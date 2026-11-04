@@ -54,6 +54,9 @@ export function criarPrejogoTela(opc) {
   const fundoEsc = raiz.querySelector('.pj-esc-fundo');
 
   let naAbertura = false, ativo = false;
+  // muda (item 64): a tela antes do jogo está por cima da abertura — os três ouvintes dela (o toque da camada, o Enter/Espaço na
+  // captura e o A do controle) ficam calados; o "Jogar partida" da tela é o gesto (main.js chama prejogo.comecar())
+  let muda = false;
   let ultimoGesto = 0;
   const padAntes = [];
   const mostrarPular = () => { ultimoGesto = performance.now(); pular.classList.add('visivel'); };
@@ -62,7 +65,7 @@ export function criarPrejogoTela(opc) {
   // toque: no pointerup do mesmo dedo (aoTocar; com outro dedo na tela o click não vem)
   aoTocar(pular, () => { if (ativo && !naAbertura) opc.aoPularTudo(); });
   raiz.addEventListener('pointerdown', e => {
-    if (!ativo || e.button > 0) return;
+    if (!ativo || muda || e.button > 0) return;
     e.preventDefault();
     // o toque que encerra o pré-jogo some com a camada: o click dele não cai no ≡ (abria a pausa)
     engolirClique(e);
@@ -73,7 +76,7 @@ export function criarPrejogoTela(opc) {
   raiz.addEventListener('contextmenu', e => e.preventDefault());
   // Enter / Espaço: próximo bloco (Esc, P e Start vêm pela entrada: pular tudo). Na captura, antes da entrada.
   window.addEventListener('keydown', e => {
-    if (!ativo || e.repeat) return;
+    if (!ativo || muda || e.repeat) return;
     if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
       e.preventDefault();
       mostrarPular();
@@ -115,6 +118,9 @@ export function criarPrejogoTela(opc) {
       }
     },
     get naAbertura() { return naAbertura; },
+    /** A abertura calada (a tela antes do jogo por cima: item 64) ou de volta (false). */
+    mudo(v) { muda = !!v; raiz.classList.toggle('muda', muda); },
+    get muda() { return muda; },
     /** Faixas de cinema: k = 0 (sem) a 1 (2,39:1). */
     faixas(k, proporcao) {
       const w = window.innerWidth, h = window.innerHeight;
@@ -128,7 +134,7 @@ export function criarPrejogoTela(opc) {
     fundoEscalacao(a) { fundoEsc.style.opacity = String(Math.max(0, Math.min(1, a)).toFixed(3)); raiz.classList.toggle('na-escalacao', a > 0.01); },
     /** Uma vez por quadro: o A do controle (próximo bloco) e o botão Pular que some parado. */
     atualizar(agora) {
-      if (!ativo) return;
+      if (!ativo || muda) return;
       const lista = navigator.getGamepads ? navigator.getGamepads() : null;
       if (lista) {
         for (let i = 0; i < lista.length; i++) {

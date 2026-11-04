@@ -152,7 +152,8 @@ export function layoutPrepartida(W, H, sa = {}, formacao = '4-3-3', nAbas = 3, o
   // os cantos de baixo do campinho (ao lado do goleiro): a formação e o selo à esquerda, o geral e as estrelas à direita
   const yDef = posFicha(L, 1, 0).y + hc / 2 + 2;
   const fForma = pc ? Math.round(hc * 0.42) : Math.round(Math.min(22, hc * 0.48));
-  const fSelo = pc ? Math.max(12, Math.round(hc * 0.2)) : L.info.letra - 1 >= 10 ? L.info.letra - 1 : 10;
+  // (o selo: ≥ 11 px no celular e ≥ 12 no PC — a letra mínima da tela)
+  const fSelo = pc ? Math.max(12, Math.round(hc * 0.2)) : 11;
   const base = larguraEm(C, C.top + C.h);
   L.cantos = {
     y: yDef, forma: fForma, selo: Math.max(10, fSelo),

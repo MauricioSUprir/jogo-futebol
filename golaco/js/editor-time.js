@@ -221,6 +221,8 @@ export function criarEditorTime(opc) {
   function notaNatural(id) { const j = fichaDe(id); return j ? notaExibida(j, j.pos) : 0; }
   function substContagem() {
     const r = R();
+    // antes do jogo (o Personalizar da tela antes do jogo, item 64): as trocas viram a escalação — nada conta como substituição
+    if (st.antesDoJogo) return 'Antes do jogo: as trocas viram a escalação';
     return `Subst. ${r.subs.feitas + r.substituicoes.length}/${PARTIDA.subsMax} · paradas ${r.subs.paradas}/${PARTIDA.paradasMax}`;
   }
 
@@ -844,6 +846,7 @@ export function criarEditorTime(opc) {
     montar();
     st.timeEstado = snap.time;
     st.timeId = snap.timeId ?? 0;
+    st.antesDoJogo = !!snap.antesDoJogo;
     const r = ESC.rascunhoDe(snap.time, snap.fila ?? null, st.timeId);
     // "estado do jogo" = o time no mundo (com as substituições pendentes): é com ele que se decide se
     // houve mudança e para onde o Desfazer tudo volta (tela §0); a edição na fila só abre a tela

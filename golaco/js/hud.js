@@ -32,6 +32,9 @@ const TEXTO_EVENTO = {
   edicaoRecusada: { t: 'Mudança no time recusada', ms: 2400, prio: 3 },
   // (a substituição feita não vira aviso de texto: a faixa ENTRA/SAI de TV — faixaSubst — mostra quem entra e quem sai)
   reinicio: { t: 'Partida reiniciada', ms: 1200 },
+  // a tela antes do jogo (item 64): o "Jogar partida" pelo controle pode não liberar o som (o A não conta como gesto em todo
+  // navegador) — o aviso discreto de 2 s
+  somGesto: { t: 'Toque ou aperte uma tecla para ligar o som', ms: 2000 },
   // disputa de pênaltis (modo Pênaltis): o comando da vez, na 1ª vez que o humano bate e que defende
   penaltisBate: { t: 'Sua vez: mire e segure o CHUTE', ms: 3600, forte: true },
   penaltisDefende: { t: 'Defenda: esquerda ou direita antes do chute', ms: 3600, forte: true },
@@ -1044,6 +1047,21 @@ export function criarHud(opc) {
     fecharMenu() { el.menu.hidden = true; soltarFoco(el.menu); marcarAberta(); },
     /** Um submenu da pausa ('modos' | 'opcoes' | 'estatisticas') ou de volta ao 1º nível (null). */
     submenu,
+    /**
+     * A pausa no modo "antes do jogo" (o ≡ da tela antes do jogo, item 64; #menu[data-antes]): "Voltar" no lugar de "Voltar ao
+     * jogo" e sem o que só existe com a bola rolando (Editar time — a tela tem o Personalizar —, Estatísticas, Replay, Reiniciar,
+     * Simular o resto e o cartão do meu time: o css/prepartida.css esconde). false volta à pausa de sempre.
+     */
+    definirAntes(v) {
+      if (!el.menu) return;
+      if (v) el.menu.dataset.antes = '1'; else delete el.menu.dataset.antes;
+      const tx = el.continuar?.querySelector('.item-txt');
+      const t = v ? 'Voltar' : 'Voltar ao jogo';
+      if (tx && tx.textContent !== t) tx.textContent = t;
+      el.menu.querySelectorAll('.btn-fechar[data-cmd="continuar"]').forEach(b => b.setAttribute('aria-label', t));
+      marcarNivel();
+    },
+    get antes() { return !!el.menu?.dataset.antes; },
     /** O nível da pausa agora: 'acoes' (o 1º) ou o id do submenu à vista sem o "menu-" ('opcoes', 'modos', 'livre'...); null fechada. */
     get nivelMenu() {
       if (el.menu.hidden) return null;
