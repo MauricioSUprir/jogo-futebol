@@ -5,18 +5,21 @@
 
 const NOME = 'studylab-fotos';
 const LOJA = 'fotos';
+const LOJA_ARQ = 'arquivos';
 let bancoP = null;
 
 function abrir() {
   if (bancoP) return bancoP;
   bancoP = new Promise((resolve, reject) => {
-    const pedido = indexedDB.open(NOME, 1);
+    // versão 2: + a loja de arquivos dos Materiais (PDF, documentos, imagens)
+    const pedido = indexedDB.open(NOME, 2);
     pedido.onupgradeneeded = () => {
       const db = pedido.result;
       if (!db.objectStoreNames.contains(LOJA)) {
         const loja = db.createObjectStore(LOJA, { keyPath: 'id' });
         loja.createIndex('materiaId', 'materiaId', { unique: false });
       }
+      if (!db.objectStoreNames.contains(LOJA_ARQ)) db.createObjectStore(LOJA_ARQ, { keyPath: 'id' });
     };
     pedido.onsuccess = () => resolve(pedido.result);
     pedido.onerror = () => reject(pedido.error || new Error('Não consegui abrir o armazenamento de fotos.'));
@@ -24,10 +27,10 @@ function abrir() {
   return bancoP;
 }
 
-function transacao(modo, executar) {
+function transacao(modo, executar, loja = LOJA) {
   return abrir().then((db) => new Promise((resolve, reject) => {
-    const tx = db.transaction(LOJA, modo);
-    const saida = executar(tx.objectStore(LOJA));
+    const tx = db.transaction(loja, modo);
+    const saida = executar(tx.objectStore(loja));
     tx.oncomplete = () => resolve(saida?.result ?? saida);
     tx.onerror = () => reject(tx.error);
   }));
@@ -92,4 +95,50 @@ export function dataUrlParaBloco(dataUrl) {
   const m = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/s);
   if (!m) throw new Error('Foto em formato inesperado.');
   return { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } };
+}
+
+/* ---------- arquivos dos Materiais (ficam só no aparelho) ---------- */
+export const TETO_ARQUIVO = 25 * 1024 * 1024;   // 25 MB por arquivo
+
+/** Guarda o arquivo (Blob/File) e devolve o id para pôr no material. */
+export async function salvarArquivo(arquivo) {
+  if (arquivo.size > TETO_ARQUIVO) throw new Error('Arquivo grande demais (máximo 25 MB).');
+  const id = `arq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await transacao('readwrite', (loja) => loja.put({
+    id, nome: arquivo.name || 'arquivo', mime: arquivo.type || 'application/octet-stream',
+    tamanho: arquivo.size, blob: arquivo, em: new Date().toISOString(),
+  }), LOJA_ARQ);
+  return { id, nome: arquivo.name || 'arquivo', mime: arquivo.type || '', tamanho: arquivo.size };
+}
+
+export function lerArquivoSalvo(id) {
+  return abrir().then((db) => new Promise((resolve, reject) => {
+    const pedido = db.transaction(LOJA_ARQ, 'readonly').objectStore(LOJA_ARQ).get(id);
+    pedido.onsuccess = () => resolve(pedido.result || null);
+    pedido.onerror = () => reject(pedido.error);
+  }));
+}
+
+/** Abre o arquivo numa aba nova (PDF e imagem o navegador mostra; o resto baixa). */
+export async function abrirArquivoSalvo(id) {
+  const a = await lerArquivoSalvo(id);
+  if (!a) throw new Error('Este arquivo não está mais neste aparelho.');
+  const url = URL.createObjectURL(a.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  if (/^(application\/pdf|image\/|text\/)/.test(a.mime)) link.target = '_blank';
+  else link.download = a.nome;
+  link.rel = 'noopener';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+export const apagarArquivoSalvo = (id) => transacao('readwrite', (loja) => loja.delete(id), LOJA_ARQ);
+
+export function tamanhoLegivel(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
 }

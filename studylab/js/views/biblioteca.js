@@ -2,6 +2,7 @@
 import { h, iso, norm, fmtData, parseISO } from '../util.js';
 import { st, set, nomeMateria, emojiMateria, atualizar, remover, novoMaterial } from '../store.js';
 import { titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, segmento, confirmar } from '../ui.js';
+import { abrirArquivoSalvo, apagarArquivoSalvo } from '../fotos.js';
 import { formMaterial, TIPOS_MATERIAL, opcoesMaterias, selMateria, tagMateria } from './comum.js';
 import { temIA, resumir, resumoLocal } from '../ai.js';
 
@@ -85,13 +86,22 @@ function ver(m, pintar) {
   const corpo = h('div', {},
     h('div', { class: 'flexb mb' }, tagMateria(m.materiaId),
       h('span', { class: 'chip' }, fmtData(m.criadoEm)),
-      m.url ? h('a', { class: 'chip sp', href: m.url, target: '_blank', rel: 'noopener' }, '🔗 abrir link') : null),
+      m.url ? h('a', { class: 'chip sp', href: m.url, target: '_blank', rel: 'noopener' }, '🔗 abrir link') : null,
+      m.arquivoId ? h('button', {
+        class: 'chip sp', style: { cursor: 'pointer' },
+        onclick: () => abrirArquivoSalvo(m.arquivoId).catch((e) => toast(e.message, 'bad')),
+      }, `📎 abrir ${m.nomeArquivo || 'arquivo'}`) : null),
     m.conteudo
       ? h('p', { style: { whiteSpace: 'pre-wrap', lineHeight: 1.6 } }, m.conteudo)
-      : h('p', { class: 'muted small' }, 'Sem texto salvo — este material é só um link/referência.'));
+      : h('p', { class: 'muted small' }, m.arquivoId ? 'Arquivo guardado neste aparelho.' : 'Sem texto salvo — este material é só um link/referência.'));
 
   const acoes = h('div', { class: 'flexb mt2' },
-    h('button', { class: 'btn btn--d', onclick: () => confirmar('Apagar material?', m.titulo, () => { remover('biblioteca', m.id); fecharModal(); pintar(); }) }, 'Apagar'),
+    h('button', {
+      class: 'btn btn--d', onclick: () => confirmar('Apagar material?', m.titulo, () => {
+        if (m.arquivoId) apagarArquivoSalvo(m.arquivoId).catch(() => {});
+        remover('biblioteca', m.id); fecharModal(); pintar();
+      }),
+    }, 'Apagar'),
     h('button', { class: 'btn sp', onclick: () => { fecharModal(); formMaterial(m, pintar); } }, '✏️ Editar'));
 
   if (m.conteudo && m.conteudo.length > 200) {
