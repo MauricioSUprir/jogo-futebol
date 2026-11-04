@@ -46,10 +46,28 @@ const IC_SELO = {
 };
 const icSelo = id => `<svg viewBox="0 0 24 24" aria-hidden="true">${IC_SELO[id] ?? IC_SELO.equilibrada}</svg>`;
 
-/** A camisa (SVG 24×24): o corpo na cor da camisa, a gola e os punhos no acento, o contorno branco a 55%. */
+/** A luminância relativa (WCAG) de "#rrggbb" (inválida: 1, a clara). */
+function luminancia(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''));
+  if (!m) return 1;
+  const v = parseInt(m[1], 16);
+  const lin = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; };
+  return 0.2126 * lin(v >> 16) + 0.7152 * lin((v >> 8) & 255) + 0.0722 * lin(v & 255);
+}
+/** A camisa escura (o Golaço FC, #15191b; azul-marinho, preto) some no fundo preto da tela e da carta: < 2,2:1 contra ele. */
+const escura = hex => luminancia(hex) < 0.07;
+/** "#rrggbb" misturado com o cinza claro (t de 0 a 1): o ombro da camisa escura aparece sem mudar de cor. */
+function clarear(hex, t) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''));
+  if (!m) return hex;
+  const v = parseInt(m[1], 16), c = [v >> 16, (v >> 8) & 255, v & 255].map(x => Math.round(x + (0xc9 - x) * t));
+  return `#${c.map(x => x.toString(16).padStart(2, '0')).join('')}`;
+}
+/** A camisa (SVG 24×24): o corpo na cor da camisa, a gola e os punhos no acento, o contorno branco a 55%; a escura com um disco
+ * claro atrás (sem ele sobrava só o contorno: revisão V12). */
 function svgCamisa(c) {
   const corpo = c?.corpo ?? '#e9ecee', ac = c?.acento ?? '#15191b';
-  return `<svg class="pp-cam" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3c-.6 1.4-2 2.2-3 2.2S8.6 4.4 8 3z" fill="${esc(corpo)}" stroke="rgba(255,255,255,.55)" stroke-width=".9" stroke-linejoin="round"/>`
+  return `<svg class="pp-cam" viewBox="0 0 24 24" aria-hidden="true">${escura(corpo) ? '<circle cx="12" cy="12" r="11.5" fill="rgba(255,255,255,.14)"/>' : ''}<path d="M8 3 3 6l2 5 2-1v11h10V10l2 1 2-5-5-3c-.6 1.4-2 2.2-3 2.2S8.6 4.4 8 3z" fill="${esc(corpo)}" stroke="rgba(255,255,255,.55)" stroke-width=".9" stroke-linejoin="round"/>`
     + `<path d="M9.4 3.6c.8 1.1 1.7 1.6 2.6 1.6s1.8-.5 2.6-1.6" fill="none" stroke="${esc(ac)}" stroke-width="1.3" stroke-linecap="round"/>`
     + `<path d="M3.5 7.3l1.7 3.4M20.5 7.3l-1.7 3.4" stroke="${esc(ac)}" stroke-width="1.4" stroke-linecap="round"/></svg>`;
 }
@@ -59,11 +77,13 @@ function htmlEscudo(e, sigla) {
   if (e?.simbolo) return `<svg class="pp-esc" viewBox="0 0 20 22" aria-hidden="true"><use href="#${esc(e.simbolo)}"/></svg>`;
   return `<span class="pp-esc pp-esc-sigla" aria-hidden="true">${esc(sigla)}</span>`;
 }
-/** O busto da ficha (a silhueta da carta do TM, ultimate.js silhueta) com os ombros vestidos na cor da camisa. */
+/** O busto da ficha (a silhueta da carta do TM, ultimate.js silhueta) com os ombros vestidos na cor da camisa; a camisa escura
+ * clareia 32% e ganha um contorno mais forte (sumia no miolo preto e sobrava uma cabeça solta: revisão V12). */
 function svgBusto(c) {
-  const corpo = c?.corpo ?? '#2a2f33', ac = c?.acento ?? '#4ade80';
+  const corpo0 = c?.corpo ?? '#2a2f33', ac = c?.acento ?? '#4ade80';
+  const esc0 = escura(corpo0), corpo = esc0 ? clarear(corpo0, 0.32) : corpo0;
   return `<svg class="pp-busto" viewBox="0 0 100 120" aria-hidden="true"><ellipse cx="50" cy="43" rx="18.5" ry="22.5" fill="currentColor"/>`
-    + `<path d="M6 120C8 93 27 81 50 81S92 93 94 120Z" fill="${esc(corpo)}" stroke="rgba(255,255,255,.4)" stroke-width="2"/>`
+    + `<path d="M6 120C8 93 27 81 50 81S92 93 94 120Z" fill="${esc(corpo)}" stroke="rgba(255,255,255,${esc0 ? '.6' : '.4'})" stroke-width="${esc0 ? 4 : 2}"/>`
     + `<path d="M40 82l10 13 10-13" fill="none" stroke="${esc(ac)}" stroke-width="5" stroke-linejoin="round"/></svg>`;
 }
 
