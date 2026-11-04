@@ -628,6 +628,22 @@ export function criarHud(opc) {
     selecionado = b;
     b.classList?.add('selecionado');
   });
+  // o toque que troca de nível (o ≡ que abre, um item que entra ou sai de um submenu, o X e o fundo que fecham): o navegador ainda
+  // gera o mousedown de compatibilidade DEPOIS do pointerup, no ponto do dedo — e o mousedown dá o foco ao que ficou embaixo dele
+  // no nível NOVO (o X no lugar do ≡, um controle das Opções) ou o tira (o fundo vazio): o foco que o nível escolheu ("Voltar ao
+  // jogo", o escolhido do submenu, o item que o abriu) se perdia, e o destaque com ele (revisão do item 58, F4). O mousedown de um
+  // toque só dá o foco se a pausa continua no nível em que o dedo desceu (tocar num controle do mesmo nível continua focando ele)
+  let nivelNoToque = null, fimDoToque = -1e9;
+  const nivelAgora = () => (el.menu.hidden ? (el.ajuda.hidden ? '-' : 'ajuda') : `${el.janelaMenu?.dataset.nivel ?? ''}:${el.janelaMenu?.dataset.sub ?? ''}`);
+  window.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') nivelNoToque = nivelAgora(); }, true);
+  window.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') fimDoToque = performance.now(); }, true);
+  window.addEventListener('mousedown', e => {
+    if (nivelNoToque === null) return;
+    // (o Chromium marca o mouse que vem do toque; sem a marca — Safari, Firefox —, o que chega logo depois de um toque)
+    const caps = e.sourceCapabilities;
+    const doToque = caps ? caps.firesTouchEvents : performance.now() - fimDoToque < 800;
+    if (doToque && nivelAgora() !== nivelNoToque) e.preventDefault();
+  }, true);
   // o mouse em cima de um item dá o foco a ele (como o FC no PC: um só item em destaque)
   el.menu?.addEventListener('pointerover', e => {
     if (e.pointerType !== 'mouse') return;

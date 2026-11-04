@@ -355,6 +355,41 @@ async function partidaCelular(s, pg) {
   await pg.waitForTimeout(500);
   const ficou = await pg.evaluate(() => window.__golaco.estado().menuAberto);
   P.p9.push({ nome: 'tocar no jogo fecha; tocar na faixa vazia (ao lado da lista) não fecha', ok: fechouJogo && ficou, medido: `jogo (${ptJogo.x.toFixed(0)}, ${ptJogo.y.toFixed(0)}) fecha ${fechouJogo}; faixa (${ptFaixa.x.toFixed(0)}, ${ptFaixa.y.toFixed(0)}) fica aberta ${ficou}` });
+  // o toque que troca de nível deixa o foco (e o destaque) no que o nível escolhe — o mousedown de compatibilidade que o navegador
+  // gera depois do toque, no ponto do dedo, dava o foco ao X (no lugar do ≡) ou a um controle do submenu que ficou embaixo do dedo
+  // (revisão do item 58, F4): ≡ → "Voltar ao jogo"; Opções → o escolhido do 1º grupo; o Voltar do submenu → o item "Opções"
+  for (const [W, H] of [[844, 390], [568, 320]]) {
+    await pg.setViewportSize({ width: W, height: H });
+    await pg.waitForTimeout(80);
+    await pg.evaluate(() => { window.__golaco.fecharMenu(); document.activeElement?.blur?.(); });
+    await quadros(pg, 2);
+    const focoAgora = () => pg.evaluate(() => {
+      const a = document.activeElement, sel = [...document.querySelectorAll('#menu .selecionado')];
+      const nome = !a || a === document.body ? 'BODY' : (a.id || (a.closest('.segmentado') ? `${a.closest('.segmentado').dataset.grupo}:${a.dataset.valor}` : a.dataset?.cmd || a.className));
+      const nivel = [...document.querySelectorAll('#menu .menu-acoes')].find(e => !e.hidden && e.getClientRects().length);
+      const vis = nivel ? [...nivel.querySelectorAll('button, input[type="range"]')].filter(b => !b.disabled && !b.hidden && b.getClientRects().length && !b.classList.contains('btn-voltar')) : [];
+      const esperado = vis.find(b => b.getAttribute('aria-pressed') === 'true') ?? vis[0] ?? null;
+      return { nome, destaque: sel.length === 1 && sel[0] === a, esperadoSub: !!esperado && a === esperado, peso: getComputedStyle(document.getElementById('btn-continuar')).fontWeight };
+    });
+    const tri2 = await centro(pg, '#btn-menu');
+    await pg.touchscreen.tap(tri2.x, tri2.y);
+    await quadros(pg, 3);
+    const f1 = await focoAgora();
+    const op = await centro(pg, '#btn-opcoes');
+    if (op) await pg.touchscreen.tap(op.x, op.y);
+    await quadros(pg, 3);
+    const f2 = await focoAgora();
+    const vt = await centro(pg, '#menu-opcoes .btn-voltar');
+    if (vt) await pg.touchscreen.tap(vt.x, vt.y);
+    await quadros(pg, 3);
+    const f3 = await focoAgora();
+    P.p9.push({ nome: `${W}×${H}: o toque que troca de nível não deixa o foco no que ficou embaixo do dedo`,
+      ok: f1.nome === 'btn-continuar' && f1.destaque && f1.peso === '800' && f2.esperadoSub && f2.destaque && f3.nome === 'btn-opcoes' && f3.destaque,
+      medido: `≡ → foco ${f1.nome} (destaque ${f1.destaque}, peso ${f1.peso}); Opções → ${f2.nome} (o escolhido ${f2.esperadoSub}, destaque ${f2.destaque}); Voltar → ${f3.nome} (destaque ${f3.destaque})` });
+  }
+  await pg.evaluate(() => window.__golaco.fecharMenu());
+  await pg.setViewportSize({ width: 844, height: 390 });
+  await pg.waitForTimeout(80);
 
   // ---- P4: o campinho em 844×390 e 568×320
   for (const [W, H] of [[844, 390], [568, 320]]) {
