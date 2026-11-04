@@ -180,7 +180,7 @@ function montar(el, pintar) {
       if (toques >= 5) { toques = 0; location.hash = '#/criador'; }
       else if (toques === 3) toast('Mais 2 toques…');
     },
-  }, 'MindTrack AI · versão 2.0 · por Caio, Cauã, Eduardo, Khoan, Lucas, Thiago e Tarso'));
+  }, 'MindTrack AI · versão 2.0 · por Caio, Cauã, Eduardo, Guilherme, Khoan, Lucas, Thiago e Tarso'));
   el.append(h('p', { class: 'tiny center', style: { marginTop: '6px' } },
     h('a', { href: '#/termos' }, 'Termos de uso'), ' · ',
     h('a', { href: '#/termos?aba=privacidade' }, 'Política de privacidade')));
