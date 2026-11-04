@@ -15,6 +15,9 @@ process.env.CACHE_IA = '0';             // cada seção liga o cache só quando 
 process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 process.env.MP_PUBLIC_KEY = 'APP_USR-publica';
 delete process.env.DATABASE_URL;
+process.env.GOOGLE_CLIENT_ID = 'cliente-teste.apps.googleusercontent.com';
+process.env.GOOGLE_CLIENT_SECRET = 'segredo-google-teste';
+process.env.URL_SERVIDOR = `http://localhost:${process.env.PORT}`;
 
 const BASE = `http://localhost:${process.env.PORT}`;
 const { montarBRCode } = await import('./brcode.js');
@@ -27,6 +30,10 @@ let ultimoGemini = null;
 let chamadasGemini = [];                // modelos chamados, em ordem
 const geminiFalha = {};                 // modelo → { status, msg } para simular cota/sumiço
 let assinaturasMP = 0;
+/* ---- Google dublado: o "code" diz quem entra e o que foi permitido ---- */
+const google = { revogados: [], refreshPedidos: 0, codigos: {} };
+const jwtFalso = (p) => ['e30', Buffer.from(JSON.stringify(p)).toString('base64url'), 'x'].join('.');
+const resp = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json' } });
 let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
   const alvo = String(url);
@@ -128,6 +135,45 @@ globalThis.fetch = async (url, opcoes) => {
       usage: { input_tokens: 120, output_tokens: 45 },
       stop_reason: 'end_turn',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
+  if (alvo === 'https://oauth2.googleapis.com/token') {
+    const c = new URLSearchParams(String(opcoes.body));
+    if (c.get('client_secret') !== 'segredo-google-teste') return resp({ error: 'invalid_client' }, 401);
+    if (c.get('grant_type') === 'refresh_token') {
+      google.refreshPedidos++;
+      if (c.get('refresh_token') === 'rt-revogado') return resp({ error: 'invalid_grant' }, 400);
+      return resp({ access_token: `at-de-${c.get('refresh_token')}`, expires_in: 3599 });
+    }
+    const d = google.codigos[c.get('code')];
+    if (!d || c.get('redirect_uri') !== `${process.env.URL_SERVIDOR}/conexoes/google/volta`) return resp({ error: 'invalid_grant' }, 400);
+    return resp({
+      access_token: 'at-1', expires_in: 3599, scope: d.scope, ...(d.refresh ? { refresh_token: d.refresh } : {}),
+      id_token: jwtFalso({ iss: 'https://accounts.google.com', aud: d.aud || process.env.GOOGLE_CLIENT_ID,
+        sub: d.sub, email: d.email, name: d.nome, exp: Math.floor(Date.now() / 1000) + 3600 }),
+    });
+  }
+  if (alvo === 'https://oauth2.googleapis.com/revoke') { google.revogados.push(new URLSearchParams(String(opcoes.body)).get('token')); return resp({}); }
+  if (alvo.startsWith('https://www.googleapis.com/calendar/v3/calendars/primary/events')) {
+    if (opcoes?.headers?.authorization !== 'Bearer at-de-rt-agenda') return resp({}, 401);
+    const d = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    return resp({ items: [
+      { id: 'e1', summary: 'Prova de Matemática', start: { date: d(5) }, end: { date: d(6) } },
+      { id: 'e2', summary: 'Férias de julho', start: { date: d(30) }, end: { date: d(45) } },
+      { id: 'e3', summary: 'Dentista', start: { dateTime: `${d(2)}T15:30:00-03:00` }, end: { dateTime: `${d(2)}T16:30:00-03:00` } },
+      { id: 'e4', summary: 'Cancelado', status: 'cancelled', start: { date: d(3) } },
+    ] });
+  }
+  if (alvo.startsWith('https://classroom.googleapis.com/v1/')) {
+    if (opcoes?.headers?.authorization !== 'Bearer at-de-rt-class') return resp({}, 401);
+    if (alvo.includes('/courses?')) return resp({ courses: [{ id: 'c1', name: 'Biologia 2º A' }] });
+    if (alvo.includes('/studentSubmissions')) return resp({ studentSubmissions: [{ courseWorkId: 'w2', state: 'TURNED_IN' }] });
+    const fut = new Date(Date.now() + 4 * 86400000);
+    return resp({ courseWork: [
+      { id: 'w1', title: 'Lista de genética', alternateLink: 'https://classroom.google.com/c/x/a/w1',
+        dueDate: { year: fut.getUTCFullYear(), month: fut.getUTCMonth() + 1, day: fut.getUTCDate() } },
+      { id: 'w2', title: 'Trabalho sobre células' },
+      { id: 'w3', title: 'Atividade velha', dueDate: { year: 2020, month: 1, day: 1 } },
+    ] });
   }
   return fetchReal(url, opcoes);
 };
@@ -582,6 +628,149 @@ console.log('\n== escada do Gemini: o modelo bom que dura ==');
 
   process.env.ANTHROPIC_API_KEY = chaveClaude;
   delete process.env.GEMINI_API_KEY;
+}
+
+console.log('\n== conexões (Google e calendário por link) ==');
+{
+  const { decifrar } = await import('../src/conexoes.js');
+  const volta = 'http://localhost:9999/studylab/';
+  const G = 'https://www.googleapis.com/auth/';
+  const voltar = async (urlGoogle, code) => {
+    const estado = new URL(urlGoogle).searchParams.get('state');
+    const r = await fetchReal(`${BASE}/conexoes/google/volta?code=${code}&state=${encodeURIComponent(estado)}`, { redirect: 'manual' });
+    const loc = r.headers.get('location') || '';
+    return { status: r.status, loc, p: new URLSearchParams(loc.split('?')[1] || '') };
+  };
+
+  const cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.google === true && cfg.dados.drive === null, 'config diz que o Google está ligado (o seletor do Drive precisa da chave)', JSON.stringify(cfg.dados));
+
+  // 1) conta de aparelho não usa as Conexões…
+  const ap = await pedir('POST', '/entrar', { corpo: { dispositivo: { id: 'ap_conex', segredo: 's3', nome: 'Lia' } } });
+  await pedir('POST', '/codigo', { token: ap.dados.token, corpo: { codigo: 'TESTE7' } });
+  let r = await pedir('GET', '/conexoes', { token: ap.dados.token });
+  conferir(r.status === 403 && /entre com o Google/i.test(r.dados.erro), 'sem conta Google, as Conexões recusam', `${r.status} ${r.dados.erro}`);
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: ap.dados.token, corpo: { servico: 'agenda', volta } });
+  conferir(r.status === 403, 'nem dá para começar a ligar a Agenda sem conta');
+
+  // 2) …até entrar com o Google: a conta de aparelho vira conta Google (o plano fica)
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: ap.dados.token, corpo: { servico: 'conta', volta } });
+  const urlConta = new URL(r.dados.url);
+  conferir(urlConta.origin === 'https://accounts.google.com' && urlConta.searchParams.get('redirect_uri') === `${BASE}/conexoes/google/volta`
+    && urlConta.searchParams.get('scope') === 'openid email profile', 'entrar: leva ao Google só com nome e e-mail', r.dados.url.slice(0, 80));
+  const ruim = await pedir('POST', '/conexoes/google/iniciar', { corpo: { servico: 'conta', volta: 'javascript:alert(1)' } });
+  conferir(ruim.status === 400, 'endereço de volta esquisito é recusado');
+  google.codigos['cod-lia'] = { sub: 'g-lia', email: 'lia@gmail.com', nome: 'Lia Souza', scope: 'openid email profile' };
+  let v = await voltar(r.dados.url, 'cod-lia');
+  conferir(v.status === 302 && v.loc.startsWith(`${volta}#/conexoes?entrou=`), 'Google volta para o app com um tíquete', v.loc.slice(0, 70));
+  const troca = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(troca.status === 200 && troca.dados.usuario.id === 'ap_conex' && troca.dados.usuario.provedor === 'google'
+    && troca.dados.usuario.email === 'lia@gmail.com', 'tíquete vira sessão na MESMA conta, agora Google', JSON.stringify(troca.dados.usuario));
+  conferir(troca.dados.plano === 'pro', 'o plano da conta de aparelho continua valendo', troca.dados.plano);
+  const deNovo = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(deNovo.status === 401, 'o tíquete só vale uma vez');
+  const t = troca.dados.token;
+
+  // 2b) entrar de novo pelo Google (outro aparelho) acha a mesma conta
+  r = await pedir('POST', '/conexoes/google/iniciar', { corpo: { servico: 'conta', volta } });
+  v = await voltar(r.dados.url, 'cod-lia');
+  const outra = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(outra.dados.usuario?.id === 'ap_conex', 'em outro aparelho, o mesmo Google entra na mesma conta', outra.dados.usuario?.id);
+
+  // 3) Google Agenda
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'agenda', volta } });
+  const ua = new URL(r.dados.url).searchParams;
+  conferir(ua.get('access_type') === 'offline' && ua.get('scope').includes(`${G}calendar.events.readonly`) && ua.get('login_hint') === 'lia@gmail.com',
+    'Agenda: pede só leitura dos eventos, com acesso contínuo', ua.get('scope'));
+  google.codigos['cod-agenda-sem'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: 'openid email', refresh: 'rt-x' };
+  v = await voltar(r.dados.url, 'cod-agenda-sem');
+  conferir(v.p.get('erro') === 'faltou_permissao' && google.revogados.includes('rt-x'), 'desmarcou a permissão no Google: avisa e não guarda nada');
+  google.codigos['cod-agenda'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: `openid email ${G}calendar.events.readonly`, refresh: 'rt-agenda' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'agenda', volta } });
+  v = await voltar(r.dados.url, 'cod-agenda');
+  conferir(v.p.get('ok') === 'agenda', 'Agenda conectada', v.loc);
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'agenda' } });
+  const titulos = (r.dados.itens || []).map((i) => `${i.tipo}:${i.titulo}`);
+  conferir(r.status === 200 && titulos.join('|') === 'prova:Prova de Matemática|ferias:Férias de julho|evento:Dentista',
+    'sincroniza: prova vira prova, férias com período, cancelado fica de fora', titulos.join('|'));
+  const ferias = r.dados.itens?.find((i) => i.tipo === 'ferias');
+  conferir(ferias && ferias.ate > ferias.data && !r.dados.itens.find((i) => i.titulo === 'Prova de Matemática').ate, 'dia inteiro: o fim do Google (exclusivo) vira o último dia certo');
+  conferir(r.dados.itens?.find((i) => i.titulo === 'Dentista')?.hora === '15:30', 'evento com horário guarda a hora');
+
+  // 4) segredo cifrado no banco
+  const { conexaoDe } = await import('../src/db.js');
+  const guardada = await conexaoDe('ap_conex', 'agenda');
+  conferir(guardada && !guardada.segredo.includes('rt-agenda') && decifrar(guardada.segredo) === 'rt-agenda', 'refresh token guardado cifrado');
+
+  // 5) Classroom
+  google.codigos['cod-class'] = { sub: 'g-lia-escola', email: 'lia@escola.edu.br', scope: `openid ${G}classroom.courses.readonly ${G}classroom.coursework.me.readonly`, refresh: 'rt-class' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'classroom', volta } });
+  v = await voltar(r.dados.url, 'cod-class');
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'classroom' } });
+  const at = r.dados.atividades || [];
+  conferir(at.length === 2 && at[0].materia === 'Biologia 2º A' && at[0].entrega && !at[0].feita && at[1].feita,
+    'Classroom: atividades com a turma, a entrega e o que já foi entregue (a velha fica de fora)', JSON.stringify(at).slice(0, 160));
+  const lista = await pedir('GET', '/conexoes', { token: t });
+  const cl = lista.dados.conexoes?.find((c) => c.servico === 'classroom');
+  conferir(cl?.conta === 'lia@escola.edu.br' && !!cl.sincronizadoEm && !JSON.stringify(lista.dados).includes('rt-'),
+    'lista mostra a conta da escola (pode ser outro Google) e nunca o token', JSON.stringify(lista.dados).slice(0, 160));
+
+  // 6) Drive: token curto para o seletor
+  google.codigos['cod-drive'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: `openid ${G}drive.file`, refresh: 'rt-agenda' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'drive', volta } });
+  await voltar(r.dados.url, 'cod-drive');
+  r = await pedir('POST', '/conexoes/google/token', { token: t, corpo: { servico: 'drive' } });
+  conferir(r.status === 200 && r.dados.accessToken === 'at-de-rt-agenda', 'Drive: entrega só um acesso curto para escolher os arquivos');
+
+  // 7) remover: só revoga no Google quando nenhuma outra conexão usa o mesmo login
+  google.revogados = [];
+  await pedir('POST', '/conexoes/remover', { token: t, corpo: { servico: 'drive' } });
+  conferir(!google.revogados.includes('rt-agenda') && !!(await conexaoDe('ap_conex', 'agenda')), 'tirar o Drive não derruba a Agenda (mesmo Google)');
+  await pedir('POST', '/conexoes/remover', { token: t, corpo: { servico: 'agenda' } });
+  conferir(google.revogados.includes('rt-agenda') && !(await conexaoDe('ap_conex', 'agenda')), 'tirar a Agenda revoga no Google e apaga daqui');
+
+  // 8) permissão tirada lá no Google → conexão sai e o app pede para conectar de novo
+  const { salvarConexao } = await import('../src/db.js');
+  const { cifrar } = await import('../src/conexoes.js');
+  await salvarConexao({ usuarioId: 'ap_conex', servico: 'agenda', conta: 'x', segredo: cifrar('rt-revogado') });
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'agenda' } });
+  conferir(r.status === 410 && !(await conexaoDe('ap_conex', 'agenda')), 'permissão revogada no Google: 410 e a conexão some', `${r.status} ${r.dados.erro}`);
+
+  // 9) calendário por link (.ics)
+  const http = await import('node:http');
+  const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+  const ics = ['BEGIN:VCALENDAR', 'X-WR-CALNAME:Colégio Exemplo', 'BEGIN:VEVENT', 'UID:x1', 'SUMMARY:Simulado ENEM',
+    `DTSTART;VALUE=DATE:${amanha}`, 'END:VEVENT', 'BEGIN:VEVENT', 'UID:x2', 'SUMMARY:Reunião de pais',
+    `DTSTART:${amanha}T220000Z`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const srvIcs = http.createServer((q, s2) => {
+    if (q.url === '/pula') { s2.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data' }); return s2.end(); }
+    s2.writeHead(200, { 'content-type': 'text/calendar' }); s2.end(q.url === '/nada' ? '<html>oi</html>' : ics);
+  });
+  await new Promise((ok2) => srvIcs.listen(4799, ok2));
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://127.0.0.1:4799/cal.ics' } });
+  conferir(r.status === 400 && /não é público/.test(r.dados.erro), 'link para a rede interna é recusado', `${r.status} ${r.dados.erro}`);
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/cal.ics' } });
+  conferir(r.status === 400, 'nome que aponta para a própria máquina também', `${r.status} ${r.dados.erro}`);
+  process.env.ICS_PERMITIR_LOCAL = '1';     // só no teste: o "calendário da escola" roda aqui mesmo
+  const { normalizarLinkIcs } = await import('../src/conexoes.js');
+  conferir(normalizarLinkIcs('webcal://p01-caldav.icloud.com/x.ics').startsWith('https://'), 'link webcal (iCloud, Outlook) vira https');
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/cal.ics' } });
+  conferir(r.status === 200 && r.dados.nome === 'Colégio Exemplo' && r.dados.itens.map((i) => i.tipo).join() === 'simulado,reuniao',
+    'calendário por link: nome e eventos com tipo', JSON.stringify(r.dados).slice(0, 160));
+  conferir(r.dados.itens[1].hora === '19:00', 'horário em UTC vira o de Brasília', r.dados.itens[1].hora);
+  const icsGuardado = await conexaoDe('ap_conex', 'ics');
+  conferir(icsGuardado && !icsGuardado.segredo.includes('4799'), 'o link privado do calendário também fica cifrado');
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/nada' } });
+  conferir(r.status === 400 && /não devolveu um calendário/.test(r.dados.erro), 'página que não é calendário: erro claro');
+  delete process.env.ICS_PERMITIR_LOCAL;
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'ics' } });
+  conferir(r.status === 400, 'mesmo um link já salvo não consegue ir para a rede interna');
+  process.env.ICS_PERMITIR_LOCAL = '1';
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/pula' } });
+  delete process.env.ICS_PERMITIR_LOCAL;
+  conferir(r.status === 400 && /não é público/.test(r.dados.erro),
+    'redirecionamento para endereço interno não é seguido', `${r.status} ${r.dados.erro}`);
+  srvIcs.close();
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

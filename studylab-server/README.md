@@ -170,6 +170,48 @@ dinheiro de verdade se move.
 
 ---
 
+## Ligar as Conexões (conta Google, Agenda, Classroom, Drive)
+
+A aba **Conexões** do app só funciona com conta: o aluno entra com o Google e o que ele liga fica salvo
+aqui no servidor, cifrado. Tudo é grátis. Passo a passo no [Google Cloud](https://console.cloud.google.com/):
+
+1. **Criar o projeto**: no topo, *Selecionar projeto → Novo projeto* → nome `MindTrack AI`.
+2. **Ligar as APIs**: em *APIs e serviços → Biblioteca*, ative **Google Calendar API**, **Google Classroom API**,
+   **Google Drive API** e **Google Picker API**.
+3. **Tela de consentimento** (*APIs e serviços → Tela de permissão OAuth*): tipo **Externo**, nome `MindTrack AI`,
+   seu e-mail de suporte e de contato. Em *Escopos*, adicione:
+   `calendar.events.readonly`, `classroom.courses.readonly`, `classroom.coursework.me.readonly` e `drive.file`.
+   Em *Usuários de teste*, coloque os e-mails de quem vai testar (até 100).
+4. **Cliente OAuth** (*Credenciais → Criar credenciais → ID do cliente OAuth*): tipo **Aplicativo da Web**.
+   - *Origens JavaScript autorizadas*: `https://mauriciosuprir.github.io`
+   - *URIs de redirecionamento autorizados*: `https://mindtrack-servidor.onrender.com/conexoes/google/volta`
+     (o `/saude` mostra esse endereço em `enderecoDeVoltaGoogle`).
+   Copie o **ID do cliente** e a **chave secreta do cliente**.
+5. **Chave do seletor do Drive** (*Credenciais → Criar credenciais → Chave de API*): restrinja a
+   *Referenciadores HTTP* `https://mauriciosuprir.github.io/*` e à *Google Picker API*.
+   O **número do projeto** está em *Painel do projeto → Informações do projeto*.
+6. **No Render** (*mindtrack-servidor → Environment*), cole:
+
+| Variável | O que é |
+|---|---|
+| `GOOGLE_CLIENT_ID` | ID do cliente (termina em `.apps.googleusercontent.com`) |
+| `GOOGLE_CLIENT_SECRET` | chave secreta do cliente — **só no servidor, nunca no app** |
+| `GOOGLE_API_KEY` | a chave do passo 5 (é pública, mas fica restrita ao site) |
+| `GOOGLE_PROJETO` | o número do projeto (só dígitos) |
+
+Pronto: o `/saude` passa a dizer `"conexoesProntas": true`.
+
+**Importante enquanto o app está "Em teste" no Google:** só os usuários de teste conseguem entrar, e o Google
+derruba a permissão da Agenda/Classroom depois de **7 dias** (o app avisa e o aluno conecta de novo em 2 toques).
+Para liberar para todo mundo, peça a *verificação* do app na tela de consentimento (o Google pede página de
+privacidade e um vídeo mostrando o uso; o `drive.file` não precisa de verificação). A **Classroom** de escola
+pode estar bloqueada pelo administrador da escola — nesse caso o app mostra o aviso do Google.
+
+**O que o servidor guarda:** só o *refresh token* (AES-256-GCM, chave derivada do `SEGREDO`) e o e-mail da
+conta ligada. Trocar o `SEGREDO` desliga todas as conexões (o aluno conecta de novo). O MindTrack só **lê**.
+O calendário por link (.ics) não precisa de nada disso; ele só baixa de endereços públicos (bloqueia a rede
+interna, também depois de redirecionamentos) e no máximo 2 MB.
+
 ## Quanto custa (a conta que decide o preço)
 
 Os planos têm **dois níveis** — os preços de verdade ficam em `src/pagamento.js`:
