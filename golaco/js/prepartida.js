@@ -214,8 +214,13 @@ export function linhasCampinho(L, janela = null) {
   const out = { contorno: [P(f0, -1), P(f1, -1), P(f1, 1), P(f0, 1)], linhas: [], polis: [] };
   if (f0 <= 0.5 && f1 >= 0.5) { const a = P(0.5, -1), b = P(0.5, 1); out.linhas.push([a[0], a[1], b[0], b[1]]); }
   const area = (a, b, z) => [[P(a, -z), P(b, -z), P(b, z), P(a, z)], false];
-  if (f0 === 0) out.polis.push(area(0, 16.5 / 105, 20.16 / 34), area(0, 5.5 / 105, 9.16 / 34));
-  if (f1 === 1) out.polis.push(area(1, 1 - 16.5 / 105, 20.16 / 34), area(1, 1 - 5.5 / 105, 9.16 / 34));
+  // as áreas também RECORTADAS pela janela (a Visão tática começa ~4,5 m antes da linha de fundo: sem elas o campo parecia cortado
+  // no meio e o goleiro ficava sozinho num trapézio liso — revisão V9); o lado da janela fica aberto (é a borda do campinho)
+  const G = 16.5 / 105, p = 5.5 / 105;
+  if (f0 < G) out.polis.push(area(Math.max(0, f0), G, 20.16 / 34));
+  if (f0 < p) out.polis.push(area(Math.max(0, f0), p, 9.16 / 34));
+  if (f1 > 1 - G) out.polis.push(area(Math.min(1, f1), 1 - G, 20.16 / 34));
+  if (f1 > 1 - p) out.polis.push(area(Math.min(1, f1), 1 - p, 9.16 / 34));
   if (0.5 - 9.15 / 105 >= f0 && 0.5 + 9.15 / 105 <= f1) {
     const c = [];
     for (let i = 0; i <= 40; i++) { const t = i / 40 * Math.PI * 2; c.push(P(0.5 + Math.cos(t) * 9.15 / 105, Math.sin(t) * 9.15 / 34)); }

@@ -173,6 +173,26 @@ const letraMin = L => (L.pc ? (L.H >= 720 ? 13 : 11) : L.regime === 'normal' ? 1
   }
   reg('L2 Visão tática: 13 telas × 6 formações × sem/com × 17 táticas', prob.length ? `${prob.length} de ${casos}: ${prob.slice(0, 3).join(' · ')}` : `0 sobrepostos em ${casos} casos; disco ≥ ${minD} px, número ≥ ${minLetra} px, afastamento ≤ ${maxAf.toFixed(1)} px`,
     '0 sobreposto (≥ 1 px), número ≥ 10, afastamento ≤ 4', prob.length === 0 && minLetra >= 10 && maxAf <= 4 + 1e-6);
+  // as áreas recortadas pela janela (revisão V9): com o bloco começando antes da linha de fundo, a grande área (e a pequena, se a
+  // janela começa antes dos 5,5 m) aparece aberta na borda de baixo, dentro do trapézio; na HEAD antes da correção, só com a janela
+  // na linha de fundo (f0 = 0)
+  {
+    const L = PP.layoutPrepartida(844, 390, {}, '4-3-3', 3);
+    const out = [];
+    let ok = true;
+    for (const fase of ['sem', 'com']) {
+      const V = PP.layoutVisao(L, PP.pontosVisao('4-3-3', null, fase));
+      const ln = PP.linhasCampinho(L, V.janela);
+      const C = L.campo, base = C.top + C.h;
+      // as áreas de baixo: polilinhas abertas que tocam a borda de baixo do campinho
+      const embaixo = ln.polis.filter(([p, fechado]) => !fechado && Math.abs(p[0][1] - base) < 0.5 && Math.abs(p[p.length - 1][1] - base) < 0.5);
+      const dentro = ln.polis.every(([p]) => p.every(([x, y]) => y >= C.top - 0.5 && y <= base + 0.5));
+      const quer = (V.janela.f0 < 16.5 / 105 ? 1 : 0) + (V.janela.f0 < 5.5 / 105 ? 1 : 0);
+      out.push(`${fase}: janela ${V.janela.f0.toFixed(3)}–${V.janela.f1.toFixed(3)} (${(V.janela.f0 * 105).toFixed(1)} m), áreas de baixo ${embaixo.length} de ${quer}`);
+      if (!(V.janela.f0 > 0 && quer >= 1 && embaixo.length === quer && dentro)) ok = false;
+    }
+    reg('L2 Visão tática: a grande e a pequena área recortadas pela janela (o bloco começa antes da linha de fundo)', out.join(' · '), 'a grande (e a pequena antes dos 5,5 m) embaixo, dentro do campinho', ok);
+  }
 }
 
 // ------------------------------------------------------------------------------------------------ L3
