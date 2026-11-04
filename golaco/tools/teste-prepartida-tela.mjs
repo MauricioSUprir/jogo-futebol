@@ -8,7 +8,8 @@
 //   E3  sem rolar e E4 nada encosta: 4 telas do celular (com o entalhe) e 6 do PC × a escalação, o adversário e as duas vistas
 //       (as fichas, os discos, a barra, a competição, o ≡, a info, os cantos, as abas; dentro da tela e da área segura); também
 //       com as fontes BLOQUEADAS (a letra do sistema); E4b os Pênaltis e o TM pro com o clássico e o estádio longos no celular (a
-//       info nunca cortada pelo CSS: revisão A3; as abas sem "…" e com o ícone igual na barra: A4/V3/V15)
+//       info nunca cortada pelo CSS: revisão A3; as abas sem "…" e com o ícone igual na barra: A4/V3/V15) e o Rumo ao Estrelato, também
+//       no regime mínimo (640×304, 568×280) e no PC; E5b a letra do resto nesses modos (o VOCÊ, a ordem, a competição: A5)
 //   E5  a letra: nome ≥ 10 px (568×320), ≥ 11 (outros celulares), ≥ 13 (PC ≥ 720); info ≥ 11; abas ≥ 13; o resto ≥ 11/12
 //   E6  os alvos: abas ≥ 177 × 40 (568), ≥ 200 × 44 (640+); ≡ ≥ 34/40/44; os times ≥ 30 × 56 (568) e 36 × 64; nada sob o entalhe
 //   E7* toques até o jogo: partida com o pré-jogo 2 (Jogar + Pular); sem pré-jogo 1 → o apito; Pênaltis 1; o requestFullscreen
@@ -175,7 +176,8 @@ const MEDIR = () => {
   for (const f of fichas) menorNome = Math.min(menorNome, f.letra);
   for (const e of raiz.querySelectorAll('#pp-info')) if (e.getClientRects().length) menorInfo = Math.min(menorInfo, parseFloat(getComputedStyle(e).fontSize));
   for (const e of raiz.querySelectorAll('.pp-aba-txt')) menorAba = Math.min(menorAba, parseFloat(getComputedStyle(e).fontSize));
-  for (const e of raiz.querySelectorAll('.pp-comp-txt, .pp-hora, .pp-forma, .pp-selo, .pp-geral, .pp-tnome b, .pp-tnome i, .pp-cmd span')) if (e.getClientRects().length) menorResto = Math.min(menorResto, parseFloat(getComputedStyle(e).fontSize));
+  // (também o VOCÊ, a ordem dos cobradores e as teclas da linha dos comandos: revisão A5)
+  for (const e of raiz.querySelectorAll('.pp-comp-txt, .pp-hora, .pp-forma, .pp-selo, .pp-geral, .pp-tnome b, .pp-tnome i, .pp-cmd span, .pp-cmd kbd, .pp-filete span, .pp-ordem')) if (e.getClientRects().length) menorResto = Math.min(menorResto, parseFloat(getComputedStyle(e).fontSize));
   const abas = [...raiz.querySelectorAll('.pp-aba')].map(R);
   const times = [...raiz.querySelectorAll('.pp-time')].map(R);
   return {
@@ -445,14 +447,16 @@ if (faz('telas')) {
   const MODOS_TELA = [
     ['Pênaltis', { q: `${Q}&prepartida=1&modo=penaltis&semente=5&hora=noite` }, ['meu', 'outro']],
     ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu', 'sem', 'com', 'armado']],
+    ['Rumo ao Estrelato', { q: `${Q}&prepartida=1&tm=${PED_B.id}&hora=dia`, pedido: PED_B }, ['meu']],
   ];
-  const TELAS_B = [[844, 390], [667, 375], [640, 360], [568, 320]];
+  // (as 4 do celular, o regime mínimo — o Android antes da tela cheia — e o PC 1280×720 para a letra do PC)
+  const TELAS_B = [[844, 390], [667, 375], [640, 360], [568, 320], [640, 304], [568, 280], [1280, 720]];
   for (const [nome, o, vistas] of MODOS_TELA) {
     const { navegador, pagina: pg, erros } = await abrirPagina({ w: 844, h: 390, toque: true, ...o });
     try {
       if (!(await temTela(pg))) { meta(`E4b ${nome}`, 'sem tela', 'a tela', false); continue; }
       await pg.evaluate(() => document.fonts.ready);
-      const falhas = [];
+      const falhas = [], letras = [];
       let casos = 0;
       for (const [w, h] of TELAS_B) {
         await pg.evaluate(c => document.documentElement.classList.toggle('entalhe-simulado', c), w === 844);
@@ -476,12 +480,15 @@ if (faz('telas')) {
           }
           casos++;
           for (const p of m.prob) falhas.push(`${w}×${h} ${v}: ${p}`);
+          if (v === 'meu') letras.push({ tela: `${w}×${h}`, pc: h > 480, resto: m.letras.resto });
         }
       }
+      const ruins = letras.filter(l => l.resto < (l.pc ? 12 : 11) - 0.01);
+      meta(`E5b a letra do resto (${nome}: o VOCÊ, a ordem, a competição, as teclas)`, letras.map(l => `${l.tela} ${l.resto.toFixed(1)}`).join(' · '), '≥ 11 no celular, ≥ 12 no PC', ruins.length === 0);
       // (os problemas agrupados pelo tipo, com as telas de cada um)
       const tipos = new Map();
       for (const f of falhas) { const i = f.indexOf(': '); const k = f.slice(i + 2); tipos.set(k, [...(tipos.get(k) ?? []), f.slice(0, i)]); }
-      meta(`E4b nada encosta nem é cortado pelo CSS (${nome}: ${TELAS_B.length} telas do celular)`, falhas.length ? `${falhas.length}: ${[...tipos].map(([k, v]) => `${k} [${v.join(', ')}]`).join(' · ')}` : `0 em ${casos} casos`, '0', falhas.length === 0);
+      meta(`E4b nada encosta nem é cortado pelo CSS (${nome}: ${TELAS_B.length - 1} telas do celular e o PC)`, falhas.length ? `${falhas.length}: ${[...tipos].map(([k, v]) => `${k} [${v.join(', ')}]`).join(' · ')}` : `0 em ${casos} casos`, '0', falhas.length === 0);
       meta(`S1 0 erros no console (telas ${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
   }

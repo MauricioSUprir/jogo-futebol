@@ -75,8 +75,9 @@ export function regime(W, H, sa = {}) {
 const CEL = {
   normal: { m: 8, mb: 6, barra: 36, g1: 4, info: 14, fInfo: 12, g2: 6, g3: 6, abas: 44, fAba: 15, fHora: 20, escudo: 28, menu: 40, gb: 6, fComp: 11 },
   compacto: { m: 6, mb: 6, barra: 30, g1: 3, info: 13, fInfo: 11, g2: 4, g3: 4, abas: 40, fAba: 14, fHora: 18, escudo: 24, menu: 34, gb: 5, fComp: 11 },
-  minimo: { m: 4, mb: 4, barra: 28, g1: 2, info: 13, fInfo: 11, g2: 2, g3: 2, abas: 36, fAba: 14, fHora: 18, escudo: 22, menu: 34, gb: 5, fComp: 10 },
-  emergencia: { m: 4, mb: 4, barra: 28, g1: 0, info: 0, fInfo: 11, g2: 3, g3: 2, abas: 36, fAba: 13, fHora: 18, escudo: 22, menu: 34, gb: 5, fComp: 10 },
+  // (a competição com 11 px também no mínimo e na emergência: a letra mínima do celular — revisão A5)
+  minimo: { m: 4, mb: 4, barra: 28, g1: 2, info: 13, fInfo: 11, g2: 2, g3: 2, abas: 36, fAba: 14, fHora: 18, escudo: 22, menu: 34, gb: 5, fComp: 11 },
+  emergencia: { m: 4, mb: 4, barra: 28, g1: 0, info: 0, fInfo: 11, g2: 3, g3: 2, abas: 36, fAba: 13, fHora: 18, escudo: 22, menu: 34, gb: 5, fComp: 11 },
 };
 
 /**
