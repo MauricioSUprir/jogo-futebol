@@ -16,11 +16,12 @@
 //       chamado DENTRO do handler do Jogar (toque)
 //   E9  o som: o toque no Jogar liga o contexto em ≤ 1 s; o apito só depois
 //   E10* teclado: o foco inicial no Jogar; ←/→; 40 Tabs presos; Enter na Visão tática e no Personalizar NÃO começa; Esc e P nunca
-//       levam ao jogo (na base, Esc no pré-jogo = o jogo); Q/E trocam o time; o ≡ abre a pausa "antes do jogo" e volta à tela
+//       levam ao jogo (na base, Esc no pré-jogo = o jogo); Q/E trocam o time; o ≡ abre a pausa "antes do jogo" — a tela some atrás
+//       dela, só o véu (V6) — e volta à tela
 //   E11* controle (getGamepads falso): a cruz anda; Ⓐ na Visão tática não começa; Ⓑ volta; Ⓨ abre o Personalizar; LB/RB; Start = ≡
 //   E11b* com o pré-jogo: o Ⓐ segurado 6 quadros no Jogar começa as cenas do 1º plano (não pula o bloco; revisão A1)
 //   E12 leitor de tela: o diálogo com nome e aria-modal; a barra de ferramentas; a lista com a nota; o fundo inert
-//   E13* Personalizar: abre o editor "antes do jogo"; o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
+//   E13* Personalizar: abre o editor "antes do jogo" sem a tela atrás dele (V5); o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
 //       no cortejo e o lado de fora NÃO remontado
 //   E14 por modo: TM "Simular partida" só no 2º toque → tm3d:fim com o resultado do motor 3D; Rumo ao Estrelato sem Personalizar,
@@ -109,6 +110,9 @@ const avancar = (pg, ms, hz = 60) => pg.evaluate(([ms, hz]) => { const g = windo
 const estado = pg => pg.evaluate(() => { const g = window.__golaco; return { pp: g.prepartida?.estado ?? null, aberta: !!g.prepartida?.aberta, tick: g.mundo.tick, passos: g.passos, menu: g.estado().menuAberto, editor: g.editor.aberto, pre: g.prejogo ? { ativo: g.prejogo.ativo, fase: g.prejogo.fase, bloco: g.prejogo.bloco } : null, foco: document.activeElement?.closest?.('#prepartida') ? (document.activeElement.dataset.aba ?? document.activeElement.dataset.pp ?? 'outro') : (document.activeElement?.id || document.activeElement?.tagName) }; });
 const tecla = async (pg, k, n = 1) => { for (let i = 0; i < n; i++) await pg.keyboard.press(k); await quadros(pg, 1); };
 
+/** As peças da tela que se veem (visibility e caixa): com a pausa ou o editor por cima, nenhuma (só o véu; revisões V5/V6). */
+const SEL_ATRAS = ['.pp-menu', '.pp-comp', '.pp-barra', '#pp-info', '.pp-campo .pp-ficha', '.pp-abas', '.pp-cmd', '.pp-canto-esq'];
+const telaAtras = pg => pg.evaluate(sels => sels.filter(sel => { const e = document.querySelector('#prepartida ' + sel); return e && e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden'; }), SEL_ATRAS);
 /** A régua da tela (na página): rolagem, encostos, cortes, área segura, letras, alvos. */
 const MEDIR = () => {
   const R = e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
@@ -231,11 +235,14 @@ if (faz('pc')) {
       // P = ≡: a pausa "antes do jogo"
       await tecla(pg, 'KeyP');
       const pausa = await pg.evaluate(() => ({ aberta: window.__golaco.estado().menuAberto, antes: document.getElementById('menu').dataset.antes ?? null, voltar: document.querySelector('#btn-continuar .item-txt')?.textContent, editar: !!document.querySelector('#menu [data-cmd="editar-time"]')?.getClientRects().length, replay: !!document.querySelector('#menu [data-cmd="replay"]')?.getClientRects().length }));
+      pausa.atras = await telaAtras(pg);
       await tecla(pg, 'Escape');
       await avancar(pg, 100);
       e = await estado(pg);
-      k.push(['P → pausa', JSON.stringify(pausa)], ['Esc na pausa', `menu ${e.menu}, aberta ${e.aberta}, tick ${e.tick}, foco ${e.foco}`]);
-      const okPausa = pausa.aberta && pausa.antes === '1' && pausa.voltar === 'Voltar' && !pausa.editar && !pausa.replay && !e.menu && e.aberta && e.tick === 0 && e.foco === 'menu';
+      const atrasDepois = await telaAtras(pg);
+      k.push(['P → pausa', JSON.stringify(pausa)], ['Esc na pausa', `menu ${e.menu}, aberta ${e.aberta}, tick ${e.tick}, foco ${e.foco}, a tela à vista ${atrasDepois.join(',') || 'nada'}`]);
+      // (com a pausa aberta a tela some atrás dela — só o véu; fechada, tudo volta: revisão V6)
+      const okPausa = pausa.aberta && pausa.antes === '1' && pausa.voltar === 'Voltar' && !pausa.editar && !pausa.replay && pausa.atras.length === 0 && !e.menu && e.aberta && e.tick === 0 && e.foco === 'menu' && atrasDepois.length >= 5;
       meta('E10* teclado: foco no Jogar, ←/→, Enter na Visão tática não começa, Esc volta um nível, 80 Tabs presos, Q/E, P = ≡ "antes do jogo" e Esc volta à tela', k.map(x => `${x[0]}: ${x[1]}`).join(' · '),
         'jogar → visao; sem/com; Esc → escalação; 0 fora; time 1 ↔ 0; pausa antes e de volta com o foco no ≡', k[0][1] === 'jogar' && k[1][1] === 'visao' && okVisao && okCom && okEsc && okEsc2 && fora === 0 && okE && okVolta && okPausa);
       // E12 leitor de tela
@@ -259,7 +266,9 @@ if (faz('pc')) {
       await pg.evaluate(() => { const b = document.querySelector('#prepartida [data-aba="personalizar"]'); b.focus(); });
       await tecla(pg, 'Enter');
       await pg.waitForFunction(() => window.__golaco.editor.aberto, null, { timeout: 15000 }).catch(() => {});
+      await avancar(pg, 50);
       const ed = await pg.evaluate(() => ({ aberto: window.__golaco.editor.aberto, contagem: document.querySelector('#editar-time .ed-contagem')?.textContent ?? '', tick: window.__golaco.mundo.tick, aberta: window.__golaco.prepartida.aberta }));
+      ed.atras = await telaAtras(pg);
       await pg.evaluate(() => window.__golaco.editor.voltar());
       await avancar(pg, 100);
       e = await estado(pg);
@@ -280,9 +289,9 @@ if (faz('pc')) {
       }, edicao);
       const nodeE = hashNode(criarPartida({ semente: SEM, times: { 0: vagasE } }), 600);
       meta('E13* Personalizar: o editor "antes do jogo", o PRONTO volta à tela no Personalizar; a escalação sem substituição e o hash = Node criarPartida({times})',
-        `editor ${ed.aberto} ("${ed.contagem}"), tick ${ed.tick}; depois: aberta ${e.aberta}, foco ${e.foco}; escalação: feitas ${depois.feitas}, saiu ${depois.saiu}, pendente ${depois.pendente}, GOL ${depois.gol}, 22 em campo ${depois.em22} e na ficha ${depois.ficha22 && depois.fichaDom}, ${depois.forma}; hash ${hexa(depois.hash)} × Node ${hexa(nodeE.h0)}`,
-        'editor aberto "Antes do jogo…", tick 0; foco personalizar; 0, 0, null, 12, true, 4-4-2, iguais',
-        ed.aberto && /Antes do jogo/.test(ed.contagem) && ed.tick === 0 && ed.aberta && e.aberta && e.foco === 'personalizar' && depois.ok && depois.feitas === 0 && depois.saiu === 0 && depois.pendente === null && depois.gol === 12 && depois.em22 && depois.ficha22 && depois.fichaDom && depois.forma === '4-4-2' && depois.hash === nodeE.h0);
+        `editor ${ed.aberto} ("${ed.contagem}"), tick ${ed.tick}, a tela à vista atrás dele: ${ed.atras.join(',') || 'nada'}; depois: aberta ${e.aberta}, foco ${e.foco}; escalação: feitas ${depois.feitas}, saiu ${depois.saiu}, pendente ${depois.pendente}, GOL ${depois.gol}, 22 em campo ${depois.em22} e na ficha ${depois.ficha22 && depois.fichaDom}, ${depois.forma}; hash ${hexa(depois.hash)} × Node ${hexa(nodeE.h0)}`,
+        'editor aberto "Antes do jogo…", tick 0, nada da tela atrás; foco personalizar; 0, 0, null, 12, true, 4-4-2, iguais',
+        ed.aberto && /Antes do jogo/.test(ed.contagem) && ed.tick === 0 && ed.aberta && ed.atras.length === 0 && e.aberta && e.foco === 'personalizar' && depois.ok && depois.feitas === 0 && depois.saiu === 0 && depois.pendente === null && depois.gol === 12 && depois.em22 && depois.ficha22 && depois.fichaDom && depois.forma === '4-4-2' && depois.hash === nodeE.h0);
       // E7: o Jogar (Enter no Jogar) sem pré-jogo → o apito; 600 passos = Node
       await pg.evaluate(() => document.querySelector('#prepartida [data-aba="jogar"]').focus());
       await tecla(pg, 'Enter');

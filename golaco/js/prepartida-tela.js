@@ -600,7 +600,7 @@ export function criarPrepartida(opc) {
       st.foco = Math.max(0, st.abas.findIndex(a => a.id === (o.foco ?? st.abas[0]?.id)));
       st.aberta = true;
       raiz.hidden = false;
-      raiz.classList.remove('saindo');
+      raiz.classList.remove('saindo', 'coberta');
       raiz.classList.add('entrando');
       document.documentElement.classList.add('prepartida');
       refazer(false);
@@ -621,6 +621,7 @@ export function criarPrepartida(opc) {
       if (!st.aberta) return;
       st.aberta = false;
       st.saindo = true;
+      raiz.classList.remove('coberta');
       document.documentElement.classList.remove('prepartida');
       if (raiz.contains(document.activeElement)) document.activeElement.blur();
       const fim = () => { raiz.hidden = true; raiz.classList.remove('saindo'); raiz.innerHTML = ''; st.saindo = null; };
@@ -631,6 +632,13 @@ export function criarPrepartida(opc) {
     },
     /** Refaz o layout (resize, a fonte que chegou). */
     layout() { refazer(); },
+    /**
+     * A pausa, a Ajuda, o editor ou um submenu do Livre por cima (true): a tela some e fica só o véu sobre o 3D — as duas camadas
+     * de interface brigavam (o ✕ da pausa sobre o ≡, duas linhas de comandos, a competição duas vezes, o texto da tela atrás do
+     * editor: revisões V5/V6). false: de volta (antes do foco).
+     */
+    cobrir(v) { raiz.classList.toggle('coberta', !!v); },
+    get coberta() { return raiz.classList.contains('coberta'); },
     /** Uma vez por quadro: o controle (Y, X, R3, LB, RB) e o armado que expira. */
     atualizar() {
       if (!st.aberta || st.saindo) return;

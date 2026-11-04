@@ -3405,6 +3405,8 @@ function acaoPrepartida(id) {
     case 'personalizar':
       ppPersonalizar = true;
       if (!abrirEditor()) ppPersonalizar = false;
+      // (o editor por cima: a tela some atrás dele, só o véu — revisão V5; o editor que ainda baixa cobre no quadro em que abrir)
+      pp?.cobrir(!!editor?.aberto);
       break;
     // (o "Voltar" da pausa devolve o foco ao ≡)
     case 'opcoes': ppVolta = 'menu'; abrirMenuDaTela(() => hud.abrirMenu(true)); break;
@@ -3432,6 +3434,8 @@ function abrirMenuDaTela(abrir) {
   entrada?.soltarTudo();
   entrada?.bloquear?.(false);
   ppOcupado = true;
+  // (a pausa sozinha sobre o 3D e o véu, como sobre o jogo: a tela some atrás dela — revisão V6)
+  pp?.cobrir(true);
   abrir();
 }
 /**
@@ -3463,6 +3467,8 @@ function acaoPrepartidaOnline(id) {
 function voltarParaTela() {
   if (!pp?.aberta || hud.menuAberto || hud.ajudaAberta || editor?.aberto) return;
   ppOcupado = false;
+  // (a tela de volta ANTES do foco: o ≡ escondido não recebe foco)
+  pp.cobrir(false);
   // (a entrada bloqueada de novo e o fundo inert de novo: a pausa, ao fechar, tira o inert dos botões de toque e das cenas)
   entrada?.soltarTudo();
   entrada?.bloquear?.(true);
@@ -3487,6 +3493,8 @@ function quadroPrepartida(dtReal, agoraMs, desenhar) {
   if (ppOcupado && !ocup) voltarParaTela();
   ppOcupado = ocup;
   if (!pp?.aberta) return;
+  // (a tela atrás da pausa, da Ajuda ou do editor: só o véu — revisões V5/V6; a cada quadro também cobre o editor que chegou depois)
+  pp.cobrir(ocup);
   if (mundo.online && PAG_ONLINE) { quadroOnlineTela(agoraMs); if (!pp.aberta) return; }
   pp.atualizar(agoraMs);
   const emPe = retratoBloqueado();

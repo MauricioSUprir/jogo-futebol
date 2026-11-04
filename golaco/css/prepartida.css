@@ -20,6 +20,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida[hidden] { display: none; }
 #prepartida.entrando { opacity: 0; }
 #prepartida.saindo { opacity: 0; transition-duration: 0.25s; pointer-events: none; }
+/* com a pausa, a Ajuda ou o editor por cima, só o véu sobre o 3D (prepartida-tela.js cobrir; revisões V5/V6) */
+#prepartida.coberta > :not(.pp-veu) { visibility: hidden; }
 #prepartida .pp-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* o véu (sem backdrop-filter): preto no alto (barra e info), mais leve no meio (o campinho tem o fundo dele), escuro embaixo (abas) */
 #prepartida .pp-veu {
