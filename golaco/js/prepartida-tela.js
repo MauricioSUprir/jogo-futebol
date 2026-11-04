@@ -263,7 +263,8 @@ export function criarPrepartida(opc) {
         const q = V.discos.find(x => x.vaga === f.vaga);
         if (!q) return;
         const cam = f.gol ? T.camisaGol : T.camisa;
-        h += `<div class="pp-disco${f.gol ? ' gol' : ''}${st.discoFoco === i ? ' com-nome' : ''}" data-vaga="${esc(f.vaga)}" data-i="${i}" style="left:${r1(q.x)}px;top:${r1(q.y)}px;--d:${V.d}px;--dl:${V.letra}px;--cor:${esc(cam?.corpo ?? '#22c55e')};--cor-txt:${esc(cam?.texto ?? '#050807')}">`
+        // (o disco recebe o foco do teclado e do controle: papel e nome para o leitor de tela — revisão A6)
+        h += `<div class="pp-disco${f.gol ? ' gol' : ''}${st.discoFoco === i ? ' com-nome' : ''}" role="button" tabindex="-1" aria-label="${esc(`${f.num} ${f.nome}, ${f.pos}`)}" data-vaga="${esc(f.vaga)}" data-i="${i}" style="left:${r1(q.x)}px;top:${r1(q.y)}px;--d:${V.d}px;--dl:${V.letra}px;--cor:${esc(cam?.corpo ?? '#22c55e')};--cor-txt:${esc(cam?.texto ?? '#050807')}">`
           + `<b>${esc(f.num)}</b><span class="pp-etq">${esc(f.nome)}</span></div>`;
       });
       ce.innerHTML = ''; cd.innerHTML = '';
@@ -287,7 +288,16 @@ export function criarPrepartida(opc) {
       cd.innerHTML = T.texto ? '' : `<div class="pp-geral">GERAL ${T.geral}</div><div class="pp-est" aria-hidden="true">${estrelasTxt(T.estrelas)}</div>`;
     }
     fichasEl.innerHTML = h;
-    fichasEl.setAttribute('aria-hidden', 'true');
+    // as fichas são só desenho (a lista .pp-lista diz o mesmo ao leitor de tela); os discos da Visão tática recebem o foco: fora do
+    // aria-hidden, num grupo com o nome da vista (revisão A6: o foco caía dentro de um bloco aria-hidden)
+    if (st.V) {
+      fichasEl.removeAttribute('aria-hidden');
+      fichasEl.setAttribute('role', 'group');
+      fichasEl.setAttribute('aria-label', `${st.visao === 'sem' ? 'Sem a bola' : 'Com a bola'}: ${T.nome}`);
+    } else {
+      fichasEl.setAttribute('aria-hidden', 'true');
+      fichasEl.removeAttribute('role'); fichasEl.removeAttribute('aria-label');
+    }
     campo.style.setProperty('--fs-forma', `${L.cantos.forma}px`);
     campo.style.setProperty('--fs-selo', `${L.cantos.selo}px`);
     campo.classList.toggle('editavel', st.visao === 'escalacao' && st.abas.some(a => a.id === 'personalizar'));
@@ -391,7 +401,7 @@ export function criarPrepartida(opc) {
     const naBarra = barra.includes(ativo), noDisco = discos.includes(ativo);
     if (noDisco) {
       const v = vizinho(discos, ativo, dir);
-      if (v) { mostrarNomeDisco(v); focarEl(v); return; }
+      if (v) { mostrarNomeDisco(v, false); focarEl(v); return; }
       if (dir === 'cima') { st.linhaFoco = 'barra'; focarEl(barra.find(b => b.classList.contains('pp-time')) ?? barra[0]); limparNomeDisco(); return; }
       if (dir === 'baixo') { limparNomeDisco(); focarAba(st.foco); }
       return;
@@ -401,7 +411,7 @@ export function criarPrepartida(opc) {
       if (dir === 'esq' && i > 0) focarEl(barra[i - 1]);
       else if (dir === 'dir' && i < barra.length - 1) focarEl(barra[i + 1]);
       else if (dir === 'baixo') {
-        if (discos.length) { const v = maisPerto(discos, ativo); mostrarNomeDisco(v); focarEl(v); } else focarAba(st.foco);
+        if (discos.length) { const v = maisPerto(discos, ativo); mostrarNomeDisco(v, false); focarEl(v); } else focarAba(st.foco);
       }
       return;
     }
@@ -410,7 +420,7 @@ export function criarPrepartida(opc) {
     if (dir === 'esq') focarAba(st.foco - 1);
     else if (dir === 'dir') focarAba(st.foco + 1);
     else if (dir === 'cima') {
-      if (discos.length) { const v = maisPerto(discos, ativo); mostrarNomeDisco(v); focarEl(v); return; }
+      if (discos.length) { const v = maisPerto(discos, ativo); mostrarNomeDisco(v, false); focarEl(v); return; }
       st.linhaFoco = 'barra';
       focarEl(maisPerto(barra, ativo));
     }
@@ -437,10 +447,11 @@ export function criarPrepartida(opc) {
     }
     return m;
   }
-  function mostrarNomeDisco(el) {
+  /** O nome do disco à vista; anunciar = false quando o foco vai a ele (o leitor de tela já lê o aria-label do disco). */
+  function mostrarNomeDisco(el, anunciar = true) {
     for (const d of discosEl()) d.classList.toggle('com-nome', d === el);
     st.discoFoco = el ? +el.dataset.i : -1;
-    if (el) { el.tabIndex = -1; viva(`${el.querySelector('b').textContent} ${el.querySelector('.pp-etq').textContent}`); }
+    if (el && anunciar) viva(`${el.querySelector('b').textContent} ${el.querySelector('.pp-etq').textContent}`);
   }
   function limparNomeDisco() { for (const d of discosEl()) d.classList.remove('com-nome'); st.discoFoco = -1; }
   function viva(t) { const v = raiz.querySelector('#pp-vivo'); if (v) v.textContent = t; }
@@ -483,10 +494,13 @@ export function criarPrepartida(opc) {
   }
   function proximaVista() {
     if (st.dados?.disputa) return;
+    // (o foco num disco que vai sumir volta à aba: não cai no body — revisão A6)
+    const noDisco = !!document.activeElement?.classList?.contains('pp-disco');
     st.visao = st.visao === 'escalacao' ? 'sem' : st.visao === 'sem' ? 'com' : 'escalacao';
     st.discoFoco = -1;
     raiz.dataset.visao = st.visao;
     desenharCampo(); escreverInfo(); marcarAbas();
+    if (noDisco) focarAba(st.foco);
     viva(st.visao === 'escalacao' ? 'Escalação' : `${st.visao === 'sem' ? 'Sem a bola' : 'Com a bola'}: ${textoTatica(st.dados.times[st.time].tatica).join(', ')}`);
   }
   function trocarTime(t) {
@@ -553,7 +567,9 @@ export function criarPrepartida(opc) {
 
   // o teclado (na captura da janela, antes da entrada; só com a tela aberta e nada por cima)
   window.addEventListener('keydown', e => {
-    if (!st.aberta || st.saindo || opc.ocupado() || e.ctrlKey || e.altKey || e.metaKey) return;
+    if (!st.aberta) return;
+    if (!st.teclaVista) { st.teclaVista = true; marcarMeio(); }
+    if (st.saindo || opc.ocupado() || e.ctrlKey || e.altKey || e.metaKey) return;
     const c = e.code;
     let usado = true;
     if (c === 'Tab') tab(e.shiftKey);
@@ -581,7 +597,10 @@ export function criarPrepartida(opc) {
   }
 
   function marcarMeio() {
-    const m = opc.meio?.() ?? 'teclado';
+    // (no aparelho de toque, antes de qualquer tecla, o meio é o toque — a entrada começa em 'teclado' — e o toque não tem o anel de
+    // foco: a especificação §5, "o verde da aba do foco fica no Jogar"; revisão A6)
+    const m0 = opc.meio?.() ?? 'teclado';
+    const m = m0 === 'teclado' && !st.teclaVista && opc.comToque?.() ? 'toque' : m0;
     if (raiz.dataset.meio !== m) { raiz.dataset.meio = m; if (st.L) marcarAbas(); }
   }
 

@@ -37,6 +37,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
   -webkit-tap-highlight-color: transparent; touch-action: manipulation;
 }
 #prepartida .pp-btn:focus-visible { outline: 2px solid var(--pp-verde-cl); outline-offset: 2px; }
+/* (no toque não há anel de foco — o verde da aba do foco basta; especificação §5, revisão A6) */
+#prepartida[data-meio="toque"] .pp-btn:focus-visible { outline: none; }
 #prepartida .pp-menu, #prepartida .pp-canto {
   position: absolute; display: grid; place-items: center; border-radius: 10px; background: rgba(5, 8, 7, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.16); color: #fff;

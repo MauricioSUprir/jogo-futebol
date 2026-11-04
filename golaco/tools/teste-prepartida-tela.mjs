@@ -20,7 +20,9 @@
 //       dela, só o véu (V6) — e volta à tela
 //   E11* controle (getGamepads falso): a cruz anda; Ⓐ na Visão tática não começa; Ⓑ volta; Ⓨ abre o Personalizar; LB/RB; Start = ≡
 //   E11b* com o pré-jogo: o Ⓐ segurado 6 quadros no Jogar começa as cenas do 1º plano (não pula o bloco; revisão A1)
-//   E12 leitor de tela: o diálogo com nome e aria-modal; a barra de ferramentas; a lista com a nota; o fundo inert
+//   E12 leitor de tela: o diálogo com nome e aria-modal; a barra de ferramentas; a lista com a nota; o fundo inert; E12b o disco da
+//       Visão tática com o foco fora do aria-hidden, com papel e nome, e o Esc devolvendo o foco à aba; E12c no toque, sem o anel de
+//       foco ao abrir (revisão A6)
 //   E13* Personalizar: abre o editor "antes do jogo" sem a tela atrás dele (V5); o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
 //       no cortejo e o lado de fora NÃO remontado
@@ -221,7 +223,13 @@ if (faz('pc')) {
       await tecla(pg, 'Enter'); let e = await estado(pg); k.push(['Enter na Visão tática', `${e.pp.visao}, tick ${e.tick}, aberta ${e.aberta}`]);
       const okVisao = e.pp.visao === 'sem' && e.tick === 0 && e.aberta;
       await tecla(pg, 'Enter'); e = await estado(pg); const okCom = e.pp.visao === 'com';
+      // E12b (revisão A6): ↑ das abas leva o foco a um disco da Visão tática — fora de qualquer aria-hidden, com papel e nome — e o Esc
+      // (a escalação: os discos somem) devolve o foco à aba, não ao body
+      await tecla(pg, 'ArrowUp');
+      const disco = await pg.evaluate(() => { const a = document.activeElement; return { disco: !!a?.classList?.contains('pp-disco'), escondido: !!a?.closest?.('[aria-hidden="true"]'), role: a?.getAttribute('role') ?? null, nome: a?.getAttribute('aria-label') ?? '' }; });
       await tecla(pg, 'Escape'); e = await estado(pg); k.push(['Esc', e.pp.visao]);
+      meta('E12b leitor de tela na Visão tática: o disco com o foco fora do aria-hidden, com papel e nome; o Esc devolve o foco à aba', `${JSON.stringify(disco)}; depois do Esc: ${e.pp.visao}, foco ${e.foco}`,
+        'disco, não escondido, button, "N Nome, POS"; escalacao, foco visao', disco.disco && !disco.escondido && disco.role === 'button' && /^\S+ .+, [A-Z]{2,3}$/.test(disco.nome) && e.pp.visao === 'escalacao' && e.foco === 'visao');
       const okEsc = e.pp.visao === 'escalacao' && e.aberta && e.tick === 0;
       await tecla(pg, 'Escape'); e = await estado(pg); const okEsc2 = e.aberta && e.tick === 0 && !e.menu;
       // 40 Tabs e 40 Shift+Tabs: nunca saem
@@ -333,6 +341,9 @@ if (faz('cel')) {
     const ab = tem ? await pg.evaluate(() => ({ vis: getComputedStyle(document.getElementById('prejogo')).visibility, chama: getComputedStyle(document.querySelector('.pj-abertura')).display })) : null;
     meta('E1 a tela por cima da abertura calada (celular, ?prejogo=1)', tem ? `fundo ${e0.pp.fundo}, pré-jogo ${e0.pre.fase}, a camada da abertura ${ab.vis}` : 'sem tela', 'abertura, abertura, hidden', tem && e0.pp.fundo === 'abertura' && e0.pre.fase === 'abertura' && ab.vis === 'hidden');
     if (tem) {
+      // E12c (revisão A6): no toque não há anel de foco (especificação §5: o verde da aba do foco basta)
+      const anel = await pg.evaluate(() => { const a = document.activeElement, cs = getComputedStyle(a); return { foco: a?.dataset?.aba ?? a?.tagName, estilo: cs.outlineStyle, largura: cs.outlineWidth, meio: document.getElementById('prepartida').dataset.meio }; });
+      meta('E12c no toque, sem anel de foco ao abrir (o foco no Jogar, só o verde da aba)', JSON.stringify(anel), 'jogar, sem contorno', anel.foco === 'jogar' && (anel.estilo === 'none' || anel.largura === '0px'));
       // E15 desenho e 30 qps
       await pg.waitForTimeout(1500);
       const dz = await pg.evaluate(async () => { const g = window.__golaco; const d0 = g.prepartida.desenhos, t0 = performance.now(); await new Promise(r => setTimeout(r, 2000)); return { qps: (g.prepartida.desenhos - d0) / ((performance.now() - t0) / 1000), ...g.prejogo.desenho }; });
