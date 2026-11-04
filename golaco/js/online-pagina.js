@@ -7,6 +7,7 @@
 // e recebe {tipo: 'tm3d:porta', porta} — nela chegam {t:'j', b} (pacote do jogo), {t:'c', m} (controle) e {t:'estado', ...};
 // saem {t:'j', b} (transferido), {t:'c', m}, {t:'religar'} e {t:'estado?'}.
 import * as O from './online.js';
+import { aoTocar } from './toque-botao.js';
 
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
@@ -185,20 +186,25 @@ export function criarPaginaOnline(opc) {
     const acoes = document.getElementById('menu-acoes');
     if (!acoes || document.getElementById('btn-online-pausar')) return;
     bPausar = el('button', { type: 'button', classe: 'btn', id: 'btn-online-pausar' });
-    bPausar.append('Pausar a partida ', el('small', { texto: `${pausasRestam} restantes` }));
+    bPausar.append('Pausar a partida ', el('small', { classe: 'estado', texto: `${pausasRestam} restantes` }));
     bSair = el('button', { type: 'button', classe: 'btn', id: 'btn-online-sair' });
-    bSair.append('Sair da partida ', el('small', { texto: 'conta como derrota' }));
-    bPausar.addEventListener('click', () => ao.menuPausar?.());
+    const descSair = el('small', { classe: 'desc', id: 'desc-online-sair', texto: 'conta como derrota' });
+    bSair.append('Sair da partida ', descSair);
+    bSair.setAttribute('aria-describedby', 'desc-online-sair');
+    // pelo toque, no pointerup do MESMO dedo (aoTocar: com outro dedo parado na tela o click não vem); mouse e teclado pelo click
+    aoTocar(bPausar, () => { if (!bPausar.disabled) ao.menuPausar?.(); });
     // sair pede confirmação: o 1º toque arma (3 s), o 2º sai
-    bSair.addEventListener('click', () => {
+    aoTocar(bSair, () => {
       const agora = performance.now();
       if (agora - sairArmado < 3000) { sairArmado = 0; ao.menuSair?.(); return; }
       sairArmado = agora;
       bSair.firstChild.textContent = 'Toque de novo para sair ';
       setTimeout(() => { if (performance.now() - sairArmado >= 2900) bSair.firstChild.textContent = 'Sair da partida '; }, 3000);
     });
-    const ref = acoes.querySelector('[data-cmd="editar-time"]');
-    if (ref) ref.after(bPausar, bSair); else acoes.append(bPausar, bSair);
+    // a pausa do item 58: o Pausar logo depois do "Voltar ao jogo" e o Sair por último
+    const cont = document.getElementById('btn-continuar');
+    if (cont && cont.parentElement === acoes) cont.after(bPausar); else acoes.prepend(bPausar);
+    acoes.append(bSair);
   }
   function marcarMenu() {
     if (!bPausar) return;
