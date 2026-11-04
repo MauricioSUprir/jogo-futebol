@@ -29,34 +29,38 @@ import * as vConexoes from './views/conexoes.js';
 import * as vCriador from './views/criador.js';
 import * as vTermos from './views/termos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
+import { ic, icHtml } from './icones.js';
 import { temServidor, buscarEu, garantirSessao, manterServidorAcordado } from './api.js';
 
-/* g = a seção do menu lateral · tab = vai na barra de baixo do celular (ta = rótulo curto).
+/* Menu lateral enxuto: 4 atalhos no topo, seções que abrem e fecham (só a da
+   tela atual vem aberta) e a conta no rodapé. g = seção · ic = ícone de traço
+   (js/icones.js) · tab = vai na barra de baixo do celular (ta = rótulo curto).
    O 1º item é a tela de entrada do app: o chat. */
+export const GRUPOS = { Escola: 'escola', Estudar: 'aprender', Progresso: 'grafico' };
 export const MENU = [
-  { r: 'ai', i: '💬', t: 'MindTrack AI', ta: 'Chat', v: vAI, tab: true },
-  { r: 'inicio', i: '🏠', t: 'Início', v: vInicio, tab: true },
+  { r: 'ai', ic: 'chat', i: '💬', t: 'MindTrack AI', ta: 'Chat', v: vAI, tab: true },
+  { r: 'inicio', ic: 'casa', i: '🏠', t: 'Início', v: vInicio, tab: true },
+  { r: 'agenda', ic: 'agenda', i: '📅', t: 'Agenda', v: vAgenda, tab: true },
+  { r: 'tarefas', ic: 'tarefas', i: '✅', t: 'Tarefas', v: vTarefas },
 
-  { g: 'Escola', r: 'escola', i: '🏫', t: 'Minha Escola', ta: 'Escola', v: vEscola, tab: true },
-  { g: 'Escola', r: 'agenda', i: '📅', t: 'Agenda', v: vAgenda, tab: true },
-  { g: 'Escola', r: 'tarefas', i: '✅', t: 'Tarefas', v: vTarefas },
-  { g: 'Escola', r: 'provas', i: '🎯', t: 'Provas e testes', v: vProvas },
-  { g: 'Escola', r: 'materias', i: '📚', t: 'Matérias', v: vMaterias },
-  { g: 'Escola', r: 'biblioteca', i: '📂', t: 'Materiais', v: vBiblioteca },
+  { g: 'Escola', r: 'escola', ic: 'escola', i: '🏫', t: 'Minha Escola', ta: 'Escola', v: vEscola, tab: true },
+  { g: 'Escola', r: 'provas', ic: 'provas', i: '🎯', t: 'Provas e testes', v: vProvas },
+  { g: 'Escola', r: 'materias', ic: 'materias', i: '📚', t: 'Matérias', v: vMaterias },
+  { g: 'Escola', r: 'biblioteca', ic: 'materiais', i: '📂', t: 'Materiais', v: vBiblioteca },
 
-  { g: 'Estudar', r: 'foco', i: '⏱️', t: 'Foco', v: vFoco, tab: true },
-  { g: 'Estudar', r: 'aprender', i: '🧠', t: 'Aprender', v: vAprender },
-  { g: 'Estudar', r: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
-  { g: 'Estudar', r: 'flashcards', i: '🃏', t: 'Flashcards', v: vFlash },
-  { g: 'Estudar', r: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
-  { g: 'Estudar', r: 'relogio', i: '⏲️', t: 'Cronômetro e timer', v: vRelogio },
+  { g: 'Estudar', r: 'foco', ic: 'foco', i: '⏱️', t: 'Foco', v: vFoco, tab: true },
+  { g: 'Estudar', r: 'aprender', ic: 'aprender', i: '🧠', t: 'Aprender', v: vAprender },
+  { g: 'Estudar', r: 'questoes', ic: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
+  { g: 'Estudar', r: 'flashcards', ic: 'cartas', i: '🃏', t: 'Flashcards', v: vFlash },
+  { g: 'Estudar', r: 'revisao', ic: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
+  { g: 'Estudar', r: 'relogio', ic: 'relogio', i: '⏲️', t: 'Cronômetro e timer', v: vRelogio },
 
-  { g: 'Progresso', r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
-  { g: 'Progresso', r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
+  { g: 'Progresso', r: 'desempenho', ic: 'grafico', i: '📊', t: 'Desempenho', v: vDesempenho },
+  { g: 'Progresso', r: 'conquistas', ic: 'trofeu', i: '🏆', t: 'Conquistas', v: vConquistas },
 
-  { g: 'Conta', r: 'conexoes', i: '🔗', t: 'Conexões', v: vConexoes },
-  { g: 'Conta', r: 'planos', i: '✨', t: 'MindTrack Pro', v: vPlanos },
-  { g: 'Conta', r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
+  { conta: true, r: 'conexoes', ic: 'link', i: '🔗', t: 'Conexões', v: vConexoes },
+  { conta: true, r: 'planos', ic: 'estrela', i: '✨', t: 'MindTrack Pro', v: vPlanos },
+  { conta: true, r: 'config', ic: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
   { r: 'termos', i: '📄', t: 'Termos e privacidade', v: vTermos, oculto: true },
   // rota escondida: não entra no menu (ver views/criador.js)
   { r: 'criador', i: '🛠️', t: 'Área do criador', v: vCriador, oculto: true },
@@ -65,30 +69,50 @@ export const MENU = [
 export function irPara(rota) { location.hash = rota.startsWith('#') ? rota : `#/${rota}`; }
 
 /* ---------- montagem do menu ---------- */
+const abertos = new Set();            // seções que o aluno abriu nesta visita
+const link = (m) => h('a', { href: `#/${m.r}`, 'data-r': m.r }, ic(m.ic), h('span', {}, m.t));
+
 function montarMenu() {
   const nav = $('#sideNav');
-  const itens = [];
-  let grupo = null;
-  for (const m of MENU.filter((x) => !x.oculto)) {
-    if (m.g && m.g !== grupo) itens.push(h('div', { class: 'side__grupo' }, m.g));
-    grupo = m.g || grupo;
-    itens.push(h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('span', { class: 'i' }, m.i), m.t));
+  const visiveis = MENU.filter((x) => !x.oculto && !x.conta);
+  const itens = visiveis.filter((m) => !m.g).map(link);
+  for (const [g, icone] of Object.entries(GRUPOS)) {
+    const filhos = visiveis.filter((m) => m.g === g);
+    const sec = h('div', { class: 'side__sec', 'data-g': g },
+      h('button', {
+        class: 'side__sec-h', type: 'button', 'aria-expanded': 'false',
+        onclick: () => {
+          const abrir = !sec.classList.contains('aberta');
+          if (abrir) abertos.add(g); else abertos.delete(g);
+          sec.classList.toggle('aberta', abrir);
+          sec.firstChild.setAttribute('aria-expanded', String(abrir));
+        },
+      }, ic(icone), h('span', {}, g), h('small', {}, String(filhos.length)), ic('seta', 16)),
+      h('div', { class: 'side__sec-b' }, h('div', {}, ...filhos.map(link))));
+    itens.push(sec);
   }
   nav.replaceChildren(...itens);
+  $('#sideConta').replaceChildren(...MENU.filter((m) => m.conta).map(link));
   const tab = $('#tabbar');
-  const tabs = MENU.filter((m) => m.tab);
-  tab.replaceChildren(...tabs.map((m) =>
-    h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('b', {}, m.i), m.ta || m.t)));
+  tab.replaceChildren(...MENU.filter((m) => m.tab).map((m) =>
+    h('a', { href: `#/${m.r}`, 'data-r': m.r }, ic(m.ic, 22), h('span', {}, m.ta || m.t))));
 }
 
 function marcarAtiva(rota) {
   $$('[data-r]').forEach((a) => a.classList.toggle('on', a.dataset.r === rota));
+  const g = MENU.find((m) => m.r === rota)?.g;
+  $$('.side__sec').forEach((sec) => {
+    const abrir = sec.dataset.g === g || abertos.has(sec.dataset.g);
+    sec.classList.toggle('aberta', abrir);
+    sec.classList.toggle('tem-ativa', sec.dataset.g === g);
+    sec.firstChild.setAttribute('aria-expanded', String(abrir));
+  });
 }
 
 /* ---------- topo ---------- */
 function atualizarTopo() {
   const s = st();
-  $('#topStreak').innerHTML = `🔥 <b>${s.jogo.streak}</b>`;
+  $('#topStreak').innerHTML = `${icHtml('fogo', 16)} <b>${s.jogo.streak}</b>`;
   $('#topAvatar').textContent = s.perfil.avatar && s.perfil.avatar.length <= 2 ? s.perfil.avatar : inicial(s.perfil.nome);
   const n = notificacoes().filter((x) => !s.lidas.includes(x.id));
   $('#topBell .dot').hidden = n.length === 0;

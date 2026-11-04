@@ -47,9 +47,14 @@ export function kpi(valor, rotulo, extra = '') {
 export function barra(v, cls = '') {
   return h('div', { class: `bar ${cls}` }, h('i', { style: { width: `${clamp(v, 0, 100)}%` } }));
 }
+/* O emoji do começo do título fica num <span> separado: no visual editorial
+   (títulos grandes em Anton) ele vira um selo pequeno ao lado, sem pesar. */
+const EMOJI_INICIAL = /^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*/u;
 export function titulo(t, sub = '', ...acoes) {
+  const m = typeof t === 'string' ? t.match(EMOJI_INICIAL) : null;
+  const cab = m ? h('h1', {}, h('span', { class: 'page-h__emo', 'aria-hidden': 'true' }, m[1]), t.slice(m[0].length)) : h('h1', {}, t);
   return h('div', { class: 'page-h' },
-    h('div', {}, h('h1', {}, t), sub ? h('p', {}, sub) : null),
+    h('div', {}, cab, sub ? h('p', {}, sub) : null),
     acoes.filter(Boolean).length ? h('div', { class: 'sp' }, ...acoes.filter(Boolean)) : null);
 }
 export const vazio = (tit, txt, acao = null) =>
