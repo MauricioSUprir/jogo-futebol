@@ -33,7 +33,7 @@ function montar(el, pintar) {
     h('div', { class: 'f-row mt' }, campo('Nome', nome), campo('Série / ano', serie)),
     campo('Avatar (um emoji)', avatar),
     h('label', { class: 'f' }, h('span', {}, 'Tema'),
-      segmento([{ v: 'escuro', t: '🌙 Escuro' }, { v: 'claro', t: '☀️ Claro' }], s.perfil.tema, (v) => {
+      segmento([{ v: 'claro', t: '☀️ Claro' }, { v: 'escuro', t: '🌙 Escuro' }], s.perfil.tema, (v) => {
         set((x) => { x.perfil.tema = v; }); aplicarTema();
       })),
     h('button', {
