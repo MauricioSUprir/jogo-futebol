@@ -11,13 +11,13 @@
 // itinerante — APG Toolbar; depois os dois times, o ≡ e o canto [<]); ←/→ nas abas e na barra de cima, ↑/↓ entre as duas (e
 // nos discos da Visão tática); Enter/Espaço agem; Esc volta um nível; Q/E o time mostrado; P o ≡. O controle chega pelas ações
 // menu-* (entrada.js lerMenuPad) e o resto aqui no atualizar(): Y Personalizar, X/R3 a vista, LB/RB o time, Start o ≡ ('pausa').
-import { layoutPrepartida, linhasCampinho, layoutVisao, pontosVisao, linhaInfo, textoTatica, PREPARTIDA, SEP_INFO } from './prepartida.js';
+import { layoutPrepartida, linhasCampinho, layoutVisao, pontosVisao, linhaInfo, textoTatica, textoClassico, PREPARTIDA, SEP_INFO } from './prepartida.js';
 import { aoTocar, engolirClique } from './toque-botao.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 const esc = t => String(t ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const r1 = v => Math.round(v * 10) / 10;
-const txtClassico = c => (c && c !== 'Clássico' ? `Clássico · ${c}` : 'Clássico');
+const txtClassico = textoClassico;
 
 // ícones (SVG de linha; nada de emoji)
 const IC = {

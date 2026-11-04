@@ -232,6 +232,13 @@ const letraMin = L => (L.pc ? (L.H >= 720 ? 13 : 11) : L.regime === 'normal' ? 1
       && dD.duracao.longa === `5 cobranças alternadas · Começa: ${sig}` && dD.disputa.fila[0].cobradores.length === 5 && dD.disputa.fila[0].goleiro != null);
   const dMin = PP.dadosDaPartida(P.criarPartida({ semente: 3, minutosPorTempo: 0.5 }), {});
   reg('L3 a duração respeita o ?min= (0,5 min)', dMin.duracao.longa, '2 tempos de 0,5 min', dMin.duracao.longa === '2 tempos de 0,5 min');
+  // o clássico sem repetir a palavra (os nomes do TM já começam com "Clássico": revisão V10)
+  {
+    const casos = [['Clássico Mineiro', 'Clássico Mineiro'], ['Clássico San-São', 'Clássico San-São'], ['clássico vovô', 'clássico vovô'], ['Choque-Rei', 'Clássico · Choque-Rei'], ['Clássico', 'Clássico'], [null, 'Clássico'], ['Classicos do Sul', 'Clássico · Classicos do Sul']];
+    const f = typeof PP.textoClassico === 'function' ? PP.textoClassico : null;
+    const out = casos.map(([c, quer]) => { const v = f ? f(c) : '(sem textoClassico)'; return { c, v, ok: v === quer }; });
+    reg('L3 o clássico sem repetir "Clássico" (Clássico Mineiro, San-São, Vovô; Choque-Rei com o prefixo)', out.map(o => `${o.c ?? '—'} → "${o.v}"`).join(' · '), 'o nome do TM como veio; o prefixo só quando falta', out.every(o => o.ok));
+  }
   const dt = PP.textoData(new Date(2026, 10, 4)), dt2 = PP.textoData('2026-03-01');
   reg('L3 a data', `${dt?.curta} / ${dt?.longa} · ${dt2?.curta}`, '4 nov. 2026 / 4 de novembro de 2026 · 1 mar. 2026', dt?.curta === '4 nov. 2026' && dt?.longa === '4 de novembro de 2026' && dt2?.curta === '1 mar. 2026');
 }

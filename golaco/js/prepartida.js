@@ -326,6 +326,14 @@ export function linhaInfo(campos, largura, medir, nLinhas = 1, larguraSep = null
   }
   return { linhas: montar(), cortes, estadioCortado };
 }
+/**
+ * O clássico na tela: "Clássico · <nome>"; o nome que já começa com "Clássico" (os do TM: "Clássico Mineiro", "Clássico San-São",
+ * "Clássico Vovô") fica como veio — antes saía "Clássico · Clássico Mineiro" (revisão V10); sem nome, "Clássico".
+ */
+export function textoClassico(c) {
+  const n = String(c ?? '').trim();
+  return !n || /^cl[aá]ssico$/i.test(n) ? 'Clássico' : /^cl[aá]ssico\b/i.test(n) ? n : `Clássico · ${n}`;
+}
 /** "Ricardo Salgado" → "R. Salgado" (o 1º nome vira a inicial). */
 function abreviar(nome) {
   const p = String(nome).trim().split(/\s+/);
