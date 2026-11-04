@@ -772,6 +772,22 @@ if (faz('online')) {
   const comparar = (x, y) => { const mx = new Map(x.hashes), comuns = y.hashes.filter(([n]) => mx.has(n)); return { comuns: comuns.length, difs: comuns.filter(([n, h]) => mx.get(n) !== h).length, ate: comuns.length ? Math.max(...comuns.map(([n]) => n)) : 0 }; };
   const ate = (p, n, ms = 240000) => p.waitForFunction(k => (window.__golaco.online?.n ?? 0) >= k, n, { timeout: ms }).then(() => true, () => false);
   const espera = ms => new Promise(r => setTimeout(r, ms));
+  /**
+   * Até `n` passos, reprovando só quando o online.n PARA de andar por `semAndar` ms (teto `teto`): o prazo fixo de 240 s reprovou o
+   * O2/O3 com a máquina carregada (as duas abas sem GPU a ~1 quadro por segundo pararam em 1140–1199, todos os hashes iguais; na
+   * repetição sozinha, o trecho levou 125 s) — tempo, não defeito.
+   */
+  async function ateAndando(p, n, semAndar = 90000, teto = 900000) {
+    const t0 = Date.now();
+    let ultimo = -1, desde = t0;
+    while (Date.now() - t0 < teto) {
+      const k = await p.evaluate(() => window.__golaco.online?.n ?? 0).catch(() => -1);
+      if (k >= n) return true;
+      if (k > ultimo) { ultimo = k; desde = Date.now(); } else if (Date.now() - desde > semAndar) return false;
+      await espera(2000);
+    }
+    return false;
+  }
   /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável). */
   async function abrirPar(extra, perda = 0) {
     const ctx = await abrir({ largura: 960, altura: 540, dpr: 1 });
@@ -895,7 +911,7 @@ if (faz('online')) {
         // B pula também; os dois até 1200 passos
         await B.bringToFront();
         await tecla(B, 'Escape');
-        const chegou = (await Promise.all([ate(A, 1210), ate(B, 1210)])).every(Boolean);
+        const chegou = (await Promise.all([ateAndando(A, 1210), ateAndando(B, 1210)])).every(Boolean);
         await olhar();
         a = await on(A); b = await on(B);
         const c = comparar(a, b);
