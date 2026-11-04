@@ -223,10 +223,13 @@ export const RECURSOS = [
   { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', nivel: 'pro' },
   { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', nivel: 'pro' },
   { id: 'ia_apresentacao', nome: 'Apresentações prontas pela IA (baixa em PowerPoint)', nivel: 'pro' },
+  { id: 'relatorio_pais', nome: 'Relatório semanal para os responsáveis (WhatsApp ou PDF)', nivel: 'pro' },
 
   { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', nivel: 'plus' },
   { id: 'ia_redacao', nome: 'Correção de redação com nota e comentários', nivel: 'plus' },
   { id: 'ia_plano', nome: 'Plano de estudos da semana montado pela IA', nivel: 'plus' },
+  { id: 'ia_topo', nome: 'Sempre o modelo de IA mais forte primeiro', nivel: 'plus' },
+  { id: 'suporte', nome: 'Suporte prioritário e novidades antes de todo mundo', nivel: 'plus' },
 ];
 
 export const RECURSOS_PRO = RECURSOS.filter((r) => r.nivel === 'pro');

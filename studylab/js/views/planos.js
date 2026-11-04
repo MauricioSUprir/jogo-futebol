@@ -1,6 +1,6 @@
 /* ===== views/planos.js — assinatura do MindTrack (Pro e Plus) ===== */
 import { h, iso, fmtData, daysBetween, parseISO, today } from '../util.js';
-import { st, ehPro, ehPlus, nivelPlano, ativarPro, cancelarPro } from '../store.js';
+import { st, set, ehPro, ehPlus, nivelPlano, ativarPro, cancelarPro } from '../store.js';
 import {
   titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, confirmar,
   RECURSOS_FREE, RECURSOS_PRO, RECURSOS_PLUS, selo,
@@ -32,10 +32,24 @@ function montar(el, pintar) {
       'Ele não é um chat qualquer: conhece suas matérias, suas provas, seus erros, seu calendário e o que você '
       + 'escreveu na Minha Escola. Pergunte "o que eu estudo agora?" e ele responde com base no seu desempenho de verdade.')));
 
+  /* ---------- 7 dias grátis (uma vez por conta) ---------- */
+  if (!s.conta.testeUsado) el.append(cartaoTeste(pintar));
+
   /* ---------- os dois níveis ---------- */
   el.append(h('div', { class: 'grid g2' },
     cartaoNivel('pro', pintar),
     cartaoNivel('plus', pintar)));
+
+  /* ---------- famílias e escolas ---------- */
+  el.append(h('h3', { class: 'mt2', style: { margin: '24px 0 10px' } }, 'Para famílias e escolas'));
+  el.append(h('div', { class: 'grid g2' },
+    cartao(h('div', { class: 'flexb' }, h('b', {}, '👨‍👩‍👧 MindTrack Família'), h('span', { class: 'chip' }, 'em breve')),
+      h('p', { class: 'small muted' }, 'Até 3 filhos no Plus numa assinatura só, com o relatório de cada um chegando no WhatsApp dos pais.'),
+      h('b', {}, `${precoBR(69.9)}`), h('span', { class: 'small muted' }, '/mês — sai R$ 23,30 por filho')),
+    cartao(h('div', { class: 'flexb' }, h('b', {}, '🏫 MindTrack Escola'), h('span', { class: 'chip' }, 'em breve')),
+      h('p', { class: 'small muted' }, 'Licença por turma: o calendário e as provas da escola entram sozinhos para todos os alunos, '
+        + 'e o professor vê como a turma está se preparando (sem ver as conversas de ninguém).'),
+      h('b', {}, `${precoBR(9.9)}`), h('span', { class: 'small muted' }, ' por aluno/mês — a escola paga, o aluno ganha o Pro'))));
 
   /* ---------- comparação rápida ---------- */
   el.append(h('div', { class: 'mt2' }, cartao(
@@ -115,17 +129,22 @@ function cartaoNivel(nivel, pintar) {
 
   const beneficios = ehPlusCard
     ? ['Tudo do Pro, e mais:',
-      `${L.dia} perguntas por dia (${L.mes}/mês)`,
+      `${L.dia} perguntas por dia (${L.mes}/mês) — quase 3× o Pro`,
       `${L.fotosDia} fotos por dia — ${L.fotosPergunta} por pergunta`,
-      '✍️ Correção de redação com nota',
-      '🗓️ Plano de estudos da semana pela IA',
-      '📊 Análise dos seus simulados']
-    : ['MindTrack AI completo, com os seus dados',
+      '🚀 Sempre o modelo de IA mais forte primeiro',
+      '✍️ Correção de redação no padrão ENEM (nota de 0 a 1000)',
+      '🗓️ Plano de estudos da semana montado pela IA',
+      '📊 Análise dos seus simulados e pontos fracos',
+      '⭐ Suporte prioritário e novidades antes de todo mundo']
+    : ['MindTrack AI completo, que conhece suas matérias e provas',
       `${L.dia} perguntas por dia (${L.mes}/mês)`,
       `${L.fotosDia} fotos por dia — ${L.fotosPergunta} por pergunta`,
       '📗 Me explica · professor socrático',
       '🎯 Questões, simulados e flashcards por IA',
-      '📚 Resumos, mapas mentais, PDF e foto'];
+      '📚 Resumos, mapas mentais, PDF e foto da atividade',
+      '🎤 Apresentações prontas em PowerPoint',
+      '📸 Calendário da escola lido por foto',
+      '👨‍👩‍👧 Relatório semanal para os responsáveis'];
 
   pintarPreco();
   const c = cartao(
@@ -145,6 +164,26 @@ function cartaoNivel(nivel, pintar) {
   c.style.position = 'relative';
   if (!ehPlusCard) c.style.borderColor = '#3ec9f588';
   return c;
+}
+
+/** Teste grátis: 7 dias de Pro, uma vez por conta (código TESTE7 no servidor). */
+function cartaoTeste(pintar) {
+  return h('div', { class: 'card mb plano-teste' },
+    h('div', { class: 'grow' },
+      h('b', {}, '🎁 Experimente o Pro por 7 dias, de graça'),
+      h('p', { class: 'small muted', style: { margin: '4px 0 0' } }, 'Sem cartão e sem compromisso. Depois, continua no grátis se não quiser assinar.')),
+    h('button', {
+      class: 'btn btn--p', onclick: async (e) => {
+        e.target.disabled = true; e.target.textContent = 'Liberando…';
+        try {
+          if (temServidor()) { await garantirSessao(); await ativarCodigoNoServidor('TESTE7'); }
+          else ativarPro({ planoId: 'codigo', dias: 7, codigo: 'TESTE7', nivel: 'pro' });
+          set((x) => { x.conta.testeUsado = true; });
+          toast('Pro liberado por 7 dias! 🎉 Teste o MindTrack AI no chat.', 'good');
+          pintar();
+        } catch (err) { toast(err.message, 'bad'); e.target.disabled = false; e.target.textContent = 'Começar o teste'; }
+      },
+    }, 'Começar o teste'));
 }
 
 function cartaoCodigo(el, pintar) {

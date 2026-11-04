@@ -265,3 +265,7 @@ label.f>span{font-size:12.5px;color:var(--txt)}
   .apr-pagina{width:297mm;height:167.06mm;break-after:page;overflow:hidden}
   .apr-pagina .sld{border-radius:0;width:297mm;height:167.06mm;aspect-ratio:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
+
+/* teste grátis nos planos */
+.plano-teste{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:radial-gradient(120% 140% at 0% 0%,#3ec9f540,transparent 60%),var(--preto);color:var(--bege)}
+.plano-teste .muted{color:#b2ac9c}

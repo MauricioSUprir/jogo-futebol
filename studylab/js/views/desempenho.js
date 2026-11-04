@@ -1,4 +1,5 @@
 /* ===== views/desempenho.js — analytics, notas, simulador e metas ===== */
+import { abrirRelatorioPais } from '../relatorio-pais.js';
 import { h, fmtMin, iso, round, sum, avg, DIAS_S, parseISO, fmtData, nf, addDays, today, daysBetween } from '../util.js';
 import { st, set, nomeMateria, emojiMateria, corMateria, atualizar, remover, novaMeta } from '../store.js';
 import {
@@ -21,7 +22,8 @@ export function render(el, { params }) {
 }
 
 function montar(el, pintar) {
-  el.append(titulo('📊 Desempenho', 'Números reais do seu estudo — sem achismo.'));
+  el.append(titulo('📊 Desempenho', 'Números reais do seu estudo — sem achismo.',
+    h('button', { class: 'btn', onclick: () => abrirRelatorioPais() }, '👨‍👩‍👧 Relatório para os pais')));
   el.append(h('div', { class: 'mb' }, segmento([
     { v: 'geral', t: '📈 Visão geral' }, { v: 'graficos', t: '📊 Gráficos' },
     { v: 'notas', t: '🎓 Notas' }, { v: 'metas', t: '🎯 Metas' },
