@@ -96,8 +96,12 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
   const pausa = await pg.evaluate(async () => {
     window.__golaco.abrirMenu();
     await new Promise(r => requestAnimationFrame(r));
+    // (item 58: o Minimapa mora no submenu Opções da pausa — na disputa a linha dele fica escondida lá)
+    document.getElementById('btn-opcoes')?.click();
+    await new Promise(r => requestAnimationFrame(r));
     const chip = document.getElementById('chip-minimapa');
-    const r = { minimapa: !!chip && getComputedStyle(chip).display !== 'none' && chip.getBoundingClientRect().width > 0 };
+    const r = { minimapa: !!chip && getComputedStyle(chip).display !== 'none' && chip.getBoundingClientRect().width > 0, opcoes: !document.getElementById('menu-opcoes')?.hidden };
+    document.querySelector('#menu-opcoes [data-cmd="opcoes-voltar"]')?.click();
     document.querySelector('#menu [data-cmd="ajuda"]').click();
     await new Promise(ok => requestAnimationFrame(ok));
     const vis = e => !!e && getComputedStyle(e).display !== 'none' && e.getClientRects().length > 0;
@@ -110,8 +114,8 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     return r;
   });
   meta('8 PC: a dica de teclas aparece; o aviso de bater diz a tecla (K); sem "Minimapa" na pausa; Ajuda com "Pênaltis" (esquerda/direita), sem o "cima ou baixo"',
-    `dica ${ini.dica ? 'visível' : 'ESCONDIDA'}; avisos [${[...avisos].join(' | ')}]; Minimapa na pausa ${pausa.minimapa ? 'VISÍVEL' : 'fora'}; Ajuda: ${pausa.itens.length} itens "Pênaltis", "cima ou baixo" ${pausa.cimaBaixo ? 'AINDA' : 'fora'}`,
-    ini.dica && [...avisos].some(a => /\bK\b/.test(a)) && !pausa.minimapa && pausa.itens.length === 3 && pausa.itens.every(t => /esquerda/.test(t) && /direita/.test(t)) && !pausa.cimaBaixo);
+    `dica ${ini.dica ? 'visível' : 'ESCONDIDA'}; avisos [${[...avisos].join(' | ')}]; Minimapa nas Opções da pausa ${pausa.minimapa ? 'VISÍVEL' : 'fora'} (Opções ${pausa.opcoes ? 'aberto' : 'NÃO abriu'}); Ajuda: ${pausa.itens.length} itens "Pênaltis", "cima ou baixo" ${pausa.cimaBaixo ? 'AINDA' : 'fora'}`,
+    ini.dica && [...avisos].some(a => /\bK\b/.test(a)) && pausa.opcoes && !pausa.minimapa && pausa.itens.length === 3 && pausa.itens.every(t => /esquerda/.test(t) && /direita/.test(t)) && !pausa.cimaBaixo);
   // 9) a faixa do fim nas telas baixas de celular (a mesma disputa, a janela menor)
   const baixas = [];
   for (const [w, h] of [[568, 320], [667, 375]]) {
@@ -195,7 +199,8 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
     document.getElementById('btn-modos').click();
     const j = document.querySelector('.janela-menu'), p = document.querySelector('#menu-modos [data-valor="penaltis"]'), q = document.querySelector('#menu-modos [data-valor="partida"]');
     const rp = p?.getBoundingClientRect(), rq = q?.getBoundingClientRect();
-    return { rola: j ? j.scrollHeight - j.clientHeight : 0, pen: !!p && p.offsetParent !== null, mesmaLinha: !!rp && !!rq && Math.abs(rp.top - rq.top) < 2, folga: rp && rq ? rp.left - rq.right : NaN, marcado: p?.getAttribute('aria-pressed') };
+    // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+    return { rola: j ? Math.max(j.scrollHeight - j.clientHeight, ...[...document.querySelectorAll('#menu .menu-corpo, #menu .menu-acoes:not([hidden])')].map(e => e.scrollHeight - e.clientHeight)) : 0, pen: !!p && p.offsetParent !== null, mesmaLinha: !!rp && !!rq && Math.abs(rp.top - rq.top) < 2, folga: rp && rq ? rp.left - rq.right : NaN, marcado: p?.getAttribute('aria-pressed') };
   });
   await pg.evaluate(() => document.querySelector('#menu-modos [data-valor="partida"]').click());
   await quadros(pg, 10, true);

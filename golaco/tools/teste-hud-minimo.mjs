@@ -30,8 +30,10 @@
 //  H6 (informativo) jogadores a < 20 m da bola com ≥ 30% do corpo atrás do HUD, média por instante
 //  H7 opções da pausa: "Minimapa" (padrão desligado no celular e ligado no PC) e "Nomes nos botões" (padrão
 //     LIGADO desde 12/10) mudam a tela, ficam salvas e, com os dois ligados, nada encosta
-//     e, na barra de cima da pausa, título, opções, tela cheia e X não encostam (folga ≥ 4 px) nas 4 telas do H1;
-//     o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no celular deitado
+//     e, no topo da pausa (item 58: a marca e a competição à esquerda; a pílula do placar e o X à direita), nada encosta
+//     (folga ≥ 4 px) nem transborda nas 4 telas do H1; as opções (Minimapa e Nomes nos botões) moram no submenu Opções da
+//     pausa, que cabe sem rolar; o submenu "Modo de jogo" (Pré-jogo e a cena de substituição, 12/10) cabe sem rolar no
+//     celular deitado
 //  H8 os ajustes de toque antigos (golaco.toque.v1) não valem mais: todo mundo recebe o padrão novo (80%, 55%)
 //  H11 (item 70, P2) os botões PARADINHA e PULINHO aparecem SÓ na cobrança do pênalti da pessoa (a classe cobranca-penalti
 //     do #toque, main.js): no ataque e na defesa, nenhum; na cobrança, os dois (e saem ENFIADA e LANÇAMENTO) — com o nome
@@ -658,20 +660,21 @@ for (const [w, h] of TELAS_CEL) {
         tq.classList.remove('cobranca-penalti');
       }
       g.sincronizarFase?.();
-      // a barra de cima da pausa (título, Minimapa, Nomes nos botões, tela cheia, X): nada encosta nem passa da janela
+      // o topo da pausa (item 58: a marca e a competição à esquerda; a pílula do placar e o X à direita): nada encosta (na
+      // mesma faixa de altura) nem transborda
       g.abrirMenu?.();
-      const topo = document.querySelector('.janela-menu .janela-topo');
+      const topo = document.querySelector('.janela-menu .pausa-faixa .janela-topo');
       if (topo) {
         const pecas = [];
-        for (const e of topo.children) {
-          if (e.offsetParent === null) continue;
-          const filhos = e.classList.contains('chips-tela') ? [...e.children].filter(c => c.offsetParent !== null) : [e];
-          for (const c of filhos) { const q = c.getBoundingClientRect(); pecas.push({ nome: c.id || c.tagName, l: q.left, r: q.right }); }
+        const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden' && getComputedStyle(e).display !== 'none';
+        for (const e of [...topo.children, document.getElementById('pausa-placar'), document.querySelector('#menu .pausa-topo-dir .btn-fechar')]) {
+          if (!vis(e)) continue;
+          const q = e.getBoundingClientRect(); pecas.push({ nome: e.id || e.getAttribute('class')?.split(' ')[0] || e.tagName, l: q.left, r: q.right, t: q.top, b: q.bottom });
         }
         pecas.sort((a, b) => a.l - b.l);
         let folga = Infinity, par = '';
         for (let i = 1; i < pecas.length; i++) { const d = pecas[i].l - pecas[i - 1].r; if (d < folga) { folga = d; par = `${pecas[i - 1].nome} × ${pecas[i].nome}`; } }
-        out.pausa = { folga, par, transborda: topo.scrollWidth - topo.clientWidth };
+        out.pausa = { folga, par, transborda: Math.max(topo.scrollWidth - topo.clientWidth, ...[...topo.children].map(c => c.scrollWidth - c.clientWidth > 1 && getComputedStyle(c).textOverflow !== 'ellipsis' ? c.scrollWidth - c.clientWidth : 0)) };
       }
       g.fecharMenu?.();
       return out;
@@ -831,7 +834,7 @@ if (!soPlacar) {
     `${h13aFalhas.length ? 'FALHAS: ' + [...new Set(h13aFalhas)].slice(0, 12).join(' | ') + ' — ' : ''}${h13a.join('; ')}`, 'esq/dir ≤ 16 px da borda, base ≤ 6 px, embaixo do analógico/arco, ≥ 4 px de tudo', h13a.length === 8 * TELAS_CEL.length && h13aFalhas.length === 0);
 }
 meta('H11 os botões PARADINHA e PULINHO (item 70, P2): só na cobrança do pênalti da pessoa (4 telas; visíveis de 2)', estilosVistos.join('; '), 'ataque 0, defesa 0, pênalti 2 (ENFIADA/LANÇAMENTO 0)', estilosVistos.length === TELAS_CEL.length && estilosFalhas === 0);
-meta('H7 barra da pausa no celular (título, opções, tela cheia, X): nada encosta nem transborda (4 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === TELAS_CEL.length && piorPausa >= 4);
+meta('H7 topo da pausa no celular (a marca e a competição; a pílula do placar e o X): nada encosta nem transborda (4 telas com entalhe)', linhasPausa.join('; ') || 'sem a pausa', 'folga ≥ 4 px (a do ENCOSTA)', linhasPausa.length === TELAS_CEL.length && piorPausa >= 4);
 
 // H11b (item 70, P2): na página de verdade, o pênalti a favor montado (a falta na área, __golaco.faltaDeTeste) liga a classe
 // cobranca-penalti com o cobrador da pessoa (os dois botões aparecem) e a bola rolando a desliga
@@ -1382,14 +1385,17 @@ if (!soPlacar) {
         nomes: !!sp && getComputedStyle(sp).display !== 'none' && sp.offsetWidth > 0,
         temOpcoes: !!document.getElementById('chip-minimapa') && !!document.getElementById('chip-nomes'),
         pressionados: [document.getElementById('chip-minimapa')?.getAttribute('aria-pressed'), document.getElementById('chip-nomes')?.getAttribute('aria-pressed')].join('/'),
-        // a pausa cabe sem rolar no celular deitado (como antes das opções novas)
-        rola: (() => { const j = document.querySelector('.janela-menu'); return j ? j.scrollHeight - j.clientHeight : 0; })(),
+        // a pausa cabe sem rolar no celular deitado (item 58: a janela, o corpo e o nível à vista — com o submenu Opções aberto,
+        // onde moram o Minimapa e os Nomes nos botões)
+        rola: (() => { const l = [document.querySelector('.janela-menu'), document.querySelector('#menu .menu-corpo'), ...document.querySelectorAll('#menu .menu-acoes:not([hidden])')].filter(Boolean); return l.length ? Math.max(...l.map(e => e.scrollHeight - e.clientHeight)) : 0; })(),
       };
     });
     const e0 = await estado();
     let e1 = { mapa: false, nomes: false }, e2 = e1, e3 = { nomes: true }, enc = ['sem as opções'], menu = { pressionados: '-', rola: NaN }, sub = null;
     if (e0.temOpcoes) {
+      // (item 58: o Minimapa e os Nomes nos botões estão no submenu Opções da pausa)
       await pagina.evaluate(() => window.__golaco.abrirMenu());
+      await pagina.click('#btn-opcoes');
       menu = await estado();
       // o submenu "Modo de jogo" (12/10: a opção da cena de substituição entrou nele, ao lado do pré-jogo) também cabe
       // sem rolar, e os dois botões da linha de cenas não encostam
@@ -1399,11 +1405,14 @@ if (!soPlacar) {
         const vis = e => !!e && e.offsetParent !== null && e.getBoundingClientRect().height > 0;
         const rb = b?.getBoundingClientRect(), rp = p?.getBoundingClientRect();
         const folga = rb && rp ? Math.max(rb.left - rp.right, rp.left - rb.right, rb.top - rp.bottom, rp.top - rb.bottom) : NaN;
-        const r = { rola: j ? j.scrollHeight - j.clientHeight : 0, subst: vis(b), prejogo: vis(p), folga, texto: b?.textContent.replace(/\s+/g, ' ').trim() ?? '' };
+        // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+        const rola = Math.max(j ? j.scrollHeight - j.clientHeight : 0, ...[document.querySelector('#menu .menu-corpo'), ...document.querySelectorAll('#menu .menu-acoes:not([hidden])')].filter(Boolean).map(e => e.scrollHeight - e.clientHeight));
+        const r = { rola, subst: vis(b), prejogo: vis(p), folga, texto: b?.textContent.replace(/\s+/g, ' ').trim() ?? '' };
         document.querySelector('#menu-modos [data-cmd="modos-voltar"]')?.click();
         return r;
       });
       // liga o minimapa (os nomes já vêm ligados): os dois ligados
+      await pagina.click('#btn-opcoes');
       await pagina.click('#chip-minimapa');
       await pagina.evaluate(() => window.__golaco.fecharMenu());
       await pagina.waitForTimeout(150);
@@ -1424,6 +1433,7 @@ if (!soPlacar) {
       e2 = await estado();
       // desligar os nomes na pausa: só o ícone, e fica salvo
       await pagina.evaluate(() => window.__golaco.abrirMenu());
+      await pagina.click('#btn-opcoes');
       await pagina.click('#chip-nomes');
       await pagina.evaluate(() => window.__golaco.fecharMenu());
       await pagina.reload({ waitUntil: 'load' });

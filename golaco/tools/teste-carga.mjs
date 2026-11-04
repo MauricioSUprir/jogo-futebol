@@ -36,7 +36,12 @@ const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', '
   // (PR 2: o módulo chega junto das cadeiras; o modelo com a textura de animação, depois dele — fora da qualidade Baixa)
   'js/render/cadeiras3d.js', 'js/render/torcedor3d.js', 'js/render/torcedor-dados.js',
   // o impostor octaédrico da torcida (item 69, PR 3): chega com as cadeiras 3D e assa quando o modelo do torcedor chega
-  'js/render/impostor.js', 'js/render/impostor-dados.js'];
+  'js/render/impostor.js', 'js/render/impostor-dados.js',
+  // a pausa do item 58: o cartão do meu time e as Estatísticas (a lista da pausa é do 1º quadro: abre no 1º Esc)
+  'js/pausa-tela.js', 'css/pausa.css'];
+// a fonte da cara do TM na pausa sem ?tm (item 58): só com a pausa na tela ou pela pré-carga dela (main.js SOB.pausa) — nunca no
+// download inicial sem ?tm (com ?tm o tm.css a usa desde o 1º quadro)
+const FONTES_PAUSA = ['assets/tm/fontes/inter-400.woff2', 'assets/tm/fontes/inter-600.woff2', 'assets/tm/fontes/inter-800.woff2'];
 // o que é baixado só DEPOIS de um módulo sob demanda chegar (nunca no download inicial; pedido depois da pré-carga)
 const SOB_DEMANDA_DEPOIS = ['assets/torcedor/torcedor.bin'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial
@@ -215,8 +220,8 @@ try {
   const total = bytesSrv + bytesCdn;
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
   meta('Folga no download inicial (até os 4 MB)', `${((LIMITE_BYTES - total) / 1024).toFixed(1)} KB (medido ${tMedida.toFixed(1)} s depois do 1º quadro)`, `≥ ${FOLGA_MIN / 1024} KB`, LIMITE_BYTES - total >= FOLGA_MIN);
-  const noInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ, ...SOB_DEMANDA_DEPOIS, ...SO_BOLA_PARADA_ARQ].filter(a => pedidosIniciais.includes(a));
-  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas, cadeiras e torcedor 3D, o estádio real do TM, a bola parada)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length + SO_TM_PRO_ARQ.length + SOB_DEMANDA_DEPOIS.length + SO_BOLA_PARADA_ARQ.length}`, 'nenhum', noInicial.length === 0);
+  const noInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ, ...SOB_DEMANDA_DEPOIS, ...SO_BOLA_PARADA_ARQ, ...FONTES_PAUSA].filter(a => pedidosIniciais.includes(a));
+  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas, cadeiras e torcedor 3D, o estádio real do TM, a bola parada, a pausa e a fonte dela sem ?tm)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length + SO_TM_PRO_ARQ.length + SOB_DEMANDA_DEPOIS.length + SO_BOLA_PARADA_ARQ.length + FONTES_PAUSA.length}`, 'nenhum', noInicial.length === 0);
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
@@ -394,7 +399,7 @@ try {
   // automática pode ter descido numa máquina lenta: na Baixa ele não é pedido)
   const qTorcida = await pagina.evaluate(() => window.__golaco.estadio?.torcida?.qualidade ?? null);
   if (chegou && qTorcida !== 'baixa') await pagina.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado, null, { timeout: 5000 }).catch(() => {});
-  const faltam = [...SOB_DEMANDA_ARQ, ...(qTorcida === 'baixa' ? [] : SOB_DEMANDA_DEPOIS)].filter(a => !pedidos.includes(a));
+  const faltam = [...SOB_DEMANDA_ARQ, ...FONTES_PAUSA, ...(qTorcida === 'baixa' ? [] : SOB_DEMANDA_DEPOIS)].filter(a => !pedidos.includes(a));
   const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
   meta('Pré-carga ociosa: o replay, o Editar time e as cenas chegaram sem gesto', chegou && !faltam.length ? `sim (até ${tChegou.toFixed(1)} s depois do 1º quadro)` : `não (${JSON.stringify(estSob)}; faltam ${faltam.join(', ') || '—'})`, 'sim, sem erro', chegou && !faltam.length && erros.length === 0);
 

@@ -451,8 +451,9 @@ else try {
     const posK = await pg.evaluate(() => { const g = window.__golaco; const r = []; for (let i = 0; i < 20; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); r.push(!!g.estado().jogador?.carga); } return { ativo: g.replay.estado.ativo, cargas: r.filter(Boolean).length }; });
     await pg.keyboard.up('KeyK');
     meta('D3 uma tecla do jogo (K) pula e não vira chute', `replay antes ${antesK}, depois ${posK.ativo}; quadros com carga depois do pulo ${posK.cargas}`, 'sim → não; 0', antesK && !posK.ativo && posK.cargas === 0);
-    // desligar na pausa: salvo; o gol seguinte sem replay
+    // desligar na pausa (item 58: no submenu Opções): salvo; o gol seguinte sem replay
     await pg.evaluate(() => window.__golaco.abrirMenu());
+    await pg.click('#btn-opcoes', { timeout: CLIQUE_MS });
     await pg.click('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { timeout: CLIQUE_MS });
     const salvo = await pg.evaluate(() => { const g = window.__golaco; g.fecharMenu(); let p = {}; try { p = JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}'); } catch (_) {} return { auto: g.replay.automatico(), salvo: p.replay, marcado: document.querySelector('#menu .segmentado[data-grupo="replayAuto"] [aria-pressed="true"]')?.dataset.valor }; });
     const gol2 = await golRoteirizado(pg, { semente: 5, time: 0 });

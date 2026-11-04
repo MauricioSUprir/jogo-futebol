@@ -12,6 +12,9 @@
 //      quadroOnline nos dois aparelhos);
 //   P6 a pausa no celular deitado (844×390, toque) cabe sem rolar com "Pausar a partida" e "Sair da partida", sem Replay,
 //      Simular o resto, Reiniciar nem Modo de jogo.
+//   P9 (item 58) o Pausar e o Sair da pausa pelo toque COM OUTRO DEDO PARADO NA TELA (o navegador não gera o click com dois
+//      dedos: os dois agem no pointerup do mesmo dedo, toque-botao.js aoTocar) — o Pausar pausa; o 1º toque no Sair arma a
+//      confirmação ("Toque de novo para sair"), sem sair.
 //   node tools/teste-online-tela.mjs
 import { servidor, abrir } from './lib/navegador.mjs';
 
@@ -87,6 +90,40 @@ const pausa = await B.evaluate(() => {
 meta('P4 o menu aberto não para o jogo (a IA joga pelo meu controlado)', `menu ${menuAberto ? 'aberto' : 'fechado'} · ${b5.n - b4.n} passos com ele aberto`, menuAberto && andou);
 meta('P6 a pausa do online (844×390): Pausar e Sair; sem Replay, Simular, Reiniciar, Modo de jogo; sem rolar', JSON.stringify(pausa),
   pausa.pausar && pausa.sair && !pausa.replay && !pausa.simular && !pausa.reiniciar && !pausa.modos && pausa.rola <= 0);
+// P9 o Pausar e o Sair pelo toque com outro dedo parado na tela. O dedo parado fica no título da faixa (nada acontece ali: nem
+// fecha a pausa nem toca num item — perto da lista, o ajuste do toque do Chromium o levava ao item mais próximo, que agia ao
+// soltar). O touchEnd do CDP solta os dois (os dois pointerup chegam com dois dedos na sequência: o click não vem)
+{
+  const cdpB = await s.contexto.newCDPSession(B);
+  const toque = (type, pts) => cdpB.send('Input.dispatchTouchEvent', { type, touchPoints: pts });
+  const ponto = sel => B.evaluate(sl => { const e = document.querySelector(sl); if (!e || e.hidden || !e.getClientRects().length) return null; const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, sel);
+  const dedo = await B.evaluate(() => { const l = document.querySelector('#menu .janela-topo h2').getBoundingClientRect(); return { x: Math.round(l.left + l.width / 2), y: Math.round(l.top + l.height / 2), id: 1, radiusX: 1, radiusY: 1 }; });
+  const comOutroDedo = async sel => {
+    const p = await ponto(sel);
+    if (!p) return false;
+    await toque('touchStart', [dedo]);
+    await toque('touchStart', [dedo, { x: p.x, y: p.y, id: 2, radiusX: 1, radiusY: 1 }]);
+    await esperar(120);
+    await toque('touchEnd', []);
+    return true;
+  };
+  await B.evaluate(() => window.__golaco.abrirMenu());
+  await esperar(200);
+  const p0 = await B.evaluate(() => window.__golaco.online.pausasRestam);
+  const tocouP = await comOutroDedo('#btn-online-pausar');
+  await esperar(300);
+  const pz = await B.evaluate(() => ({ pausado: window.__golaco.online.pausado, restam: window.__golaco.online.pausasRestam, menu: !document.getElementById('menu').hidden }));
+  await B.evaluate(() => window.__golaco.online.retomar());
+  await B.evaluate(() => window.__golaco.abrirMenu());
+  await esperar(200);
+  const tocouS = await comOutroDedo('#btn-online-sair');
+  await esperar(200);
+  const sair = await B.evaluate(() => ({ texto: document.getElementById('btn-online-sair')?.firstChild?.textContent ?? '', estado: window.__golaco.online.estado }));
+  meta('P9 o Pausar e o Sair da pausa pelo toque com outro dedo parado na tela (item 58)',
+    `Pausar ${tocouP ? 'tocado' : 'NÃO achado'}: pausado ${pz.pausado}, pausas ${p0} → ${pz.restam}, pausa ${pz.menu ? 'aberta' : 'fechada'} · Sair ${tocouS ? 'tocado' : 'NÃO achado'}: "${sair.texto.trim()}" (${sair.estado})`,
+    tocouP && pz.pausado && pz.restam === p0 - 1 && tocouS && /Toque de novo para sair/.test(sair.texto) && sair.estado !== 'fim');
+  await cdpB.detach().catch(() => {});
+}
 await B.evaluate(() => document.querySelector('#menu [data-cmd="continuar"]')?.click());
 
 // P5 a partida inteira

@@ -329,7 +329,8 @@ try {
         const esc = () => window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true }));
         esc(); g.relogio.avancar(16);
         const j = document.querySelector('.janela-menu');
-        const rola = () => (j ? j.scrollHeight - j.clientHeight : NaN);
+        // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+        const rola = () => (j ? Math.max(j.scrollHeight - j.clientHeight, ...[...document.querySelectorAll('#menu .menu-corpo, #menu .menu-acoes:not([hidden])')].map(e => e.scrollHeight - e.clientHeight)) : NaN);
         const r = { aberto: !document.getElementById('menu').hidden, rola: rola() };
         document.getElementById('btn-modos')?.click();
         r.rolaModos = rola();
