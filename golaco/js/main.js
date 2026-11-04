@@ -3412,6 +3412,9 @@ function acaoPrepartida(id) {
     case 'simular': fecharPrepartida(true); voltarAoTM(); break;
     case 'canto':
       if (mundo.online) { acaoPrepartidaOnline('sair'); break; }
+      // os Pênaltis 3D do TM antes do Bater: volta SEM resultado ('tm3d:sair' → a escolha dos times; o X do TM nos Pênaltis diz
+      // "nada é simulado") — o voltarAoTM() simulava a disputa inteira e o TM mostrava o vencedor dela (revisão A2)
+      if (mundo.disputa) { fecharPrepartida(true); sairTM(); break; }
       fecharPrepartida(true); voltarAoTM();
       break;
     case 'jogadores': abrirMenuDaTela(() => paginaLivre().abrirJogadores()); break;

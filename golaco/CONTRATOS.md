@@ -1962,8 +1962,8 @@ letra da carta do TM) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`
   "Toque de novo: simular", 3 s; o 2º toque = `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`); Rumo ao
   Estrelato Jogar · Visão · Simular (sem Personalizar); Livre Jogar · Jogadores · Câmera (os submenus do Livre; o Voltar deles
   volta à tela e o N contra M novo vale já, no mundo do tick 0); Pênaltis Bater pênaltis · Cobradores do adversário; online
-  **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match"; no online "Sair da
-  partida". O ≡ (P, Start) abre a pausa no modo "antes do jogo" (`hud.definirAntes`: `#menu[data-antes]`, "Voltar" no lugar de
+  **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match" (o Livre manda `tm3d:fim {livre}`; os Pênaltis
+  `tm3d:sair`, sem resultado — nada é simulado, como o X do TM neles); no online "Sair da partida". O ≡ (P, Start) abre a pausa no modo "antes do jogo" (`hud.definirAntes`: `#menu[data-antes]`, "Voltar" no lugar de
   "Voltar ao jogo"; somem Editar time, Estatísticas, Replay, Reiniciar, Simular o resto, Pausar do online, o cartão e a pílula).
 - **Dados** (`main.js dadosPrepartida()` → `prepartida.js dadosDaPartida(m, ctx)`: só LÊ o mundo): os dois times (sigla, nome,
   escudo do TM/`<symbol>`, cores do uniforme, formação, as fichas, o selo `seloTatica`, o GERAL, a pessoa no online), a competição

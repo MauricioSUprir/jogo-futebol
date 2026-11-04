@@ -22,7 +22,8 @@
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
 //       no cortejo e o lado de fora NÃO remontado
 //   E14 por modo: TM "Simular partida" só no 2º toque → tm3d:fim com o resultado do motor 3D; Rumo ao Estrelato sem Personalizar,
-//       com "VOCÊ"; Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a fila e a disputa só anda depois do Bater
+//       com "VOCÊ"; Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a fila e a disputa só anda depois do Bater;
+//       Pênaltis 3D do TM: o [<] "Voltar ao Total Match" antes do Bater volta SEM resultado (tm3d:sair; revisão A2)
 //   E15 desenho (celular Média): ≤ 40 chamadas e ≤ 130 mil triângulos com a tela; ≤ 31 desenhos 3D por segundo
 //   E16 download: os bytes até +2,5 s com a tela ≤ os sem ela + 140 KB; a TM Cond só com a tela
 //   E17 contraste: a luminância (mediana) atrás da info e da barra ≤ 50/255, de dia e de noite, nos dois fundos
@@ -572,7 +573,8 @@ if (faz('pad')) {
 
 // ================================================================================================ TM: público (Simular partida) e o Rumo ao Estrelato
 if (faz('tm')) {
-  for (const [nome, ped] of [['TM pública', PED_A], ['Rumo ao Estrelato', PED_B]]) {
+  const PED_PEN = { ...PED_A, id: 'tPenPP', modo: 'penaltis' };
+  for (const [nome, ped] of [['TM pública', PED_A], ['Rumo ao Estrelato', PED_B], ['Pênaltis 3D do TM', PED_PEN]]) {
     // num quadro, como o TM de verdade (fora dele o fimTM navegaria de volta ao TM)
     const s = await abrir({ largura: 1280, altura: 720 });
     const { navegador, erros } = s;
@@ -606,6 +608,16 @@ document.body.appendChild(f);
         await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 120000 }).catch(() => {});
         const fim = await pg.evaluate(() => { const m = window.__golaco.tm.mensagens.find(x => x.tipo === 'tm3d:fim'); return { tem: !!m, placar: m?.dados?.placar ?? m?.resultado?.placar ?? null, estado: window.__golaco.estado().relogio?.estado }; });
         meta('E14 TM: "Simular partida" arma no 1º toque e simula pelo motor 3D no 2º → tm3d:fim com o resultado', `1º: armado ${arm.armado}, tela ${arm.aberta}, mensagens ${arm.msgs}; 2º: tm3d:fim ${fim.tem}, relógio ${fim.estado}`, 'simular, aberta, sem fim; fim, fim', arm.armado === 'simular' && arm.aberta && !arm.msgs.includes('tm3d:fim') && fim.tem && fim.estado === 'fim');
+      } else if (ped === PED_PEN) {
+        // o [<] "Voltar ao Total Match" (2 toques) antes do Bater: volta SEM resultado — 'tm3d:sair' (a escolha dos times), nunca a
+        // disputa simulada com 'tm3d:fim' (revisão A2: o TM mostrava o vencedor de uma disputa que ninguém jogou)
+        const canto = () => pg.evaluate(() => document.querySelector('#prepartida [data-pp="canto"]')?.click());
+        await canto(); await canto();
+        await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim' || m.tipo === 'tm3d:sair'), null, { timeout: 120000 }).catch(() => {});
+        await pg.waitForTimeout(500);
+        const msgs = await pg.evaluate(() => window.__golaco.tm.mensagens.map(m => m.tipo + (m.resultado?.penaltis ? `(${m.resultado.penaltis.placar})` : '')));
+        meta('E14 Pênaltis 3D do TM: o [<] "Voltar ao Total Match" (2º toque) antes do Bater volta sem resultado (tm3d:sair, nenhum tm3d:fim)', `abas ${e.pp.abas}; mensagens ${msgs.join(', ')}`,
+          'jogar,adversario; tm3d:pronto, tm3d:sair', e.pp.abas.join() === 'jogar,adversario' && msgs.includes('tm3d:sair') && !msgs.some(m => m.startsWith('tm3d:fim')));
       } else {
         meta('E14 Rumo ao Estrelato: sem Personalizar (Jogar · Visão tática · Simular), a ficha "VOCÊ"', `abas ${e.pp.abas}; fichas VOCÊ ${voce}`, 'jogar,visao,simular; 1', e.pp.abas.join() === 'jogar,visao,simular' && voce === 1);
       }
