@@ -172,6 +172,8 @@ pausa para quem quiser só o ícone); o resto da tela limpa fica como está (`te
 Depois (itens 59 e 60, dono 23/10): o minimapa ligado saiu do alto do celular para baixo no meio, entre o analógico e o
 arco, e o nome do jogador com a bola saiu de cima dele para os cantos de baixo, pelo lado do time no placar — o topo da
 partida ficou só placar e menu, como no "Time/Score Display" do FC. Fontes, decisões e medidas no §7.2.
+Depois (item 58, dono 23/10): a pausa ficou a do FC 24 (a lista à esquerda e o campinho do meu time no canto direito) e o
+Minimapa e os Nomes nos botões saíram da barra de cima para as Opções dela. Fontes, decisões e medidas no §7.4.
 ### 7.1 Placar no formato da referência, menor e com a cara do GOLAÇO (12/10; `index.html`, `css/estilo.css`, `js/hud.js`)
 
 Pedido do dono (12/10), com uma imagem de referência: "quero o placar assim, tem que ser algo menor e mais com a nossa
@@ -331,6 +333,41 @@ de 12/10 já ia a 11,09%. Ela ganhou o placar das telas baixas (26 px, até 700 
 10,75%). De 720×360 para cima o placar continua com 28 px (10,18% no pior caso). (3) O "Simular o resto" do TM só reescrevia o
 relógio quando mudava o minuto da faixa, e os segundos ficavam parados. Agora o relógio vem antes da saída antecipada
 (`teste-tm-tela` 3b: 161/219 → 280/280 leituras iguais à conta).
+
+### 7.4 A pausa no estilo do FC 24, com o campinho do meu time no canto direito (item 58, dono 23/10; `index.html`, `css/estilo.css`, `css/tm.css`, `css/pausa.css`, `js/hud.js`, `js/entrada.js`, `js/main.js`, `js/pausa-tela.js`, `js/livre-pagina.js`, `js/online-pagina.js`)
+Pedido: "não quero ele assim, quero ele igual ao do FIFA" (a pausa do EA FC 24) e "só quero que tenha que aparecer o campinho
+do time no canto direito". Contrato "Pausa (item 58)" no `CONTRATOS.md`. Pesquisa de 02/11 com capturas reais medidas (Pillow)
+no quadro de 16:9; as imagens ficaram fora do repositório.
+
+| Fonte | O que diz / o que se mediu | O que foi aproveitado |
+|---|---|---|
+| EA FC 24, Kick Off, pausa completa (captura no r/FifaCareers, "FIFA 15 vs FC 24 Menus" — https://www.reddit.com/r/FifaCareers/comments/196r3j5/ ; imagem https://i.redd.it/v3j3e5pl5hcc1.jpg, 1280×720) | LISTA VERTICAL de texto puro à esquerda, sem caixas nem ícones, sobre uma faixa escura que some para a direita. Texto em x 5,2%; marca + modo ("KO Classic Match") em y 4,3–8,5%; 1º item em 19,3% da altura; passo 6,67%; letra ~2,7% da altura e o item com o foco em NEGRITO, ~1,36× maior e branco 100% (os outros ~85–94%); "✕ Select ◯ Resume" embaixo à esquerda. Ordem: Resume Match · Team Management · Match Facts · Performance · Instant Replay · Settings · Accessibility · Trainer (+ sair) | O desenho inteiro: a lista de texto na faixa em degradê, as proporções no PC (5,2vw, 4,3vh, 19,3vh, 6,67vh, 2,65vh/3,6vh), o foco em 800 e 1,36×, a linha dos comandos e a ordem (Voltar ao jogo · Editar time · Estatísticas · Replay · Opções · …, os de saída por último) |
+| EA FC 24, UT Division Rivals (YouTube Shorts "THE PAUSE MENU IN EA FC 24 IS…" — https://www.youtube.com/shorts/nondP8ptfq8) | A pausa online: a mesma lista, sem o replay, "Leave Match" por último, o contador da pausa embaixo | O online: Pausar logo depois do Voltar e o Sair por último; sem o Replay (já era assim) |
+| EA FC 25, Kick Off (quadro de https://www.youtube.com/watch?v=v44TUUL8Bk0) | A pílula do placar em cima à direita ("42:56 \| time 14 - 0 time") | A pílula do placar no canto de cima à direita, espelho do placar do HUD (que sai com a pausa aberta) |
+| FIFA 23, pausa em blocos COM o campinho (r/EASportsFC — https://www.reddit.com/r/EASportsFC/comments/18cdlq7/) e FIFA 19 (eFootballer — https://www.efootballer.com/how-to-turn-off-the-trainer-in-fifa/) | O campinho não está na pausa do FC 24/25 (mora no "Team Management"); ESTAVA na pausa do FIFA 19–23: o nome do time, a formação ("4-1-3-2"), o MEU MEIO CAMPO visto de cima, camisa na cor do uniforme + nota + fôlego + sobrenome cortado sem reticências, o "C" do capitão e a etiqueta da mentalidade; o bloco do time ERA o botão do Team Management | O cartão do canto direito: o meu meio campo em pé (o ataque para cima), o disco na cor do uniforme com o número, o nome de camisa com "…" (o corte sem reticências do FIFA 23 é feio), a formação e a mentalidade no cabeçalho, e tocar no cartão abre o Editar time. Fôlego e capitão ficaram de fora: o jogo não tem o dado |
+| "Team Management" do FC 26 (r/FifaCareers — https://www.reddit.com/r/FifaCareers/comments/1xdn5jn/) e o guia de fôlego da FUTeam (https://fifauteam.com/fc-24-fitness-guide/) | Cada jogador numa ficha, a barra de energia e o nome; "Select · Back · …" embaixo | A ficha compacta (disco + nome) e a linha dos comandos com Selecionar/Voltar |
+| PES 2019, "Game Plan" pela pausa (manual Konami — https://dds.konami.com/games/manual/pes2019/PS4/en/plan.html) | Ícones de cartão amarelo, vermelho e lesão nas fichas | O cartãozinho amarelo na ficha e o expulso como vaga VAZIA (tracejada, com o vermelho: a expulsão do jogo já é "buraco na vaga") e o ↑ de quem entra na próxima parada |
+| EA FC 24, Matchday Menus (RealSport101 — https://realsport101.com/article/ea-fc-24-matchday-experience-everything-you-need-to-know ; The SixthAxis — https://www.thesixthaxis.com/2023/08/04/deep-dive-trailer-explains-how-ea-sports-fc-24-will-look-better-than-fifa-23/) | O fundo da pausa do FC 24/25 é uma câmera de "bastidores" (close de um jogador com o fundo desfocado), não o jogo da TV; nada de desfoque de tela inteira | O jogo CONGELADO à vista (o que a FILA pede) + a faixa escura, sem `backdrop-filter` (não é do FC e custa recomposição no celular); a câmera de bastidores fica para depois (render) |
+| FIFPlay, controles e câmera do FC 24 (https://www.fifplay.com/fc-24-tactics/ ; https://www.fifplay.com/fc-24-camera-settings/) | Câmera, "Display", áudio etc. moram em Settings (abas); LB/RB trocam as abas dentro do Team Management | As opções de antes (qualidade, câmera, minimapa, replays, horário, tela cheia, som, volume, nomes nos botões, tamanho, transparência) num submenu Opções |
+| FIFA Mobile (FIFAMobileGuide — https://www.fifamobileguide.com/gameplay-controls) e eFootball no celular (tutorial do Game Plan — https://www.youtube.com/watch?v=4f200xLXxaI) | No toque: poucos itens, botões grandes e um ✕ no canto de cima à direita; o eFootball põe o campinho EM PÉ no meio, com a formação ao lado | O X no lugar exato do ≡ (abre e fecha no mesmo ponto); o campinho em pé |
+| Apple HIG (https://developer.apple.com/design/human-interface-guidelines/accessibility), Material 3 (https://m3.material.io/foundations/designing/structure), WCAG 2.2 2.5.8 (https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html) | Alvo 44 pt (mínimo 28), 48 dp, ≥ 24 px; texto mínimo 11 pt | Linhas de 28–44 px no celular (28 em 568×320, a linha na largura toda da faixa), alvos ≥ 44 × 32 nas Opções, letra ≥ 11 (o campinho ≥ 10 em 568×320); no PC as proporções do FC (≥ 42 px) |
+| Xbox Accessibility Guideline 101 (https://learn.microsoft.com/en-us/gaming/accessibility/xbox-accessibility-guidelines/101) | Corpo do texto: PC 18 px a 1080p, celular ~29 px CSS (o "texto grande") | No PC o texto do FC (2,65vh = 19 px a 720p) passa; no celular 15 px (17 no foco) — o de 29 px não cabe numa lista de 8 itens em 320 px de altura |
+| WAI-ARIA APG, diálogo modal (https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/) e WCAG 2.4.13 (https://www.w3.org/WAI/WCAG22/Understanding/focus-appearance.html) | `role="dialog"`, `aria-modal`, `aria-labelledby`; o foco entra no 1º item, o Tab dá a volta dentro, Esc fecha; o indicador de foco com ≥ 2 px e 3:1 | O diálogo "Pausa: <competição>", o foco no Voltar ao jogo, o Tab preso, o fundo `inert`, o Esc que volta um nível (como o ◯ Back do FC) e a barra verde de 3 px no item com o foco (7,1:1 contra a faixa), além do negrito |
+| Game Accessibility Guidelines (https://gameaccessibilityguidelines.com/ensure-that-all-areas-of-the-user-interface-can-be-accessed-using-the-same-input-method-as-the-gameplay/) | O menu tem de ir com a mesma entrada do jogo | Todo comando da pausa pelos 3 meios: toque, teclado só com setas + Enter e controle (navegação espacial, como o direcional do FC) |
+| MDN `env()` (https://developer.mozilla.org/en-US/docs/Web/CSS/env) | `safe-area-inset-*` com `viewport-fit=cover` | A lista e o cartão a partir das áreas seguras (`--sa-l/r/t/b`); o teste mede com o entalhe simulado |
+
+**Decisões** (medidas na base a5abaa4e e no PR com o `teste-pausa-tela`; as alternativas na especificação do item):
+- **A lista + o cartão do FIFA 23** (nenhum jogo da EA faz exatamente isso: é a combinação dos dois que o pedido descreve). O
+  meu meio campo EM PÉ cabe no canto quase quadrado do celular (o campo inteiro deitado deixava as filas a 31 px em 568×320).
+- **As opções num submenu** (o "Settings" do FC, o plano da FILA): no celular a faixa vira a tela inteira no submenu, com as
+  opções em 2 colunas; a lista do 1º nível fica com 5–8 itens e cabe sem rolar até 568×320 (8 linhas de 28,6 px).
+- **Celular em px, PC em proporções**: as do FC dariam 10,5 px de letra e 26 px de linha em 390 px de altura (abaixo do mínimo
+  da Apple); no celular 15/17 px e linhas de 28–44 px, no PC as proporções medidas.
+- **A Inter TM sem `?tm`** (a cara do TM pedida também fora do TM): os 3 pesos (~72 KB) baixam com a pausa (pré-carga), fora
+  do download inicial.
+- **Esc num submenu volta um nível** (o B do controle e o "◯ Back" do FC); P e Start fecham tudo.
+- **O jogo à vista** (P3, a luminância com a pausa ≥ 60% da sem ela): 10,7–12,9% → 20,7–30,2% no celular e 6,2 → 44,6% no PC.
+  O placar em cima à direita (a pílula) custa ~2–3 pontos disso; sem ele, a pausa ficaria sem o placar (o do HUD sai).
 
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 

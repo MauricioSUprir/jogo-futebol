@@ -2,7 +2,7 @@
 
 > Resumo da `golaco/FILA.md` (lá estão o status, a evidência e o plano de cada item).
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
-> Atualizado em 02/11.
+> Atualizado em 04/11.
 
 **Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera ou da mira (02/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
@@ -78,13 +78,13 @@
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~86 h a fazer
+## 📱 F. Telas, HUD, câmera e controles — ~78 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
 | 34 | ✅ ⭐ **Botão de CARRINHO**: L e X na defesa (com a bola alta, lançamento) e o botão "CARRIN." no celular; desliza na bola pela perna desenhada, quem erra fica ~1,2 s no chão, falta e cartão pela Regra 12 (#597) | 14 |
 | 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela); na bola muito alta o gramado e os jogadores ficam no quadro, e no Rumo ao Estrelato o seu jogador fica no quadro (#600) | 8 |
-| 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
+| 58 | ✅ **Menu de pausa igual ao do FC 24**: o jogo parado à vista, a lista de texto à esquerda (Voltar ao jogo, Editar time, Estatísticas, Replay, Opções, …) e o campinho do seu time no canto direito (número, nome, cartões, quem entra e "você"; tocar nele abre o Editar time); cabe sem rolar até o celular pequeno, com teclado, controle e toque (PR do item 58) | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
 | 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais; o dedo que já estava no botão antes de a mira aparecer também arrasta (#601) | 8 |
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
@@ -178,6 +178,7 @@
 
 ## ✅ Entregue nesta rodada
 
+- ⏸️ A pausa igual à do FC 24: a lista à esquerda, as opções num submenu e o campinho do seu time no canto direito (item 58)
 - 🎯 A mira das bolas paradas minimalista, com a cara do TM: a linha fina branca, o anel onde a bola cai e o arco da curva junto da bola, sem painel nem texto; no celular a curva é arrastar o polegar no CHUTE ou no LANÇAMENTO (item 65, #601)
 - 🎥 A câmera que acompanha a bola e mostra a área: menos atraso, a bola mais no centro, a área inteira quando a bola está nela, 6% mais aberta e o escanteio que você cobra visto do alto (item 66, #600)
 - ⏱️ O placar um pouco maior, com a cara do TM e o relógio em minutos e segundos (item 32, #599)

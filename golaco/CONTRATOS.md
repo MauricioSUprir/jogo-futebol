@@ -1676,10 +1676,10 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   opacidade e sem o pino; com o dedo, como antes. Minimapa 112×73 a 0,8 (embaixo no meio; no celular também, 92×60, desde o
   item 59: "Faixa de baixo"); escondido com `html.mapa-desligado` ou, sem
   escolha salva, com `html.com-toque` sem `html.mapa-ligado` (escondido não redesenha: `hud.minimapa` sai antes).
-- **Pausa**: dois botões de liga/desliga na barra de cima (`#chip-minimapa`, `#chip-nomes`, `aria-pressed`; "Nomes nos
-  botões" só com `html.com-toque`) — na barra para a pausa continuar cabendo sem rolar em 844×390 (a lista de opções não
-  tinha altura sobrando). Até 600 px de largura ficam sem a bolinha (o estado fica no fundo verde), para não encostar no
-  título em 568×320 com entalhe (folga ≥ 4 px conferida no `teste-hud-minimo`, H7). `data-cmd="minimapa" | "nomes"` → `comando(cmd, valor?)` (sem valor alterna; 'ligado' |
+- **Pausa**: desde o item 58 (seção "Pausa (item 58)" abaixo) o Minimapa e os Nomes nos botões são linhas liga/desliga das
+  Opções da pausa (`#chip-minimapa`, `#chip-nomes`, `aria-pressed`; "Nomes nos botões" só com `html.com-toque`); o H7 do
+  `teste-hud-minimo` confere o topo novo da pausa (a marca e a competição; a pílula e o X). Antes (11/10–03/11) eram dois
+  botões na barra de cima da janela, para a pausa caber sem rolar em 844×390. `data-cmd="minimapa" | "nomes"` → `comando(cmd, valor?)` (sem valor alterna; 'ligado' |
   'desligado' fixam); salvos em `golaco.prefs.v1` como `prefs.minimapa` ('ligado' | 'desligado' | ausente = padrão do
   aparelho) e `prefs.nomesBotoes` (boolean). `main.js aplicarTelaLimpa()` liga as classes; `hud.definirEstado({minimapa,
   nomes})` marca o estado que vale (o padrão muda quando os controles de toque aparecem: `aoMudarLayout`).
@@ -1767,6 +1767,130 @@ tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md`
   (59 → 4,2 por nome); H1 no pior caso (568×320 com entalhe, defesa, o nome de 88 px; medido com o relógio em "0'" — com o relógio
   de verdade a base passava dos 11% ali: 11,06% no jogo e 11,95–12,06% nos acréscimos, ver "Placar (17/10)"): régua nova 10,16%
   sem o nome → 10,95% com ele; régua de antes 10,98% → 11,77% — passa dos 11%: o H1 só passa com a régua nova (decisão do dono, FILA "Depende do dono" 14); PC (H5) 1,5% → 1,6%. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS.
+
+## Pausa (item 58; 04/11) — a pausa do FC 24 com o campinho do meu time no canto direito (contrato)
+Pedido do dono (23/10): "não quero ele assim, quero ele igual ao do FIFA" (a pausa do EA FC 24), "só quero que tenha que
+aparecer o campinho do time no canto direito". Pesquisa em `PESQUISA-ESTADIO.md` §7.4. **Só DOM, CSS e página**: `index.html`,
+`css/estilo.css`, `css/tm.css`, `js/hud.js`, `js/entrada.js` (fora do fecho), `js/main.js`, `js/livre-pagina.js`,
+`js/online-pagina.js` e os novos `js/pausa-tela.js` + `css/pausa.css` (sob demanda); `escalacao.js`, `formacoes.js`, `elenco.js`,
+`tatica.js` e `config.js` só lidos. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS. Com a pausa aberta o mundo
+fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu controlado).
+- **O DOM** (`index.html`; ids e `data-cmd` de antes mantidos): `#menu.sobreposicao.pausa[data-entrada]` > `.janela-menu`
+  (`role="dialog"`, `aria-modal`, `aria-labelledby="menu-titulo"`) com a `.pausa-faixa` (o `.janela-topo`: a marca
+  `<svg class="pausa-marca"><use href="#marca-golaco">` — o símbolo do placar, que passou a `<symbol id="marca-golaco">` no
+  sprite — e o `h2#menu-titulo` "<span class=sr>Pausa: </span><span id=pausa-competicao>"; o `.menu-corpo` com o 1º nível
+  `#menu-acoes` e os submenus `#menu-opcoes`, `#menu-modos`, `#menu-estatisticas`, cada um com a `.sub-topo` = Voltar
+  (`data-cmd="<nome>-voltar"`) + o título; a `.pausa-comandos` do PC, `aria-hidden`) e a `.pausa-direita` (`.pausa-topo-dir`
+  com a pílula `#pausa-placar` `role="img"` e o X `.btn-fechar[data-cmd=continuar]`, e o cartão `section#pausa-time`
+  `role="region"`). O fim do 1º nível tem a âncora `<!--fim-->`: o Reiniciar, o Simular o resto e o Voltar ao TM moram antes
+  dela; no fim de jogo o primário do fim (Jogar de novo / Voltar ao TM) sobe para o 1º lugar (`hud.js ordenarFim`).
+- **O 1º nível, na ordem do FC 24** (o `data-so`, a trava e o online escondem; `pausa-medidas.mjs ORDEM` por modo): Voltar ao jogo
+  (primário, foco ao abrir) · Editar time · Estatísticas · Replay · Opções · Modo de jogo (no TM, "Cenas da partida") · Ajuda e
+  controles · Reiniciar partida · Simular o resto · Voltar ao TM. Nos treinos: Voltar · Recomeçar · Máquina de passes · Marcador
+  · Opções · Modo de jogo · Ajuda. No Livre (`livre-pagina.js`, ANTES do Replay): Jogadores e Câmera (com o estado em
+  `small.estado`) e a `.linha-par` "Recomeçar" (Recomeçar | Bola no meu pé). Online (`online-pagina.js`): Pausar depois do
+  Voltar e Sair por último, os dois por `aoTocar`. Lista de TEXTO, sem caixas: a linha na largura toda da faixa (28–44 px no
+  celular, `--item-h` no PC), o item com o foco (`.selecionado`, que segue o `focusin`; o mouse dá o foco no `pointerover`) em
+  800 com a barra verde de 3 px e o brilho verde para a direita, 1,13× a partir de 640 px de largura e 1,36× no PC
+  (`--item-f`/`--item-f-foco`); o primário sem foco em verde-claro. A descrição de antes (`small.desc`) só para o leitor de
+  tela (`aria-describedby`); o estado (`small.estado`) à direita, o único que ganha "…".
+- **Opções** (`#btn-opcoes` → `#menu-opcoes`): Qualidade (+ `#info-qualidade`), Câmera, Minimapa (`#chip-minimapa`, linha
+  liga/desliga com a chave desenhada, `aria-pressed`), Replays (`aria-label` "Replays automáticos"), Horário, Tela cheia (linha
+  liga/desliga, `aria-pressed`; só com `document.fullscreenEnabled`), Som (`aria-label` "Som da torcida"), Volume, Nomes nos
+  botões (`#chip-nomes`, só com `html.com-toque`), Tamanho e Transparência. Cada grupo `role="group"` com nome. Saíram os chips
+  da barra de cima da pausa de antes (seção "Tela limpa"). **Estatísticas** (`#btn-estatisticas`, partida) → `#menu-estatisticas`
+  com a `table.pausa-est` (legenda, cabeçalho com escudo e sigla, `th scope=row` no meio; posse, chutes, no alvo, escanteios,
+  faltas, cartões — a `sumula.js estatisticas`, o mesmo do painel do intervalo, `ROTULOS_EST` do `cenas-tela.js`), refeita a cada
+  abertura (no online, 1× por segundo com ela à vista). **Modo de jogo** como antes (no celular em grade: Jogos | Modo Livre,
+  Treinos, a linha das cenas).
+- **Layout** (`css/estilo.css`, bloco "Pausa (item 58)"; nada depende de JS para caber): o jogo congelado à vista, sem véu; a
+  faixa escura (`#050807` a 0,9) do x 0 até o fim da lista + 16 px e o degradê depois (`--fx-cheia`, `--fx-fade` 12vw no
+  celular, 22vw no PC); dois regimes pela ALTURA — celular deitado (≤ 480 px; a lista em px a `--sa-l + --pm`, `--pm` 16/14/12
+  px por largura, a faixa de `clamp(196px, 18vw + 100px, 260px)`, os itens em `flex: 1 1 0` de 28 a 44 px) e PC/tablet
+  (≥ 481 px; as proporções do FC 24 medidas em 1280×720: o texto em 5,2vw, a marca em 4,3vh, o 1º item em 19,3vh, o passo
+  6,67vh, a letra 2,65vh e 3,6vh no foco, a lista em 24vw — `max(24vw, 380px)` nas Opções e Estatísticas —, a linha dos
+  comandos em 93vh). Nos submenus do celular (`data-nivel="sub"` na `.janela-menu`, posto pelo `hud.js marcarNivel`; o
+  `data-sub` = o id) a faixa vira a tela inteira, a competição sai (a linha do Voltar fica na altura do X), o cartão e a pílula
+  saem de cena e as Opções vão em 2 colunas. Janela estreita de PC (< 560 px): só a lista. `#menu [hidden]` = `display: none
+  !important` (as regras da pausa põem `display` nos itens). Com a pausa (ou a Ajuda) aberta, `html.pausa-aberta`: o HUD do
+  jogo, os botões de toque e as camadas de cena saem (`visibility: hidden`; o `ajustarTopo` mede igual) e ficam `inert`; o
+  `#aviso` fica.
+- **O canto direito**: a pílula do placar (`hud.js espelharPlacar`: o espelho do placar do HUD — siglas, gols, escudos e o
+  relógio —, escrita ao abrir e, com ela aberta, nas mesmas funções que escrevem o placar; nos treinos não aparece; sem lugar
+  entre o topo da faixa e o X perde o relógio e depois os escudos, `ajustarPilula`), o X no lugar do ≡ (44×44, fecha) e o
+  CARTÃO do meu time em `--card-y` (66 px no celular, 72 no PC) com `--card-w` (até 300 px no celular; 30vw no PC).
+- **O cartão** (`js/pausa-tela.js` + `css/pausa.css`, sob demanda; `criarPausaTela({cartao, est})` → `{time(d), estatisticas(d),
+  layout(), estado}`): o cabeçalho (escudo, nome com "…", a formação em verde-claro e a mentalidade quando cabe), o MEU MEIO
+  CAMPO EM PÉ (o `campinho.js svgCampinho(true)` com `viewBox "0 51 68 54.5"` e `posicaoNaTela(…, true)`, como o FIFA 23) e uma
+  ficha por vaga: o disco na cor do uniforme (o goleiro com a dele) com o número e o nome de camisa embaixo ("…" quando não
+  cabe), o cartãozinho amarelo, o ↑ de quem entra na próxima parada, o anel verde-claro de "você" (o controlado ou o travado do
+  Rumo ao Estrelato) e o expulso como a vaga VAZIA (disco tracejado e o cartão vermelho). `tamanhoCampinhoPausa(W, H)`: disco
+  `clamp(16, round(6 + W·0,056), 34)`, letra 11 (10,5 com o disco abaixo de 20, abaixo de ~250 px de largura; a metade do disco,
+  11–18, a partir de 26), o campo esticado até +15% para as 5 linhas caberem; sem lugar, disco 16 e letra 10. Um resumo `.pt-sr` para o leitor de tela
+  ("4-3-3, Equilibrada. Goleiro: …"), a região `aria-labelledby` o cabeçalho. Os dados (`main.js dadosPausaTime`): o
+  `escalacao.js rascunhoDe` (o time que VAI valer, com a edição na fila), `fichaDe`, `m.partida.cartoes`, `TRAVA_TM` ou
+  `m.controlado`, a cor do `IDENT.hud.placar` ou do `COR_UNIFORME` (agora exportado pelo `escalacao-tela.js`), a do goleiro pelos
+  `KITS`/`IDENT.kits`; no Livre só quem está em campo (fora do `m.livre.fora`) e o texto do `#estado-livre`; null nos treinos e
+  na disputa (sem cartão). Refeito só quando a chave muda (`chavePausaTime`: formação, versão, saídas, substituições na fila,
+  expulsos, edição na fila, cartões, controlado, Livre, mentalidade). Tocar ou clicar no cartão abre o Editar time
+  (`data-editavel="1"`: só na partida, fora do Livre e sem a trava do TM); fora da ordem do foco (o teclado e o controle usam o
+  item "Editar time"). `data-pronto` quando desenhado.
+- **Sob demanda** (`main.js SOB.pausa`): `import('./pausa-tela.js')` + `css/pausa.css` (antes do `prejogo.css`) + a Inter TM nos
+  3 pesos (`fontesPausa`, `@font-face 'Inter TM'` 400/600/800 no `estilo.css`, ~72 KB) — fora do download inicial; a pré-carga
+  ociosa de sempre traz tudo; abrir a pausa antes mostra a lista na hora (com a fonte do sistema até a Inter chegar) e o cartão
+  quando chega (`teste-carga`: os 2 arquivos na lista do sob demanda e as 3 fontes nunca no inicial e pedidas depois da pré-carga).
+- **Navegação** (`hud.js`): os níveis (`submenu('modos' | 'opcoes' | 'estatisticas' | null)`: abrindo, o foco vai ao escolhido
+  — `aria-pressed` — ou ao 1º controle; voltando, ao item que abriu); `voltarNivel` (o B do controle e o Esc: a Ajuda fecha e
+  volta à pausa se veio dela, o submenu — também os do Livre — volta ao 1º nível, o 1º fecha; P e Start fecham tudo);
+  `navegarPad` ESPACIAL (`vizinho`: cima/baixo pelo menor Δy e depois o menor |Δx|, dando a volta; esquerda/direita só na mesma
+  linha; nos deslizantes, esquerda/direita mudam o valor; o X fica fora); o Tab preso no nível à vista + o X (dá a volta, nunca sai
+  para o jogo). **Teclado** (`entrada.js MENU_TECLA`, com o menu ou a Ajuda abertos — `opc.menuAberto`): setas → `menu-cima/
+  baixo/esq/dir` (com a repetição da tecla), Esc → `menu-voltar` (sem a repetição); Ctrl/Alt/Meta ficam de fora. `entrada.
+  ultimoMeio` ('teclado' | 'pad' | 'toque', pelo último keydown, botão/eixo do controle ou pointerdown) → `hud.definirEntrada` →
+  `#menu[data-entrada]`: a linha dos comandos do PC mostra Enter Selecionar · Esc Voltar ou Ⓐ Selecionar · Ⓑ Voltar (some com
+  o toque). **Toque**: o fundo que fecha é o jogo à vista (a área do degradê, o canto direito, a pílula), nunca a faixa da lista
+  (tocar nela fora dos itens não fecha); o X no lugar exato do ≡ fecha e o mesmo toque não reabre (`engolirClique`). Fechando, o
+  foco SAI da pausa (o padrão do APG o devolveria ao ≡, mas o Enter seguinte reabriria a pausa: de propósito).
+- **`main.js`**: os comandos `opcoes`, `estatisticas` (`abrirEstatisticas`) e `*-voltar`; `atualizarPausa(abrindo)` a cada quadro
+  com a pausa aberta (a linha dos comandos, a competição ao abrir, o cartão quando a chave muda); `hud.definirCompeticao(
+  textoCompeticao())` no começo e em cada `trocarMundo` (TM: `IDENT.competicao` ou a do pedido, senão "Total Match"; online
+  "Partida online"; sem eles o modo: Amistoso, Disputa de pênaltis, Modo Livre, Treino de ataque, Treino de condução). API de
+  teste: `__golaco.pausa` ({aberta, nivel, sub(nome), tela, pronta, carregar(), dados(), competicao()}), `__golaco.
+  comandosVistos` / `limparComandosVistos()` / `secarComandos(lista)` (os comandos que chegam ao `comando()`; os "secos" só
+  registrados), `sobDemanda.estado.pausa`.
+- **Cara do TM com e sem `?tm`**: as variáveis `--p-*` do `#menu` (#050807, #22c55e, #4ade80, a Inter TM) no `estilo.css`;
+  o `tm.css` só troca a marca (`--tm-simbolo` no `::before` do topo) e guarda a Ajuda. Contraste medido (P8): texto 11,2:1, a
+  barra do foco 7,1:1.
+- **Testes**: `teste-pausa-tela` (navegador, CI e deploy; `tools/lib/pausa-medidas.mjs` com a ORDEM por modo, os 31 COMANDOS
+  e as medidas na página; `--so cel|pc|tm|online`, `--raiz` mede outra cópia): P1 a lista à esquerda na ordem por modo e o
+  cartão à direita (folgas, nada cortado nem fora da área segura); P2 sem rolar em todos os níveis × modos × telas (844×390,
+  667×375, 640×360 e 568×320 com entalhe; 1280×720; e com `?tm` num quadro com a meta viewport); P3 o jogo à vista pelo print
+  (luminância com a pausa ≥ 60% da sem ela: ≥ 40% no PC, 25% em 844, 17% em 667/640, 14% em 568); P4 o campinho (11 fichas na
+  ordem da formação, letra ≥ 11 ou ≥ 10 em 568, o amarelo, o ↑, o "você" e o expulso vazio, tocar abre o editor, o 4-4-2 do
+  PRONTO no cartão antes de o jogo voltar, a trava do TM sem editor, o Livre só com quem está em campo, sem cartão nos treinos e
+  nos pênaltis); P5 o teclado (↓/↑, Esc um nível com o foco no item que abriu, Tab preso, fundo inert); P6 alvos ≥ 44 × 32 px
+  no celular (28 em 568×320) e ≥ 32 de altura no PC; P7 o leitor de tela (o diálogo "Pausa: …", grupos com nome, o cartão como
+  região com resumo, a tabela com legenda); P8 a cara do TM sem `?tm`; P9 o toque (o X no lugar do ≡ fecha e não reabre, o jogo
+  fecha, a faixa não); P10 todo comando pelos 3 meios (toque; teclado só com setas + Enter; controle pelas ações `menu-*`) chega
+  ao `comando()`, com Voltar ao jogo ≤ 2 e Editar time ≤ 2 toques e ≤ 3 teclas/apertos; S1 o mundo parado (0/60 passos com a
+  pausa aberta; no online anda ≥ 40% da janela fechada); S2 0 erros; S5 a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320).
+  Adaptados: `teste-hud-minimo` H7 (o topo novo; Minimapa e Nomes nas Opções), `teste-livre-tela` (D1, D3, E1, F: a ordem do
+  Livre, o topo novo, a meta viewport no quadro do TM), `teste-replay` D4 e `teste-replay-paradas-tela` (a opção "Replays" nas
+  Opções), `teste-penaltis-tela` 8 (o Minimapa escondido nas Opções), `teste-online-tela` P9 (Pausar e Sair pelo toque, o Sair
+  com outro dedo no analógico), `teste-tm-tela` (a meta viewport), os de "a pausa não rola" (`teste-prejogo`,
+  `teste-substituicao-tela`, `teste-cenas-tela`, `teste-penaltis-tela`, `teste-livre-tela`: a rolagem do `.menu-corpo` e do
+  nível à vista) e o `teste-carga` (o sob demanda novo e as fontes).
+- **Medidas** (a5abaa4e → PR, `teste-pausa-tela`; a base reprova P1–P10 e S5): rolagem do 1º nível no celular 287/302/342 px
+  (667/640/568) → 0 em todas as telas e níveis (88 medidas no celular, 12 no PC, 40 no TM, 2 no online); o jogo à vista 10,7 /
+  11,6 / 11,9 / 12,9% (844/667/640/568) → 30,2 / 20,7 / 21,1 / 21,6%, PC 6,2 → 44,6%; alvos pequenos 17–19 por tela (o menor
+  26×32) → 0; a menor letra 10 → 11 px (o campinho 10,5 em 568×320); a fonte system-ui → Inter TM; teclado: as setas não
+  andavam e o Tab saía da pausa 2 em 40 → as setas andam, 0 em 40; o Editar time pelo teclado inalcançável → 3 teclas, pelo
+  controle 4 → 3 apertos; o toque: 2 toques no 1º nível e 3 nas Opções (antes 2, na própria janela). Custos que subiram (o plano
+  da FILA: as opções num submenu e a ordem do FC): no teclado e no controle as opções custam 9–16 (Qualidade → Alta 9,
+  Transparência 16), o Replay 5 (antes 3 no controle) e o Modo de jogo 7 (antes 6).
+- **Fica** (fora da v1, anotado): o fôlego e o capitão no campinho (não há o dado); a câmera de bastidores (o close do
+  controlado, como os "Matchday Menus" do FC 24; render); a Ajuda no estilo novo (continua janela e rola no celular como antes); o
+  contador da pausa combinada do online dentro da pausa; desenhar o 3D só na mudança com a pausa aberta (mexe no laço).
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -3920,7 +4044,8 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
 - **Teste `teste-online-tela`** (navegador, CI e deploy): duas abas do mesmo Chromium jogando a mesma partida (IA nos dois
   lados): P1 andam, P2 os hashes iguais (0 de 12), P3 a pausa de A para os dois, B mostra "Pausado por", depois seguem
   iguais, P4 o menu aberto não para, P5 a partida inteira (?min=0.25) acaba igual nas duas (0 de 36), P6 a pausa do online
-  em 844×390 sem rolar, 0 erros. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não
+  em 844×390 sem rolar, P9 (item 58: o Pausar depois do Voltar ao jogo e o Sair por último, os dois por `aoTocar`) o Pausar
+  pelo toque pausa e o Sair arma com outro dedo no analógico, 0 erros. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não
   tempo.)
 
 ## Corpo humano realista — Etapa 5.1 (22/10; contrato)
