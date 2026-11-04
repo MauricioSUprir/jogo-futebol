@@ -53,6 +53,12 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .pp-comp > svg { flex: none; width: 1.6em; height: 1.6em; color: var(--pp-verde); }
 #prepartida .pp-comp-txt { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 #prepartida .pp-canto.armado ~ .pp-comp .pp-comp-txt, #prepartida .pp-comp:has(+ .pp-canto.armado) .pp-comp-txt { color: #fecaca; }
+/* (o nome que não cabe no celular: as letras apertam, o ícone sai e, por fim, 2 linhas — prepartida-tela.js ajustarComp) */
+#prepartida .pp-comp.aperta { letter-spacing: 0.02em; }
+#prepartida .pp-comp.sem-icone > svg { display: none; }
+#prepartida .pp-comp.duas .pp-comp-txt {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; white-space: normal; line-height: 1.12;
+}
 #prepartida .pp-classico { margin-left: 0.6em; padding: 0.15em 0.6em; border-radius: 999px; border: 1px solid rgba(250, 204, 21, 0.5); color: #fde68a; font-size: 0.85em; letter-spacing: 0.04em; }
 
 /* ------------------------------------------------------------------ a barra (controle, camisas, escudos, horário) */

@@ -173,6 +173,7 @@ export function criarPrepartida(opc) {
       const c = raiz.querySelector('.pp-comp');
       c.style.maxWidth = `${Math.max(0, b.left - L.comp.x - 8)}px`;
     }
+    ajustarComp();
     ligar();
     desenharCampo();
     escreverInfo();
@@ -182,6 +183,18 @@ export function criarPrepartida(opc) {
     void mostrado;
   }
   const chave = () => `${st.L.W}x${st.L.H}|${st.time}|${st.visao}`;
+  /**
+   * A competição no celular sem o "…" (revisão V11: "BRASILEIRÃO S…" em 568×320): não cabendo, as letras apertam (0,02 em), o ícone
+   * sai e, por fim, o nome quebra em 2 linhas (a altura da barra comporta); só com as 2 linhas cheias sobra o "…".
+   */
+  function ajustarComp() {
+    const c = raiz.querySelector('.pp-comp'), t = c?.querySelector('.pp-comp-txt');
+    if (!t) return;
+    c.classList.remove('aperta', 'sem-icone', 'duas');
+    if (st.L.pc) return;
+    const corta = () => t.scrollWidth > t.clientWidth + 0.5 || t.scrollHeight > t.clientHeight + 0.5;
+    for (const k of ['aperta', 'sem-icone', 'duas']) { if (!corta()) break; c.classList.add(k); }
+  }
 
   /** A info (1 linha no celular, 2 no PC) com o corte por prioridade; na Visão tática, as 4 escolhas da tática. */
   function escreverInfo() {
@@ -352,8 +365,8 @@ export function criarPrepartida(opc) {
       c.classList.toggle('armado', armado);
       c.classList.toggle('destaque', !!st.destaqueCanto && !armado);
       c.setAttribute('aria-label', armado ? st.canto.armar : st.canto.texto);
-      const ct = raiz.querySelector('.pp-comp-txt');
-      if (ct) ct.textContent = armado ? st.canto.armar : st.dados.competicao;
+      const ct = raiz.querySelector('.pp-comp-txt'), txt = armado ? st.canto.armar : st.dados.competicao;
+      if (ct && ct.textContent !== txt) { ct.textContent = txt; ajustarComp(); }
     }
   }
   function focarEl(el) { if (el) { el.focus({ preventScroll: true }); } }

@@ -141,7 +141,13 @@ const MEDIR = () => {
   const pecas = { barra: q('.pp-barra'), comp: q('.pp-comp'), menu: q('[data-pp="menu"]'), canto: q('[data-pp="canto"]'), info: q('#pp-info'), campo: q('.pp-gramado'), abas: q('.pp-abas'), esq: q('.pp-canto-esq'), dir: q('.pp-canto-dir'), cmd: q('.pp-cmd') };
   // a competição: o texto (não a caixa inteira) — a caixa vai até a borda no PC
   const compTxt = raiz.querySelector('.pp-comp-txt');
-  if (compTxt) { const r = R(compTxt); const ic = R(raiz.querySelector('.pp-comp svg')); pecas.comp = { x: ic.x, r: r.r, y: Math.min(ic.y, r.y), b: Math.max(ic.b, r.b) }; }
+  if (compTxt) {
+    // (o ícone pode ter saído: a competição longa no celular)
+    const r = R(compTxt), icEl = raiz.querySelector('.pp-comp > svg'), ic = icEl && icEl.getClientRects().length ? R(icEl) : r;
+    pecas.comp = { x: ic.x, r: r.r, y: Math.min(ic.y, r.y), b: Math.max(ic.b, r.b) };
+    // o nome nunca cortado (revisão V11: "BRASILEIRÃO S…" em 568×320)
+    if (compTxt.scrollWidth > compTxt.clientWidth + 0.5 || compTxt.scrollHeight > compTxt.clientHeight + 0.5) prob.push(`competição cortada ("${compTxt.textContent}")`);
+  }
   const pares = [['comp', 'barra'], ['menu', 'barra'], ['canto', 'barra'], ['canto', 'comp'], ['menu', 'comp'], ['barra', 'info'], ['info', 'abas'], ['campo', 'abas'], ['abas', 'cmd'], ['esq', 'abas'], ['dir', 'abas'], ['esq', 'dir'], ['info', 'menu'], ['info', 'canto']];
   for (const [a, b] of pares) if (pecas[a] && pecas[b] && sob(pecas[a], pecas[b], 1, 1)) prob.push(`${a}×${b}`);
   const cantosTxt = [...raiz.querySelectorAll('.pp-canto-esq > *, .pp-canto-dir > *')].map(R).filter(r => r.w > 0);
@@ -442,8 +448,9 @@ if (faz('telas')) {
   }
   // E4b os outros modos no celular (a revisão do item 64): os Pênaltis (a duração "5 cobranças · Começa: …") e o TM pro com o
   // clássico, a competição e o estádio longos (4 abas, as duas vistas e o Simular armado) — a linha de informação sem o corte do
-  // CSS (A3), o texto das abas inteiro (também o "Toque de novo: simular": V2) e o ícone igual na barra toda (A4/V3/V15)
-  const PED_PRO = { ...PED_A, id: 'tProPP', edicao: 'pro', home: { ...PED_A.home, stadium: 'Estadio Municipal El Molinón – Enrique Castro "Quini"' }, partida: { ...PED_A.partida, classico: true, nomeClassico: 'Clássico das Multidões', competicao: 'Brasileirão Série A' } };
+  // CSS (A3), o texto das abas inteiro (também o "Toque de novo: simular": V2), o ícone igual na barra toda (A4/V3/V15) e a
+  // competição sem "…" (V11)
+  const PED_PRO = { ...PED_A, id: 'tProPP', edicao: 'pro', home: { ...PED_A.home, stadium: 'Estadio Municipal El Molinón – Enrique Castro "Quini"' }, partida: { ...PED_A.partida, classico: true, nomeClassico: 'Clássico das Multidões', competicao: 'Campeonato Brasileiro Série A' } };
   const MODOS_TELA = [
     ['Pênaltis', { q: `${Q}&prepartida=1&modo=penaltis&semente=5&hora=noite` }, ['meu', 'outro']],
     ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu', 'sem', 'com', 'armado']],
