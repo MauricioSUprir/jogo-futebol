@@ -43,25 +43,37 @@ e um freio por IP.
 
 ## Começar DE GRAÇA (Gemini)
 
-Não quer gastar nada para testar? O servidor também fala com o **Gemini**, do Google,
-que tem uma faixa gratuita **sem cartão**:
+Não quer gastar nada? O servidor fala com o **Gemini**, do Google, que tem uma faixa
+gratuita **sem cartão**:
 
 1. Entre em [aistudio.google.com](https://aistudio.google.com) com uma conta Google
    → **Get API key** → crie a chave.
-2. No Railway, em vez de `ANTHROPIC_API_KEY`, configure `GEMINI_API_KEY`.
-3. Pronto: o MindTrack AI funciona de verdade, custo zero.
+2. No Render/Railway, configure `GEMINI_API_KEY`.
 
-Regras de convivência das chaves:
+### A escada de modelos (o "modelo bom que dura")
 
-- Só `GEMINI_API_KEY` → usa o Gemini (grátis).
-- Só `ANTHROPIC_API_KEY` → usa a Claude (paga por uso).
-- As duas → a **Claude vence** (mais estável para quem paga); `PROVEDOR=gemini` inverte.
-- `MODELO_GEMINI` troca o modelo do Gemini (padrão `gemini-2.5-flash`).
+No plano grátis o Google dá **poucas** perguntas por dia aos modelos melhores e bem mais aos
+leves — e o limite é do **projeto inteiro**, não de cada aluno. Por isso cada pergunta sobe uma
+escada, do melhor para o mais leve; quando um modelo esgota a cota (erro 429), o servidor anota
+até quando (a cota diária renova à meia-noite do Pacífico) e **pula direto** para o próximo, sem
+gastar chamada testando de novo. Modelo que saiu do ar (404) é pulado por 6 h.
 
-⚠️ O limite do plano grátis do Gemini é **do app inteiro**, não por aluno — serve para
-testar e para os primeiros usuários, mas quando houver assinantes pagando, ponha a
-chave da Claude para ninguém ficar na fila (os limites por aluno continuam valendo
-igual nos dois provedores).
+| Escada | Quando | Degraus (padrão) | Variável |
+| --- | --- | --- | --- |
+| topo | assinante Plus, redação, plano da semana | 3.8-flash → 3.6-flash → 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI_TOPO` |
+| normal | chat, explicações, questões | 3.6-flash → 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI` |
+| leve | resumos, flashcards, dividir tarefa | 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI_LEVE` |
+
+(os nomes são `gemini-…`; as variáveis recebem listas separadas por vírgula.) O `/saude` mostra a
+escada e quem está sem cota (`foraDaCota`).
+
+Outras economias: o "pensamento" dos Gemini 3 vai no mínimo necessário (`thinkingLevel`
+minimal/low/medium pelo esforço do pedido — pensar gasta tokens da cota); respostas iguais
+(mesmo pedido, sem foto) voltam de um **cache** de 12 h e não contam no limite do aluno
+(`CACHE_IA=0` desliga); e o próprio app responde sem IA as perguntas comuns ("o que estudo
+agora?", "minhas provas", "plano de hoje"…, em `studylab/js/respostas-locais.js`).
+
+Com as duas chaves (Gemini e Claude), a Claude vence; `PROVEDOR=gemini` inverte.
 
 ---
 

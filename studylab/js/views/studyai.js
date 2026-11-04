@@ -4,16 +4,19 @@ import { st, set, nomeMateria, nivelPlano } from '../store.js';
 import { resumoPeriodo, filaRevisao, filaTarefas, preparoProva, nivelDe } from '../engine.js';
 import { titulo, cartao, vazio, modal, fecharModal, toast, campo, inp, txtarea, confirmar, paywall, liberado, selo } from '../ui.js';
 import { temIA, motivoIA, chat, contextoDoAluno, observacoesLocais, corrigirRedacao, planoSemanaIA } from '../ai.js';
+import { responderLocal } from '../respostas-locais.js';
 import { LIMITES_PLANO } from '../produto.js';
 import { comprimirImagem, dataUrlParaBloco, fotosDaMateria } from '../fotos.js';
 
+// as 5 primeiras respondem na hora (respostas-locais.js); as outras usam a IA
 const SUGESTOES = [
   'O que eu estudo agora?',
-  'Monte meu plano de estudo para hoje',
-  'Estou pronto para a próxima prova?',
+  'Qual o plano de hoje?',
+  'Minhas próximas provas',
+  'Tarefas atrasadas',
+  'Como foi minha semana?',
   'Quais são meus pontos mais fracos?',
   'Explique meu pior conteúdo de forma simples',
-  'Como eu organizo a semana com essas tarefas?',
 ];
 
 export function render(el) {
@@ -23,33 +26,14 @@ export function render(el) {
 
 function montar(el, pintar) {
   const s = st();
-  el.append(titulo('🤖 MindTrack AI', 'Ele conhece suas matérias, provas, erros e calendário.',
+  el.append(titulo('💬 MindTrack AI', 'Pergunte o que quiser sobre os seus estudos — ele conhece suas matérias, provas e calendário.',
     h('button', { class: 'btn', onclick: () => verContexto() }, '👁️ O que ele sabe'),
     h('button', { class: 'btn', onclick: () => abrirMemoria(pintar) }, '🧠 Memória')));
 
-  if (!temIA()) {
-    const porQue = motivoIA();
-    el.append(h('div', { class: 'mb' }, porQue === 'PRO'
-      ? paywall('O MindTrack AI é dos planos Pro e Plus',
-        'Ele conhece suas matérias, suas provas, seus erros e seu calendário — e responde com base nos seus dados de verdade, '
-        + 'não em achismo. Pergunte "o que eu estudo agora?" e veja a diferença.')
-      : paywall('MindTrack AI ainda não foi ligado',
-        'Sua assinatura está ativa, mas o servidor do MindTrack ainda não está no ar — é ele que guarda a chave e '
-        + 'conversa com a inteligência artificial. Se este app é seu: publique o studylab-server e informe o '
-        + 'endereço em ⚙️ Configurações → Área do criador.')));
-
-    if (porQue !== 'PRO') {
-      el.append(h('div', { class: 'mb' }, h('a', { class: 'btn btn--p', href: '#/config' }, '⚙️ Abrir a Área do criador')));
-    }
-    el.append(cartao(
-      h('b', {}, '🤔 O que ele responderia com os seus dados'),
-      h('p', { class: 'tiny muted' }, 'Exemplos reais do que o MindTrack AI usa quando é liberado:'),
-      h('div', { class: 'chips' }, ...SUGESTOES.map((sg) => h('span', { class: 'chip' }, sg))),
-      porQue === 'PRO' ? h('a', { class: 'btn btn--p mt', href: '#/planos' }, '✨ Ver planos') : null));
-
-    el.append(h('div', { class: 'mt2' }, cartaoObservacoes()));
-    return;
-  }
+  // O chat aparece para TODO mundo: sem plano (ou sem o servidor ligado) ele
+  // responde na hora as perguntas comuns, calculadas pelo próprio app (sem IA).
+  const iaLigada = temIA();
+  const porQue = iaLigada ? null : motivoIA();
 
   /* ---------- chat ---------- */
   let historico = s.conversas?.length ? [...s.conversas] : [];
@@ -133,7 +117,10 @@ function montar(el, pintar) {
     if (!historico.length) {
       chatBox.append(h('div', { class: 'msg sys' }, 'Comece perguntando alguma coisa — ou escolha uma sugestão abaixo.'));
     }
-    for (const m of historico) chatBox.append(h('div', { class: `msg ${m.autor === 'me' ? 'me' : 'ai'}` }, m.txt));
+    for (const m of historico) {
+      chatBox.append(h('div', { class: `msg ${m.autor === 'me' ? 'me' : 'ai'}` }, m.txt,
+        m.local ? h('div', { class: 'tiny muted', style: { marginTop: '6px' } }, '⚡ resposta instantânea, sem gastar a IA') : null));
+    }
     chatBox.scrollTop = chatBox.scrollHeight;
   }
 
@@ -145,6 +132,19 @@ function montar(el, pintar) {
     anexos = []; pintarAnexos();
     entrada.value = '';
     historico.push({ autor: 'me', txt: rotulo + (pergunta || 'O que você vê nessa(s) foto(s)?') });
+
+    // 1º o próprio app: pergunta comum sobre os seus estudos não gasta a IA
+    const local = fotos.length ? null : responderLocal(pergunta);
+    if (local || !iaLigada) {
+      historico.push(local
+        ? { autor: 'ai', txt: local, local: true }
+        : { autor: 'ai', txt: porQue === 'PRO'
+          ? 'Essa pergunta precisa do MindTrack AI, que é dos planos Pro e Plus. ✨\n\nSem plano eu respondo na hora: o que estudar agora, o plano de hoje, suas provas, tarefas, revisões, aulas e como foi a sua semana.'
+          : 'O MindTrack AI ainda está sendo ligado no servidor. Enquanto isso eu respondo na hora: o que estudar agora, o plano de hoje, suas provas, tarefas, revisões, aulas e como foi a sua semana.' });
+      set((x) => { x.conversas = historico.slice(-40); });
+      pintarChat();
+      return;
+    }
     pintarChat();
     const pensando = h('div', { class: 'msg ai typing' }, h('i'), h('i'), h('i'));
     chatBox.append(pensando); chatBox.scrollTop = chatBox.scrollHeight;
@@ -166,9 +166,18 @@ function montar(el, pintar) {
   });
 
   el.append(chatBox);
+  if (!iaLigada) {
+    el.append(h('div', { class: 'card card--flat mt', style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } },
+      h('span', { class: 'small grow' }, porQue === 'PRO'
+        ? '⚡ Modo grátis: respostas instantâneas sobre os seus estudos. Para perguntar qualquer coisa e mandar fotos, assine o Pro.'
+        : '⚡ Respostas instantâneas ligadas. O MindTrack AI completo está sendo ligado no servidor.'),
+      porQue === 'PRO' ? h('a', { class: 'btn btn--sm btn--p', href: '#/planos' }, '✨ Ver planos') : null));
+  }
   el.append(h('div', { class: 'mt' }, tiraAnexos));
-  el.append(h('div', { class: 'flexb mt' },
-    h('button', { class: 'btn', title: 'Anexar foto', onclick: abrirFotos }, '📸'),
+  entrada.style.flex = '1';
+  entrada.style.minWidth = '0';
+  el.append(h('div', { class: 'mt', style: { display: 'flex', gap: '8px', alignItems: 'flex-end' } },
+    h('button', { class: 'btn', title: 'Anexar foto', 'aria-label': 'Anexar foto', onclick: abrirFotos }, '📸'),
     entrada,
     h('button', { class: 'btn btn--p', onclick: () => enviar() }, 'Enviar')));
   el.append(arquivoFoto);
@@ -182,7 +191,7 @@ function montar(el, pintar) {
         historico = []; set((x) => { x.conversas = []; }); pintarChat();
       }),
     }, '🗑️ Limpar conversa'),
-    h('span', { class: 'tiny muted sp' }, `${s.ia.usoHoje || 0} de ${limites.dia} perguntas hoje`)));
+    iaLigada ? h('span', { class: 'tiny muted sp' }, `${s.ia.usoHoje || 0} de ${limites.dia} perguntas à IA hoje`) : null));
   el.append(h('div', { class: 'grid g2 mt2' }, cartaoRedacao(), cartaoPlanoSemana()));
   el.append(h('div', { class: 'mt2' }, cartaoObservacoes()));
   pintarChat();

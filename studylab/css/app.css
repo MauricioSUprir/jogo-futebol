@@ -64,6 +64,7 @@ svg.mark{width:100%;height:auto;display:block}
   font-weight:600;font-size:14px
 }
 .side__nav a span.i{width:20px;text-align:center}
+.side__grupo{margin:12px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim2)}
 .side__nav a:hover{background:var(--panel2);color:var(--txt)}
 .side__nav a.on{background:linear-gradient(90deg,rgba(62,201,245,.20),transparent);color:var(--txt)}
 .side__nav a.on span.i{filter:drop-shadow(0 0 6px rgba(62,201,245,.7))}

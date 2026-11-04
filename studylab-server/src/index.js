@@ -15,7 +15,9 @@ import {
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
 } from './db.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
-import { perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso } from './ia.js';
+import {
+  perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso, escadaGemini, estadoEscada, tamanhoCache,
+} from './ia.js';
 import {
   PLANOS, pagamentoLigado, criarAssinatura as criarAssinaturaMP, criarPagamentoUnico, criarPix,
   pagarComCartao, chavePublica, interpretarAviso, webhookConfere, urlDoWebhook, consultarPagamento,
@@ -103,6 +105,11 @@ const rotas = {
       banco: emMemoria ? 'memoria' : 'postgres',
       provedor: provedor(),                                  // claude | gemini | null
       modelo: modeloEmUso(),
+      ...(provedor() === 'gemini' ? {
+        escada: { topo: escadaGemini('topo'), normal: escadaGemini('normal'), leve: escadaGemini('leve') },
+        foraDaCota: estadoEscada(),                          // modelo → até quando está sem cota
+      } : {}),
+      respostasGuardadas: tamanhoCache(),
       chaveConfigurada: temChaveIA(),
       googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,     // opcional: dá para usar conta de aparelho
       pagamentoConfigurado: pagamentoLigado(),
@@ -210,10 +217,11 @@ const rotas = {
     }
 
     const r = await perguntar({ system, conteudo, schema, maxTokens, esforco, nivel });
-    await registrarUso(aluno.id, { ...r.uso, fotos });
+    // resposta que veio do cache não gastou a IA: não conta no limite do aluno
+    if (!r.cache) await registrarUso(aluno.id, { ...r.uso, fotos });
     return {
       texto: r.texto,
-      restamHoje: Math.max(0, L.dia - uso.chamadas - 1),
+      restamHoje: Math.max(0, L.dia - uso.chamadas - (r.cache ? 0 : 1)),
       fotosRestamHoje: Math.max(0, L.fotosDia - (uso.fotos || 0) - fotos),
     };
   },
