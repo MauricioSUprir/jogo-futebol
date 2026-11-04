@@ -10,7 +10,8 @@ process.env.LIMITE_DIARIO = '3';        // limite do Pro no teste
 process.env.LIMITE_DIARIO_PLUS = '8';   // limite do Plus no teste
 process.env.FOTOS_DIA = '2';            // fotos/dia do Pro no teste
 process.env.FOTOS_DIA_PLUS = '10';
-process.env.FREIO_IP = '5000';          // o freio por IP não atrapalha o teste
+process.env.FREIO_IP = '5000';
+process.env.CACHE_IA = '0';             // cada seção liga o cache só quando testa ele          // o freio por IP não atrapalha o teste
 process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 process.env.MP_PUBLIC_KEY = 'APP_USR-publica';
 delete process.env.DATABASE_URL;
@@ -23,6 +24,8 @@ const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
 let ultimoModelo = '';
 let ultimoGemini = null;
+let chamadasGemini = [];                // modelos chamados, em ordem
+const geminiFalha = {};                 // modelo → { status, msg } para simular cota/sumiço
 let assinaturasMP = 0;
 let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
@@ -95,8 +98,17 @@ globalThis.fetch = async (url, opcoes) => {
   // ---- Gemini dublado ----
   if (alvo.includes('generativelanguage')) {
     const corpo = JSON.parse(opcoes.body);
+    const modelo = (alvo.match(/models\/([^:]+):/) || [])[1] || '';
+    chamadasGemini.push(modelo);
+    const pensa = corpo.generationConfig.thinkingConfig?.thinkingLevel || null;
+    const f = geminiFalha[modelo];
+    if (f && !(f.soComPensar && !pensa)) {
+      return new Response(JSON.stringify({ error: { code: f.status, message: f.msg, details: f.details || [] } }),
+        { status: f.status, headers: { 'content-type': 'application/json' } });
+    }
     ultimoGemini = {
-      model: (alvo.match(/models\/([^:]+):/) || [])[1] || '',
+      model: modelo,
+      pensa,
       temFoto: JSON.stringify(corpo.contents).includes('inline_data'),
       schemaLimpo: corpo.generationConfig.responseSchema
         ? !JSON.stringify(corpo.generationConfig.responseSchema).includes('additionalProperties') : null,
@@ -457,7 +469,8 @@ console.log('\n== Gemini (a IA grátis) ==');
 
   const r = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'oi pelo gemini' } });
   conferir(r.status === 200 && r.dados.texto.includes('o gemini disse'), 'pergunta respondida pelo Gemini', r.dados.erro || r.dados.texto);
-  conferir(ultimoGemini?.model === 'gemini-2.5-flash', 'usa o modelo padrão do Gemini', ultimoGemini?.model);
+  conferir(ultimoGemini?.model === 'gemini-3.6-flash', 'começa pelo 1º degrau da escada normal (gemini-3.6-flash)', ultimoGemini?.model);
+  conferir(ultimoGemini?.pensa === 'low', 'pergunta normal pensa pouco (thinkingLevel low)', String(ultimoGemini?.pensa));
 
   const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
   const rf = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'que foto é essa?' }] } });
@@ -480,6 +493,94 @@ console.log('\n== Gemini (a IA grátis) ==');
   const forcado = await pedir('GET', '/saude');
   conferir(forcado.dados.provedor === 'gemini', 'PROVEDOR=gemini força o Gemini mesmo com a chave da Claude');
   delete process.env.PROVEDOR;
+  delete process.env.GEMINI_API_KEY;
+}
+
+console.log('\n== escada do Gemini: o modelo bom que dura ==');
+{
+  const { zerarEscada, limparCache } = await import('../src/ia.js');
+  const chaveClaude = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  process.env.GEMINI_API_KEY = 'AIza-falsa';
+  let n = 0;
+  const aluno = async (codigo = 'TESTE7') => {
+    const e = await pedir('POST', '/entrar', { corpo: { teste: { id: `escada-${n++}`, email: 'e@e.com', nome: 'E' } } });
+    await pedir('POST', '/codigo', { token: e.dados.token, corpo: { codigo } });
+    return e.dados.token;
+  };
+  const perguntaNova = (t, extra = {}) => pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: `p${Math.random()}`, ...extra } });
+
+  // 1) o melhor esgotou a cota do dia → desce sem o aluno ver erro, e não insiste
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 429, msg: 'Quota exceeded for metric: generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash GenerateRequestsPerDayPerProjectPerModel-FreeTier' };
+  let t = await aluno();
+  chamadasGemini = [];
+  let r = await perguntaNova(t);
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.5-flash-lite',
+    'cota do dia esgotada: desce para o gemini-3.5-flash-lite e responde', chamadasGemini.join(','));
+  chamadasGemini = [];
+  r = await perguntaNova(t);
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.5-flash-lite',
+    'na pergunta seguinte nem tenta o esgotado (não gasta chamada)', chamadasGemini.join(','));
+  const saude = await pedir('GET', '/saude');
+  conferir(!!saude.dados.foraDaCota?.['gemini-3.6-flash'], 'a saúde mostra quem está sem cota e até quando', JSON.stringify(saude.dados.foraDaCota));
+  delete geminiFalha['gemini-3.6-flash'];
+
+  // 2) tarefa simples vai direto aos leves; o Plus começa no topo
+  zerarEscada();
+  chamadasGemini = [];
+  r = await perguntaNova(t, { esforco: 'low' });
+  conferir(chamadasGemini[0] === 'gemini-3.5-flash-lite' && ultimoGemini.pensa === 'minimal',
+    'tarefa simples (esforço baixo) vai direto ao leve, pensando o mínimo', `${chamadasGemini[0]} ${ultimoGemini.pensa}`);
+  const tp = await aluno('PROFESSOR');
+  chamadasGemini = [];
+  r = await perguntaNova(tp);
+  conferir(chamadasGemini[0] === 'gemini-3.8-flash', 'assinante Plus começa no melhor (gemini-3.8-flash)', chamadasGemini[0]);
+
+  // 3) modelo que saiu do ar é pulado; modelo que recusa o pensamento tenta de novo sem ele
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 404, msg: 'models/gemini-3.6-flash is not found for API version v1beta' };
+  chamadasGemini = [];
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.5-flash-lite', 'modelo que sumiu é pulado', chamadasGemini.join(','));
+  delete geminiFalha['gemini-3.6-flash'];
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 400, msg: 'thinking_level is not supported for this model', soComPensar: true };
+  chamadasGemini = [];
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.6-flash' && ultimoGemini.pensa === null,
+    'modelo que recusa o thinkingLevel: o mesmo modelo de novo, sem ele', `${chamadasGemini.join(',')} ${ultimoGemini.pensa}`);
+  delete geminiFalha['gemini-3.6-flash'];
+
+  // 4) todos sem cota → mensagem clara (e as perguntas rápidas continuam no app)
+  zerarEscada();
+  for (const m of ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite']) {
+    geminiFalha[m] = { status: 429, msg: 'Quota exceeded GenerateRequestsPerDayPerProjectPerModel-FreeTier' };
+  }
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 429 && /limite de hoje/.test(r.dados.erro), 'escada inteira sem cota: aviso de limite do dia', r.dados.erro);
+  for (const m of Object.keys(geminiFalha)) delete geminiFalha[m];
+  zerarEscada();
+
+  // 5) cache: a mesma pergunta não gasta a IA de novo nem o limite do aluno
+  delete process.env.CACHE_IA;
+  limparCache();
+  t = await aluno();
+  chamadasGemini = [];
+  const igual = { system: 'Explique de forma simples.', conteudo: 'fotossíntese' };
+  const r1 = await pedir('POST', '/ia', { token: t, corpo: igual });
+  const r2 = await pedir('POST', '/ia', { token: t, corpo: igual });
+  const eu = await pedir('GET', '/eu', { token: t });
+  conferir(r1.dados.texto === r2.dados.texto && chamadasGemini.length === 1, 'pergunta repetida volta do cache (1 chamada só)', String(chamadasGemini.length));
+  conferir(eu.dados.uso.chamadasHoje === 1, 'a resposta do cache não conta no limite do aluno', String(eu.dados.uso.chamadasHoje));
+  const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
+  chamadasGemini = [];
+  await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'x' }] } });
+  await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'x' }] } });
+  conferir(chamadasGemini.length === 2, 'pergunta com foto nunca vem do cache', String(chamadasGemini.length));
+  process.env.CACHE_IA = '0';
+
+  process.env.ANTHROPIC_API_KEY = chaveClaude;
   delete process.env.GEMINI_API_KEY;
 }
 

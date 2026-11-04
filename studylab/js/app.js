@@ -30,25 +30,31 @@ import * as vTermos from './views/termos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
 import { temServidor, buscarEu, garantirSessao, manterServidorAcordado } from './api.js';
 
+/* g = a seção do menu lateral · tab = vai na barra de baixo do celular (ta = rótulo curto).
+   O 1º item é a tela de entrada do app: o chat. */
 export const MENU = [
+  { r: 'ai', i: '💬', t: 'MindTrack AI', ta: 'Chat', v: vAI, tab: true },
   { r: 'inicio', i: '🏠', t: 'Início', v: vInicio, tab: true },
-  { r: 'agenda', i: '📅', t: 'Agenda', v: vAgenda, tab: true },
-  { r: 'tarefas', i: '✅', t: 'Tarefas', v: vTarefas, tab: true },
-  { r: 'provas', i: '🎯', t: 'Provas', v: vProvas },
-  { r: 'materias', i: '📚', t: 'Matérias', v: vMaterias },
-  { r: 'escola', i: '🏫', t: 'Minha Escola', v: vEscola },
-  { r: 'aprender', i: '🧠', t: 'Aprender', v: vAprender },
-  { r: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
-  { r: 'flashcards', i: '🃏', t: 'Flashcards', v: vFlash },
-  { r: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
-  { r: 'foco', i: '⏱️', t: 'Foco', v: vFoco, tab: true },
-  { r: 'relogio', i: '⏲️', t: 'Cronômetro e timer', v: vRelogio },
-  { r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
-  { r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
-  { r: 'biblioteca', i: '📂', t: 'Biblioteca', v: vBiblioteca },
-  { r: 'planos', i: '✨', t: 'MindTrack Pro', v: vPlanos },
-  { r: 'ai', i: '🤖', t: 'MindTrack AI', v: vAI, tab: true },
-  { r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
+
+  { g: 'Escola', r: 'escola', i: '🏫', t: 'Minha Escola', ta: 'Escola', v: vEscola, tab: true },
+  { g: 'Escola', r: 'agenda', i: '📅', t: 'Agenda', v: vAgenda, tab: true },
+  { g: 'Escola', r: 'tarefas', i: '✅', t: 'Tarefas', v: vTarefas },
+  { g: 'Escola', r: 'provas', i: '🎯', t: 'Provas e testes', v: vProvas },
+  { g: 'Escola', r: 'materias', i: '📚', t: 'Matérias', v: vMaterias },
+  { g: 'Escola', r: 'biblioteca', i: '📂', t: 'Materiais', v: vBiblioteca },
+
+  { g: 'Estudar', r: 'foco', i: '⏱️', t: 'Foco', v: vFoco, tab: true },
+  { g: 'Estudar', r: 'aprender', i: '🧠', t: 'Aprender', v: vAprender },
+  { g: 'Estudar', r: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
+  { g: 'Estudar', r: 'flashcards', i: '🃏', t: 'Flashcards', v: vFlash },
+  { g: 'Estudar', r: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
+  { g: 'Estudar', r: 'relogio', i: '⏲️', t: 'Cronômetro e timer', v: vRelogio },
+
+  { g: 'Progresso', r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
+  { g: 'Progresso', r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
+
+  { g: 'Conta', r: 'planos', i: '✨', t: 'MindTrack Pro', v: vPlanos },
+  { g: 'Conta', r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
   { r: 'termos', i: '📄', t: 'Termos e privacidade', v: vTermos, oculto: true },
   // rota escondida: não entra no menu (ver views/criador.js)
   { r: 'criador', i: '🛠️', t: 'Área do criador', v: vCriador, oculto: true },
@@ -59,12 +65,18 @@ export function irPara(rota) { location.hash = rota.startsWith('#') ? rota : `#/
 /* ---------- montagem do menu ---------- */
 function montarMenu() {
   const nav = $('#sideNav');
-  nav.replaceChildren(...MENU.filter((m) => !m.oculto).map((m) =>
-    h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('span', { class: 'i' }, m.i), m.t)));
+  const itens = [];
+  let grupo = null;
+  for (const m of MENU.filter((x) => !x.oculto)) {
+    if (m.g && m.g !== grupo) itens.push(h('div', { class: 'side__grupo' }, m.g));
+    grupo = m.g || grupo;
+    itens.push(h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('span', { class: 'i' }, m.i), m.t));
+  }
+  nav.replaceChildren(...itens);
   const tab = $('#tabbar');
   const tabs = MENU.filter((m) => m.tab);
   tab.replaceChildren(...tabs.map((m) =>
-    h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('b', {}, m.i), m.t)));
+    h('a', { href: `#/${m.r}`, 'data-r': m.r }, h('b', {}, m.i), m.ta || m.t)));
 }
 
 function marcarAtiva(rota) {
@@ -113,7 +125,7 @@ function abrirNotificacoes() {
 /* ---------- roteador ---------- */
 let limparAnterior = null;
 function render() {
-  const hash = location.hash.replace(/^#\/?/, '') || 'inicio';
+  const hash = location.hash.replace(/^#\/?/, '') || MENU[0].r;
   const [rota, ...resto] = hash.split(/[/?]/);
   const item = MENU.find((m) => m.r === rota) || MENU[0];
   const params = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');

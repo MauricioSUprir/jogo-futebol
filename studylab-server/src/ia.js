@@ -6,6 +6,8 @@
      inteiro (não por aluno), então para escala use o Claude.
    Com as duas chaves, o Claude vence; PROVEDOR=gemini força o Gemini.          */
 // URL_ANTHROPIC / URL_GEMINI existem para os testes apontarem para APIs dubladas.
+import crypto from 'node:crypto';
+
 const URL_API = process.env.URL_ANTHROPIC || 'https://api.anthropic.com/v1/messages';
 const URL_GEMINI = () => process.env.URL_GEMINI || 'https://generativelanguage.googleapis.com';
 const VERSAO = '2023-06-01';
@@ -40,7 +42,7 @@ export function provedor() {
   return null;
 }
 export const temChaveIA = () => !!provedor();
-export const modeloGemini = () => process.env.MODELO_GEMINI || 'gemini-2.5-flash';
+export const modeloGemini = () => escadaGemini('normal')[0];
 /** O que aparece em /saude e nos logs. */
 export const modeloEmUso = () => (provedor() === 'gemini' ? modeloGemini() : modeloPadrao());
 
@@ -86,7 +88,31 @@ export async function perguntar(pedido) {
   const tamanho = (pedido.system || '').length + medirTexto(pedido.conteudo);
   if (tamanho > TETO_TEXTO) throw Object.assign(new Error('Material grande demais. Divida em partes menores.'), { status: 413 });
 
-  return quem === 'gemini' ? perguntarGemini(pedido) : perguntarClaude(pedido);
+  const chave = chaveCache(pedido, quem);
+  const guardada = chave && cache.get(chave);
+  if (guardada && Date.now() - guardada.em < CACHE_TTL) {
+    return { ...guardada.r, cache: true, uso: { entrada: 0, saida: 0 } };
+  }
+  const r = quem === 'gemini' ? await perguntarGemini(pedido) : await perguntarClaude(pedido);
+  if (chave) {
+    cache.delete(chave);
+    cache.set(chave, { em: Date.now(), r });
+    while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);   // sai o mais antigo
+  }
+  return r;
+}
+
+/* ---------- cache: a mesma pergunta com o mesmo material não gasta a IA de novo ----------
+   Só texto (foto nunca entra), por 12 h, até 400 respostas na memória. A chave
+   é o pedido inteiro (com o contexto do aluno), então só repete o que é igual. */
+const cache = new Map();
+const CACHE_MAX = 400, CACHE_TTL = 12 * 3600000;
+export const tamanhoCache = () => cache.size;
+export const limparCache = () => cache.clear();
+function chaveCache(pedido, quem) {
+  if (contarFotos(pedido.conteudo) || process.env.CACHE_IA === '0') return null;
+  const txt = JSON.stringify([quem, escadaPara(pedido), pedido.system, pedido.conteudo, pedido.schema || null, pedido.maxTokens || 0]);
+  return txt.length > 80000 ? null : crypto.createHash('sha256').update(txt).digest('hex');
 }
 
 async function perguntarClaude({ system, conteudo, schema = null, maxTokens = 4000, esforco = 'medium', nivel = 'pro' }) {
@@ -145,6 +171,61 @@ async function perguntarClaude({ system, conteudo, schema = null, maxTokens = 40
 /* ==========================================================
    Gemini (Google) — a porta de entrada GRÁTIS
    ========================================================== */
+/* ---------- a escada de modelos (o "modelo bom que dura") ----------
+   O plano grátis do Gemini dá POUCAS perguntas por dia aos modelos melhores e
+   bem mais aos leves (o limite é do projeto inteiro, não por aluno). Cada pedido
+   sobe a escada do melhor para o mais leve: quando um modelo esgota a cota, o
+   servidor anota até quando e pula direto para o próximo — sem gastar chamada
+   testando de novo. Os nomes mudam com o tempo: troque pelas variáveis abaixo
+   (listas separadas por vírgula) sem mexer no código.                         */
+const ESCADAS = {
+  topo: ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'],
+  normal: ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'],
+  leve: ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite'],
+};
+const VAR_ESCADA = { topo: 'MODELOS_GEMINI_TOPO', normal: 'MODELOS_GEMINI', leve: 'MODELOS_GEMINI_LEVE' };
+
+export function escadaGemini(nome) {
+  const lista = (process.env[VAR_ESCADA[nome]] || '').split(',').map((x) => x.trim()).filter(Boolean);
+  const base = lista.length ? lista : ESCADAS[nome] || ESCADAS.normal;
+  // compatibilidade: MODELO_GEMINI (versão antiga) passa a ser o 1º degrau da escada normal
+  const fixo = process.env.MODELO_GEMINI;
+  return nome === 'normal' && fixo && !lista.length ? [fixo, ...base.filter((m) => m !== fixo)] : base;
+}
+
+/** Tarefa simples (esforço baixo) vai direto aos leves; difícil ou do Plus começa no topo. */
+export function escadaPara({ esforco = 'medium', nivel = 'pro' } = {}) {
+  if (esforco === 'low') return 'leve';
+  if (esforco === 'high' || esforco === 'xhigh' || esforco === 'max' || nivel === 'plus') return 'topo';
+  return 'normal';
+}
+
+/* quem está fora e até quando (ms); some sozinho quando passa a hora */
+const fora = new Map();
+const semPensar = new Set();   // modelos que recusaram o thinkingConfig
+export const estadoEscada = () => Object.fromEntries([...fora].filter(([, ate]) => ate > Date.now())
+  .map(([m, ate]) => [m, new Date(ate).toISOString()]));
+export function zerarEscada() { fora.clear(); semPensar.clear(); }
+
+/** A cota diária do Gemini renova à meia-noite do horário do Pacífico (~07–08h UTC). */
+function proximaRenovacao(agora = Date.now()) {
+  const d = new Date(agora);
+  const alvo = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 8, 5);
+  return alvo > agora ? alvo : alvo + 86400000;
+}
+
+function segundosDoRetry(dados) {
+  const det = dados?.error?.details || [];
+  for (const x of det) {
+    const m = /^(\d+(?:\.\d+)?)s$/.exec(String(x?.retryDelay || ''));
+    if (m) return Number(m[1]);
+  }
+  return null;
+}
+
+/** Nível de "pensamento" dos Gemini 3: pensar custa tokens da cota — só o necessário. */
+const PENSAR = { low: 'minimal', medium: 'low', high: 'medium', xhigh: 'medium', max: 'high' };
+
 function blocosParaGemini(conteudo) {
   if (!Array.isArray(conteudo)) return [{ text: String(conteudo ?? '') }];
   return conteudo.map((b) => (b.type === 'text'
@@ -166,55 +247,94 @@ function esquemaParaGemini(schema) {
   return schema;
 }
 
-async function perguntarGemini({ system, conteudo, schema = null, maxTokens = 4000 }) {
-  const chave = process.env.GEMINI_API_KEY;
+async function chamarModeloGemini(modelo, { system, conteudo, schema, maxTokens, esforco }) {
+  const pensar = modelo.startsWith('gemini-3') && !semPensar.has(modelo) ? PENSAR[esforco] || 'low' : null;
   const corpo = {
     system_instruction: { parts: [{ text: system || '' }] },
     contents: [{ role: 'user', parts: blocosParaGemini(conteudo) }],
     generationConfig: {
       maxOutputTokens: Math.min(Number(maxTokens) || 4000, TETO_TOKENS),
+      ...(pensar ? { thinkingConfig: { thinkingLevel: pensar } } : {}),
       ...(schema ? { responseMimeType: 'application/json', responseSchema: esquemaParaGemini(schema) } : {}),
     },
   };
-
   const ctrl = new AbortController();
-  const relogio = setTimeout(() => ctrl.abort(), 150000);
-  let r;
+  const relogio = setTimeout(() => ctrl.abort(), 120000);
   try {
-    r = await fetch(`${URL_GEMINI()}/v1beta/models/${modeloGemini()}:generateContent`, {
+    const r = await fetch(`${URL_GEMINI()}/v1beta/models/${modelo}:generateContent`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'x-goog-api-key': chave },
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY },
       body: JSON.stringify(corpo),
       signal: ctrl.signal,
     });
-  } catch (e) {
+    const dados = await r.json().catch(() => ({}));
+    return { r, dados, pensar };
+  } finally {
     clearTimeout(relogio);
-    if (e.name === 'AbortError') throw Object.assign(new Error('A resposta demorou demais. Tente de novo.'), { status: 504 });
-    throw Object.assign(new Error('Não consegui falar com o Gemini.'), { status: 502 });
   }
-  clearTimeout(relogio);
+}
 
-  const dados = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    console.error('Erro do Gemini:', r.status, dados?.error?.message || '');
-    if (r.status === 429) {
-      // o limite do plano grátis é do app inteiro, não do aluno
-      throw Object.assign(new Error('A fila do plano grátis da IA está cheia agora. Espere um pouco e tente de novo.'), { status: 429 });
+async function perguntarGemini({ system, conteudo, schema = null, maxTokens = 4000, esforco = 'medium', nivel = 'pro' }) {
+  const degraus = escadaGemini(escadaPara({ esforco, nivel }));
+  let ultimoErro = null;
+
+  for (const modelo of degraus) {
+    if ((fora.get(modelo) || 0) > Date.now()) continue;      // sabidamente esgotado: nem tenta
+
+    let resp;
+    try { resp = await chamarModeloGemini(modelo, { system, conteudo, schema, maxTokens, esforco }); }
+    catch (e) {
+      ultimoErro = e.name === 'AbortError' ? 'demorou demais' : 'sem conexão';
+      continue;                                               // tenta o próximo degrau
     }
-    throw Object.assign(new Error('O MindTrack AI está temporariamente indisponível.'), { status: 503 });
-  }
-  if (dados.promptFeedback?.blockReason) {
-    throw Object.assign(new Error('O modelo preferiu não responder a esse pedido.'), { status: 422 });
+    let { r, dados, pensar } = resp;
+
+    // modelo que não aceita o nível de pensamento: tenta de novo sem ele (e lembra)
+    if (r.status === 400 && pensar && /think/i.test(dados?.error?.message || '')) {
+      semPensar.add(modelo);
+      ({ r, dados } = await chamarModeloGemini(modelo, { system, conteudo, schema, maxTokens, esforco }));
+    }
+
+    if (r.ok) {
+      if (dados.promptFeedback?.blockReason) {
+        throw Object.assign(new Error('O modelo preferiu não responder a esse pedido.'), { status: 422 });
+      }
+      const texto = (dados.candidates?.[0]?.content?.parts || [])
+        .filter((p) => !p.thought).map((p) => p.text || '').join('\n').trim();
+      if (!texto) { ultimoErro = 'resposta vazia'; continue; }
+      return {
+        texto,
+        modelo,
+        uso: {
+          entrada: dados.usageMetadata?.promptTokenCount || 0,
+          saida: (dados.usageMetadata?.candidatesTokenCount || 0) + (dados.usageMetadata?.thoughtsTokenCount || 0),
+        },
+      };
+    }
+
+    const msg = dados?.error?.message || '';
+    ultimoErro = `${modelo}: ${r.status} ${msg.slice(0, 120)}`;
+    if (r.status === 429) {
+      const porDia = /per ?day|daily|PerDay/i.test(msg) || /PerDay/.test(JSON.stringify(dados?.error?.details || []));
+      const espera = segundosDoRetry(dados);
+      fora.set(modelo, porDia ? proximaRenovacao() : Date.now() + 1000 * Math.min(Math.max(espera ?? 60, 10), 600));
+      console.warn(`Gemini: ${modelo} sem cota (${porDia ? 'até amanhã' : 'por um minuto'}) — descendo a escada.`);
+      continue;
+    }
+    if (r.status === 404 || /not found|not supported|is not available/i.test(msg)) {
+      fora.set(modelo, Date.now() + 6 * 3600000);              // nome que saiu do ar: pula por 6 h
+      console.warn(`Gemini: ${modelo} não existe mais — confira MODELOS_GEMINI.`);
+      continue;
+    }
+    if (r.status >= 500) { fora.set(modelo, Date.now() + 30000); continue; }   // sobrecarga: o próximo
+    if (r.status === 401 || r.status === 403) {
+      console.error('Gemini: a chave GEMINI_API_KEY foi recusada.', msg);
+      throw Object.assign(new Error('O MindTrack AI está temporariamente indisponível.'), { status: 503 });
+    }
+    console.error('Erro do Gemini:', r.status, msg);
+    throw Object.assign(new Error('O MindTrack AI não entendeu esse pedido. Tente escrever de outro jeito.'), { status: 502 });
   }
 
-  const texto = (dados.candidates?.[0]?.content?.parts || [])
-    .map((p) => p.text || '').join('\n').trim();
-  if (!texto) throw Object.assign(new Error('A resposta veio vazia. Tente de novo.'), { status: 502 });
-  return {
-    texto,
-    uso: {
-      entrada: dados.usageMetadata?.promptTokenCount || 0,
-      saida: dados.usageMetadata?.candidatesTokenCount || 0,
-    },
-  };
+  console.error('Gemini: todos os degraus da escada falharam.', ultimoErro, estadoEscada());
+  throw Object.assign(new Error('O MindTrack AI atingiu o limite de hoje. Tente de novo mais tarde — as perguntas rápidas do chat continuam funcionando.'), { status: 429 });
 }

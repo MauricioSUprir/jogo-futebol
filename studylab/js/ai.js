@@ -157,21 +157,24 @@ Regras invioláveis:
 - Use os dados reais do aluno que forem fornecidos. NUNCA invente notas, porcentagens, datas ou desempenho que não estejam no contexto.
 - Se faltar informação, diga o que falta em vez de supor.
 - Seja específico e acionável: diga o que fazer, por quanto tempo e por quê.
-- Não use formatação com asteriscos de markdown; escreva em texto corrido curto, listas com "•" quando ajudar.`;
+- Não use formatação com asteriscos de markdown; escreva em texto corrido curto, listas com "•" quando ajudar.
+- Seja breve: responda no tamanho que a pergunta pede (em geral até 8 linhas).`;
 
 /* ==========================================================
    CHAT / ME EXPLICA / SOCRÁTICO
    ========================================================== */
 export async function chat(historico, pergunta, fotos = []) {
   const ctx = contextoDoAluno();
-  const conversa = historico.slice(-10).map((m) => `${m.autor === 'me' ? 'ALUNO' : 'STUDY AI'}: ${m.txt}`).join('\n');
+  // economia: só as 6 últimas falas (sem as respostas instantâneas do app), cada uma até 600 letras
+  const conversa = historico.filter((m) => !m.local).slice(-6)
+    .map((m) => `${m.autor === 'me' ? 'ALUNO' : 'MINDTRACK AI'}: ${String(m.txt).slice(0, 600)}`).join('\n');
   const texto = `${conversa ? `Conversa até agora:\n${conversa}\n\n` : ''}ALUNO: ${pergunta}`;
   return chamar({
     system: `${REGRAS}\n\nCONTEXTO DO ALUNO (dados reais do app):\n${ctx}`
       + (fotos.length ? '\nO aluno anexou foto(s) — leia com atenção o que está nelas antes de responder.' : ''),
     // com fotos, o conteúdo vira uma lista de blocos: as imagens + a pergunta
     conteudo: fotos.length ? [...fotos, { type: 'text', text: texto }] : texto,
-    esforco: 'medium', maxTokens: 3000,
+    esforco: 'medium', maxTokens: 1500,
   });
 }
 
