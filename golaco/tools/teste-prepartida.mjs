@@ -3,7 +3,7 @@
 //   L1 layout — 13 telas (o celular deitado com o entalhe, os regimes compacto e mínimo, o PC 16:9, 16:10, 4:3 e baixo) × 6
 //      formações × 2 times × (o elenco fictício | os 11 nomes mais largos do TM, pela tabela de avanços da TM Cond 800) × 3 e 4
 //      abas (+ o Livre "10 contra 10" e a fila dos Pênaltis): 0 ficha sobreposta (2 px na vertical, 3 na horizontal), 0 fora do
-//      campinho, da tela ou da área segura, os cantos sem encostar nas fichas, a soma das alturas ≤ a altura útil, o nome ≥ 10 px
+//      campinho, da tela ou da área segura, os cantos sem encostar nas fichas nem na borda do campinho (V4), a soma das alturas ≤ a altura útil, o nome ≥ 10 px
 //      (compacto e mínimo), ≥ 11 (normal e PC baixo), ≥ 13 (PC ≥ 720 de altura); as abas nos alvos do E6
 //   L2 Visão tática — 6 formações × sem/com × 17 táticas (as 16 extremas + a padrão) × 13 telas: 0 disco sobreposto (≥ 1 px), o
 //      número ≥ 10 px, o afastamento ≤ 4 px
@@ -108,9 +108,12 @@ const letraMin = L => (L.pc ? (L.H >= 720 ? 13 : 11) : L.regime === 'normal' ? 1
               const wE = Math.max(PP.larguraCond(txt, K.forma), PP.larguraInter(corteSelo, K.selo, 800) + K.selo + 6);
               const wD = Math.max(PP.larguraCond('GERAL 99', K.forma), K.selo * 5.2);
               const cantos = variante === 'disputa' ? [] : [{ x: K.esq.x, r: K.esq.x + wE, y: K.y, b: K.y + K.h }, { x: K.dir.x - wD, r: K.dir.x, y: K.y, b: K.y + K.h }];
-              for (const k of cantos) {
+              for (const [n, k] of cantos.entries()) {
                 if (k.b > C.top + C.h + 0.5) prob.push(`${tag}: canto passa do campinho (${k.b.toFixed(0)} > ${(C.top + C.h).toFixed(0)})`);
                 for (let i = 0; i < cx.length; i++) if (sobrepoe(k, cx[i], 3, 1)) prob.push(`${tag}: canto × ${L.fichas[i].vaga}`);
+                // dentro do trapézio no ALTO do bloco (a borda inclinada não atravessa o texto; revisão V4)
+                const meia = (C.T + (C.B - C.T) * (k.y - C.top) / C.h) / 2;
+                if (n === 0 ? k.x < C.cx - meia + 2 - 0.01 : k.r > C.cx + meia - 2 + 0.01) prob.push(`${tag}: canto ${n ? 'direito' : 'esquerdo'} × a borda do campinho (${(n === 0 ? C.cx - meia + 2 - k.x : k.r - C.cx - meia + 2).toFixed(1)} px)`);
               }
               // a ordem das faixas e a altura útil
               const yInfoFim = L.info.y + L.info.h;

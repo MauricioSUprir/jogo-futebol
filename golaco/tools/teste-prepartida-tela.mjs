@@ -145,6 +145,21 @@ const MEDIR = () => {
   for (const [a, b] of pares) if (pecas[a] && pecas[b] && sob(pecas[a], pecas[b], 1, 1)) prob.push(`${a}×${b}`);
   const cantosTxt = [...raiz.querySelectorAll('.pp-canto-esq > *, .pp-canto-dir > *')].map(R).filter(r => r.w > 0);
   for (const k of cantosTxt) for (const f of fichas) if (sob(k, f, 3, 1)) prob.push(`canto×${f.v}`);
+  // o texto dos cantos dentro do campinho: a borda inclinada do trapézio (o polígono do SVG) não atravessa as letras (revisão V4)
+  const gram = raiz.querySelector('.pp-gramado');
+  if (gram) {
+    const P = gram.getAttribute('points').trim().split(/\s+/).map(q => q.split(',').map(Number));
+    const borda = (a, b, y) => a[0] + (b[0] - a[0]) * (y - a[1]) / (b[1] - a[1]);
+    const rg = document.createRange();
+    for (const [sel, lado] of [['.pp-canto-esq > *', 0], ['.pp-canto-dir > *', 1]]) for (const e of raiz.querySelectorAll(sel)) {
+      rg.selectNodeContents(e);
+      const q = rg.getBoundingClientRect();
+      if (!q.width) continue;
+      // contorno: [baixo-esq, cima-esq, cima-dir, baixo-dir]; a borda mais para dentro no alto da caixa
+      const d = lado === 0 ? borda(P[0], P[1], q.top) - q.left : q.right - borda(P[3], P[2], q.top);
+      if (d > -1) prob.push(`canto ${lado ? 'direito' : 'esquerdo'} × a borda do campinho ("${e.textContent.trim()}", ${d.toFixed(1)} px)`);
+    }
+  }
   // a info cortada pelo CSS (o corte por prioridade evita: só pode o estádio com "…" da conta)
   for (const l of raiz.querySelectorAll('.pp-info-l')) if (l.scrollWidth > l.clientWidth + 1) prob.push('info cortada pelo CSS');
   // o texto das abas nunca cortado; o ícone igual na barra inteira (revisões A4/V3/V15)

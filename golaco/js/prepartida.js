@@ -154,10 +154,12 @@ export function layoutPrepartida(W, H, sa = {}, formacao = '4-3-3', nAbas = 3, o
   const fForma = pc ? Math.round(hc * 0.42) : Math.round(Math.min(22, hc * 0.48));
   // (o selo: ≥ 11 px no celular e ≥ 12 no PC — a letra mínima da tela)
   const fSelo = pc ? Math.max(12, Math.round(hc * 0.2)) : 11;
-  const base = larguraEm(C, C.top + C.h);
+  // (a largura do trapézio no ALTO do bloco, o ponto mais estreito dele: pela base, a borda inclinada atravessava o "4" do "4-3-3"
+  // e o "7" do "GERAL 77" em 844×390 — revisão V4)
+  const lCanto = larguraEm(C, yDef);
   L.cantos = {
     y: yDef, forma: fForma, selo: Math.max(10, fSelo),
-    esq: { x: C.cx - base / 2 + 8 }, dir: { x: C.cx + base / 2 - 8 },
+    esq: { x: C.cx - lCanto / 2 + 8 }, dir: { x: C.cx + lCanto / 2 - 8 },
     h: Math.round(fForma * 1.05) + Math.round(Math.max(10, fSelo) * 1.3),
   };
   return L;
