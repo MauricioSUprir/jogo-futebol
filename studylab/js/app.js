@@ -18,6 +18,7 @@ import * as vQuestoes from './views/questoes.js';
 import * as vFlash from './views/flashcards.js';
 import * as vRevisao from './views/revisao.js';
 import * as vFoco from './views/foco.js';
+import * as vDespertador from './views/despertador.js';
 import * as vDesempenho from './views/desempenho.js';
 import * as vConquistas from './views/conquistas.js';
 import * as vBiblioteca from './views/biblioteca.js';
@@ -41,6 +42,7 @@ export const MENU = [
   { r: 'flashcards', i: '🃏', t: 'Flashcards', v: vFlash },
   { r: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
   { r: 'foco', i: '⏱️', t: 'Foco', v: vFoco, tab: true },
+  { r: 'despertador', i: '⏰', t: 'Despertador', v: vDespertador },
   { r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
   { r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
   { r: 'biblioteca', i: '📂', t: 'Biblioteca', v: vBiblioteca },
@@ -195,6 +197,7 @@ function iniciar() {
 
   // a cada 5 min revalida domínio/conquistas (o app costuma ficar aberto)
   setInterval(rotinaDiaria, 5 * 60 * 1000);
+  vDespertador.iniciarDespertador();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});

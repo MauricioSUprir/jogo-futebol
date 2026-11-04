@@ -8,8 +8,17 @@ import postgres from 'postgres';
 const URL_BANCO = process.env.DATABASE_URL || '';
 export const emMemoria = !URL_BANCO;
 
+/* O endereço INTERNO do banco do Render (host sem ponto, ex.: dpg-xxxx-a) e o
+   localhost não usam SSL; os endereços públicos (Railway, Render externo) exigem. */
+function precisaSsl(url) {
+  try {
+    const host = new URL(url).hostname;
+    return host !== 'localhost' && host.includes('.');
+  } catch { return true; }
+}
+
 const sql = URL_BANCO
-  ? postgres(URL_BANCO, { ssl: URL_BANCO.includes('localhost') ? false : 'require', max: 5 })
+  ? postgres(URL_BANCO, { ssl: precisaSsl(URL_BANCO) ? 'require' : false, max: 5 })
   : null;
 
 /* ---------- modo memória ---------- */
