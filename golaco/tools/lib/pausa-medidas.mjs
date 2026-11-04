@@ -13,6 +13,7 @@ export const ORDEM = {
   livre: ['continuar', 'livre-jogadores', 'livre-camera', 'par', 'replay', 'opcoes', 'modos', 'ajuda'],
   penaltis: ['continuar', 'replay', 'opcoes', 'modos', 'ajuda', 'reiniciar-partida'],
   tmPartida: ['continuar', 'editar-time', 'estatisticas', 'replay', 'opcoes', 'modos', 'ajuda', 'simular-resto'],
+  tmFim: ['voltar-tm', 'editar-time', 'estatisticas', 'replay', 'opcoes', 'modos', 'ajuda'],
   tmTrava: ['continuar', 'estatisticas', 'replay', 'opcoes', 'modos', 'ajuda', 'simular-resto'],
   tmLivre: ['continuar', 'livre-jogadores', 'livre-camera', 'par', 'replay', 'opcoes', 'ajuda', 'voltar-tm'],
   tmPenaltis: ['continuar', 'replay', 'opcoes', 'ajuda', 'simular-resto'],
@@ -131,4 +132,42 @@ export const FOCO = () => {
   const id = (a.dataset?.cmd ? a.dataset.cmd + (a.dataset.valor ? ':' + a.dataset.valor : '') : '') || a.id
     || (a.closest?.('.segmentado') ? `${a.closest('.segmentado').dataset.grupo}:${a.dataset.valor}` : '') || a.tagName;
   return { id, dentro: !!document.getElementById('menu')?.contains(a) && !document.getElementById('menu').hidden };
+};
+
+/**
+ * Cada item do 1º nível COM o foco (a letra cresce de --item-f a --item-f-foco e o peso vai a 800): o texto do item cabe na
+ * linha? (o .menu-corpo corta o que passa, sem "…"). Devolve [{id, f, sobra}] — sobra = da borda de dentro do botão (menos o
+ * padding da direita) ao fim do texto, ou ao começo do estado à direita quando ele aparece; < 0 = cortado. O foco volta ao que
+ * estava.
+ */
+export const FOCO_LARGURA = () => {
+  const menu = document.getElementById('menu');
+  if (!menu || menu.hidden) return [];
+  const est = e => getComputedStyle(e);
+  const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && est(e).display !== 'none' && est(e).visibility !== 'hidden';
+  const nivel = document.getElementById('menu-acoes');
+  if (!vis(nivel)) return [];
+  const bts = [...nivel.querySelectorAll(':scope > button, :scope > .linha-par > button')].filter(vis);
+  const antes = document.activeElement;
+  const out = [];
+  for (const b of bts) {
+    b.focus({ preventScroll: true });
+    const cs = est(b), br = b.getBoundingClientRect();
+    // o texto do item: os nós de texto fora do estado/descrição (o 1º nó, ou o span dele)
+    const nos = [];
+    const tw = document.createTreeWalker(b, NodeFilter.SHOW_TEXT);
+    for (let n = tw.nextNode(); n; n = tw.nextNode()) if (n.data.trim() && !n.parentElement.closest('small, .sr')) nos.push(n);
+    if (!nos.length) continue;
+    let dir = -Infinity;
+    for (const n of nos) { const rg = document.createRange(); rg.selectNodeContents(n); for (const r of rg.getClientRects()) dir = Math.max(dir, r.right); }
+    const estado = [...b.querySelectorAll('small')].find(s => !s.classList.contains('desc') && vis(s) && s.getBoundingClientRect().width > 0.5);
+    const lim = estado ? estado.getBoundingClientRect().left : br.right - parseFloat(cs.paddingRight);
+    const id = b.dataset.cmd ? b.dataset.cmd + (b.dataset.valor ? ':' + b.dataset.valor : '') : b.id;
+    // o que o corpo da lista corta (overflow-x: hidden): o texto também tem de ficar dentro dele
+    const corpo = b.closest('.menu-corpo');
+    const limCorpo = corpo ? corpo.getBoundingClientRect().right : Infinity;
+    out.push({ id, f: parseFloat(cs.fontSize), sobra: +Math.min(lim - dir, limCorpo - dir).toFixed(1) });
+  }
+  if (antes && antes !== document.body && menu.contains(antes)) antes.focus({ preventScroll: true }); else document.activeElement?.blur?.();
+  return out;
 };

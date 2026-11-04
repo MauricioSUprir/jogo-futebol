@@ -242,23 +242,24 @@
         </div>
         <div class="menu-corpo">
           <!-- 1º nível (data-so: em que modo aparece — partida, treino, penaltis, livre; vários separados por espaço). O texto do
-               item é o 1º nó; <small class="estado"> é o estado à direita (só ele pode ganhar "…"); <small class="desc"> é a
-               descrição para o leitor de tela (aria-describedby; fica no textContent, escondida na tela) -->
+               item é o <span class="item-txt"> (o "…" dele é só a rede de segurança: o tamanho da letra cabe na faixa — o teste
+               reprova o corte); <small class="estado"> é o estado à direita (ele perde o lugar primeiro e ganha "…"); <small
+               class="desc"> é a descrição para o leitor de tela (aria-describedby; fica no textContent, escondida na tela) -->
           <div class="menu-acoes" id="menu-acoes">
-            <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar">Voltar ao jogo</button>
-            <button class="btn" type="button" data-cmd="editar-time" data-so="partida" aria-describedby="desc-editar">Editar time <small class="desc" id="desc-editar">escalação e tática</small></button>
-            <button class="btn" type="button" data-cmd="estatisticas" data-so="partida" id="btn-estatisticas">Estatísticas</button>
-            <button class="btn" type="button" data-cmd="recomecar" data-so="treino" aria-describedby="desc-recomecar">Recomeçar <small class="desc" id="desc-recomecar">bola no pé</small></button>
-            <button class="btn" type="button" data-cmd="maquina" data-so="treino">Máquina de passes</button>
-            <button class="btn btn-alternar" type="button" data-cmd="marcador" data-so="treino" aria-pressed="false">Marcador de treino <small class="estado" id="estado-marcador">desligado</small></button>
-            <button class="btn" type="button" data-cmd="replay" data-so="partida penaltis livre" aria-describedby="desc-replay">Replay <small class="desc" id="desc-replay">os últimos 10 segundos</small></button>
-            <button class="btn" type="button" data-cmd="opcoes" id="btn-opcoes">Opções</button>
-            <button class="btn" type="button" data-cmd="modos" id="btn-modos">Modo de jogo <small class="estado" id="estado-modo">partida</small></button>
-            <button class="btn" type="button" data-cmd="ajuda">Ajuda e controles</button>
-            <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida">Reiniciar partida</button>
+            <button class="btn btn-primario" type="button" data-cmd="continuar" id="btn-continuar"><span class="item-txt">Voltar ao jogo</span></button>
+            <button class="btn" type="button" data-cmd="editar-time" data-so="partida" aria-describedby="desc-editar"><span class="item-txt">Editar time</span> <small class="desc" id="desc-editar">escalação e tática</small></button>
+            <button class="btn" type="button" data-cmd="estatisticas" data-so="partida" id="btn-estatisticas"><span class="item-txt">Estatísticas</span></button>
+            <button class="btn" type="button" data-cmd="recomecar" data-so="treino" aria-describedby="desc-recomecar"><span class="item-txt">Recomeçar</span> <small class="desc" id="desc-recomecar">bola no pé</small></button>
+            <button class="btn" type="button" data-cmd="maquina" data-so="treino"><span class="item-txt">Máquina de passes</span></button>
+            <button class="btn btn-alternar" type="button" data-cmd="marcador" data-so="treino" aria-pressed="false"><span class="item-txt">Marcador de treino</span> <small class="estado" id="estado-marcador">desligado</small></button>
+            <button class="btn" type="button" data-cmd="replay" data-so="partida penaltis livre" aria-describedby="desc-replay"><span class="item-txt">Replay</span> <small class="desc" id="desc-replay">os últimos 10 segundos</small></button>
+            <button class="btn" type="button" data-cmd="opcoes" id="btn-opcoes"><span class="item-txt">Opções</span></button>
+            <button class="btn" type="button" data-cmd="modos" id="btn-modos"><span class="item-txt">Modo de jogo</span> <small class="estado" id="estado-modo">partida</small></button>
+            <button class="btn" type="button" data-cmd="ajuda"><span class="item-txt">Ajuda e controles</span></button>
+            <button class="btn" type="button" data-cmd="reiniciar-partida" data-so="partida penaltis" id="btn-reiniciar-partida"><span class="item-txt">Reiniciar partida</span></button>
             <!-- Total Match (?tm; hud.js aplicarModoNoMenu): sem ?tm ficam escondidos -->
-            <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" aria-describedby="desc-simular" hidden>Simular o resto <small class="desc" id="desc-simular">até o apito final</small></button>
-            <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden>Voltar ao Total Match</button>
+            <button class="btn" type="button" data-cmd="simular-resto" id="btn-simular-resto" aria-describedby="desc-simular" hidden><span class="item-txt">Simular o resto</span> <small class="desc" id="desc-simular">até o apito final</small></button>
+            <button class="btn" type="button" data-cmd="voltar-tm" id="btn-voltar-tm" hidden><span class="item-txt">Voltar ao Total Match</span></button>
             <!--fim-->
           </div>
           <!-- Opções (submenu): o que era a coluna da direita e a barra de cima. Cada linha tem o nome à esquerda e o controle à

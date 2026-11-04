@@ -4,7 +4,9 @@
 // 640×360 e 568×320 com toque e o entalhe simulado; PC em 1280×720; a partida, o fim, os treinos, o Livre, os Pênaltis, o ?tm (num
 // quadro COM a meta viewport, como o Total Match de verdade: pedido A, pedido B com a trava, Livre e Pênaltis) e o online (2 abas).
 //   P1  a lista à esquerda (uma coluna, na ordem do FC 24 por modo) e o cartão do meu time à direita, nada encostando, cortado ou
-//       fora da área segura
+//       fora da área segura; CADA item do 1º nível com o foco (a letra maior e o negrito) cabe na linha — também no PC fora do
+//       16:9 (1024×768, 1280×1024, 1440×900, 1280×800: a letra crescia com a altura e a faixa com a largura), o
+//       "Voltar ao Total Match" do fim do TM e o "Sair" armado do online (revisão do item 58, F1)
 //   P2  sem rolar em todos os níveis (1º, Opções, Modo de jogo, Estatísticas, Jogadores e Câmera do Livre) × modos × telas
 //   P3  o jogo à vista (pelo print: a luminância com a pausa ≥ 60% da sem ela): ≥ 40% no PC, 25% em 844×390, 17% em 667 e 640,
 //       14% em 568×320
@@ -28,7 +30,7 @@
 import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
 import { PED_A, PED_B } from './lib/pedidos-tm.mjs';
-import { ORDEM, COMANDOS, SECOS, MEDIR, FOCO, margemCelular } from './lib/pausa-medidas.mjs';
+import { ORDEM, COMANDOS, SECOS, MEDIR, FOCO, FOCO_LARGURA, margemCelular } from './lib/pausa-medidas.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -36,6 +38,8 @@ const RAIZ = path.resolve(arg('--raiz', RAIZ_PADRAO));
 const SO = arg('--so', null);
 const CEL = [[844, 390], [667, 375], [640, 360], [568, 320]];
 const PC = [1280, 720];
+// o PC fora do 16:9 (revisão do item 58: F1 4:3, 5:4 e 16:10)
+const PC_MAIS = [[1024, 768], [1280, 1024], [1440, 900], [1280, 800]];
 const Q = 'q=baixa&replay=0&comemoracao=0&semente=5';
 const META_P3 = { 1280: 0.40, 844: 0.25, 667: 0.17, 640: 0.17, 568: 0.14 };
 const srv = await servidor(0, RAIZ);
@@ -91,6 +95,7 @@ async function trocarModo(pg, v) {
 async function medirNiveis(pg) {
   await abrirPausa(pg);
   const out = { primeiro: await pg.evaluate(MEDIR), subs: {} };
+  out.primeiro.foco = await pg.evaluate(FOCO_LARGURA);
   for (const [nome, sel] of [['opcoes', '#btn-opcoes'], ['modos', '#btn-modos'], ['estatisticas', '#btn-estatisticas'], ['jogadores', '#btn-livre-jogadores'], ['camera', '#btn-livre-camera']]) {
     await abrirPausa(pg);
     const tem = await pg.evaluate(s => { const b = document.querySelector(s); return !!b && !b.hidden && b.getClientRects().length > 0; }, sel);
@@ -128,6 +133,8 @@ function problemasP1(m, ordem, { cartao, pc }) {
   if (m.encosta.length) p.push(`encosta: ${m.encosta.slice(0, 3).join('; ')}`);
   if (m.cortados.length) p.push(`cortado: ${m.cortados.slice(0, 4).join(', ')}`);
   if (m.fora.length) p.push(`fora da área segura: ${m.fora.slice(0, 4).join(', ')}`);
+  const passa = (m.foco ?? []).filter(x => x.sobra < 0);
+  if (passa.length) p.push(`com o foco passa da linha: ${passa.slice(0, 4).map(x => `${x.id} ${x.f.toFixed(1)} px ${x.sobra}`).join(', ')}`);
   return p;
 }
 /** P2, P6 e S5 de uma medida (qualquer nível); devolve as listas de problemas. */
@@ -520,6 +527,22 @@ async function sessaoPC() {
       }
       await pg.evaluate(() => { window.__golaco.secarComandos?.(null); window.__golaco.fecharMenu(); });
     }
+    // P1/P2/P6/S5 no PC fora do 16:9, baixo e estreito (o 1º nível com o foco em cada item e todos os submenus), começando no
+    // Livre (o modo em que o laço acima termina)
+    for (const modo of ['livre', 'conducao', 'partida', 'fim']) {
+      if (modo !== 'livre') await trocarModo(pg, modo);
+      for (const [W, H] of PC_MAIS) {
+        await pg.setViewportSize({ width: W, height: H });
+        await pg.waitForTimeout(80);
+        const r = await medirNiveis(pg);
+        P.p1n++;
+        const p1 = problemasP1(r.primeiro, ORDEM[modo], { cartao: modo !== 'conducao', pc: true });
+        if (p1.length) P.p1.push(`PC ${modo} ${W}×${H}: ${p1.join('; ')}`);
+        conferirNivel(`PC ${modo} ${W}×${H} 1º`, r.primeiro, true);
+        for (const [n, m] of Object.entries(r.subs)) conferirNivel(`PC ${modo} ${W}×${H} ${n}`, m, true);
+      }
+    }
+    await pg.setViewportSize({ width: PC[0], height: PC[1] });
   } catch (e) { erros.push(`PC: ${e.stack ?? e}`); }
   finally { erros.push(...s.erros.map(x => `PC: ${x}`)); await s.navegador.close(); }
 }
@@ -598,6 +621,8 @@ document.body.appendChild(f);
     pg = fr;
     await pronta(pg);
     await carregarPausa(pg);
+    // o fim da partida do TM: o "Voltar ao Total Match" sobe para o 1º lugar com o foco (o item mais longo da lista)
+    if (opc.fim) await trocarModo(pg, 'fim');
     if (modo === 'livre') {
       await pg.waitForFunction(() => !!document.getElementById('btn-livre-jogar'), null, { timeout: 60000 }).catch(nada);
       await pg.evaluate(() => { const b = document.getElementById('btn-livre-jogar'); if (b && b.offsetParent !== null) b.click(); });
@@ -642,16 +667,24 @@ async function sessaoOnline() {
     await Promise.all([A.goto(q(0), { waitUntil: 'load' }), B.goto(q(1), { waitUntil: 'load' })]);
     await Promise.all([A, B].map(p => p.waitForFunction(() => window.__golaco && window.__golaco.pronto && window.__golaco.online, null, { timeout: 240000 })));
     await carregarPausa(B);
-    for (const [W, H] of [[844, 390], [568, 320]]) {
+    // (também no PC: o online do TM roda no computador; o "Sair" armado — o 1º toque — é o texto mais longo da lista dele)
+    for (const [W, H] of [[844, 390], [667, 375], [640, 360], [568, 320], [1280, 720], [1024, 768]]) {
+      const pc = H > 480;
       await B.setViewportSize({ width: W, height: H });
       await B.waitForTimeout(150);
       await B.evaluate(() => window.__golaco.abrirMenu());
       await quadros(B, 2);
       const m = await B.evaluate(MEDIR);
+      m.foco = await B.evaluate(FOCO_LARGURA);
+      // o 1º clique no Sair só arma a confirmação (3 s); a medida é com o texto armado e a espera deixa ele desarmar
+      const armado = await B.evaluate(() => { const b = document.getElementById('btn-online-sair'); b?.click(); return (b?.querySelector('.item-txt') ?? b?.firstChild)?.textContent ?? ''; });
+      const fArmado = (await B.evaluate(FOCO_LARGURA)).filter(x => x.id === 'btn-online-sair').map(x => ({ ...x, id: `Sair armado "${armado.trim()}"` }));
+      m.foco.push(...fArmado);
       P.p1n++;
-      const p1 = problemasP1(m, ORDEM.online, { cartao: true, pc: false });
+      const p1 = problemasP1(m, ORDEM.online, { cartao: true, pc });
       if (p1.length) P.p1.push(`online ${W}×${H}: ${p1.join('; ')}`);
-      conferirNivel(`online ${W}×${H} 1º`, m, false);
+      conferirNivel(`online ${W}×${H} 1º`, m, pc);
+      await B.waitForTimeout(3300);
       await B.evaluate(() => window.__golaco.fecharMenu());
     }
     // a vazão do lockstep entre duas abas varia com a carga da máquina (45 passos em 3 s sozinho, 10–26 com outro teste rodando):
@@ -679,7 +712,9 @@ if (!SO || SO === 'tm') {
   const PED_L = { ...PED_A, id: 'pL', modo: 'livre', livre: { linha: [5, 5], goleiro: [true, true] } };
   const PED_P = { ...PED_A, id: 'pP', modo: 'penaltis' };
   await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, CEL, { rot: 'partida' });
-  await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, [PC], { rot: 'partida PC', pc: true });
+  const PC_TM = [PC, [1024, 768], [1280, 1024], [1440, 900], [1280, 800]];
+  await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, PC_TM, { rot: 'partida PC', pc: true });
+  await sessaoTM(PED_A, 'partida', ORDEM.tmFim, PC_TM, { rot: 'fim PC', pc: true, fim: true });
   await sessaoTM(PED_B, 'partida', ORDEM.tmTrava, [[844, 390], [568, 320]], { rot: 'trava', trava: true });
   await sessaoTM(PED_L, 'livre', ORDEM.tmLivre, [[844, 390], [568, 320]], { rot: 'Livre' });
   await sessaoTM(PED_P, 'penaltis', ORDEM.tmPenaltis, [[844, 390], [568, 320]], { rot: 'Pênaltis' });

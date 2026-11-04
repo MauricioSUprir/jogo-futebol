@@ -101,11 +101,11 @@ export function criarPaginaLivre(ctx) {
     const acoes = $('menu-acoes'), ref = acoes?.querySelector('[data-cmd="recomecar"]') ?? acoes?.querySelector('[data-cmd="replay"]');
     if (acoes) {
       const t = doc.createElement('template');
-      t.innerHTML = `<button class="btn" type="button" data-cmd="livre-jogadores" id="btn-livre-jogadores" data-so="livre">Jogadores <small class="estado" id="estado-livre"></small></button>
-<button class="btn" type="button" data-cmd="livre-camera" id="btn-livre-camera" data-so="livre">Câmera <small class="estado" id="estado-camera-livre"></small></button>
+      t.innerHTML = `<button class="btn" type="button" data-cmd="livre-jogadores" id="btn-livre-jogadores" data-so="livre"><span class="item-txt">Jogadores</span> <small class="estado" id="estado-livre"></small></button>
+<button class="btn" type="button" data-cmd="livre-camera" id="btn-livre-camera" data-so="livre"><span class="item-txt">Câmera</span> <small class="estado" id="estado-camera-livre"></small></button>
 <div class="linha-par" role="group" aria-label="Recomeçar" data-so="livre">
-<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="meio" id="btn-livre-meio" aria-describedby="desc-livre-meio">Recomeçar <small class="desc" id="desc-livre-meio">bola no meio</small></button>
-<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="pe" id="btn-livre-pe" aria-describedby="desc-livre-pe">Bola no meu pé <small class="desc" id="desc-livre-pe">onde estou</small></button>
+<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="meio" id="btn-livre-meio" aria-describedby="desc-livre-meio"><span class="item-txt">Recomeçar</span> <small class="desc" id="desc-livre-meio">bola no meio</small></button>
+<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="pe" id="btn-livre-pe" aria-describedby="desc-livre-pe"><span class="item-txt">Bola no meu pé</span> <small class="desc" id="desc-livre-pe">onde estou</small></button>
 </div>`;
       acoes.insertBefore(t.content, ref ?? null);
     }

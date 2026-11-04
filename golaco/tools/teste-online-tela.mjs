@@ -14,7 +14,7 @@
 //      Simular o resto, Reiniciar nem Modo de jogo.
 //   P9 (item 58) o Pausar e o Sair da pausa pelo toque COM OUTRO DEDO PARADO NA TELA (o navegador não gera o click com dois
 //      dedos: os dois agem no pointerup do mesmo dedo, toque-botao.js aoTocar) — o Pausar pausa; o 1º toque no Sair arma a
-//      confirmação ("Toque de novo para sair"), sem sair.
+//      confirmação ("Toque de novo: sair"), sem sair.
 //   node tools/teste-online-tela.mjs
 import { servidor, abrir } from './lib/navegador.mjs';
 
@@ -118,10 +118,10 @@ meta('P6 a pausa do online (844×390): Pausar e Sair; sem Replay, Simular, Reini
   await esperar(200);
   const tocouS = await comOutroDedo('#btn-online-sair');
   await esperar(200);
-  const sair = await B.evaluate(() => ({ texto: document.getElementById('btn-online-sair')?.firstChild?.textContent ?? '', estado: window.__golaco.online.estado }));
+  const sair = await B.evaluate(() => ({ texto: (document.querySelector('#btn-online-sair .item-txt') ?? document.getElementById('btn-online-sair')?.firstChild)?.textContent ?? '', estado: window.__golaco.online.estado }));
   meta('P9 o Pausar e o Sair da pausa pelo toque com outro dedo parado na tela (item 58)',
     `Pausar ${tocouP ? 'tocado' : 'NÃO achado'}: pausado ${pz.pausado}, pausas ${p0} → ${pz.restam}, pausa ${pz.menu ? 'aberta' : 'fechada'} · Sair ${tocouS ? 'tocado' : 'NÃO achado'}: "${sair.texto.trim()}" (${sair.estado})`,
-    tocouP && pz.pausado && pz.restam === p0 - 1 && tocouS && /Toque de novo para sair/.test(sair.texto) && sair.estado !== 'fim');
+    tocouP && pz.pausado && pz.restam === p0 - 1 && tocouS && /Toque de novo: sair/.test(sair.texto) && sair.estado !== 'fim');
   await cdpB.detach().catch(() => {});
 }
 await B.evaluate(() => document.querySelector('#menu [data-cmd="continuar"]')?.click());

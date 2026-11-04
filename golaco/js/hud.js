@@ -459,7 +459,10 @@ export function criarHud(opc) {
     const fim = partida && fimDeJogo;
     if (el.continuar) el.continuar.hidden = fim;
     if (el.reiniciarPartida) {
-      el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : penaltis ? 'Reiniciar disputa' : 'Reiniciar partida';
+      // (o texto mora no <span class="item-txt"> do item: o "…" de segurança da pausa)
+      const tx = el.reiniciarPartida.querySelector('.item-txt') ?? el.reiniciarPartida;
+      const t = fim ? 'Jogar de novo' : penaltis ? 'Reiniciar disputa' : 'Reiniciar partida';
+      if (tx.textContent !== t) tx.textContent = t;
       el.reiniciarPartida.classList.toggle('btn-primario', fim);
     }
     // Total Match (?tm): a partida é a do TM — sem Reiniciar nem a troca para os treinos (voltariam ao Golaço ×
@@ -468,7 +471,8 @@ export function criarHud(opc) {
     if (opc.tm) {
       if (el.reiniciarPartida) el.reiniciarPartida.hidden = true;
       const modos = $('btn-modos');
-      if (modos && modos.firstChild && modos.firstChild.nodeType === 3) modos.firstChild.textContent = 'Cenas da partida ';
+      const txModos = modos?.querySelector('.item-txt');
+      if (txModos && txModos.textContent !== 'Cenas da partida') txModos.textContent = 'Cenas da partida';
       const tit = $('titulo-modos');
       if (tit && tit.textContent !== 'Cenas da partida') tit.textContent = 'Cenas da partida';
       if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }

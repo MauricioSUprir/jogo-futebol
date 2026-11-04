@@ -604,6 +604,10 @@ html.pausa-aberta #aviso { visibility: visible; }
 #menu .linha-par > .btn.selecionado::before, #menu .linha-par > .btn:focus-visible::before { background: var(--p-verde); }
 #menu #menu-acoes > .btn-primario:not(.selecionado):not(:focus-visible) { color: var(--p-verde-cl); }
 #menu #menu-acoes > .btn:disabled { opacity: 0.45; cursor: default; }
+/* o texto do item (o <span class="item-txt">): não encolhe enquanto o estado à direita tem lugar a ceder; só quando ele sozinho
+   passa da linha ganha "…" — a rede de segurança (o tamanho da letra já cabe na faixa: o teste-pausa-tela reprova o corte). A
+   altura da linha cobre as descendentes da Inter (1,21 em) para o recorte não comer o "ç" e o "p" */
+#menu #menu-acoes .item-txt { flex: 0 0 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
 /* a linha com dois (no Livre: Recomeçar | Bola no meu pé): o peso não muda no foco (em 568×320 os dois cabem por pouco) */
 #menu #menu-acoes > .linha-par { display: flex; gap: 6px; }
 #menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 13px; font-weight: 500; }
@@ -742,20 +746,27 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu #menu-modos > .linha-cenas.tres { grid-column: 1 / -1; }
 }
 @media (max-height: 480px) and (max-width: 600px) {
+  /* (o par do Livre em 568×320: "Bola no meu pé" entrava 2,4 px no padding da direita — com o "…" de segurança do .item-txt ele
+     cortaria; 3 px a menos de cada lado dão a folga sem tirar a barra do foco de perto do texto) */
+  #menu .linha-par > .btn { padding: 0 3px 0 8px; }
   #menu .opcao { min-height: 32px; }
   #menu .segmentado button { height: 30px; padding: 0 8px; }
 }
 
 /* ---- PC e tablet: as proporções do FC 24 (1280×720: o texto em x 5,2vw, a marca em y 4,3vh, o 1º item em 19,3vh, o passo
-   6,67vh, a letra 2,65vh e 3,6vh no foco, a faixa cheia até 28vw e o degradê até 50vw; a linha dos comandos em 93vh) */
+   6,67vh, a letra 2,65vh e 3,6vh no foco, a faixa cheia até 28vw e o degradê até 50vw; a linha dos comandos em 93vh).
+   Fora do 16:9 (4:3, 5:4, 16:10: a letra cresce com a altura e a faixa com a largura) a faixa cresce pela altura até 30vw
+   (42,66vh = 24vw no 16:9: lá nada muda) e a letra fica no que a faixa comporta: o item mais longo com o foco ("Voltar ao Total
+   Match", 800) mede ~10,5 letras de largura e o padding é 26 px — (faixa − 32 px) / 10,6 deixa ≥ 8 px de sobra (F1 da revisão;
+   P1 do teste-pausa-tela com o foco em cada item, em 1024×768, 1280×1024 e 1440×900) */
 @media (min-height: 481px) {
   #menu .janela-menu {
     --fx-x: calc(var(--sa-l) + 5.2vw);
-    --fx-w: 24vw;
+    --fx-w: max(24vw, min(42.66vh, 30vw));
     --fx-cheia: max(28vw, calc(var(--fx-x) + var(--fx-w) + 16px));
     --fx-fade: 22vw;
     --item-h: clamp(42px, calc(6.67vh - 2px), 70px);
-    --item-f: 2.65vh; --item-f-foco: 3.6vh;
+    --item-f: min(2.65vh, calc((var(--fx-w) - 32px) / 14.4)); --item-f-foco: min(3.6vh, calc((var(--fx-w) - 32px) / 10.6));
     --card-w: 30vw; --card-y: 72px;
   }
   #menu .janela-menu[data-sub="menu-opcoes"], #menu .janela-menu[data-sub="menu-estatisticas"] { --fx-w: max(24vw, 380px); }
