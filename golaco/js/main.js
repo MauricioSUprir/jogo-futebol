@@ -3275,7 +3275,8 @@ function abasDoModo(modo) {
   const J = { id: 'jogar', texto: 'Jogar partida', icone: 'jogar', primaria: true };
   const V = { id: 'visao', texto: 'Visão tática', icone: 'tatica' };
   const P = { id: 'personalizar', texto: 'Personalizar', icone: 'editar' };
-  const S = { id: 'simular', texto: 'Simular partida', icone: 'simular', armar: 'Toque de novo: simular' };
+  // (armada: o 1º rótulo que cabe na aba — com 4 abas o "Toque de novo: simular" saía "Toque de novo:…", sem o verbo: revisão V2)
+  const S = { id: 'simular', texto: 'Simular partida', icone: 'simular', armar: 'Toque de novo: simular', armarCurto: ['De novo: simular', 'Simular?'] };
   switch (modo) {
     case 'tm': return [J, V, P, S];
     case 'rae': return [J, V, S];

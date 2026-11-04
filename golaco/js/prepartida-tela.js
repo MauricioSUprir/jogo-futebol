@@ -333,7 +333,8 @@ export function criarPrepartida(opc) {
       if (a.armar) {
         const armado = st.armado === a.id && performance.now() < st.armadoAte;
         b.classList.toggle('armado', armado);
-        b.querySelector('.pp-aba-txt').textContent = armado ? a.armar : a.texto;
+        // (armada: o 1º rótulo que cabe — o leitor de tela lê o inteiro)
+        b.querySelector('.pp-aba-txt').textContent = armado ? rotuloQueCabe([a.armar, ...(a.armarCurto ?? [])], st.comIcone) : a.texto;
         b.setAttribute('aria-label', armado ? a.armar : a.texto);
       }
       // (o Pronto esperando: aria-disabled, não disabled — o foco fica nele e o leitor de tela lê "Aguardando {nome}…")

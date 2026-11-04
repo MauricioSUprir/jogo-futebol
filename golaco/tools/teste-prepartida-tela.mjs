@@ -424,12 +424,12 @@ if (faz('telas')) {
     } finally { await navegador.close(); }
   }
   // E4b os outros modos no celular (a revisão do item 64): os Pênaltis (a duração "5 cobranças · Começa: …") e o TM pro com o
-  // clássico, a competição e o estádio longos (4 abas, as duas vistas) — a linha de informação sem o corte do CSS (A3), o texto das
-  // abas inteiro e o ícone igual na barra toda (A4/V3/V15)
+  // clássico, a competição e o estádio longos (4 abas, as duas vistas e o Simular armado) — a linha de informação sem o corte do
+  // CSS (A3), o texto das abas inteiro (também o "Toque de novo: simular": V2) e o ícone igual na barra toda (A4/V3/V15)
   const PED_PRO = { ...PED_A, id: 'tProPP', edicao: 'pro', home: { ...PED_A.home, stadium: 'Estadio Municipal El Molinón – Enrique Castro "Quini"' }, partida: { ...PED_A.partida, classico: true, nomeClassico: 'Clássico das Multidões', competicao: 'Brasileirão Série A' } };
   const MODOS_TELA = [
     ['Pênaltis', { q: `${Q}&prepartida=1&modo=penaltis&semente=5&hora=noite` }, ['meu', 'outro']],
-    ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu', 'sem', 'com']],
+    ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu', 'sem', 'com', 'armado']],
   ];
   const TELAS_B = [[844, 390], [667, 375], [640, 360], [568, 320]];
   for (const [nome, o, vistas] of MODOS_TELA) {
@@ -450,8 +450,15 @@ if (faz('telas')) {
             let n = 0; const alvo = v === 'sem' || v === 'com' ? v : 'escalacao';
             while (P.estado.visao !== alvo && n++ < 4) P.vista();
           }, v);
+          // (o Simular partida armado: o 1º toque; o Esc desarma depois da medida)
+          if (v === 'armado') await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
           await quadros(pg, 1);
           const m = await pg.evaluate(MEDIR);
+          if (v === 'armado') {
+            const arm = await pg.evaluate(() => window.__golaco.prepartida.estado.armado);
+            if (arm !== 'simular') falhas.push(`${w}×${h} armado: o Simular não armou (${arm})`);
+            await tecla(pg, 'Escape');
+          }
           casos++;
           for (const p of m.prob) falhas.push(`${w}×${h} ${v}: ${p}`);
         }
