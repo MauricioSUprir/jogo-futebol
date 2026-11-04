@@ -602,12 +602,19 @@ export function criarHud(opc) {
   const mostrarSubmenu = v => submenu(v ? 'modos' : null);
 
   // ---- com a pausa (ou a Ajuda) aberta: o HUD do jogo sai (html.pausa-aberta) e fica inert (o Tab e o leitor de tela não chegam)
-  const ATRAS = ['hud', 'toque', 'cena'].map($).filter(Boolean);
+  // (o #aviso mora no #hud e fica fora do inert: ele continua à vista com a pausa — "Time atualizado", a substituição na fila, as
+  // recusas da edição; no online o jogo anda por baixo — e um nó inerte sai da árvore de acessibilidade: o leitor de tela não o
+  // anunciava; revisão do item 58, F6. Os outros filhos do #hud ficam inert, também os que as cenas põem lá)
+  const ATRAS = ['toque', 'cena'].map($).filter(Boolean);
+  const hudEl = $('hud');
   function marcarAberta() {
     const aberta = !el.menu.hidden || !el.ajuda.hidden;
     if (raiz.classList.contains('pausa-aberta') !== aberta) raiz.classList.toggle('pausa-aberta', aberta);
     for (const e of ATRAS) if (e.inert !== aberta) e.inert = aberta;
+    if (hudEl) for (const e of hudEl.children) { const v = aberta && e !== el.aviso; if (e.inert !== v) e.inert = v; }
   }
+  // (as tarjas e o painel das cenas entram no #hud quando o módulo delas chega — a pré-carga ociosa pode chegar com a pausa aberta)
+  if (hudEl && typeof MutationObserver !== 'undefined') new MutationObserver(() => { if (raiz.classList.contains('pausa-aberta')) marcarAberta(); }).observe(hudEl, { childList: true });
   // o Tab preso na pausa (o nível à vista mais o X, na ordem do DOM) e na Ajuda: dá a volta, nunca sai para o jogo
   document.addEventListener('keydown', e => {
     if (e.key !== 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;

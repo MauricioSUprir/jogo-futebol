@@ -1814,7 +1814,9 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   saem de cena e as Opções vão em 2 colunas. Janela estreita de PC (< 560 px): só a lista. `#menu [hidden]` = `display: none
   !important` (as regras da pausa põem `display` nos itens). Com a pausa (ou a Ajuda) aberta, `html.pausa-aberta`: o HUD do
   jogo, os botões de toque e as camadas de cena saem (`visibility: hidden`; o `ajustarTopo` mede igual) e ficam `inert`; o
-  `#aviso` fica.
+  `#aviso` fica à vista, FORA do `inert` (o `hud.js` põe o `inert` em cada filho do `#hud` menos ele — um `MutationObserver` pega
+  as tarjas das cenas que chegam com a pausa aberta —: o leitor de tela anuncia o `role="status"`) e por cima da pausa (o `#hud`
+  sobe a `z-index` 41, acima do `#menu` e abaixo do Editar time; revisão F6).
 - **O canto direito**: a pílula do placar (`hud.js espelharPlacar`: o espelho do placar do HUD — siglas, gols, escudos e o
   relógio —, escrita ao abrir e, com ela aberta, nas mesmas funções que escrevem o placar; nos treinos não aparece; sem lugar
   entre o topo da faixa e o X perde o relógio e depois os escudos, `ajustarPilula`), o X no lugar do ≡ (44×44, fecha) e o

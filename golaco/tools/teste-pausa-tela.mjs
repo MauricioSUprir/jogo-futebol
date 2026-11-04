@@ -17,7 +17,8 @@
 //       quem entra, o anel de "você"; tocar no cartão abre o editor (e não abre na trava); treinos e disputa sem ele; no Livre só
 //       quem está em campo
 //   P5  teclado: ↓/↑ andam; Esc no submenu volta ao 1º nível com o foco no item que o abriu e Esc de novo fecha; 40 Tabs e 40
-//       Shift+Tabs não saem da pausa; o HUD, os botões de toque e a camada das cenas ficam inert com ela aberta
+//       Shift+Tabs não saem da pausa; o HUD, os botões de toque e a camada das cenas ficam inert com ela aberta — menos o aviso
+//       (role=status), que fica fora do inert e por cima da pausa (revisão do item 58, F6)
 //   P6  alvos ≥ 44 × 32 px (28 em 568×320; no PC altura ≥ 32)
 //   P7  leitor de tela: o diálogo "Pausa: …", os grupos das Opções com nome, o cartão como região com nome e resumo, as
 //       Estatísticas como tabela com legenda
@@ -595,7 +596,16 @@ async function pcTeclado(pg, kb) {
   const f1 = (await pg.evaluate(FOCO)).id;
   await kb.press('ArrowUp'); await quadros(pg, 1);
   const f2 = (await pg.evaluate(FOCO)).id;
-  const inert = await pg.evaluate(() => ['hud', 'toque', 'cena'].map(id => document.getElementById(id)).every(e => !e || e.inert === true));
+  // o fundo inert: o #toque, o #cena e tudo do #hud MENOS o #aviso — ele continua à vista, fora do inert (o leitor de tela o
+  // anuncia) e por cima da pausa (o #hud sobe acima do #menu; revisão do item 58, F6)
+  const inert = await pg.evaluate(() => {
+    const hud = document.getElementById('hud'), av = document.getElementById('aviso');
+    const soltos = [...['toque', 'cena'].map(id => document.getElementById(id)).filter(e => e && e.inert !== true),
+      ...[...hud.children].filter(e => e !== av && e.inert !== true)].map(e => e.id || String(e.className).split(' ')[0]);
+    const aviso = !!av && !av.closest('[inert]') && getComputedStyle(av).visibility === 'visible'
+      && (+getComputedStyle(hud).zIndex || 0) > (+getComputedStyle(document.getElementById('menu')).zIndex || 0);
+    return soltos.length === 0 && aviso ? true : `não (soltos: ${soltos.join(', ') || '—'}; aviso fora do inert e por cima ${aviso})`;
+  });
   // Opções pelo teclado, Esc volta ao 1º nível com o foco nele, Esc de novo fecha
   for (let k = 0; k < 10 && (await pg.evaluate(FOCO)).id !== 'opcoes'; k++) { await kb.press('ArrowDown'); await quadros(pg, 1); }
   await kb.press('Enter'); await quadros(pg, 2);
@@ -605,14 +615,14 @@ async function pcTeclado(pg, kb) {
   const fEsc = (await pg.evaluate(FOCO)).id;
   await kb.press('Escape'); await quadros(pg, 2);
   const fechou = !(await pg.evaluate(() => window.__golaco.estado().menuAberto));
-  const inertDepois = await pg.evaluate(() => ['hud', 'toque', 'cena'].map(id => document.getElementById(id)).every(e => !e || e.inert !== true));
+  const inertDepois = await pg.evaluate(() => [...['hud', 'toque', 'cena'].map(id => document.getElementById(id)), ...document.getElementById('hud').children].every(e => !e || e.inert !== true));
   // 40 Tabs e 40 Shift+Tabs
   let saiu = 0, saiuTras = 0;
   await kb.press('Escape'); await quadros(pg, 2);
   for (let k = 0; k < 40; k++) { await kb.press('Tab'); if (!(await pg.evaluate(FOCO)).dentro) saiu++; }
   for (let k = 0; k < 40; k++) { await kb.press('Shift+Tab'); if (!(await pg.evaluate(FOCO)).dentro) saiuTras++; }
   await pg.evaluate(() => window.__golaco.fecharMenu());
-  P.p5.push({ ok: f0 === 'continuar' && f1 === 'editar-time' && f2 === 'continuar' && nivelSub === 'opcoes' && depoisEsc.aberta && depoisEsc.nivel === 'acoes' && fEsc === 'opcoes' && fechou && saiu === 0 && saiuTras === 0 && inert && inertDepois,
+  P.p5.push({ ok: f0 === 'continuar' && f1 === 'editar-time' && f2 === 'continuar' && nivelSub === 'opcoes' && depoisEsc.aberta && depoisEsc.nivel === 'acoes' && fEsc === 'opcoes' && fechou && saiu === 0 && saiuTras === 0 && inert === true && inertDepois,
     medido: `foco ${f0} → ↓ ${f1} → ↑ ${f2}; Enter no Opções → ${nivelSub}; Esc → ${depoisEsc.aberta ? depoisEsc.nivel : 'fechou'} (foco ${fEsc}); Esc → ${fechou ? 'fechou' : 'aberta'}; Tab fora ${saiu}/40, Shift+Tab fora ${saiuTras}/40; inert ${inert} (fechada: solto ${inertDepois})` });
 }
 

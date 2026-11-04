@@ -530,10 +530,14 @@ html.com-toque .ajuda-colunas section:last-child { order: -1; }
 @font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/tm/fontes/inter-600.woff2') format('woff2'); }
 @font-face { font-family: 'Inter TM'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/inter-800.woff2') format('woff2'); }
 /* com a pausa (ou a Ajuda) aberta o HUD do jogo sai, como no FC (o layout dele não muda: o ajustarTopo mede igual); o aviso
-   fica (o resultado da edição do time, o "Time atualizado"); o hud.js põe inert neles (o Tab e o leitor de tela não chegam lá) */
+   fica (o resultado da edição do time, o "Time atualizado"); o hud.js põe inert neles (o Tab e o leitor de tela não chegam lá),
+   menos no aviso (role=status: o leitor de tela o anuncia) */
 html.pausa-aberta #hud, html.pausa-aberta #toque, html.pausa-aberta #cena .btn-replay-pular, html.pausa-aberta #cena .btn-cena-menu { visibility: hidden; }
 html.pausa-aberta .gol-tela, html.pausa-aberta .replay-faixa { visibility: hidden !important; }
 html.pausa-aberta #aviso { visibility: visible; }
+/* (o #hud é o contexto de empilhamento do aviso: com a pausa aberta ele sobe para cima dela — 40 —, abaixo do Editar time — 45;
+   o resto do #hud está escondido e não pega toque, e o hud.js põe inert em tudo dele menos o aviso: revisão do item 58, F6) */
+html.pausa-aberta #hud { z-index: 41; }
 #menu {
   --p-preto: #050807; --p-painel: #0f1612; --p-verde: #22c55e; --p-verde-cl: #4ade80;
   --p-texto: #eef5f0; --p-fraco: #8a9d90; --p-linha: rgba(255, 255, 255, 0.13);
