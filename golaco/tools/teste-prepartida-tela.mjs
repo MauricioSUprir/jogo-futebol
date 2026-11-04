@@ -16,6 +16,7 @@
 //   E10* teclado: o foco inicial no Jogar; ←/→; 40 Tabs presos; Enter na Visão tática e no Personalizar NÃO começa; Esc e P nunca
 //       levam ao jogo (na base, Esc no pré-jogo = o jogo); Q/E trocam o time; o ≡ abre a pausa "antes do jogo" e volta à tela
 //   E11* controle (getGamepads falso): a cruz anda; Ⓐ na Visão tática não começa; Ⓑ volta; Ⓨ abre o Personalizar; LB/RB; Start = ≡
+//   E11b* com o pré-jogo: o Ⓐ segurado 6 quadros no Jogar começa as cenas do 1º plano (não pula o bloco; revisão A1)
 //   E12 leitor de tela: o diálogo com nome e aria-modal; a barra de ferramentas; a lista com a nota; o fundo inert
 //   E13* Personalizar: abre o editor "antes do jogo"; o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
@@ -38,7 +39,7 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,tm,online,carga] [--espera <s>]
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,online,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -535,6 +536,36 @@ if (faz('modos')) {
     try {
       const r = await pg.evaluate(() => ({ aberta: !!window.__golaco.prepartida?.aberta, fase: window.__golaco.prejogo?.fase, chama: document.querySelector('.pj-ab-chama')?.textContent ?? '' }));
       meta('E21 a reserva: com o módulo bloqueado, a abertura de texto de hoje', JSON.stringify(r), 'sem tela; abertura; "Clique ou aperte Enter…"', !r.aberta && r.fase === 'abertura' && /começar/.test(r.chama));
+    } finally { await navegador.close(); }
+  }
+}
+
+// ================================================================================================ o Ⓐ do Jogar com o pré-jogo
+if (faz('pad')) {
+  // E11b* o Ⓐ do Jogar com o pré-jogo (revisão A1): um toque de verdade dura 80–150 ms — o Ⓐ segurado 6 quadros no "Jogar
+  // partida" começa as cenas do 1º plano (na HEAD antes da correção ia ao bloco 'escalacao0', ~60 s à frente)
+  {
+    const s = await abrir({ largura: 1280, altura: 720 });
+    const { navegador, contexto, pagina: pg, erros } = s;
+    try {
+      await contexto.addInitScript(() => {
+        const mk = () => ({ pressed: false, value: 0, touched: false });
+        window.__pad = { id: 'falso', index: 0, connected: true, mapping: 'standard', timestamp: 0, axes: [0, 0, 0, 0], buttons: Array.from({ length: 17 }, mk) };
+        navigator.getGamepads = () => [window.__pad, null, null, null];
+      });
+      await pg.goto(srv.url + `index.html?${Q}&prepartida=1&prejogo=1&semente=3`);
+      await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
+      const antes = await pg.evaluate(() => ({ tela: !!window.__golaco.prepartida?.aberta, fase: window.__golaco.prejogo?.fase, foco: window.__golaco.prepartida?.estado?.foco }));
+      await pg.evaluate(() => { window.__pad.buttons[0].pressed = true; window.__pad.buttons[0].value = 1; window.__pad.timestamp++; });
+      await quadros(pg, 6);
+      await pg.evaluate(() => { window.__pad.buttons[0].pressed = false; window.__pad.buttons[0].value = 0; window.__pad.timestamp++; });
+      await quadros(pg, 3);
+      const d = await pg.evaluate(() => { const p = window.__golaco.prejogo; return { tela: !!window.__golaco.prepartida?.aberta, fase: p.fase, bloco: p.bloco, indice: p.indice, t: +p.tempo.toFixed(2) }; });
+      meta('E11b* controle com o pré-jogo: o Ⓐ segurado 6 quadros no Jogar começa as cenas do 1º plano (não pula o bloco)',
+        `antes: tela ${antes.tela}, ${antes.fase}, foco ${antes.foco}; depois: tela ${d.tela}, ${d.fase}, bloco ${d.bloco}, plano ${d.indice}, t ${d.t} s`,
+        'aberta, abertura, jogar → fechada, rodando, cenas, 0, < 2 s',
+        antes.tela && antes.foco === 'jogar' && !d.tela && d.fase === 'rodando' && d.bloco === 'cenas' && d.indice === 0 && d.t < 2);
+      meta('S1 0 erros (controle com o pré-jogo)', erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
   }
 }

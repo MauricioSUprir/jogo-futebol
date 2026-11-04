@@ -60,6 +60,22 @@ export function criarPrejogoTela(opc) {
   let ultimoGesto = 0;
   const padAntes = [];
   const mostrarPular = () => { ultimoGesto = performance.now(); pular.classList.add('visivel'); };
+  /**
+   * O Ⓐ de cada controle; agir = false: só guarda o estado (a camada calada, ou ao abrir/soltar a abertura). Sem isso o Ⓐ do
+   * "Jogar partida" da tela antes do jogo — lido pela entrada no mesmo quadro, ainda segurado no seguinte — contava como um aperto
+   * NOVO aqui e pulava o bloco inteiro das cenas (~60 s; revisão A1 do item 64).
+   */
+  function lerPad(agir) {
+    const lista = navigator.getGamepads ? navigator.getGamepads() : null;
+    if (!lista) return;
+    for (let i = 0; i < lista.length; i++) {
+      const g = lista[i];
+      if (!g || !g.connected) { padAntes[i] = false; continue; }
+      const a = !!(g.buttons[0] && (g.buttons[0].pressed || g.buttons[0].value > 0.3));
+      if (agir && a && !padAntes[i]) { mostrarPular(); if (naAbertura) opc.aoComecar(); else opc.aoProximo(); }
+      padAntes[i] = a;
+    }
+  }
 
   pular.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); });
   // toque: no pointerup do mesmo dedo (aoTocar; com outro dedo na tela o click não vem)
@@ -88,10 +104,11 @@ export function criarPrejogoTela(opc) {
     raiz, escalacao,
     get ativo() { return ativo; },
     mostrar(v) {
+      const antes = ativo;
       ativo = !!v;
       raiz.hidden = !ativo;
       document.documentElement.classList.toggle('prejogo', ativo);
-      if (ativo) mostrarPular(); else { escalacao.esconder(); ab.hidden = true; naAbertura = false; }
+      if (ativo) { mostrarPular(); if (!antes) lerPad(false); } else { escalacao.esconder(); ab.hidden = true; naAbertura = false; }
     },
     /** A abertura (times = m.times) ou null para tirar. */
     abertura(times) {
@@ -119,7 +136,11 @@ export function criarPrejogoTela(opc) {
     },
     get naAbertura() { return naAbertura; },
     /** A abertura calada (a tela antes do jogo por cima: item 64) ou de volta (false). */
-    mudo(v) { muda = !!v; raiz.classList.toggle('muda', muda); },
+    mudo(v) {
+      // (a camada volta a ouvir: o Ⓐ que já está apertado — o do Jogar — não é um aperto novo)
+      if (muda && !v) lerPad(false);
+      muda = !!v; raiz.classList.toggle('muda', muda);
+    },
     get muda() { return muda; },
     /** Faixas de cinema: k = 0 (sem) a 1 (2,39:1). */
     faixas(k, proporcao) {
@@ -134,17 +155,10 @@ export function criarPrejogoTela(opc) {
     fundoEscalacao(a) { fundoEsc.style.opacity = String(Math.max(0, Math.min(1, a)).toFixed(3)); raiz.classList.toggle('na-escalacao', a > 0.01); },
     /** Uma vez por quadro: o A do controle (próximo bloco) e o botão Pular que some parado. */
     atualizar(agora) {
-      if (!ativo || muda) return;
-      const lista = navigator.getGamepads ? navigator.getGamepads() : null;
-      if (lista) {
-        for (let i = 0; i < lista.length; i++) {
-          const g = lista[i];
-          if (!g || !g.connected) continue;
-          const a = !!(g.buttons[0] && (g.buttons[0].pressed || g.buttons[0].value > 0.3));
-          if (a && !padAntes[i]) { mostrarPular(); if (naAbertura) opc.aoComecar(); else opc.aoProximo(); }
-          padAntes[i] = a;
-        }
-      }
+      if (!ativo) return;
+      // (calada: o estado segue guardado, sem agir)
+      lerPad(!muda);
+      if (muda) return;
       if (!naAbertura && pular.classList.contains('visivel') && agora - ultimoGesto > 3000) pular.classList.remove('visivel');
     },
     get pularVisivel() { return pular.classList.contains('visivel'); },
