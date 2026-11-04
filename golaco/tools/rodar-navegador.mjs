@@ -37,6 +37,8 @@ const LISTA = [
   ['câmera de TV na tela (a projeção e a câmera = Node, a bola fora do HUD, a torcida, o controlado, o custo, a área inteira, o escanteio da pessoa alto e o da IA na TV, de noite; PC e celular)', 'teste-camera-tela.mjs'],
   ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],
   ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular)', 'teste-online-tela.mjs', { deploy: true }],
+  // Item 58 (dono, 23/10: "quero ele igual ao do FIFA ... o campinho do time no canto direito")
+  ['pausa do FC 24 com o campinho (lista à esquerda, cartão do time à direita, sem rolar em 4 telas do celular e no PC, o jogo à vista, teclado/controle/toque, leitor de tela, ?tm e online)', 'teste-pausa-tela.mjs', { deploy: true }],
   ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele)', 'teste-corpo-tela.mjs'],
   ['mira pelo que se vê na tela (o meio e os paus vistos → a mira no alvo, PC e celular, pênalti, câmera aproximada e as do Livre)', 'teste-mira-tela.mjs'],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)

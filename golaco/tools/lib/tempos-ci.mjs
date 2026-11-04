@@ -131,6 +131,9 @@ export const TEMPOS_NAVEGADOR = {
   'teste-cenas-tela.mjs': 1020,
   'teste-penaltis-tela.mjs': 60,
   'teste-livre-tela.mjs': 120,
+  // (item 58: a pausa do FC 24 — medido aqui com a máquina dividida: celular 250 s, PC 361 s, ?tm 96 s, online 15 s; acertar pelo
+  // log do CI)
+  'teste-pausa-tela.mjs': 720,
   'teste-online-tela.mjs': 160,
   'teste-corpo-tela.mjs': 150,
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
