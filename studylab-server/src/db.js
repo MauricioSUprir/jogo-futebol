@@ -22,7 +22,7 @@ const sql = URL_BANCO
   : null;
 
 /* ---------- modo memória ---------- */
-const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map(), pagamentos: new Map() };
+const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map(), pagamentos: new Map(), conexoes: new Map() };
 
 export async function migrar() {
   if (emMemoria) {
@@ -96,6 +96,22 @@ export async function migrar() {
       criado_em  timestamptz NOT NULL DEFAULT now()
     )`;
   await sql`ALTER TABLE codigos ADD COLUMN IF NOT EXISTS nivel text NOT NULL DEFAULT 'pro'`;
+  // conta Google ligada a uma conta de aparelho (o id da conta não muda)
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS google_sub text`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google ON usuarios (google_sub) WHERE google_sub IS NOT NULL`;
+  // Conexões: o que o aluno ligou (Google Agenda, Classroom, Drive, calendário por link).
+  // O segredo (refresh token do Google ou o link privado do calendário) fica CIFRADO.
+  await sql`
+    CREATE TABLE IF NOT EXISTS conexoes (
+      usuario_id       text NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+      servico          text NOT NULL,                -- agenda | classroom | drive | ics
+      conta            text NOT NULL DEFAULT '',     -- e-mail ou nome do calendário (só para mostrar)
+      segredo          text NOT NULL,                -- cifrado (AES-256-GCM)
+      escopos          text NOT NULL DEFAULT '',
+      criado_em        timestamptz NOT NULL DEFAULT now(),
+      sincronizado_em  timestamptz,
+      PRIMARY KEY (usuario_id, servico)
+    )`;
   // códigos iniciais, só se a tabela estiver vazia
   const [{ count }] = await sql`SELECT count(*)::int AS count FROM codigos`;
   if (count === 0) {
@@ -123,6 +139,78 @@ export async function salvarUsuario({ id, email, nome, foto, provedor = 'google'
       foto = excluded.foto, visto_em = now()
     RETURNING *`;
   return u;
+}
+
+export async function usuarioPorId(id) {
+  if (emMemoria) return mem.usuarios.get(id) || null;
+  const [u] = await sql`SELECT * FROM usuarios WHERE id = ${id}`;
+  return u || null;
+}
+
+/**
+ * Entrada pelo Google (fluxo das Conexões). Ordem:
+ * 1) já existe conta com este Google → é ela;
+ * 2) o aluno estava numa conta de aparelho → liga o Google nela (plano e dados ficam);
+ * 3) senão → conta nova com o id do Google.
+ */
+export async function entrarComGoogle({ sub, email, nome, foto }, contaAtualId = null) {
+  if (emMemoria) {
+    const achada = [...mem.usuarios.values()].find((u) => u.google_sub === sub || (u.id === sub && u.provedor === 'google'));
+    if (achada) { Object.assign(achada, { email, nome: nome || achada.nome, foto, google_sub: sub }); return achada; }
+    const atual = contaAtualId && mem.usuarios.get(contaAtualId);
+    if (atual) { Object.assign(atual, { email, nome: nome || atual.nome, foto, provedor: 'google', google_sub: sub }); return atual; }
+    const u = { id: sub, email, nome, foto, provedor: 'google', google_sub: sub };
+    mem.usuarios.set(sub, u);
+    return u;
+  }
+  const [achada] = await sql`SELECT * FROM usuarios WHERE google_sub = ${sub} OR (id = ${sub} AND provedor = 'google') LIMIT 1`;
+  if (achada) {
+    const [u] = await sql`UPDATE usuarios SET email = ${email}, nome = ${nome || achada.nome}, foto = ${foto},
+      google_sub = ${sub}, visto_em = now() WHERE id = ${achada.id} RETURNING *`;
+    return u;
+  }
+  if (contaAtualId) {
+    const [u] = await sql`UPDATE usuarios SET email = ${email}, nome = coalesce(nullif(${nome}, ''), nome), foto = ${foto},
+      provedor = 'google', google_sub = ${sub}, visto_em = now() WHERE id = ${contaAtualId} RETURNING *`;
+    if (u) return u;
+  }
+  const [u] = await sql`
+    INSERT INTO usuarios ${sql({ id: sub, email, nome, foto, provedor: 'google', google_sub: sub })}
+    RETURNING *`;
+  return u;
+}
+
+/* ---------- conexões ---------- */
+export async function salvarConexao({ usuarioId, servico, conta = '', segredo, escopos = '' }) {
+  if (emMemoria) {
+    mem.conexoes.set(`${usuarioId}|${servico}`, { usuario_id: usuarioId, servico, conta, segredo, escopos, criado_em: new Date().toISOString(), sincronizado_em: null });
+    return;
+  }
+  await sql`
+    INSERT INTO conexoes ${sql({ usuario_id: usuarioId, servico, conta, segredo, escopos })}
+    ON CONFLICT (usuario_id, servico) DO UPDATE SET conta = excluded.conta, segredo = excluded.segredo,
+      escopos = excluded.escopos, criado_em = now(), sincronizado_em = NULL`;
+}
+
+export async function conexoesDo(usuarioId) {
+  if (emMemoria) return [...mem.conexoes.values()].filter((c) => c.usuario_id === usuarioId);
+  return sql`SELECT * FROM conexoes WHERE usuario_id = ${usuarioId} ORDER BY criado_em`;
+}
+
+export async function conexaoDe(usuarioId, servico) {
+  if (emMemoria) return mem.conexoes.get(`${usuarioId}|${servico}`) || null;
+  const [c] = await sql`SELECT * FROM conexoes WHERE usuario_id = ${usuarioId} AND servico = ${servico}`;
+  return c || null;
+}
+
+export async function apagarConexao(usuarioId, servico) {
+  if (emMemoria) { mem.conexoes.delete(`${usuarioId}|${servico}`); return; }
+  await sql`DELETE FROM conexoes WHERE usuario_id = ${usuarioId} AND servico = ${servico}`;
+}
+
+export async function marcarSincronizado(usuarioId, servico) {
+  if (emMemoria) { const c = mem.conexoes.get(`${usuarioId}|${servico}`); if (c) c.sincronizado_em = new Date().toISOString(); return; }
+  await sql`UPDATE conexoes SET sincronizado_em = now() WHERE usuario_id = ${usuarioId} AND servico = ${servico}`;
 }
 
 /**

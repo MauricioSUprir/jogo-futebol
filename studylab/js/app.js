@@ -25,6 +25,7 @@ import * as vBiblioteca from './views/biblioteca.js';
 import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
 import * as vPlanos from './views/planos.js';
+import * as vConexoes from './views/conexoes.js';
 import * as vCriador from './views/criador.js';
 import * as vTermos from './views/termos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
@@ -53,6 +54,7 @@ export const MENU = [
   { g: 'Progresso', r: 'desempenho', i: '📊', t: 'Desempenho', v: vDesempenho },
   { g: 'Progresso', r: 'conquistas', i: '🏆', t: 'Conquistas', v: vConquistas },
 
+  { g: 'Conta', r: 'conexoes', i: '🔗', t: 'Conexões', v: vConexoes },
   { g: 'Conta', r: 'planos', i: '✨', t: 'MindTrack Pro', v: vPlanos },
   { g: 'Conta', r: 'config', i: '⚙️', t: 'Configurações', v: vConfig },
   { r: 'termos', i: '📄', t: 'Termos e privacidade', v: vTermos, oculto: true },
@@ -211,6 +213,7 @@ function iniciar() {
   setInterval(rotinaDiaria, 5 * 60 * 1000);
   vRelogio.iniciarRelogio();
   manterServidorAcordado();
+  setTimeout(() => vConexoes.sincronizarAoAbrir().catch(() => {}), 2500);
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
