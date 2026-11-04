@@ -588,25 +588,26 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
   texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
   dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
-- **Tela antes do jogo** (item 64, dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o Total Match com
-  cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do dono" 19): a
-  pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo ao Estrelato, Livre, Pênaltis, online)
-  ANTES do pré-jogo; nos treinos não. Barra com os dois times (camisa, escudo, sigla) e a hora; estádio · data · árbitro
-  FICTÍCIO · duração · período; o campinho em trapézio com as 11 fichas (busto vestido, nota `notaExibida`, posição, nome na TM
-  Cond, filete na cor da raridade da carta do TM); o selo da tática e o GERAL; abas Jogar partida · Visão tática (Escalação →
-  Sem → Com a bola, pela `posicaoTatica`) · Personalizar (+ Simular partida no TM; Livre/Pênaltis/online com as deles). Puro
-  `js/prepartida.js` (FORA do fecho; as constantes nele, não no `config.js`) + `js/prepartida-tela.js` + `css/prepartida.css` +
-  a TM Cond, SOB DEMANDA (pedidos no topo do `iniciar()`; reserva: sem o módulo em 1,5 s, a abertura de texto de hoje). O fundo
-  é a abertura do pré-jogo CALADA (`prejogo-tela mudo`) ou o jogo parado no tick 0, a 30 qps atrás de um véu; o "Jogar" é o
-  GESTO do som e começa o pré-jogo escolhido (ou o apito). O laço fica no tick 0 (hash IGUAL, fecho 0). O Personalizar RECRIA o
-  mundo do tick 0 (`criarPartida({times})`, `timesAntes`, `prejogo.refazerTimes()`): pela fila do Editar time viraria
-  substituição. Online: a fase no byte 19 do pacote em bits da PÁGINA (`online-pagina.js E_TELA/E_PRONTO/E_PREJOGO`; o
-  `online.js` intocado), a do outro é o maior valor recebido; "Pronto" final, os dois saem juntos; no jogo o aviso diz "{nome}
-  ainda está antes do jogo / no pré-jogo" em vez de "A conexão parou". DESLIGADA com webdriver, `?prints=1` e `?demo=1`
-  (`?prepartida=1|0` força). Testes `teste-prepartida` (Node) e `teste-prepartida-tela` (navegador, CI e deploy; `--so`
-  pc,cel,telas,modos,tm,online,carga). Lições: o 3D atrás da tela no Chromium sem GPU deixa o quadro lento (~1 s com duas abas) — o que
-  depende de reação rápida (a saída conjunta do online) age no evento (clique, mensagem), não no próximo quadro; a cascata de
-  animação re-disparada a cada refazer deixava as fichas 6 px mais baixas nas medidas (só ao abrir; a régua acaba as animações).
+- **Tela antes do jogo** (item 64, PR #603; dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o
+  Total Match com cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do
+  dono" 19; o que ficou nos itens 100–107): a pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo
+  ao Estrelato, Livre, Pênaltis, online) ANTES do pré-jogo; nos treinos não. Barra com os dois times e a hora; estádio · data ·
+  árbitro FICTÍCIO · duração · período; o campinho em trapézio com as 11 fichas (busto, nota `notaExibida`, nome na TM Cond,
+  filete na cor da raridade da carta do TM), o selo da tática e o GERAL; abas Jogar partida · Visão tática (Escalação → Sem →
+  Com a bola, pela `posicaoTatica`) · Personalizar (+ Simular partida no TM; Livre, Pênaltis e online com as deles). Puro
+  `js/prepartida.js` (FORA do fecho: as constantes nele, não no `config.js`) + `js/prepartida-tela.js` + `css/prepartida.css` + a
+  TM Cond, SOB DEMANDA (no topo do `iniciar()`; reserva: sem o módulo em 1,5 s, a abertura de texto). O fundo é a abertura do
+  pré-jogo CALADA ou o jogo parado no tick 0, a 30 qps atrás de um véu; o "Jogar" é o GESTO do som e começa o pré-jogo escolhido
+  (ou o apito). O laço fica no tick 0 (hash IGUAL, fecho 0). O Personalizar RECRIA o mundo do tick 0 (`criarPartida({times})`,
+  `prejogo.refazerTimes()`): pela fila do Editar time viraria substituição. Online: a fase no byte 19 do pacote em bits da
+  PÁGINA (`online-pagina.js`; o `online.js` intocado), "Pronto" final e os dois saem juntos. DESLIGADA com webdriver, `?prints=1`
+  e `?demo=1` (`?prepartida=1|0` força). Testes `teste-prepartida` (Node) e `teste-prepartida-tela` (navegador, CI e deploy;
+  `--so pc,cel,telas,modos,pad,tm,online,carga`, `--raiz` mede a base). Lições: o 3D atrás da tela no Chromium sem GPU deixa o
+  quadro lento (~1 s com duas abas) — o que depende de reação rápida (a saída conjunta do online) age no EVENTO, não no próximo
+  quadro; camada que volta a ouvir o controle lê o estado antes (o Ⓐ segurado do Jogar virava um aperto novo no pré-jogo e pulava
+  ~60 s de cenas); conta de largura mede o que é DESENHADO (o separador com as margens) e confere no DOM — o "…" do CSS escondia
+  a duração; a decisão do ícone das abas é da barra inteira; tela com camada por cima (pausa, editor) fica só o véu; foco nunca
+  dentro de `aria-hidden`; medir também os modos com textos longos (TM pro, clássico, 4 abas) e o regime mínimo.
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
   §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
   foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta
@@ -694,7 +695,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   o tempo todo — quem foge da lente, a 2ª fileira de câmeras, quem está dentro do gol/atrás das placas no apito e o trilho da
   torcida só apareceram com 7 amostras de 56 fins (uma amostra só passava).
 - **Pré-jogo** (pedido de 11/10; `PESQUISA-PREJOGO.md`, contrato em `CONTRATOS.md`): antes do 1º passo (tick 0; o apito
-  da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som), aéreo de fora, fachada com a torcida
+  da saída só no fim; hash igual) — abertura "Toque para começar" (libera o som; desde o item 64, com a tela antes do jogo
+  ligada, ela fica CALADA atrás da tela e o gesto do som é o "Jogar partida" dela), aéreo de fora, fachada com a torcida
   chegando, o estádio por dentro, túnel, entrada com os árbitros, plano alto da fila se formando, a câmera passando pela
   fila de cada time, 4 cortes de torcida/estádio e as escalações no campinho (cada time grande, ~10 s, o mesmo fundo; a 1ª
   sai e a 2ª entra). Puros: `cortejo.js` (22 + 3 árbitros saem do túnel pela locomoção do jogo num mundo à parte; fotos e

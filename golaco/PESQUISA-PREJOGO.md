@@ -24,7 +24,7 @@ sólidos e o lado de fora), `js/render/prejogo.js` (o diretor), `js/render/estad
 | "Preferred walking speed" (Wikipedia, com Ralston 1958 e Bohannon), https://en.wikipedia.org/wiki/Preferred_walking_speed | Andar preferido de 1,10–1,65 m/s (~1,25 m/s em laboratório); a entrada em campo é uma caminhada de cerimônia: 1,45 m/s no cortejo, que cabe na faixa e deixa a passada da locomoção do jogo (`jogador.js`) com os pés plantados. |
 | three.js docs — `CatmullRomCurve3` (https://threejs.org/docs/pages/CatmullRomCurve3.html) | Trilhos Catmull–Rom do tipo **centrípeto** (sem laços nem bicos com pontos irregulares) e percorridos pelo **comprimento do arco** (`getPointAt`: velocidade constante no trilho) com suavização por plano. Implementado puro em `prejogo-roteiro.js` (a mesma conta não uniforme da three.js) para o teste dos trilhos rodar em Node com a MESMA curva que a página desenha. |
 | three.js docs — `BokehPass` e o fórum (tag bokeh) | Profundidade de campo é mais uma renderização da tela inteira e tem relatos de piscar no iOS: sem DOF no celular; o fundo "desfocado" vem da lente longa (fov 28–34) e, na escalação, do degradê escuro sobre o 3D vivo. |
-| MDN — "Autoplay guide for media and Web Audio APIs", https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide | O AudioContext só começa num gesto: sem a abertura "Toque para começar", os 80 s do pré-jogo seriam mudos. O mesmo toque pede, no Android, a tela cheia deitada (`screen.orientation.lock`). |
+| MDN — "Autoplay guide for media and Web Audio APIs", https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide | O AudioContext só começa num gesto: sem a abertura "Toque para começar", os 80 s do pré-jogo seriam mudos. O mesmo toque pede, no Android, a tela cheia deitada (`screen.orientation.lock`). Desde o item 64 (04/11) esse gesto é o "Jogar partida" da tela antes do jogo (§8); a abertura de texto só aparece sem a tela. |
 
 ## 1. Roteiro (prejogo-roteiro.js)
 
@@ -93,6 +93,7 @@ pré-jogo, 2/2 malhas recortadas) e o vão fechado no jogo (0/2, recorte local d
 
 ## 5. Pular e preferências
 
+(Com a tela antes do jogo do item 64 ligada, o pré-jogo começa pelo "Jogar partida" dela; o resto desta seção vale igual — §8.)
 Toque/clique, Enter, Espaço ou A: próximo BLOCO (cenas → escalação 1 → escalação 2 → jogo). Botão Pular (ícone + palavra,
 ≥ 48 px; some parado e volta com qualquer toque), Esc/P ou Start: direto para o jogo. Pausa → "Modo de jogo" → "Pré-jogo da partida":
 cada toque passa para o próximo (completo → curto → só escalação → desligado; salvo). Na 1ª versão era uma linha a mais
@@ -129,3 +130,20 @@ torcedores nunca entram no quadro): 6 peças em vez de 12.
 - Aperto de mão, mascotes e o hino: precisam de animação de braço (mocap da Etapa 5).
 - A cobertura e a fachada só no pré-jogo (a TV do jogo fica dentro da arquibancada de cá); se um dia a câmera de jogo sair
   dali, elas podem ficar no jogo (o plano geral do intervalo atravessaria a cobertura: CAMERA_GERAL [0, 34, 78]).
+
+## 8. Desde o item 64 (04/11): a tela antes do jogo vem antes do pré-jogo
+
+O dono pediu (23/10, com o print da pré-partida do EA FC) uma tela de entrada "nesse nível" com a cara do TM; a pesquisa, as
+fontes e as medidas estão no `PESQUISA-ESTADIO.md` §7.5 e o contrato em "Tela antes do jogo (item 64)" no `CONTRATOS.md`. O que
+muda AQUI:
+- **A abertura deixa de ser o gesto** quando a tela está ligada: ela continua montada (o aéreo de fora, o som abafado) como o
+  FUNDO da tela, mas CALADA (`prejogo-tela.mudo(true)`: o toque, o Enter/Espaço e o Ⓐ não agem). O "Jogar partida" da tela é o
+  gesto que libera o som (a mesma regra do MDN acima) e chama `prejogo.comecar()`; daí em diante o pré-jogo é o de sempre (os
+  mesmos blocos, o Pular, o "Pré-jogo da partida"). A escolha do "Pré-jogo da partida" feita pelo ≡ da tela vale no Jogar.
+- **Sem a tela** (webdriver, `?prints=1`, `?demo=1`, `?prepartida=0`, ou o módulo dela sem chegar em 1,5 s) a abertura "Toque para
+  começar" volta a ser o gesto, como antes: o `teste-prejogo` e os prints continuam iguais.
+- **O Ⓐ do Jogar** ainda segurado no quadro seguinte contava como um aperto NOVO para a camada do pré-jogo e pulava o bloco das
+  cenas (~60 s): a camada passou a ler o Ⓐ sempre e a ignorar o que já estava apertado quando volta a ouvir (revisão A1).
+- **O Personalizar antes do jogo** recria o mundo do tick 0 com a escalação nova; o diretor refaz o cortejo, os treinadores, as
+  fotos e as escalações (`refazerTimes`) sem remontar o lado de fora — o reserva escalado sai do túnel e aparece na escalação.
+- **Toques até o jogo** na partida com o pré-jogo: 2, como antes (Jogar + Pular no lugar de toque para começar + Pular).
