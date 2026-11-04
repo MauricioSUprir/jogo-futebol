@@ -190,8 +190,19 @@ export function criarPrepartida(opc) {
       data: d.data ? (pc ? d.data.longa : d.data.curta) : null, arbitro: d.arbitro,
       duracao: pc ? d.duracao.longa : d.duracao.curta, periodo: d.periodo, dificuldade: d.dificuldade,
     };
-    const r = linhaInfo(campos, L.info.w, t => medir(t, L.info.letra, 600), pc ? 2 : 1);
-    el.innerHTML = r.linhas.map(l => `<span class="pp-info-l">${l.map(esc).join(sep)}</span>`).join('');
+    const fonte = t => medir(t, L.info.letra, 600);
+    // o separador como ele é DESENHADO: a barra com a margem de 0,45 em de cada lado (.pp-s) — revisão A3
+    const sepW = fonte('|') + 0.9 * L.info.letra;
+    // a conta e depois a conferência no DOM (a letra de verdade): passou da linha, a conta corta de novo com o que sobrou a menos
+    let w = L.info.w, r = null;
+    for (let k = 0; k < 4; k++) {
+      r = linhaInfo(campos, w, fonte, pc ? 2 : 1, sepW);
+      el.innerHTML = r.linhas.map(l => `<span class="pp-info-l">${l.map(esc).join(sep)}</span>`).join('');
+      let excesso = 0;
+      for (const l of el.querySelectorAll('.pp-info-l')) excesso = Math.max(excesso, l.scrollWidth - l.clientWidth);
+      if (excesso <= 0.5) break;
+      w -= Math.ceil(excesso) + 1;
+    }
     el.removeAttribute('aria-label');
     el.dataset.cortes = r.cortes.join(' ');
   }

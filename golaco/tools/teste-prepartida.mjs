@@ -198,6 +198,25 @@ const letraMin = L => (L.pc ? (L.H >= 720 ? 13 : 11) : L.regime === 'normal' ? 1
   // PC em 2 linhas: o período mora na 2ª e não sai pelo estádio longo
   const pc = PP.linhaInfo(campos, 420, medir, 2);
   reg('L3 info no PC (2 linhas): o período fica na 2ª', `${pc.linhas.map(l => l.join(' | ')).join(' / ')}`, '2ª linha com a duração e o período', pc.linhas.length === 2 && pc.linhas[1].includes('Noite') && pc.linhas[1].includes('2 × 4 min'));
+  // o separador como a tela o DESENHA (a barra + 0,45 em de cada lado; revisão A3): com a largura dele a linha cabe — nos Pênaltis e
+  // no clássico do TM com o estádio longo (a conta com ' | ' achava a linha 3–4 px por separador mais estreita e o CSS cortava a
+  // duração do fim). Na HEAD antes da correção o 5º argumento não existia e as linhas passavam.
+  {
+    const letra = 11, med = t => PP.larguraInter(t, letra), sepW = med('|') + 0.9 * letra;
+    const real = l => l.reduce((s, p) => s + med(p), 0) + Math.max(0, l.length - 1) * sepW;
+    const casosA3 = [
+      ['Pênaltis', { estadio: 'Estádio Golaço', data: '4 nov. 2026', arbitro: 'Patrícia Vasconcelos', duracao: '5 cobranças · Começa: VNT', periodo: 'Noite' }],
+      ['clássico do TM', { estadio: 'Clássico · Clássico das Multidões · Estadio Municipal El Molinón – Enrique Castro "Quini"', data: '8 nov. 2026', arbitro: 'Fábio Antunes Leal', duracao: '2 × 4 min', periodo: 'Dia' }],
+    ];
+    let passa = 0, total = 0, pior = '';
+    for (const [nome, c] of casosA3) for (let w = 360; w <= 720; w += 4) {
+      const r = PP.linhaInfo(c, w, med, 1, sepW);
+      const lw = real(r.linhas[0]);
+      total++;
+      if (lw <= w + 0.5 && r.linhas[0].includes(c.duracao)) passa++; else if (!pior) pior = `${nome} em ${w} px: ${lw.toFixed(1)} px`;
+    }
+    reg('L3 info com o separador desenhado (| + 0,9 em): a linha cabe e a duração fica (Pênaltis e o clássico do TM, 360–720 px: a linha do celular tem ≥ 464)', `${passa}/${total}${pior ? `; 1º que passa: ${pior}` : ''}`, `${total}/${total}`, passa === total);
+  }
   // os textos de cada modo
   const mP = P.criarPartida({ semente: 3, minutosPorTempo: 4 });
   const mL = criarLivre({ semente: 3, linha: [6, 4], goleiro: [true, false] });

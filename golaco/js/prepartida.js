@@ -287,20 +287,23 @@ export const SEP_INFO = ' | ';
 /**
  * A linha (ou as 2 linhas do PC) de informação com o corte por PRIORIDADE (sai inteiro, nunca pela metade): (1) o período, (2)
  * "Árbitro: Nome Sobrenome" vira "Árb. N. Sobrenome", (3) o árbitro, (4) a data, (5) o estádio ganha "…" até 40% da linha. A
- * duração nunca sai. campos = {estadio, data, arbitro, duracao, periodo, dificuldade}; medir(texto) → px.
+ * duração nunca sai. campos = {estadio, data, arbitro, duracao, periodo, dificuldade}; medir(texto) → px; larguraSep = a largura
+ * do separador COMO ELE É DESENHADO (a tela: a barra com 0,45 em de margem de cada lado; sem ela, medir(SEP_INFO) — a conta com
+ * ' | ' dava 10 px a um separador de 13,9 no DOM e o CSS cortava o fim da linha: revisão A3).
  * Devolve {linhas: [[partes]], cortes: [os passos aplicados], estadioCortado}.
  */
-export function linhaInfo(campos, largura, medir, nLinhas = 1) {
+export function linhaInfo(campos, largura, medir, nLinhas = 1, larguraSep = null) {
   const c = { ...campos };
   const cortes = [];
   const arb = c.arbitro ? `Árbitro: ${c.arbitro}` : null;
   let arbTexto = arb;
+  const sepW = larguraSep ?? medir(SEP_INFO);
   const montar = () => {
     const l1 = [c.estadio, c.data, arbTexto].filter(Boolean);
     const l2 = [c.duracao, c.dificuldade, c.periodo].filter(Boolean);
     return nLinhas >= 2 ? [l1, l2] : [[...l1, ...l2]];
   };
-  const larg = l => l.reduce((s, p) => s + medir(p), 0) + Math.max(0, l.length - 1) * medir(SEP_INFO);
+  const larg = l => l.reduce((s, p) => s + medir(p), 0) + Math.max(0, l.length - 1) * sepW;
   const cabe = () => montar().every(l => larg(l) <= largura + 0.5);
   // (no PC, em 2 linhas, o período mora na 2ª: só sai se ela não couber)
   const segundaCabe = () => nLinhas < 2 || larg(montar()[1]) <= largura + 0.5;
@@ -312,7 +315,7 @@ export function linhaInfo(campos, largura, medir, nLinhas = 1) {
   if (!cabe() && c.estadio) {
     // o estádio com "…": até 40% da linha (o resto da linha cabe sempre: a duração é curta)
     const linhas = montar();
-    const outros = larg(linhas[0].filter(p => p !== c.estadio)) + (linhas[0].length > 1 ? medir(SEP_INFO) : 0);
+    const outros = larg(linhas[0].filter(p => p !== c.estadio)) + (linhas[0].length > 1 ? sepW : 0);
     const alvo = Math.max(largura * 0.4, largura - outros);
     let t = c.estadio;
     while (t.length > 1 && medir(t + '…') > alvo) t = t.slice(0, -1).trimEnd();

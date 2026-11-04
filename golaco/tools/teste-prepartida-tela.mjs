@@ -7,7 +7,8 @@
 //       tick 0, 0 passos, o hash = o do Node (criarPartida/criarLivre/criarDisputa); depois do Jogar, 600 passos = Node
 //   E3  sem rolar e E4 nada encosta: 4 telas do celular (com o entalhe) e 6 do PC × a escalação, o adversário e as duas vistas
 //       (as fichas, os discos, a barra, a competição, o ≡, a info, os cantos, as abas; dentro da tela e da área segura); também
-//       com as fontes BLOQUEADAS (a letra do sistema)
+//       com as fontes BLOQUEADAS (a letra do sistema); E4b os Pênaltis e o TM pro com o clássico e o estádio longos no celular (a
+//       info nunca cortada pelo CSS: revisão A3)
 //   E5  a letra: nome ≥ 10 px (568×320), ≥ 11 (outros celulares), ≥ 13 (PC ≥ 720); info ≥ 11; abas ≥ 13; o resto ≥ 11/12
 //   E6  os alvos: abas ≥ 177 × 40 (568), ≥ 200 × 44 (640+); ≡ ≥ 34/40/44; os times ≥ 30 × 56 (568) e 36 × 64; nada sob o entalhe
 //   E7* toques até o jogo: partida com o pré-jogo 2 (Jogar + Pular); sem pré-jogo 1 → o apito; Pênaltis 1; o requestFullscreen
@@ -417,6 +418,42 @@ if (faz('telas')) {
         meta('E17 contraste atrás do texto (fundo do jogo, noite)', `info ${c.info.toFixed(0)}, barra ${c.barra.toFixed(0)}`, '≤ 50', c.info <= 50 && c.barra <= 50);
       }
       meta(`S1 0 erros no console (telas ${modo})`, erros.filter(x => !/woff2|net::ERR_FAILED|Failed to load resource/.test(x)).slice(0, 3).join(' | ') || '0', '0', erros.filter(x => !/woff2|net::ERR_FAILED|Failed to load resource/.test(x)).length === 0);
+    } finally { await navegador.close(); }
+  }
+  // E4b os outros modos no celular (a revisão do item 64): os Pênaltis (a duração "5 cobranças · Começa: …") e o TM pro com o
+  // clássico, a competição e o estádio longos (4 abas) — a linha de informação sem o corte do CSS (A3)
+  const PED_PRO = { ...PED_A, id: 'tProPP', edicao: 'pro', home: { ...PED_A.home, stadium: 'Estadio Municipal El Molinón – Enrique Castro "Quini"' }, partida: { ...PED_A.partida, classico: true, nomeClassico: 'Clássico das Multidões', competicao: 'Brasileirão Série A' } };
+  const MODOS_TELA = [
+    ['Pênaltis', { q: `${Q}&prepartida=1&modo=penaltis&semente=5&hora=noite` }, ['meu', 'outro']],
+    ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu']],
+  ];
+  const TELAS_B = [[844, 390], [667, 375], [640, 360], [568, 320]];
+  for (const [nome, o, vistas] of MODOS_TELA) {
+    const { navegador, pagina: pg, erros } = await abrirPagina({ w: 844, h: 390, toque: true, ...o });
+    try {
+      if (!(await temTela(pg))) { meta(`E4b ${nome}`, 'sem tela', 'a tela', false); continue; }
+      await pg.evaluate(() => document.fonts.ready);
+      const falhas = [];
+      let casos = 0;
+      for (const [w, h] of TELAS_B) {
+        await pg.evaluate(c => document.documentElement.classList.toggle('entalhe-simulado', c), w === 844);
+        await pg.setViewportSize({ width: w, height: h });
+        await quadros(pg, 2);
+        for (const v of vistas) {
+          await pg.evaluate(v => {
+            const P = window.__golaco.prepartida, meu = P.estado.meu;
+            P.adversario(v === 'outro' ? 1 - meu : meu);
+            let n = 0; const alvo = v === 'sem' || v === 'com' ? v : 'escalacao';
+            while (P.estado.visao !== alvo && n++ < 4) P.vista();
+          }, v);
+          await quadros(pg, 1);
+          const m = await pg.evaluate(MEDIR);
+          casos++;
+          for (const p of m.prob) falhas.push(`${w}×${h} ${v}: ${p}`);
+        }
+      }
+      meta(`E4b nada encosta nem é cortado pelo CSS (${nome}: ${TELAS_B.length} telas do celular)`, falhas.length ? `${falhas.length}: ${falhas.slice(0, 4).join(' · ')}` : `0 em ${casos} casos`, '0', falhas.length === 0);
+      meta(`S1 0 erros no console (telas ${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
   }
 }
