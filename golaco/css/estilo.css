@@ -790,6 +790,18 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu .pausa-placar { height: 34px; }
   #menu .pausa-time { right: calc(var(--sa-r) + 14px); }
 }
+/* PC baixo (notebook com o navegador fora da tela cheia: ~1366×600; janelas até 481 px): as Opções numa coluna rolavam abaixo de
+   ~610 px de altura com a barra escondida (Transparência, Tamanho e Volume sumiam embaixo; F2 da revisão) — em 2 colunas, como no
+   celular, na faixa mais larga; sem lugar ao lado dela (< 860 px de largura) o cartão sai de cena nesse submenu */
+@media (min-height: 481px) and (max-height: 640px) {
+  #menu .janela-menu[data-sub="menu-opcoes"] { --fx-w: max(24vw, min(540px, calc(100vw - var(--fx-x) - var(--sa-r) - 16px))); }
+  #menu .opcoes-grade { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; row-gap: 2px; }
+  #menu .op-larga { grid-column: 1 / -1; }
+  #menu .opcoes-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+}
+@media (min-height: 481px) and (max-height: 640px) and (max-width: 859px) {
+  #menu .janela-menu[data-sub="menu-opcoes"] .pausa-time { display: none; }
+}
 /* janela estreita de PC (sem toque; com toque e em pé vale a tela "Gire o celular"): só a lista */
 @media (max-width: 559px) and (min-height: 481px) {
   #menu .janela-menu { --fx-w: min(320px, calc(100vw - var(--fx-x) - 70px)); }

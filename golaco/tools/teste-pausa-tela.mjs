@@ -7,7 +7,8 @@
 //       fora da área segura; CADA item do 1º nível com o foco (a letra maior e o negrito) cabe na linha — também no PC fora do
 //       16:9 (1024×768, 1280×1024, 1440×900, 1280×800: a letra crescia com a altura e a faixa com a largura), o
 //       "Voltar ao Total Match" do fim do TM e o "Sair" armado do online (revisão do item 58, F1)
-//   P2  sem rolar em todos os níveis (1º, Opções, Modo de jogo, Estatísticas, Jogadores e Câmera do Livre) × modos × telas
+//   P2  sem rolar em todos os níveis (1º, Opções, Modo de jogo, Estatísticas, Jogadores e Câmera do Livre) × modos × telas,
+//       também no PC baixo (1366×600, 1280×520: as Opções rolavam com a barra escondida — F2)
 //   P3  o jogo à vista (pelo print: a luminância com a pausa ≥ 60% da sem ela): ≥ 40% no PC, 25% em 844×390, 17% em 667 e 640,
 //       14% em 568×320
 //   P4  o campinho: 11 fichas na ordem da formação, número e nome de camisa, a formação do rascunho (o Editar time com 4-4-2 →
@@ -38,8 +39,8 @@ const RAIZ = path.resolve(arg('--raiz', RAIZ_PADRAO));
 const SO = arg('--so', null);
 const CEL = [[844, 390], [667, 375], [640, 360], [568, 320]];
 const PC = [1280, 720];
-// o PC fora do 16:9 (revisão do item 58: F1 4:3, 5:4 e 16:10)
-const PC_MAIS = [[1024, 768], [1280, 1024], [1440, 900], [1280, 800]];
+// o PC fora do 16:9 e baixo (revisão do item 58: F1 4:3, 5:4 e 16:10; F2 a janela do notebook fora da tela cheia)
+const PC_MAIS = [[1024, 768], [1280, 1024], [1440, 900], [1280, 800], [1366, 600], [1280, 520]];
 const Q = 'q=baixa&replay=0&comemoracao=0&semente=5';
 const META_P3 = { 1280: 0.40, 844: 0.25, 667: 0.17, 640: 0.17, 568: 0.14 };
 const srv = await servidor(0, RAIZ);
