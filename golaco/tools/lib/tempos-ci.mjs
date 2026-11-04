@@ -83,6 +83,7 @@ export const TEMPOS_NODE = {
   'teste-cortejo.mjs': 4,
   'teste-prejogo-roteiro.mjs': 0.3,
   'teste-prejogo-roteiro.mjs --forma maracana': 0.3,
+  'teste-prepartida.mjs': 1.6,
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
