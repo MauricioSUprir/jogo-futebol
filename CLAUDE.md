@@ -588,6 +588,25 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
   texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
   dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
+- **Tela antes do jogo** (item 64, dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o Total Match com
+  cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do dono" 19): a
+  pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo ao Estrelato, Livre, Pênaltis, online)
+  ANTES do pré-jogo; nos treinos não. Barra com os dois times (camisa, escudo, sigla) e a hora; estádio · data · árbitro
+  FICTÍCIO · duração · período; o campinho em trapézio com as 11 fichas (busto vestido, nota `notaExibida`, posição, nome na TM
+  Cond, filete na cor da raridade da carta do TM); o selo da tática e o GERAL; abas Jogar partida · Visão tática (Escalação →
+  Sem → Com a bola, pela `posicaoTatica`) · Personalizar (+ Simular partida no TM; Livre/Pênaltis/online com as deles). Puro
+  `js/prepartida.js` (FORA do fecho; as constantes nele, não no `config.js`) + `js/prepartida-tela.js` + `css/prepartida.css` +
+  a TM Cond, SOB DEMANDA (pedidos no topo do `iniciar()`; reserva: sem o módulo em 1,5 s, a abertura de texto de hoje). O fundo
+  é a abertura do pré-jogo CALADA (`prejogo-tela mudo`) ou o jogo parado no tick 0, a 30 qps atrás de um véu; o "Jogar" é o
+  GESTO do som e começa o pré-jogo escolhido (ou o apito). O laço fica no tick 0 (hash IGUAL, fecho 0). O Personalizar RECRIA o
+  mundo do tick 0 (`criarPartida({times})`, `timesAntes`, `prejogo.refazerTimes()`): pela fila do Editar time viraria
+  substituição. Online: a fase no byte 19 do pacote em bits da PÁGINA (`online-pagina.js E_TELA/E_PRONTO/E_PREJOGO`; o
+  `online.js` intocado), a do outro é o maior valor recebido; "Pronto" final, os dois saem juntos; no jogo o aviso diz "{nome}
+  ainda está antes do jogo / no pré-jogo" em vez de "A conexão parou". DESLIGADA com webdriver, `?prints=1` e `?demo=1`
+  (`?prepartida=1|0` força). Testes `teste-prepartida` (Node) e `teste-prepartida-tela` (navegador, CI e deploy; `--so`
+  pc,cel,telas,modos,tm,online,carga). Lições: o 3D atrás da tela no Chromium sem GPU deixa o quadro lento (~1 s com duas abas) — o que
+  depende de reação rápida (a saída conjunta do online) age no evento (clique, mensagem), não no próximo quadro; a cascata de
+  animação re-disparada a cada refazer deixava as fichas 6 px mais baixas nas medidas (só ao abrir; a régua acaba as animações).
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
   §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
   foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta

@@ -385,6 +385,61 @@ no quadro de 16:9; as imagens ficaram fora do repositório.
   o "View Player List" do FC 24 abre; se a lista do FC dá a volta no fim (a nossa dá, nas setas e no controle); a pílula do
   placar no FC 24 Kick Off (a captura tem uma marca d'água em cima; vista no FC 25 e cortada no FC 24 UT).
 
+### 7.5 A tela antes do jogo no nível do EA FC, com a cara do TM (item 64, dono 23/10; `js/prepartida.js`, `js/prepartida-tela.js`, `css/prepartida.css`, `js/main.js`, `js/hud.js`, `js/prejogo-tela.js`, `js/render/prejogo.js`, `js/editor-time.js`, `js/online-pagina.js`)
+Pedido: "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e etc, mas é do mesmo nível" (com o print de uma
+pré-partida do FC). Contrato "Tela antes do jogo (item 64)" no `CONTRATOS.md`. Pesquisa de 04/11 com 25 capturas medidas
+(Pillow, em % do quadro 16:9; as imagens ficaram fora do repositório) e uma MAQUETE em DOM medida em 11 telas × 6 formações × 2
+elencos antes do código.
+
+| Fonte | O que diz / o que se mediu | O que foi aproveitado |
+|---|---|---|
+| A pré-partida da CARREIRA do FC 24 (r/FifaCareers, "New Pre-Match screen, doesn't show other team anymore", ago/2023 — https://www.reddit.com/r/FifaCareers/comments/15nh42b/ ; imagem https://i.redd.it/rfdnbyfn7bhb1.jpg; foto de monitor, ±3–4 pontos) | É a tela do print do dono: barra com quem controla + uniforme + escudo · HORÁRIO · escudo + uniforme (16–22% da altura); duas linhas de informação (estádio · data · árbitro / dificuldade · duração · clima, 25–28%); o campinho em perspectiva (34–76%) com o RECORTE do rosto, a nota e o nome de cada titular; "Team Management" logo abaixo; 4 abas de 22,2% × 7,4% (Play Match · Tactical View · Play Highlights · provável Sim Match, 83,5–90,8%) | O desenho inteiro de cima para baixo, nas proporções medidas (no PC ±1,5 ponto, `teste-prepartida-tela` E20); o Team Management virou a aba Personalizar; a 4ª aba "Simular partida" só no TM |
+| FC 24 Kick Off, "Match Preview" (YouTube OGX5lhCQo7w, 1280×720) e o Matchday Hub da carreira (r/FifaCareers, post 16qxv2s, 1920×1080) | A aba com o foco BRANCA com texto escuro, as outras escuras translúcidas; o fundo escuro (L 14–74 de 255); o selo da Tactical Vision embaixo do nome do time; a linha dos comandos a 96% | O foco das abas em degradê VERDE (a cara do TM no lugar do branco), o selo da tática (`seloTatica`: 7 selos pelo que o jogo tem) e a linha dos comandos do PC a 95,4% |
+| EA, Pitch Notes — Career Deep Dive do FC 24 (https://www.ea.com/en-au/games/ea-sports-fc/pitch-notes/news/fc-24-career-deep-dive) e as chaves da carreira do FC 26 (YouTube l54b3Wr2NAs, mCSytCUz_LE) | "Tactical View" do FC é ASSISTIR a partida como técnico (câmeras de transmissão, trocar a tática sem pausar), e Sim Match / Play Highlights são jeitos de jogar a partida | A nossa "Visão tática" NÃO é isso (mudaria o jogo e o resultado do TM): é a vista com/sem a bola, só leitura; assistir como técnico ficou como escolha do dono |
+| EA, FC 25 FC IQ Deep Dive (imagens oficiais "With Ball / Without Ball") | A formação vista com a bola e sem a bola no Team Management (RS troca) | A Visão tática: Escalação → Sem a bola → Com a bola, os pontos pela `posicaoTatica` (a mesma função da IA), discos com o número e o nome do disco em foco (com os nomes, 12–18 de 24 casos encostavam; só números, 3, corrigidos pela separação de ≤ 4 px) |
+| FC 26 Kick Off "Match Preview" (YouTube 8Duva17t7fI, 480×360) e a interface do UT do FC 26 (RealSport101 — https://realsport101.com/article/fc-26s-new-ui-a-deep-dive-into-the-redesigned-ultimate-team-menu) | O desenho da pré-partida mudou pouco; a tipografia nova em caixa alta, letra larga; nada sobre a pré-partida | O nome de camisa em caixa alta na TM Cond (a letra da carta do TM) |
+| eFootball no celular, "Game Plan" (YouTube 4f200xLXxaI) e FC Mobile, "My Team" (https://backup.mrbelieverhub.com/head-to-head-guide/, 917×423) | eFootball: campo de cima, cartas SEM nome; FC Mobile: cartas inteiras de 78 × 75 px (17,7% da altura), nome com ~9–10 px, os reservas cortados (rola) | Escalados para 320 px de altura dariam 44–57 px por carta: a carta inteira do TM não cabe com nome ≥ 10 px; a FICHA do FC 24 (busto + nota + nome) com a moldura chanfrada e o filete da raridade da carta do TM cabe (40 px por fileira em 568×320) |
+| Fórum da EA, FC 24 "pre-match" (https://forums.ea.com/discussions/fc-24-technical-issues-en/pre-match-fc-24/7846726; só pelo resumo da busca) e o próprio post do print ("doesn't show other team anymore") | A queixa: a pré-partida do FC 24 não mostra o time adversário | O adversário à vista (o botão do time, Q/E, LB/RB), escolha do dono |
+| Apple HIG, Material 3, WCAG 2.2 2.5.8 e 2.5.5, Xbox Accessibility Guideline 101 e Valve (Steam Deck: "o menor caractere não abaixo de 9 px a 1280×800" — https://partner.steamgames.com/doc/steamdeck/compat) | Alvo 44 pt (mínimo 28), 48 dp, ≥ 24 px; texto mínimo 11 pt; o caractere de ~1 mm de altura | No celular em PX (a mesma regra da pausa, §7.4): nome ≥ 10 px em 568×320 e ≥ 11 nos outros, info ≥ 11, abas ≥ 13 de letra e 40–44 px de altura; no PC as proporções do FC (nome ≥ 13) |
+| WAI-ARIA APG: diálogo modal e barra de ferramentas (https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/ ; https://www.w3.org/WAI/ARIA/apg/patterns/toolbar/) | `role="dialog"`, `aria-modal`, o Tab preso; a toolbar com UMA parada no Tab e as setas dentro (tabindex itinerante) | O diálogo "Antes do jogo: …", as abas como toolbar, o Tab preso em 4 paradas, a lista com a nota para o leitor de tela |
+| MDN, Autoplay guide (https://developer.mozilla.org/en-US/docs/Web/Media/Autoplay_guide) e os relatos do controle que não conta como ativação (Construct; WebKit 217675) | O áudio da Web só começa num gesto do usuário; o botão do controle pode não contar | O "Jogar partida" é o gesto (o mesmo papel do "Toque para começar"); pelo controle, o aviso discreto para ligar o som se o contexto não estiver `running` |
+| Barlow Condensed (Google Fonts, OFL; a "TM Cond" da carta do TM em `legacy-total-match/assets/fontes`) | — | Os nomes, as notas e as posições das fichas na letra da carta do TM (a tabela de avanços da fonte no `prepartida.js` deixa a conta independente da fonte chegar) |
+| CBF, quadro de árbitros FIFA 2026, e a lista do ge com 72 árbitros (fontes em `tools/dados/arbitros-reais.txt`) | Os nomes reais | Os 32 árbitros FICTÍCIOS conferidos contra eles (nenhum nome igual; `teste-prepartida` L4) |
+
+**Decisões** (as alternativas na especificação do item e na FILA "Depende do dono" 19):
+- **O fundo é a abertura de hoje** (o aéreo de fora, o som abafado) ou o jogo parado, atrás de um véu: 0 código 3D novo, 0
+  chamada a mais (40/96 mil no 844×390 Média, o teto do `teste-prejogo`), 30 qps. O estádio por dentro numa câmera nova (mais
+  perto do Kick Off do FC 24) arriscava um tranco no "Jogar" (o lado de fora compilaria nesse instante).
+- **A ficha**: a carta de campo (moldura chanfrada, busto VESTIDO na cor do uniforme, nota, posição e nome na TM Cond) com o
+  filete CHEIO na cor da raridade — a barrinha verde do FC 24 não tem dado nosso (inventaria uma "forma").
+- **O Personalizar recria o mundo do tick 0** (`criarPartida({times})`): pelo caminho do Editar time da pausa a troca viraria
+  substituição pendente no 1º passo (conferido no `escalacao.js`).
+- **O online pelo byte de estado do pacote** (bits da página): contínuo, sem recado perdido, e o `online.js` (entrada do fecho)
+  intocado. Sem Personalizar no online (v1).
+- **Antes → depois** (base 30ce999f × o item 64; `teste-prepartida-tela`, `teste-carga`, os hashes; na base o teste novo passa 7
+  de 18 medidas e reprova 11):
+
+  | Medida | Base | Item 64 |
+  |---|---|---|
+  | A tela antes do jogo | não existe | partida, TM, Rumo ao Estrelato, Livre, Pênaltis e online; não nos treinos, nem com webdriver, prints e demo |
+  | Toques até o jogo: partida com o pré-jogo / desligado / Pênaltis | 2 (toque para começar + Pular) / 0 / 0 (a disputa andava sozinha no 1º quadro) | 2 (Jogar + Pular) / 1 / 1 |
+  | A simulação com a tela aberta (10 s de relógio) | — | tick 0, 0 passos, hash = Node; 30 desenhos 3D/s |
+  | O som depois do gesto | o toque para começar | o Jogar: o contexto `running` em 0,03 s; o apito só depois |
+  | Personalizar antes do jogo | o Editar time da pausa: a troca vira substituição pendente no 1º passo (1 de 5) | a escalação: 0 substituições, ninguém "saiu", hash = Node `criarPartida({times})`; o reserva conta no resultado do TM |
+  | Sem rolar / nada encosta | — | 0 px e 0 encostos em 4 telas de celular e 6 de PC × as 3 vistas × os dois times, também sem as fontes |
+  | A letra (menor) | — | nome 10 px em 568×320, 11–12 nos outros celulares, 15 no PC 1280×720; info ≥ 11; abas ≥ 14 |
+  | Os alvos de toque | — | abas 177 × 40 (568×320) a 241 × 44 (844×390); o ≡ 34–40; os times 64 × 30 a 75 × 36 |
+  | O desenho com a tela (844×390 Média) | — | 40 chamadas, 96 mil triângulos (o teto do pré-jogo) |
+  | Contraste atrás do texto (mediana) | — | 10–29 de 255 (≤ 50), de dia e de noite |
+  | Online: a saída conjunta do Pronto | — | 12–19 ms (esperando o quadro seguinte: 900 ms no Chromium sem GPU); com 20% dos pacotes perdidos, 12–19 ms |
+  | Online: o aviso com o outro no pré-jogo e pacotes chegando | "A conexão parou. Se não voltar, vocês podem encerrar." | "{nome} ainda está no pré-jogo." (em 4,2 s com quadros de ~1 s) |
+  | Download inicial (até +2,5 s) | 2673 KB, folga 747 KB | 2696 KB, folga 725 KB (o `main.js` +20 KB) |
+  | Com a tela, a mais (sob demanda) | — | +99 KB transferidos (+160 KB crus): os 2 módulos, o CSS, a Inter TM 600/800 e a TM Cond |
+  | hash-igual / hash-partida / fecho | — | IGUAL / IGUAL (104 hashes) / 0 módulos do fecho mexidos |
+- **Dúvidas em aberto**: em qual versão (24/25/26) o dono tirou o print; a pré-partida do FC 25 e a da carreira do FC 26 (não
+  achadas); a animação de saída da tela no FC; se o botão do controle libera o som no Safari de hoje; nada medido em celular de
+  verdade (só o Chromium sem GPU).
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja

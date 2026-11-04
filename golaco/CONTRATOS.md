@@ -1910,6 +1910,107 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
 - **Limite**: 568×320 está no limite — 8 linhas de 28,6 px no 1º nível e um cartão de ~236×217. Item novo no 1º nível (ou modo
   novo com mais itens) pede rever a conta, ou entrar num submenu.
 
+## Tela antes do jogo (item 64; 04/11) — a pré-partida do EA FC com a cara do TM (contrato)
+Pedido do dono (23/10, com o print da pré-partida do FC): "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e
+etc, mas é do mesmo nível" (FILA item 64; as escolhas no "Depende do dono" 19). Pesquisa em `PESQUISA-ESTADIO.md` §7.5. **Só
+DOM, CSS e página**: os novos `js/prepartida.js` (puro, FORA do fecho: nenhuma constante no `config.js`), `js/prepartida-tela.js`
++ `css/prepartida.css` + `assets/tm/fontes/tmcond-800-latin(-ext).woff2` (a TM Cond 800 = Barlow Condensed ExtraBold, OFL, a
+letra da carta do TM) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
+`editor-time.js`, `online-pagina.js`. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS: a tela segura o laço no tick 0
+(nenhum passo) e nada dela vai ao passo.
+- **Quando aparece** (`main.js prepartidaLigada`): em todo JOGO — partida, TM (também o Rumo ao Estrelato), Livre, Pênaltis e
+  online — ANTES do pré-jogo; nos treinos não. `?prepartida=1|0` força; sem o parâmetro, DESLIGADA com `navigator.webdriver`,
+  `?prints=1` e `?demo=1` (a regra do `modoPrejogo`). Sem opção para desligar (é o portão do som e do Personalizar, como no FC).
+  "Jogar de novo" (fim) e a troca de modo pela pausa a mostram de novo; o "Reiniciar partida" no meio não; o `trocarMundo` da
+  API dos testes só com `opc.prepartida`.
+- **Carga** (sob demanda, fora do download inicial): `carregarPrepartida()` no TOPO do `iniciar()` (com a tela ligada) baixa o
+  `prepartida-tela.js`, o `prepartida.js`, o `css/prepartida.css` (antes do `prejogo.css`) e pede a Inter TM (600/800) e a TM Cond
+  (o layout não espera as fontes: a conta do nome usa a tabela de avanços da TM Cond, `larguraCond`). **Reserva**: sem o módulo
+  até 1,5 s depois do 3D pronto (`esperarPrepartida`), a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
+  partida. Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`).
+- **O fundo**: partida com o pré-jogo ligado → a fase `abertura` do diretor do pré-jogo de hoje (o aéreo de fora, o som abafado)
+  CALADA (`prejogo.iniciar(modo, {abertura, muda})` → `prejogo-tela.mudo(true)`: os três ouvintes dela — o toque da camada, o
+  Enter/Espaço na captura e o Ⓐ — não agem) e o fundo `'abertura'`; o resto (pré-jogo desligado, Livre, Pênaltis) → o JOGO PARADO
+  no tick 0 (`'jogo'`). Um véu em degradê por cima (sem `backdrop-filter`); o 3D atrás desenha a 30 qps (`PP_QPS`); em pé (o
+  `#girar` cobre) ou com a aba escondida não desenha. O ramo do laço (`quadroPrepartida`, no TOPO do `quadro()`): `entrada.ler`,
+  as ações `menu-*` para a tela, `laco.ultimo = agora` (o tempo não se acumula) e, no online, o pacote. `pausado()` e
+  `marcarCondutor` olham a tela; o HUD, os botões de toque, as cenas, o canvas e o `#prejogo` ficam `inert` atrás dela.
+- **O "Jogar partida"** (`jogarPrepartida`): é o GESTO (o `som.js` cria e retoma o contexto no 1º gesto; a tela cheia deitada do
+  Android dentro do handler); a tela some e começa o pré-jogo escolhido no "Pré-jogo da partida" (completo, curto, só escalação —
+  `prejogo.comecar()` no fundo da abertura, ou `comecarPrejogo` se a escolha mudou com a tela aberta) ou, desligado, o apito
+  (`eventosIniciais`). Pelo controle, se o contexto do som não estiver `running` 0,3 s depois, o aviso discreto "Toque ou aperte
+  uma tecla para ligar o som" (`hud.evento('somGesto')`).
+- **Layout** (`prepartida.js layoutPrepartida(W, H, sa, formacao, nAbas, {canto})`, puro; o mesmo nos testes): o celular deitado
+  pela ALTURA útil Hu = H − sa.t − sa.b, em px (regimes normal ≥ 352, compacto 316–351, mínimo 277–315, emergência < 277); o PC
+  (Hu > 480 e W ≥ 560) pelas proporções do FC 24 medidas em 1280×720 (barra 15,5–22%, info 24,6%, campinho 32–78%, abas
+  83,5–90,8% de 5% a 95% da largura, comandos 95,4%). De cima para baixo: a competição + o ≡ (e o [<] do canto), a BARRA (o
+  botão de cada time com a camisa, o escudo e a sigla — no PC o nome e o selo —, a hora no meio), a linha de INFORMAÇÃO
+  (estádio · data · árbitro · duração · período; `linhaInfo` corta por prioridade: período → árbitro curto → árbitro → data →
+  o estádio com "…"; no PC em 2 linhas), o CAMPINHO em trapézio (topo = 0,70 da base, perspectiva verdadeira por `projetar`, 5
+  fileiras de altura hc = ⌊(Hcampo − 4·folga)/5⌋), o selo da tática e o GERAL nos cantos de baixo, as ABAS e, no PC, a linha dos
+  comandos (Enter/Ⓐ Selecionar · Esc/Ⓑ Voltar · Q E/LB RB Time · P/Start Opções · Ⓨ Personalizar · Ⓧ Vista). Layout só no
+  `resize`, na troca de time e na troca de vista (`pp.layout()`); a cascata das fichas só ao abrir.
+- **A ficha** (11 por time): a carta de campo — moldura chanfrada (`clip-path`) e filete CHEIO na cor da raridade da carta do TM
+  (`raridade`: Base < 65, Elite < 75, Craque < 85, Lenda ≥ 85; a nota é a `notaExibida`, a mesma do TM e do GERAL), o busto
+  VESTIDO na cor do uniforme (o goleiro com o dele), a nota, a posição e o nome de camisa em TM Cond 800 (nome = clamp(10/11,
+  round(0,235·hc), 20) px; "…" só sem a fonte). No Rumo ao Estrelato a ficha do travado diz "VOCÊ". Nos Pênaltis o campinho dá
+  lugar à FILA dos cobradores (o goleiro + 1º…5º do `m.disputa`); no Livre só quem está em campo, com "N contra M".
+- **Visão tática** (aba; Ⓧ): Escalação → Sem a bola → Com a bola (o FC IQ do FC 25), só leitura — os pontos da `posicaoTatica`
+  (`pontosVisao`, a MESMA função da IA e da prévia do editor) num campo aproximado no bloco (± 6 m), discos com o NÚMERO e o nome
+  só do disco em foco/tocado; `layoutVisao` afasta os discos que encostariam (≤ 4 px do ponto). Esc volta à Escalação.
+- **As abas por modo** (`abasDoModo`): partida Jogar partida · Visão tática · Personalizar; TM + **Simular partida** (armada:
+  "Toque de novo: simular", 3 s; o 2º toque = `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`); Rumo ao
+  Estrelato Jogar · Visão · Simular (sem Personalizar); Livre Jogar · Jogadores · Câmera (os submenus do Livre; o Voltar deles
+  volta à tela e o N contra M novo vale já, no mundo do tick 0); Pênaltis Bater pênaltis · Cobradores do adversário; online
+  **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match"; no online "Sair da
+  partida". O ≡ (P, Start) abre a pausa no modo "antes do jogo" (`hud.definirAntes`: `#menu[data-antes]`, "Voltar" no lugar de
+  "Voltar ao jogo"; somem Editar time, Estatísticas, Replay, Reiniciar, Simular o resto, Pausar do online, o cartão e a pílula).
+- **Dados** (`main.js dadosPrepartida()` → `prepartida.js dadosDaPartida(m, ctx)`: só LÊ o mundo): os dois times (sigla, nome,
+  escudo do TM/`<symbol>`, cores do uniforme, formação, as fichas, o selo `seloTatica`, o GERAL, a pessoa no online), a competição
+  (`textoCompeticao`), a hora (16:00 de dia, 21:30 à noite), o estádio (`IDENT.estadio.nome` ou "Estádio Golaço"), a data (do
+  pedido do TM; fora do TM a do aparelho; no TM sem data, nenhuma), o ÁRBITRO fictício (`arbitroDe(semente)`: 32 nomes conferidos
+  contra os quadros da CBF/FIFA — `tools/dados/arbitros-reais.txt`; hash da semente, nunca o `m.rng`; nenhum no Livre), a
+  duração (os minutos por tempo) e o período.
+- **Navegação** (`prepartida-tela.js`; WAI-ARIA APG): `role="dialog"` + `aria-modal` + `aria-labelledby` ("Antes do jogo:
+  <casa> × <fora>, <hora>"), as abas numa `role="toolbar"` com tabindex itinerante, a lista `.pp-lista` só para o leitor de tela
+  (posição, nome, nota), uma região `aria-live`. Foco inicial na 1ª aba (o Ⓐ do FC). Tab PRESO: a aba itinerante → os dois times
+  → o ≡ → o [<] → volta. Setas: ←/→ nas abas e na barra, ↑/↓ entre as linhas (barra, discos, abas). Enter/Espaço/Ⓐ age; Esc/Ⓑ
+  volta um nível (vista → escalação, adversário → o meu time, 1º nível → o foco na 1ª aba); Q/E e LB/RB trocam o time mostrado;
+  P/Start = ≡; Ⓨ = Personalizar; Ⓧ = a próxima vista. O teclado por um ouvinte na CAPTURA da `window`; o controle pelas ações
+  `menu-*` do `tratarAcao` e o Ⓨ/Ⓧ/LB/RB lidos em `pp.atualizar`. Toque: as abas e os botões por `aoTocar`; tocar no campinho =
+  Personalizar (só onde é editável); na Visão tática, tocar num disco mostra o nome. Com a pausa, a Ajuda ou o editor por cima,
+  a entrada volta a valer para eles (`abrirMenuDaTela`) e, quando fecham, `voltarParaTela()` bloqueia de novo, refaz os dados e
+  devolve o foco (ao ≡ depois das Opções, ao Personalizar depois do editor).
+- **Personalizar antes do jogo** (aba; Ⓨ; o toque no campinho): o Editar time de hoje com `antesDoJogo` (o rótulo "Antes do
+  jogo: as trocas viram a escalação"); o PRONTO NÃO passa pela fila de edições (que viraria substituição pendente no 1º passo):
+  `timesAntes[TIME_HUMANO] = edicaoParaTimes(ed)` e o mundo do tick 0 é RECRIADO por `criarPartida({times})` (`trocarMundo(…,
+  {antesDoJogo: true})` mantém a tela e o pré-jogo; `prejogo.refazerTimes()` refaz o cortejo, os técnicos, as fotos e as
+  escalações — não o lado de fora). O reserva escalado joga, conta no resultado do TM e ninguém "saiu" (`teste-ponte-tm` P9).
+- **Online** (§4.5 da especificação; `online.js` INTOCADO): a fase vai no byte 19 do pacote em bits definidos na PÁGINA
+  (`online-pagina.js E_TELA = 8`, `E_PRONTO = 16`, `E_PREJOGO = 32`; os bits 0–2 continuam os do `online.js`); todo pacote leva a
+  fase e a do outro é o MAIOR valor recebido (`faseRemota`: −1 nenhum pacote, 0 tela, 1 pronto, 2 pré-jogo, 3 jogo — um pacote
+  velho não desfaz nada). "Pronto" é final: o botão vira "Aguardando {nome}…" (`aria-disabled`, a bolinha girando) e o pacote sai
+  na hora; a saída conjunta é eu pronto e o outro com fase ≥ 1 (pronto ou além da tela: a reserva sem a tela manda `E_PREJOGO`)
+  → `jogarPrepartida()`, conferida no EVENTO (`saidaOnlineTela`: o clique do Pronto e a mensagem que sobe a fase, `ao.fase` do
+  `criarPaginaOnline`) e a cada quadro (rede de segurança) — esperar o quadro dava 900 ms com o 3D atrás da tela no Chromium sem
+  GPU; no evento, 12–19 ms de um lado ao outro. O 1º passo continua decidido pelo lockstep. Com a tela aberta, `PAG_ONLINE.quadro(agora, {antes: true})`
+  a cada quadro (o abandono, a ligação fechada e o "Aguardando" só sem pacote por 5 s valem; o "espera" de 0,9 s não); com 60 s
+  esperando, o [<] "Sair da partida" ganha destaque (`destacarCanto`, nada automático). No jogo, com pacotes chegando e o outro
+  ainda na tela ou no pré-jogo, o aviso de espera diz "{nome} ainda está antes do jogo." / "{nome} ainda está no pré-jogo." (antes:
+  "A conexão parou", enganoso); o W.O. continua só sem pacote por 90 s. Sem Personalizar no online (v1: no passo ≥ D viraria
+  substituição). O Sair armado = o da pausa: `PAG_ONLINE.sair()` + `tm3d:sair {abandono}` (derrota; o outro recebe o W.O.).
+- **API de teste** (`__golaco.prepartida`): `ligada`, `carregada`, `aberta`, `estado` (modo, fundo, regime, abas, foco, time,
+  visão, armado, aguardando, destaqueCanto), `dados()`, `layout()`, `visao()`, `jogar()`, `personalizar()`, `adversario(t)`,
+  `vista()`, `simular()`, `abrir()`, `carregar()`, `timesAntes`, `desenhos`, `fechadaEm`, `escalar(ed)`; `__golaco.online` ganhou
+  `fase`, `faseRemota`, `encerrado` e `aviso`; `sobDemanda.estado.prepartida`.
+- **Testes**: `teste-prepartida` (Node, padrão: L1 o layout da maquete medida em 11 telas × 6 formações, L2 a Visão tática sem
+  encosto, L3 a linha de informação, L4 o árbitro, L5 a edição → times, L6 os dados por modo, L7 a pureza e o fecho);
+  `teste-prepartida-tela` (navegador, CI e deploy; `--so pc,cel,telas,modos,tm,online,carga`, `--raiz` mede a base, `--espera <s>`
+  o O5): E1–E21 (liga/desliga, simulação parada e hash = Node, sem rolar e nada encosta em 10 telas também sem as fontes, letras,
+  alvos, toques até o jogo, som, teclado, controle, leitor de tela, Personalizar, modos, desenho, download, contraste, em pé,
+  voltas, proporções do FC 24, reserva) e O1–O7 (duas abas pelo BroadcastChannel); `teste-ponte-tm` P9; `teste-carga`
+  (`SO_COM_TELA`).
+
 ## Pedidos de 11/10 — regras e controles (contrato)
 
 Tudo novo só vale na partida (`m.partida`): o treino continua bit a bit igual (`tools/hash-igual.mjs` IGUAL). Pesquisa em
