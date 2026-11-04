@@ -243,6 +243,7 @@ let PAG_ONLINE = null;
 // a tela antes do jogo (item 64; o bloco "a tela antes do jogo" mais abaixo): o módulo DOM, as contas, a tela criada, o fundo, a
 // escalação do Personalizar (vale nos mundos novos desta página), a pausa/o editor por cima no quadro anterior e os 30 qps
 let MOD_PP = null, PP_PURO = null, ppCarga = null, pp = null, ppFundo = null, timesAntes = null, ppOcupado = false, ppPersonalizar = false;
+let ppOnline = { pronto: false, desde: 0 }, ppFechadaEm = null; // (online: o meu Pronto e quando; a hora em que a tela fechou)
 let ppDesenho = -1e9, ppDt = 0, ppVolta = null, ppDesenhos = 0;
 
 const params = new URLSearchParams(location.search);
@@ -2740,7 +2741,8 @@ function quadro(agoraMs, desenhar = true) {
   if (prejogo && prejogo.ativo) {
     entrada.ler(yawEntrada());
     laco.ultimo = agoraMs;
-    if (mundo.online && PAG_ONLINE) PAG_ONLINE.enviarPacote(agoraMs, 0);
+    // (a fase no pacote: o outro, ainda na tela antes do jogo, sai com ela; e o aviso dele diz "ainda está no pré-jogo")
+    if (mundo.online && PAG_ONLINE) PAG_ONLINE.enviarPacote(agoraMs, MOD_PAG_ON.E_PREJOGO);
     const emPe = retratoBloqueado();
     if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
@@ -3233,8 +3235,6 @@ function fimDoPrejogo() {
 const PP_PARAM = params.get('prepartida');
 function prepartidaLigada(m = mundo) {
   if (!m || !ehJogo(m)) return false;
-  // (o online entra no último commit do item 64)
-  if (m.online) return false;
   if (PP_PARAM === '1') return true;
   if (PP_PARAM === '0') return false;
   return !(navigator.webdriver || PRINTS || DEMO_ON);
@@ -3342,7 +3342,7 @@ function abrirPrepartida() {
   entrada?.bloquear?.(true);
   hud.definirAntes(true);
   marcarInertTela(true);
-  ppDesenho = -1e9; ppDt = 0; ppOcupado = false;
+  ppDesenho = -1e9; ppDt = 0; ppOcupado = false; ppOnline = { pronto: false, desde: 0 };
   const modo = modoTela();
   pp.abrir({ modo, fundo: ppFundo, dados: dadosPrepartida(), abas: abasDoModo(modo), canto: cantoDoModo(modo), meu: TIME_HUMANO });
   return true;
@@ -3353,6 +3353,7 @@ function fecharPrepartida(imediato = false) {
   if (hud.menuAberto) hud.fecharMenu();
   if (hud.ajudaAberta) hud.fecharAjuda();
   pp.fechar(imediato);
+  ppFechadaEm = Date.now();
   hud.definirAntes(false);
   marcarInertTela(false);
   ppPersonalizar = false;
@@ -3429,8 +3430,31 @@ function abrirMenuDaTela(abrir) {
   ppOcupado = true;
   abrir();
 }
-/** Online (o último commit do item 64): sem ele, nada. */
-function acaoPrepartidaOnline(_id) { /* (o online liga a tela no commit dele) */ }
+/**
+ * Online (§4.5 do contrato): "Pronto" é final — o botão vira "Aguardando {nome}…" e os dois saem juntos para o pré-jogo quando
+ * o outro também está pronto (ou já passou da tela: a reserva sem a tela, um aparelho que entrou depois). "Sair da partida"
+ * (o [<] armado) = o Sair da pausa de hoje: conta como derrota, o outro recebe o W.O.
+ */
+// (ppOnline mora no topo do arquivo, com as outras da tela)
+const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0);
+function acaoPrepartidaOnline(id) {
+  if (!PAG_ONLINE || !pp?.aberta) return;
+  if (id === 'pronto') {
+    if (ppOnline.pronto || PAG_ONLINE.encerrado) return;
+    ppOnline = { pronto: true, desde: performance.now() };
+    pp.aguardando(PAG_ONLINE.nomeOutro);
+    // (o toque no Pronto é o gesto: a tela cheia deitada do Android já aqui — a saída depois não é um gesto)
+    pedirTelaCheia();
+    // o outro sabe já (não espera o próximo quadro) e, se ele já está pronto, os dois saem agora
+    PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+    saidaOnlineTela();
+  } else if (id === 'sair') {
+    if (PAG_ONLINE.encerrado) return;
+    PAG_ONLINE.sair();
+    pp.aviso('Você saiu da partida.', 4000);
+    setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400);
+  }
+}
 /** A pausa, a Ajuda ou o editor fecharam por cima da tela: o Livre mudado vale, os dados se refazem e o foco volta. */
 function voltarParaTela() {
   if (!pp?.aberta || hud.menuAberto || hud.ajudaAberta || editor?.aberto) return;
@@ -3459,7 +3483,7 @@ function quadroPrepartida(dtReal, agoraMs, desenhar) {
   if (ppOcupado && !ocup) voltarParaTela();
   ppOcupado = ocup;
   if (!pp?.aberta) return;
-  if (mundo.online && PAG_ONLINE) quadroOnlineTela(agoraMs);
+  if (mundo.online && PAG_ONLINE) { quadroOnlineTela(agoraMs); if (!pp.aberta) return; }
   pp.atualizar(agoraMs);
   const emPe = retratoBloqueado();
   ppDt += Math.min(0.1, dtReal);
@@ -3477,8 +3501,29 @@ function quadroPrepartida(dtReal, agoraMs, desenhar) {
   medirQps(dtReal, agoraMs);
 }
 const PP_QPS = 30;
-/** Online: com a tela aberta (sem passos), o pacote segue (o outro sabe que estamos aqui) — o commit do online liga o resto. */
-function quadroOnlineTela(agoraMs) { PAG_ONLINE.enviarPacote(agoraMs, 0); }
+/**
+ * Online com a tela aberta (sem passos): os avisos de verdade (o outro saiu, a ligação caiu — nada de "Aguardando" enquanto os
+ * pacotes chegam), o pacote com a MINHA fase e a saída conjunta: eu pronto e o outro pronto (ou além da tela).
+ */
+function quadroOnlineTela(agoraMs) {
+  PAG_ONLINE.quadro(agoraMs, { antes: true });
+  PAG_ONLINE.enviarPacote(agoraMs, bitsTelaOnline());
+  if (!saidaOnlineTela() && ppOnline.pronto && !PAG_ONLINE.encerrado && agoraMs - ppOnline.desde >= 60000) pp.destacarCanto(true);
+}
+/**
+ * A saída conjunta: eu pronto e o outro pronto (ou além da tela) → o "Jogar". Chamada no clique do Pronto, na mensagem que traz
+ * a fase nova do outro (`ao.fase`) e a cada quadro (a rede de segurança): com o 3D atrás da tela e duas abas, o quadro leva ~1 s no
+ * Chromium sem GPU, e esperar por ele dava 0,9 s de um lado ao outro (no evento, 12–19 ms).
+ */
+function saidaOnlineTela() {
+  if (!pp?.aberta || !ppOnline.pronto || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
+  // (o pacote com o meu Pronto sai antes: o outro sai pela mesma regra)
+  PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+  jogarPrepartida();
+  return true;
+}
+/** A minha fase no online (0 tela, 1 pronto, 2 pré-jogo, 3 jogo) — a API dos testes. */
+const faseOnlineLocal = () => pp?.aberta ? (ppOnline.pronto ? 1 : 0) : prejogo?.ativo ? 2 : 3;
 
 // ------------------------------------------------------------------ Total Match (?tm)
 /** O resultado do contrato (§2) pela súmula da partida de agora (sumula.js). */
@@ -3840,6 +3885,8 @@ async function iniciar() {
         menuSair: () => { hud.fecharMenu(); PAG_ONLINE.sair(); setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400); },
         wo: (vencedor, motivo) => { if (TM) fimTM(resultadoAtualTM(), { online: { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 } }); },
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
+        // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
+        fase: () => saidaOnlineTela(),
       },
     });
   }
@@ -4142,6 +4189,9 @@ const api = {
     return { lado: s.lado, n: s.n, D: s.D, rtt: s.rtt, paradas: s.paradas, dessinc: s.dessinc, hashes: [...s.hashesLoc.entries()],
       placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0], estado: mundo.partida?.estado ?? null, tick: mundo.tick,
       conexao: MOD_ON.estadoConexao(s, performance.now()).estado, pausado: PAG_ONLINE.pausado, pausasRestam: PAG_ONLINE.pausasRestam,
+      // (item 64: as fases — 0 tela, 1 pronto, 2 pré-jogo, 3 jogo; -1 = nenhum pacote do outro — e o abandono)
+      fase: faseOnlineLocal(), faseRemota: PAG_ONLINE.faseRemota, encerrado: PAG_ONLINE.encerrado,
+      aviso: (() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; })(),
       pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
   },
   /** Carrega o Livre (livre.js + livre-pagina.js) antes de um reiniciar({modo: 'livre'}) — o trocarModo já carrega. */
@@ -4456,6 +4506,8 @@ const api = {
     get timesAntes() { return timesAntes ? structuredClone(timesAntes) : null; },
     /** Quantos desenhos do 3D atrás da tela até agora (a régua dos 30 qps). */
     get desenhos() { return ppDesenhos; },
+    /** Date.now() de quando a tela fechou pela última vez (a saída conjunta do online: duas abas, o mesmo relógio). */
+    get fechadaEm() { return ppFechadaEm; },
     /** O PRONTO do editor aberto pelo Personalizar, com a edição `ed` (escalacao.js edicaoDe) — o mesmo caminho do aoPronto. */
     escalar(ed) { if (!pp?.aberta) return false; ppPersonalizar = true; aoPronto(ed ?? null); return true; },
   },

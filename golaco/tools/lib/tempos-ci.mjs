@@ -113,8 +113,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-editor-tela.mjs': 51,
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   'teste-prejogo.mjs': 298,
-  // (item 64: medido aqui com a máquina dividida; acertar pelo log do CI)
-  'teste-prepartida-tela.mjs': 420,
+  // (item 64: 498 s aqui com o online — 3 pares de abas —, a máquina dividida com o hash-partida; acertar pelo log do CI)
+  'teste-prepartida-tela.mjs': 540,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o

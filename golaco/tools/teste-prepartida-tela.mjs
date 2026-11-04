@@ -30,7 +30,15 @@
 //       "Pré-jogo da partida" mudado pelo ≡ vale no Jogar (desligado = o apito)
 //   E20 as proporções do FC 24 no PC 16:9 (±1,5 ponto)
 //   E21 a reserva: com o módulo bloqueado, a abertura de texto de hoje (e o jogo começa como hoje)
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,tm,carga]
+//   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
+//   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
+//   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
+//   O3  antes do Pronto, A troca o time mostrado, a vista e as Opções (qualidade, horário): hashes iguais, nenhum "Pausado por"
+//   O4  A pula o pré-jogo e B assiste: A parado em n = D com "{B} ainda está no pré-jogo"
+//   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
+//   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
+//   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,tm,online,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -89,7 +97,8 @@ async function abrirPagina(o) {
   ctx.tPronto = (Date.now() - t0) / 1000;
   return ctx;
 }
-const quadros = (pg, n = 2) => pg.evaluate(n => new Promise(ok => { let k = 0; const f = () => (++k >= n ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
+// (com teto de 10 s: numa aba sem quadros — escondida — o teste segue e a meta reprova, em vez de ficar parado)
+const quadros = (pg, n = 2) => pg.evaluate(n => new Promise(ok => { let k = 0; const f = () => (++k >= n ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(ok, 10000); }), n);
 const temTela = pg => pg.evaluate(() => !!window.__golaco?.prepartida?.aberta).catch(() => false);
 /** Avança o relógio manual (ms em quadros de 1000/hz). */
 const avancar = (pg, ms, hz = 60) => pg.evaluate(([ms, hz]) => { const g = window.__golaco; const n = Math.round(ms * hz / 1000); for (let i = 0; i < n; i++) g.relogio.avancar(1000 / hz, { desenhar: false }); return g.mundo.tick; }, [ms, hz]);
@@ -571,6 +580,205 @@ document.body.appendChild(f);
       }
       meta(`S1 0 erros (${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
+  }
+}
+
+// ================================================================================================ online: duas abas pelo BroadcastChannel
+if (faz('online')) {
+  const ESPERA = Math.max(10, +arg('--espera', 10));
+  const t0on = Date.now();
+  const passo = t => { if (args.includes('--log')) console.error(`  [online ${((Date.now() - t0on) / 1000).toFixed(1)} s] ${t}`); };
+  const textoAviso = p => p.evaluate(() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; });
+  const on = p => p.evaluate(() => { const g = window.__golaco, o = g.online; return o ? { n: o.n, D: o.D, fase: o.fase, faseRemota: o.faseRemota, encerrado: o.encerrado, hashes: o.hashes, aberta: !!g.prepartida?.aberta, fechadaEm: g.prepartida?.fechadaEm ?? null, pp: g.prepartida?.estado ?? null, editor: g.editor.aberto, tick: g.mundo.tick } : null; });
+  const comparar = (x, y) => { const mx = new Map(x.hashes), comuns = y.hashes.filter(([n]) => mx.has(n)); return { comuns: comuns.length, difs: comuns.filter(([n, h]) => mx.get(n) !== h).length, ate: comuns.length ? Math.max(...comuns.map(([n]) => n)) : 0 }; };
+  const ate = (p, n, ms = 240000) => p.waitForFunction(k => (window.__golaco.online?.n ?? 0) >= k, n, { timeout: ms }).then(() => true, () => false);
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável). */
+  async function abrirPar(extra, perda = 0) {
+    const ctx = await abrir({ largura: 960, altura: 540, dpr: 1 });
+    if (perda) await ctx.contexto.addInitScript(f => {
+      let k = 0x2545f491, perdidos = 0, total = 0;
+      const orig = BroadcastChannel.prototype.postMessage;
+      BroadcastChannel.prototype.postMessage = function (m) {
+        if (m && m.t === 'j') {
+          total++;
+          k = (Math.imul(k, 1664525) + 1013904223) >>> 0;
+          const fora = k / 4294967296 < f;
+          if (fora) perdidos++;
+          window.__perda = { perdidos, total };
+          if (fora) return undefined;
+        }
+        return orig.call(this, m);
+      };
+    }, perda);
+    const sala = `pp${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+    const url = lado => `${srv.url}index.html?online=${sala}&transporte=bc&lado=${lado}&ia=1&semente=7&min=0.25&${Q}&D=4&prepartida=1${extra}`;
+    const A = ctx.pagina, B = await ctx.contexto.newPage();
+    // (nenhuma ação espera para sempre: um clique que não acha o alvo reprova em 20 s)
+    for (const p of [A, B]) p.setDefaultTimeout(20000);
+    const erros = [];
+    for (const [p, nome] of [[A, 'A'], [B, 'B']]) {
+      p.on('pageerror', e => erros.push(`${nome}: ${e.message}`));
+      p.on('console', m => { if (m.type() === 'error') erros.push(`${nome}: ${m.text()}`); });
+    }
+    await Promise.all([A.goto(url(0), { waitUntil: 'load' }), B.goto(url(1), { waitUntil: 'load' })]);
+    await Promise.all([A, B].map(p => p.waitForFunction(() => window.__golaco?.pronto && window.__golaco.online, null, { timeout: 240000 })));
+    return { ctx, A, B, erros };
+  }
+  /** A saída conjunta: o 2º Pronto (em B, com a hora) → as duas telas fechadas; devolve os ms até a última fechar. */
+  async function saidaConjunta(A, B) {
+    // o intervalo entre quadros de A antes (o relógio do ambiente: duas abas com o 3D sem GPU)
+    const quadroA = await A.evaluate(() => new Promise(ok => { const t = []; const f = x => { t.push(x); if (t.length < 6) requestAnimationFrame(f); else ok((t[5] - t[0]) / 5); }; requestAnimationFrame(f); setTimeout(() => ok(null), 10000); }));
+    const t0 = await B.evaluate(() => { const t = Date.now(); document.querySelector('#prepartida [data-aba="pronto"]').click(); return t; });
+    const fim = await Promise.all([A, B].map(p => p.waitForFunction(() => !window.__golaco.prepartida.aberta && window.__golaco.prepartida.fechadaEm, null, { timeout: 15000 }).then(h => h.jsonValue(), () => null)));
+    const ok = fim.every(x => x != null);
+    return { ms: ok ? Math.max(...fim) - t0 : null, a: fim[0] != null ? fim[0] - t0 : null, b: fim[1] != null ? fim[1] - t0 : null, quadroA };
+  }
+  const textoSaida = x => x.ms == null ? 'não saíram em 15 s' : `${x.ms} ms (A ${x.a} ms, B ${x.b} ms; o quadro de A antes: ${x.quadroA == null ? '—' : x.quadroA.toFixed(0)} ms)`;
+
+  // ---- par 1: O3, O1, O5, O2, O4 e os hashes (com o pré-jogo curto)
+  {
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=curto');
+    try {
+      let a = await on(A), b = await on(B);
+      const telas = !!(a?.aberta && b?.aberta);
+      meta('E1 online: a tela nos dois lados (Pronto e Visão tática; sem o Personalizar)', `A ${a?.aberta} ${JSON.stringify(a?.pp?.abas ?? null)} · B ${b?.aberta} ${JSON.stringify(b?.pp?.abas ?? null)}`, 'as duas abertas, [pronto, visao]',
+        telas && a.pp.abas.join() === 'pronto,visao' && b.pp.abas.join() === 'pronto,visao' && a.pp.modo === 'online');
+      if (telas) {
+        const avisos = new Set();
+        const olhar = async () => { for (const [p, k] of [[A, 'A'], [B, 'B']]) { const t = await textoAviso(p); if (t) avisos.add(`${k}: ${t}`); } };
+        // O3: A mexe na tela (o time, a vista, as Opções) com B parado nela
+        await A.bringToFront();
+        passo('O3: teclas em A');
+        await tecla(A, 'KeyE'); await tecla(A, 'KeyQ');
+        await A.evaluate(() => document.querySelector('#prepartida [data-aba="visao"]').focus());
+        await tecla(A, 'Enter'); await tecla(A, 'Enter'); await tecla(A, 'Escape');
+        passo('O3: o ≡ de A');
+        await A.click('#prepartida [data-pp="menu"]');
+        await quadros(A, 3);
+        const menuA = await A.evaluate(() => window.__golaco.estado().menuAberto);
+        // (as Opções pelo click do DOM: com duas abas e o 3D sem GPU cada quadro leva ~0,5 s e a espera de "estável" do Playwright
+        // estourava o prazo; o que se testa aqui é a simulação, não o clique)
+        const clicar = sel => A.evaluate(sel => { const e = document.querySelector(sel); if (!e || !e.getClientRects().length) return false; e.click(); return true; }, sel);
+        const cliques = [await clicar('#btn-opcoes')];
+        await quadros(A, 2);
+        cliques.push(await clicar('[data-grupo="qualidade"] [data-valor="media"]'), await clicar('[data-grupo="hora"] [data-valor="noite"]'));
+        passo(`O3: cliques ${cliques.join(',')}`);
+        await quadros(A, 2);
+        const hora = await A.evaluate(() => document.documentElement.classList.contains('noite'));
+        await tecla(A, 'Escape'); await tecla(A, 'Escape');
+        await quadros(A, 3);
+        await olhar();
+        a = await on(A); b = await on(B);
+        const o3 = { menu: menuA, noite: hora, aberta: a.aberta, foco: a.pp.foco, nA: a.n, nB: b.n, editor: a.editor };
+        passo('O1: A pronto');
+        // O1 + O5: A pronto (o clique de verdade) e B na tela por ESPERA s
+        await A.click('#prepartida [data-aba="pronto"]');
+        const tA = Date.now();
+        let maxN = 0, wo = false;
+        while (Date.now() - tA < ESPERA * 1000) {
+          await espera(1000);
+          await olhar();
+          const [x, y] = await Promise.all([on(A), on(B)]);
+          maxN = Math.max(maxN, x.n, y.n);
+          if (!x.aberta || !y.aberta) break;
+        }
+        wo = [...avisos].some(t => /W\.O\./.test(t));
+        a = await on(A); b = await on(B);
+        const botaoA = await A.evaluate(() => document.querySelector('#prepartida [data-aba="pronto"] .pp-aba-txt')?.textContent ?? '');
+        const parou = [...avisos].filter(t => /conexão parou/i.test(t));
+        meta('O1* A pronto e B na tela: nenhum passo, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"',
+          `${ESPERA} s: passos (máx.) ${maxN}; A "${botaoA}" (fase ${a.fase}), B fase ${b.fase} vê A na fase ${b.faseRemota}; telas ${a.aberta}/${b.aberta}; avisos ${avisos.size ? [...avisos].join(' | ') : 'nenhum'}`,
+          '0 passos; "Aguardando Lado 1…"; as duas abertas; nenhum "conexão parou"', maxN === 0 && botaoA === 'Aguardando Lado 1…' && a.fase === 1 && b.faseRemota === 1 && a.aberta && b.aberta && !parou.length && !wo);
+        meta(`O5 B ${ESPERA} s na tela com A esperando: nenhum W.O. oferecido (os pacotes chegando)${ESPERA >= 60 ? '; aos 60 s o Sair de A em destaque' : ''}`,
+          `W.O. ${wo ? 'oferecido' : 'não'}; destaque do Sair ${a.pp.destaqueCanto}`, `nenhum${ESPERA >= 60 ? '; destaque' : ''}`, !wo && (ESPERA < 60 || a.pp.destaqueCanto));
+        passo('O2: B pronto');
+        // O2: B pronto → os dois saem juntos
+        const sai = await saidaConjunta(A, B);
+        meta('O2 B pronto: os dois saem juntos (do 2º Pronto até a última tela fechar)', textoSaida(sai), '≤ 500 ms', sai.ms != null && sai.ms <= 500);
+        passo('O4: A pula o pré-jogo');
+        // O4: A pula o pré-jogo (Esc) e B assiste
+        await A.waitForFunction(() => window.__golaco.prejogo?.ativo, null, { timeout: 30000 }).catch(() => {});
+        await espera(1500);
+        await A.bringToFront();
+        await tecla(A, 'Escape');
+        await ate(A, 4, 60000);
+        // (o aviso de espera sai com 0,9 s parado, contados nos quadros de A — ~1 s cada aqui, com duas abas sem GPU: espera até 20 s)
+        const tAv = Date.now();
+        await A.waitForFunction(() => { const e = document.getElementById('online-aviso'); return e && !e.hidden && /ainda está no pré-jogo/.test(e.textContent); }, null, { timeout: 20000 }).catch(() => {});
+        await espera(1000);
+        a = await on(A); b = await on(B);
+        const sAv = ((Date.now() - tAv) / 1000 - 1).toFixed(1);
+        const avA = await textoAviso(A);
+        meta('O4 A pula o pré-jogo e B assiste: A parado em n = D com "{B} ainda está no pré-jogo"', `A n ${a.n} (D ${a.D}), vê B na fase ${a.faseRemota}; B n ${b.n}, fase ${b.fase}; aviso de A "${avA}" (em ${sAv} s)`,
+          'n = D; "Lado 1 ainda está no pré-jogo"', a.n === a.D && b.n === 0 && b.fase === 2 && /Lado 1 ainda está no pré-jogo/.test(avA) && !/conexão parou/i.test(avA));
+        passo('B pula; até 1200 passos');
+        // B pula também; os dois até 1200 passos
+        await B.bringToFront();
+        await tecla(B, 'Escape');
+        const chegou = (await Promise.all([ate(A, 1210), ate(B, 1210)])).every(Boolean);
+        await olhar();
+        a = await on(A); b = await on(B);
+        const c = comparar(a, b);
+        const pausados = [...avisos].filter(t => /Pausado por/.test(t));
+        meta('O2/O3 os hashes iguais em todos os HASH_CADA até 1200 passos (com o time, a vista e as Opções mudados antes em A); nenhum "Pausado por"',
+          `${chegou ? '' : 'não chegaram a 1200 · '}${c.difs} diferentes de ${c.comuns} em comum (até o passo ${c.ate}); antes do Pronto: ${JSON.stringify(o3)}; "Pausado por" ${pausados.length}`,
+          '0 diferentes, ≥ 20 em comum até ≥ 1140; a pausa e a noite abertas em A, a tela de volta no Jogar; 0',
+          chegou && c.difs === 0 && c.comuns >= 20 && c.ate >= 1140 && o3.menu && o3.noite && o3.aberta && o3.nA === 0 && o3.nB === 0 && !o3.editor && !pausados.length);
+      }
+      meta('S5 0 erros no console (online, par 1)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 2: O6 (sem Personalizar; o Sair só no 2º toque e o abandono do outro lado)
+  {
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=0');
+    try {
+      let a = await on(A), b = await on(B);
+      if (a?.aberta && b?.aberta) {
+        await A.bringToFront();
+        await tecla(A, 'KeyY');
+        await A.mouse.click(480, 270);
+        await quadros(A, 3);
+        a = await on(A);
+        const semEditor = !a.editor && a.aberta && !a.pp.abas.includes('personalizar');
+        await A.click('#prepartida [data-pp="canto"]');
+        await quadros(A, 2);
+        const um = await on(A), umB = await on(B);
+        await espera(3500);
+        await A.click('#prepartida [data-pp="canto"]');
+        await quadros(A, 2);
+        const dois = await on(A);
+        const t0 = Date.now();
+        await A.click('#prepartida [data-pp="canto"]');
+        const recebeu = await B.waitForFunction(() => window.__golaco.online.encerrado, null, { timeout: 10000 }).then(() => Date.now() - t0, () => null);
+        a = await on(A); b = await on(B);
+        meta('O6 sem Personalizar no online (Y e o toque no campinho não abrem o editor); "Sair da partida" só no 2º toque (3 s); o outro recebe o abandono',
+          `editor ${!semEditor ? 'abriu' : 'não'}; 1º toque: A ${um.encerrado ? 'saiu' : `armado ${um.pp.armado}`}, B ${umB.encerrado ? 'recebeu' : 'nada'}; passados 3,5 s, outro toque: ${dois.encerrado ? 'saiu' : `armado ${dois.pp.armado}`}; 2º toque: A ${a.encerrado ? 'saiu' : 'não'}, B ${recebeu == null ? 'não recebeu' : `recebeu em ${recebeu} ms`}`,
+          'não abre; armado, nada; armado de novo; saiu e o outro recebe',
+          semEditor && !um.encerrado && um.pp.armado === 'canto' && !umB.encerrado && !dois.encerrado && dois.pp.armado === 'canto' && a.encerrado && recebeu != null);
+      } else meta('O6 sem Personalizar no online; o Sair só no 2º toque', 'sem a tela', 'a tela nos dois lados', false);
+      meta('S6 0 erros no console (online, par 2)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 3: O7 (20% dos pacotes do jogo perdidos)
+  {
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=0', 0.2);
+    try {
+      const a = await on(A), b = await on(B);
+      if (a?.aberta && b?.aberta) {
+        await A.click('#prepartida [data-pp="aba"][data-aba="pronto"]');
+        await espera(2000);
+        const sai = await saidaConjunta(A, B);
+        const perda = await Promise.all([A, B].map(p => p.evaluate(() => window.__perda ?? null)));
+        const andou = (await Promise.all([ate(A, 120, 60000), ate(B, 120, 60000)])).every(Boolean);
+        meta('O7 20% dos pacotes do jogo descartados: a saída conjunta em ≤ 1 s (e o jogo anda nos dois)',
+          `${textoSaida(sai)}; descartados ${perda.map(x => x ? `${x.perdidos}/${x.total}` : '—').join(' e ')}; 120 passos nos dois ${andou}`,
+          '≤ 1000 ms; ~20%; sim', sai.ms != null && sai.ms <= 1000 && andou && perda.every(x => x && x.perdidos > 0));
+      } else meta('O7 a saída conjunta com 20% de perda', 'sem a tela', 'a tela nos dois lados', false);
+      meta('S7 0 erros no console (online, par 3)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
   }
 }
 

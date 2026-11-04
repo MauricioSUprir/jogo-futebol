@@ -9,6 +9,18 @@
 import * as O from './online.js';
 import { aoTocar } from './toque-botao.js';
 
+// A tela antes do jogo (item 64; contrato "Tela antes do jogo (item 64)" no CONTRATOS.md): a FASE de cada lado vai no byte 19 do
+// pacote (o `estado`), em bits definidos AQUI — o online.js (entrada do fecho do hash) fica intocado; os bits 0–2 continuam os
+// dele (30 qps, menu, aba escondida). Todo pacote leva a fase: o canal do jogo é sem ordem e sem reenvio, mas a fase só avança
+// (tela → pronto → pré-jogo → jogo), então a do outro é o MAIOR valor já recebido — um pacote velho não desfaz nada.
+export const E_TELA = 8, E_PRONTO = 16, E_PREJOGO = 32;
+/** A fase (0 tela, 1 pronto, 2 pré-jogo, 3 jogo) pelo byte de estado de um pacote. */
+export function faseDoEstado(e) {
+  if (e & E_PREJOGO) return 2;
+  if (e & E_TELA) return e & E_PRONTO ? 1 : 0;
+  return 3;
+}
+
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
   background:rgba(5,8,7,.92);color:#fff;border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:14px 18px;text-align:center;
@@ -36,7 +48,7 @@ const mmss = ms => { const s = seg(ms); return `${Math.floor(s / 60)}:${String(s
 
 /**
  * opc: {lado, D, nomes: [anfitrião, convidado], transporte: 'porta' | 'bc', sala, ao: {sair(motivo), wo(vencedor, motivo),
- * dessinc(info)}}. Devolve a página do online (s = a sessão).
+ * dessinc(info), fase(f) — a fase do outro subiu}}. Devolve a página do online (s = a sessão).
  */
 export function criarPaginaOnline(opc) {
   const lado = opc.lado === 1 ? 1 : 0;
@@ -56,9 +68,14 @@ export function criarPaginaOnline(opc) {
     else if (m.tipo === 'hash') O.receberHash(s, m.n, m.h);
     else ctrlRecebidos.push(m);
   }
+  // a fase do outro: o maior valor recebido (-1 = nenhum pacote ainda)
+  let faseRemota = -1;
   function aoMensagem(d) {
     if (!d || typeof d !== 'object') return;
-    if (d.t === 'j' && d.b instanceof ArrayBuffer) O.receber(s, d.b, performance.now());
+    if (d.t === 'j' && d.b instanceof ArrayBuffer) {
+      // (a fase que subiu avisa na hora — a saída conjunta da tela não espera o próximo quadro, que com o 3D atrás é lento)
+      if (O.receber(s, d.b, performance.now())) { const f = faseDoEstado(s.estadoRemoto); if (f > faseRemota) { faseRemota = f; ao.fase?.(f); } }
+    }
     else if (d.t === 'c') aoControle(d.m);
     else if (d.t === 'estado') estadoLig = { estado: d.estado, rtt: d.rtt ?? null, motivo: d.motivo ?? null };
   }
@@ -134,9 +151,17 @@ export function criarPaginaOnline(opc) {
     enviarControle({ tipo: 'retoma' });
   }
 
+  /** O outro ainda não começou o jogo: o texto do aviso de espera (pacotes chegando; null = a conexão parou de verdade). */
+  function antesDoOutro(c) {
+    if (s.ultimoPacote == null || c.semPacoteMs >= O.AGUARDANDO_MS) return null;
+    if (faseRemota === 0 || faseRemota === 1) return `${nomeOutro} ainda está antes do jogo.`;
+    if (faseRemota === 2) return `${nomeOutro} ainda está no pré-jogo.`;
+    return null;
+  }
   /**
    * A cada quadro (agora em ms): trata o controle que chegou, a pausa, o W.O. e a dessincronia, e mostra o aviso certo.
-   * ctx: {fim: a partida acabou}. Devolve se a MINHA pausa segura a simulação.
+   * ctx: {fim: a partida acabou, antes: a tela antes do jogo aberta (sem passos: só a saída do outro e a ligação valem)}.
+   * Devolve se a MINHA pausa segura a simulação.
    */
   function quadro(agora, ctx = {}) {
     for (const m of ctrlRecebidos.splice(0)) {
@@ -169,10 +194,13 @@ export function criarPaginaOnline(opc) {
         { texto: 'Encerrar com vitória por W.O.', primario: true, fn: () => { encerrado = true; ao.wo?.(lado, 'sumiu'); } },
         { texto: 'Esperar mais', fn: () => { esperaWO = semNada + 60000; avisoChave = ''; } },
       ] : [];
-      mostrar('aguardando', `Aguardando ${nomeOutro}…`, s.ultimoPacote == null ? 'O outro aparelho ainda está abrindo a partida.' : 'A conexão parou. Se não voltar, vocês podem encerrar.', botoes);
+      // (o outro ainda na tela antes do jogo ou no pré-jogo, com os pacotes chegando: é isso que o aviso diz — "a conexão parou"
+      // enganava; o W.O. continua só sem pacote por 90 s)
+      const antesOutro = antesDoOutro(c);
+      mostrar('aguardando', `Aguardando ${nomeOutro}…`, s.ultimoPacote == null ? 'O outro aparelho ainda está abrindo a partida.' : antesOutro ?? 'A conexão parou. Se não voltar, vocês podem encerrar.', botoes);
       if (c.semPacoteMs >= O.AGUARDANDO_MS && porta && (Math.floor(c.semPacoteMs / 5000) !== quadro.ultReligar)) { quadro.ultReligar = Math.floor(c.semPacoteMs / 5000); enviar({ t: 'religar' }); }
-    } else if (c.paradoMs >= 900) {
-      mostrar('espera', `Aguardando ${nomeOutro}…`);
+    } else if (c.paradoMs >= 900 && !ctx.antes) {
+      mostrar('espera', `Aguardando ${nomeOutro}…`, antesDoOutro(c) ?? '');
     } else esconder();
     // selo pequeno de conexão instável (só quando não há aviso maior)
     const instavel = c.estado === 'instavel' && aviso.hidden;
@@ -226,6 +254,8 @@ export function criarPaginaOnline(opc) {
   return {
     s, lado, nomeOutro, enviarPacote, enviarControle, quadro, pausar, retomar, sair,
     get pausasRestam() { return pausasRestam; },
+    /** A fase do outro (-1 sem pacote; 0 tela, 1 pronto, 2 pré-jogo, 3 jogo) — a tela antes do jogo sai com ela ≥ 1. */
+    get faseRemota() { return faseRemota; },
     get pausado() { return !!pausa; },
     get encerrado() { return encerrado; },
     get estadoLigacao() { return estadoLig; },

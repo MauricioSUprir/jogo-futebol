@@ -88,7 +88,7 @@ export function criarPrepartida(opc) {
   const st = {
     aberta: false, modo: 'partida', fundo: 'jogo', dados: null, abas: [], canto: null, meu: 0, time: 0, visao: 'escalacao',
     foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
-    saindo: null, nomeMostrado: null, ultimaChave: '',
+    saindo: null, nomeMostrado: null, ultimaChave: '', destaqueCanto: false,
   };
   const medidor = document.createElement('canvas').getContext('2d');
   const medir = (t, px, peso = 600) => { medidor.font = `${peso} ${px}px "Inter TM", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; return medidor.measureText(t).width; };
@@ -312,8 +312,9 @@ export function criarPrepartida(opc) {
         b.querySelector('.pp-aba-txt').textContent = armado ? a.armar : a.texto;
         b.setAttribute('aria-label', armado ? a.armar : a.texto);
       }
+      // (o Pronto esperando: aria-disabled, não disabled — o foco fica nele e o leitor de tela lê "Aguardando {nome}…")
       if (st.aguardando && a.id === 'pronto') {
-        b.disabled = true; b.classList.add('aguardando');
+        b.setAttribute('aria-disabled', 'true'); b.classList.add('aguardando');
         b.querySelector('.pp-aba-txt').textContent = `Aguardando ${st.aguardando}…`;
       }
     });
@@ -321,6 +322,7 @@ export function criarPrepartida(opc) {
     if (c && st.canto) {
       const armado = st.armado === 'canto' && performance.now() < st.armadoAte;
       c.classList.toggle('armado', armado);
+      c.classList.toggle('destaque', !!st.destaqueCanto && !armado);
       c.setAttribute('aria-label', armado ? st.canto.armar : st.canto.texto);
       const ct = raiz.querySelector('.pp-comp-txt');
       if (ct) ct.textContent = armado ? st.canto.armar : st.dados.competicao;
@@ -417,6 +419,8 @@ export function criarPrepartida(opc) {
     if (!a || st.saindo) return;
     focarAba(i);
     if (a.id === 'visao') { proximaVista(); return; }
+    // o Pronto é final (sem cancelar): esperando o outro, nada
+    if (a.id === 'pronto' && st.aguardando) return;
     if (a.id === 'adversario') { trocarTime(st.time === st.meu ? 1 - st.meu : st.meu); return; }
     if (a.armar) {
       const agora = performance.now();
@@ -550,7 +554,7 @@ export function criarPrepartida(opc) {
      */
     abrir(o) {
       st.modo = o.modo; st.fundo = o.fundo; st.dados = o.dados; st.abas = o.abas; st.canto = o.canto ?? null;
-      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; st.armado = null; st.aguardando = null; st.discoFoco = -1;
+      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; st.armado = null; st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1;
       st.saindo = null;
       st.foco = Math.max(0, st.abas.findIndex(a => a.id === (o.foco ?? st.abas[0]?.id)));
       st.aberta = true;
@@ -621,6 +625,12 @@ export function criarPrepartida(opc) {
     focar,
     /** Online: o "Pronto" vira "Aguardando {nome}…" (desabilitado). */
     aguardando(nome) { st.aguardando = nome; marcarAbas(); viva(`Aguardando ${nome}`); },
+    /** Online: 60 s esperando o outro — o [<] "Sair da partida" ganha destaque (nada automático). */
+    destacarCanto(v = true) {
+      if (!!st.destaqueCanto === !!v) return;
+      st.destaqueCanto = !!v; marcarAbas();
+      if (v && st.canto) viva(`Se ${st.aguardando ?? 'o outro'} não voltar, você pode usar ${st.canto.texto}.`);
+    },
     /** Um aviso discreto no canto por `ms` (o som que não ligou pelo controle). */
     aviso(texto, ms = 2000) {
       const a = raiz.querySelector('#pp-aviso');
@@ -634,6 +644,7 @@ export function criarPrepartida(opc) {
         aberta: st.aberta, modo: st.modo, fundo: st.fundo, regime: st.L?.regime ?? null, abas: st.abas.map(a => a.id),
         foco: st.abas[st.foco]?.id ?? null, focoDom: document.activeElement?.closest?.('#prepartida') ? (document.activeElement.dataset.aba ?? document.activeElement.dataset.pp ?? document.activeElement.className) : null,
         time: st.time, meu: st.meu, visao: st.visao, armado: st.armado, aguardando: st.aguardando, disco: st.discoFoco,
+        destaqueCanto: !!st.destaqueCanto,
       };
     },
     get layoutAtual() { return st.L; },
