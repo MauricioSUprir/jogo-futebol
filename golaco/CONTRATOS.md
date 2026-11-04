@@ -1790,9 +1790,12 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   · Opções · Modo de jogo · Ajuda. No Livre (`livre-pagina.js`, ANTES do Replay): Jogadores e Câmera (com o estado em
   `small.estado`) e a `.linha-par` "Recomeçar" (Recomeçar | Bola no meu pé). Online (`online-pagina.js`): Pausar depois do
   Voltar e Sair por último, os dois por `aoTocar`. Lista de TEXTO, sem caixas: a linha na largura toda da faixa (28–44 px no
-  celular, `--item-h` no PC), o item com o foco (`.selecionado`, que segue o `focusin`; o mouse dá o foco no `pointerover`) em
+  celular, `--item-h` no PC), o item com o foco (`.selecionado`, que segue o `focusin`; o mouse dá o foco no `pointerover`; o mousedown de compatibilidade de um TOQUE só dá o foco se o nível não mudou — o ≡ deixa o foco em Voltar ao jogo, não no X que mora no lugar dele; revisão F4) em
   800 com a barra verde de 3 px e o brilho verde para a direita, 1,13× a partir de 640 px de largura e 1,36× no PC
-  (`--item-f`/`--item-f-foco`); o primário sem foco em verde-claro. A descrição de antes (`small.desc`) só para o leitor de
+  (`--item-f`/`--item-f-foco`; no PC limitada ao que a faixa comporta — `(faixa − 32 px) / 10,6` no foco e `/ 14,4` sem: o item
+  mais longo, "Voltar ao Total Match" em 800, mede ~10,5 letras —, revisão F1); o texto de cada item num `<span
+  class="item-txt">` com "…" de SEGURANÇA (o estado à direita cede o lugar primeiro; o `teste-pausa-tela` P1 reprova qualquer
+  corte, com o foco em cada item); o primário sem foco em verde-claro. A descrição de antes (`small.desc`) só para o leitor de
   tela (`aria-describedby`); o estado (`small.estado`) à direita, o único que ganha "…".
 - **Opções** (`#btn-opcoes` → `#menu-opcoes`): Qualidade (+ `#info-qualidade`), Câmera, Minimapa (`#chip-minimapa`, linha
   liga/desliga com a chave desenhada, `aria-pressed`), Replays (`aria-label` "Replays automáticos"), Horário, Tela cheia (linha
@@ -1808,8 +1811,10 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   celular, 22vw no PC); dois regimes pela ALTURA — celular deitado (≤ 480 px; a lista em px a `--sa-l + --pm`, `--pm` 16/14/12
   px por largura, a faixa de `clamp(196px, 18vw + 100px, 260px)`, os itens em `flex: 1 1 0` de 28 a 44 px) e PC/tablet
   (≥ 481 px; as proporções do FC 24 medidas em 1280×720: o texto em 5,2vw, a marca em 4,3vh, o 1º item em 19,3vh, o passo
-  6,67vh, a letra 2,65vh e 3,6vh no foco, a lista em 24vw — `max(24vw, 380px)` nas Opções e Estatísticas —, a linha dos
-  comandos em 93vh). Nos submenus do celular (`data-nivel="sub"` na `.janela-menu`, posto pelo `hud.js marcarNivel`; o
+  6,67vh, a letra 2,65vh e 3,6vh no foco, a lista em `max(24vw, min(42,66vh, 30vw))` — 24vw no 16:9; fora dele (4:3, 5:4, 16:10)
+  cresce pela altura até 30vw —, `max(24vw, min(380px, a tela útil))` nas Opções, Estatísticas, Modo de jogo e nos submenus do
+  Livre, a linha dos comandos em 93vh). PC baixo (481–640 px de altura: o notebook fora da tela cheia): as Opções em 2 colunas
+  na faixa de até 540 px, sem o cartão nesse submenu abaixo de 860 px de largura (revisão F2/F3). Nos submenus do celular (`data-nivel="sub"` na `.janela-menu`, posto pelo `hud.js marcarNivel`; o
   `data-sub` = o id) a faixa vira a tela inteira, a competição sai (a linha do Voltar fica na altura do X), o cartão e a pílula
   saem de cena e as Opções vão em 2 colunas. Janela estreita de PC (< 560 px): só a lista. `#menu [hidden]` = `display: none
   !important` (as regras da pausa põem `display` nos itens). Com a pausa (ou a Ajuda) aberta, `html.pausa-aberta`: o HUD do
@@ -1820,7 +1825,8 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
 - **O canto direito**: a pílula do placar (`hud.js espelharPlacar`: o espelho do placar do HUD — siglas, gols, escudos e o
   relógio —, escrita ao abrir e, com ela aberta, nas mesmas funções que escrevem o placar; nos treinos não aparece; sem lugar
   entre o topo da faixa e o X perde o relógio e depois os escudos, `ajustarPilula`), o X no lugar do ≡ (44×44, fecha) e o
-  CARTÃO do meu time em `--card-y` (66 px no celular, 72 no PC) com `--card-w` (até 300 px no celular; 30vw no PC).
+  CARTÃO do meu time em `--card-y` (66 px no celular, 72 no PC) com `--card-w` (até 300 px no celular; `max(30vw, 270px)` no PC:
+  abaixo de 270 px o campinho dava a letra de 10,5).
 - **O cartão** (`js/pausa-tela.js` + `css/pausa.css`, sob demanda; `criarPausaTela({cartao, est})` → `{time(d), estatisticas(d),
   layout(), estado}`): o cabeçalho (escudo, nome com "…", a formação em verde-claro e a mentalidade quando cabe), o MEU MEIO
   CAMPO EM PÉ (o `campinho.js svgCampinho(true)` com `viewBox "0 51 68 54.5"` e `posicaoNaTela(…, true)`, como o FIFA 23) e uma
@@ -1865,15 +1871,18 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   barra do foco 7,1:1.
 - **Testes**: `teste-pausa-tela` (navegador, CI e deploy; `tools/lib/pausa-medidas.mjs` com a ORDEM por modo, os 31 COMANDOS
   e as medidas na página; `--so cel|pc|tm|online`, `--raiz` mede outra cópia): P1 a lista à esquerda na ordem por modo e o
-  cartão à direita (folgas, nada cortado nem fora da área segura); P2 sem rolar em todos os níveis × modos × telas (844×390,
-  667×375, 640×360 e 568×320 com entalhe; 1280×720; e com `?tm` num quadro com a meta viewport); P3 o jogo à vista pelo print
+  cartão à direita (folgas, nada cortado nem fora da área segura; CADA item do 1º nível com o foco cabe na linha —
+  `FOCO_LARGURA` —, também o "Voltar ao Total Match" do fim do TM e o Sair armado do online; o selo do online fora do X, da
+  pílula e do cartão); P2 sem rolar em todos os níveis × modos × telas (844×390, 667×375, 640×360 e 568×320 com entalhe;
+  1280×720 e, da revisão, 1024×768, 1280×1024, 1440×900, 1280×800, 800×600, 1366×600, 1280×520 e 1000×520; e com `?tm` num
+  quadro com a meta viewport); P3 o jogo à vista pelo print
   (luminância com a pausa ≥ 60% da sem ela: ≥ 40% no PC, 25% em 844, 17% em 667/640, 14% em 568); P4 o campinho (11 fichas na
   ordem da formação, letra ≥ 11 ou ≥ 10 em 568, o amarelo, o ↑, o "você" e o expulso vazio, tocar abre o editor, o 4-4-2 do
   PRONTO no cartão antes de o jogo voltar, a trava do TM sem editor, o Livre só com quem está em campo, sem cartão nos treinos e
-  nos pênaltis); P5 o teclado (↓/↑, Esc um nível com o foco no item que abriu, Tab preso, fundo inert); P6 alvos ≥ 44 × 32 px
+  nos pênaltis); P5 o teclado (↓/↑, Esc um nível com o foco no item que abriu, Tab preso, fundo inert menos o aviso, que fica por cima); P6 alvos ≥ 44 × 32 px
   no celular (28 em 568×320) e ≥ 32 de altura no PC; P7 o leitor de tela (o diálogo "Pausa: …", grupos com nome, o cartão como
   região com resumo, a tabela com legenda); P8 a cara do TM sem `?tm`; P9 o toque (o X no lugar do ≡ fecha e não reabre, o jogo
-  fecha, a faixa não); P10 todo comando pelos 3 meios (toque; teclado só com setas + Enter; controle pelas ações `menu-*`) chega
+  fecha, a faixa não; o toque que troca de nível deixa o foco no que o nível escolhe); P10 todo comando pelos 3 meios (toque; teclado só com setas + Enter; controle pelas ações `menu-*`) chega
   ao `comando()`, com Voltar ao jogo ≤ 2 e Editar time ≤ 2 toques e ≤ 3 teclas/apertos; S1 o mundo parado (0/60 passos com a
   pausa aberta; no online anda ≥ 40% da janela fechada); S2 0 erros; S5 a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320).
   Adaptados: `teste-hud-minimo` H7 (o topo novo; Minimapa e Nomes nas Opções), `teste-livre-tela` (D1, D3, E1, F: a ordem do
@@ -4035,12 +4044,13 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o editor abertos NÃO param
   (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal confiável). O hash a
   cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
-- Avisos (`#online-aviso`, no meio da tela; `#online-selo` "Conexão instável"): "Aguardando <nome>…", "Pausado por
+- Avisos (`#online-aviso`, no meio da tela; `#online-selo` "Conexão instável" no canto de cima à direita, dentro de `--sa-r`/
+  `--sa-t`, e fora de cena com a pausa aberta — o X da pausa mora nesse canto): "Aguardando <nome>…", "Pausado por
   <nome> · 0:52", "Você pausou" com "Continuar a partida" e a contagem de 3 s, "<nome> saiu da partida. Vitória por W.O.",
   W.O. oferecido (não automático) depois de 90 s sem nada do outro ("Esperar mais" adia 60 s), dessincronia ("Os dois
   aparelhos ficaram diferentes por um erro do jogo… nada conta").
 - Pausa do online: "Pausar a partida" (3 por jogador, até 60 s cada; só quem pausou retoma) e "Sair da partida" (dois
-  toques; 'abandono' ao outro e 'tm3d:sair' {abandono: true} ao TM = derrota); sem Replay da pausa, Simular o resto,
+  toques — o 1º arma por 3 s com "Toque de novo: sair", curto para caber com o foco no PC e em 667×375; 'abandono' ao outro e 'tm3d:sair' {abandono: true} ao TM = derrota); sem Replay da pausa, Simular o resto,
   Reiniciar, Modo de jogo/Cenas e a cena de substituição (seguraria a simulação de um lado só). Fim: 'tm3d:fim'
   {resultado (a súmula: a mesma nos dois), online: {hashFinal | wo: {vencedor, motivo} | dessinc}} (`fimTM(resultado, extra)`).
 - **Teste `teste-online-tela`** (navegador, CI e deploy): duas abas do mesmo Chromium jogando a mesma partida (IA nos dois
