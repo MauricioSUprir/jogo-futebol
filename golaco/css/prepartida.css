@@ -197,6 +197,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 }
 #prepartida[data-meio="pad"]:not([data-regime="pc"]) .pp-aba.foco .pp-g-a,
 #prepartida[data-meio="pad"]:not([data-regime="pc"]) .pp-aba:not(.foco) .pp-g-y { display: inline-grid; }
+/* (o glifo sai da aba onde o texto não caberia com ele: prepartida-tela.js marcarAbas) */
+#prepartida .pp-aba.sem-glifo .pp-glifo { display: none !important; }
 
 /* ------------------------------------------------------------------ a linha dos comandos (PC) e o aviso */
 #prepartida .pp-cmd { position: absolute; display: flex; gap: 1.6em; color: var(--pp-fraco); font-weight: 600; white-space: nowrap; pointer-events: none; }

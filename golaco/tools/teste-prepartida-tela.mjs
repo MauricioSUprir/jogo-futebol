@@ -8,7 +8,7 @@
 //   E3  sem rolar e E4 nada encosta: 4 telas do celular (com o entalhe) e 6 do PC × a escalação, o adversário e as duas vistas
 //       (as fichas, os discos, a barra, a competição, o ≡, a info, os cantos, as abas; dentro da tela e da área segura); também
 //       com as fontes BLOQUEADAS (a letra do sistema); E4b os Pênaltis e o TM pro com o clássico e o estádio longos no celular (a
-//       info nunca cortada pelo CSS: revisão A3)
+//       info nunca cortada pelo CSS: revisão A3; as abas sem "…" e com o ícone igual na barra: A4/V3/V15)
 //   E5  a letra: nome ≥ 10 px (568×320), ≥ 11 (outros celulares), ≥ 13 (PC ≥ 720); info ≥ 11; abas ≥ 13; o resto ≥ 11/12
 //   E6  os alvos: abas ≥ 177 × 40 (568), ≥ 200 × 44 (640+); ≡ ≥ 34/40/44; os times ≥ 30 × 56 (568) e 36 × 64; nada sob o entalhe
 //   E7* toques até o jogo: partida com o pré-jogo 2 (Jogar + Pular); sem pré-jogo 1 → o apito; Pênaltis 1; o requestFullscreen
@@ -147,6 +147,9 @@ const MEDIR = () => {
   for (const k of cantosTxt) for (const f of fichas) if (sob(k, f, 3, 1)) prob.push(`canto×${f.v}`);
   // a info cortada pelo CSS (o corte por prioridade evita: só pode o estádio com "…" da conta)
   for (const l of raiz.querySelectorAll('.pp-info-l')) if (l.scrollWidth > l.clientWidth + 1) prob.push('info cortada pelo CSS');
+  // o texto das abas nunca cortado; o ícone igual na barra inteira (revisões A4/V3/V15)
+  for (const b of raiz.querySelectorAll('.pp-aba')) { const t = b.querySelector('.pp-aba-txt'); if (t && t.scrollWidth > t.clientWidth + 0.5) prob.push(`aba ${b.dataset.aba} cortada ("${t.textContent}")`); }
+  if (new Set([...raiz.querySelectorAll('.pp-aba')].map(b => getComputedStyle(b.querySelector('svg') ?? b).display === 'none')).size > 1) prob.push('o ícone em umas abas e não em outras');
   // dentro da tela; os interativos fora do entalhe
   for (const [k, r] of Object.entries(pecas)) if (r && (r.x < -0.5 || r.y < -0.5 || r.r > W + 0.5 || r.b > H + 0.5)) prob.push(`${k} fora da tela`);
   const inter = [...raiz.querySelectorAll('button')].filter(b => b.getClientRects().length).map(b => ({ c: b.className.split(' ')[0], ...R(b) }));
@@ -421,11 +424,12 @@ if (faz('telas')) {
     } finally { await navegador.close(); }
   }
   // E4b os outros modos no celular (a revisão do item 64): os Pênaltis (a duração "5 cobranças · Começa: …") e o TM pro com o
-  // clássico, a competição e o estádio longos (4 abas) — a linha de informação sem o corte do CSS (A3)
+  // clássico, a competição e o estádio longos (4 abas, as duas vistas) — a linha de informação sem o corte do CSS (A3), o texto das
+  // abas inteiro e o ícone igual na barra toda (A4/V3/V15)
   const PED_PRO = { ...PED_A, id: 'tProPP', edicao: 'pro', home: { ...PED_A.home, stadium: 'Estadio Municipal El Molinón – Enrique Castro "Quini"' }, partida: { ...PED_A.partida, classico: true, nomeClassico: 'Clássico das Multidões', competicao: 'Brasileirão Série A' } };
   const MODOS_TELA = [
     ['Pênaltis', { q: `${Q}&prepartida=1&modo=penaltis&semente=5&hora=noite` }, ['meu', 'outro']],
-    ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu']],
+    ['TM pro com o clássico', { q: `${Q}&prepartida=1&tm=${PED_PRO.id}&hora=noite`, pedido: PED_PRO }, ['meu', 'sem', 'com']],
   ];
   const TELAS_B = [[844, 390], [667, 375], [640, 360], [568, 320]];
   for (const [nome, o, vistas] of MODOS_TELA) {
@@ -452,7 +456,10 @@ if (faz('telas')) {
           for (const p of m.prob) falhas.push(`${w}×${h} ${v}: ${p}`);
         }
       }
-      meta(`E4b nada encosta nem é cortado pelo CSS (${nome}: ${TELAS_B.length} telas do celular)`, falhas.length ? `${falhas.length}: ${falhas.slice(0, 4).join(' · ')}` : `0 em ${casos} casos`, '0', falhas.length === 0);
+      // (os problemas agrupados pelo tipo, com as telas de cada um)
+      const tipos = new Map();
+      for (const f of falhas) { const i = f.indexOf(': '); const k = f.slice(i + 2); tipos.set(k, [...(tipos.get(k) ?? []), f.slice(0, i)]); }
+      meta(`E4b nada encosta nem é cortado pelo CSS (${nome}: ${TELAS_B.length} telas do celular)`, falhas.length ? `${falhas.length}: ${[...tipos].map(([k, v]) => `${k} [${v.join(', ')}]`).join(' · ')}` : `0 em ${casos} casos`, '0', falhas.length === 0);
       meta(`S1 0 erros no console (telas ${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
   }

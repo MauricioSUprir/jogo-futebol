@@ -92,6 +92,19 @@ export function criarPrepartida(opc) {
   };
   const medidor = document.createElement('canvas').getContext('2d');
   const medir = (t, px, peso = 600) => { medidor.font = `${peso} ${px}px "Inter TM", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; return medidor.measureText(t).width; };
+  // ---- o texto das abas (revisões A4/V3/V15): o ícone é decidido para a BARRA inteira pelo rótulo mais longo que cada aba pode
+  // mostrar (a vista "Sem a bola ⇄" saía cortada com 4 abas em 568: o ícone era decidido só pelo "Visão tática"); a vista encurta se
+  // nem sem o ícone couber; o glifo do controle (Ⓐ/Ⓨ no celular) sai da aba onde não cabe
+  const VISTAS = { sem: ['Sem a bola ⇄', 'Sem a bola', 'Sem bola'], com: ['Com a bola ⇄', 'Com a bola', 'Com bola'] };
+  /** O espaço (px) para o texto numa aba: a aba menos o padding (0,6 em × 2) e a borda; com o ícone, ele (1,3 em) e o vão (0,5 em);
+   * com o glifo, ele (1,35 × 0,7 em) e o vão. */
+  function espacoTexto(icone, glifo) {
+    const A = st.L.abas;
+    return A.larguraAba - 1.2 * A.letra - 2 - (icone ? 1.8 * A.letra : 0) - (glifo ? 1.45 * A.letra : 0) - 1;
+  }
+  const cabeAba = (t, icone, glifo = false) => medir(t, st.L.abas.letra, 800) <= espacoTexto(icone, glifo);
+  /** O 1º rótulo da lista que cabe (nenhum: o último, com o "…" do CSS). */
+  const rotuloQueCabe = (lista, icone) => lista.find(t => cabeAba(t, icone)) ?? lista[lista.length - 1];
 
   // ------------------------------------------------------------------------------------------------ montagem
   function montar() {
@@ -136,10 +149,9 @@ export function criarPrepartida(opc) {
     // as abas (UMA parada no Tab: a barra de ferramentas com o foco itinerante)
     const A = L.abas;
     h += `<div class="pp-abas" role="toolbar" aria-label="Ações da partida" style="left:${r1(A.x)}px;top:${r1(A.y)}px;width:${r1(A.w)}px;height:${r1(A.h)}px;gap:${A.vao}px">`;
+    st.comIcone = st.abas.every(a => [a.texto, ...(a.id === 'visao' ? [VISTAS.sem[0], VISTAS.com[0]] : [])].every(t => cabeAba(t, true)));
     st.abas.forEach((a, i) => {
-      const larg = A.larguraAba;
-      const semIcone = medir(a.texto, A.letra, 800) + A.letra * 1.3 + 24 > larg;
-      h += `<button type="button" class="pp-aba pp-btn${a.primaria ? ' primaria' : ''}${semIcone ? ' sem-icone' : ''}" data-pp="aba" data-aba="${esc(a.id)}" data-i="${i}" tabindex="-1" style="font-size:${r1(A.letra)}px"`
+      h += `<button type="button" class="pp-aba pp-btn${a.primaria ? ' primaria' : ''}${st.comIcone ? '' : ' sem-icone'}" data-pp="aba" data-aba="${esc(a.id)}" data-i="${i}" tabindex="-1" style="font-size:${r1(A.letra)}px"`
         + `${a.id === 'visao' || a.id === 'adversario' ? ' aria-pressed="false"' : ''}>${IC[a.icone] ?? ''}<span class="pp-aba-txt">${esc(a.texto)}</span>`
         + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}</button>`;
     });
@@ -313,8 +325,9 @@ export function criarPrepartida(opc) {
       b.classList.toggle('foco', i === st.foco);
       if (a.id === 'visao') {
         b.setAttribute('aria-pressed', String(st.visao !== 'escalacao'));
-        const t = st.visao === 'sem' ? 'Sem a bola ⇄' : st.visao === 'com' ? 'Com a bola ⇄' : a.texto;
+        const t = st.visao === 'escalacao' ? a.texto : rotuloQueCabe(VISTAS[st.visao], st.comIcone);
         b.querySelector('.pp-aba-txt').textContent = t;
+        if (st.visao === 'escalacao') b.removeAttribute('aria-label'); else b.setAttribute('aria-label', `${a.texto}: ${st.visao === 'sem' ? 'sem a bola' : 'com a bola'}`);
       }
       if (a.id === 'adversario') b.setAttribute('aria-pressed', String(st.time !== st.meu));
       if (a.armar) {
@@ -328,6 +341,9 @@ export function criarPrepartida(opc) {
         b.setAttribute('aria-disabled', 'true'); b.classList.add('aguardando');
         b.querySelector('.pp-aba-txt').textContent = `Aguardando ${st.aguardando}…`;
       }
+      // o glifo do controle (o celular com o controle: o Ⓐ na aba do foco, o Ⓨ no Personalizar) sai onde o texto não caberia com ele
+      const glifo = raiz.dataset.meio === 'pad' && !st.L.pc && (i === st.foco || a.id === 'personalizar');
+      b.classList.toggle('sem-glifo', glifo && !cabeAba(b.querySelector('.pp-aba-txt').textContent, st.comIcone, true));
     });
     const c = raiz.querySelector('[data-pp="canto"]');
     if (c && st.canto) {
@@ -552,7 +568,7 @@ export function criarPrepartida(opc) {
 
   function marcarMeio() {
     const m = opc.meio?.() ?? 'teclado';
-    if (raiz.dataset.meio !== m) raiz.dataset.meio = m;
+    if (raiz.dataset.meio !== m) { raiz.dataset.meio = m; if (st.L) marcarAbas(); }
   }
 
   // ------------------------------------------------------------------------------------------------ interface
