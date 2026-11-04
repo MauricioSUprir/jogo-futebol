@@ -433,7 +433,7 @@ elencos antes do código.
   | Contraste atrás do texto (mediana) | — | 10–29 de 255 (≤ 50), de dia e de noite |
   | Online: a saída conjunta do Pronto | — | 12–19 ms (esperando o quadro seguinte: 900 ms no Chromium sem GPU); com 20% dos pacotes perdidos, 12–19 ms |
   | Online: o aviso com o outro no pré-jogo e pacotes chegando | "A conexão parou. Se não voltar, vocês podem encerrar." | "{nome} ainda está no pré-jogo." (em 4,2 s com quadros de ~1 s) |
-  | Download inicial (até +2,5 s) | 2673 KB, folga 747 KB | 2696 KB, folga 725 KB (o `main.js` +20 KB) |
+  | Download inicial (até +2,5 s) | 2673 KB, folga 747 KB | 2701 KB, folga 720 KB (o `main.js` +24 KB; o `hud.js`, a `prejogo-tela.js` e o `render/prejogo.js` +1 KB cada; depois da revisão) |
   | Com a tela, a mais (sob demanda) | — | +99 KB transferidos (+160 KB crus): os 2 módulos, o CSS, a Inter TM 600/800 e a TM Cond |
   | hash-igual / hash-partida / fecho | — | IGUAL / IGUAL (104 hashes) / 0 módulos do fecho mexidos |
 - **Dúvidas em aberto**: em qual versão (24/25/26) o dono tirou o print; a pré-partida do FC 25 e a da carreira do FC 26 (não
