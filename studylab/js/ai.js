@@ -555,3 +555,52 @@ Você lê calendários escolares brasileiros (foto, print ou texto) e devolve as
   });
   return (r.itens || []).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.data));
 }
+
+/* ---------- Apresentações (slides prontos para editar e baixar em PowerPoint) ---------- */
+const SCHEMA_APRESENTACAO = {
+  type: 'object', additionalProperties: false, required: ['titulo', 'slides'],
+  properties: {
+    titulo: { type: 'string' },
+    subtitulo: { type: 'string' },
+    slides: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['tipo', 'titulo'],
+        properties: {
+          tipo: { type: 'string', enum: ['capa', 'topicos', 'duas_colunas', 'destaque', 'pergunta', 'fim'] },
+          titulo: { type: 'string' },
+          texto: { type: 'string', description: 'uma frase curta (destaque, capa, pergunta, fim); vazio nos outros' },
+          topicos: { type: 'array', items: { type: 'string' }, description: '3 a 5 tópicos curtos (até 12 palavras cada)' },
+          esquerda: { type: 'array', items: { type: 'string' }, description: 'só em duas_colunas' },
+          direita: { type: 'array', items: { type: 'string' }, description: 'só em duas_colunas' },
+          rotuloEsquerda: { type: 'string' },
+          rotuloDireita: { type: 'string' },
+          notas: { type: 'string', description: 'o que o aluno fala neste slide (2 a 4 frases)' },
+        },
+      },
+    },
+  },
+};
+
+/** Gera a apresentação em UMA chamada (JSON). O app desenha, edita e exporta sem IA. */
+export async function gerarApresentacao({ tema, materia = '', qtd = 8, publico = 'turma', detalhes = '' }) {
+  const n = Math.max(4, Math.min(12, Number(qtd) || 8));
+  const serie = st().perfil?.serie ? ` (${st().perfil.serie})` : '';
+  const r = await chamar({
+    system: `${REGRAS}
+Você monta apresentações escolares em português do Brasil para um aluno${serie} apresentar ${publico === 'professor' ? 'para o professor' : 'para a turma'}.
+- Exatamente ${n} slides. O 1º é "capa" e o último é "fim" (agradecimento + 1 pergunta para a turma).
+- No meio, misture "topicos" (a maioria), 1 "duas_colunas" quando houver comparação, 1 "destaque" com um dado ou frase forte e, se couber, 1 "pergunta".
+- Texto de slide é CURTO (tópicos de até 12 palavras); a explicação vai nas "notas", que é o que o aluno fala.
+- Conteúdo correto e no nível da série; nada inventado (sem números ou citações de que você não tenha certeza).`,
+    conteudo: `Tema: ${String(tema).slice(0, 300)}${materia ? `\nMatéria: ${materia}` : ''}${detalhes ? `\nO que o professor pediu / detalhes:\n${String(detalhes).slice(0, 2000)}` : ''}`,
+    schema: SCHEMA_APRESENTACAO, maxTokens: 6000, esforco: 'medium',
+  });
+  const slides = (r.slides || []).filter((x) => x && x.titulo).slice(0, 12).map((x) => ({
+    tipo: x.tipo || 'topicos', titulo: String(x.titulo).slice(0, 120), texto: x.texto || '',
+    topicos: (x.topicos || []).slice(0, 6), esquerda: (x.esquerda || []).slice(0, 6), direita: (x.direita || []).slice(0, 6),
+    rotuloEsquerda: x.rotuloEsquerda || '', rotuloDireita: x.rotuloDireita || '', notas: x.notas || '',
+  }));
+  if (!slides.length) throw new Error('Não consegui montar os slides agora. Tente de novo com mais detalhes do tema.');
+  return { titulo: r.titulo || tema, subtitulo: r.subtitulo || '', slides };
+}

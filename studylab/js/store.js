@@ -39,6 +39,7 @@ export function estadoVazio() {
     // ele. As fotos ficam no IndexedDB (fotos.js) — aqui só o texto.
     escola: {},                 // { [materiaId]: { texto, em } }
     relogio: {},             // cronômetro e timer (ver js/relogio.js)
+    apresentacoes: [],       // slides (views/apresentacoes.js)
     conexoes: {},            // apps ligados (o segredo fica no servidor): { lista, ultima: { servico: iso } }
     lidas: [],  // notificações já lidas
   };
