@@ -222,6 +222,7 @@ export const RECURSOS = [
   { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', nivel: 'pro' },
   { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', nivel: 'pro' },
   { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', nivel: 'pro' },
+  { id: 'ia_apresentacao', nome: 'Apresentações prontas pela IA (baixa em PowerPoint)', nivel: 'pro' },
 
   { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', nivel: 'plus' },
   { id: 'ia_redacao', nome: 'Correção de redação com nota e comentários', nivel: 'plus' },

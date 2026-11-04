@@ -8,7 +8,8 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "teste": "node testes/brcode.js && node testes/roda.js"
+    "teste": "node testes/brcode.js && node testes/roda.js && node testes/capacidade-gemini.mjs --rapido",
+    "capacidade": "node testes/capacidade-gemini.mjs"
   },
   "dependencies": {
     "jose": "^5.9.6",

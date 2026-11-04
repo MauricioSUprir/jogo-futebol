@@ -26,6 +26,7 @@ import * as vAI from './views/studyai.js';
 import * as vConfig from './views/config.js';
 import * as vPlanos from './views/planos.js';
 import * as vConexoes from './views/conexoes.js';
+import * as vApresentacoes from './views/apresentacoes.js';
 import * as vCriador from './views/criador.js';
 import * as vTermos from './views/termos.js';
 import { precisaEntrar, abrirEntrada } from './views/entrar.js';
@@ -53,6 +54,7 @@ export const MENU = [
   { g: 'Estudar', r: 'questoes', ic: 'questoes', i: '📝', t: 'Questões', v: vQuestoes },
   { g: 'Estudar', r: 'flashcards', ic: 'cartas', i: '🃏', t: 'Flashcards', v: vFlash },
   { g: 'Estudar', r: 'revisao', ic: 'revisao', i: '🔁', t: 'Revisão', v: vRevisao },
+  { g: 'Estudar', r: 'apresentacoes', ic: 'apresentacao', i: '🎤', t: 'Apresentações', v: vApresentacoes },
   { g: 'Estudar', r: 'relogio', ic: 'relogio', i: '⏲️', t: 'Cronômetro e timer', v: vRelogio },
 
   { g: 'Progresso', r: 'desempenho', ic: 'grafico', i: '📊', t: 'Desempenho', v: vDesempenho },
