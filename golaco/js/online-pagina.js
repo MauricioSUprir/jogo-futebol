@@ -19,9 +19,10 @@ const CSS = `
 #online-aviso button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
   color:#fff;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
 #online-aviso button.primario{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:transparent;color:#04130a}
-#online-selo{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:40;font:600 12px Inter,system-ui,sans-serif;
-  color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
+#online-selo{position:fixed;right:calc(var(--sa-r,env(safe-area-inset-right,0px)) + 10px);top:calc(var(--sa-t,env(safe-area-inset-top,0px)) + 8px);
+  z-index:40;font:600 12px Inter,system-ui,sans-serif;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
 #online-selo[hidden]{display:none}
+html.pausa-aberta #online-selo{display:none}
 `;
 
 function el(tag, attrs = {}, filhos = []) {

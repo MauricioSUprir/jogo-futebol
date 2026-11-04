@@ -709,6 +709,17 @@ async function sessaoOnline() {
       const pc = H > 480;
       await B.setViewportSize({ width: W, height: H });
       await B.waitForTimeout(150);
+      // (com a pausa fechada o selo fica dentro da área segura: --sa-r/--sa-t, o entalhe simulado)
+      const seloFora = await B.evaluate(() => {
+        const s = document.getElementById('online-selo');
+        if (!s) return null;
+        const era = s.hidden, txt = s.textContent;
+        s.hidden = false; s.textContent = 'Conexão instável';
+        const r = s.getBoundingClientRect(), cs = getComputedStyle(document.documentElement);
+        s.hidden = era; s.textContent = txt;
+        const sr = parseFloat(cs.getPropertyValue('--sa-r')) || 0, st = parseFloat(cs.getPropertyValue('--sa-t')) || 0;
+        return r.right > innerWidth - sr + 0.5 || r.top < st - 0.5 ? `x ${r.left.toFixed(0)}–${r.right.toFixed(0)} (área útil até ${innerWidth - sr})` : null;
+      });
       await B.evaluate(() => window.__golaco.abrirMenu());
       await quadros(B, 2);
       const m = await B.evaluate(MEDIR);
@@ -719,6 +730,23 @@ async function sessaoOnline() {
       m.foco.push(...fArmado);
       P.p1n++;
       const p1 = problemasP1(m, ORDEM.online, { cartao: true, pc });
+      // o selo "Conexão instável" (online-pagina.js) com a pausa aberta: não fica por cima do X, da pílula nem do cartão (antes ele
+      // ia para o canto do ≡, onde agora mora o X — revisão do item 58, F5); o estado instável é forçado só no instante da medida
+      const selo = await B.evaluate(() => {
+        const s = document.getElementById('online-selo');
+        if (!s) return { falta: true };
+        const era = s.hidden, txt = s.textContent;
+        s.hidden = false; s.textContent = 'Conexão instável';
+        const r = s.getBoundingClientRect(), vis = r.width > 0 && getComputedStyle(s).display !== 'none' && getComputedStyle(s).visibility !== 'hidden';
+        s.hidden = era; s.textContent = txt;
+        if (!vis) return { vis };
+        const enc = ['#menu .pausa-topo-dir .btn-fechar', '#pausa-placar', '#pausa-time'].map(q => document.querySelector(q)).filter(e => e && e.getClientRects().length)
+          .filter(e => { const q = e.getBoundingClientRect(); return r.left < q.right && q.left < r.right && r.top < q.bottom && q.top < r.bottom; }).map(e => e.id || e.className);
+        return { vis, enc };
+      });
+      if (seloFora) p1.push(`o selo "Conexão instável" fora da área segura com a pausa fechada: ${seloFora}`);
+      if (selo.falta) p1.push('sem o selo do online');
+      else if (selo.vis && selo.enc.length) p1.push(`o selo "Conexão instável" por cima de ${selo.enc.join(', ')}`);
       if (p1.length) P.p1.push(`online ${W}×${H}: ${p1.join('; ')}`);
       conferirNivel(`online ${W}×${H} 1º`, m, pc);
       await B.waitForTimeout(3300);
