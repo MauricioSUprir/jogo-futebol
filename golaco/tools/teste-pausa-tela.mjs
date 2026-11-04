@@ -5,10 +5,11 @@
 // quadro COM a meta viewport, como o Total Match de verdade: pedido A, pedido B com a trava, Livre e Pênaltis) e o online (2 abas).
 //   P1  a lista à esquerda (uma coluna, na ordem do FC 24 por modo) e o cartão do meu time à direita, nada encostando, cortado ou
 //       fora da área segura; CADA item do 1º nível com o foco (a letra maior e o negrito) cabe na linha — também no PC fora do
-//       16:9 (1024×768, 1280×1024, 1440×900, 1280×800: a letra crescia com a altura e a faixa com a largura), o
+//       16:9 (1024×768, 1280×1024, 1440×900, 1280×800, 800×600: a letra crescia com a altura e a faixa com a largura), o
 //       "Voltar ao Total Match" do fim do TM e o "Sair" armado do online (revisão do item 58, F1)
 //   P2  sem rolar em todos os níveis (1º, Opções, Modo de jogo, Estatísticas, Jogadores e Câmera do Livre) × modos × telas,
-//       também no PC baixo (1366×600, 1280×520: as Opções rolavam com a barra escondida — F2)
+//       também no PC baixo (1366×600, 1280×520, 1000×520: as Opções rolavam com a barra escondida — F2) e nada saindo das
+//       pílulas do Modo de jogo na janela estreita (800×600 — F3)
 //   P3  o jogo à vista (pelo print: a luminância com a pausa ≥ 60% da sem ela): ≥ 40% no PC, 25% em 844×390, 17% em 667 e 640,
 //       14% em 568×320
 //   P4  o campinho: 11 fichas na ordem da formação, número e nome de camisa, a formação do rascunho (o Editar time com 4-4-2 →
@@ -39,8 +40,8 @@ const RAIZ = path.resolve(arg('--raiz', RAIZ_PADRAO));
 const SO = arg('--so', null);
 const CEL = [[844, 390], [667, 375], [640, 360], [568, 320]];
 const PC = [1280, 720];
-// o PC fora do 16:9 e baixo (revisão do item 58: F1 4:3, 5:4 e 16:10; F2 a janela do notebook fora da tela cheia)
-const PC_MAIS = [[1024, 768], [1280, 1024], [1440, 900], [1280, 800], [1366, 600], [1280, 520]];
+// o PC fora do 16:9 e baixo (revisão do item 58: F1 4:3, 5:4 e 16:10; F2 a janela do notebook fora da tela cheia; F3 a estreita)
+const PC_MAIS = [[1024, 768], [1280, 1024], [1440, 900], [1280, 800], [800, 600], [1366, 600], [1280, 520], [1000, 520]];
 const Q = 'q=baixa&replay=0&comemoracao=0&semente=5';
 const META_P3 = { 1280: 0.40, 844: 0.25, 667: 0.17, 640: 0.17, 568: 0.14 };
 const srv = await servidor(0, RAIZ);
@@ -713,7 +714,7 @@ if (!SO || SO === 'tm') {
   const PED_L = { ...PED_A, id: 'pL', modo: 'livre', livre: { linha: [5, 5], goleiro: [true, true] } };
   const PED_P = { ...PED_A, id: 'pP', modo: 'penaltis' };
   await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, CEL, { rot: 'partida' });
-  const PC_TM = [PC, [1024, 768], [1280, 1024], [1440, 900], [1280, 800]];
+  const PC_TM = [PC, [1024, 768], [1280, 1024], [1440, 900], [1280, 800], [800, 600]];
   await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, PC_TM, { rot: 'partida PC', pc: true });
   await sessaoTM(PED_A, 'partida', ORDEM.tmFim, PC_TM, { rot: 'fim PC', pc: true, fim: true });
   await sessaoTM(PED_B, 'partida', ORDEM.tmTrava, [[844, 390], [568, 320]], { rot: 'trava', trava: true });

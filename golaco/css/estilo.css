@@ -767,9 +767,13 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
     --fx-fade: 22vw;
     --item-h: clamp(42px, calc(6.67vh - 2px), 70px);
     --item-f: min(2.65vh, calc((var(--fx-w) - 32px) / 14.4)); --item-f-foco: min(3.6vh, calc((var(--fx-w) - 32px) / 10.6));
-    --card-w: 30vw; --card-y: 72px;
+    /* (o cartão ≥ 270 px: o campo de dentro ≥ 242 px dá o disco de 20 px e a letra de 11 — em 800×600, com 30vw, saía 10,5) */
+    --card-w: max(30vw, 270px); --card-y: 72px;
   }
-  #menu .janela-menu[data-sub="menu-opcoes"], #menu .janela-menu[data-sub="menu-estatisticas"] { --fx-w: max(24vw, 380px); }
+  /* os submenus com linhas de controles (Opções, Estatísticas, Modo de jogo e os do Livre) não cabem na faixa estreita de 4:3
+     ou da janela pequena (F3: em 800×600 o "Substituição" saía da pílula e encostava no "Cenas") */
+  #menu .janela-menu[data-sub="menu-opcoes"], #menu .janela-menu[data-sub="menu-estatisticas"], #menu .janela-menu[data-sub="menu-modos"],
+  #menu .janela-menu[data-sub="menu-livre"], #menu .janela-menu[data-sub="menu-camera-livre"] { --fx-w: max(24vw, min(380px, calc(100vw - var(--fx-x) - var(--sa-r) - 16px))); }
   #menu .janela-topo { top: calc(var(--sa-t) + 4.3vh); height: calc(min(3vh, 30px) * 1.5); gap: 12px; }
   #menu .janela-topo h2 { font-size: min(3vh, 30px); }
   #menu .pausa-marca { width: calc(min(3vh, 30px) * 1.25); height: min(3vh, 30px); }
