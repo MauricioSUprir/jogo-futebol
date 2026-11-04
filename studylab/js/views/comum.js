@@ -199,6 +199,7 @@ export function formProva(provaExistente = null, aoSalvar = null, padrao = {}) {
   f.materiaId = selMateria(p.materiaId);
   f.data = inp({ type: 'date', value: p.data });
   f.valor = inp({ type: 'number', min: 0, step: .5, value: p.valor });
+  f.tipo = sel(TIPOS_AVALIACAO, p.tipo || 'prova');
 
   const listaC = h('div', { class: 'chips' });
   let escolhidos = [...(p.conteudoIds || [])];
@@ -219,7 +220,7 @@ export function formProva(provaExistente = null, aoSalvar = null, padrao = {}) {
   modal(nova ? '🎯 Nova prova' : '✏️ Editar prova', h('div', {},
     campo('Título', f.titulo),
     h('div', { class: 'f-row' }, campo('Matéria', f.materiaId), campo('Data', f.data)),
-    campo('Vale quantos pontos?', f.valor),
+    h('div', { class: 'f-row' }, campo('Tipo', f.tipo), campo('Vale quantos pontos?', f.valor)),
     h('label', { class: 'f' }, h('span', {}, 'Conteúdos que caem'), listaC),
     h('div', { class: 'flexb mt2' },
       !nova ? h('button', {
@@ -231,6 +232,7 @@ export function formProva(provaExistente = null, aoSalvar = null, padrao = {}) {
         class: 'btn btn--p', onclick: () => {
           const dados = {
             titulo: f.titulo.value.trim() || 'Prova',
+            tipo: f.tipo.value,
             materiaId: f.materiaId.value || null,
             data: f.data.value || iso(),
             valor: Number(f.valor.value) || 10,
@@ -304,6 +306,25 @@ export function formNota(nota = null, aoSalvar = null, padrao = {}) {
         },
       }, 'Salvar'))));
 }
+
+/** Tipos de evento da agenda — os de cima são do calendário da escola. */
+export const TIPOS_EVENTO = [
+  { v: 'feriado', t: '🎉 Feriado' }, { v: 'ferias', t: '🏖️ Férias / recesso' },
+  { v: 'bimestre', t: '📌 Início/fim de bimestre' }, { v: 'reuniao', t: '👪 Reunião' },
+  { v: 'escolar', t: '🏫 Evento da escola' },
+  { v: 'aula', t: '📙 Aula' }, { v: 'prova', t: '📕 Prova' }, { v: 'trabalho', t: '📘 Trabalho' },
+  { v: 'atividade', t: '📗 Atividade' }, { v: 'revisao', t: '📓 Revisão' }, { v: 'simulado', t: '🧪 Simulado' },
+];
+export const TIPOS_CALENDARIO = ['feriado', 'ferias', 'bimestre', 'reuniao', 'escolar'];
+/** O evento acontece neste dia? (vale o período data → ate) */
+export const noDia = (e, dataISO) => e.data === dataISO || (!!e.ate && e.data <= dataISO && dataISO <= e.ate);
+
+/** Tipos de avaliação (todas moram em s.provas). */
+export const TIPOS_AVALIACAO = [
+  { v: 'prova', t: '🎯 Prova' }, { v: 'teste', t: '📝 Teste' },
+  { v: 'trabalho', t: '📘 Trabalho' }, { v: 'simulado', t: '🧪 Simulado' },
+];
+export const rotuloAvaliacao = (tipo) => TIPOS_AVALIACAO.find((x) => x.v === (tipo || 'prova'))?.t || '🎯 Prova';
 
 export const TIPOS_MATERIAL = [
   { v: 'anotacao', t: '📝 Anotação de aula' }, { v: 'resumo', t: '📖 Resumo' },

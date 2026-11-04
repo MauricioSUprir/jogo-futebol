@@ -116,6 +116,6 @@ const RESPOSTAS = {
 
 function aulas(dia, rotulo) {
   const as = aulasDoDia(dia);
-  if (!as.length) return `Sem aulas cadastradas para ${rotulo}. Monte a semana na Minha Escola → Aulas da semana.`;
+  if (!as.length) return `Sem aulas cadastradas para ${rotulo}. Monte a semana na Minha Escola → Semana.`;
   return `Aulas de ${rotulo}:\n${linha(as.map((a) => `${a.hora || '--:--'} ${a.materia?.emoji || '📘'} ${a.materia?.nome || 'Aula'}`))}`;
 }

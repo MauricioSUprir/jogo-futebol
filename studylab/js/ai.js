@@ -512,3 +512,46 @@ export function observacoesLocais() {
   if (top && s.sessoes.length > 8) out.push(`Seu dia mais produtivo costuma ser ${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][top[0]]}.`);
   return out;
 }
+
+/* ==========================================================
+   CALENDÁRIO DA ESCOLA POR FOTO (Minha Escola → Calendário)
+   Uma chamada só lê o calendário impresso/PDF/print e devolve a lista; o
+   aluno confere e escolhe o que importar (nada entra sozinho).
+   ========================================================== */
+const SCHEMA_CALENDARIO = {
+  type: 'object', additionalProperties: false, required: ['itens'],
+  properties: {
+    itens: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['tipo', 'titulo', 'data'],
+        properties: {
+          tipo: { type: 'string', enum: ['prova', 'teste', 'trabalho', 'simulado', 'feriado', 'ferias', 'bimestre', 'reuniao', 'escolar'] },
+          titulo: { type: 'string' },
+          data: { type: 'string', description: 'AAAA-MM-DD' },
+          ate: { type: 'string', description: 'AAAA-MM-DD, só para período (férias, recesso, semana de provas); vazio se for um dia' },
+          materia: { type: 'string', description: 'nome da matéria, se houver; vazio se não' },
+        },
+      },
+    },
+  },
+};
+
+export async function lerCalendarioEscolar({ fotos = [], texto = '' }) {
+  const ano = new Date().getFullYear();
+  const materias = st().materias.map((m) => m.nome).join(', ') || '(nenhuma cadastrada)';
+  const pedido = `${texto ? `Texto do calendário:\n"""\n${String(texto).slice(0, 15000)}\n"""\n\n` : ''}`
+    + 'Extraia TODAS as datas deste calendário escolar: provas, testes, trabalhos, simulados, feriados, férias/recessos, '
+    + 'início/fim de bimestre, reuniões e eventos da escola.';
+  const r = await chamar({
+    system: `${REGRAS}
+Você lê calendários escolares brasileiros (foto, print ou texto) e devolve as datas em JSON.
+- Datas no formato AAAA-MM-DD. Sem ano escrito, use ${ano} (ou ${ano + 1} se o mês já passou e o calendário é do ano seguinte).
+- Período (ex.: "férias de 10 a 25/07", "semana de provas") vira um item com data e ate.
+- "materia": use o nome mais parecido desta lista quando der: ${materias}.
+- Não invente: se não tem certeza da data, deixe o item de fora.`,
+    conteudo: fotos.length ? [...fotos, { type: 'text', text: pedido }] : pedido,
+    schema: SCHEMA_CALENDARIO, maxTokens: 4000, esforco: 'medium',
+  });
+  return (r.itens || []).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.data));
+}

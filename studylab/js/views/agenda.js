@@ -6,10 +6,13 @@ import {
 import { st, set, nomeMateria, emojiMateria, corMateria, novoEvento, remover, atualizar } from '../store.js';
 import { agendaDoDia, aulasDoDia, filaTarefas, preparoProva, filaRevisao, ordemRecomendada } from '../engine.js';
 import { titulo, cartao, kpi, vazio, modal, fecharModal, toast, campo, inp, sel, segmento, confirmar } from '../ui.js';
-import { opcoesMaterias, selMateria, formTarefa, formProva, linhaTarefa } from './comum.js';
+import { opcoesMaterias, selMateria, formTarefa, formProva, linhaTarefa, TIPOS_EVENTO, noDia } from './comum.js';
 
 const CORES_EV = { aula: '#60a5fa', prova: '#f87171', trabalho: '#a78bfa', atividade: '#34d399', revisao: '#fbbf24', simulado: '#f1d794', tarefa: '#34d399', plano: '#3ec9f5' };
-const ICONES_EV = { aula: '📙', prova: '📕', trabalho: '📘', atividade: '📗', revisao: '📓', simulado: '🧪', tarefa: '📗', plano: '🗓️' };
+const ICONES_EV = {
+  aula: '📙', prova: '📕', trabalho: '📘', atividade: '📗', revisao: '📓', simulado: '🧪', tarefa: '📗', plano: '🗓️',
+  feriado: '🎉', ferias: '🏖️', bimestre: '📌', reuniao: '👪', escolar: '🏫',
+};
 
 let modo = 'mes';
 let refData = new Date();
@@ -46,7 +49,7 @@ export function eventosDoDia(dataISO) {
   for (const t of s.tarefas.filter((t) => t.prazo === dataISO)) out.push({ tipo: 'tarefa', hora: '', titulo: t.titulo, materiaId: t.materiaId, id: t.id, feito: t.status === 'concluido' });
   for (const p of s.provas.filter((p) => p.data === dataISO)) out.push({ tipo: 'prova', hora: '', titulo: p.titulo, materiaId: p.materiaId, id: p.id });
   for (const p of s.provas) for (const b of (p.plano || []).filter((b) => b.data === dataISO)) out.push({ tipo: 'plano', hora: '', titulo: b.titulo, materiaId: p.materiaId, feito: b.feito });
-  for (const e of s.eventos.filter((e) => e.data === dataISO)) out.push({ tipo: e.tipo, hora: e.hora, titulo: e.titulo, materiaId: e.materiaId, id: e.id, evento: true });
+  for (const e of s.eventos.filter((e) => noDia(e, dataISO))) out.push({ tipo: e.tipo, hora: e.hora, titulo: e.titulo, materiaId: e.materiaId, id: e.id, evento: true });
   return out.sort((a, b) => (a.hora || 'zz').localeCompare(b.hora || 'zz'));
 }
 
@@ -153,7 +156,7 @@ function cardHorario(pintar) {
   return box;
 }
 
-function editarHorario(aoSalvar) {
+export function editarHorario(aoSalvar) {
   const s = st();
   const rascunho = JSON.parse(JSON.stringify(s.horario || {}));
   const corpo = h('div', {});
@@ -240,26 +243,26 @@ export function abrirSemana() {
 }
 
 /* ---------- evento avulso ---------- */
-export function formEvento(ev = null, aoSalvar = null) {
-  const e = ev || { tipo: 'atividade', titulo: '', data: iso(), hora: '', materiaId: '' };
+export function formEvento(ev = null, aoSalvar = null, padrao = {}) {
+  const e = ev || { tipo: 'atividade', titulo: '', data: iso(), hora: '', materiaId: '', ...padrao };
   const f = {};
   f.titulo = inp({ value: e.titulo, placeholder: 'Ex.: Entrega do trabalho de Artes' });
-  f.tipo = sel([
-    { v: 'aula', t: '📙 Aula' }, { v: 'prova', t: '📕 Prova' }, { v: 'trabalho', t: '📘 Trabalho' },
-    { v: 'atividade', t: '📗 Atividade' }, { v: 'revisao', t: '📓 Revisão' }, { v: 'simulado', t: '🧪 Simulado' },
-  ], e.tipo);
+  f.tipo = sel(TIPOS_EVENTO, e.tipo);
   f.data = inp({ type: 'date', value: e.data });
+  f.ate = inp({ type: 'date', value: e.ate || '' });
   f.hora = inp({ type: 'time', value: e.hora });
   f.materiaId = selMateria(e.materiaId);
   modal(ev ? '✏️ Editar evento' : '📅 Novo evento', h('div', {},
     campo('Título', f.titulo),
     h('div', { class: 'f-row' }, campo('Tipo', f.tipo), campo('Matéria', f.materiaId)),
     h('div', { class: 'f-row' }, campo('Data', f.data), campo('Hora (opcional)', f.hora)),
+    campo('Até (opcional — férias, recesso, semana de provas)', f.ate),
     h('div', { class: 'flexb mt2' },
       h('button', { class: 'btn sp', onclick: fecharModal }, 'Cancelar'),
       h('button', {
         class: 'btn btn--p', onclick: () => {
-          const d = { titulo: f.titulo.value.trim() || 'Evento', tipo: f.tipo.value, data: f.data.value, hora: f.hora.value, materiaId: f.materiaId.value || null };
+          const ate = f.ate.value && f.ate.value > f.data.value ? f.ate.value : null;
+          const d = { titulo: f.titulo.value.trim() || 'Evento', tipo: f.tipo.value, data: f.data.value, ate, hora: f.hora.value, materiaId: f.materiaId.value || null };
           if (ev) atualizar('eventos', ev.id, d); else novoEvento(d);
           fecharModal(); toast('Evento salvo', 'good'); aoSalvar?.();
         },
