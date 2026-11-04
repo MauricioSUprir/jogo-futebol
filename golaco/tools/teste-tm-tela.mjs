@@ -55,7 +55,9 @@ const Q = 'q=baixa&replay=0&comemoracao=0&min=1';
 function htmlQuadro(pedido, q) {
   const json = JSON.stringify(JSON.stringify(pedido)).replace(/</g, '\\u003c');
   const id = JSON.stringify(pedido.id);
-  return `<!doctype html><html><head><meta charset="utf-8"><title>TM</title></head><body style="margin:0;background:#000">
+  // (com a meta viewport, como o TM de verdade — legacy-total-match/index.html: sem ela, com isMobile, o caso de "844×390" media
+  // 980 px de largura dentro do quadro)
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TM</title></head><body style="margin:0;background:#000">
 <script>
 localStorage.setItem('tm3d:pedido:' + ${id}, ${json});
 localStorage.removeItem('tm3d:resultado:' + ${id});

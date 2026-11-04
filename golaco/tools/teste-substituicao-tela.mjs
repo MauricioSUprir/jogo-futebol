@@ -525,7 +525,8 @@ for (const L of roda('L') ? LAYOUTS.filter(L => !telas || telas.some(t => L.nome
           const depois = document.getElementById('estado-subst').textContent;
           let salvo = null; try { salvo = JSON.parse(localStorage.getItem('golaco.prefs.v1') || '{}').substituicao; } catch (_) { salvo = null; }
           const j = document.querySelector('.janela-menu');
-          return { antes, depois, salvo, rola: j.scrollHeight - j.clientHeight };
+          // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+          return { antes, depois, salvo, rola: Math.max(j.scrollHeight - j.clientHeight, ...[...document.querySelectorAll('#menu .menu-corpo, #menu .menu-acoes:not([hidden])')].map(e => e.scrollHeight - e.clientHeight)) };
         });
         // a página aberta de novo (outra aba do MESMO navegador: o localStorage é o mesmo; navegar na aba velha às vezes
         // não termina no Chromium headless daqui com a máquina carregada)

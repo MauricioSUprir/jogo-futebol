@@ -342,14 +342,20 @@ const PAUSA = () => {
   // <small> dos botões, que cortam com reticências)
   const textos = [...botoes, ...[...document.querySelectorAll('#menu .livre-rotulo, #menu button small')].filter(vis)];
   const cortados = textos.filter(b => b.scrollWidth > b.clientWidth + 1).map(b => b.textContent.trim().slice(0, 16));
-  const jr = j.getBoundingClientRect();
+  // fora: da área segura da tela (item 58: a pausa ocupa a tela inteira, sem janela; antes era "fora da janela")
+  const cs = getComputedStyle(document.documentElement), sa = v => parseFloat(cs.getPropertyValue(v)) || 0;
+  const jr = { left: sa('--sa-l'), right: innerWidth - sa('--sa-r') };
   const fora = botoes.filter(b => { const r = b.getBoundingClientRect(); return r.right > jr.right + 0.5 || r.left < jr.left - 0.5; }).map(b => b.textContent.trim().slice(0, 14));
   return {
-    rola: j.scrollHeight - j.clientHeight, id: lista?.id, linhas: filhos.length, textos: filhos.map(e => e.textContent.replace(/\s+/g, ' ').trim()),
+    // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+    rola: Math.max(j.scrollHeight - j.clientHeight, ...[...document.querySelectorAll('#menu .menu-corpo, #menu .menu-acoes:not([hidden])')].map(e => e.scrollHeight - e.clientHeight)), id: lista?.id, linhas: filhos.length, textos: filhos.map(e => e.textContent.replace(/\s+/g, ' ').trim()),
     encosta: enc, cortados, fora,
   };
 };
-const okPausa = p => p.rola <= 0 && p.linhas <= 5 && p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0;
+// (item 58: o 1º nível do Livre tem 8 linhas na ordem do FC 24 — antes, ≤ 5 linhas com dois botões por linha)
+const okPausa = p => p.rola <= 0 && p.linhas <= 8 && p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0;
+const ORDEM_LIVRE = [/^Voltar ao jogo/, /^Jogadores \d+ contra \d+/, /^Câmera \S+/, /^Recomeçar .*Bola no meu pé/, /^Replay/, /^Opções/, /^Modo de jogo/, /^Ajuda e controles/];
+const naOrdem = (textos, ordem) => textos.length === ordem.length && ordem.every((re, i) => re.test(textos[i]));
 const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' / ')}]${p.encosta.length ? '; ENCOSTA: ' + p.encosta.slice(0, 3).join(', ') : ''}${p.cortados.length ? '; CORTADO: ' + p.cortados.join(', ') : ''}${p.fora.length ? '; FORA: ' + p.fora.join(', ') : ''}`;
 
 // ------------------------------------------------------------------ B e C: PC 1280×720, Alta, de dia
@@ -555,7 +561,10 @@ const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' 
     for (let i = 0; i < 40 && g.mundo.modo !== 'partida'; i++) await new Promise(r => setTimeout(r, 50));
     g.abrirMenu();
     const vis = e => !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none';
-    const r = { modo: g.mundo.modo, camera: g.camera, seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')), botao: vis(document.getElementById('opcao-camera-livre')), livre: vis(document.getElementById('btn-livre-camera')), cantos: g.livre.cantos };
+    // (item 58: Jogadores | Câmera no 1º nível da pausa; o TV | Aproximada e o botão da câmera do Livre na linha Câmera das Opções)
+    const livre = vis(document.getElementById('btn-livre-camera'));
+    document.getElementById('btn-opcoes')?.click();
+    const r = { modo: g.mundo.modo, camera: g.camera, seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')), botao: vis(document.getElementById('opcao-camera-livre')), livre, cantos: g.livre.cantos };
     g.fecharMenu();
     return r;
   });
@@ -577,19 +586,23 @@ const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' 
   const acoes = await pg.evaluate(P => { document.querySelector('#menu-livre [data-cmd="livre-voltar"]').click(); return eval(P)(); }, PAUSA.toString().replace(/^/, '(') + ')');
   const cam = await pg.evaluate(P => { document.getElementById('btn-livre-camera').click(); const r = eval(P)(); r.botoes = [...document.querySelectorAll('#menu-camera-livre [data-cmd="livre-cam"]')].map(b => b.textContent.trim()); document.querySelector('#menu-camera-livre [data-cmd="livre-voltar"]').click(); return r; }, PAUSA.toString().replace(/^/, '(') + ')');
   const modos = await pg.evaluate(P => { document.getElementById('btn-modos').click(); const r = eval(P)(); r.livre = document.getElementById('btn-modo-livre')?.textContent.replace(/\s+/g, ' ').trim(); document.querySelector('#menu-modos [data-cmd="modos-voltar"]').click(); return r; }, PAUSA.toString().replace(/^/, '(') + ')');
+  // (item 58: o nome da câmera mora nas Opções da pausa, na linha Câmera)
   const opc = await pg.evaluate(() => {
     const vis = e => !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none';
+    document.getElementById('btn-opcoes')?.click();
     const b = document.getElementById('opcao-camera-livre');
-    return { botao: vis(b), texto: b?.textContent.trim(), seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')) };
+    const r = { botao: vis(b), texto: b?.textContent.trim(), seg: vis(document.querySelector('.segmentado[data-grupo="camera"]')) };
+    document.querySelector('#menu-opcoes [data-cmd="opcoes-voltar"]')?.click();
+    return r;
   });
   const textos = acoes.textos.join(' / ');
-  meta('D1 celular 844×390: a pausa do Livre — Continuar | Replay; Jogadores | Câmera; Recomeçar | Bola no meu pé; Modo de jogo; Ajuda (sem Editar time nem Reiniciar) — sem rolar, nada encosta nem fica cortado',
-    txtPausa(acoes), okPausa(acoes) && acoes.linhas === 5 && /Jogadores.*Câmera/.test(textos) && /Recomeçar.*Bola no meu pé/.test(textos) && /Modo de jogo/.test(textos) && /Ajuda/.test(textos) && !/Editar time|Reiniciar/.test(textos));
+  meta('D1 celular 844×390: a pausa do Livre na ordem do FC 24 (item 58) — Voltar ao jogo; Jogadores; Câmera; Recomeçar | Bola no meu pé; Replay; Opções; Modo de jogo; Ajuda (sem Editar time nem Reiniciar: 8 linhas) — sem rolar, nada encosta nem fica cortado',
+    txtPausa(acoes), okPausa(acoes) && acoes.linhas === 8 && naOrdem(acoes.textos, ORDEM_LIVRE) && /Jogadores.*Câmera/.test(textos) && /Recomeçar.*Bola no meu pé/.test(textos) && /Modo de jogo/.test(textos) && /Ajuda/.test(textos) && !/Editar time|Reiniciar/.test(textos));
   meta('D2 celular 844×390: os submenus Jogadores, Câmera (as 6 câmeras, Altura, Distância) e Modo de jogo (com "Modo Livre N contra M") sem rolar, nada encosta nem fica cortado',
     `Jogadores: ${txtPausa(jog)} · Câmera: ${txtPausa(cam)} (botões ${cam.botoes.join(', ')}) · Modo de jogo: ${txtPausa(modos)} ("${modos.livre}")`,
     okPausa(jog) && jog.id === 'menu-livre' && okPausa(cam) && cam.id === 'menu-camera-livre' && cam.botoes.length === 6 && /Altura/.test(cam.textos.join()) && /Distância/.test(cam.textos.join())
       && okPausa(modos) && /^Modo Livre \d+ contra \d+$/.test(modos.livre ?? ''));
-  meta('D3 celular: na coluna das opções o nome da câmera (abre o submenu Câmera) no lugar do TV | Aproximada',
+  meta('D3 celular: nas Opções da pausa (linha Câmera) o nome da câmera (abre o submenu Câmera) no lugar do TV | Aproximada',
     `botão ${opc.botao ? `à vista ("${opc.texto}")` : 'NÃO'}, segmentado ${opc.seg ? 'À VISTA' : 'escondido'}`, opc.botao && opc.texto === 'TV' && !opc.seg);
   await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.fecharMenu(); });
   await quadros(pg, 60);
@@ -612,25 +625,29 @@ const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' 
   const pg = s.pagina;
   await pg.goto(`${srv.url}?modo=livre&q=baixa&toque=1&entalhe=1&replay=0&comemoracao=0&semente=7`, { waitUntil: 'load' });
   await pronta(pg);
+  const sub = {};
+  for (const [nome, abre] of [['Jogadores', null], ['ações', '#menu-livre [data-cmd="livre-voltar"]'], ['Câmera', '#btn-livre-camera']]) {
+    sub[nome] = await pg.evaluate(([P, sel]) => { if (sel) document.querySelector(sel).click(); return eval(P)(); }, [PAUSA.toString().replace(/^/, '(') + ')', abre]);
+  }
+  // (item 58: o topo da pausa é a marca + a competição à esquerda e a pílula do placar + o X à direita; dentro da área segura.
+  // Medido no 1º nível: nos submenus do celular a faixa vira a tela inteira e só fica o X)
   const topo = await pg.evaluate(() => {
-    const j = document.querySelector('.janela-menu'), jr = j.getBoundingClientRect();
-    const vis = e => !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().width > 0;
-    const pecas = [document.querySelector('.janela-topo h2'), ...document.querySelectorAll('.janela-topo .chip, .janela-topo .btn-fechar')].filter(vis);
+    document.querySelector('#menu-camera-livre [data-cmd="livre-voltar"]')?.click();
+    const cs = getComputedStyle(document.documentElement), sa = v => parseFloat(cs.getPropertyValue(v)) || 0;
+    const jr = { left: sa('--sa-l'), right: innerWidth - sa('--sa-r') };
+    const vis = e => !!e && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden' && e.getBoundingClientRect().width > 0;
+    const pecas = [document.querySelector('#menu .pausa-marca') ?? document.querySelector('.janela-topo h2'), document.querySelector('#menu .janela-topo h2'), document.getElementById('pausa-placar'), document.querySelector('#menu .pausa-topo-dir .btn-fechar')].filter(vis);
     let folga = Infinity, fora = 0;
     for (let a = 0; a < pecas.length; a++) {
       const ra = pecas[a].getBoundingClientRect();
       if (ra.right > jr.right + 0.5 || ra.left < jr.left - 0.5) fora++;
       for (let b = a + 1; b < pecas.length; b++) { const rb = pecas[b].getBoundingClientRect(); folga = Math.min(folga, Math.max(rb.left - ra.right, ra.left - rb.right)); }
     }
-    return { folga, fora, n: pecas.length };
+    return { folga, fora, n: pecas.length, nivel: window.__golaco.pausa.nivel };
   });
-  const sub = {};
-  for (const [nome, abre] of [['Jogadores', null], ['ações', '#menu-livre [data-cmd="livre-voltar"]'], ['Câmera', '#btn-livre-camera']]) {
-    sub[nome] = await pg.evaluate(([P, sel]) => { if (sel) document.querySelector(sel).click(); return eval(P)(); }, [PAUSA.toString().replace(/^/, '(') + ')', abre]);
-  }
-  const okE = topo.n >= 3 && topo.folga >= 4 && topo.fora === 0 && Object.values(sub).every(p => p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0);
-  meta('E1 568×320: a barra da pausa sem encostar nem passar da janela; nos submenus e nas ações do Livre nada encosta, fica cortado ou passa da janela (a pausa rola nessa tela, como a da partida)',
-    `barra: ${topo.n} peças, folga ${topo.folga.toFixed(0)} px${topo.fora ? `, ${topo.fora} FORA` : ''}; ${Object.entries(sub).map(([k, p]) => `${k}: rola ${p.rola} px${p.encosta.length ? ', ENCOSTA ' + p.encosta.join(', ') : ''}${p.cortados.length ? ', CORTADO ' + p.cortados.join(', ') : ''}${p.fora.length ? ', FORA ' + p.fora.join(', ') : ''}`).join('; ')}`, okE);
+  const okE = topo.nivel === 'acoes' && topo.n >= 3 && topo.folga >= 4 && topo.fora === 0 && Object.values(sub).every(p => p.encosta.length === 0 && p.cortados.length === 0 && p.fora.length === 0);
+  meta('E1 568×320: o topo da pausa (marca, competição, pílula, X) sem encostar nem sair da área segura; nos submenus e nas ações do Livre nada encosta, fica cortado ou sai da área segura',
+    `topo (nível ${topo.nivel}): ${topo.n} peças, folga ${topo.folga.toFixed(0)} px${topo.fora ? `, ${topo.fora} FORA` : ''}; ${Object.entries(sub).map(([k, p]) => `${k}: rola ${p.rola} px${p.encosta.length ? ', ENCOSTA ' + p.encosta.join(', ') : ''}${p.cortados.length ? ', CORTADO ' + p.cortados.join(', ') : ''}${p.fora.length ? ', FORA ' + p.fora.join(', ') : ''}`).join('; ')}`, okE);
   meta('G3 568×320: sem erro no console', s.erros.length ? s.erros.slice(0, 3).join(' | ') : 'nenhum', s.erros.length === 0);
   errosTodos.push(...s.erros);
   await s.navegador.close();
@@ -640,7 +657,9 @@ const txtPausa = p => `rola ${p.rola} px, ${p.linhas} linhas [${p.textos.join(' 
 {
   const pedido = { ...PED_A, id: 'tL', modo: 'livre', livre: { linha: [3, 2], goleiro: [true, false] } };
   const json = JSON.stringify(JSON.stringify(pedido)).replace(/</g, '\\u003c');
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>TM</title></head><body style="margin:0;background:#000">
+  // (com a meta viewport, como o TM de verdade — legacy-total-match/index.html: sem ela, com isMobile, o quadro media 980 px de
+  // largura no "844×390")
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TM</title></head><body style="margin:0;background:#000">
 <script>
 localStorage.setItem('tm3d:pedido:tL', ${json});
 localStorage.removeItem('tm3d:resultado:tL');

@@ -178,7 +178,7 @@ import { criarVaoPlacas } from './render/vao-placas.js';
 import { PREJOGO } from './prejogo-roteiro.js';
 import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, marcasDoPasso } from './render/replay-anel.js';
 import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS, kitTecnico, treinadorDoTime } from './tecnicos.js';
-import { OCULTA } from './render/jogador3d.js';
+import { OCULTA, KITS } from './render/jogador3d.js';
 import {
   planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
   tempoCena, duracaoCena, infoAtores,
@@ -195,6 +195,11 @@ import { registrarElenco } from './elenco.js';
 import { criarLances, lancesPasso, decidirReplay, registrarReplay, montaNoProximoPasso, REPLAY_PARADA } from './lances.js';
 // a súmula da partida (o resultado do TM e as estatísticas das cenas; puro, só lê: fora do fecho do hash)
 import { criarSumula, sumulaPasso, resultadoTM, minutoTM, estatisticas as estatisticasDaSumula, autoresPorTime, melhorEmCampo } from './sumula.js';
+// a pausa do item 58: o cartão do meu time lê o rascunho da escalação (o time que VAI valer, com a edição na fila) — puros, só
+// leem; a cor do time sem o TM é a da escalação do pré-jogo
+import { rascunhoDe } from './escalacao.js';
+import { FORMACOES } from './formacoes.js';
+import { COR_UNIFORME } from './escalacao-tela.js';
 
 const { PASSO, BOTAO, QUALIDADE, VERSAO, FALTAS } = CFG;
 const ID_HUMANO = S.ID_HUMANO ?? 0;
@@ -322,7 +327,9 @@ function temWebGL2() {
 // (aoFaixaFinal: a faixa do fim de jogo saiu — os controles de toque voltam: o arco é refeito com eles na tela)
 // (layoutToque: a geometria dos controles de toque para a faixa de baixo — o minimapa embaixo no meio e os nomes nos cantos,
 // itens 59 e 60; null sem toque ou antes de a entrada existir)
+// (aoAbrirMenu: a pausa abriu — o cartão do time e a competição são refeitos: atualizarPausa)
 const hud = criarHud({ aoComando: comando, tm: TM ? { trava: TRAVA_TM != null, timeHumano: TIME_HUMANO } : null, online: ONLINE,
+  aoAbrirMenu: () => atualizarPausa(true),
   aoFaixaFinal: final => { if (!final) try { entrada?.reposicionar?.(); } catch (_) { /* antes de a entrada existir */ } },
   layoutToque: () => { try { return entrada?.layoutToque?.() ?? null; } catch (_) { return null; } } });
 // "Editar time" (partida; editor-time.js sob demanda: carregarSobDemanda): a tela entrega a edição no PRONTO (aoPronto)
@@ -430,6 +437,18 @@ const SOB = {
     baixar: () => import('./render/cadeiras3d.js'),
     criar(md) { MOD_CAD = md; if (campo) campo.ligarCadeiras(md); },
   },
+  // a pausa do item 58: o cartão do meu time e a tabela das Estatísticas (js/pausa-tela.js + css/pausa.css) e a fonte da cara do
+  // TM (a Inter TM: sem ?tm ela só baixa aqui ou com a pausa na tela — fora do download inicial). A lista da pausa é do 1º quadro
+  // (abre no 1º Esc); o cartão chega quando isto chega (data-pronto no #pausa-time)
+  pausa: {
+    carga: null, ok: false,
+    baixar: () => Promise.all([import('./pausa-tela.js'), cssSobDemanda('css/pausa.css', 'css/prejogo.css'), fontesPausa()]).then(([md]) => md),
+    criar(md) {
+      pausaTela = md.criarPausaTela({ cartao: document.getElementById('pausa-time'), est: document.querySelector('#menu-estatisticas .pausa-est') });
+      pausaChave = null;
+      if (hud.menuAberto) atualizarPausa(true);
+    },
+  },
   cenas: {
     carga: null, ok: false,
     baixar: () => Promise.all([import('./cena-cartao.js'), import('./cenas-config.js'), import('./render/cartao3d.js'), import('./cenas-tela.js'),
@@ -456,6 +475,11 @@ function cssSobDemanda(href, antes) {
     const ref = document.querySelector(`link[rel="stylesheet"][href="${antes}"]`);
     if (ref) ref.before(l); else document.head.append(l);
   });
+}
+/** A Inter TM nos 3 pesos da pausa (400, 600 e 800): baixa junto com o módulo dela; resolve sempre (sem a fonte, a do sistema). */
+function fontesPausa() {
+  if (!document.fonts?.load) return Promise.resolve();
+  return Promise.all(['400', '600', '800'].map(p => document.fonts.load(`${p} 15px "Inter TM"`).catch(() => null))).then(() => undefined, () => undefined);
 }
 /** Carrega (uma vez) o módulo sob demanda `nome`, ou todos sem nome. Promise; falha de rede: tenta de novo no próximo pedido. */
 function carregarSobDemanda(nome) {
@@ -2724,6 +2748,7 @@ function quadro(agoraMs, desenhar = true) {
   if (pausaAntes && !pz) { entrada.soltarTudo(true); entrada.ler(yawEntrada(), agoraMs); }
   pausaAntes = pz;
   entrada.definirMenu?.(hud.menuAberto || hud.ajudaAberta);
+  if (hud.menuAberto) atualizarPausa(false);
   if (mundo.online && PAG_ONLINE) quadroOnline(dt, ent, agoraMs);
   else if (cenaSub) {
     // cena de substituição: a simulação fica parada (como no replay; o laço não recupera o tempo); pausa, aba escondida e
@@ -3007,6 +3032,95 @@ function aoFecharEditor() {
   entrada?.soltarTudo();
   entrada?.bloquear?.(false);
 }
+
+// ------------------------------------------------------------------ a pausa do item 58 (o cartão do meu time e as Estatísticas)
+// pausaTela: js/pausa-tela.js (sob demanda: SOB.pausa; null até chegar); pausaChave: a chave do time desenhado (só refaz quando
+// ela muda — no online o jogo anda por baixo); comandosVistos: os (c, v) que chegaram ao comando() (os testes conferem que cada
+// comando da pausa chega pelo toque, pelo teclado e pelo controle; comandosSecos: os que os testes registram sem executar)
+let pausaTela = null, pausaChave = null, pausaEstMs = 0;
+const comandosVistos = [];
+let comandosSecos = null;
+const NOMES_MENTALIDADE = { '-2': 'Ultradefensiva', '-1': 'Defensiva', 0: 'Equilibrada', 1: 'Ofensiva', 2: 'Ultraofensiva' };
+const ITENS_EST_PAUSA = ['posse', 'chutes', 'noAlvo', 'escanteios', 'faltas', 'cartoes'];
+/** O nome no topo da faixa da pausa: a competição do TM (ou o título do pedido), sem ele o modo. */
+function textoCompeticao() {
+  if (TM) return IDENT?.competicao || PEDIDO_TM?.partida?.competicao || PEDIDO_TM?.titulo || 'Total Match';
+  if (ONLINE) return 'Partida online';
+  return { partida: 'Amistoso', penaltis: 'Disputa de pênaltis', livre: 'Modo Livre', ataque: 'Treino de ataque', conducao: 'Treino de condução' }[mundo.livre ? 'livre' : mundo.disputa ? 'penaltis' : mundo.modo] ?? 'Amistoso';
+}
+/** A chave do cartão (barata, 1× por quadro com a pausa aberta): o que muda o que ele mostra. */
+function chavePausaTime() {
+  const m = mundo;
+  if (!m.times || m.disputa) return 'sem';
+  const t = m.times[TIME_HUMANO], ed = edicaoNaFila && edicaoNaFila.time === TIME_HUMANO ? edicaoNaFila : null;
+  return `${m.modo}|${t.formacao}|${t.versao}|${t.saiu.length}|${t.pendente ? JSON.stringify(t.pendente.substituicoes ?? []) : ''}|${(t.expulsos ?? []).join(',')}`
+    + `|${ed ? JSON.stringify([ed.formacao, ed.vagas, ed.substituicoes, ed.tatica?.mentalidade]) : ''}|${m.partida?.contagem?.cartoes ?? 0}`
+    + `|${TRAVA_TM ?? m.controlado?.[TIME_HUMANO] ?? ''}|${m.livre ? Object.keys(m.livre.fora).join(',') : ''}|${t.tatica?.mentalidade}`;
+}
+/**
+ * Os dados do cartão do meu time (js/pausa-tela.js time): o rascunho da escalação (escalacao.js rascunhoDe: a formação, as vagas
+ * com quem entra, a tática e os expulsos — o time que VAI valer, com a edição na fila), a ficha de cada um (fichaDe), os amarelos
+ * (m.partida.cartoes) e "você" (o controlado ou o travado). null nos treinos (sem m.times) e na disputa. No Livre, só quem está em
+ * campo (as vagas fora do m.livre não aparecem).
+ */
+function dadosPausaTime() {
+  const m = mundo;
+  if (!m.times || m.disputa) return null;
+  const T = TIME_HUMANO, tm = m.times[T];
+  const r = rascunhoDe(tm, edicaoNaFila && edicaoNaFila.time === T ? edicaoNaFila : null, T);
+  const forma = FORMACOES[r.formacao];
+  if (!forma) return null;
+  const el = ELENCOS[tm.elenco];
+  const entra = new Set(r.substituicoes.map(x => x.entra)), expulsos = new Set(r.expulsos ?? []);
+  const fora = m.livre ? new Set(Object.keys(m.livre.fora ?? {}).map(Number)) : null;
+  const voce = TRAVA_TM ?? m.controlado?.[T] ?? null;
+  const cartoes = m.partida?.cartoes ?? {};
+  const fichas = [];
+  for (const v of forma.vagas) {
+    const id = r.vagas[v.id];
+    if (id == null || (fora && fora.has(id))) continue;
+    const f = fichaDe(id);
+    const expulso = !fora && expulsos.has(id);
+    if (!f && !expulso) continue;
+    fichas.push({ vaga: v.id, fila: v.fila, col: v.col, id, num: f?.num ?? '', nome: f?.camisa ?? f?.nome ?? '', gol: v.pos === 'GOL',
+      amarelos: cartoes[id] ?? 0, expulso, entra: entra.has(id), voce: id === voce });
+  }
+  const chaveGol = el?.uniforme?.goleiro ?? `goleiro${T}`;
+  return {
+    nome: el?.nome ?? hud.times[T]?.nome ?? '', sigla: el?.sigla ?? '', escudo: document.getElementById(`escudo-${T}`)?.getAttribute('href') ?? null,
+    cor: IDENT?.hud?.placar?.[T] ?? COR_UNIFORME[el?.uniforme?.linha] ?? '#22c55e',
+    corGol: IDENT?.kits?.[chaveGol]?.camisa ?? KITS[chaveGol]?.camisa ?? null,
+    formacao: r.formacao, mentalidade: m.livre ? null : NOMES_MENTALIDADE[r.tatica?.mentalidade ?? 0] ?? null,
+    texto: m.livre ? (document.getElementById('estado-livre')?.textContent || null) : null,
+    editavel: m.modo === 'partida' && !m.livre && TRAVA_TM == null, fichas,
+  };
+}
+/** As estatísticas da partida até agora (a súmula; o mesmo formato do painel da cena do intervalo). */
+function dadosPausaEst() {
+  if (!sumula || !mundo.partida || mundo.livre || mundo.disputa) return null;
+  return { titulo: 'Estatísticas da partida', times: timesDaCena(), itens: ITENS_EST_PAUSA, valores: estatisticasDaSumula(sumula, null) };
+}
+/**
+ * A pausa aberta (a cada quadro; abrindo = ao abrir): a linha dos comandos pelo último meio, a competição, o cartão do time quando
+ * a chave muda e, no online (o jogo anda por baixo), as Estatísticas à vista 1× por segundo. Sem o módulo, pede (sob demanda).
+ */
+function atualizarPausa(abrindo = false) {
+  if (entrada) hud.definirEntrada(entrada.ultimoMeio);
+  if (abrindo) hud.definirCompeticao(textoCompeticao());
+  if (!pausaTela) { if (abrindo) carregarSobDemanda('pausa').catch(() => {}); return; }
+  const ch = chavePausaTime();
+  if (abrindo || ch !== pausaChave) { pausaChave = ch; pausaTela.time(dadosPausaTime()); }
+  if (mundo.online && hud.nivelMenu === 'estatisticas') {
+    const agora = performance.now();
+    if (agora - pausaEstMs > 1000) { pausaEstMs = agora; pausaTela.estatisticas(dadosPausaEst()); }
+  }
+}
+/** O submenu Estatísticas: os números de agora (refeitos a cada abertura). */
+function abrirEstatisticas() {
+  const preencher = () => { pausaEstMs = performance.now(); pausaTela?.estatisticas(dadosPausaEst()); };
+  if (pausaTela) preencher(); else carregarSobDemanda('pausa').then(preencher, () => {});
+  hud.submenu('estatisticas');
+}
 /** Troca o modo da página (partida ou treino) sem recarregar; o endereço guarda a escolha. */
 function trocarModo(v) {
   if (!MODOS.includes(v)) return;
@@ -3195,6 +3309,10 @@ function rotuloModoLivre() {
 }
 
 function comando(c, v) {
+  // (os testes: cada comando que chega, e os "secos" só registrados — a pausa do item 58 confere os 3 meios)
+  comandosVistos.push([c, v ?? null]);
+  if (comandosVistos.length > 400) comandosVistos.splice(0, 200);
+  if (comandosSecos?.has(c)) return;
   // Modo Livre: o submenu Jogadores e os recomeços (livre-pagina.js)
   if (c.startsWith('livre-')) { PAG_LIVRE?.comando(c, v); return; }
   switch (c) {
@@ -3271,8 +3389,12 @@ function comando(c, v) {
       trocarMundo(novoMundo(), { prejogo: mundo.partida?.estado === 'fim' ? 'preferencia' : 'escalacao' });
       if (!prejogo?.ativo) hud.evento('reinicio');
       break;
-    case 'modos': hud.submenuModos(true); break;
-    case 'modos-voltar': hud.submenuModos(false); break;
+    // os submenus da pausa (item 58): Modo de jogo (no TM, Cenas da partida), Opções e Estatísticas; o Voltar de cada um volta
+    // ao 1º nível com o foco no item que o abriu
+    case 'modos': hud.submenu('modos'); break;
+    case 'opcoes': hud.submenu('opcoes'); break;
+    case 'estatisticas': abrirEstatisticas(); break;
+    case 'modos-voltar': case 'opcoes-voltar': case 'estatisticas-voltar': hud.submenu(null); break;
     case 'modo': hud.fecharMenu(); trocarModo(v); break;
     case 'ajuda': hud.abrirAjuda(); break;
     case 'tela-cheia':
@@ -3459,7 +3581,7 @@ async function iniciar() {
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
   // os controles de toque apareceram/sumiram: o topo se ajusta e o padrão do minimapa (celular × PC) muda junto
-  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, tela: () => (telaMira.ok ? telaMira : null), aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
+  entrada = criarEntrada({ forcarToque: params.get('toque') === '1', aoAcao: tratarAcao, menuAberto: () => hud.menuAberto || hud.ajudaAberta, tela: () => (telaMira.ok ? telaMira : null), aoMudarLayout: () => { hud.ajustarTopo(); hud.definirEstado({ minimapa: minimapaLigado() }); } });
   // Total Match, "só o meu jogador": sem TROCAR nem GOLEIRO na tela (a entrada mascara as teclas e o mundo recusa a troca)
   // Total Match (html.tm; js/tm-cara.js): a Inter do TM chega depois do 1º layout — os nomes dos botões de toque (medidos
   // pelo canvas) e o topo do HUD medem de novo com ela. Sem ?tm o aviso 'tm:fontes' nunca vem
@@ -3488,6 +3610,7 @@ async function iniciar() {
     minimapa: minimapaLigado(), nomes: nomesLigados(),
   });
   hud.definirTimes(timesDoMundo(mundo));
+  hud.definirCompeticao(textoCompeticao());
   // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
   const somLigado = prefs.som !== false, volume = Number.isFinite(prefs.volume) ? prefs.volume : undefined;
   if (!PRINTS) {
@@ -3589,6 +3712,8 @@ function trocarMundo(m, opc = {}) {
   if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, lancaNaDefesa(mundo));
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
   hud.definirTimes(timesDoMundo(mundo));
+  hud.definirCompeticao(textoCompeticao());
+  pausaChave = null;
   hud.faixa(null);
   PAG_LIVRE?.ligarCamera(!!mundo.livre);
   if (mundo.livre) PAG_LIVRE?.marcar();
@@ -3705,9 +3830,9 @@ const api = {
    * chegaram — os testes de navegador esperam por ele depois do pronto (waitForFunction); estado = {replay, editor, cenas}.
    */
   sobDemanda: {
-    ja() { if (!SOB.replay.ok || !SOB.editor.ok || !SOB.cenas.ok || !SOB.cadeiras.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok; },
-    get carregado() { return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok; },
-    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok, cadeiras: SOB.cadeiras.ok }; },
+    ja() { if (!SOB.replay.ok || !SOB.editor.ok || !SOB.cenas.ok || !SOB.cadeiras.ok || !SOB.pausa.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok && SOB.pausa.ok; },
+    get carregado() { return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok && SOB.pausa.ok; },
+    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok, cadeiras: SOB.cadeiras.ok, pausa: SOB.pausa.ok }; },
   },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */
   editor: {
@@ -3896,6 +4021,25 @@ const api = {
   definirCamera(m) { comando('camera', m); },
   abrirMenu() { hud.abrirMenu(true); },
   fecharMenu() { hud.fecharMenu(); },
+  /**
+   * A pausa do item 58 (testes): aberta, o nível ('acoes', 'opcoes', 'modos', 'estatisticas', 'livre', 'camera-livre'), sub(nome)
+   * abre um submenu (null volta), tela = o que o cartão e a tabela desenham (js/pausa-tela.js estado), pronta = o módulo chegou,
+   * carregar() (Promise), dados() = os do cartão agora.
+   */
+  pausa: {
+    get aberta() { return hud.menuAberto; },
+    get nivel() { return hud.nivelMenu; },
+    sub(nome) { hud.submenu(nome ?? null); if (nome === 'estatisticas') abrirEstatisticas(); return hud.nivelMenu; },
+    get tela() { return pausaTela ? pausaTela.estado : null; },
+    get pronta() { return SOB.pausa.ok; },
+    carregar() { return carregarSobDemanda('pausa').then(() => true); },
+    dados() { return dadosPausaTime(); },
+    competicao: () => textoCompeticao(),
+  },
+  /** Os comandos que chegaram ao comando() ([c, v]; os últimos 200–400) e os "secos" (só registrados: null = todos executam). */
+  get comandosVistos() { return comandosVistos.map(x => x.slice()); },
+  limparComandosVistos() { comandosVistos.length = 0; },
+  secarComandos(lista) { comandosSecos = lista ? new Set(lista) : null; },
   /** Faixa do intervalo/fim por cima dos prints (conferência do HUD). */
   mostrarFaixa(f) { hud.faixa(f, true); },
   /** A entrada já tem os botões da defesa da Etapa 3 e o bloquear() do editor? */

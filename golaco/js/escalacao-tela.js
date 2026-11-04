@@ -14,8 +14,9 @@ import { ELENCOS, fichaDe } from './elenco.js';
 import { FORMACOES } from './formacoes.js';
 import { svgCampinho, posicaoNaTela } from './campinho.js';
 
-// cor da faixa do time pelo uniforme de linha (fictícios: o Golaço FC preto e verde, o Ventania FC branco)
-const COR_UNIFORME = { linha0: '#19e07a', linha1: '#e9ecee' };
+// cor da faixa do time pelo uniforme de linha (fictícios: o Golaço FC preto e verde, o Ventania FC branco); a pausa usa a mesma
+// no cartão do time (js/pausa-tela.js, pelo main.js)
+export const COR_UNIFORME = { linha0: '#19e07a', linha1: '#e9ecee' };
 const PROPORCAO = 105 / 68;
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const reduz = () => typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

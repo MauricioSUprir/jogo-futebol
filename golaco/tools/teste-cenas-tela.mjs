@@ -665,7 +665,8 @@ if (roda('C')) try {
         const jr = j?.getBoundingClientRect();
         const cortados = bs.filter(b => b.scrollWidth > b.clientWidth + 1 || [...b.querySelectorAll('small')].some(s => s.scrollWidth > s.clientWidth + 1)).map(b => b.id);
         const fora = bs.filter((b, k) => !cx[k] || (jr && (cx[k].x0 < jr.left - 0.5 || cx[k].x1 > jr.right + 0.5))).map(b => b.id);
-        const out = { rola: j ? j.scrollHeight - j.clientHeight : NaN, ids: bs.map(b => b.id), textos: bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()), visiveis: cx.filter(Boolean).length, folgaMin, cortados, fora };
+        // (item 58: a janela não rola mais — quem rolaria é o corpo da faixa ou o nível à vista)
+        const out = { rola: j ? Math.max(j.scrollHeight - j.clientHeight, ...[...document.querySelectorAll('#menu .menu-corpo, #menu .menu-acoes:not([hidden])')].map(e => e.scrollHeight - e.clientHeight)) : NaN, ids: bs.map(b => b.id), textos: bs.map(b => b.textContent.replace(/\s+/g, ' ').trim()), visiveis: cx.filter(Boolean).length, folgaMin, cortados, fora };
         const btn = document.getElementById('btn-cenas'), est = () => document.getElementById('estado-cenas')?.textContent.trim();
         if (btn && g.cenas) {
           out.antes = { txt: est(), ligado: g.cenas.ligado };

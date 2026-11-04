@@ -387,6 +387,8 @@ if (roda('D')) try {
       '≥ 30 quadros; |x| ≤ 0,6; |y| ≤ 0,8; 0', !!v11 && v11.n >= 30 && v11.pior <= 0.6 && v11.piorY <= 0.8 && v11.atras === 0);
     // V6b: a opção da pausa desligada no meio do jogo: o lance armado não toca
     await pg.evaluate(() => window.__golaco.abrirMenu());
+    // (item 58: os replays automáticos moram no submenu Opções da pausa)
+    await pg.evaluate(() => document.getElementById('btn-opcoes')?.click());
     // o clique no próprio botão (o handler da pausa): o page.click espera a página "estabilizar" pelo requestAnimationFrame e,
     // com o relógio manual, chegou a esperar 120 s numa rodada (22/10) — o que se mede aqui é a opção, não o ponteiro
     await pg.waitForSelector('#menu .segmentado[data-grupo="replayAuto"] button[data-valor="desligado"]', { state: 'visible', timeout: 30000 });

@@ -3,13 +3,14 @@
 // dos testes (__golaco.livre). Carregado por import dinâmico junto com livre.js (main.js carregarLivre): sem o Livre nada
 // disto entra no download (teste-carga). A lógica (pura) é a do livre.js; contrato "Modo Livre" no CONTRATOS.md.
 //
-// A pausa do Livre: o HTML (os botões data-so="livre", os submenus #menu-livre e #menu-camera-livre, o botão da câmera na
-// coluna das opções) e o CSS são postos aqui na 1ª vez — fora do download sem o Livre. As ações (≤ 5 linhas: a pausa cabe
-// sem rolar no celular deitado, tools/teste-livre-tela.mjs): Continuar | Replay; Jogadores | Câmera; Recomeçar | Bola no
-// meu pé; Modo de jogo (com ?tm, "Voltar ao Total Match"); Ajuda. O Editar time e o Reiniciar não aparecem (data-so).
+// A pausa do Livre: o HTML (os botões data-so="livre", os submenus #menu-livre e #menu-camera-livre, o botão da câmera nas
+// Opções) e o CSS são postos aqui na 1ª vez — fora do download sem o Livre. O 1º nível (a pausa do item 58: 8 linhas, cabe sem
+// rolar de 844×390 a 568×320, tools/teste-livre-tela.mjs e teste-pausa-tela.mjs): Voltar ao jogo; Jogadores; Câmera;
+// Recomeçar | Bola no meu pé (a única linha com dois); Replay; Opções; Modo de jogo (com ?tm, "Voltar ao Total Match" por
+// último); Ajuda. O Editar time, as Estatísticas e o Reiniciar não aparecem (data-so).
 // Submenu Jogadores: o total de cada lado com −/+ e o goleiro (vale ao sair da pausa). Submenu Câmera: as 6 câmeras
-// (render/camera-livre.js) e Altura/Distância 0–20; na coluna das opções o segmentado TV | Aproximada dá lugar a um
-// botão com o nome da câmera que abre o submenu. A câmera, a Altura e a Distância ficam nas prefs da página
+// (render/camera-livre.js) e Altura/Distância 0–20; nas Opções o segmentado TV | Aproximada dá lugar a um botão com o nome
+// da câmera que abre o submenu. A câmera, a Altura e a Distância ficam nas prefs da página
 // (golaco.prefs.v1: cameraLivre, cameraAjuste); a da partida (prefs.camera) não muda. C/R3 = a próxima câmera.
 //
 // A escolha fica na visão do HUMANO ([meu time, adversário]); o mundo usa os índices dos TIMES (escolhaParaTimes troca os
@@ -21,36 +22,40 @@ import { CAMERAS_LIVRE, NOME_CAMERA, AJUSTE, criarCameraLivre, fatorAjuste } fro
 
 const CHAVE = 'golaco.livre.v1';
 const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 12l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+// (a pausa do item 58: os botões dos submenus em pílula vêm do estilo.css — bloco "Pausa"; aqui só o que é do Livre)
 const CSS = `
-.livre-time { display: flex; flex-wrap: wrap; align-items: center; column-gap: 6px; row-gap: 2px; min-height: 48px; }
-/* o nome inteiro: "Meu time" e "Adversário" numa linha própria, com o −/+ e o Goleiro embaixo (ao lado deles o nome
-   cortava: "Adversá…" no PC, "M." e "A.." em 740×360; quebrando só quando não cabe, as duas linhas ficavam diferentes);
-   Altura e Distância (sem o Goleiro) cabem ao lado e só descem se faltar espaço */
-.livre-rotulo { flex: 1 0 auto; font-weight: 700; white-space: nowrap; }
-.livre-lado .livre-rotulo { flex-basis: 100%; line-height: 1.2; }
-.livre-ctrl { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
-.livre-lado .livre-ctrl { margin-left: 0; }
-.livre-time .btn { flex: none; justify-content: center; padding: 0 10px; }
-.livre-passo { width: 44px; font-size: 20px; }
-.livre-n { flex: none; width: 2.2em; text-align: center; font-size: 20px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.livre-gol[aria-pressed="false"] { opacity: 0.55; }
-#menu-livre .btn[aria-disabled="true"], #menu-camera-livre .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
-/* as linhas do Livre nas ações: o nome numa linha só (quebrado, "Bola no meu pé" fazia a pausa rolar 6 px em 844×390) */
-#menu-acoes .linha-cenas[data-so="livre"] .btn { padding-left: 10px; padding-right: 10px; white-space: nowrap; }
-/* as 6 câmeras em 2 linhas de 3; a do meio mais larga (Aproximada, Atrás): com 3 iguais, "Aproximada" cortava em 844×390 */
-.livre-cameras { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr); gap: 6px; }
-.livre-cameras .btn { justify-content: center; min-width: 0; padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 760px) { .livre-cameras .btn, #menu-acoes .linha-cenas[data-so="livre"] .btn { font-size: 13px; } }
-.livre-cameras .btn[aria-pressed="true"] { border-color: var(--verde); color: var(--verde); }
-.btn-camera-livre { display: none; }
-html.em-livre .segmentado[data-grupo="camera"] { display: none; }
-html.em-livre .btn-camera-livre {
-  display: flex; align-items: center; justify-content: center; height: 42px; padding: 0 12px; cursor: pointer; min-width: 0;
-  font: inherit; font-size: 13px; font-weight: 700; color: var(--preto); background: var(--verde); border: 3px solid var(--preto);
-  outline: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* os submenus Jogadores e Câmera: cada linha com o nome à esquerda e o −/+ (e o Goleiro) à direita */
+#menu .livre-time { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 4px; min-height: 44px; }
+#menu .livre-rotulo { flex: 1 1 auto; min-width: 0; font: 700 14px / 1.2 var(--p-fonte); color: var(--p-texto); white-space: nowrap; }
+#menu .livre-ctrl { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
+#menu .livre-time .btn { flex: none; justify-content: center; min-width: 44px; padding: 0 14px; }
+#menu .livre-time .livre-passo { width: 44px; padding: 0; font-size: 20px; }
+#menu .livre-n { flex: none; width: 2.2em; text-align: center; font: 800 20px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
+#menu .livre-gol[aria-pressed="true"] { border-color: var(--p-verde); color: var(--p-verde-cl); }
+#menu .livre-gol[aria-pressed="false"] { opacity: 0.55; }
+#menu #menu-livre .btn[aria-disabled="true"], #menu #menu-camera-livre .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }
+/* as 6 câmeras em 2 linhas de 3; a do meio mais larga (Aproximada, Atrás); a escolhida em degradê */
+#menu .livre-cameras { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr); gap: 6px; }
+#menu .livre-cameras .btn { justify-content: center; min-width: 44px; padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; }
+#menu .livre-cameras .btn[aria-pressed="true"] { background: linear-gradient(120deg, #4ade80, #22c55e); color: var(--p-preto); border-color: transparent; font-weight: 800; }
+#menu .submenu-livre .livre-pares { display: flex; flex-direction: column; gap: 6px; }
+/* no celular (a faixa larga): Altura | Distância lado a lado; Meu time e Adversário um embaixo do outro (com o Goleiro, o −/+ não
+   cabia em meia faixa de 568×320) */
+@media (max-height: 480px) {
+  #menu #menu-camera-livre .livre-pares { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; row-gap: 6px; }
+  #menu .livre-time { min-height: 40px; }
+  #menu .livre-n { width: 1.7em; }
 }
-html.em-livre .btn-camera-livre:focus-visible { outline: 2px solid var(--verde); outline-offset: 1px; }
-@media (max-height: 480px) { html.em-livre .btn-camera-livre { height: 38px; } }`;
+/* Opções → Câmera: no Livre, o nome da câmera (abre o submenu Câmera) no lugar do segmentado TV | Aproximada */
+#menu .btn-camera-livre { display: none; }
+html.em-livre #menu .segmentado[data-grupo="camera"] { display: none; }
+html.em-livre #menu .btn-camera-livre {
+  display: inline-flex; align-items: center; justify-content: center; flex: none; min-width: 44px; height: 32px; padding: 0 14px; cursor: pointer;
+  font: 800 13px / 1 var(--p-fonte); color: var(--p-preto); background: linear-gradient(120deg, #4ade80, #22c55e); border: 0; border-radius: 8px;
+  white-space: nowrap; outline: 0;
+}
+html.em-livre #menu .btn-camera-livre:focus-visible, html.em-livre #menu .btn-camera-livre.selecionado { outline: 2px solid var(--p-verde-cl); outline-offset: 1px; }
+@media (max-height: 480px) and (max-width: 600px) { html.em-livre #menu .btn-camera-livre { height: 30px; } }`;
 const CHAVE_CAM = 'cameraLivre', CHAVE_AJUSTE = 'cameraAjuste';
 
 /** Lê a escolha (visão do humano) e a põe nos limites: meu time 1–10 de linha, o adversário 0–10; goleiros booleanos. */
@@ -91,18 +96,18 @@ export function criarPaginaLivre(ctx) {
     const st = doc.createElement('style');
     st.id = 'estilo-livre'; st.textContent = CSS;
     doc.head.appendChild(st);
-    const acoes = $('menu-acoes'), editar = acoes?.querySelector('[data-cmd="editar-time"]');
+    // o 1º nível (item 58): Jogadores e Câmera soltos e Recomeçar | Bola no meu pé numa linha só (a única exceção da lista: a
+    // pausa do Livre fica com 8 linhas e cabe em 568×320), antes dos treinos e do Replay
+    const acoes = $('menu-acoes'), ref = acoes?.querySelector('[data-cmd="recomecar"]') ?? acoes?.querySelector('[data-cmd="replay"]');
     if (acoes) {
       const t = doc.createElement('template');
-      t.innerHTML = `<div class="linha-cenas" role="group" aria-label="Modo Livre" data-so="livre">
-<button class="btn" type="button" data-cmd="livre-jogadores" id="btn-livre-jogadores">Jogadores <small id="estado-livre"></small></button>
-<button class="btn" type="button" data-cmd="livre-camera" id="btn-livre-camera">Câmera <small id="estado-camera-livre"></small></button>
-</div>
-<div class="linha-cenas" role="group" aria-label="Recomeçar" data-so="livre">
-<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="meio" id="btn-livre-meio">Recomeçar <small>bola no meio</small></button>
-<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="pe" id="btn-livre-pe">Bola no meu pé <small>onde estou</small></button>
+      t.innerHTML = `<button class="btn" type="button" data-cmd="livre-jogadores" id="btn-livre-jogadores" data-so="livre"><span class="item-txt">Jogadores</span> <small class="estado" id="estado-livre"></small></button>
+<button class="btn" type="button" data-cmd="livre-camera" id="btn-livre-camera" data-so="livre"><span class="item-txt">Câmera</span> <small class="estado" id="estado-camera-livre"></small></button>
+<div class="linha-par" role="group" aria-label="Recomeçar" data-so="livre">
+<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="meio" id="btn-livre-meio" aria-describedby="desc-livre-meio"><span class="item-txt">Recomeçar</span> <small class="desc" id="desc-livre-meio">bola no meio</small></button>
+<button class="btn" type="button" data-cmd="livre-recomecar" data-valor="pe" id="btn-livre-pe" aria-describedby="desc-livre-pe"><span class="item-txt">Bola no meu pé</span> <small class="desc" id="desc-livre-pe">onde estou</small></button>
 </div>`;
-      acoes.insertBefore(t.content, editar ? editar.nextSibling : acoes.firstChild);
+      acoes.insertBefore(t.content, ref ?? null);
     }
     const modos = $('menu-modos');
     if (modos) {
@@ -117,20 +122,24 @@ export function criarPaginaLivre(ctx) {
 <button class="btn livre-passo" type="button" data-cmd="livre-ajuste-mais" data-valor="${id}" aria-label="${nome}: mais">+</button></span></div>`;
       const t = doc.createElement('template');
       // o submenu Jogadores (abre no lugar da lista de ações, como o "Modo de jogo"): o TOTAL de cada lado (de linha +
-      // goleiro), −/+ um de linha e o goleiro liga/desliga; vale ao sair da pausa (Jogar ou Continuar), sem recomeçar
-      t.innerHTML = `<div class="menu-acoes submenu-livre" id="menu-livre" hidden>
-<button class="btn btn-voltar" type="button" data-cmd="livre-voltar">${SETA}Voltar</button>
+      // goleiro), −/+ um de linha e o goleiro liga/desliga; vale ao sair da pausa (Jogar ou Voltar ao jogo), sem recomeçar
+      t.innerHTML = `<div class="menu-acoes submenu-livre" id="menu-livre" role="group" aria-labelledby="titulo-livre" hidden>
+<div class="sub-topo"><button class="btn btn-voltar" type="button" data-cmd="livre-voltar">${SETA}Voltar</button><h3 class="sub-titulo" id="titulo-livre">Jogadores</h3></div>
+<div class="livre-pares">
 ${lado('meu', 'Meu time')}
 ${lado('adv', 'Adversário')}
+</div>
 <button class="btn btn-primario" type="button" data-cmd="livre-jogar" id="btn-livre-jogar">Jogar</button></div>
-<div class="menu-acoes submenu-livre" id="menu-camera-livre" hidden>
-<button class="btn btn-voltar" type="button" data-cmd="livre-voltar">${SETA}Voltar</button>
+<div class="menu-acoes submenu-livre" id="menu-camera-livre" role="group" aria-labelledby="titulo-camera-livre" hidden>
+<div class="sub-topo"><button class="btn btn-voltar" type="button" data-cmd="livre-voltar">${SETA}Voltar</button><h3 class="sub-titulo" id="titulo-camera-livre">Câmera</h3></div>
 <div class="livre-cameras" role="group" aria-label="Câmera">${CAMERAS_LIVRE.map(c => `<button class="btn" type="button" data-cmd="livre-cam" data-valor="${c}" aria-pressed="false">${NOME_CAMERA[c]}</button>`).join('')}</div>
+<div class="livre-pares">
 ${linhaAjuste('altura', 'Altura')}
-${linhaAjuste('distancia', 'Distância')}</div>`;
+${linhaAjuste('distancia', 'Distância')}
+</div></div>`;
       modos.after(t.content);
     }
-    // na coluna das opções: o nome da câmera (abre o submenu) no lugar do segmentado TV | Aproximada (só no Livre: CSS)
+    // nas Opções (linha Câmera): o nome da câmera (abre o submenu) no lugar do segmentado TV | Aproximada (só no Livre: CSS)
     const seg = doc.querySelector('#menu .segmentado[data-grupo="camera"]');
     if (seg) {
       const b = doc.createElement('button');
@@ -255,7 +264,8 @@ ${linhaAjuste('distancia', 'Distância')}</div>`;
     const volta = aberto;
     aberto = qual;
     acoes.hidden = !!qual; lv.hidden = qual !== 'jogadores'; lc.hidden = qual !== 'camera';
-    const modos = $('menu-modos'); if (modos) modos.hidden = true;
+    for (const id of ['menu-modos', 'menu-opcoes', 'menu-estatisticas']) { const e = $(id); if (e) e.hidden = true; }
+    hud.marcarNivel?.();
     const foco = qual === 'jogadores' ? $('btn-livre-jogar') : qual === 'camera' ? lc.querySelector('[aria-pressed="true"]')
       : volta === 'camera' ? $('btn-livre-camera') : $('btn-livre-jogadores');
     foco?.focus({ preventScroll: true });

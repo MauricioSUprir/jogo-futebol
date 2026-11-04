@@ -98,6 +98,9 @@ export const SENTIDO_FASE = {
 export const RELE_NA_DEFESA = new Set(['KeyO', 'pad:RB']);
 // ações de um toque que passam com a entrada bloqueada (o editor aberto fecha pela pausa)
 const PASSA_BLOQUEADA = new Set(['pausa']);
+// com a pausa ou a Ajuda abertas (item 58): as setas navegam na pausa (a navegação espacial do hud.js navegarPad) e o Esc
+// volta um nível (submenu → o 1º nível → fecha); o P e o Start continuam fechando tudo ('pausa')
+export const MENU_TECLA = { ArrowUp: 'menu-cima', ArrowDown: 'menu-baixo', ArrowLeft: 'menu-esq', ArrowRight: 'menu-dir', Escape: 'menu-voltar' };
 // bits em que o reaperto entre dois passos vira solto + apertado (os de segurar continuamente ficam de fora)
 const REAPERTO = ~(BOTAO.CORRER | BOTAO.MOD);
 // (PARADINHA e PULINHO: um aperto marca o estilo — o reaperto entre passos vira solto + apertado, como os de ação)
@@ -387,7 +390,8 @@ export function calcularLayoutToque(W, H, sa, tamanho = 1, vagas = ['grande', 'a
 }
 
 /**
- * opc = {forcarToque: bool, aoAcao(acao), aoMudarLayout(), tela() → {cam, ox, oz} | null (a câmera do quadro para a mira: C6)}. Devolve a interface da entrada.
+ * opc = {forcarToque: bool, aoAcao(acao), aoMudarLayout(), tela() → {cam, ox, oz} | null (a câmera do quadro para a mira: C6),
+ * menuAberto() → a pausa ou a Ajuda abertas agora (item 58: as setas e o Esc navegam nelas)}. Devolve a interface da entrada.
  * aoMudarLayout: os controles de toque apareceram/sumiram (o HUD do topo se ajusta).
  */
 export function criarEntrada(opc = {}) {
@@ -411,6 +415,10 @@ export function criarEntrada(opc = {}) {
   let faseVisivel = 'ataque';
   let bloqueada = false;   // "Editar time" aberto: nada vai para o jogo (só a pausa)
   let menuAtivo = false;   // pausa ou Ajuda aberta: o controle navega nos botões dela (lerMenuPad)
+  // a pausa ou a Ajuda abertas AGORA (o teclado age no keydown: a do quadro, definirMenu, pode estar um quadro atrás)
+  const noMenu = () => (opc.menuAberto ? !!opc.menuAberto() : menuAtivo);
+  // o último meio usado (item 58: a linha dos comandos da pausa no PC mostra as teclas ou os botões do controle)
+  let ultimoMeio = 'teclado';
   let penalti = false;     // a cobrança do pênalti da pessoa (item 70, P2): o controle do pênalti (PAD_PENALTI)
   // a curva por arrasto na cobrança mirada (item 65; main.js definirCurva): o gesto liga só com ela ativa
   let curvaAtiva = false, curvaMundo = 0, classeCurva = false, ladoCurva = '';
@@ -424,16 +432,24 @@ export function criarEntrada(opc = {}) {
   function ehMov(code) { return MOV.cima.includes(code) || MOV.baixo.includes(code) || MOV.esq.includes(code) || MOV.dir.includes(code); }
   window.addEventListener('keydown', e => {
     const code = e.code;
+    ultimoMeio = 'teclado';
     if (bloqueada) {
       // o editor cuida do teclado (sem preventDefault aqui); só a pausa passa (fecha o editor)
       if (!e.repeat && PASSA_BLOQUEADA.has(ACOES_TECLA[code])) emitir(ACOES_TECLA[code]);
+      return;
+    }
+    // pausa ou Ajuda abertas: as setas e o Esc são da pausa (as setas também na repetição da tecla segurada; nada disso entra em
+    // `teclas`: soltar a pausa com a seta segurada não anda)
+    if (MENU_TECLA[code] && noMenu() && !e.ctrlKey && !e.altKey && !e.metaKey) {
+      e.preventDefault();
+      if (code !== 'Escape' || !e.repeat) emitir(MENU_TECLA[code]);
       return;
     }
     const usado = ehMov(code) || TECLA_BIT[code] || SENTIDO_FASE[code] || ACOES_TECLA[code];
     if (usado) {
       // Ctrl + tecla do jogo não pode virar atalho do navegador (salvar, favoritos...)
       // (a barra de espaço — o pulinho — não rola a página; com a pausa ou a Ajuda abertas ela segue apertando o botão em foco)
-      if (e.ctrlKey || code.startsWith('Arrow') || code === 'F1' || code === 'F3' || (code === 'Space' && !menuAtivo)) e.preventDefault();
+      if (e.ctrlKey || code.startsWith('Arrow') || code === 'F1' || code === 'F3' || (code === 'Space' && !noMenu())) e.preventDefault();
     }
     if (e.repeat) return;
     teclas.add(code);
@@ -519,6 +535,8 @@ export function criarEntrada(opc = {}) {
     gp = null;
     if (lista) for (let i = 0; i < lista.length; i++) { const g = lista[i]; if (g && g.connected) { gp = g; break; } }
     if (!gp) return null;
+    for (let i = 0; i < gp.buttons.length; i++) if (apertado(i)) { ultimoMeio = 'pad'; break; }
+    if (Math.abs(gp.axes[0] ?? 0) > 0.6 || Math.abs(gp.axes[1] ?? 0) > 0.6) ultimoMeio = 'pad';
     lerMenuPad();
     let ax = gp.axes[0] ?? 0, ay = -(gp.axes[1] ?? 0);
     // cruz digital como alternativa ao analógico
@@ -714,6 +732,7 @@ export function criarEntrada(opc = {}) {
   // ≡ pelo toque (aoTocar: age no pointerup do mesmo dedo — com o polegar no analógico o navegador não gera o click)
   aoTocar(btMenu, () => emitir('pausa'));
   window.addEventListener('touchstart', () => { if (!usandoToque) { usandoToque = true; mostrarToque(true); } }, { passive: true });
+  window.addEventListener('pointerdown', e => { ultimoMeio = e.pointerType === 'touch' ? 'toque' : 'teclado'; }, { capture: true, passive: true });
 
   /** Acaba o arrasto da curva: o pulso que nenhum passo viu ainda é descartado (a batida sai com a curva que a tela mostrava). */
   function fimArrasto() {
@@ -1015,5 +1034,7 @@ export function criarEntrada(opc = {}) {
     get bloqueada() { return bloqueada; },
     /** Pausa ou Ajuda aberta (main.js): a cruz/analógico, o A e o B do controle navegam nela (ações 'menu-*'). */
     definirMenu(v) { menuAtivo = !!v; },
+    /** O último meio usado: 'teclado' (também o mouse), 'pad' (o controle) ou 'toque'. */
+    get ultimoMeio() { return ultimoMeio; },
   };
 }

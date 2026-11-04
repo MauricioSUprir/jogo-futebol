@@ -7,6 +7,7 @@
 // e recebe {tipo: 'tm3d:porta', porta} — nela chegam {t:'j', b} (pacote do jogo), {t:'c', m} (controle) e {t:'estado', ...};
 // saem {t:'j', b} (transferido), {t:'c', m}, {t:'religar'} e {t:'estado?'}.
 import * as O from './online.js';
+import { aoTocar } from './toque-botao.js';
 
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
@@ -18,9 +19,10 @@ const CSS = `
 #online-aviso button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
   color:#fff;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
 #online-aviso button.primario{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:transparent;color:#04130a}
-#online-selo{position:fixed;right:10px;top:calc(env(safe-area-inset-top,0px) + 8px);z-index:40;font:600 12px Inter,system-ui,sans-serif;
-  color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
+#online-selo{position:fixed;right:calc(var(--sa-r,env(safe-area-inset-right,0px)) + 10px);top:calc(var(--sa-t,env(safe-area-inset-top,0px)) + 8px);
+  z-index:40;font:600 12px Inter,system-ui,sans-serif;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
 #online-selo[hidden]{display:none}
+html.pausa-aberta #online-selo{display:none}
 `;
 
 function el(tag, attrs = {}, filhos = []) {
@@ -185,20 +187,28 @@ export function criarPaginaOnline(opc) {
     const acoes = document.getElementById('menu-acoes');
     if (!acoes || document.getElementById('btn-online-pausar')) return;
     bPausar = el('button', { type: 'button', classe: 'btn', id: 'btn-online-pausar' });
-    bPausar.append('Pausar a partida ', el('small', { texto: `${pausasRestam} restantes` }));
+    // (o texto do item no <span class="item-txt">, como os da pausa: o "…" de segurança)
+    bPausar.append(el('span', { classe: 'item-txt', texto: 'Pausar a partida' }), ' ', el('small', { classe: 'estado', texto: `${pausasRestam} restantes` }));
     bSair = el('button', { type: 'button', classe: 'btn', id: 'btn-online-sair' });
-    bSair.append('Sair da partida ', el('small', { texto: 'conta como derrota' }));
-    bPausar.addEventListener('click', () => ao.menuPausar?.());
+    const descSair = el('small', { classe: 'desc', id: 'desc-online-sair', texto: 'conta como derrota' });
+    const txSair = el('span', { classe: 'item-txt', texto: 'Sair da partida' });
+    bSair.append(txSair, ' ', descSair);
+    bSair.setAttribute('aria-describedby', 'desc-online-sair');
+    // pelo toque, no pointerup do MESMO dedo (aoTocar: com outro dedo parado na tela o click não vem); mouse e teclado pelo click
+    aoTocar(bPausar, () => { if (!bPausar.disabled) ao.menuPausar?.(); });
     // sair pede confirmação: o 1º toque arma (3 s), o 2º sai
-    bSair.addEventListener('click', () => {
+    aoTocar(bSair, () => {
       const agora = performance.now();
       if (agora - sairArmado < 3000) { sairArmado = 0; ao.menuSair?.(); return; }
       sairArmado = agora;
-      bSair.firstChild.textContent = 'Toque de novo para sair ';
-      setTimeout(() => { if (performance.now() - sairArmado >= 2900) bSair.firstChild.textContent = 'Sair da partida '; }, 3000);
+      // (curto: "Toque de novo para sair" passava da linha com o foco no PC e em 667×375 — F1 da revisão do item 58)
+      txSair.textContent = 'Toque de novo: sair';
+      setTimeout(() => { if (performance.now() - sairArmado >= 2900) txSair.textContent = 'Sair da partida'; }, 3000);
     });
-    const ref = acoes.querySelector('[data-cmd="editar-time"]');
-    if (ref) ref.after(bPausar, bSair); else acoes.append(bPausar, bSair);
+    // a pausa do item 58: o Pausar logo depois do "Voltar ao jogo" e o Sair por último
+    const cont = document.getElementById('btn-continuar');
+    if (cont && cont.parentElement === acoes) cont.after(bPausar); else acoes.prepend(bPausar);
+    acoes.append(bSair);
   }
   function marcarMenu() {
     if (!bPausar) return;

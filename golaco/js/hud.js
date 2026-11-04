@@ -104,7 +104,12 @@ export function criarHud(opc) {
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
     terco: $('terco'), nome: $('nome-condutor'), chipMapa: $('chip-minimapa'),
+    // a pausa do item 58: os submenus novos, a faixa, o topo (a competição), a pílula do placar e o cartão do meu time
+    opcoes: $('menu-opcoes'), estat: $('menu-estatisticas'), competicao: $('pausa-competicao'), pausaPlacar: $('pausa-placar'),
+    pausaTime: $('pausa-time'),
   };
+  el.janelaMenu = el.menu?.querySelector('.janela-menu') ?? null;
+  el.faixaPausa = el.menu?.querySelector('.pausa-faixa') ?? null;
   const nomeEl = el.nome ? { cor: el.nome.querySelector('.nc-cor'), num: el.nome.querySelector('.nc-num'), nome: el.nome.querySelector('.nc-nome') } : null;
   let nomeChave = null; // time|num|nome|apagado escrito no DOM (null = escondido): só escreve quando muda
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
@@ -176,18 +181,26 @@ export function criarHud(opc) {
       if (b) cmd(g.dataset.grupo, b.dataset.valor);
     });
   });
-  // fundo escuro fecha a janela (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa)
-  for (const s of [el.menu, el.ajuda]) {
-    s?.addEventListener('pointerdown', e => {
-      if (e.target === s) { engolirClique(e); cmd(s === el.menu ? 'continuar' : 'fechar-ajuda'); }
-    });
-  }
+  // o "fundo" fecha (o click do mesmo toque não cai no ≡ que fica embaixo e reabre a pausa): na Ajuda, o véu em volta da janela;
+  // na pausa (item 58), o jogo à vista — a área do degradê, o canto direito e a pílula do placar (que não pega toque) —, nunca a
+  // faixa da lista (tocar nela fora dos itens não fecha por engano)
+  const fundoPausa = new Set([el.menu, el.janelaMenu, el.menu?.querySelector('.pausa-direita'), el.menu?.querySelector('.pausa-topo-dir')].filter(Boolean));
+  el.menu?.addEventListener('pointerdown', e => {
+    if (fundoPausa.has(e.target)) { engolirClique(e); cmd('continuar'); }
+  });
+  el.ajuda?.addEventListener('pointerdown', e => {
+    if (e.target === el.ajuda) { engolirClique(e); cmd('fechar-ajuda'); }
+  });
+  // o cartão do meu time (js/pausa-tela.js): tocar nele (ou clicar) abre o Editar time, o mesmo comando do item da lista —
+  // menos com a trava do Rumo ao Estrelato e onde não há editor (data-editavel). Fora da ordem do foco: o teclado e o controle
+  // usam o item "Editar time"
+  aoTocar(el.pausaTime, () => { if (el.pausaTime?.dataset.editavel === '1' && !el.menu.hidden) cmd('editar-time'); });
   el.tam?.addEventListener('input', () => { cmd('toqueTamanho', +el.tam.value / 100); });
-  // tela cheia (Android/PC; o iPhone não deixa a página pedir)
+  // tela cheia (Android/PC; o iPhone não deixa a página pedir): uma linha liga/desliga nas Opções (aria-pressed)
   const btTela = $('btn-tela-cheia');
   if (btTela && document.fullscreenEnabled) {
     btTela.hidden = false;
-    const rotulo = () => { const t = document.fullscreenElement ? 'Sair da tela cheia' : 'Tela cheia'; btTela.setAttribute('aria-label', t); btTela.title = t; };
+    const rotulo = () => { btTela.setAttribute('aria-pressed', String(!!document.fullscreenElement)); };
     document.addEventListener('fullscreenchange', rotulo);
     rotulo();
   }
@@ -446,7 +459,10 @@ export function criarHud(opc) {
     const fim = partida && fimDeJogo;
     if (el.continuar) el.continuar.hidden = fim;
     if (el.reiniciarPartida) {
-      el.reiniciarPartida.textContent = fim ? 'Jogar de novo' : penaltis ? 'Reiniciar disputa' : 'Reiniciar partida';
+      // (o texto mora no <span class="item-txt"> do item: o "…" de segurança da pausa)
+      const tx = el.reiniciarPartida.querySelector('.item-txt') ?? el.reiniciarPartida;
+      const t = fim ? 'Jogar de novo' : penaltis ? 'Reiniciar disputa' : 'Reiniciar partida';
+      if (tx.textContent !== t) tx.textContent = t;
       el.reiniciarPartida.classList.toggle('btn-primario', fim);
     }
     // Total Match (?tm): a partida é a do TM — sem Reiniciar nem a troca para os treinos (voltariam ao Golaço ×
@@ -455,7 +471,10 @@ export function criarHud(opc) {
     if (opc.tm) {
       if (el.reiniciarPartida) el.reiniciarPartida.hidden = true;
       const modos = $('btn-modos');
-      if (modos && modos.firstChild && modos.firstChild.nodeType === 3) modos.firstChild.textContent = 'Cenas da partida ';
+      const txModos = modos?.querySelector('.item-txt');
+      if (txModos && txModos.textContent !== 'Cenas da partida') txModos.textContent = 'Cenas da partida';
+      const tit = $('titulo-modos');
+      if (tit && tit.textContent !== 'Cenas da partida') tit.textContent = 'Cenas da partida';
       if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }
       if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; if (b.parentElement?.classList.contains('linha-cenas')) b.parentElement.hidden = true; });
       const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
@@ -477,15 +496,212 @@ export function criarHud(opc) {
       const volta = $('btn-voltar-tm');
       if (volta) volta.hidden = !fimDeJogo || !opc.tm;
     }
+    ordenarFim(fim);
+    marcarNivel();
   }
+  // ---- os níveis da pausa (item 58): o 1º (#menu-acoes) e os submenus no lugar dele; os do Livre (Jogadores e Câmera) são do
+  // livre-pagina.js, que chama marcarNivel ao trocar
   const fecharSubLivre = () => document.querySelectorAll('.submenu-livre').forEach(e => { e.hidden = true; });
-  function mostrarSubmenu(v) {
-    if (!el.acoes || !el.modos) return;
-    fecharSubLivre(); // (os submenus Jogadores e Câmera do Livre: livre-pagina.js)
-    el.acoes.hidden = v; el.modos.hidden = !v;
-    const alvo = v ? el.modos.querySelector('[aria-pressed="true"]') ?? el.modos.querySelector('button') : $('btn-modos');
-    alvo?.focus({ preventScroll: true });
+  // submenu → [id do submenu, id do item que o abre]
+  const SUBMENUS = { modos: ['menu-modos', 'btn-modos'], opcoes: ['menu-opcoes', 'btn-opcoes'], estatisticas: ['menu-estatisticas', 'btn-estatisticas'] };
+  let subAberto = null;
+  // a âncora <!--fim--> do #menu-acoes: o Reiniciar, o Simular o resto e o Voltar ao TM moram antes dela (o 1º nível na ordem
+  // do FC 24); no fim de jogo o primário do fim (Jogar de novo ou Voltar ao TM) sobe para o 1º lugar e volta depois
+  const ancoraFim = el.acoes ? [...el.acoes.childNodes].find(n => n.nodeType === 8 && n.data.trim() === 'fim') ?? null : null;
+  function ordenarFim(fim) {
+    if (!el.acoes || !ancoraFim) return;
+    const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
+    const prim = fim ? [el.reiniciarPartida, volta].find(b => b && !b.hidden && b.classList.contains('btn-primario')) ?? null : null;
+    const ordem = [el.reiniciarPartida, sim, volta].filter(b => b && b !== prim);
+    const ativo = document.activeElement;
+    // (só mexe no DOM se a ordem mudou: mover o botão com o foco tira o foco dele)
+    let n = ancoraFim, igual = true;
+    for (let i = ordem.length - 1; i >= 0 && igual; i--) { let q = n.previousSibling; while (q && q.nodeType !== 1) q = q.previousSibling; igual = q === ordem[i]; n = q; }
+    if (!igual) ancoraFim.before(...ordem);
+    if (prim && el.acoes.firstElementChild !== prim) el.acoes.prepend(prim);
+    if (ativo && ativo !== document.activeElement && el.menu.contains(ativo) && !el.menu.hidden) ativo.focus({ preventScroll: true });
   }
+  /** O nível na janela (data-nivel="sub" com um submenu à vista, data-sub = o id dele): o CSS da faixa larga no celular. */
+  function marcarNivel() {
+    if (!el.janelaMenu) return;
+    const vis = [...el.menu.querySelectorAll('.menu-acoes')].find(e => !e.hidden && e.id !== 'menu-acoes');
+    const nivel = vis ? 'sub' : '1';
+    if (el.janelaMenu.dataset.nivel !== nivel) el.janelaMenu.dataset.nivel = nivel;
+    if (vis) { if (el.janelaMenu.dataset.sub !== vis.id) el.janelaMenu.dataset.sub = vis.id; } else delete el.janelaMenu.dataset.sub;
+  }
+  /** Os botões e deslizantes à vista (não desligados) dentro de `r`, na ordem do DOM. */
+  const visiveis = r => (r ? [...r.querySelectorAll('button, input[type="range"]')] : [])
+    .filter(b => !b.disabled && !b.hidden && b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden');
+  /** Os focáveis do nível da pausa à vista (a .menu-acoes visível); comX: mais o X (o Tab passa por ele; o controle e as setas não). */
+  function focaveisDoNivel(comX) {
+    const nivel = [...el.menu.querySelectorAll('.menu-acoes')].find(e => !e.hidden && e.getClientRects().length > 0);
+    const l = visiveis(nivel);
+    if (comX) { const x = el.menu.querySelector('.pausa-topo-dir .btn-fechar'); if (x && x.getClientRects().length) l.push(x); }
+    return l;
+  }
+  const focar = b => { b.focus({ preventScroll: true }); b.scrollIntoView?.({ block: 'nearest' }); };
+  /**
+   * O vizinho de `at` na direção (navegação ESPACIAL, como o FC: o controle e as setas): cima/baixo = o focável cujo topo está
+   * além da base do atual (ou o contrário), pelo menor Δy e depois pelo menor |Δx| entre os centros — sem nenhum, dá a volta (o
+   * 1º ou o último na ordem do DOM: numa coluna, ±1 com a volta); esq/dir = o da MESMA linha (sobreposição vertical ≥ 50% da
+   * menor altura) mais perto naquele sentido, ou nada (nunca anda na vertical).
+   */
+  function vizinho(lista, at, acao) {
+    const r0 = at.getBoundingClientRect(), cx0 = (r0.left + r0.right) / 2;
+    let melhor = null, m1 = Infinity, m2 = Infinity;
+    if (acao === 'cima' || acao === 'baixo') {
+      const desce = acao === 'baixo';
+      for (const b of lista) {
+        if (b === at) continue;
+        const r = b.getBoundingClientRect();
+        const dy = desce ? r.top - r0.bottom : r0.top - r.bottom;
+        if (dy < -1) continue;
+        const dx = Math.abs((r.left + r.right) / 2 - cx0);
+        if (dy < m1 - 0.5 || (Math.abs(dy - m1) <= 0.5 && dx < m2)) { melhor = b; m1 = dy; m2 = dx; }
+      }
+      return melhor ?? (desce ? lista[0] : lista[lista.length - 1]);
+    }
+    const dir = acao === 'dir';
+    for (const b of lista) {
+      if (b === at) continue;
+      const r = b.getBoundingClientRect();
+      const sob = Math.min(r.bottom, r0.bottom) - Math.max(r.top, r0.top);
+      if (sob < 0.5 * Math.min(r.height, r0.height)) continue;
+      const dc = dir ? (r.left + r.right) / 2 - cx0 : cx0 - (r.left + r.right) / 2;
+      if (dc > 1 && dc < m1) { m1 = dc; melhor = b; }
+    }
+    return melhor;
+  }
+  /** Volta um nível (o B do controle e o Esc): a Ajuda fecha (volta à pausa se veio dela), o submenu volta ao 1º nível, o 1º fecha. */
+  function voltarNivel() {
+    if (!el.ajuda.hidden) { cmd('fechar-ajuda'); return; }
+    if (el.menu.hidden) return;
+    if (document.querySelector('.submenu-livre:not([hidden])')) { cmd('livre-voltar'); return; }
+    for (const [nome, [id]] of Object.entries(SUBMENUS)) { const e = $(id); if (e && !e.hidden) { cmd(nome + '-voltar'); return; } }
+    cmd('continuar');
+  }
+  /**
+   * Um submenu ('modos' | 'opcoes' | 'estatisticas') no lugar do 1º nível, ou de volta (null). Abrindo, o foco vai ao escolhido
+   * (aria-pressed) ou ao 1º controle; voltando, ao item que abriu.
+   */
+  function submenu(nome) {
+    if (!el.acoes) return;
+    fecharSubLivre(); // (os submenus Jogadores e Câmera do Livre: livre-pagina.js)
+    const volta = subAberto;
+    subAberto = SUBMENUS[nome] ? nome : null;
+    el.acoes.hidden = !!subAberto;
+    for (const [k, [id]] of Object.entries(SUBMENUS)) { const e = $(id); if (e) e.hidden = k !== subAberto; }
+    marcarNivel();
+    let alvo = null;
+    if (subAberto) {
+      const l = visiveis($(SUBMENUS[subAberto][0])), semVoltar = l.filter(b => !b.classList.contains('btn-voltar'));
+      alvo = semVoltar.find(b => b.getAttribute('aria-pressed') === 'true') ?? semVoltar[0] ?? l[0] ?? null;
+    } else if (volta) alvo = $(SUBMENUS[volta][1]);
+    if (alvo && alvo.getClientRects().length) alvo.focus({ preventScroll: true });
+  }
+  const mostrarSubmenu = v => submenu(v ? 'modos' : null);
+
+  // ---- com a pausa (ou a Ajuda) aberta: o HUD do jogo sai (html.pausa-aberta) e fica inert (o Tab e o leitor de tela não chegam)
+  // (o #aviso mora no #hud e fica fora do inert: ele continua à vista com a pausa — "Time atualizado", a substituição na fila, as
+  // recusas da edição; no online o jogo anda por baixo — e um nó inerte sai da árvore de acessibilidade: o leitor de tela não o
+  // anunciava; revisão do item 58, F6. Os outros filhos do #hud ficam inert, também os que as cenas põem lá)
+  const ATRAS = ['toque', 'cena'].map($).filter(Boolean);
+  const hudEl = $('hud');
+  function marcarAberta() {
+    const aberta = !el.menu.hidden || !el.ajuda.hidden;
+    if (raiz.classList.contains('pausa-aberta') !== aberta) raiz.classList.toggle('pausa-aberta', aberta);
+    for (const e of ATRAS) if (e.inert !== aberta) e.inert = aberta;
+    if (hudEl) for (const e of hudEl.children) { const v = aberta && e !== el.aviso; if (e.inert !== v) e.inert = v; }
+  }
+  // (as tarjas e o painel das cenas entram no #hud quando o módulo delas chega — a pré-carga ociosa pode chegar com a pausa aberta)
+  if (hudEl && typeof MutationObserver !== 'undefined') new MutationObserver(() => { if (raiz.classList.contains('pausa-aberta')) marcarAberta(); }).observe(hudEl, { childList: true });
+  // o Tab preso na pausa (o nível à vista mais o X, na ordem do DOM) e na Ajuda: dá a volta, nunca sai para o jogo
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Tab' || e.altKey || e.ctrlKey || e.metaKey) return;
+    const aberta = !el.ajuda.hidden ? el.ajuda : !el.menu.hidden ? el.menu : null;
+    if (!aberta) return;
+    const lista = aberta === el.menu ? focaveisDoNivel(true) : visiveis(aberta);
+    if (!lista.length) return;
+    e.preventDefault();
+    const i = lista.indexOf(document.activeElement);
+    const k = i < 0 ? (e.shiftKey ? lista.length - 1 : 0) : (i + (e.shiftKey ? -1 : 1) + lista.length) % lista.length;
+    focar(lista[k]);
+  }, true);
+  // o destaque segue o foco (classe .selecionado: também no toque, sem :focus-visible, há sempre um item em destaque, como no FC)
+  let selecionado = null;
+  el.menu?.addEventListener('focusin', e => {
+    const b = e.target;
+    if (selecionado && selecionado !== b) selecionado.classList.remove('selecionado');
+    selecionado = b;
+    b.classList?.add('selecionado');
+  });
+  // o toque que troca de nível (o ≡ que abre, um item que entra ou sai de um submenu, o X e o fundo que fecham): o navegador ainda
+  // gera o mousedown de compatibilidade DEPOIS do pointerup, no ponto do dedo — e o mousedown dá o foco ao que ficou embaixo dele
+  // no nível NOVO (o X no lugar do ≡, um controle das Opções) ou o tira (o fundo vazio): o foco que o nível escolheu ("Voltar ao
+  // jogo", o escolhido do submenu, o item que o abriu) se perdia, e o destaque com ele (revisão do item 58, F4). O mousedown de um
+  // toque só dá o foco se a pausa continua no nível em que o dedo desceu (tocar num controle do mesmo nível continua focando ele)
+  let nivelNoToque = null, fimDoToque = -1e9;
+  const nivelAgora = () => (el.menu.hidden ? (el.ajuda.hidden ? '-' : 'ajuda') : `${el.janelaMenu?.dataset.nivel ?? ''}:${el.janelaMenu?.dataset.sub ?? ''}`);
+  window.addEventListener('pointerdown', e => { if (e.pointerType !== 'mouse') nivelNoToque = nivelAgora(); }, true);
+  window.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') fimDoToque = performance.now(); }, true);
+  window.addEventListener('mousedown', e => {
+    if (nivelNoToque === null) return;
+    // (o Chromium marca o mouse que vem do toque; sem a marca — Safari, Firefox —, o que chega logo depois de um toque)
+    const caps = e.sourceCapabilities;
+    const doToque = caps ? caps.firesTouchEvents : performance.now() - fimDoToque < 800;
+    if (doToque && nivelAgora() !== nivelNoToque) e.preventDefault();
+  }, true);
+  // o mouse em cima de um item dá o foco a ele (como o FC no PC: um só item em destaque)
+  el.menu?.addEventListener('pointerover', e => {
+    if (e.pointerType !== 'mouse') return;
+    const b = e.target.closest?.('button, input[type="range"]');
+    if (b && el.menu.contains(b) && !b.disabled && document.activeElement !== b) b.focus({ preventScroll: true });
+  });
+
+  // ---- a pílula do placar da pausa: o espelho do placar do HUD (as siglas, os gols, os escudos e o relógio), escrito ao abrir e,
+  // com ela aberta, nas mesmas funções que escrevem o placar (no online o jogo anda por baixo); nos treinos não aparece
+  function espelharPlacar() {
+    const p = el.pausaPlacar;
+    if (!p) return;
+    const mostra = modoAtual === 'partida' || modoAtual === 'penaltis' || modoAtual === 'livre';
+    if (p.hidden === mostra) p.hidden = !mostra;
+    if (!mostra) return;
+    const usos = p.querySelectorAll('.pp-escudo use'), siglas = p.querySelectorAll('.pp-sigla'), gols = p.querySelectorAll('.pp-gols b');
+    const nomes = [];
+    for (let i = 0; i < 2; i++) {
+      const h = el.escudos[i]?.getAttribute('href');
+      if (h && usos[i] && usos[i].getAttribute('href') !== h) usos[i].setAttribute('href', h);
+      const sg = el.siglas[i]?.textContent ?? '', g = el.gols[i]?.textContent ?? '0';
+      if (siglas[i] && siglas[i].textContent !== sg) siglas[i].textContent = sg;
+      if (gols[i] && gols[i].textContent !== g) gols[i].textContent = g;
+      nomes.push(`${times[i]?.nome ?? sg} ${g}`);
+    }
+    const rel = p.querySelector('.pp-relogio');
+    const relVis = !!el.relogio && !el.relogio.hidden;
+    if (rel) {
+      rel.hidden = !relVis;
+      const t = relVis ? `${el.minuto?.textContent ?? ''}${el.tempo?.textContent ? ' ' + el.tempo.textContent : ''}` : '';
+      if (rel.textContent !== t) rel.textContent = t;
+      if (relVis) nomes.push(t);
+    }
+    const rot = `Placar: ${nomes.join(', ')}`;
+    if (p.getAttribute('aria-label') !== rot) p.setAttribute('aria-label', rot);
+  }
+  /** Sem lugar entre o topo da faixa e o X, a pílula perde o relógio e depois os escudos (nunca encosta no topo da faixa). */
+  function ajustarPilula() {
+    const p = el.pausaPlacar;
+    if (!p || p.hidden || el.menu.hidden) return;
+    p.classList.remove('sem-relogio', 'sem-escudo');
+    const topo = el.menu.querySelector('.janela-topo')?.getBoundingClientRect();
+    if (!topo || !(topo.width > 0)) return;
+    const lim = topo.right + 8;
+    if (p.getBoundingClientRect().left >= lim) return;
+    p.classList.add('sem-relogio');
+    if (p.getBoundingClientRect().left >= lim) return;
+    p.classList.add('sem-escudo');
+  }
+  const pausaAtualizar = () => { if (!el.menu.hidden) { espelharPlacar(); ajustarPilula(); } };
+  window.addEventListener('resize', () => requestAnimationFrame(ajustarPilula));
 
   const avisoAtual = { tipo: null, prio: 0, ate: 0, texto: '' };
   function mostrarAviso(texto, ms, cls = '', prio = 1, tipo = null) {
@@ -705,6 +921,7 @@ export function criarHud(opc) {
         placarVisto[i] = v[i];
       }
       if (largura) ajustarTopo();
+      pausaAtualizar();
     },
     /**
      * Minimapa (no máximo ~30 vezes por segundo; 20 com os controles de toque, no celular). Escondido (opção da
@@ -774,29 +991,21 @@ export function criarHud(opc) {
     },
     get menuAberto() { return !el.menu.hidden; },
     get ajudaAberta() { return !el.ajuda.hidden; },
-    /** Abre a pausa; foco: seletor do botão que recebe o foco (padrão: o primário visível). */
     /**
-     * Controle na pausa ou na Ajuda (main.js, ações 'menu-*'): cima/esquerda e baixo/direita movem o foco entre os botões
-     * visíveis (no deslizante em foco, esquerda/direita mudam o valor), ok aperta o botão em foco e voltar fecha a
-     * Ajuda, sai do "Modo de jogo" ou fecha a pausa.
+     * O controle e as setas na pausa ou na Ajuda (main.js, ações 'menu-*'): cima/baixo/esq/dir movem o foco pela navegação
+     * ESPACIAL entre os focáveis do nível à vista (vizinho; o X fica de fora: o B faz o papel dele); no deslizante em foco,
+     * esquerda/direita mudam o valor; ok aperta o botão em foco; voltar volta um nível (voltarNivel).
      */
     navegarPad(acao) {
       const raizAberta = !el.ajuda.hidden ? el.ajuda : !el.menu.hidden ? el.menu : null;
       if (!raizAberta) return;
-      if (acao === 'voltar') {
-        if (raizAberta === el.ajuda) cmd('fechar-ajuda');
-        else if (el.modos && !el.modos.hidden) cmd('modos-voltar');
-        else if (document.querySelector('.submenu-livre:not([hidden])')) cmd('livre-voltar');
-        else cmd('continuar');
-        return;
-      }
-      const lista = [...raizAberta.querySelectorAll('button, input[type="range"]')]
-        .filter(b => !b.disabled && !b.hidden && b.getClientRects().length > 0 && getComputedStyle(b).visibility !== 'hidden');
+      if (acao === 'voltar') { voltarNivel(); return; }
+      const lista = raizAberta === el.menu ? focaveisDoNivel(false) : visiveis(raizAberta);
       if (!lista.length) return;
       const at = document.activeElement, i = lista.indexOf(at);
       if (acao === 'ok') {
         if (i >= 0 && at.tagName === 'BUTTON') at.click();
-        else if (i < 0) lista[0].focus({ preventScroll: false });
+        else if (i < 0) focar(lista[0]);
         return;
       }
       if ((acao === 'esq' || acao === 'dir') && i >= 0 && at.type === 'range') {
@@ -805,23 +1014,48 @@ export function criarHud(opc) {
         at.dispatchEvent(new Event('input', { bubbles: true }));
         return;
       }
-      const passo = acao === 'cima' || acao === 'esq' ? -1 : 1;
-      const k = i < 0 ? 0 : (i + passo + lista.length) % lista.length;
-      lista[k].focus({ preventScroll: false });
-      lista[k].scrollIntoView?.({ block: 'nearest' });
+      if (i < 0) { focar(lista[0]); return; }
+      const alvo = vizinho(lista, at, acao);
+      if (alvo) focar(alvo);
     },
+    /**
+     * Abre a pausa no 1º nível; foco: seletor do botão que recebe o foco (padrão: o primário visível — Voltar ao jogo, ou o do
+     * fim). O HUD do jogo sai (marcarAberta), a pílula copia o placar e o main.js refaz o cartão do time (opc.aoAbrirMenu).
+     */
     abrirMenu(forcar = false, foco = null) {
       if (prints && !forcar) return;
       el.ajuda.hidden = true; el.menu.hidden = false;
       if (el.acoes) el.acoes.hidden = false;
-      if (el.modos) el.modos.hidden = true;
+      for (const [, [id]] of Object.entries(SUBMENUS)) { const e = $(id); if (e) e.hidden = true; }
+      subAberto = null;
       fecharSubLivre();
-      const alvo = (foco && el.menu.querySelector(foco)) || [...el.menu.querySelectorAll('#menu-acoes .btn-primario')].find(b => !b.hidden);
-      alvo?.focus({ preventScroll: true });
+      marcarNivel();
+      marcarAberta();
+      espelharPlacar();
+      opc.aoAbrirMenu?.();
+      ajustarPilula();
+      const prim = el.acoes ? visiveis(el.acoes) : [];
+      const alvo = (foco && el.menu.querySelector(foco)) || prim.find(b => b.classList.contains('btn-primario')) || prim[0];
+      if (alvo && alvo.getClientRects().length) alvo.focus({ preventScroll: true });
     },
     // (fechando, o foco sai do botão que ficou escondido: com ele lá, o Enter seguinte — que no jogo é o 'pular' — também
-    // CLICAVA o botão escondido, e abrir e fechar a pausa com Esc deixava o foco no "Reiniciar partida")
-    fecharMenu() { el.menu.hidden = true; soltarFoco(el.menu); },
+    // CLICAVA o botão escondido, e abrir e fechar a pausa com Esc deixava o foco no "Reiniciar partida". O padrão do APG
+    // devolveria o foco ao ≡, mas aí o Enter seguinte reabriria a pausa: de propósito, o foco sai)
+    fecharMenu() { el.menu.hidden = true; soltarFoco(el.menu); marcarAberta(); },
+    /** Um submenu da pausa ('modos' | 'opcoes' | 'estatisticas') ou de volta ao 1º nível (null). */
+    submenu,
+    /** O nível da pausa agora: 'acoes' (o 1º) ou o id do submenu à vista sem o "menu-" ('opcoes', 'modos', 'livre'...); null fechada. */
+    get nivelMenu() {
+      if (el.menu.hidden) return null;
+      const vis = [...el.menu.querySelectorAll('.menu-acoes')].find(e => !e.hidden);
+      return vis ? vis.id.replace(/^menu-/, '') : null;
+    },
+    /** Recalcula o nível (o livre-pagina.js chama depois de trocar os submenus dele). */
+    marcarNivel,
+    /** O nome da competição no topo da faixa (TM: a do pedido; sem ele, o modo: "Amistoso", "Modo Livre"...). */
+    definirCompeticao(t) { if (el.competicao && el.competicao.textContent !== t) el.competicao.textContent = t; },
+    /** O último meio usado ('teclado' | 'pad' | 'toque'): a linha dos comandos do PC mostra as teclas ou os botões do controle. */
+    definirEntrada(meio) { if (el.menu && el.menu.dataset.entrada !== meio) el.menu.dataset.entrada = meio; },
     /** Lista "Modo de jogo" (partida e treinos) no lugar das ações do menu (true) ou de volta (false). */
     submenuModos: mostrarSubmenu,
     /** Siglas, nomes e escudos ({sigla, nome, escudo: id do elenco}) dos dois times (partida: do elenco) ou null (treino). */
@@ -829,6 +1063,7 @@ export function criarHud(opc) {
       times = t ?? TIMES_TREINO;
       escreverTimes();
       ajustarTopo();
+      pausaAtualizar();
     },
     get times() { return times; },
     /**
@@ -842,7 +1077,7 @@ export function criarHud(opc) {
     relogio(r) {
       if (!el.relogio) return;
       const v = relogioVisto, vis = !!r;
-      if (vis !== v.visivel) { el.relogio.hidden = !vis; v.visivel = vis; v.seg = null; ajustarTopo(); }
+      if (vis !== v.visivel) { el.relogio.hidden = !vis; v.visivel = vis; v.seg = null; ajustarTopo(); pausaAtualizar(); }
       if (!r) return;
       const ac = r.acrescimo, seg = r.segundo ?? -1, min = r.minuto ?? -1, an = ac ? ac.anunciado : -1, dec = ac ? ac.decorrido : -1;
       if (seg === v.seg && r.estado === v.est && an === v.an && min === v.min && dec === v.dec) return;
@@ -861,6 +1096,7 @@ export function criarHud(opc) {
       }
       if (t.extra !== v.extra) { el.tempo.textContent = t.extra; v.extra = t.extra; topo = true; }
       if (topo) ajustarTopo();
+      pausaAtualizar();
     },
     /**
      * Faixa no meio da tela: f = {titulo, placar, ms?, botao?, botaoTexto?, botaoCmd?, botao2?, botao2Texto?, botao2Cmd?}
@@ -902,10 +1138,13 @@ export function criarHud(opc) {
       if (prints && !forcar) return;
       ajudaDaPausa = !el.menu.hidden;
       el.menu.hidden = true; el.ajuda.hidden = false;
+      soltarFoco(el.menu);
+      marcarAberta();
     },
     fecharAjuda() {
       el.ajuda.hidden = true; soltarFoco(el.ajuda);
-      if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '[data-cmd="ajuda"]'); }
+      marcarAberta();
+      if (ajudaDaPausa) { ajudaDaPausa = false; this.abrirMenu(true, '#menu-acoes [data-cmd="ajuda"]'); }
     },
     /** Recalcula o topo do HUD e a faixa de baixo (os controles de toque apareceram ou a tela mudou). */
     ajustarTopo,
@@ -947,6 +1186,7 @@ export function criarHud(opc) {
         if (e.modoTreino !== undefined) modoAtual = e.modoTreino;
         if (e.fim !== undefined) fimDeJogo = !!e.fim;
         aplicarModoNoMenu();
+        pausaAtualizar();
       }
       if (e.qualidadeEscolha) marcarGrupo('qualidade', e.qualidadeEscolha);
       if (e.qualidadeAtual && el.infoQ) {
@@ -1117,6 +1357,7 @@ export function criarHud(opc) {
       prints = true;
       document.documentElement.classList.add('modo-prints');
       el.menu.hidden = true; el.ajuda.hidden = true;
+      marcarAberta();
       el.carregando.hidden = true;
     },
   };

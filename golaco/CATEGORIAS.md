@@ -2,9 +2,9 @@
 
 > Resumo da `golaco/FILA.md` (lá estão o status, a evidência e o plano de cada item).
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
-> Atualizado em 02/11.
+> Atualizado em 04/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera ou da mira (02/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa (04/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -32,6 +32,7 @@
 | 71 | 🔎 Um item do teste do estádio (o "GOL!" na tela) que não mede nada | 1 |
 | 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599; o tempo dos lugares do estádio genérico no CI do #600) | 3,5 |
 | 92 | 🔎 Os tempos dos testes da mira na divisão do CI: acertar pelo log do 1º CI do #601 | 0,25 |
+| 93 | 🔎 O tempo do teste da pausa na divisão do CI: acertar pelo log do 1º CI do #602 | 0,25 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
 
 ---
@@ -78,13 +79,13 @@
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~86 h a fazer
+## 📱 F. Telas, HUD, câmera e controles — ~90 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
 | 34 | ✅ ⭐ **Botão de CARRINHO**: L e X na defesa (com a bola alta, lançamento) e o botão "CARRIN." no celular; desliza na bola pela perna desenhada, quem erra fica ~1,2 s no chão, falta e cartão pela Regra 12 (#597) | 14 |
 | 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela); na bola muito alta o gramado e os jogadores ficam no quadro, e no Rumo ao Estrelato o seu jogador fica no quadro (#600) | 8 |
-| 58 | 🆕 **Menu de pausa igual ao do FC 24**, com o campinho do seu time no canto direito | 8 |
+| 58 | ✅ **Menu de pausa igual ao do FC 24**: o jogo parado à vista, a lista de texto à esquerda (Voltar ao jogo, Editar time, Estatísticas, Replay, Opções, …) e o campinho do seu time no canto direito (número, nome, cartões, quem entra e "você"; tocar nele abre o Editar time); cabe sem rolar até o celular pequeno, com teclado, controle e toque; no PC também nas telas 4:3, 5:4 e 16:10 e na janela baixa (#602) | 8 |
 | 64 | 🆕 **Tela antes do jogo** (todo modo) no nível da do EA FC, com a cara do TM | 12 |
 | 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais; o dedo que já estava no botão antes de a mira aparecer também arrasta (#601) | 8 |
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
@@ -107,6 +108,11 @@
 | 89 | 🔎 Escanteio que você cobra do lado de lá: a câmera alta fica colada numa bandeira da torcida (uma mancha verde e preta no canto) | 2 |
 | 90 | 🔎 Na montagem da sua falta ou do seu escanteio, os botões do celular são os da defesa por ~1 s (o botão grande não é o CHUTE) | 1,5 |
 | 91 | 🔎 As outras marcas no gramado (as opções do lateral, amarelas, e a marca de onde a bola alta cai) com a mesma cara da mira nova | 2 |
+| 94 | 🔎 A "Ajuda e controles" com a cara da pausa nova (hoje é a janela de antes e rola no celular) | 3 |
+| 95 | 🔎 ⏳ Atrás da pausa, um close do seu jogador (a câmera de "bastidores" do FC 24) no lugar do jogo parado na TV — opcional | 4 |
+| 96 | 🔎 Com a pausa aberta, o jogo parado deixar de ser redesenhado a cada quadro (economiza bateria no celular) | 2 |
+| 97 | 🔎 O "C" do capitão nas fichas do campinho da pausa (o fôlego só quando o jogo tiver cansaço) | 1,5 |
+| 99 | 🔎 ⏳ Os botões da pausa no celular com 44 px de altura onde couber (hoje de 28 a 44; o padrão da Apple é 44) | 1,5 |
 
 ---
 
@@ -123,13 +129,14 @@
 
 ---
 
-## 🌐 H. Online — ~28 h
+## 🌐 H. Online — ~30 h
 
 | nº | o que é | horas |
 |---|---|---|
 | 42 | Indicador de sinal no HUD | 3 |
 | 43 | Convite pela lista de amigos | 5 |
 | 44 | Voltar à partida depois de recarregar a página | 20 |
+| 98 | 🔎 A pausa nova no online: o tempo da pausa combinada dentro dela, "Toque de novo: sair" também com o mouse e o teclado, e as telas largas do PC no teste | 1,5 |
 | 56 | Rollback (fora da fila ativa: só se houver reclamação medida) | 40 |
 
 ---
@@ -173,11 +180,13 @@
 14. ⏱️ Item 32 (o placar): feito com a escolha recomendada — na tela de 568×320 (o iPhone SE de 2016) o HUD pode ocupar até 12% (nas outras, 11%): ali o placar com minutos e segundos, escudos e siglas não cabe nos 11% (o de antes já passava dos 11% com o relógio de verdade: 12,06% nos acréscimos; o novo, 11,85%). Também escolhidos: nos acréscimos o relógio continua andando ("47:13 +4"), "Intervalo"/"Fim" no lugar do relógio, o símbolo do TM some do placar nas telas de até 700 px de largura. Na revisão: no celular, cada dígito a mais no placar (gols de 2 dígitos, ou o relógio passando de 99:59) aperta os espaços, e com dois a mais sai também o "+N" dos acréscimos; a tela de 640×360 usa o placar de 26 px e fica nos 11% (#599). Alternativas medidas na FILA ("Depende do dono" 15).
 15. 🎥 Item 66 (a câmera): feita com as escolhas recomendadas — 6% mais aberta (o seu jogador ~35 px no celular; o mínimo é 34; dá para abrir 4% ou 8%); um pouco de espaço à frente da jogada (dá para deixar a bola bem no centro, ou com o espaço da TV de verdade); o escanteio cobrado por você atrás do cobrador e alto (dá para voltar à baixa, só a TV, ou mais longe); a área inteira quando a bola está nela, mais do que a TV mostra; a câmera não gira como a da TV (giraria o analógico). Da revisão: no Rumo ao Estrelato o seu jogador vem antes da área (a área inteira com a bola nela cai de 96% para 76% só nesse modo); a câmera acelera mais vezes para acompanhar a bola, sem tremer (se achar agitada, dá para suavizar); a falta da IA de 30 a 35 m no celular sem a área inteira (item 87). Detalhes e números na FILA ("Depende do dono" 16).
 16. 🎯 Item 65 (a mira das bolas paradas): feita com as escolhas recomendadas — a linha fina BRANCA com contorno preto (o branco é a única cor que aparece em todo gramado; o verde do TM fica no anel, no arco e nas setinhas dos botões); a mesma informação de antes (nos cruzamentos a linha até perto da metade e o anel onde a bola cai; dá para mostrar só o começo, como no EA, mas aí fica mais difícil); a curva mostrada por um arco verde junto da bola (dá para usar o ponto de contato do EA, ou nada); no celular, segurar o CHUTE ou o LANÇAMENTO e arrastar o polegar para o lado, um degrau a cada 14 px (dá para mudar o passo, arrastar antes de carregar, usar o analógico ou voltar aos 2 botões CURVA, que estouram o espaço da tela); o nome do tipo da batida (ALTA, CHUTE...) saiu da tela. Para conferir no seu celular: o arrasto da curva (à direita do CHUTE sobra pouco espaço) e o traço da linha. Da revisão: na montagem da sua falta os botões são os da defesa por ~1 s (item 90; recomendado mostrar os do ataque). Detalhes na FILA ("Depende do dono" 17).
+17. ⏸️ Item 58 (a pausa): feita com as escolhas recomendadas — as opções (qualidade, câmera, minimapa, som...) num submenu Opções, como o "Settings" do FC (custa alguns apertos a mais no teclado e no controle); o campinho é o SEU meio campo em pé, como no FIFA 23 (dá para mostrar o campo inteiro, mas no celular pequeno os nomes não cabem); "Cenas" dentro do "Modo de jogo"; a linha "Selecionar · Voltar" só no PC; atrás da pausa o jogo parado, sem desfoque (dá para pôr o close de um jogador, como o FC 24: item 95); o placar pequeno em cima à direita; tocar no campinho abre o Editar time; o Esc num submenu volta um passo; a fonte Inter do TM também fora do TM; sem animação ao abrir. **A decidir:** os botões da pausa no celular têm de 28 a 44 px de altura (o padrão da Apple é 44): (a) deixar (recomendado: é o que cabe sem tirar nada da lista), (b) 44 px só onde há lugar (item 99) ou (c) 44 px em todo celular, tirando um item da lista (por exemplo a Ajuda para dentro das Opções). Para conferir no seu celular: o entalhe e o polegar nas linhas mais baixas (testados só no navegador). Detalhes na FILA ("Depende do dono" 18).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- ⏸️ A pausa igual à do FC 24: a lista à esquerda, as opções num submenu e o campinho do seu time no canto direito (item 58, #602)
 - 🎯 A mira das bolas paradas minimalista, com a cara do TM: a linha fina branca, o anel onde a bola cai e o arco da curva junto da bola, sem painel nem texto; no celular a curva é arrastar o polegar no CHUTE ou no LANÇAMENTO (item 65, #601)
 - 🎥 A câmera que acompanha a bola e mostra a área: menos atraso, a bola mais no centro, a área inteira quando a bola está nela, 6% mais aberta e o escanteio que você cobra visto do alto (item 66, #600)
 - ⏱️ O placar um pouco maior, com a cara do TM e o relógio em minutos e segundos (item 32, #599)
