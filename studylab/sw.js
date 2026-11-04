@@ -1,5 +1,5 @@
 /* ===== sw.js — cache offline do MindTrack ===== */
-const CACHE = 'mindtrack-v15';
+const CACHE = 'mindtrack-v16';
 const ARQUIVOS = [
   './', './index.html', './manifest.webmanifest',
   './css/app.css', './css/visual.css', './assets/logo.svg', './assets/marca-dagua.svg',
