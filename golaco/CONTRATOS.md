@@ -1697,8 +1697,8 @@ durante o jogo; quando o jogo parar por impedimento, aí no replay vai mostrar a
   sem a seta no chão do controlado (anel + triângulo de 2,2% do menor lado da tela); `render/marcas.js criarMarcas(cena,
   {timeHumano})`: a marca de queda só para a bola alta do time do humano (`m.voo.time`; null = os dois times).
 - **Testes**: `teste-hud-minimo` (H1–H8; H12 e H13 da faixa de baixo; `--raiz <pasta>` mede outra cópia; o H5 espera a animação da dica acabar — o
-  relógio das animações do Chromium sem GPU atrasa do real com a máquina carregada — e o H7 confere a barra da pausa nas 3
-  telas), `teste-entrada` (5 botões, nada no 2º anel, `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada =
+  relógio das animações do Chromium sem GPU atrasa do real com a máquina carregada — e o H7 confere o topo da pausa nas 3
+  telas: até o item 58 a barra com o Minimapa e os Nomes; desde ele, a marca e a competição, a pílula e o X), `teste-entrada` (5 botões, nada no 2º anel, `criarToqueOuSegura` e do toque ao jogo: tocada = bote, segurada =
   conter), `teste-controles` (lista da defesa com 5 e a DIVIDIDA tocada/segurada/cancelada pelo sistema com toque de
   verdade; volta ao tamanho salvo). `tools/prints.mjs`: sem as cenas da linha viva;
   cenas `*-jogador-ve*` sem o `?prints=1` (a página como ela abre).
@@ -1770,7 +1770,8 @@ tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md`
 
 ## Pausa (item 58; 04/11) — a pausa do FC 24 com o campinho do meu time no canto direito (contrato)
 Pedido do dono (23/10): "não quero ele assim, quero ele igual ao do FIFA" (a pausa do EA FC 24), "só quero que tenha que
-aparecer o campinho do time no canto direito". Pesquisa em `PESQUISA-ESTADIO.md` §7.4. **Só DOM, CSS e página**: `index.html`,
+aparecer o campinho do time no canto direito". PR #602 (FILA item 58; as escolhas no "Depende do dono" 18). Pesquisa em
+`PESQUISA-ESTADIO.md` §7.4. **Só DOM, CSS e página**: `index.html`,
 `css/estilo.css`, `css/tm.css`, `js/hud.js`, `js/entrada.js` (fora do fecho), `js/main.js`, `js/livre-pagina.js`,
 `js/online-pagina.js` e os novos `js/pausa-tela.js` + `css/pausa.css` (sob demanda); `escalacao.js`, `formacoes.js`, `elenco.js`,
 `tatica.js` e `config.js` só lidos. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS. Com a pausa aberta o mundo
@@ -1899,9 +1900,15 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   controle 4 → 3 apertos; o toque: 2 toques no 1º nível e 3 nas Opções (antes 2, na própria janela). Custos que subiram (o plano
   da FILA: as opções num submenu e a ordem do FC): no teclado e no controle as opções custam 9–16 (Qualidade → Alta 9,
   Transparência 16), o Replay 5 (antes 3 no controle) e o Modo de jogo 7 (antes 6).
-- **Fica** (fora da v1, anotado): o fôlego e o capitão no campinho (não há o dado); a câmera de bastidores (o close do
-  controlado, como os "Matchday Menus" do FC 24; render); a Ajuda no estilo novo (continua janela e rola no celular como antes); o
-  contador da pausa combinada do online dentro da pausa; desenhar o 3D só na mudança com a pausa aberta (mexe no laço).
+- **Fica** (fora da v1, anotado; FILA itens 93–99): o tempo do `teste-pausa-tela` no `tempos-ci.mjs` (330 s, estimado aqui:
+  acertar pelo log do CI; item 93); a Ajuda no estilo novo (continua janela e rola no celular como antes; item 94); a câmera de
+  bastidores (o close do controlado, como os "Matchday Menus" do FC 24; render; item 95); desenhar o 3D só na mudança com a
+  pausa aberta (mexe no laço; item 96); o fôlego e o capitão no campinho (o jogo não tem fôlego dinâmico; o capitão só existe na
+  fila do pré-jogo, `cortejo.js`; item 97); no online, o contador da pausa combinada dentro da pausa, o "Toque de novo: sair"
+  que diz "Toque" também com o mouse e o teclado, e o online nas telas 16:10 e 5:4 do PC no teste (item 98); os alvos de toque
+  de 28–44 px no celular, abaixo dos 44 da Apple (revisão F7: decisão do dono, "Depende do dono" 18; item 99).
+- **Limite**: 568×320 está no limite — 8 linhas de 28,6 px no 1º nível e um cartão de ~236×217. Item novo no 1º nível (ou modo
+  novo com mais itens) pede rever a conta, ou entrar num submenu.
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -2398,8 +2405,10 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   em pedaços de 30 ms por quadro SEM desenhar, com a faixa "Simulando o resto da partida… 63' · FLA 1 × 0 PAL"; no apito, a faixa
   do fim. `window.__golaco.tm = {id, pedido, humano, trava, mapa, controlado, simulando, mensagens, sumula(), resultado(),
   simularResto() (Promise), resultadoGravado()}` (null sem `?tm`).
-- **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida" e "Modo de jogo", com
-  `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no fim); sem "Editar time" com a trava. `faixa({..., botaoTexto,
+- **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
+  como "Cenas da partida" (pré-jogo e substituição, sem os treinos), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
+  fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
+  58)"); sem "Editar time" com a trava. `faixa({..., botaoTexto,
   botaoCmd})`. O ponto do controlado no minimapa na cor do time dele.
 - **Testes**: `teste-ponte-tm` (Node, padrão; P1 sem recuo, P2 tm-times, P3 humano no visitante, P4 trava, P5 resultado de
   partidas inteiras, P6 súmula com eventos montados; os pedidos em `tools/lib/pedidos-tm.mjs`) e `teste-tm-tela` (navegador; o
@@ -3879,12 +3888,16 @@ dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,
   golaco.livre.v1`, em try/catch; com `?tm`, o `livre` do pedido como valor inicial), a pausa MÍNIMA posta no DOM na 1ª vez
   (os botões `data-so="livre"` "Jogadores <small>N contra M</small>" e "Recomeçar <small>bola no meio</small> | Bola no meu pé";
   o submenu `#menu-livre`: Voltar, "Meu time − N + [Goleiro]", "Adversário − M + [Goleiro]", Jogar) e a fila da mudança (a
-  ação-objeto entra no 1º passo depois da pausa, como a edição do time). A pausa do Livre (HTML e CSS postos na 1ª vez, ≤ 5
-  linhas, sem rolar em 844×390): Continuar | Replay; Jogadores | Câmera (`.linha-cenas`); Recomeçar <small>bola no meio</small>
-  | Bola no meu pé; Modo de jogo (com `?tm`, "Voltar ao Total Match"); Ajuda — sem Editar time nem Reiniciar. Submenus
-  `.submenu-livre` (o hud.js os fecha e o "voltar" do controle sai deles): `#menu-livre` (Jogadores) e `#menu-camera-livre`
-  (as 6 câmeras em 2 linhas de 3, "Altura − N +", "Distância − N +"); na coluna das opções o segmentado TV | Aproximada dá
-  lugar ao botão `#opcao-camera-livre` com o nome da câmera (abre o submenu; `html.em-livre`). Cara do TM em `css/tm.css`.
+  ação-objeto entra no 1º passo depois da pausa, como a edição do time). A pausa do Livre (desde o item 58: seção "Pausa
+  (item 58)"; o HTML e o CSS próprios postos na 1ª vez; 8 linhas no 1º nível, sem rolar de 844×390 a 568×320): Voltar ao jogo;
+  Jogadores e Câmera (soltos, com o estado em `small.estado`: "N contra M" e o nome da câmera); a `.linha-par` "Recomeçar"
+  (Recomeçar <small>bola no meio</small> | Bola no meu pé — a única linha com dois); Replay; Opções; Modo de jogo; Ajuda — sem
+  Editar time, Estatísticas nem Reiniciar; com `?tm`, sem o Modo de jogo e com "Voltar ao Total Match" por último (antes,
+  16/10–03/11: ≤ 5 linhas em pares, Continuar | Replay e Jogadores | Câmera). Submenus `.submenu-livre` (níveis da pausa como
+  os outros: o Esc e o B voltam ao 1º nível): `#menu-livre` (Jogadores: Meu time e Adversário em linhas empilhadas, cada uma
+  com − N + e o Goleiro; Jogar) e `#menu-camera-livre` (as 6 câmeras em 2 linhas de 3, "Altura − N +", "Distância − N +");
+  nas Opções o segmentado TV | Aproximada dá lugar ao botão `#opcao-camera-livre` com o nome da câmera (abre o submenu;
+  `html.em-livre`). A cara é a da pausa (as variáveis `--p-*` do `estilo.css`).
 - **Câmeras do Livre** (`render/camera-livre.js`, carregado pelo `livre-pagina.js`: fora do download sem o Livre). As do EA FC
   (fifplay.com/fc-25-camera-settings, fifauteam.com/fc-26-camera): TV e Aproximada (as de hoje), Ampla (Co-op: 62 m de largura
   no foco, 24 m de altura, 46 m atrás), Alta (Tactical: 52 m de altura, 24 m atrás, 65°, 76 m de largura), Atrás (End to End:

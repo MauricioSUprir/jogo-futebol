@@ -96,7 +96,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   no chute fora do canto = regravar com `--gravar-referencia <pasta js>` e dizer no PR.
   **Dono, 23/10: a fila por CATEGORIAS** (A–I da FILA.md; a D FEITA em 26/10, #524–#550): ele diz qual categoria fazer e nada começa sem o aval dele
   ("tem algumas coisas a mais que vou te sinalizar, que vc só cmc dps do meu aval"). Os pedidos de 23/10 são os itens 57–66:
-  impedimento pelas partes do corpo (B), pausa igual à do FIFA, minimapa embaixo e nome do condutor nos cantos (59 e 60 FEITOS, #598), a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66 FEITO, #600) (F),
+  impedimento pelas partes do corpo (B), pausa igual à do FIFA (58 FEITO, #602), minimapa embaixo e nome do condutor nos cantos (59 e 60 FEITOS, #598), a tela antes do jogo no nível do EA FC com a cara do TM (64), a mira das bolas paradas minimalista com uma curva boa (65), a câmera que acompanha a bola e mostra a área (66 FEITO, #600) (F),
   passada natural, costura da nuca e bordas dos decalques (I).
   **Pedidos de 29/10 (dono: "add nas categorias"; esperam o aval dele):** item 68, a mira pelo que se vê na tela do celular
   (achado na revisão do C2; dono: "publicar o C2 e pôr a mira na fila") e item 70, cobranças com corrida (pênalti, escanteio,
@@ -564,16 +564,30 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `escalaAnalogico`); minimapa embaixo no meio (PC 112×73; no celular desligado por padrão e, ligado, 92×60 entre o
   analógico e o arco desde os itens 59 e 60, #598 — `hud.js ajustarBaixo`, `entrada.js FAIXA_BAIXO` 22 px; sem lugar, some)
   e o nome do jogador com a bola nos cantos de baixo pelo lado do time no placar (contrato "Faixa de baixo"; o H1 conta o
-  nome e mede o ≡ pelo ícone — régua nova, FILA "Depende do dono" 14); "Minimapa" e "Nomes nos botões" são botões
-  de liga/desliga na barra da pausa (na lista não cabia: a pausa continua sem rolar em 844×390); sem a seta no chão do
+  nome e mede o ≡ pelo ícone — régua nova, FILA "Depende do dono" 14); "Minimapa" e "Nomes nos botões" são linhas
+  liga/desliga nas Opções da pausa (desde o item 58; antes, botões na barra de cima dela); sem a seta no chão do
   controlado; marca de queda só na bola alta do time do humano. **Defesa do toque com 5 botões** no 1º anel: o CONTER
   virou a DIVIDIDA segurada (`entrada.js criarToqueOuSegura`: tocar < `ENTRADA.toqueCurto` 0,25 s = bote, segurar =
   CONTER desde o 1º quadro, como o "Sprint & Tackle" do FC Mobile; só o `pointerup` dá o bote — toque cancelado pelo
   sistema não) e a PRESSÃO foi para a vaga b; teclado e controle não mudam. O mundo recebe as mesmas máscaras
   (hash-igual IGUAL). Teste: `teste-hud-minimo` (navegador, CI e deploy; celular ≤ 11% de HUD em 4 telas — 12% em 568×320 desde o item 32 —, 0 texto fora
-  do placar e do nome do condutor, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, barra da pausa sem encostar). Peça nova de HUD na
+  do placar e do nome do condutor, ≤ 15% da torcida atrás do HUD, 0 linha viva, PC ≤ 2,5%, o topo da pausa sem encostar). Peça nova de HUD na
   partida tem de caber nesse orçamento (ou ir para a pausa). Lição: o relógio das animações CSS do Chromium sem GPU
   atrasa 1–2 s do real com a máquina carregada — teste de algo que some por animação espera a animação, não um tempo fixo.
+- **Pausa do FC 24** (item 58, dono 23/10: "quero ele igual ao do FIFA ... o campinho do time no canto direito"; PR #602,
+  contrato "Pausa (item 58)", `PESQUISA-ESTADIO.md` §7.4; escolhas na FILA "Depende do dono" 18): o jogo congelado à vista, sem
+  janela nem véu; à esquerda a faixa escura em degradê com a marca, a competição e a LISTA de texto na ordem do FC (Voltar ao
+  jogo · Editar time · Estatísticas · Replay · Opções · Modo de jogo/Cenas da partida · Ajuda · Reiniciar/Simular o resto/
+  Voltar ao TM; o Livre, os treinos, a disputa e o online com as listas deles); no canto direito a pílula do placar, o X no
+  lugar do ≡ e o cartão do MEU meio campo em pé (`js/pausa-tela.js` + `css/pausa.css` + a Inter TM, sob demanda; o
+  `campinho.js` do editor; tocar abre o Editar time). As opções (qualidade, câmera, minimapa, replays, horário, tela cheia,
+  som, nomes nos botões, toque) no submenu Opções. Teclado (setas, Enter, Esc volta um nível, Tab preso), controle (espacial)
+  e toque; o fundo `inert` (menos o aviso). A pausa NÃO ROLA em nenhum nível de 844×390 a 568×320 nem no PC (16:9, 4:3, 5:4,
+  16:10, baixo, estreito; a Ajuda ainda é a janela de antes e rola no celular: FILA item 94); 568×320 está no limite (8
+  linhas de 28,6 px): item novo no 1º nível pede rever a conta. Só DOM/CSS/página (hash IGUAL, fecho 0). Teste
+  `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
+  texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
+  dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
   §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
   foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta
@@ -583,7 +597,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   linha, congela 1,6 s no quadro do passe (`tickFoto` no evento) com a linha do lance (`linhaImped.mostrar`; depois do
   replay ela não fica parada no jogo; a linha VIVA continua até a frente da tela limpa) e segue até o toque do impedido em
   ≤ 2,5 s reais (até 2× quando o apito vem longe do passe: 14% dos lances). "Replay" na pausa (últimos 10 s; pausa logo
-  depois de uma montagem: o lance antes dela) e "Replays automáticos" (`?replay=0|1`). A SIMULAÇÃO FICA PARADA no replay (como na
+  depois de uma montagem: o lance antes dela) e "Replays automáticos" (nas Opções da pausa; `?replay=0|1`). A SIMULAÇÃO FICA PARADA no replay (como na
   pausa): hash-igual e hash-partida IGUAIS. Qualquer tecla/botão/clique/toque pula (o aperto não vira jogada); só a marca
   "REPLAY" no canto (transmissão, não narração) e "Pular" no toque; o apito da saída toca depois. Testes:
   `teste-replay-anel` (Node, padrão) e `teste-replay` (navegador, CI); os testes de navegador e prints que não são do
@@ -750,8 +764,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   atributos do TM sem desequilibrar), `sumula.js` (puro: gols com autor/contra/pênalti/assistência, cartões, chutes, no
   alvo, posse, nota do travado → o resultado do TM). Time 0 = mandante do TM; o HUMANO é variável (`criarPartida({humano,
   trava})`, `m.timeHumano`); "só o meu jogador" (Rumo ao Estrelato) = `m.trava` em `assumirControle` + TROCAR/GOLEIRO
-  mascarados. Pausa do TM: "Simular o resto" (passoPartida em pedaços de 30 ms sem desenhar), sem Reiniciar/Modo de
-  jogo; fim com "Voltar ao Total Match". Identidade por time (`identidade.js`, puro; padrão = as constantes de hoje):
+  mascarados. Pausa do TM: "Simular o resto" (passoPartida em pedaços de 30 ms sem desenhar), sem Reiniciar; fim com
+  "Voltar ao Total Match" (desde o item 58 os dois no fim da lista; no fim de jogo o Voltar ao TM sobe para o 1º). Identidade por time (`identidade.js`, puro; padrão = as constantes de hoje):
   escudo no placar/escalação/abertura/placas/bandeirões/fachada, uniformes sem confusão (ΔE₀₀), torcida/cachecóis/faixas/
   mosaico/cadeiras pelas cores e nomes, nome do estádio do mandante, ocupação pelo público. Cara do TM só com `?tm`
   (`<html class="tm">`, `css/tm.css`, `js/tm-cara.js`, `assets/tm/` com a Inter e a logo do próprio TM). **Sem `?tm` nada
