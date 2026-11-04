@@ -1975,7 +1975,7 @@ letra da carta do TM) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`
   <casa> × <fora>, <hora>"), as abas numa `role="toolbar"` com tabindex itinerante, a lista `.pp-lista` só para o leitor de tela
   (posição, nome, nota), uma região `aria-live`. Foco inicial na 1ª aba (o Ⓐ do FC). Tab PRESO: a aba itinerante → os dois times
   → o ≡ → o [<] → volta. Setas: ←/→ nas abas e na barra, ↑/↓ entre as linhas (barra, discos, abas). Enter/Espaço/Ⓐ age; Esc/Ⓑ
-  volta um nível (vista → escalação, adversário → o meu time, 1º nível → o foco na 1ª aba); Q/E e LB/RB trocam o time mostrado;
+  volta um nível (vista → escalação, adversário → o meu time; no 1º nível, no TM o foco no "Simular partida", no resto nada); Q/E e LB/RB trocam o time mostrado;
   P/Start = ≡; Ⓨ = Personalizar; Ⓧ = a próxima vista. O teclado por um ouvinte na CAPTURA da `window`; o controle pelas ações
   `menu-*` do `tratarAcao` e o Ⓨ/Ⓧ/LB/RB lidos em `pp.atualizar`. Toque: as abas e os botões por `aoTocar`; tocar no campinho =
   Personalizar (só onde é editável); na Visão tática, tocar num disco mostra o nome. Com a pausa, a Ajuda ou o editor por cima,
@@ -2005,10 +2005,15 @@ letra da carta do TM) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`
   `fase`, `faseRemota`, `encerrado` e `aviso`; `sobDemanda.estado.prepartida`.
 - **Testes**: `teste-prepartida` (Node, padrão: L1 o layout da maquete medida em 11 telas × 6 formações, L2 a Visão tática sem
   encosto, L3 a linha de informação, L4 o árbitro, L5 a edição → times, L6 os dados por modo, L7 a pureza e o fecho);
-  `teste-prepartida-tela` (navegador, CI e deploy; `--so pc,cel,telas,modos,tm,online,carga`, `--raiz` mede a base, `--espera <s>`
+  `teste-prepartida-tela` (navegador, CI e deploy; `--so pc,cel,telas,modos,pad,tm,online,carga`, `--raiz` mede a base, `--espera <s>`
   o O5): E1–E21 (liga/desliga, simulação parada e hash = Node, sem rolar e nada encosta em 10 telas também sem as fontes, letras,
   alvos, toques até o jogo, som, teclado, controle, leitor de tela, Personalizar, modos, desenho, download, contraste, em pé,
-  voltas, proporções do FC 24, reserva) e O1–O7 (duas abas pelo BroadcastChannel); `teste-ponte-tm` P9; `teste-carga`
+  voltas, proporções do FC 24, reserva) e O1–O7 (duas abas pelo BroadcastChannel); da revisão: E4b/E5b (os Pênaltis, o TM pro com
+  o clássico e os nomes longos — 4 abas, as duas vistas, o Simular armado — e o Rumo ao Estrelato, também no regime mínimo e no PC:
+  a info, as abas e a competição sem o corte do CSS, o ícone igual na barra, os cantos dentro da borda do campinho, a letra do
+  resto), E11b (o Ⓐ do Jogar com o pré-jogo não pula as cenas), E12b/E12c (os discos da Visão tática para o leitor de tela; o toque
+  sem anel de foco), E19b (o "Pré-jogo da partida" mudado pelo ≡ vale no Jogar, com o webdriver de um usuário), E14 dos Pênaltis
+  do TM (o [<] manda `tm3d:sair`) e a tela coberta pela pausa e pelo editor (E10/E13); `teste-ponte-tm` P9; `teste-carga`
   (`SO_COM_TELA`).
 
 ## Pedidos de 11/10 — regras e controles (contrato)

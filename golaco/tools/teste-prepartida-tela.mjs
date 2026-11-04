@@ -33,8 +33,8 @@
 //   E16 download: os bytes até +2,5 s com a tela ≤ os sem ela + 140 KB; a TM Cond só com a tela
 //   E17 contraste: a luminância (mediana) atrás da info e da barra ≤ 50/255, de dia e de noite, nos dois fundos
 //   E18 em pé: o #girar cobre, o fundo para; deitado de novo, o mesmo foco
-//   E19 voltas: "Jogar de novo" mostra a tela; "Reiniciar partida" no meio não; a troca de modo mostra a do modo novo; o
-//       "Pré-jogo da partida" mudado pelo ≡ vale no Jogar (desligado = o apito)
+//   E19 voltas: "Jogar de novo" mostra a tela; "Reiniciar partida" no meio não; a troca de modo mostra a do modo novo; E19b o
+//       "Pré-jogo da partida" mudado pelo ≡ vale no Jogar (desligado = o apito; curto = o curto; com o webdriver de um usuário)
 //   E20 as proporções do FC 24 no PC 16:9 (±1,5 ponto)
 //   E21 a reserva: com o módulo bloqueado, a abertura de texto de hoje (e o jogo começa como hoje)
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
@@ -632,6 +632,42 @@ if (faz('modos')) {
       } finally { await navegador.close(); }
     }
     meta('E1 desligada com webdriver sem o parâmetro, ?prepartida=0, prints, demo e nos treinos (o começo de hoje; o módulo nem baixa)', out.join(' · '), 'nenhum #prepartida; com ?prejogo=1 a abertura de texto', ok);
+    // E19b (revisão A7) o "Pré-jogo da partida" mudado pelo ≡ com a tela aberta vale no Jogar: desligado = o apito (o jogo anda, sem
+    // pré-jogo); curto = o pré-jogo curto. Com o navigator.webdriver de um usuário (false) e sem ?prejogo — com o parâmetro a
+    // preferência não vale e, com o webdriver, o pré-jogo fica desligado
+    const r19 = [];
+    let ok19 = true;
+    for (const alvo of ['desligado', 'curto']) {
+      const s = await abrir({ largura: 1280, altura: 720 });
+      try {
+        await s.contexto.addInitScript(() => { Object.defineProperty(Navigator.prototype, 'webdriver', { get: () => false, configurable: true }); });
+        await s.pagina.goto(srv.url + `index.html?${Q}&prepartida=1&semente=3`);
+        await s.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
+        const pg = s.pagina;
+        const a = await pg.evaluate(() => ({ wd: navigator.webdriver, tela: !!window.__golaco.prepartida?.aberta, fundo: window.__golaco.prepartida?.estado?.fundo, pre: window.__golaco.prejogo?.fase }));
+        await tecla(pg, 'KeyP');
+        const ciclo = await pg.evaluate(async alvo => {
+          document.querySelector('#btn-modos')?.click();
+          await new Promise(r => setTimeout(r, 100));
+          const b = document.querySelector('#menu [data-cmd="prejogo-ciclo"]'), est = () => document.getElementById('estado-prejogo')?.textContent;
+          const out = [est()];
+          for (let i = 0; i < 4 && est() !== alvo; i++) { b.click(); out.push(est()); }
+          return out;
+        }, alvo);
+        await tecla(pg, 'Escape'); await tecla(pg, 'Escape');
+        await quadros(pg, 3);
+        await pg.evaluate(() => document.querySelector('#prepartida [data-aba="jogar"]').focus());
+        await tecla(pg, 'Enter');
+        await pg.waitForTimeout(1500);
+        const d = await pg.evaluate(() => ({ tela: !!window.__golaco.prepartida.aberta, pre: window.__golaco.prejogo.ativo, modo: window.__golaco.prejogo.modo, tick: window.__golaco.mundo.tick }));
+        r19.push(`${alvo}: antes ${JSON.stringify(a)}; ${ciclo.join('→')}; depois do Jogar ${JSON.stringify(d)}`);
+        const bom = a.wd === false && a.tela && a.fundo === 'abertura' && ciclo[ciclo.length - 1] === (alvo === 'desligado' ? 'desligado' : 'curto') && !d.tela
+          && (alvo === 'desligado' ? !d.pre && d.tick > 0 : d.pre && d.modo === 'curto' && d.tick === 0);
+        if (!bom || s.erros.length) { ok19 = false; if (s.erros.length) r19.push(`erros: ${s.erros.slice(0, 2).join(' | ')}`); }
+      } finally { await s.navegador.close(); }
+    }
+    meta('E19b o "Pré-jogo da partida" mudado pelo ≡ com a tela aberta vale no Jogar (desligado = o apito e o jogo anda; curto = o pré-jogo curto)', r19.join(' · '),
+      'webdriver false, tela na abertura; desligado → sem pré-jogo, tick > 0; curto → pré-jogo curto, tick 0', ok19);
     // E21 a reserva
     const { navegador, pagina: pg } = await abrirPagina({ w: 1024, h: 600, q: `${Q}&prejogo=1&prepartida=1`, bloquear: /prepartida-tela\.js/ });
     try {
