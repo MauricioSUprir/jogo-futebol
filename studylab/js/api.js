@@ -120,3 +120,17 @@ export const pagarComCartaoNoServidor = (planoId, cartao) =>
   chamar('/pagar/cartao', { metodo: 'POST', corpo: { planoId, cartao } });
 
 export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });
+
+/** Mantém o servidor do Render acordado enquanto o app está aberto e visível
+ *  (o plano grátis dorme depois de 15 min sem ninguém chamar). Quem acorda o
+ *  servidor de madrugada é o robô do GitHub (.github/workflows/mindtrack-acordar.yml). */
+let cutucando = null;
+export function manterServidorAcordado(intervaloMs = 10 * 60000) {
+  if (cutucando || !temServidor()) return;
+  const cutucar = () => {
+    if (document.hidden) return;
+    fetch(url('/saude'), { cache: 'no-store' }).catch(() => { /* fora do ar ou sem internet: tenta na próxima */ });
+  };
+  cutucar();
+  cutucando = setInterval(cutucar, intervaloMs);
+}
