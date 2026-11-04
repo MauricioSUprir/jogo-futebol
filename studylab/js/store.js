@@ -38,7 +38,7 @@ export function estadoVazio() {
     // Minha Escola: o que o aluno está aprendendo em cada matéria, escrito por
     // ele. As fotos ficam no IndexedDB (fotos.js) — aqui só o texto.
     escola: {},                 // { [materiaId]: { texto, em } }
-    despertadores: [],          // ver js/despertador.js
+    relogio: {},                // cronômetro e timer (ver js/relogio.js)
     lidas: [],  // notificações já lidas
   };
 }
