@@ -406,6 +406,18 @@ elencos antes do código.
 | Barlow Condensed (Google Fonts, OFL; a "TM Cond" da carta do TM em `legacy-total-match/assets/fontes`) | — | Os nomes, as notas e as posições das fichas na letra da carta do TM (a tabela de avanços da fonte no `prepartida.js` deixa a conta independente da fonte chegar) |
 | CBF, quadro de árbitros FIFA 2026, e a lista do ge com 72 árbitros (fontes em `tools/dados/arbitros-reais.txt`) | Os nomes reais | Os 32 árbitros FICTÍCIOS conferidos contra eles (nenhum nome igual; `teste-prepartida` L4) |
 
+**Outras fontes lidas** (o que se viu e se entrou ou não; as capturas ficaram fora do repositório):
+
+| Fonte | O que mostra | Aproveitado? |
+|---|---|---|
+| FC 24 carreira, a "Central" (https://i.redd.it/5l0kmebxhftb1.jpg, 3840×2160) e o Kick Off, a escolha do tipo de partida (https://fifauteam.com/images/fc24/kickoff/1.webp, na página https://fifauteam.com/fc-26-kick-off/) | O fundo é o estádio 3D vazio e ESCURECIDO; blocos de abas com a selecionada branca e uma linha verde de enfeite; o Kick Off do 26 "quase igual" ao do 25, com as estatísticas do confronto antes de começar | O fundo 3D escurecido (o nosso véu sobre a abertura ou o jogo parado); o estádio por dentro e a vinheta ficaram como escolha (item 102); o H2H não (o jogo não guarda confrontos) |
+| FIFA 23, a escalação da pré-partida (https://i.redd.it/r4hub527wwca1.jpg, foto) | O "antes" do FC 24: abas Squad/Formations, camisas com a nota e o nome | A nota e o nome em cada ficha; o nome cortado com "…" só sem a fonte |
+| FC 25 carreira: os menus em cartões grandes (r/FifaCareers 1emf5b4; https://i.redd.it/h0z062mji9hd1.jpg) e a escolha de uniforme num estúdio 3D (r/FifaCareers 1hxep2d); FC 25 Rush (https://www.charlieintel.com/ea-sports-fc/ea-fc-25-rush-mode-explained-332932/) | "Tactical Preset", "Team Management" com o mini campo e o fôlego; um jogador 3D de corpo inteiro de cada lado; as cartas na seleção antes da partida | O selo da tática (o "Tactical Preset" pelo que o jogo tem); os jogadores 3D de corpo inteiro ficaram fora (pedem o corpo novo; como o item 95 da pausa) |
+| Reviews do FC 25 — TechRadar (https://www.techradar.com/gaming/ea-sports-fc-25-review) e Operation Sports (https://operationsports.com/ea-sports-fc-25-presentation-breakdown), só pelo resumo da busca | As intros do pré-jogo, tiradas no FC 24, voltaram no FC 25 | A tela vem ANTES do pré-jogo cinematográfico, não no lugar dele (o "Jogar" começa o pré-jogo escolhido) |
+| FC 26 carreira e UT: o Team Management (Dexerto, https://www.dexerto.com/wikis/ea-fc-26-guides-walkthrough-tips/best-tactics-to-use-in-career-mode/), a escalação de TV em perspectiva (r/FifaCareers 1ujq5di) e as cartas no campo em perspectiva com o painel do time (r/fut 1q5gejy) | Carta ~9% da altura em 4 fileiras em ~60% da altura; o painel com o escudo, "Rating 85" e a química | O campinho em perspectiva com as fichas e o GERAL do time (a mesma conta do `notaTime` do TM); a química não (não existe no 3D) |
+| Konami, "Mobile gameplay setting" do eFootball (Facebook, só pelo resumo) | O celular passou a escolher o estádio e ver os uniformes antes da partida | Só confirma o lugar da tela no celular; nada copiado |
+| Fórum do Construct (https://www.construct.net/en/forum/construct-3/general-discussion-7/gamepad-input-not-unlock-audio-187396) e WebKit 217675 (https://bugs.webkit.org/show_bug.cgi?id=217675) | O botão do controle pode não contar como "ativação do usuário" para o áudio (no Chrome, `getGamepads()` com botão > 50% contaria; não confirmado em documento oficial) | O aviso discreto "Toque ou aperte uma tecla para ligar o som" quando o contexto não está `running` 0,3 s depois do Jogar pelo controle |
+
 **Decisões** (as alternativas na especificação do item e na FILA "Depende do dono" 19):
 - **O fundo é a abertura de hoje** (o aéreo de fora, o som abafado) ou o jogo parado, atrás de um véu: 0 código 3D novo, 0
   chamada a mais (40/96 mil no 844×390 Média, o teto do `teste-prejogo`), 30 qps. O estádio por dentro numa câmera nova (mais
@@ -416,6 +428,17 @@ elencos antes do código.
   substituição pendente no 1º passo (conferido no `escalacao.js`).
 - **O online pelo byte de estado do pacote** (bits da página): contínuo, sem recado perdido, e o `online.js` (entrada do fecho)
   intocado. Sem Personalizar no online (v1).
+- **Da revisão (04/11; 7 achados de comportamento e 18 visuais — os confirmados corrigidos com teste)**: nada sai cortado pelo
+  CSS (a info mede o separador como ele é desenhado e confere no DOM; a vista e o Simular armado têm rótulos curtos — "Sem
+  bola", "Simular?" —; a competição do celular quebra em 2 linhas em vez do "…"); o ícone das abas decidido para a barra inteira
+  (com 4 abas nas telas pequenas, nenhuma aba tem ícone: antes umas tinham e outras não); a pausa, a Ajuda e o editor ficam
+  SOZINHOS sobre o 3D (a tela some atrás deles, só o véu); o Ⓐ do Jogar não pula mais as cenas do pré-jogo; nos Pênaltis do TM
+  o [<] volta sem simular a disputa (`tm3d:sair`); os discos da Visão tática com papel e nome para o leitor de tela e as áreas
+  desenhadas; no toque, sem anel de foco; a aba do foco com um indicador só; a camisa escura aparece no busto e na barra; o
+  clássico sem repetir "Clássico"; a letra do resto ≥ 11/12 px também no VOCÊ (que subiu para cima do filete), na ordem dos
+  cobradores, nas teclas e na competição. Ficaram (decisão do dono ou maiores; FILA itens 100–107): as fotos nas fichas (item
+  31), o fundo desfocado e sem o 3D competindo (item 102), o nome embaixo de cada disco (item 103), o selo grande da competição
+  no PC (item 104), a moldura mais fina (gosto: "Depende do dono" 19) e o editor com a cara da tela (item 105).
 - **Antes → depois** (base 30ce999f × o item 64; `teste-prepartida-tela`, `teste-carga`, os hashes; na base o teste novo passa 7
   de 18 medidas e reprova 11):
 
@@ -426,8 +449,8 @@ elencos antes do código.
   | A simulação com a tela aberta (10 s de relógio) | — | tick 0, 0 passos, hash = Node; 30 desenhos 3D/s |
   | O som depois do gesto | o toque para começar | o Jogar: o contexto `running` em 0,03 s; o apito só depois |
   | Personalizar antes do jogo | o Editar time da pausa: a troca vira substituição pendente no 1º passo (1 de 5) | a escalação: 0 substituições, ninguém "saiu", hash = Node `criarPartida({times})`; o reserva conta no resultado do TM |
-  | Sem rolar / nada encosta | — | 0 px e 0 encostos em 4 telas de celular e 6 de PC × as 3 vistas × os dois times, também sem as fontes |
-  | A letra (menor) | — | nome 10 px em 568×320, 11–12 nos outros celulares, 15 no PC 1280×720; info ≥ 11; abas ≥ 14 |
+  | Sem rolar / nada encosta | — | 0 px e 0 encostos em 4 telas de celular e 6 de PC × as 3 vistas × os dois times, também sem as fontes; os Pênaltis, o TM pro com o clássico e nomes longos (4 abas, as duas vistas, o Simular armado) e o Rumo ao Estrelato também no regime mínimo (640×304, 568×280) e no PC sem nada cortado pelo CSS (antes da revisão: 34, 106 e 24 problemas; os cantos atravessavam a borda do campinho em 11–15 px) |
+  | A letra (menor) | — | nome 10 px em 568×320, 11–12 nos outros celulares, 15 no PC 1280×720; info ≥ 11; abas ≥ 14; o resto ≥ 11 no celular e ≥ 12 no PC (antes da revisão: o VOCÊ e a ordem dos Pênaltis a 9 px, as teclas a 11,6 px no PC, a competição a 10 px no regime mínimo) |
   | Os alvos de toque | — | abas 177 × 40 (568×320) a 241 × 44 (844×390); o ≡ 34–40; os times 64 × 30 a 75 × 36 |
   | O desenho com a tela (844×390 Média) | — | 40 chamadas, 96 mil triângulos (o teto do pré-jogo) |
   | Contraste atrás do texto (mediana) | — | 10–29 de 255 (≤ 50), de dia e de noite |
@@ -436,9 +459,13 @@ elencos antes do código.
   | Download inicial (até +2,5 s) | 2673 KB, folga 747 KB | 2701 KB, folga 720 KB (o `main.js` +24 KB; o `hud.js`, a `prejogo-tela.js` e o `render/prejogo.js` +1 KB cada; depois da revisão) |
   | Com a tela, a mais (sob demanda) | — | +99 KB transferidos (+160 KB crus): os 2 módulos, o CSS, a Inter TM 600/800 e a TM Cond |
   | hash-igual / hash-partida / fecho | — | IGUAL / IGUAL (104 hashes) / 0 módulos do fecho mexidos |
+  | O teste final na versão de antes da revisão (31620135) | — | 12 de 32 metas reprovavam (`--so telas,pad,tm`); depois das correções, 73 de 73 em todas as seções (573 s) |
 - **Dúvidas em aberto**: em qual versão (24/25/26) o dono tirou o print; a pré-partida do FC 25 e a da carreira do FC 26 (não
-  achadas); a animação de saída da tela no FC; se o botão do controle libera o som no Safari de hoje; nada medido em celular de
-  verdade (só o Chromium sem GPU).
+  achadas); o que mede a barrinha verde embaixo de cada rosto no FC 24 (forma? condição?) e qual é a 4ª aba (provável "Sim
+  Match"); a animação de saída da tela no FC; se o botão do controle libera o som no Safari de hoje; os comentários do post do
+  Reddit e o texto inteiro das reviews do FC 25 (só o resumo da busca); nenhuma pré-partida de jogo de celular medida em 568×320
+  exatos; nada medido em celular de verdade (só o Chromium sem GPU); o regime mínimo (a barra do navegador antes da tela cheia)
+  medido só no Chromium.
 
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
