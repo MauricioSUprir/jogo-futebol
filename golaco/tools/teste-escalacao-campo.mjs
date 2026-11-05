@@ -6,17 +6,22 @@
 //     de 10 letras do TM, os de estresse): o campo em pé (0,648 ≤ L/A ≤ 0,85), a carta com a altura de hoje (clamp(44,
 //     ⌊(H − 52)/5⌋, 76)), folga ≥ 10 px entre cartas, as letras ≥ o mínimo da tela (§7.4/§7.5: celular nome e posição ≥ 11, ≥ 10
 //     em 568×320; PC nome ≥ 13 e posição ≥ 11), a linha da posição cabe, nenhum nome do fictício nem do TM de 10 letras cortado
-//     (pela mesma tabela de avanços) e a carta da ponta no máximo meia carta fora da lateral; a janela de PC em pé (a largura
-//     não dá) desce a altura até o grupo caber;
+//     (pela mesma tabela de avanços) e a carta da ponta no máximo meia carta fora da lateral e NUNCA tangente a ela (revisão V1:
+//     a borda ≥ 5 px para dentro, ou o centro na lateral); a janela de PC em pé (a largura não dá) desce a altura até o grupo
+//     caber;
 //  N2 as posições nas 6 formações (posicaoCarta): o GOL o mais baixo (≥ 10 px) e no meio; o lado certo (col menor → x menor;
 //     col < 0 à esquerda do meio, > 0 à direita); os centros dentro do campo; nenhum par de cartas encostando (folga ≥ 10 − 0,5);
 //  N3 o campinho.js dos outros usuários (o "Editar time" e a pausa) igual ao da base: svgCampinho(true), svgCampinho(false) e o
 //     posicaoNaTela (6 formações × 2 orientações × 3 tamanhos) pelo hash FNV-1a gravado; svgCampinho(true, L): viewBox
 //     "0 0 L 105", o círculo em L/2 com r 9,15, as áreas centradas, as laterais em 0,5 e L − 0,5;
 //  N4 a larguraCond do prepartida.js é a do letra-cond.js (a mesma função) e dá os valores da tabela antiga em 200 textos (hash);
-//  N5 a conta das duas folhas: os 22 titulares (nomesTitulares) — o tamanho é o do nome mais largo dos dois times, igual para os
-//     dois (o elenco fictício e o pedido do TM com nomes longos, tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS).
-// Na base 9ce86227 REPROVA N1 (a função deitava a caixa no celular), N2, N3 (a largura é ignorada), N4 (sem o letra-cond.js) e N5.
+//  N5 a conta das duas folhas (revisões A1/V2: tamanhosDasFolhas): os 22 titulares (nomesTitulares) na ordem das vagas; a MESMA
+//     caixa do campo nas duas (w × h), a altura a da conta dos 22 e a largura a maior das duas folhas; as cartas de cada folha
+//     pelos 11 nomes dela (a de nomes mais estreitos nunca com a carta maior nem com as pontas mais para fora; cada uma igual à
+//     conta dela na caixa) e a regra das pontas do N1 nas duas (o elenco fictício, o pedido do TM com nomes longos —
+//     tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS — e o MISTO, PED_NOMES_MISTOS: a folha de nomes curtos com as pontas para dentro).
+// Na base 9ce86227 REPROVA N1 (a função deitava a caixa no celular), N2, N3 (a largura é ignorada), N4 (sem o letra-cond.js) e N5;
+// no 07836042 (antes da revisão) REPROVA N1 (as pontas tangentes) e N5 (sem tamanhosDasFolhas).
 //   node tools/teste-escalacao-campo.mjs [--js <pasta js>]   (--js: mede outra cópia, ex.: a base)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -34,7 +39,7 @@ const { FORMACOES } = await imp('formacoes.js');
 const { ELENCOS, fichaDe, registrarElenco } = await imp('elenco.js');
 const P = await imp('partida.js');
 const TT = await imp('tm-times.js');
-const { PED_NOMES_LONGOS, CAM_LONGAS, CAM_ESTRESSE } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
+const { PED_NOMES_LONGOS, PED_NOMES_MISTOS, CAM_LONGAS, CAM_ESTRESSE } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
 
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
@@ -63,6 +68,8 @@ const tam = (W, H, nomes, vh) => ESC.tamanhoEscalacao(W, H, { larguraNome: largu
 const larguraTela = (n, px) => Math.max(larguraCond(n, px, false), LC.larguraCondInteira ? LC.larguraCondInteira(n, px, false) : 0);
 const cabeNaCarta = (n, T) => larguraTela(n, T.fonteNome) <= 0.94 * (T.cw - 2) + 0.01;
 const larguraDe = nomes => px => nomes.reduce((m, n) => Math.max(m, larguraTela(n, px)), 0);
+// a ponta nunca tangente à lateral (revisão V1): a borda da carta ≥ 5 px para dentro, ou o centro na lateral
+const pontaOk = T => T.inset - T.cw / 2 >= 5 - 1e-9 || Math.abs(T.inset) <= 1e-9;
 
 // ------------------------------------------------------------------ N1
 {
@@ -84,6 +91,7 @@ const larguraDe = nomes => px => nomes.reduce((m, n) => Math.max(m, larguraTela(
       if (T.comPos !== true) p.push('sem a linha da posição');
       if (rot !== 'estresse' && cortados.length) p.push(`cortados ${cortados.join(', ')}`);
       if (!(T.fora <= T.cw / 2 + 1e-9 && T.inset >= -1e-9)) p.push(`fora ${f1(T.fora)} (meia carta ${T.cw / 2})`);
+      if (!pontaOk(T)) p.push(`ponta tangente (borda ${f1(T.inset - T.cw / 2)} px, centro a ${f1(T.inset)})`);
       if (!(T.w + 2 * T.fora <= W + 0.5)) p.push(`grupo ${Math.ceil(T.w + 2 * T.fora)} > ${Math.floor(W)}`);
       if (!(T.largura >= 68 && T.largura <= 89.3)) p.push(`largura ${T.largura} m`);
       if (p.length) ruins.push(`${nome} ${rot}: ${p.join('; ')}`);
@@ -92,14 +100,14 @@ const larguraDe = nomes => px => nomes.reduce((m, n) => Math.max(m, larguraTela(
   }
   meta('N1 tamanhoEscalacao em pé: 10 telas × 3 conjuntos de nomes — L/A, carta, folga, letra, linha da posição, cortados, ponta',
     ruins.length ? ruins.slice(0, 4).join(' | ') + (ruins.length > 4 ? ` (+${ruins.length - 4})` : '') : linhas.filter((_, i) => i % 2 === 0).slice(0, 5).join('; ') + ' …',
-    '0,648 ≤ L/A ≤ 0,85; carta de hoje; folga ≥ 10; letra ≥ mín.; posição cabe; 0 cortados (fict./TM); ≤ meia carta fora', ruins.length === 0);
+    '0,648 ≤ L/A ≤ 0,85; carta de hoje; folga ≥ 10; letra ≥ mín.; posição cabe; 0 cortados (fict./TM); ≤ meia carta fora, nunca tangente', ruins.length === 0);
   // a janela de PC em pé: a largura não dá → a altura desce até o grupo caber
   let r = null;
   try {
-    r = [[400, 900], [520, 900], [300, 700]].map(([W, H]) => { const T = tam(W, H, CAM_LONGAS, 1000); return { W, H, T, ok: T.w + 2 * T.fora <= W + 0.5 && T.w / T.h <= 0.85 + 1e-9 && T.w / T.h >= 0.648 && T.h < H }; });
+    r = [[400, 900], [520, 900], [300, 700]].map(([W, H]) => { const T = tam(W, H, CAM_LONGAS, 1000); return { W, H, T, ok: T.w + 2 * T.fora <= W + 0.5 && T.w / T.h <= 0.85 + 1e-9 && T.w / T.h >= 0.648 && T.h < H && pontaOk(T) }; });
   } catch (e) { r = null; }
   meta('N1b janela de PC em pé (largura curta): a altura desce até o campo + as pontas caberem, ainda em pé',
-    r ? r.map(x => `${x.W}×${x.H} → ${x.T.w}×${x.T.h} grupo ${Math.ceil(x.T.w + 2 * x.T.fora)}`).join('; ') : 'erro', 'grupo ≤ W; L/A ≤ 0,85; altura menor', r && r.every(x => x.ok));
+    r ? r.map(x => `${x.W}×${x.H} → ${x.T.w}×${x.T.h} grupo ${Math.ceil(x.T.w + 2 * x.T.fora)}`).join('; ') : 'erro', 'grupo ≤ W; L/A ≤ 0,85; altura menor; pontas', r && r.every(x => x.ok));
 }
 
 // ------------------------------------------------------------------ N2
@@ -180,34 +188,52 @@ const larguraDe = nomes => px => nomes.reduce((m, n) => Math.max(m, larguraTela(
 // ------------------------------------------------------------------ N5
 {
   const ruins = [], medidas = [];
+  // (os nomes lidos logo depois de registrar cada pedido: os elencos do TM de dois pedidos usam os mesmos ids)
   const casos = [];
-  {
-    const m = P.criarPartida({ semente: 3 });
-    casos.push(['fictício', m.times]);
-  }
-  try {
-    const T = TT.timesDoPedido(PED_NOMES_LONGOS);
-    for (const el of T.elencos) registrarElenco(el);
-    const m = P.criarPartida({ semente: 3, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano });
-    casos.push(['TM nomes longos', m.times]);
-  } catch (e) { ruins.push(`pedido do TM: ${e.message}`); }
-  for (const [rot, times] of casos) {
-    if (typeof ESC.nomesTitulares !== 'function') { ruins.push('nomesTitulares não existe'); break; }
-    const nomes = ESC.nomesTitulares(times);
+  const nomesDe = (rot, times) => {
     const porTime = [0, 1].map(t => FORMACOES[times[t].formacao].vagas.map(v => fichaDe(times[t].vagas[v.id])?.camisa).filter(Boolean));
+    casos.push([rot, typeof ESC.nomesTitulares === 'function' ? ESC.nomesTitulares(times) : null, porTime]);
+  };
+  nomesDe('fictício', P.criarPartida({ semente: 3 }).times);
+  for (const [rot, ped] of [['TM nomes longos', PED_NOMES_LONGOS], ['TM misto', PED_NOMES_MISTOS]]) {
+    try {
+      const T = TT.timesDoPedido(ped);
+      for (const el of T.elencos) registrarElenco(el);
+      nomesDe(rot, P.criarPartida({ semente: 3, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano }).times);
+    } catch (e) { ruins.push(`pedido ${rot}: ${e.message}`); }
+  }
+  let comPontasDentro = 0;
+  for (const [rot, nomes, porTime] of casos) {
+    if (!nomes) { ruins.push('nomesTitulares não existe'); break; }
+    if (typeof ESC.tamanhosDasFolhas !== 'function') { ruins.push('tamanhosDasFolhas não existe'); break; }
     if (nomes.length !== 22 || nomes.join('|') !== [...porTime[0], ...porTime[1]].join('|')) ruins.push(`${rot}: ${nomes.length} nomes fora da ordem`);
-    for (const [nome, vw, vh, sl, sb] of TELAS.filter((_, i) => i % 2 === 0)) {
+    for (const [nome, vw, vh, sl, sb] of TELAS) {
       const { W, H } = area(vw, vh, sl, sb);
-      const a = ESC.tamanhoEscalacao(W, H, { larguraNome: ESC.larguraNomes(nomes), alturaTela: vh });
-      const so = [0, 1].map(t => ESC.tamanhoEscalacao(W, H, { larguraNome: ESC.larguraNomes(porTime[t]), alturaTela: vh }));
-      // o tamanho das duas folhas (o mesmo, pela conta dos 22) = o do time de nome mais largo, e nunca menor que o de cada um
-      const maior = so[0].cw >= so[1].cw ? so[0] : so[1];
-      if (a.cw !== maior.cw || a.w !== maior.w || a.h !== maior.h || so.some(s => s.w > a.w || s.cw > a.cw)) ruins.push(`${rot} ${nome}: ${a.w}×${a.h}/${a.cw} × ${so.map(s => `${s.w}/${s.cw}`).join(' ')}`);
-      if (nome === '568×320') medidas.push(`${rot}: ${a.w}×${a.h} carta ${a.cw} (só o time 0: ${so[0].cw}, só o 1: ${so[1].cw})`);
+      const ls = porTime.map(ESC.larguraNomes);
+      const F = ESC.tamanhosDasFolhas(W, H, { larguras: ls, alturaTela: vh });
+      const juntos = ESC.tamanhoEscalacao(W, H, { larguraNome: ESC.larguraNomes(nomes), alturaTela: vh });
+      const p = [];
+      // a mesma caixa nas duas; a altura a dos 22; a largura nunca menor que a dos 22 e o grupo cabe
+      if (!(F[0].w === F[1].w && F[0].h === F[1].h)) p.push(`caixas ${F[0].w}×${F[0].h} × ${F[1].w}×${F[1].h}`);
+      if (F[0].h !== juntos.h || F[0].w < juntos.w) p.push(`caixa ${F[0].w}×${F[0].h} × a dos 22 ${juntos.w}×${juntos.h}`);
+      for (const t of [0, 1]) {
+        const T = F[t], so = ESC.tamanhoEscalacao(W, T.h, { larguraNome: ls[t], alturaTela: vh, caixa: { w: T.w, h: T.h } });
+        if (T.cw !== so.cw || T.passo !== so.passo || T.fonteNome !== so.fonteNome) p.push(`folha ${t} ≠ a conta dela na caixa`);
+        if (!pontaOk(T)) p.push(`folha ${t}: ponta tangente (borda ${f1(T.inset - T.cw / 2)})`);
+        if (!(T.w + 2 * T.fora <= W + 0.5)) p.push(`folha ${t}: grupo ${Math.ceil(T.w + 2 * T.fora)} > ${Math.floor(W)}`);
+      }
+      // a folha de nomes mais estreitos (na letra da conta) nunca com a carta maior nem com as pontas mais para fora
+      const px = Math.min(F[0].fonteNome, F[1].fonteNome);
+      const [e, l] = ls[0](px) <= ls[1](px) ? [0, 1] : [1, 0];
+      if (F[e].fonteNome === F[l].fonteNome && (F[e].cw > F[l].cw || F[e].inset - F[e].cw / 2 < F[l].inset - F[l].cw / 2 - 1e-9)) p.push(`a folha de nomes estreitos com carta ${F[e].cw} > ${F[l].cw} ou pontas mais para fora`);
+      if (rot === 'TM misto' && F[0].inset - F[0].cw / 2 >= 5) comPontasDentro++;
+      if (p.length) ruins.push(`${rot} ${nome}: ${p.join('; ')}`);
+      if (nome === '844×390' || nome === '568×320') medidas.push(`${rot} ${nome}: ${F[0].w}×${F[0].h}, carta ${F[0].cw}/${F[1].cw}, borda ${f1(F[0].inset - F[0].cw / 2)}/${f1(F[1].inset - F[1].cw / 2)}`);
     }
   }
-  meta('N5 as duas folhas pela mesma conta: os 22 titulares na ordem das vagas, o tamanho do nome mais largo dos dois times',
-    ruins.length ? ruins.slice(0, 3).join(' | ') : medidas.join('; '), 'o mesmo tamanho nas duas', ruins.length === 0 && casos.length === 2);
+  meta('N5 as duas folhas: a mesma caixa (a altura dos 22, a largura da maior), as cartas de cada uma pelos nomes dela, pontas nunca tangentes',
+    ruins.length ? ruins.slice(0, 3).join(' | ') + (ruins.length > 3 ? ` (+${ruins.length - 3})` : '') : medidas.join('; '),
+    'a mesma caixa; a carta e as pontas de cada folha pelos nomes dela; o mandante do misto com as pontas dentro ≥ 8 telas', ruins.length === 0 && casos.length === 3 && comPontasDentro >= 8);
 }
 
 let falhas = 0;

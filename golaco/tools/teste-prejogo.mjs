@@ -23,9 +23,14 @@
 //      do nome dentro da caixa dele: os traços de baixo de g, y, ç); E8
 //      sem rolar (documento, #prejogo, a folha, a coluna) e a coluna ≥ 8 px do grupo do campo; E9 a mesma caixa nas duas
 //      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome em TM Cond (carregada);
+//      E12 as pontas nunca tangentes à lateral (a borda da carta ≥ 5 px para dentro, ou a carta centrada na lateral ± 1 px;
+//      revisão V1 do item 29);
 //  15) a escalação com ?tm e nomes LONGOS (tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS: os dois nomes de time mais compridos e
-//      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E11 em 568×320, 640×360, 844×390 com entalhe,
-//      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…");
+//      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E12 em 568×320, 640×360, 844×390 com entalhe,
+//      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…"); e o
+//      pedido MISTO (PED_NOMES_MISTOS: um nome de time curto e camisas curtas × o nome e as camisas longas) em 1280×1024 e
+//      844×390 — a mesma caixa nas duas folhas com colunas de larguras diferentes (A1) e as cartas de cada folha pelos nomes
+//      dela (V2: as pontas do time de nomes curtos dentro do campo);
 //   5) pular: um clique/toque avança 1 bloco no mesmo quadro; Esc (PC) e o botão Pular (celular) vão direto ao jogo:
 //      o HUD volta, a partida continua no tick 0 com o hash de criarPartida (Node) e 600 passos dão o mesmo hash no Node
 //      e no Chromium;
@@ -259,6 +264,16 @@ async function conferirEmPe(pg, t) {
     const fam = getComputedStyle(folha.querySelector('.pj-nome') || folha).fontFamily.replace(/["']/g, '');
     const carregada = [...document.fonts].some(ff => ff.family.replace(/["']/g, '') === 'TM Cond' && ff.status === 'loaded');
     if (!(fam.startsWith('TM Cond') && carregada)) falhas.push(`E11 letra do nome "${fam.split(',')[0]}" (TM Cond carregada ${carregada})`);
+    // E12 as pontas nunca tangentes à lateral: a borda da carta ≥ 5 px para dentro, ou a carta centrada na lateral (± 1 px)
+    let pontas = Infinity, pontaRuim = '';
+    for (const c of cartas) {
+      for (const [dentro, centro] of [[c.r.x - rc.x, c.cx - rc.x], [rc.x + rc.w - (c.r.x + c.r.w), rc.x + rc.w - c.cx]]) {
+        if (dentro >= 4.95) continue;
+        const desvio = Math.abs(centro);
+        if (desvio > 1 && dentro < pontas) { pontas = dentro; pontaRuim = `${c.id} a ${f1(dentro)} px da lateral (o centro a ${f1(centro)})`; }
+      }
+    }
+    if (pontaRuim) falhas.push(`E12 ponta tangente: ${pontaRuim}`);
     const c0 = cartas[0]?.r;
     const resumo = `campo ${f1(rc.w)}×${f1(rc.h)} (${(rc.w / rc.h).toFixed(2)}), viewBox ${vb.map(v => Math.round(v * 10) / 10).join(' ')}, carta ${c0 ? f1(c0.w) + '×' + f1(c0.h) : '—'}, letra ${f1(fonte.num)}/${f1(fonte.nome)}/${f1(fonte.pos)}, folga ${f1(folga)}`;
     return { campo: rc, falhas, resumo, cortados, elipse, escudo: !!folha.querySelector('.pj-esc-escudo') };
@@ -289,8 +304,8 @@ async function telasEscalacao(pg, telas, { prefixo = 'Escalação', cortadosOk =
     const [a, b] = [emPe[0].campo, emPe[1].campo];
     if (!(Math.abs(a.w - b.w) <= 0.5 && Math.abs(a.h - b.h) <= 0.5 && Math.abs(a.y - b.y) <= 0.5)) falhas.push(`E9 caixas ${f1(a.w)}×${f1(a.h)} (topo ${f1(a.y)}) × ${f1(b.w)}×${f1(b.h)} (topo ${f1(b.y)})`);
     const ids = [...new Set(falhas.map(x => x.match(/E\d+/)?.[0]).filter(Boolean))].sort((a, b) => +a.slice(1) - +b.slice(1));
-    meta(`${prefixo} em pé em ${nome} (E1–E11, as duas folhas)`, falhas.length ? `falham ${ids.join(' ')} — ` + falhas.slice(0, 4).join(' | ') + (falhas.length > 4 ? ` (+${falhas.length - 4})` : '') : `${emPe[0].resumo}; cortados ${emPe[0].cortados.length + emPe[1].cortados.length}`,
-      'em pé, GOL embaixo, lado, linhas, no campo, letra, nada cortado, sem rolar, a mesma caixa, Pular, TM Cond', falhas.length === 0);
+    meta(`${prefixo} em pé em ${nome} (E1–E12, as duas folhas)`, falhas.length ? `falham ${ids.join(' ')} — ` + falhas.slice(0, 4).join(' | ') + (falhas.length > 4 ? ` (+${falhas.length - 4})` : '') : `${emPe[0].resumo}; cortados ${emPe[0].cortados.length + emPe[1].cortados.length}`,
+      'em pé, GOL embaixo, lado, linhas, no campo, letra, nada cortado, sem rolar, a mesma caixa, Pular, TM Cond, pontas', falhas.length === 0);
   }
   await pg.evaluate(() => document.documentElement.classList.remove('entalhe-simulado'));
 }
@@ -529,9 +544,9 @@ try {
   }
   // ---------------------------------------------------------------- 15) a escalação com ?tm e nomes longos (item 29)
   if (!soTm) {
-    const { PED_NOMES_LONGOS, CAM_ESTRESSE } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
+    const { PED_NOMES_LONGOS, PED_NOMES_MISTOS, CAM_ESTRESSE } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 1366, altura: 600 });
-    await contexto.addInitScript(p => { try { localStorage.setItem('tm3d:pedido:' + p.id, JSON.stringify(p)); } catch (_) { /* nada */ } }, PED_NOMES_LONGOS);
+    await contexto.addInitScript(ps => { try { for (const p of ps) localStorage.setItem('tm3d:pedido:' + p.id, JSON.stringify(p)); } catch (_) { /* nada */ } }, [PED_NOMES_LONGOS, PED_NOMES_MISTOS]);
     await pg.goto(`${srv.url}?tm=${PED_NOMES_LONGOS.id}&prejogo=escalacao&replay=0&comemoracao=0&semente=${SEMENTE}&q=media&hora=dia`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
     const ok = await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); if (!g.prejogo) return false; g.prejogo.comecar(); g.relogio.avancar(16); return { ativo: g.prejogo.ativo, tm: document.documentElement.classList.contains('tm'), nomes: [0, 1].map(t => document.querySelectorAll('.pj-esc')[t]?.querySelector('.pj-esc-nome')?.textContent) }; });
@@ -548,6 +563,28 @@ try {
         return ruins.length ? `E7 cortados/escudo: ${ruins.join('; ')}` : null;
       };
       await telasEscalacao(pg, [{ w: 568, h: 320 }, { w: 640, h: 360 }, { w: 844, h: 390, entalhe: true }, { w: 1366, h: 600 }, { w: 1920, h: 1080 }], { prefixo: '?tm, nomes longos: escalação', cortadosOk });
+    }
+    // o pedido MISTO (A1/V2): as colunas dos dois times com larguras diferentes e as cartas de cada folha pelos nomes dela
+    await pg.setViewportSize({ width: 1280, height: 1024 });
+    await pg.goto(`${srv.url}?tm=${PED_NOMES_MISTOS.id}&prejogo=escalacao&replay=0&comemoracao=0&semente=${SEMENTE}&q=media&hora=dia`, { waitUntil: 'load' });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
+    const okM = await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); if (!g.prejogo) return false; g.prejogo.comecar(); g.relogio.avancar(16); return { ativo: g.prejogo.ativo, nomes: [0, 1].map(t => document.querySelectorAll('.pj-esc')[t]?.querySelector('.pj-esc-nome')?.textContent) }; });
+    if (!okM || !okM.ativo) meta('?tm com o pedido misto: o pré-jogo (só a escalação) na página', 'não ligou', 'ativo', false);
+    else {
+      meta('?tm com o pedido misto: os dois nomes de time do pedido', okM.nomes.join(' × '), `${PED_NOMES_MISTOS.home.name} × ${PED_NOMES_MISTOS.away.name}`, okM.nomes[0] === PED_NOMES_MISTOS.home.name && okM.nomes[1] === PED_NOMES_MISTOS.away.name);
+      await telasEscalacao(pg, [{ w: 1280, h: 1024 }, { w: 844, h: 390 }], { prefixo: '?tm, pedido misto: escalação' });
+      // as colunas de fato diferentes (o caso do A1) e, no celular, as pontas do time de nomes curtos dentro do campo (V2)
+      const md = [];
+      for (const t of [0, 1]) {
+        md.push(await pg.evaluate(t => {
+          const g = window.__golaco, pj = g.prejogo, p = pj.planos.find(q => q.id === `escalacao${t}`);
+          pj.irPara(p.t0 + 2); g.relogio.avancar(16); g.relogio.avancar(16);
+          return { info: pj.escalacao.info(t).w, ...pj.escalacao.campo(t) };
+        }, t));
+      }
+      const [m0, m1] = md;
+      meta('?tm, pedido misto em 844×390: colunas diferentes, a mesma caixa, as pontas do mandante (nomes curtos) para dentro', `colunas ${f1(m0.info)} × ${f1(m1.info)} px; caixa ${f1(m0.w)}×${f1(m0.h)} × ${f1(m1.w)}×${f1(m1.h)}; borda da ponta ${f1(m0.inset - m0.cw / 2)} × ${f1(m1.inset - m1.cw / 2)} px; carta ${m0.cw} × ${m1.cw}`,
+        'colunas ≠; a mesma caixa; mandante ≥ 5 px, carta menor', Math.abs(m0.info - m1.info) > 20 && m0.w === m1.w && m0.h === m1.h && m0.inset - m0.cw / 2 >= 5 && m0.cw < m1.cw);
     }
     meta('?tm com nomes longos: sem erro no console', `${erros.length}${erros.length ? ': ' + erros.slice(0, 2).join(' | ') : ''}`, '0', erros.length === 0);
     await navegador.close();

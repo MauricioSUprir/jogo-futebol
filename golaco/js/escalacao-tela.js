@@ -7,11 +7,13 @@
 // O campinho EM PÉ (item 29; dono, 17/10: "o campinho da escalação do jogo EM PÉ (retrato), não deitado"): o campo inteiro com o
 // GOL EMBAIXO, a caixa mais alta que larga (L/A 0,80 da Globo 2025, até 0,85 quando o nome mais largo pede), as marcas no tamanho
 // real (o círculo redondo; só a distância entre as laterais estica, como no FM26: campinho.js svgCampinho(true, largura)) e as
-// cartas das pontas ~9% para dentro das laterais (no aperto, sobre a linha). O nome de camisa em TM Cond 800 (a letra das fichas
-// da tela antes do jogo), medido pela tabela de avanços (letra-cond.js: a conta não espera a fonte chegar); a letra mínima do
-// PESQUISA-ESTADIO §7.4/§7.5 (celular: nome e posição ≥ 11 px, ≥ 10 em 568×320; PC: nome ≥ 13). A conta é a mesma nas duas
-// folhas (os 22 titulares; a mesma altura): o campo tem o mesmo tamanho e o mesmo topo nas duas. tools/teste-prejogo.mjs (itens 4,
-// 4b e 15) e tools/teste-escalacao-campo.mjs conferem; contrato "Pré-jogo" no CONTRATOS.md.
+// cartas das pontas DENTRO das laterais com ≥ 5 px de margem ou, no aperto, SOBRE a linha, centradas
+// nela — nunca tangentes (revisão V1). O nome de camisa em TM Cond 800 (a letra das fichas da tela antes do jogo), medido pela
+// tabela de avanços (letra-cond.js: a conta não espera a fonte chegar); a letra mínima do PESQUISA-ESTADIO §7.4/§7.5 (celular:
+// nome e posição ≥ 11 px, ≥ 10 em 568×320; PC: nome ≥ 13). As duas folhas têm a MESMA caixa do campo (o mesmo tamanho e o mesmo
+// topo: a altura pelos 22 titulares, a largura pela maior das duas, a coluna mais larga das duas) e as cartas de cada uma pelos
+// 11 nomes dela (tamanhosDasFolhas; revisões A1/V2). tools/teste-prejogo.mjs (itens 4, 4b e 15) e tools/teste-escalacao-campo.mjs
+// conferem; contrato "Pré-jogo" no CONTRATOS.md.
 //
 // O movimento sai do relógio do roteiro (prejogo-roteiro.js escalacaoEm: entrando/saindo 0–1), não de transição do
 // CSS: com o relógio manual dos testes e prints a tela fica no mesmo ponto que o 3D. Entra deslizando da esquerda
@@ -34,13 +36,15 @@ function entrada(x) { x = x < 0 ? 0 : x > 1 ? 1 : x; return 1 - Math.pow(1 - x, 
 
 /**
  * As constantes da escalação em pé (item 29; fora do config.js, que é do fecho do hash). la/laMax: L/A do campo (Globo 2025 e o
- * teto: nunca quadrado); kPasso: o passo-alvo entre colunas × a altura (as pontas ~9% para dentro com L/A 0,80); folga: entre
- * cartas vizinhas (px); a carta: largura até cwTeto, altura chMin–chMax; o nome (k × ch, máx., mínimos do celular, de 568×320 e
- * do PC, a entrelinha que não corta os traços de baixo, a largura máxima na carta); a posição (celular, 568×320, PC k × ch);
- * celular = altura da tela ≤ celularMaxH (o corte do PREPARTIDA do item 64); pequena = altura < pequenaH (568×320).
+ * teto: nunca quadrado); kPasso: o passo-alvo entre colunas × a altura; folga: entre cartas vizinhas (px); margem/margemMin: da
+ * borda da carta da ponta até a lateral (a conta alarga o campo até a margem; abaixo da mínima a carta fica SOBRE a linha,
+ * centrada nela — nunca tangente: revisão V1); a carta: largura até cwTeto, altura chMin–chMax; o nome (k × ch, máx., mínimos do
+ * celular, de 568×320 e do PC, a entrelinha que não corta os traços de baixo, a largura máxima na carta); a posição (celular,
+ * 568×320, PC k × ch); celular = altura da tela ≤ celularMaxH (o corte do PREPARTIDA do item 64); pequena = altura < pequenaH
+ * (568×320).
  */
 export const ESCALACAO = Object.freeze({
-  la: 0.80, laMax: 0.85, kPasso: 0.164, folga: 10, cwTeto: 120, chMin: 44, chMax: 76,
+  la: 0.80, laMax: 0.85, kPasso: 0.164, folga: 10, margem: 6, margemMin: 5, cwTeto: 120, chMin: 44, chMax: 76,
   num: 0.34,
   nome: Object.freeze({ k: 0.19, max: 15, minCel: 11, minPequena: 10, minPc: 13, linha: 1.25, largura: 0.94 }),
   pos: Object.freeze({ cel: 11, pequena: 10, k: 0.15, minPc: 11, maxPc: 12 }),
@@ -53,42 +57,61 @@ export const ESCALACAO = Object.freeze({
 
 /**
  * Tamanho do campo em pé e das cartas (px) — pura (os testes chamam). W = a largura máxima do grupo do campo, H = a altura da
- * área; larguraNome(px) = a largura (TM Cond 800, caixa normal) do nome mais largo dos 22 titulares; alturaTela = innerHeight
- * (celular ≤ 480; 568×320 < 350). Devolve {w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto}:
- * w × h o campo; passo entre as colunas; inset = do centro das cartas das pontas (col ±2) até a lateral; fora = quanto a carta
- * da ponta passa da lateral; largura = a largura desenhada em metros (dentro da borda de 1 px do campo); teto = o nome mais largo
- * não coube nem no teto de L/A (os que não cabem saem com "…").
+ * área; larguraNome(px) = a largura (TM Cond 800, caixa normal) do nome mais largo; alturaTela = innerHeight (celular ≤ 480;
+ * 568×320 < 350); caixa = {w, h}: o campo já decidido (a outra folha: tamanhosDasFolhas) — só as cartas saem da conta. Devolve
+ * {w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto, naLinha}: w × h o campo; passo entre as colunas;
+ * inset = do centro das cartas das pontas (col ±2) até a lateral; fora = quanto a carta da ponta passa da lateral; naLinha = as
+ * pontas centradas na lateral (inset 0); largura = a largura desenhada em metros (dentro da borda de 1 px do campo); teto = o nome
+ * mais largo não coube (os que não cabem saem com "…").
  */
-export function tamanhoEscalacao(W, H, { larguraNome = null, alturaTela = H } = {}) {
+export function tamanhoEscalacao(W, H, { larguraNome = null, alturaTela = H, caixa = null } = {}) {
   const E = ESCALACAO;
   const celular = alturaTela <= E.celularMaxH, pequena = alturaTela < E.pequenaH;
   const minNome = celular ? (pequena ? E.nome.minPequena : E.nome.minCel) : E.nome.minPc;
   const larg = typeof larguraNome === 'function' ? larguraNome : () => 0;
-  // Wc: o teto da largura do grupo (o campo + as pontas), só na última refeita da janela em pé
-  const conta = (altura, Wc = Infinity) => {
+  // Wc: o teto da largura do grupo (o campo + as pontas), só na última refeita da janela em pé; wFixo: a caixa da outra folha
+  const conta = (altura, Wc = Infinity, wFixo = null) => {
     const h = Math.max(1, Math.floor(altura));
     const ch = clamp(E.chMin, Math.floor((h - 12 - 4 * E.folga) / 5), E.chMax);
     const fontePos = celular ? (pequena ? E.pos.pequena : E.pos.cel) : clamp(E.pos.minPc, +(E.pos.k * ch).toFixed(2), E.pos.maxPc);
-    let fonteNome = clamp(minNome, +(E.nome.k * ch).toFixed(2), E.nome.max);
-    const wMax = Math.floor(E.laMax * h), wAlvo = Math.round(E.la * h);
+    const fontePref = clamp(minNome, +(E.nome.k * ch).toFixed(2), E.nome.max);
+    const cap = wFixo ?? Math.min(Math.floor(E.laMax * h), Math.floor(Wc)), wAlvo = Math.round(E.la * h);
     const cartaDe = fn => {
       const cwNome = Math.ceil(larg(fn) / E.nome.largura) + 2;
       const cw = Math.min(E.cwTeto, Math.max(cwNome, Math.floor(E.kPasso * h - E.folga)));
-      return { cw, passo: Math.max(cw + E.folga, E.kPasso * h) };
+      return { fn, cw, passo: Math.max(cw + E.folga, E.kPasso * h) };
     };
-    let { cw, passo } = cartaDe(fonteNome), teto = false;
-    // o que cede quando não cabe: 1) a letra do nome até o mínimo da tela; 2) o passo no teto de L/A (o nome com "…"); 3) na
-    // janela em pé estreita, as 5 cartas + 4 folgas na largura Wc
-    if ((4 * passo > wMax || 4 * passo + cw > Wc) && fonteNome > minNome) { fonteNome = minNome; ({ cw, passo } = cartaDe(fonteNome)); }
-    if (4 * passo > wMax) { passo = wMax / 4; cw = Math.floor(passo - E.folga); teto = true; }
-    if (4 * passo + cw > Wc) { cw = Math.max(1, Math.floor((Wc - 4 * E.folga) / 5)); passo = cw + E.folga; teto = true; }
-    // o campo alarga de 0,80 até 0,85 para as cartas das pontas caberem inteiras; além disso elas ficam sobre a lateral
-    const w = Math.min(wMax, Math.floor(Wc), Math.max(wAlvo, Math.ceil(4 * passo + cw)));
-    const inset = (w - 4 * passo) / 2, fora = Math.max(0, cw / 2 - inset);
+    const letras = fontePref > minNome ? [cartaDe(fontePref), cartaDe(minNome)] : [cartaDe(fontePref)];
+    // o que cede quando não cabe: 1) as pontas DENTRO do campo, com a margem (o campo alarga de 0,80 até 0,85), na letra da
+    // conta e depois na mínima da tela; 2) as pontas SOBRE a linha, centradas nela (nunca tangentes: parece desalinhado); 3) o
+    // passo no teto de L/A e as cartas pelo passo (o nome com "…"); 4) na janela em pé estreita, as 5 cartas + 4 folgas em Wc
+    let r = null;
+    for (const c of letras) {
+      if (4 * c.passo + c.cw + 2 * E.margemMin > cap) continue;
+      const w = wFixo ?? Math.min(cap, Math.max(wAlvo, Math.ceil(4 * c.passo + c.cw + 2 * E.margem)));
+      r = { ...c, w, inset: (w - 4 * c.passo) / 2, teto: false };
+      break;
+    }
+    if (!r) for (const c of letras) {
+      if (4 * c.passo > cap || 4 * c.passo + c.cw > Wc) continue;
+      const w = wFixo ?? Math.max(4 * c.passo, Math.min(cap, Math.floor(Wc - c.cw), wAlvo));
+      r = { ...c, w, passo: w / 4, inset: 0, teto: false };
+      break;
+    }
+    if (!r) {
+      const fn = minNome;
+      let passo = cap / 4, cw = Math.floor(passo - E.folga);
+      if (4 * passo + cw > Wc) { cw = Math.max(1, Math.floor((Wc - 4 * E.folga) / 5)); passo = cw + E.folga; }
+      const w = wFixo ?? Math.round(4 * passo);
+      r = { fn, cw, w, passo: w / 4, inset: 0, teto: true };
+    }
+    const { w, cw, passo, inset, teto, fn: fonteNome } = r;
+    const fora = Math.max(0, cw / 2 - inset);
     const comPos = E.num * ch + E.nome.linha * fonteNome + fontePos + E.vaos + E.bordaV <= ch;
     const largura = +(105 * Math.max(1, w - 2) / Math.max(1, h - 2)).toFixed(2);
-    return { w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto };
+    return { w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto, naLinha: inset === 0 };
   };
+  if (caixa) return conta(caixa.h, Infinity, caixa.w);
   let r = conta(H);
   // janela de PC em pé: a largura não dá → a altura desce na mesma proporção (o campo fica centrado na vertical)
   const largo = x => Number.isFinite(W) && W > 0 && x.w + 2 * x.fora > W + 0.5;
@@ -96,6 +119,23 @@ export function tamanhoEscalacao(W, H, { larguraNome = null, alturaTela = H } = 
   // (a altura não resolve quando o nome mais largo segura a carta: a letra ao mínimo e as cartas pela largura)
   if (largo(r)) r = conta(r.h, W);
   return r;
+}
+
+/**
+ * As contas das DUAS folhas (revisões A1/V2) — pura. Comum só a CAIXA do campo (w × h: o mesmo tamanho e o mesmo topo nas duas,
+ * a troca de 0,55 s mostra as duas): a altura pela conta dos 22 nomes (a da janela em pé também) e a largura pela maior das
+ * duas folhas; as cartas, a letra e o inset saem de cada folha com os 11 nomes dela (na folha de nomes curtos o inset cresce e as
+ * pontas voltam para dentro). larguras = [larguraNome do time 0, do time 1]; o resto como tamanhoEscalacao. Devolve [T0, T1].
+ */
+export function tamanhosDasFolhas(W, H, { larguras, alturaTela = H } = {}) {
+  const [l0, l1] = (larguras || []).map(l => (typeof l === 'function' ? l : () => 0));
+  const ambas = px => Math.max(l0(px), l1(px));
+  const T = tamanhoEscalacao(W, H, { larguraNome: ambas, alturaTela });
+  const naCaixa = w => [l0, l1].map(l => tamanhoEscalacao(W, T.h, { larguraNome: l, alturaTela, caixa: { w, h: T.h } }));
+  const livres = [l0, l1].map(l => tamanhoEscalacao(W, T.h, { larguraNome: l, alturaTela })).filter(x => x.h === T.h);
+  const cabe = rs => rs.every(x => !(Number.isFinite(W) && W > 0) || x.w + 2 * x.fora <= W + 0.5);
+  const rs = naCaixa(Math.max(T.w, ...livres.map(x => x.w)));
+  return cabe(rs) ? rs : naCaixa(T.w);
 }
 
 /**
@@ -144,12 +184,10 @@ export function criarEscalacaoTela(raiz, ident = null) {
     s.innerHTML = `<div class="pj-esc-info"><i class="pj-esc-faixa"></i><span class="pj-esc-rotulo">Escalação</span><h2 class="pj-esc-nome"></h2><span class="pj-esc-forma"></span></div>`
       + `<div class="pj-esc-area"><div class="pj-esc-campo"><svg class="pj-esc-linhas" preserveAspectRatio="none" aria-hidden="true"></svg></div></div>`;
     raiz.appendChild(s);
-    return { s, info: s.querySelector('.pj-esc-info'), campo: s.querySelector('.pj-esc-campo'), area: s.querySelector('.pj-esc-area'), linhas: s.querySelector('.pj-esc-linhas'), cartas: [], vagas: [], largura: null, tam: null, conta: null };
+    return { s, info: s.querySelector('.pj-esc-info'), campo: s.querySelector('.pj-esc-campo'), area: s.querySelector('.pj-esc-area'), linhas: s.querySelector('.pj-esc-linhas'), cartas: [], vagas: [], largura: null, tam: null, conta: null, larguraNome: () => 0 };
   });
   const estado = { visivel: false, time: null, cheia: null };
   let ultimoTam = '';
-  // a largura do nome mais largo dos 22 titulares (as duas folhas pela mesma conta)
-  let larguraNome = () => 0;
 
   function montarFolha(f, tm, t) {
     const el = ELENCOS[tm.elenco];
@@ -185,6 +223,8 @@ export function criarEscalacaoTela(raiz, ident = null) {
       f.cartas.push(d);
       f.vagas.push(v);
     }
+    // a largura do nome mais largo da folha (as cartas de cada folha pelos 11 nomes dela; a caixa do campo pelos 22)
+    f.larguraNome = larguraNomes(f.cartas.map(d => d.querySelector('.pj-nome').textContent));
     f.tam = null;
   }
 
@@ -196,18 +236,8 @@ export function criarEscalacaoTela(raiz, ident = null) {
     return { H, sW, iw, chave: `${sW}x${H}x${iw}x${window.innerHeight}` };
   }
 
-  function layout(f) {
-    if (f.tam !== null) { const md0 = medir(f); if (!md0 || md0.chave === f.tam) return; }
-    // a conta de novo, sem os tamanhos de antes: o campo da tela anterior seguraria a linha da grade (e a altura) e o grupo
-    // largo espremeria a coluna do time (o nome quebrando letra a letra)
-    f.area.style.width = ''; f.campo.style.width = ''; f.campo.style.height = '';
-    const md = medir(f);
-    if (!md) { f.tam = null; return; }
-    const cs = getComputedStyle(f.s);
-    const conteudo = md.sW - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
-    const retrato = cs.gridTemplateColumns.trim().split(/\s+/).length < 2;
-    const W = retrato ? conteudo : conteudo - md.iw - (parseFloat(cs.columnGap) || 0);
-    const T = tamanhoEscalacao(W, md.H, { larguraNome, alturaTela: window.innerHeight });
+  /** A conta da folha f (tamanhosDasFolhas) aplicada: o grupo, o campo, as linhas e as cartas. */
+  function aplicarConta(f, T) {
     f.conta = T;
     const { w, h, cw, ch } = T;
     f.area.style.width = `${Math.ceil(w + 2 * T.fora)}px`;
@@ -228,8 +258,39 @@ export function criarEscalacaoTela(raiz, ident = null) {
       d.style.width = `${cw}px`; d.style.height = `${ch}px`;
       d.classList.toggle('sem-pos', !T.comPos);
     });
-    // a chave com os tamanhos novos no lugar (os quadros seguintes comparam com ela)
-    f.tam = medir(f)?.chave ?? null;
+  }
+
+  /**
+   * A conta das DUAS folhas de uma vez (revisões A1/V2: a mesma caixa do campo nas duas — a troca mostra as duas — e as cartas de
+   * cada uma pelos nomes dela). A escondida entra na medida sem aparecer (visibility, no mesmo quadro: nada é pintado). A largura
+   * do grupo sai da coluna MAIS LARGA das duas (a coluna é do tamanho do nome do time); a altura, da menor; na janela em pé as duas
+   * colunas ficam com a altura da maior (o campo no mesmo topo). Refaz sem os tamanhos de antes: o campo da tela anterior
+   * seguraria a linha da grade (e a altura) e o grupo largo espremeria a coluna do time (o nome quebrando letra a letra).
+   */
+  function layoutAmbas() {
+    const escondidas = folhas.filter(f => f.s.hidden);
+    for (const f of escondidas) { f.s.style.visibility = 'hidden'; f.s.hidden = false; }
+    try {
+      for (const f of folhas) { f.area.style.width = ''; f.campo.style.width = ''; f.campo.style.height = ''; f.info.style.minHeight = ''; }
+      const cs = getComputedStyle(folhas[0].s);
+      const retrato = cs.gridTemplateColumns.trim().split(/\s+/).length < 2;
+      if (retrato) { const ih = Math.max(...folhas.map(f => f.info.offsetHeight)); for (const f of folhas) f.info.style.minHeight = `${ih}px`; }
+      const md = folhas.map(medir);
+      if (md.some(x => !x)) { for (const f of folhas) f.tam = null; return; }
+      const conteudo = md[0].sW - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0);
+      const W = retrato ? conteudo : conteudo - Math.max(md[0].iw, md[1].iw) - (parseFloat(cs.columnGap) || 0);
+      const T = tamanhosDasFolhas(W, Math.min(md[0].H, md[1].H), { larguras: folhas.map(f => f.larguraNome), alturaTela: window.innerHeight });
+      folhas.forEach((f, t) => aplicarConta(f, T[t]));
+      // a chave com os tamanhos novos no lugar (os quadros seguintes comparam com ela; a escondida refaz quando aparece)
+      for (const f of folhas) f.tam = escondidas.includes(f) ? null : medir(f)?.chave ?? null;
+    } finally {
+      for (const f of escondidas) { f.s.hidden = true; f.s.style.visibility = ''; }
+    }
+  }
+
+  function layout(f) {
+    if (f.tam !== null) { const md0 = medir(f); if (md0 && md0.chave === f.tam) return; }
+    layoutAmbas();
   }
 
   function aplicar(f, mostra, x, tau) {
@@ -254,7 +315,6 @@ export function criarEscalacaoTela(raiz, ident = null) {
     montar(times) {
       folhas.forEach((f, t) => montarFolha(f, times[t], t));
       const nomes = nomesTitulares(times);
-      larguraNome = larguraNomes(nomes);
       if (typeof document !== 'undefined' && document.fonts && document.fonts.load) document.fonts.load(`800 ${ESCALACAO.nome.minCel}px "TM Cond"`, nomes.join('') || 'A').catch(() => null);
     },
     /**

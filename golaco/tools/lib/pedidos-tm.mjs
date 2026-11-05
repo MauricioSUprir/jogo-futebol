@@ -69,3 +69,12 @@ export const PED_NOMES_LONGOS = {
   home: timeNomesLongos('Sociedade Esportiva Recreativa Bandeirantes do Norte', 'SEB', '4-3-3', 11, CAM_LONGAS),
   away: timeNomesLongos('Associação Atlética Internacional de Wenceslau Braz', 'AAW', '5-3-2', 23, [...CAM_ESTRESSE, 'Wanderleyy', 'Mascherano', 'Maximilian', 'Washington', 'Montenegro', 'Wellington', 'Bittencour', 'Wendellson']),
 };
+// MISTO (revisão do item 29, A1/V2): o mandante com o nome de time curto e camisas curtas, o visitante com o nome e as camisas
+// longas — as colunas dos dois times com larguras diferentes (a caixa do campo tem de ser a mesma nas duas folhas) e as cartas de
+// cada folha pelos nomes dela (as pontas do time de nomes curtos dentro do campo)
+export const CAM_CURTAS = ['Rocha', 'Ramos', 'Gusmão', 'Prado', 'Siqueira', 'Henrique', 'Lima', 'Patrick', 'Souza', 'Valença', 'Borges'];
+export const PED_NOMES_MISTOS = {
+  ...PED_NOMES_LONGOS, id: 'f29m', titulo: 'f29m',
+  home: timeNomesLongos('Rio Azul', 'RAZ', '4-3-3', 31, CAM_CURTAS),
+  away: timeNomesLongos('Sociedade Esportiva Recreativa Bandeirantes do Norte', 'SEB', '4-2-3-1', 43, CAM_LONGAS),
+};
