@@ -504,4 +504,47 @@ o que a vontade dá (+10–25%). Nenhuma sonda aqui testou (b)–(c).
 
 ## 6. O que entrou e a calibração
 
-(preenchido na calibração)
+### 6.1 A triagem (o §3 da especificação)
+
+`teste-classico --so medida --sem-dif --sementes 8 --demo 32 --sem0 1001` = **64 partidas por braço** (demo 1001–1032 + 4
+roteiros × 1001–1008), pareadas com o braço sem o clássico jogado uma vez e reaproveitado (`--sem-de`); razão com ÷ sem
+[p5–p95 do bootstrap pareado e estratificado por modo]. "Faltas esperadas" = Σ p do árbitro (bote · cuidado, carga, passo do
+batido que segura); "chance por contato" = Σ p ÷ N nos botes e cargas avaliados (o C3b).
+
+| variação | botes | faltas esperadas | faltas marcadas | chance por contato (só o bote) | amarelos | vermelhos com | gols | chutes | volume | presença |
+|---|---|---|---|---|---|---|---|---|---|---|
+| inicial: vontade 1,4 + contenção −0,5 m + aperto −0,4 m | 1,04 [0,95–1,14] | 1,14 [1,01–1,30] | 0,98 [0,81–1,18] | 1,16 [1,01–1,32] (1,17 [1,01–1,34]) | 1,18 [0,80–1,81] | 5 em 64 | 0,89 [0,74–1,07] | 1,03 [0,93–1,13] | 1,00 [0,99–1,02] | 0,96 [0,94–0,99] |
+| T1 vontade 1,8 | 1,12 [1,05–1,20] | 1,03 [0,92–1,15] | 0,91 [0,76–1,10] | 1,01 [0,88–1,15] (1,03 [0,89–1,18]) | 0,96 [0,60–1,56] | 0 em 64 | 0,94 [0,78–1,11] | 0,99 [0,92–1,08] | 1,00 [1,00–1,01] | 0,98 [0,96–1,00] |
+| T1 vontade 2,2 | 1,25 [1,15–1,36] | 1,06 [0,95–1,19] | 1,12 [0,93–1,35] | 0,96 [0,84–1,11] (1,02 [0,87–1,19]) | 1,32 [0,85–2,00] | 7 em 64 | 1,07 [0,90–1,28] | 0,97 [0,89–1,06] | 0,99 [0,98–1,00] | 0,97 [0,95–0,99] |
+| T3 vontade 1,8 + encostada +0,4 m/s | 1,19 [1,11–1,27] | 1,07 [0,96–1,19] | 0,99 [0,84–1,18] | 1,01 [0,89–1,14] (1,03 [0,90–1,18]) | 0,96 [0,61–1,50] | 3 em 64 | 0,96 [0,81–1,14] | 0,95 [0,87–1,04] | 1,00 [0,99–1,01] | 0,98 [0,96–1,01] |
+| T4 vontade 1,8 + segura 2 | 1,10 [1,02–1,19] | 1,19 [1,06–1,33] | 1,14 [0,96–1,35] | 1,03 [0,89–1,19] (1,06 [0,91–1,23]) | 1,25 [0,82–1,95] | 0 em 64 | 0,90 [0,76–1,06] | 1,00 [0,93–1,09] | 1,00 [0,99–1,01] | 0,97 [0,95–0,99] |
+| vontade 2,2 + encostada + segura 2 | 1,22 [1,13–1,31] | 1,28 [1,16–1,43] | 1,32 [1,12–1,57] | 1,08 [0,93–1,25] (1,14 [0,98–1,34]) | 1,04 [0,69–1,57] | 4 em 64 | 0,95 [0,79–1,14] | 0,95 [0,86–1,04] | 1,00 [0,99–1,01] | 0,98 [0,95–1,00] |
+| vontade 2,6 + encostada + segura 2 | 1,27 [1,18–1,37] | 1,43 [1,29–1,57] | 1,45 [1,22–1,72] | 1,14 [0,99–1,31] (1,21 [1,03–1,41]) | 1,57 [1,06–2,42] | 5 em 64 | 0,88 [0,73–1,05] | 0,95 [0,87–1,04] | 1,00 [0,99–1,00] | 0,97 [0,95–1,00] |
+| **vontade 2,6 + segura 2 (a escolhida)** | 1,25 [1,16–1,35] | 1,36 [1,24–1,50] | 1,34 [1,12–1,61] | 1,12 [0,98–1,28] (1,17 [1,00–1,36]) | 1,25 [0,81–1,95] | 6 em 64 | 1,03 [0,88–1,21] | 1,01 [0,92–1,10] | 1,00 [0,99–1,01] | 0,97 [0,95–0,99] |
+| a escolhida, OUTRAS sementes (3001–3032 + 4 × 3001–3008) | 1,32 [1,22–1,42] | 1,39 [1,24–1,57] | 1,49 [1,27–1,77] | 1,01 [0,90–1,14] (1,07 [0,94–1,22]) | 1,52 [1,05–2,15] | 5 em 64 | 0,91 [0,75–1,11] | 1,09 [0,98–1,20] | 0,99 [0,98–1,00] | 0,96 [0,93–0,98] |
+
+Leituras:
+- **A vontade satura** (confirma a sonda do §5.2): o bote mais cedo FECHA a janela — as oportunidades (passos com a bola ao
+  alcance) caem 33% com 1,8 e ~45% com 2,6 —, então ×2,4 na chance por passo (0,08 → 0,195) dá +25–32% de botes.
+- **O bote substitui a falta do batido:** com a vontade sozinha os botes sobem e as faltas esperadas ficam em +3–6% (o batido que
+  segurava não fica mais colado atrás do condutor: a tática+segurar marcada caiu de 0,72 → 0,31 por partida na demo com 1,8). A
+  porta de decisão da especificação só abriu com o `segura` (a decisão do batido; o apito e o cartão iguais): com ele, as faltas
+  PROVADAS acima de +20% nas duas amostras.
+- **A contenção e o aperto mais perto pioram:** menos botes (+4%: o condutor solta a bola antes) e a chance por contato +16%
+  (o 1º homem colado chega com o corpo: as faltas esperadas de carga contra os roteiros subiram de 0,25 para 0,41 por partida)
+  — saíram.
+- **A bola encostada** (+0,4 m/s na diferença de velocidade) dá só +2–7% de botes e sobe a chance por contato (o contato com
+  força): saiu.
+- **A chance por contato sobe um pouco com a vontade alta** (o bote sai no começo da janela, com o defensor ainda chegando:
+  `porVel` e `fatorForca` da MESMA régua): 1,12 e 1,01 nas duas amostras (só o bote 1,17 e 1,07) — dentro do "reprova só quando
+  prova" de [0,90; 1,10]; o real dá +4% [+2; +6]. É o "bote mais forte" do pedido no sentido de mais decidido, não de mais veloz.
+- **O resto não mexe:** volume de corrida 0,99–1,00, disparada 1,00, presença perto do condutor −3–4% (o bote mais cedo acaba a
+  pressão mais cedo), gols 0,91–1,03 e chutes 1,01–1,09 (nenhum lado provado), bola rolando 1,00 e 0,98 (a parada da falta).
+
+### 6.2 O que entrou
+
+`config.js CLASSICO = { vontade: 2,6, descansoMin: 16, boteTeto: 0,26, segura: 2 }` (as chaves da especificação
+`contencaoMenos`, `apertoMenos` e `encostadaVrelMais` saíram com o código delas). Por nível (chance por passo / descanso):
+Fácil 0,025/110 → 0,064/42; Normal 0,080/45 → 0,195/17; Difícil 0,120/34 → 0,26/16 (teto/piso); Lenda 0,22/20 → 0,26/16. O
+Fácil+C continua abaixo do Normal sem clássico (0,064 < 0,08); Difícil+C e Lenda+C ficam iguais no bote (o teto do envelope
+do item 33) — o Lenda continua acima pelo resto da dificuldade (engaja, encurta, contenção, contrapressão).

@@ -464,8 +464,7 @@ function boteClassico(b) {
   const C = CLASSICO;
   return { ...b,
     chancePorPasso: Math.max(b.chancePorPasso, Math.min(C.boteTeto, 1 - MD.pow(1 - b.chancePorPasso, C.vontade))),
-    descanso: Math.min(b.descanso, Math.max(C.descansoMin, Math.round(b.descanso / C.vontade))),
-    encostadaVrel: b.encostadaVrel + C.encostadaVrelMais };
+    descanso: Math.min(b.descanso, Math.max(C.descansoMin, Math.round(b.descanso / C.vontade))) };
 }
 const BOTE_C = boteClassico(ACOES.boteIA), BOTE_DC = {};
 for (const n of DIFICULDADE.niveis) BOTE_DC[n] = BOTE_D[n] ? boteClassico(BOTE_D[n]) : BOTE_C;

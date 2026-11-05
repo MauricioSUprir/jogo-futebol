@@ -6,8 +6,8 @@
 // Estruturais (reprovam na base: a lógica não existe):
 //  K0 a tabela CLASSICO: só as chaves da lista, nos sentidos permitidos, nenhuma com o nome da constante que cobre; cfgBote({}, t)
 //     é o MESMO objeto ACOES.boteIA; com m.classico cada nível tem todas as chaves iguais (===) às do de origem menos
-//     chancePorPasso, descanso e encostadaVrel, que batem com a fórmula; a ordem Fácil+C < Normal+C < Difícil+C ≤ Lenda+C (e
-//     Fácil+C abaixo do Normal sem); a contenção e o aperto do 1º homem com os pisos (1,25 e 0,6) e nunca acima dos do nível.
+//     chancePorPasso e descanso, que batem com a fórmula; a ordem Fácil+C < Normal+C < Difícil+C ≤ Lenda+C (e
+//     Fácil+C abaixo do Normal sem).
 //  K1 a marca: {classico: true} → m.classico === true; sem o campo, false, 'sim', 1, 'true' → o campo AUSENTE; dois humanos →
 //     true; o Livre e os Pênaltis nunca o recebem.
 //  K2 o hash: sem × {classico: false} × {classico: 'sim'} → o MESMO hash a cada 300 passos (demo + 4 roteiros, 1 semente × 2
@@ -17,7 +17,7 @@
 //     provado ≤ 1).
 //  K4 o árbitro igual: uma grade de cenas montadas (chegada × velocidades × desarme × área × chance clara, os dois sentidos) em
 //     que toda função do árbitro (faltas.js chanceFaltaBote, fatorForca/forcaContato, chanceFaltaDividida, chanceClara,
-//     ataquePromissor, faltaNoBote, faltaNaCarga, faltaTatica, faltaNoCarrinho, montarFalta; partida.js regrasPartida com a falta
+//     ataquePromissor, faltaNoBote, faltaNaCarga, faltaTatica (também com o mesmo segura), faltaNoCarrinho, montarFalta; partida.js regrasPartida com a falta
 //     pendente; defesa.js chanceDividida e semAtropelar) dá o MESMO resultado e o MESMO estado do m.rng com e sem m.classico.
 //  KI a instrumentação só lê: a cópia com os ganchos ligados dá o mesmo hash da lógica original.
 // Medidas (pareadas: as mesmas sementes com e sem o clássico; "PROVADO" = bootstrap pareado e estratificado por modo, 2000×,
@@ -159,7 +159,7 @@ async function principal() {
   const pc = v => (Number.isFinite(v) ? `${v >= 1 ? '+' : '−'}${Math.abs(100 * (v - 1)).toFixed(0)}%` : String(v));
   console.log(`teste-classico: lógica ${JS}${SETS.length ? ` · --set ${SETS.join(' ')}` : ''}`);
   const L = await carregarLogica(JS, SETS);
-  const { C, P, S, F, IT, LV, DP } = L;
+  const { C, P, S, LV, DP } = L;
   const temOpcao = !!C.CLASSICO && typeof S.cfgBote === 'function';
   const instr = copiaInstrumentadaClassico(JS);
 
@@ -167,7 +167,9 @@ async function principal() {
   {
     const prob = [];
     const K = C.CLASSICO;
-    const FAIXA = { vontade: [1, 3], descansoMin: [12, 45], boteTeto: [0.22, 0.30], contencaoMenos: [0, 1], apertoMenos: [0, 0.9], encostadaVrelMais: [0, 0.6], segura: [1, 2] };
+    // (a contenção e o aperto do 1º homem mais perto e a bola encostada — contencaoMenos/apertoMenos/encostadaVrelMais da
+    // especificação — saíram na triagem, PESQUISA-CLASSICO.md §6; voltando, entram aqui com as faixas e os pisos conferidos)
+    const FAIXA = { vontade: [1, 3], descansoMin: [12, 45], boteTeto: [0.22, 0.30], segura: [1, 2] };
     const COBERTAS = ['chancePorPasso', 'descanso', 'contencao', 'aperto', 'encostadaVrel', 'encostada', 'alcance', 'colada', 'vParado', 'boteIA', 'engaja', 'encurta', 'tatica', 'semSPA'];
     if (!K) prob.push('sem config.js CLASSICO');
     else {
@@ -188,43 +190,26 @@ async function principal() {
       for (const n of C.DIFICULDADE.niveis) {
         const o = S.cfgBote(fake(n, false), 1), c = S.cfgBote(fake(n, true), 1);
         if (o === c) { prob.push(`${n}: o objeto do clássico é o mesmo do de origem`); continue; }
+        // (só a chance e o descanso mudam; o resto — alcance, colada, encostada, vParado (o árbitro lê o ACOES.boteIA) — igual)
         const ko = Object.keys(o).sort().join(','), kc = Object.keys(c).sort().join(',');
         if (ko !== kc) prob.push(`${n}: chaves diferentes (${kc})`);
         for (const k of Object.keys(o)) {
-          if (['chancePorPasso', 'descanso', 'encostadaVrel'].includes(k)) continue;
+          if (['chancePorPasso', 'descanso'].includes(k)) continue;
           if (o[k] !== c[k]) prob.push(`${n}.${k} ${c[k]} ≠ ${o[k]} (o árbitro e o alcance leem o de origem)`);
         }
         const V = K.vontade;
         const pe = Math.max(o.chancePorPasso, Math.min(K.boteTeto, 1 - Math.pow(1 - o.chancePorPasso, V)));
         const de = Math.min(o.descanso, Math.max(K.descansoMin, Math.round(o.descanso / V)));
-        const ee = o.encostadaVrel + (K.encostadaVrelMais ?? 0);
         if (Math.abs(c.chancePorPasso - pe) > 1e-12) prob.push(`${n}.chancePorPasso ${c.chancePorPasso} ≠ ${pe}`);
         if (c.descanso !== de) prob.push(`${n}.descanso ${c.descanso} ≠ ${de}`);
-        if (Math.abs(c.encostadaVrel - ee) > 1e-12) prob.push(`${n}.encostadaVrel ${c.encostadaVrel} ≠ ${ee}`);
         ch[n] = c.chancePorPasso; ds[n] = c.descanso;
       }
       const N = C.DIFICULDADE.niveis;
       if (!(ch.facil < ch.normal && ch.normal < ch.dificil && ch.dificil <= ch.lenda)) prob.push(`ordem da chance ${N.map(n => f3(ch[n])).join(' · ')}`);
       if (!(ds.facil >= ds.normal && ds.normal >= ds.dificil && ds.dificil >= ds.lenda)) prob.push(`descanso crescente ${N.map(n => ds[n]).join(' · ')}`);
       if (!(ch.facil < C.ACOES.boteIA.chancePorPasso)) prob.push(`Fácil+C ${f3(ch.facil)} ≥ Normal sem ${C.ACOES.boteIA.chancePorPasso}`);
-      if (K && 'contencaoMenos' in K) {
-        if (typeof IT.contencaoDoTime !== 'function') prob.push('sem ia-tatica.js contencaoDoTime');
-        else for (const n of N) {
-          const o = IT.contencaoDoTime(fake(n, false), 1), c = IT.contencaoDoTime(fake(n, true), 1);
-          for (let p = 0; p < 3; p++) if (!(c[p] >= 1.25 - 1e-12 && c[p] <= o[p] + 1e-12)) prob.push(`${n} contenção[${p}] ${c[p]} (nível ${o[p]})`);
-        }
-        if (IT.contencaoDoTime({}, 1) !== C.IA_DEFESA.contencao) prob.push('contencaoDoTime({}) não é o IA_DEFESA.contencao');
-      }
-      if (K && 'apertoMenos' in K) {
-        if (typeof IT.apertoDoTime !== 'function') prob.push('sem ia-tatica.js apertoDoTime');
-        else {
-          const c = IT.apertoDoTime({ classico: true }, 1), o = C.IA_DEFESA.aperto;
-          for (let p = 0; p < 3; p++) if (!(c[p] >= 0.6 - 1e-12 && c[p] <= o[p] + 1e-12)) prob.push(`aperto[${p}] ${c[p]} (sem ${o[p]})`);
-          if (IT.apertoDoTime({}, 1) !== o) prob.push('apertoDoTime({}) não é o IA_DEFESA.aperto');
-        }
-      }
     }
-    reg('K0. a tabela CLASSICO: chaves e sentidos; cfgBote sem a marca = ACOES.boteIA; com ela só vontade/descanso/encostada mudam, pela fórmula; ordem dos níveis; pisos da contenção e do aperto',
+    reg('K0. a tabela CLASSICO: chaves e sentidos; cfgBote sem a marca = ACOES.boteIA; com ela só a chance e o descanso mudam, pela fórmula; ordem dos níveis',
       prob.length ? prob.slice(0, 5).join('; ') : `ok (${Object.entries(C.CLASSICO).map(([k, v]) => `${k} ${v}`).join(', ')})`, 'ok', !prob.length);
   }
 
@@ -578,6 +563,8 @@ function arbitroIgual(L) {
           ['faltaNoBote lento', w => F.faltaNoBote(w.m, w.D, w.A, true)],
           ['faltaNaCarga', w => F.faltaNaCarga(w.m, w.A, w.D, vd)],
           ['faltaTatica', w => F.faltaTatica(w.m, w.D, w.A)],
+          // (o mesmo `segura` nos dois mundos: o árbitro não lê a marca — quem passa o segura do clássico é o sim.js boteIA)
+          ['faltaTatica segura 2', w => F.faltaTatica(w.m, w.D, w.A, 2)],
           ['faltaNoCarrinho antes', w => F.faltaNoCarrinho(w.m, w.D, w.A, { depois: false, f: vd, fExc: vd, v: vd, tentouBola: true })],
           ['faltaNoCarrinho depois', w => F.faltaNoCarrinho(w.m, w.D, w.A, { depois: true, f: vd, fExc: vd, v: vd, tentouBola: true })],
           ['montarFalta bote', w => F.montarFalta(w.m, w.D, w.A, 'bote', true)],

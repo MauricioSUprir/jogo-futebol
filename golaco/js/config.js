@@ -1737,12 +1737,13 @@ export const DIFICULDADE = {
 // mais contato). Cada chave cobre UMA constante de hoje e nunca repete o nome dela (teste-classico K0):
 //   vontade: ACOES.boteIA.chancePorPasso como TAXA, 1 − (1 − p)^vontade (≤ boteTeto, nunca abaixo do p do nível), e o descanso
 //   ÷ vontade (≥ descansoMin, nunca acima do do nível) — por cima do nível da DIFICULDADE quando há (sim.js cfgBote) ·
-//   contencaoMenos: m a menos no IA_DEFESA.contencao do 1º homem (≥ 1,25; ia-tatica.js contencaoDoTime) · apertoMenos: m a menos
-//   no IA_DEFESA.aperto (≥ 0,6; apertoDoTime) · encostadaVrelMais: m/s a mais no ACOES.boteIA.encostadaVrel · segura: × a decisão
-//   do batido de segurar (FALTAS.tatica.chancePorPasso/semSPA no faltas.js faltaTatica; o apito e o cartão iguais)
-// O teto e o piso do bote são o envelope já jogado no item 33 (a rodada 7 da calibração da dificuldade: 0,26/16).
-export const CLASSICO = { vontade: 1.4, descansoMin: 16, boteTeto: 0.26, contencaoMenos: 0.5, apertoMenos: 0.4,
-  encostadaVrelMais: 0, segura: 1 };
+//   segura: × a decisão do batido de segurar (FALTAS.tatica.chancePorPasso/semSPA no faltas.js faltaTatica; o apito e o cartão iguais)
+// O teto e o piso do bote são o envelope já jogado no item 33 (a rodada 7 da calibração da dificuldade: 0,26/16). A vontade satura
+// (o bote mais cedo fecha a janela: com 2,6 as oportunidades caem ~40% e os botes sobem ~27%) e substitui a falta do batido — por
+// isso o `segura`. Ficaram fora (a triagem, PESQUISA-CLASSICO.md §6): o 1º homem contendo e apertando mais perto (menos botes e a
+// chance por contato +16%) e a bola encostada disputada com mais diferença de velocidade (+2% de botes, a chance por contato mais
+// alta); o volume de pressão, a carga e as regras de responsabilidade (desvio, semAtropelar) de propósito.
+export const CLASSICO = { vontade: 2.6, descansoMin: 16, boteTeto: 0.26, segura: 2 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
 // Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
