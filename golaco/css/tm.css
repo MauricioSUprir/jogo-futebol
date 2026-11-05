@@ -270,6 +270,17 @@ html.tm .terco-selo {
 }
 html.tm .terco-selo b { font-weight: 800; }
 html.tm .faixa-subst { font-family: var(--fonte); background: rgba(11, 17, 14, 0.9); border-radius: 12px; }
+/* o cartão do autor do gol (item 31): a Inter do TM, o painel e a borda fina do TM; a borda esquerda na cor do time */
+html.tm .autor-gol {
+  font-family: var(--fonte); background: rgba(11, 17, 14, 0.92); border: 1px solid var(--tm-linha2);
+  border-left: 2px solid var(--cor-time, var(--tm-verde)); border-radius: 12px;
+}
+html.tm .ag-foto { border-radius: 8px; }
+html.tm .autor-gol { --ag-fundo: 11, 17, 14; }
+html.tm .ag-time { border-radius: 7px; }
+html.tm .ag-sigla { font-weight: 800; letter-spacing: 0.04em; }
+html.tm .ag-num { font-weight: 800; }
+html.tm .ag-nome { color: var(--tm-texto); }
 html.tm .fs-sigla { border-radius: 7px; }
 
 /* ------------------------------------------------------------------ celular em pé: "Gire o celular" com a logo do TM */

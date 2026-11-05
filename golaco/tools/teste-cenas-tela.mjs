@@ -794,8 +794,15 @@ async function golComCartao(pg, pularEm) {
     const fase = () => (g.cenas?.ativo ? 'cartao' : g.replay.estado?.ativo ? 'replay:' + g.replay.estado.tipo : g.comemoracao.ativa ? 'comemoracao:' + g.comemoracao.estado.estado : 'jogo');
     const seq = [];
     let q = 0, desde = null, pulou = null, comNoCartao = null, cena = null, golT = null;
+    // (item 31) o cartão do autor do gol e a tarja da cena do cartão nunca juntos na tela
+    const ag = { quadros: 0, juntos: 0, noCartao: 0 };
     while (q < 5000) {
       ct.quadro(false); q++;
+      {
+        const a = g.comemoracao?.cartaoTela, vis = !!a?.visivel;
+        const tarja = [...document.querySelectorAll('.tarja-cena')].some(e => !e.hidden && e.getClientRects().length > 0);
+        if (vis) { ag.quadros++; if (tarja) ag.juntos++; if (g.cenas?.ativo) ag.noCartao++; }
+      }
       if (desde == null && m.partida.estado === 'gol') { desde = m.partida.desde; golT = m.tick; }
       const s = fase();
       if (seq[seq.length - 1]?.s !== s) {
@@ -807,7 +814,7 @@ async function golComCartao(pg, pularEm) {
       const ult = seq[seq.length - 1];
       if (seq.some(x => x.s === 'cartao') && ult.s === 'jogo' && (seq.some(x => x.s === 'replay:gol') || q - ult.q > 180)) break;
     }
-    return { adv: adv.id, desde, golT, seq, pulou, comNoCartao, cena, temCenas: !!g.cenas };
+    return { adv: adv.id, desde, golT, seq, pulou, comNoCartao, cena, temCenas: !!g.cenas, ag };
   }, pularEm);
 }
 /**
@@ -880,9 +887,9 @@ if (roda('G')) try {
         (iR > iC + 1 ? s[iR].q - s[iC + 1].q <= 2 : true) && s[iR].tick === r.desde + 150 && s[iR].estado !== 'gol' &&
         r.comNoCartao === false && r.cena?.id === r.adv && r.cena?.cor === 'amarelo' && s.slice(iCom, iC).every(x => x.s.startsWith('comemoracao')) &&
         (pularEm == null ? s.slice(iCom, iC).every(x => x.s === 'comemoracao:rodando') : !!r.pulou && s.slice(iCom, iC).some(x => x.s === 'comemoracao:solta'));
-      meta(`C11 (rev. R7) vantagem que vira gol, ${rotulo}: comemoração → cartão (gol + 149) → saída e replay do gol (gol + 150); a comemoração fora do desenho no cartão`,
-        `gol no tick ${r.desde ?? '-'}${r.pulou ? `, pulada no tick ${r.pulou.tick}` : ''}: ${ord}; cartão ${r.cena ? `${r.cena.cor} de ${r.cena.id} (o guardado: ${r.adv})` : 'nenhum'}; comemoração ${r.comNoCartao ? 'AINDA ATIVA' : 'fora'} no cartão`,
-        `comemoracao → cartao@${r.desde != null ? r.desde + 149 : 'gol+149'} → replay:gol@${r.desde != null ? r.desde + 150 : 'gol+150'}`, ok);
+      meta(`C11 (rev. R7) vantagem que vira gol, ${rotulo}: comemoração → cartão (gol + 149) → saída e replay do gol (gol + 150); a comemoração fora do desenho no cartão; o cartão do autor (item 31) nunca junto da tarja nem na cena do cartão`,
+        `gol no tick ${r.desde ?? '-'}${r.pulou ? `, pulada no tick ${r.pulou.tick}` : ''}: ${ord}; cartão ${r.cena ? `${r.cena.cor} de ${r.cena.id} (o guardado: ${r.adv})` : 'nenhum'}; comemoração ${r.comNoCartao ? 'AINDA ATIVA' : 'fora'} no cartão; cartão do autor em ${r.ag.quadros} quadros (com a tarja ${r.ag.juntos}, na cena do cartão ${r.ag.noCartao})`,
+        `comemoracao → cartao@${r.desde != null ? r.desde + 149 : 'gol+149'} → replay:gol@${r.desde != null ? r.desde + 150 : 'gol+150'}; 0; 0`, ok && r.ag.juntos === 0 && r.ag.noCartao === 0);
     }
   } finally { await P.fechar(); }
 } catch (e) { meta('G execução (C11: a vantagem que virou gol)', erroCurto(e), 'sem exceção', false); }

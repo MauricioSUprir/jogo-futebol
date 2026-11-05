@@ -8,6 +8,10 @@
    um abre a pausa do 3D (cara do TM: Simular o resto, sem Reiniciar nem Modo de jogo), usa "Simular o resto" e
    "Voltar ao Total Match", e confere que o placar do 3D é o que o TM registrou. Reprova com erro de página (no TM ou
    dentro do 3D) ou regra quebrada. --publica roda na edição pública (escudos gerados) em vez da pro.
+   Item 31 (a foto do autor na comemoração): na pro o pedido leva `foto` (as fotos reais do TM em endereço absoluto ou a importada
+   em data:image) — a carreira com ≥ 9/11 titulares do meu clube com foto (o adversário depende do calendário: no Brasileirão,
+   6–11), todas carregadas pelo 3D em ≤ 10 s (prontas = pedidas ≥ 12, 0 erros), o Ultimate com fotos, o "rae-me" sem foto e os
+   outros com; na pública nenhum campo `foto` em pedido nenhum.
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -76,6 +80,17 @@ const timesDo3d = (fr) => fr.evaluate(() => {
       tipo: I && I.times[t].escudo.tipo };
   });
 });
+// as fotos do pedido (item 31): por lado, quantos titulares e quantos no total têm `foto`, as inválidas (nem absoluta da origem em
+// /assets/jogadores/ nem data:image/), a edição, e o estado das fotos no 3D (golaco: __golaco.tm.fotos)
+const fotosDoPedido = (fr) => fr.evaluate(() => {
+  const T = window.__golaco.tm, P = T.pedido, o = location.origin;
+  const ok = u => typeof u === "string" && (u.startsWith(o + "/assets/jogadores/") || /^data:image\/(jpeg|png|webp);base64,/.test(u));
+  const lados = [P.home, P.away].map(t => ({ tit: t.players.slice(0, 11).filter(p => p.foto).length, total: t.players.filter(p => p.foto).length, ruins: t.players.filter(p => p.foto && !ok(p.foto)).map(p => String(p.foto).slice(0, 60)) }));
+  const rae = [P.home, P.away].flatMap(t => t.players).find(p => p.tmId === "rae-me");
+  const f = T.fotos;
+  return { edicao: P.edicao, lados, raeFoto: rae ? !!rae.foto : null, fotos: f ? { n: f.n, pedidas: f.pedidas, prontas: f.prontas, erros: f.erros } : null };
+});
+const esperaFotos = (fr) => fr.waitForFunction(() => { const f = window.__golaco.tm.fotos; return !!f && f.pedidas > 0 && f.prontas + f.erros >= f.pedidas; }, null, { timeout: 10000 }).then(() => true).catch(() => false);
 // a pausa do 3D: os botões que aparecem
 const pausaDo3d = (fr) => fr.evaluate(() => {
   window.__golaco.abrirMenu();
@@ -116,6 +131,13 @@ if (fr) {
   confere("Ultimate: pedido v2 com jogo neutro", ped.v === 2 && ped.neutro === true, ped);
   // (Rivais não é mata-mata: o empate é o resultado — a cena do pós-jogo inteira no 3D)
   confere("Ultimate: o pedido diz que o empate não continua (partida.empateContinua false)", ped.empCont === false, ped);
+  // (na pro, espera o 3D carregar as fotos de quem está em campo antes de ler: a pré-carga sai com o navegador ocioso, até 1,5 s
+  // depois do pronto — lido antes, o estado das fotos dependia do momento; revisão O1)
+  if (!PUBLICA) await esperaFotos(fr);
+  const fu = await fotosDoPedido(fr);
+  confere("Ultimate: as fotos no pedido (item 31) — " + (PUBLICA ? "nenhuma na pública" : "as cartas com foto real na pro, todas válidas e as de quem está em campo carregadas pelo 3D"),
+    PUBLICA ? fu.lados.every(l => l.total === 0) : fu.lados[0].total + fu.lados[1].total >= 1 && fu.lados.every(l => l.ruins.length === 0)
+      && (fu.lados[0].tit + fu.lados[1].tit === 0 || (!!fu.fotos && fu.fotos.pedidas >= 1 && fu.fotos.prontas === fu.fotos.pedidas && fu.fotos.erros === 0)), fu);
   await print("02-ultimate-3d");
   const pausa = await pausaDo3d(fr);
   confere("Ultimate: pausa com Simular o resto (sem Reiniciar nem Modo de jogo)", pausa.some(x => /^Simular o resto/.test(x)) && !pausa.some(x => /Reiniciar|Modo de jogo/.test(x)), pausa);
@@ -145,6 +167,14 @@ if (fr) {
   // (o 1º jogo da carreira é de liga: o empate não vai a pênaltis — a cena do pós-jogo inteira)
   const ecC = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
   confere("Carreira: jogo de liga = o empate não continua (partida.empateContinua false)", ecC === false, ecC);
+  if (!PUBLICA) await esperaFotos(fr);
+  const fc = await fotosDoPedido(fr);
+  if (PUBLICA) confere("Carreira: nenhuma foto no pedido da pública (item 31)", fc.edicao !== "pro" && fc.lados.every(l => l.total === 0) && (!fc.fotos || fc.fotos.pedidas === 0), fc);
+  else {
+    const meu = fc.lados[est.humano === 1 ? 1 : 0];
+    confere("Carreira: ≥ 9/11 titulares do meu clube com foto no pedido; todas as fotos válidas (item 31)", fc.edicao === "pro" && meu.tit >= 9 && fc.lados.every(l => l.ruins.length === 0), fc);
+    confere("Carreira: as fotos dos que estão em campo carregadas pelo 3D em ≤ 10 s (prontas = pedidas ≥ 12, 0 erros)", !!fc.fotos && fc.fotos.pedidas >= 12 && fc.fotos.prontas === fc.fotos.pedidas && fc.fotos.erros === 0, fc.fotos);
+  }
   await print("04-carreira-3d");
   const r = await simulaEVolta(fr);
   const fim = await ate(() => TM.ui.current() === "coach-match", "^(Ver resultado|Pular|Avançar)");
@@ -173,6 +203,11 @@ if (fr) {
     return { trava: id, controlado: T.controlado, tmId: id != null && T.mapa[id] ? T.mapa[id].tmId : null, humano: T.humano };
   });
   confere("Estrelato: controle travado no meu jogador", tr.trava != null && tr.controlado === tr.trava && tr.tmId === "rae-me", tr);
+  if (!PUBLICA) await esperaFotos(fr);
+  const fr2 = await fotosDoPedido(fr);
+  const fotoTrava = !PUBLICA ? await fr.evaluate(() => { const T = window.__golaco.tm; return T.fotos ? T.fotos.de(T.trava) : null; }) : null;
+  confere("Estrelato: o meu jogador (rae-me) sem foto; " + (PUBLICA ? "nenhuma foto na pública" : "os outros com foto na pro, carregadas pelo 3D") + " (item 31)",
+    fr2.raeFoto === false && (PUBLICA ? fr2.lados.every(l => l.total === 0) : fr2.lados[0].total + fr2.lados[1].total >= 9 && fr2.lados.every(l => l.ruins.length === 0) && !!fr2.fotos && fr2.fotos.prontas >= 9 && fr2.fotos.erros === 0 && fotoTrava && fotoTrava.url === null), { ...fr2, fotoTrava });
   const ecR = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
   confere("Estrelato: jogo da liga = o empate não continua (partida.empateContinua false)", ecR === false, ecR);
   const pausa = await pausaDo3d(fr);

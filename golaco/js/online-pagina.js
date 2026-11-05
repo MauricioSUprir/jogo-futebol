@@ -35,6 +35,8 @@ const CSS = `
   z-index:40;font:600 12px Inter,system-ui,sans-serif;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
 #online-selo[hidden]{display:none}
 html.pausa-aberta #online-selo{display:none}
+/* (a comemoração do gol: o cartão do autor mora no mesmo canto — item 31, revisão R3; como os avisos do jogo, o selo espera a cena) */
+html.em-comemoracao #online-selo{display:none}
 `;
 
 function el(tag, attrs = {}, filhos = []) {

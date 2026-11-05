@@ -35,6 +35,10 @@
 //      CI de 522a4e36 a mudança das partidas levou um plano rente (ele na borda do quadro do celular, o joelho 0,5 m mais
 //      fundo que o centro) para dentro dela (1º gol da semente 32: 13/60 quadros); a escolha antiga passa na régua nas
 //      partidas de agora, mas não na folga (semente 103 @9611).
+//  15) (item 31) o CARTÃO DO AUTOR (js/autor-cartao.js, puro): autorDoCartao = o autor nos gols dos dois times, nada no gol
+//      contra nem no gol sem autor; a janela em toda cena (as 8): entra 0,4 s depois do 1º corte (= 1,6 s), na tela ≥ 3,0 s na
+//      cena normal e ≥ 2,2 s na curta, some ≥ 0,3 s antes do fim da cena (o replay) com a duração que ela TEVE (o kFim encurta), e
+//      nunca no plano da rede (PC e celular). Na versão sem js/autor-cartao.js REPROVA.
 // "Antes" (informativo): o pós-gol da versão sem cena, medido na simulação (a IA leva o autor de volta; nenhuma mão acima
 // da cabeça; colega mais perto a 16–24 m). Na versão sem js/comemoracao.js o teste REPROVA (o módulo não existe).
 //   node tools/teste-comemoracao.mjs [--js <pasta js>] [--detalhe]
@@ -482,6 +486,67 @@ if (CM) {
   }
   reg('14 gol com quem cabeceou no ar: a cena termina o pulo (passos do tornozelo além da régua · maior passo da pelve)',
     `${passou} (pior ${f2(piorPe)}× a régua) · ${f3(piorPelve)} m (${cenas} cenas)`, '0 · ≤ 0,06 m (≥ 10 cenas)', cenas >= 10 && passou === 0 && piorPelve <= 0.06);
+}
+
+// ------------------------------------------------------------------------------------------------ 15 o cartão do autor (item 31)
+{
+  const AC = await imp('autor-cartao.js').catch(() => null);
+  if (!AC) reg('15 o cartão do autor (js/autor-cartao.js)', 'não existe (versão de antes)', 'existe', false);
+  else {
+    const REDE = C.COMEMORACAO.rede;
+    // quem ganha o cartão
+    const quem = [];
+    let okQuem = true;
+    for (const g of gols) {
+      const pl = CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 });
+      const id = AC.autorDoCartao(pl, g.gol);
+      const deveria = g.gol.contra ? null : g.gol.id;
+      if (id !== deveria) okQuem = false;
+      quem.push(`${g.gol.contra ? 'contra' : `t${g.gol.time}${pl.curta ? 'c' : ''}`}→${id ?? 'nada'}`);
+    }
+    // o gol sem autor: quem comemora é do time que marcou, mas não é o autor
+    {
+      const g = gols.find(x => !x.gol.contra);
+      const pl = CM.planejarComemoracao(g.m, { ...g.gol, id: null }, { timeHumano: 0 });
+      const id = AC.autorDoCartao(pl, { ...g.gol, id: null });
+      if (id !== null) okQuem = false;
+      quem.push(`sem autor→${id ?? 'nada'}`);
+    }
+    reg('15 quem ganha o cartão: o autor nos gols dos dois times; nada no contra nem no sem autor', quem.join(' '), 'o autor; nada; nada', okQuem);
+    // a janela em cada cena, tick a tick, com a duração de cada tick
+    const linhas15 = [];
+    let ok15 = true;
+    const pl0 = CM.criarPlanoCamera();
+    for (const g of gols) {
+      const plano = CM.planejarComemoracao(g.m, g.gol, { timeHumano: 0 });
+      if (AC.autorDoCartao(plano, g.gol) == null) continue;
+      const c = CM.criarCena(plano, g.m);
+      const jan = AC.janelaCartao({ rede: REDE, duracao: CM.duracaoCena(c), curta: plano.curta });
+      let entra = null, saiu = null, naRede = 0, vis = 0, n = 0;
+      while (!c.acabou && n < 9 * 60) {
+        CM.passoCena(c); n++;
+        if (c.acabou) break;
+        const t = CM.tempoCena(c), f = AC.faseCartao(jan, t, CM.duracaoCena(c));
+        const visivel = f === 'entra' || f === 'fica' || f === 'sai';
+        if (visivel) {
+          vis++;
+          if (entra == null) entra = t;
+          for (const pequena of [false, true]) { CM.planoCamera(c, { pequena, aspecto: pequena ? 844 / 390 : 16 / 9 }, pl0); if (pl0.nome === 'rede') naRede++; }
+        } else if (entra != null && saiu == null) saiu = t;
+      }
+      const dur = n * PASSO, minVis = plano.curta ? 2.2 : 3.0, naTela = (vis * PASSO);
+      const okC = !!jan && entra != null && Math.abs(entra - (REDE + AC.AUTOR_GOL.atraso)) <= 1.5 * PASSO && naTela >= minVis && saiu != null && saiu <= dur - 0.3 + 1e-9 && naRede === 0;
+      if (!okC) ok15 = false;
+      linhas15.push(`${plano.curta ? 'curta' : 'normal'} ${f2(entra)}→${f2(saiu)} s (${f2(naTela)} s; cena ${f2(dur)} s; rede ${naRede})`);
+    }
+    reg('15 a janela: entra 1,6 s; ≥ 3,0 s (curta ≥ 2,2); some ≥ 0,3 s antes do fim da cena; nunca na rede', `\n      ${linhas15.join('\n      ')}`, 'todas as cenas com autor', ok15 && linhas15.length >= 7);
+    // a régua da duração que encurta: com a cena curtíssima, nada; com a duração caindo no meio, a saída vem antes
+    const j1 = AC.janelaCartao({ rede: REDE, duracao: 3.0, curta: true });
+    const j2 = AC.janelaCartao({ rede: REDE, duracao: 7.5, curta: false });
+    const f1 = AC.faseCartao(j2, 3.2, 3.8), f2b = AC.faseCartao(j2, 3.4, 3.8), f3 = AC.faseCartao(j2, 3.6, 3.8);
+    reg('15 bordas: cena de 3,0 s = sem cartão; a duração caindo para 3,8 s no meio = a saída de 3,3 a 3,5 s', `${j1 === null ? 'sem' : 'COM'} cartão; t 3,2 → ${f1}, t 3,4 → ${f2b}, t 3,6 → ${f3}`, 'sem; fica; sai; fora',
+      j1 === null && f1 === 'fica' && f2b === 'sai' && f3 === 'fora');
+  }
 }
 
 imprimir();

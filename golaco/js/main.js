@@ -188,6 +188,8 @@ import {
   duracaoCenaSubst, infoAtoresSubst, consumirEventosSubst, paresDaPlaca, placaNasMaos, planoEm,
 } from './substituicao.js';
 import { criarPlacaSubst } from './render/placa-subst.js';
+// o cartão do autor do gol na comemoração (item 31; puro, fora do fecho do hash: só decide quando a página o mostra)
+import { autorDoCartao, janelaCartao, faseCartao } from './autor-cartao.js';
 // Total Match (?tm=<id>; ponte-tm.js): os times do pedido, o lado do humano, a trava "só o meu jogador" e a súmula
 import { ID_TM, PEDIDO_TM, avisarTM, fimTM, sairTM, gravarResultadoTM, sementeTM, MENSAGENS as MENSAGENS_TM } from './ponte-tm.js';
 import { registrarElenco } from './elenco.js';
@@ -554,6 +556,11 @@ let ultimaFinal = null;      // a finalização do gol anterior (a próxima não
 let forcarFinal = null;      // testes e prints: a finalização do próximo gol
 const planoCam = criarPlanoCamera();
 const custoCena = { n: 0, ms: 0 };
+// O cartão do autor (item 31; js/autor-cartao.js): {id, time, janela, fase, mostrado} da cena em andamento ou null; ?autorGol=0
+// desliga só ele (a cena continua). Padrão LIGADO, também com webdriver e prints (os testes de outros assuntos abrem com
+// ?comemoracao=0). Só desenho e DOM: nada vai para o mundo.
+const AUTOR_GOL_ON = params.get('autorGol') !== '0';
+let cartaoAutor = null;
 // Treinadores (js/tecnicos.js): só na partida; ?tecnicos=0 desliga (comparação A/B do custo). tecAlfaCena: o último passo
 // deles veio da cena (simulação segura): o desenho interpola com o alfa da cena
 const TECNICOS_ON = params.get('tecnicos') !== '0';
@@ -1074,6 +1081,7 @@ function tratarEvento(ev) {
     return;
   }
   if (t === 'substituicao') {
+    garantirFoto(ev.entra);
     // a troca feita (dos dois times): a cena e a faixa ENTRA/SAI de TV no fim do passo (decidirSubst). A posição de quem
     // saiu no tick anterior vem do anel do replay (o mundo já não tem mais ele)
     const a = jogadorNoTick(anel, mundo.tick - 1, ev.sai);
@@ -1557,6 +1565,53 @@ function iniciarComemoracao(ev) {
   // o que já está segurado (o chute do gol) não pula: só um aperto novo, depois de COMEM.pularDepois
   cenaBotoes = entrada ? entrada.ler(yawEntrada()).botoes : 0;
   hud.comemoracao(true);
+  // o cartão do autor (item 31): só o autor de verdade comemorando (nada no gol contra nem no sem autor); a foto já pedida
+  hud.autorGol(null);
+  const idCartao = AUTOR_GOL_ON ? autorDoCartao(plano, gol) : null;
+  const janela = idCartao != null && fichaDe(idCartao) ? janelaCartao({ rede: COMEM.rede, duracao: duracaoCena(cenaGol), curta: !!plano.curta }) : null;
+  cartaoAutor = janela ? { id: idCartao, time: plano.time === 1 ? 1 : 0, janela, fase: 'antes', mostrado: false, foto: false } : null;
+  if (cartaoAutor) garantirFoto(idCartao);
+}
+
+/**
+ * O cartão do autor no quadro (pelo relógio da CENA: parado na pausa e na aba escondida, como ela; a animação do CSS só enfeita —
+ * sem GPU o relógio dela atrasa 1–2 s). Mexe no DOM só nas trocas de fase; os dados (com a foto já decodificada) são lidos na
+ * entrada: o cartão nunca muda de forma depois de entrar. Nunca antes do 1º corte (o "GOL!" sai nele: um texto por vez).
+ */
+function quadroCartaoAutor(c) {
+  const ca = cartaoAutor;
+  if (!ca || !c) return;
+  const f = faseCartao(ca.janela, tempoCena(c), duracaoCena(c));
+  if (f === ca.fase) return;
+  if ((f === 'entra' || f === 'fica') && !ca.mostrado) {
+    if (!cenaCortou) return;
+    const d = dadosAutorGol(ca.id, ca.time);
+    if (!d) { cartaoAutor = null; return; }
+    ca.mostrado = true; ca.foto = !!d.foto;
+    hud.autorGol(d);
+  } else if (f === 'sai' && ca.mostrado) hud.autorGolSai();
+  else if (f === 'fora' && ca.mostrado) { hud.autorGol(null); ca.mostrado = false; }
+  ca.fase = f;
+}
+/** O cartão do autor sai já (a cena pulada ou encerrada: a cortina ou o replay passam por cima). */
+function apagarCartaoAutor() {
+  if (cartaoAutor?.mostrado) hud.autorGol(null);
+  cartaoAutor = null;
+}
+/** Os dados do cartão do autor (a mesma montagem da tarja das cenas: dadosTarja) + a foto pronta; null sem a ficha. */
+function dadosAutorGol(id, t) {
+  const f = fichaDe(id);
+  if (!f) return null;
+  const el = ELENCOS[elencoDoJogador(id)], ct = COR_TIME[t];
+  return {
+    id, sigla: el?.sigla ?? hud.times[t]?.sigla ?? '', nomeTime: el?.nome ?? hud.times[t]?.nome ?? '', cor1: ct.cor, cor2: ct.texto,
+    escudo: document.getElementById(`escudo-${t}`)?.getAttribute('href') ?? null,
+    // o nome COMPLETO também no celular (o de camisa do tm-times corta o último nome em 10 letras sem reticências — "Evangelist" —
+    // e no nome composto fica só o fim: revisão V1); o que não couber corta com reticências no --ag-esq
+    num: f.num ?? '', nome: f.nome ?? String(id), foto: fotoPronta(id),
+    // a mesma <img> já decodificada da pré-carga: pinta no 1º quadro do cartão
+    fotoEl: FOTOS.ok.has(id) ? FOTOS.im.get(id) ?? null : null,
+  };
 }
 
 /** Um quadro da comemoração (fora da pausa): o pulo e o relógio da cena. */
@@ -1574,6 +1629,7 @@ function quadroComemoracao(dt, ent) {
   const segura = seguraSimulacao();
   const nCena = avancarCena(c, dt);
   custoCena.n += nCena;
+  quadroCartaoAutor(c);
   if (segura && tecnicos && nCena > 0) {
     leituraDoMundo(mundo, _leituraVazia, leituraTec);
     for (let k = 0; k < nCena; k++) passoTecnicos(tecnicos, leituraTec);
@@ -1614,6 +1670,7 @@ function fimComemoracao(pulou) {
   if (!cenaGol || cenaEstado !== 'rodando') return;
   cenaEstado = 'solta';
   cenaGol.acabou = true;
+  apagarCartaoAutor();
   const p = mundo.partida;
   const falta = p && p.estado === 'gol' ? PASSOS_GOL - (mundo.tick - p.desde) : 0;
   cenaRapida = falta > 1;
@@ -1625,6 +1682,7 @@ function fimComemoracao(pulou) {
 function encerrarComemoracao() {
   if (!cenaGol) return;
   cenaGol = null; cenaEstado = null; cenaRapida = false;
+  apagarCartaoAutor();
   if (cam) cam.definirCinema(null);
   hud.comemoracao(false);
   // os botões de toque voltam: o analógico de descanso calculado com eles escondidos (o pulo solta tudo; a janela pode ter
@@ -3334,7 +3392,10 @@ function abrirPrepartida() {
     ocupado: () => hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado(),
     comToque: () => document.documentElement.classList.contains('com-toque'),
     meio: () => entrada?.ultimoMeio ?? 'teclado',
+    // a foto da edição pro do TM no lugar do busto (item 31): só a já decodificada; a que chegar depois entra pelo fotoChegou
+    fotoDe: id => fotoPronta(id),
   });
+  FOTOS.aoChegar = (id, u) => pp?.fotoChegou?.(id, u);
   // o fundo: com o pré-jogo (a partida), a abertura de hoje CALADA (o aéreo de fora, o som abafado); senão o jogo parado
   ppFundo = 'jogo';
   const mp = mundo.modo === 'partida' ? modoPrejogo() : 'desligado';
@@ -3869,6 +3930,41 @@ function ligarRostosReais() {
     });
 }
 
+// ---- fotos dos jogadores (item 31: o cartão do autor na comemoração e as fichas da tela antes do jogo): só com ?tm na edição pro,
+// js/tm-fotos.js por import dinâmico (nunca no download inicial). id → endereço; pré-carga OCIOSA depois do pronto dos que estão
+// em campo, a de quem entra (substituição) e a do autor no gol; o cartão e as fichas só usam a foto já DECODIFICADA (img.decode) —
+// nada espera a rede. Image e DOM só: nada toca no mundo, no rng nem no laço (hash igual)
+const FOTOS = { url: null, im: new Map(), ok: new Set(), erro: new Set(), pedidas: 0, primeiraEm: null, prontoEm: null, aoChegar: null };
+function agendarFotosTM() {
+  if (!TM || PEDIDO_TM?.edicao !== 'pro' || FOTOS.url) return;
+  FOTOS.prontoEm = performance.now();
+  const vai = () => import('./tm-fotos.js').then(M => {
+    FOTOS.url = M.fotosDoPedido(PEDIDO_TM, TM.mapa, location.origin);
+    for (const j of mundo.jogadores) garantirFoto(j.id);
+  }).catch(() => { FOTOS.url = new Map(); });
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(vai, { timeout: 1500 }); else setTimeout(vai, 0);
+}
+/** Pede a foto de `id` (uma vez; sem endereço, já pedida ou com erro: nada). */
+function garantirFoto(id) {
+  if (id == null || !FOTOS.url || FOTOS.im.has(id) || FOTOS.erro.has(id)) return;
+  const u = FOTOS.url.get(id);
+  if (!u) return;
+  const im = new Image();
+  im.decoding = 'async';
+  im.src = u;
+  FOTOS.im.set(id, im);
+  FOTOS.pedidas++;
+  FOTOS.primeiraEm ??= performance.now();
+  im.decode().then(() => { FOTOS.ok.add(id); FOTOS.aoChegar?.(id, u); }, () => { FOTOS.erro.add(id); FOTOS.im.delete(id); });
+}
+/** O endereço da foto de `id` só se ela já chegou e foi decodificada; senão pede (garantirFoto) e devolve null. */
+function fotoPronta(id) {
+  if (id == null || !FOTOS.url) return null;
+  if (FOTOS.ok.has(id)) return FOTOS.url.get(id) ?? null;
+  garantirFoto(id);
+  return null;
+}
+
 async function iniciar() {
   // Total Match: ?tm sem o pedido (sumiu do armazenamento) — o TM simula a partida
   if (ID_TM && !TM) {
@@ -4013,6 +4109,8 @@ async function iniciar() {
   adapt.inicio = performance.now();
   hud.pronto();
   api.pronto = true;
+  // as fotos da edição pro do TM (item 31): pedidas ociosas DEPOIS do pronto
+  agendarFotosTM();
   // o replay e o "Editar time" (fora do download inicial): pré-carga no 1º gesto ou ociosa depois deste 1º quadro
   agendarSobDemanda();
   // Total Match: o 3D está no ar (o TM esconde o aviso e o X dele)
@@ -4180,6 +4278,16 @@ const api = {
     sumula() { return sumula ? structuredClone({ ...sumula, autor: undefined }) : null; },
     resultado() { return resultadoAtualTM(); },
     simularResto() { return simularResto(); },
+    /**
+     * As fotos da edição pro (item 31; testes): n (endereços aceitos no pedido), pedidas, prontas (decodificadas), erros, os
+     * instantes (performance.now) do pronto e da 1ª pedida, e de(id) → {url, estado: 'pronta' | 'carregando' | 'erro' | null}.
+     */
+    get fotos() {
+      return {
+        n: FOTOS.url?.size ?? 0, pedidas: FOTOS.pedidas, prontas: FOTOS.ok.size, erros: FOTOS.erro.size, primeiraEm: FOTOS.primeiraEm, prontoEm: FOTOS.prontoEm,
+        de(id) { const u = FOTOS.url?.get(id) ?? null; return { url: u, estado: FOTOS.ok.has(id) ? 'pronta' : FOTOS.erro.has(id) ? 'erro' : FOTOS.im.has(id) ? 'carregando' : null }; },
+      };
+    },
     resultadoGravado() { try { return JSON.parse(localStorage.getItem('tm3d:resultado:' + ID_TM) || 'null'); } catch (_) { return null; } },
   } : null,
   /**
@@ -4643,11 +4751,15 @@ const api = {
         fase: faseCena(c), t: tempoCena(c), duracao: duracaoCena(c), k: c.k, estado: cenaEstado, rapida: cenaRapida,
         autor: c.plano.autorId, alvo: { ...c.alvo }, variante: c.variante, corrida: c.corrida, curta: c.curta, time: c.time,
         golTick: c.plano.golTick, colegas: [...c.plano.colegas], reacao: c.plano.reacaoId, contra: c.plano.contra,
+        // o cartão do autor (item 31): {id, entra, sai (s da cena), fase, mostrado, foto} ou null (gol contra, sem autor, ?autorGol=0)
+        cartao: cartaoAutor ? { id: cartaoAutor.id, entra: cartaoAutor.janela.entra, sai: cartaoAutor.janela.sai, fase: cartaoAutor.fase, mostrado: cartaoAutor.mostrado, foto: cartaoAutor.foto } : null,
         plano: cam?.cinema ?? (cam?.planoGol === 'fechado' ? 'rede' : null),
         kFinal: c.kFinal, kFimFinal: c.kFimFinal, kFimAbraco: c.kFimAbraco, kFim: c.kFim, kPulo: c.kPulo,
       };
     },
     atores() { return cenaGol ? infoAtores(cenaGol) : null; },
+    /** O cartão do autor na tela (hud.js autorGolEstado: visível, saindo, foto, número, nome, caixas, letras). */
+    get cartaoTela() { return hud.autorGolEstado; },
     /** Caixa (px CSS) da pose DESENHADA de um ator (o autor, por padrão): {x0, y0, x1, y1, altura, dentro, atras}. */
     naTela(id) {
       if (!cenaGol || !cam) return null;

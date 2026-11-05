@@ -122,6 +122,15 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 }
 #prepartida .pp-busto { position: absolute; left: 6%; top: 8%; width: 88%; height: 96%; color: var(--acc2); }
 #prepartida .pp-busto ellipse { opacity: 0.5; }
+/* a foto da edição pro do TM (item 31; prepartida-tela.js fotoDe/fotoChegou) por cima do busto (a reserva: sem foto ou com erro), no
+   miolo que já recorta pelo chanfro — a ficha não muda de tamanho. A JPG de 220 px é um busto com o fundo: um leve aproximar */
+#prepartida .pp-foto {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+  object-fit: cover; object-position: 50% 36%; transform: scale(1.1); transform-origin: 50% 38%;
+}
+#prepartida .pp-foto.entra { animation: pp-foto-entra 0.2s ease-out both; }
+@keyframes pp-foto-entra { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #prepartida .pp-foto.entra { animation: none; } }
 #prepartida .pp-ficha.voce .pp-mold { filter: drop-shadow(0 0 1px var(--pp-verde-cl)) drop-shadow(0 0 1px var(--pp-verde-cl)); }
 /* (a ordem e o VOCÊ com a letra mínima da tela: 11 px no celular, 12 no PC — revisão A5) */
 #prepartida .pp-ordem {
