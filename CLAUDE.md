@@ -218,7 +218,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   guarda que sobe em toda calibração tem MECANISMO: rastrear o lance tick a tick antes de calibrar (a desfeita era o passe na
   corrida de volta); contra os roteiros o PPDA da IA não se mede (eles quase não passam): o espelho; com a base no teto de
   uma guarda de volume, todo ganho perto da bola tem de ser pago longe dela; (9)
-  editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido); (10) botão de CARRINHO
+  editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido) — FEITO no item 33 (05/11): 3–10 min
+  por tempo (`partida.js mudarDuracao` mantém o relógio) e Fácil/Normal/Difícil/Lenda SÓ contra a pessoa (`tatica.js
+  nivelContra`, `config.js DIFICULDADE`; o Normal é o jogo de hoje bit a bit, `m.dificuldade` ausente e fora do hash); pausa →
+  "Modo de jogo" (no TM "Partida e cenas"), a tela antes do jogo e o pedido do TM v377 (contrato "Tempo de jogo e
+  dificuldade"; `teste-dificuldade`); (10) botão de CARRINHO
   (dividida deslizando; falta/cartão pela Regra 12 em `faltas.js`; cabe no orçamento de HUD do celular) — FEITO no item 34
   (#597; "Carrinho (item 34)" na seção do GOLAÇO NOVO); (11) clássico mais
   PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não pelo árbitro (o pedido do TM

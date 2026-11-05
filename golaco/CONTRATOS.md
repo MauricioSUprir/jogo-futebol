@@ -1887,7 +1887,8 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   `role="region"`). O fim do 1º nível tem a âncora `<!--fim-->`: o Reiniciar, o Simular o resto e o Voltar ao TM moram antes
   dela; no fim de jogo o primário do fim (Jogar de novo / Voltar ao TM) sobe para o 1º lugar (`hud.js ordenarFim`).
 - **O 1º nível, na ordem do FC 24** (o `data-so`, a trava e o online escondem; `pausa-medidas.mjs ORDEM` por modo): Voltar ao jogo
-  (primário, foco ao abrir) · Editar time · Estatísticas · Replay · Opções · Modo de jogo (no TM, "Cenas da partida") · Ajuda e
+  (primário, foco ao abrir) · Editar time · Estatísticas · Replay · Opções · Modo de jogo (no TM, "Partida e cenas" — era "Cenas da
+  partida" até o item 33, que pôs nele a linha "Duração | Dificuldade") · Ajuda e
   controles · Reiniciar partida · Simular o resto · Voltar ao TM. Nos treinos: Voltar · Recomeçar · Máquina de passes · Marcador
   · Opções · Modo de jogo · Ajuda. No Livre (`livre-pagina.js`, ANTES do Replay): Jogadores e Câmera (com o estado em
   `small.estado`) e a `.linha-par` "Recomeçar" (Recomeçar | Bola no meu pé). Online (`online-pagina.js`): Pausar depois do
@@ -2165,7 +2166,8 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   `pixelRatio` baixo atrás da tela (item 102, decisão do dono); o nome embaixo de cada disco da Visão tática (item 103); o selo
   grande da competição no alto do PC (item 104); o Editar time com a cara da tela (item 105); a "tela cedo", durante o
   carregamento (item 106, decisão do dono); o Personalizar no online (item 107, decisão do dono); as FOTOS no lugar do busto
-  (feitas no item 31, #615, só a edição pro: abaixo); a dificuldade e o clima na linha de informação (item 33). Nada foi medido
+  (feitas no item 31, #615, só a edição pro: abaixo); o clima na linha de informação (a dificuldade entrou no item 33: seção
+  "Tempo de jogo e dificuldade"). Nada foi medido
   num celular de verdade.
 
 - **A foto da edição pro nas fichas (item 31, #615)**: `criarPrepartida({…, fotoDe(id)})` (a página passa `fotoPronta`: só a já
@@ -2672,7 +2674,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   simularResto() (Promise), resultadoGravado(), fotos (item 31: as da edição pro, contrato "Comemoração do gol")}` (null sem
   `?tm`).
 - **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
-  como "Cenas da partida" (pré-jogo e substituição, sem os treinos), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
+  como "Partida e cenas" (a duração e a dificuldade — item 33, sem elas com `partida.ajustesFixos` e no fim —, o pré-jogo e as
+  cenas, sem os treinos; era "Cenas da partida"), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
   fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
   58)"); sem "Editar time" com a trava. `faixa({..., botaoTexto,
   botaoCmd})`. O ponto do controlado no minimapa na cor do time dele.
@@ -4334,7 +4337,9 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
 
 ### Etapa 3 — o online na página (`js/online-pagina.js` + `main.js quadroOnline`)
 - Liga com o pedido do TM `modo: "online"` (`online: {sala, semente, nomes, D0, proto, lado}`; a semente é a do
-  anfitrião) ou, nos testes, `?online=<sala>&transporte=bc&lado=0|1` (duas abas pelo BroadcastChannel; `&ia=1` = a IA pelo
+  anfitrião; desde o item 33, `partida.minutosPorTempo` = a Config "Duração em 3D" DO ANFITRIÃO — o mesmo pedido nos dois
+  aparelhos: o `ticksPorTempo` está no hash do lockstep —, nunca a dificuldade, nem as preferências locais do golaço; a pausa do
+  online não tem o "Modo de jogo" e o `mudarDuracao`/`definirDificuldade` recusam) ou, nos testes, `?online=<sala>&transporte=bc&lado=0|1` (duas abas pelo BroadcastChannel; `&ia=1` = a IA pelo
   meu controlado o tempo todo). `online.js` e `online-pagina.js` só por import dinâmico (o download inicial cresce só o
   gancho no `main.js`/`hud.js`).
 - Transporte: a MessagePort que o TM entrega em resposta ao 'tm3d:pronto' ({tipo: 'tm3d:porta'}; protocolo no topo de
@@ -4883,6 +4888,113 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   treinadores, as tarjas, o toque = o próximo bloco, a festa do fim; E pureza; G custo), `teste-ponte-tm` P7/P8 (o `melhor`
   e o resto igual ao da base) e `teste-cenas-tela` seção F (navegador).
 
+## Tempo de jogo e dificuldade (item 33; 05/11; contrato)
+
+Pedido do dono (17/10): "editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido)". Pesquisa em
+`PESQUISA-DIFICULDADE.md` (EA FC 24–27, eFootball, FC Mobile e a literatura de ajuste de dificuldade). **Com a duração e a
+dificuldade padrão (4 min, Normal) nada muda**: `hash-igual` e `hash-partida` IGUAIS; o campo `m.dificuldade` nem existe no Normal.
+
+### A duração (`partida.js`, fecho)
+
+- **Opções:** `config.js PARTIDA.duracoes` = 3, 4, 5, 6, 8, 10 minutos REAIS por tempo (o relógio mostra 45' por tempo); o padrão
+  continua `PARTIDA.minutosPorTempo` 4 (o painel e as metas são medidos com 4). A duração mora num número só, o
+  `m.partida.ticksPorTempo`, que já está no hash.
+- `ticksDoTempo(min)` = a conta do `criarPartida` (`max(1, round(min·60/PASSO))`; 4 min = 14 400).
+- `mudarDuracao(m, min)` → boolean, PURA: mantém a FRAÇÃO do tempo jogado — o d' novo é o menor tick com o segundo mostrado ≥ o
+  de agora sem passar do minuto de agora; `tick0Tempo = tick − d'`, `ticksPorTempo = T'`. O minuto mostrado fica IGUAL sempre; o
+  segundo, igual nas 6 opções (T' ≥ 2700 ticks; com o tick de mais de 1 s de jogo — durações de teste abaixo de 0,75 min — fica no
+  máximo ⌈2700/T'⌉ s longe, e pode voltar: o minuto ganha); os acréscimos já anunciados ficam (minutos de jogo, os ticks pela
+  duração nova) e o "regular" (d ≥ T) também. No intervalo só troca o T (o 2º tempo nasce com ele); no tick 0 o mundo fica IDÊNTICO
+  ao de `criarPartida({minutosPorTempo})` (o Personalizar recria o mundo e dá o mesmo jogo). Recusa (false, nada muda): treinos,
+  Livre, Pênaltis, online/dois humanos, fim de jogo e `min ≤ 0`.
+- `segundoNoTempo(d, T)`: a MESMA expressão float do `relogio-placar.js segundoDeJogo` (o `partida.js` não pode importar aquele
+  módulo, fora do fecho: `teste-relogio-placar` R5); exportada só para o `teste-partida` T2, que compara as duas.
+- Nada mais depende da duração (nenhuma IA lê o relógio; não há fadiga). Os replays nas paradas ("≤ 3 por tempo, ≥ 30 s de bola
+  rolando") ficam proporcionalmente mais raros nos tempos longos; o Simular o resto com 10 min leva ~2,5× o de 4.
+
+### A dificuldade (só contra a pessoa)
+
+- **Os níveis** (os 4 do TM): Fácil ≈ Amador/Semi-Pro do EA FC; **Normal = o jogo de hoje, bit a bit** (≈ Profissional/Classe
+  Mundial); Difícil ≈ Lendário; Lenda ≈ Ultimate (sem o Competitor Mode na v1). Mexe só na VONTADE, na DECISÃO e na REAÇÃO da IA
+  adversária; nada de atributo, física, alcance de bote ou de interceptação, chance de ganhar a dividida, árbitro nem nas ajudas da
+  pessoa; nunca mais precisa nem mais rápida que hoje (o erro só ≥ 1, a leitura do passe e a reação do goleiro só mais lentas). Sem
+  ajuste pelo placar (nada de DDA).
+- **No mundo:** `m.dificuldade` = 'facil' | 'dificil' | 'lenda' ou AUSENTE (o Normal), FORA do hash (como `m.trava`): só o
+  comportamento muda o hash. `criarPartida({dificuldade})` escreve o campo só fora do Normal e com 1 humano;
+  `definirDificuldade(m, nivel)` → boolean (também no meio da partida; recusa treinos, Livre, Pênaltis, online e nível inválido).
+- **O portão:** `tatica.js nivelContra(m, t)` = `m.dificuldade && contraPessoa(m, t) ? m.dificuldade : null` — null no Normal sem
+  nem chamar o `contraPessoa`, na IA × IA (demo, painel, `?demo=1`, Simular o resto), no online, com o travado expulso, nos ticks em
+  que a IA cobra pela pessoa e no time DA pessoa (os companheiros dela continuam a IA de hoje).
+- **As alavancas** (`config.js DIFICULDADE`; cada uma num ponto só, pelo `nivelContra` do time de quem age; pré-juntadas por nível na
+  carga do módulo — o Normal usa o MESMO objeto de hoje; nenhum sorteio novo nem mudança na ordem dos sorteios):
+
+| Chave | Cobre | Ponto | Fácil | Normal | Difícil | Lenda |
+|---|---|---|---|---|---|---|
+| `boteIA.chancePorPasso` / `descanso` | `ACOES.boteIA` (a vontade de tentar o bote com a bola ao alcance; o alcance e a chance de ganhar não mudam) | `sim.js boteIA` | 0,025 / 110 | 0,08 / 45 | 0,12 / 34 | 0,22 / 20 |
+| `engaja` (m) | `IA_PESSOA.engaja` (a linha de engajamento, teto 105) | `ia-tatica.js blocoDoTime` | −8 | 0 | +3 | +6 |
+| `encurta` | `IA_PESSOA.encurta[2]` (quem guarda a zona encurta no gatilho) | `ia-tatica.js` (o ponto da zona) | 0,10 | 0,30 | 0,38 | 0,50 |
+| `utilidade.chute` / `chuteLonge` / `chutePosse` | `UTIL_P` (a vontade de chutar; a execução não muda) | `ia-ataque.js decidir` (`utilDe`) | 1,2 / 0,05 / 0,7 | 3,0 / 0,25 / 0,5 | 4,6 / 0,65 / 0,3 | 5,6 / 1,0 / 0,2 |
+| `utilidade.passeAntecipa` (s) | `IA_PESSOA.utilidade.passeAntecipa` (o passe lê a defesa da pessoa N s à frente) | idem | 0,2 | 0,5 | 0,6 | 0,7 |
+| `avaliaTicks` | `IA_ATAQUE.condutor.avaliaTicks` (de quantos em quantos ticks o condutor pensa) | `ia-ataque.js condutorTatico` | 9 (0,15 s) | 6 (0,1 s) | 5 | 5 (0,083 s) |
+| `le` (s) | `IA_DEFESA.livre.le` (ler o passe da pessoa antes de ir cortar; só mais lento) | `ia-tatica.js cortaPasse` | 0,35 | 0,20 | — | — |
+| `erro` | × o erro do passe e do chute (só ≥ 1) | `acoes.js executarAcao` | 1,2 | — | — | — |
+| `reacaoGoleiro` (s) | `GOLEIRO.reacao` do goleiro da IA (só mais lento) | `goleiro.js lerChute` | [0,30; 0,24] | [0,25; 0,19] | — | — |
+
+Medido (`teste-dificuldade`, 32 partidas pareadas por nível, 4 roteiros × sementes 1–8; razão ao Normal [p5–p95 do bootstrap]): botes
+da IA por minuto de posse da pessoa 0,61 [0,55–0,67] / 1 / 1,25 [1,12–1,41] / 1,54 [1,38–1,73]; chutes da IA 0,67 [0,56–0,81] / 1 /
+1,18 [1,02–1,37] / 1,31 [1,12–1,55]; chutes da pessoa 1,85 / 1 / 1,19 / 0,82; faltas da IA no Lenda 1,45× [1,12–1,88]. A vontade de
+chutar SATURA (com `chute` ≥ ~5 e `chuteLonge` 1 a decisão não muda mais — as mesmas partidas, bit a bit): o que mais põe a IA em
+posição de chute é ter a bola de volta mais cedo (bote, engajamento, encurtar) e pensar mais rápido (`avaliaTicks` 5).
+- **Fora da v1:** a "gestão de jogo pelo placar" do Lenda (Competitor Mode); o goleiro da IA que se entrega no pênalti; a
+  dificuldade no Livre e nos Pênaltis (Normal); a contrapressão por nível e o "2º melhor passe" do Fácil (a reserva da
+  especificação: não foi preciso).
+
+### Onde se escolhe (página, fora do fecho)
+
+- **`js/ajustes-partida.js`** (puro, só importa o `config.js`; no download inicial): `DURACOES`, `NIVEIS`, `NOME_NIVEL`,
+  `minutosValidos`, `nivelValido`, `ajustesDoPedido(pedido)` → `{minutosPorTempo | null, dificuldade | null, fixos}` (o online:
+  nunca a dificuldade), `proximaDuracao` (fora da lista — o `?min` dos testes — vai à menor opção maior), `proximoNivel`,
+  `maisFacil`, `textoDuracao` ("2 × 4 min"), `textoNivel` e `resultadoComAjustes(r, ajustes, m)`.
+- **`main.js ajustes`** = `{minutosPorTempo, dificuldade, maisFacil, fixos}`: a escolha mora na PÁGINA e sobrevive ao Personalizar,
+  ao Jogar de novo, ao Reiniciar e à troca de modo (todos recriam o mundo pelo `criarMundoTreino`). O começo: `?min`/`?dif` > o
+  pedido do TM (no online, só a duração, a do anfitrião) > `golaco.prefs.v1` (fora do TM e do online) > 4 min, Normal. A pausa
+  muda a escolha da página (salva fora do TM e do online) e, na partida em andamento, o mundo (`mudarDuracao`/`definirDificuldade`);
+  no fim do jogo fora do TM muda só a escolha (o "Jogar de novo"). `maisFacil`: a dificuldade mais fácil usada na partida (zera na
+  partida nova e no tick 0).
+- **A pausa** (`index.html #linha-ajustes`, `data-so="partida"`): a linha "Duração | Dificuldade" no "Modo de jogo" (no TM o
+  submenu passa a se chamar "Partida e cenas"), dois botões de ciclo (`duracao-ciclo`: 3 → 4 → 5 → 6 → 8 → 10; `dificuldade-ciclo`:
+  Fácil → Normal → Difícil → Lenda) e os comandos `duracao`/`dificuldade` (v) da API `__golaco.ajustes`. Escondida nos treinos, no
+  Livre, nos Pênaltis, no online (o "Modo de jogo" some), com o pedido travando (`ajustesFixos`) e no fim do jogo do TM. No celular
+  deitado ela ocupa a célula vazia da grade (a altura do nível não muda); em ≤ 600 × 480 px o padding dela é 8 px (o "Dificuldade"
+  não cabia com 16). `teste-pausa-tela` P11 (e os 2 ciclos no P10).
+- **A tela antes do jogo** (item 64): `prepartida.js dadosDaPartida` devolve `dificuldade: {curta: 'Normal', longa: 'Dificuldade:
+  Normal'}` (`textoDificuldade`; null no online, no Livre e nos Pênaltis); a linha de informação diz "2 × 4 min | Normal" no
+  celular e "2 tempos de 4 min | Dificuldade: Normal" no PC; o corte por prioridade ganhou o passo `dificuldadeCurta` (a longa vira
+  a curta, logo depois do período; no PC só se a 2ª linha não couber); a duração e a dificuldade nunca saem. O ≡ abre a pausa "antes
+  do jogo", onde a linha já está. `teste-prepartida` L3b; `teste-prepartida-tela` E23–E24b.
+- **Rumo ao Estrelato:** vale (a IA adversária joga contra a pessoa); com o travado expulso desliga sozinha.
+- **Simular o resto:** IA × IA, a dificuldade não age (a simulação do TM aplicava o `DIFF` na força do time do usuário: diferença
+  pequena, aceita).
+
+### O Total Match (v377)
+
+- O pedido ganha em `partida`: `minutosPorTempo` (Config "Duração em 3D", `settings.tempo3d`, padrão 4), `dificuldade` (o
+  `simOpts.dificuldade3d` das Batalhas, senão a Config "Dificuldade") e `ajustesFixos` (as Batalhas: a Batalha "Amador/Profissional/
+  Craque Mundial/Lendário" vira Fácil/Normal/Difícil/Lenda, travada — escolher o Lendário pelos pontos e jogar no Fácil seria uma
+  brecha). O online leva a duração do anfitrião e nunca a dificuldade (`online3d.js montaPedido`). O golaço ignora os dois nos
+  Pênaltis e no Livre.
+- O resultado volta com `minutosPorTempo` (a duração no apito) e `dificuldade` (a mais fácil usada), campos opcionais: o TM ainda não
+  os usa (pontos e recompensas por dificuldade, decisão do dono).
+- Testes: `teste-ponte-tm` P12; `testar-3d` (pro e `--publica`); `testar-online3d` (com e sem `--golaco`).
+
+### Testes
+
+- `teste-partida` T1–T5 (a duração), `teste-dificuldade` D0–D8 (CI: 4 níveis × 4 roteiros × 8 sementes = 128 partidas),
+  `teste-ponte-tm` P12, `teste-prepartida` L3b, `teste-pausa-tela` P11, `teste-prepartida-tela` E23–E24b. Na base 8871b09d todos
+  reprovam. O `--completo` (16 sementes, o D7: todos os degraus vizinhos provados) fica FORA do CI: hoje reprova nos chutes da IA
+  entre vizinhos (Normal < Difícil 0,89 [0,77–1,03], Difícil < Lenda 0,88 [0,76–1,02]) e no ponto do Difícil (1,13 < 1,15) —
+  `PESQUISA-DIFICULDADE.md` §10; as sementes 9–16 erram os pontos do CI por pouco (FILA, "Depende do dono" 22).
+
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 
 Dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre". Plano em 8 PRs (D1–D8; pesquisa e
@@ -4910,6 +5022,8 @@ o dono aprovou (`conducao.js`).
   "humano" muda) e `hash-igual` IGUAL em todo PR "só contra a pessoa". Seção P do `teste-ia-corre`: 0 passos ligados na demo
   do Node (com as cobranças), com o travado expulso (a entrada vazia e o Simular o resto) e com dois humanos; ligado em todo
   passo contra o roteiro.
+- **A dificuldade** (item 33; seção "Tempo de jogo e dificuldade"): `tatica.js nivelContra(m, t)` = o nível de `m.dificuldade`
+  só onde o `contraPessoa` liga; no Normal o campo não existe e tudo daqui fica bit a bit (`teste-dificuldade` D1–D3).
 
 ### As constantes (`config.js IA_PESSOA`)
 

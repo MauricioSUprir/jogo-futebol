@@ -100,7 +100,7 @@
 | 29 | ✅ **Campinho da escalação do pré-jogo em pé**: o campo inteiro com o gol embaixo (como a Globo), o círculo redondo, as cartas das pontas para dentro das laterais, o nome na letra da carta do TM sem cortar (nem os traços de baixo do g e do y), a posição a 11 px no celular; do celular pequeno ao PC, com e sem a cara do TM (#614) | 4 |
 | 30 | Cena de substituição no online | 4 |
 | 31 | ✅ **Foto do autor do gol com o número e o nome na comemoração**: o cartão no canto de cima à direita, na linha do placar (foto da edição pro do TM, a pílula com escudo, sigla e número e o NOME completo como a linha principal, também no celular; sem foto, uma linha da altura do placar), 3,5 s na tela a partir de 0,4 s depois do 1º corte, nunca no gol contra nem com a bola rolando; e a mesma foto no lugar do busto nas fichas da tela antes do jogo (#615) | 7 |
-| 33 | Escolher o tempo de jogo e a dificuldade (a dificuldade aparece também na tela antes do jogo) | 9 |
+| 33 | ✅ **Escolher o tempo de jogo e a dificuldade**: 3 a 10 min por tempo e Fácil/Normal/Difícil/Lenda na pausa ("Modo de jogo"), na tela antes do jogo e pela Config do TM; a dificuldade muda só a IA adversária (o Normal é o jogo de hoje) e aparece na tela antes do jogo ("2 × 4 min \| Normal") | 9 |
 | 35 | Clássico mais pegado (mais faltas pela vontade dos jogadores) | 7 |
 | 76 | 🔎 Quem sofre o carrinho cai e levanta (hoje só perde velocidade e o domínio) | 8 |
 | 80 | 🔎 ⏳ Carrinho: menos falta antes da bola (o atacante pular o carrinho, ou o contato colado na bola contar como bola primeiro) | 6 |
