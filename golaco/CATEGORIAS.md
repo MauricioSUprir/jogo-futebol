@@ -4,7 +4,7 @@
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
 > Atualizado em 05/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) ou da escalação em pé e da foto do autor (05/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) ou da escalação em pé, da foto do autor e do tempo de jogo e da dificuldade (05/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~29 h
+## 🛠️ B. Correções e regras — ~31 h
 
 | nº | o que é | horas |
 |---|---|---|
@@ -40,6 +40,8 @@
 | 109 | ✅ O tempo do teste do pré-jogo na divisão do CI: 580 s, do log do CI (#614; no #615) | 0,25 |
 | 111 | 🔎 Os tempos dos testes da comemoração e da tela antes do jogo na divisão do CI (hoje 150 s estimados e 600 s: 549 do log do #614 + ~50 estimados), do log do 1º CI do #615 | 0,25 |
 | 113 | 🔎 Conferir rodando o que a foto do autor não rodou: o online com uma pessoa na edição pro e a outra na pública, o aviso "Conexão instável" escondido na comemoração, as fotos nas fichas no Modo Livre e nos Pênaltis, e se o boneco parece com a foto (fora dos rostos reais) | 2 |
+| 114 | 🔎 Os tempos do teste da dificuldade (700 s estimados) e do teste da pausa na divisão do CI, do log do 1º CI do #616 | 0,25 |
+| 115 | 🔎 Conferir rodando o que o tempo de jogo e a dificuldade não rodaram depois da revisão: o online do TM, o TM na edição pública, os Pênaltis e o Modo Livre do TM, o Viverde e o ‹ › da pausa num celular de verdade | 1,5 |
 
 ---
 
@@ -85,7 +87,7 @@
 
 ---
 
-## 📱 F. Telas, HUD, câmera e controles — ~89 h a fazer
+## 📱 F. Telas, HUD, câmera e controles — ~87,5 h a fazer
 
 | nº | o que é | horas |
 |---|---|---|
@@ -100,7 +102,7 @@
 | 29 | ✅ **Campinho da escalação do pré-jogo em pé**: o campo inteiro com o gol embaixo (como a Globo), o círculo redondo, as cartas das pontas para dentro das laterais, o nome na letra da carta do TM sem cortar (nem os traços de baixo do g e do y), a posição a 11 px no celular; do celular pequeno ao PC, com e sem a cara do TM (#614) | 4 |
 | 30 | Cena de substituição no online | 4 |
 | 31 | ✅ **Foto do autor do gol com o número e o nome na comemoração**: o cartão no canto de cima à direita, na linha do placar (foto da edição pro do TM, a pílula com escudo, sigla e número e o NOME completo como a linha principal, também no celular; sem foto, uma linha da altura do placar), 3,5 s na tela a partir de 0,4 s depois do 1º corte, nunca no gol contra nem com a bola rolando; e a mesma foto no lugar do busto nas fichas da tela antes do jogo (#615) | 7 |
-| 33 | ✅ **Escolher o tempo de jogo e a dificuldade**: 3 a 10 min por tempo e Fácil/Normal/Difícil/Lenda na pausa ("Modo de jogo"), na tela antes do jogo e pela Config do TM; a dificuldade muda só a IA adversária (o Normal é o jogo de hoje) e aparece na tela antes do jogo ("2 × 4 min \| Normal") | 9 |
+| 33 | ✅ **Escolher o tempo de jogo e a dificuldade**: 3 a 10 min por tempo e Fácil/Normal/Difícil/Lenda na pausa ("Modo de jogo"; no TM, "Partida e cenas"), na tela antes do jogo ("2 × 4 min \| Normal") e pela Config do TM; nas Batalhas do Ultimate a dificuldade é a da Batalha, travada; a dificuldade muda só a IA adversária, sem mexer em atributo nem física (o Normal é o jogo de hoje): nos testes contra um jogador roteirizado, a IA marca ~0,65 gol por partida no Fácil, 0,9 no Normal, 1,07 no Difícil e 1,2 no Lenda (#616) | 9 |
 | 35 | Clássico mais pegado (mais faltas pela vontade dos jogadores) | 7 |
 | 76 | 🔎 Quem sofre o carrinho cai e levanta (hoje só perde velocidade e o domínio) | 8 |
 | 80 | 🔎 ⏳ Carrinho: menos falta antes da bola (o atacante pular o carrinho, ou o contato colado na bola contar como bola primeiro) | 6 |
@@ -126,6 +128,9 @@
 | 106 | 🔎 ⏳ A tela antes do jogo aparecendo enquanto o jogo ainda carrega (hoje ela vem quando o 3D fica pronto) | 4 |
 | 110 | 🔎 A foto da edição pro também nas cartas da escalação do pré-jogo (no celular não cabe sem refazer o item 29; no PC, sim) | 2 |
 | 112 | 🔎 ⏳ A foto enquadrada uma a uma pelo rosto, para a camisa de outro clube não aparecer (hoje o pé da foto escurece, mas as listras logo abaixo do queixo ainda aparecem) | 3 |
+| 116 | 🔎 ⏳ Separar mais o Lenda do Difícil: no placar os dois quase empatam (1,07 × 1,2 gol da IA por partida); o Lenda aperta mais, mas não cria chances melhores | 3 |
+| 117 | 🔎 ⏳ Na pausa, ← e → mudando a duração e a dificuldade também no teclado e no controle (hoje voltar um valor é só tocar no lado esquerdo do botão), a duração à vista no celular e "Dif. Normal" na tela antes do jogo do celular | 1,5 |
+| 118 | 🔎 ⏳ O TM usar a dificuldade e a duração da partida 3D (pontos e recompensas por dificuldade; hoje o resultado já traz as duas e o TM não usa) | 3 |
 
 ---
 
@@ -198,11 +203,13 @@
 18. 🏟️ Item 64 (a tela antes do jogo): feita com as escolhas recomendadas — a "Visão tática" mostra o time com e sem a bola, como no FC 25 (no FC 24 ela é assistir a partida como técnico: muda o jogo, seria outra entrega); no TM, "Simular partida" simula pelo jogo 3D (dá para usar o simulador do TM, ou tirar a aba); o fundo é o estádio visto de fora (ou o jogo parado) atrás de um véu escuro; o árbitro tem nome inventado, a data é a do aparelho fora do TM e não há clima nem dificuldade até o item 33; cada jogador é uma ficha da carta do TM com um busto na cor da camisa (a foto vem no item 31); dá para ver o time adversário; nos Pênaltis e com o pré-jogo desligado há 1 toque a mais antes do jogo; Personalizar antes do jogo vale como escalação (não conta substituição); no online, sem Personalizar e sair antes do jogo é W.O.; não há opção para desligar a tela; nos treinos ela não aparece; as abas de 40 px no celular pequeno, como na pausa. **A decidir:** o fundo (a revisão achou nítido e poluído): (a) desfocar o 3D e escurecer mais as bordas (recomendado), (b) o estádio por dentro, vazio e escuro, ou (c) um fundo liso (item 102); a moldura das fichas mais fina, como no FC (gosto); a tela aparecer enquanto o jogo carrega (item 106) e o Personalizar no online (item 107). Para conferir no seu celular: o entalhe, o toque nas abas de 40 px e o som ligando pelo botão do controle. Detalhes na FILA ("Depende do dono" 19).
 19. 📋 Item 29 (a escalação do pré-jogo em pé): feita com as escolhas recomendadas — o campo inteiro em pé achatado como o da Globo (dá para usar a escala real, com as cartas das pontas em cima das laterais, ou só a metade do campo, como a Copa 2026); o nome de camisa em letra normal (em caixa alta, como na TV, alguns nomes de 10 letras do TM sairiam com "…" no celular pequeno); ao lado, a coluna do time como antes (dá para pôr os reservas e o técnico numa coluna à direita, ~2–3 h); o goleiro numa linha só dele; a posição a 11 px no celular, na letra da carta e mais apagada que o nome (no PC ela fica pequena: vale olhar). Da revisão: quando a carta da ponta não cabe dentro do campo (no celular pequeno e com nomes longos do TM), ela fica centrada em cima da linha lateral, meia carta para fora (a alternativa, a carta quase encostando na linha, parece desalinhada); enquanto a letra da carta não chega, o nome aparece numa letra do sistema reduzida, menor, mas sem "…" (dá para esperar a letra, atrasando a escalação). Para conferir no seu celular: a letra chegando pela rede e a letra reduzida no Android. Detalhes na FILA ("Depende do dono" 20).
 20. 📸 Item 31 (a foto do autor na comemoração, #615): feito com as escolhas recomendadas — o cartão fica 3,5 s (2,6 s no gol do adversário) mesmo quando a câmera corta para o abraço, no canto de cima à direita (o único lugar que nunca tapa o autor no celular); mostra também o escudo e a sigla, sem o minuto; aparece também no gol da IA contra você; a foto só na edição pro (nem a foto importada da carreira própria aparece na pública); as fotos de 220 px que o TM já tem (nada novo no repositório); sem foto nas cartas da escalação do pré-jogo (não cabe no celular: item 110); no online vale a edição de quem criou a sala; o crédito das fotos fica no TM. Da revisão: o nome aparece inteiro também no celular, maior que o número (que foi para junto da sigla); muitas fotos são de jogos por OUTRO clube — o pé da foto escurece até a cor do cartão, mas as listras logo abaixo do queixo ainda aparecem: dá para enquadrar foto a foto pelo rosto (~3 h, item 112); fora dos rostos reais, o boneco pode não parecer com a foto (a conferir no item 113). Para conferir no seu celular: a foto chegando pela rede e o cartão com o entalhe. Detalhes na FILA ("Depende do dono" 21).
+21. ⏱️ Item 33 (o tempo de jogo e a dificuldade, #616): feito com as escolhas recomendadas — 3, 4, 5, 6, 8 ou 10 min por tempo, padrão 4 (dá para pôr 15 e 20, como o FC); dá para mudar no meio da partida, na pausa (o FC não deixa), menos no online; os 4 níveis do TM (Fácil ≈ Amador/Semi-Pro do FC, Normal = o jogo de hoje, Difícil ≈ Lendário, Lenda ≈ Ultimate, sem um 5º nível); a dificuldade só mexe na vontade, na decisão e na reação da IA adversária — nada de atributo, física ou alcance — e, no Fácil, a IA erra mais o chute; o Modo Livre e os Pênaltis ficam no Normal; a tela antes do jogo mostra o nível também no Normal; no TM a duração e a dificuldade vêm da Config, as Batalhas usam a delas travada, o online usa a duração de quem criou a sala; fora do TM o jogo lembra a sua escolha; o Lenda sem "jogar com o placar" (o Competitor Mode do FC). Da revisão: a dificuldade foi calibrada pelo PLACAR (antes os gols da IA quase não mudavam entre os níveis); no PC o item da pausa mostra "4 min · Normal" e no celular só "Normal"; voltar um valor é tocar no lado esquerdo do botão. **A decidir:** o Difícil e o Lenda quase empatam no placar — (a) deixar (recomendado: o Lenda já aperta mais e faz mais faltas) ou (b) separar o Lenda no ataque, ~3 h (item 116); ← e → mudando o valor no teclado e no controle (item 117); o TM dar pontos e recompensas pela dificuldade da partida 3D (item 118). Para conferir no seu celular: o toque no lado esquerdo do botão e o cadeado nas Batalhas. Detalhes na FILA ("Depende do dono" 22).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- ⏱️ O tempo de jogo (3 a 10 min por tempo) e a dificuldade (Fácil, Normal, Difícil, Lenda) na pausa, na tela antes do jogo e pela Config do TM; a dificuldade muda só a IA adversária, o Normal é o jogo de hoje (item 33, #616)
 - 📸 A foto do autor do gol com o número e o nome na comemoração, no canto de cima à direita (a foto só na edição pro do TM; sem foto, o número e o nome numa linha), e a mesma foto no lugar do busto nas fichas da tela antes do jogo (item 31, #615)
 - 📋 A escalação do pré-jogo com o campinho EM PÉ: o campo inteiro com o gol embaixo, o círculo redondo, o nome de camisa na letra da carta do TM e sem cortar, do celular pequeno ao PC e com nomes longos do TM (item 29, #614)
 - 🏟️ A tela antes do jogo no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas, Jogar partida · Visão tática · Personalizar (+ Simular partida no TM), em todo jogo antes do pré-jogo; o "Jogar" liga o som (item 64, #613)

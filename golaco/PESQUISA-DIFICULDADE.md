@@ -11,6 +11,13 @@ jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido)".
 - Os números por nível (as "%" de inteligência e reação) vêm de sites de fãs (fifplay, fifauteam). Parecem transcrever as
   barras da descrição do jogo, mas **a EA não publica uma tabela técnica da IA por dificuldade**.
 
+**O que entrou (PR #616):** as seções 0–9 são a pesquisa e a PROPOSTA de antes de medir; a §10 são as rodadas da 1ª calibração
+(pelos botes e chutes da IA); a **§11 é o estado final**, calibrado pelo resultado (gols e xG da IA, saldo da pessoa). A tabela que
+vale está no `config.js DIFICULDADE` e no contrato "Tempo de jogo e dificuldade" do `CONTRATOS.md`. Da proposta, ficaram de fora: o
+Competitor Mode no Lenda (seção 0, item 3), o `avaliaTicks` ("pensar mais rápido"), o erro do PASSE e a reação do goleiro no Fácil
+(sem efeito medível: §11), o "2º melhor passe" do Fácil e o `antecipaPressao`; a contrapressão e a contenção do 1º homem por nível
+entraram na §11. O que ficou para depois está nos itens 114–118 da `FILA.md` e no "Depende do dono" 22.
+
 ---
 
 ## 0. Resumo: o que a pesquisa sustenta (decisões propostas)

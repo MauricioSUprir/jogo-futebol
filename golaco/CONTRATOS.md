@@ -2674,10 +2674,10 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   simularResto() (Promise), resultadoGravado(), fotos (item 31: as da edição pro, contrato "Comemoração do gol")}` (null sem
   `?tm`).
 - **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
-  como "Partida e cenas" (a duração e a dificuldade — item 33, travadas com `partida.ajustesFixos` e sem elas no fim —, o pré-jogo e as
-  cenas, sem os treinos; era "Cenas da partida"), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
-  fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
-  58)"); sem "Editar time" com a trava. `faixa({..., botaoTexto,
+  como "Partida e cenas" (a duração e a dificuldade — item 33, à vista e travadas, com o cadeado, com `partida.ajustesFixos`, e
+  sem elas no fim do jogo —, o pré-jogo e as cenas, sem os treinos; era "Cenas da partida"), `#btn-simular-resto` (até o apito)
+  e `#btn-voltar-tm` (no fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar:
+  seção "Pausa (item 58)"); sem "Editar time" com a trava. `faixa({..., botaoTexto,
   botaoCmd})`. O ponto do controlado no minimapa na cor do time dele.
 - **Testes**: `teste-ponte-tm` (Node, padrão; P1 sem recuo, P2 tm-times, P3 humano no visitante, P4 trava, P5 resultado de
   partidas inteiras, P6 súmula com eventos montados; os pedidos em `tools/lib/pedidos-tm.mjs`) e `teste-tm-tela` (navegador; o
@@ -4888,7 +4888,7 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   treinadores, as tarjas, o toque = o próximo bloco, a festa do fim; E pureza; G custo), `teste-ponte-tm` P7/P8 (o `melhor`
   e o resto igual ao da base) e `teste-cenas-tela` seção F (navegador).
 
-## Tempo de jogo e dificuldade (item 33; 05/11; contrato)
+## Tempo de jogo e dificuldade (item 33, #616; 05/11; contrato)
 
 Pedido do dono (17/10): "editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido)". Pesquisa em
 `PESQUISA-DIFICULDADE.md` (EA FC 24–27, eFootball, FC Mobile e a literatura de ajuste de dificuldade). **Com a duração e a
@@ -4978,14 +4978,15 @@ Fácil > Lenda; o Difícil e o Lenda quase empatam no resultado (o Lenda se sepa
   10; `dificuldade-ciclo`: Fácil → Normal → Difícil → Lenda; o toque ou o clique no TERÇO DA ESQUERDA volta um valor — v
   'anterior', `duracaoAnterior`/`nivelAnterior` —, o resto do botão, o Enter e o Ⓐ andam; revisão A3: o teclado e o controle só
   andam, as setas continuam movendo o foco) e os comandos `duracao`/`dificuldade` (v) da API `__golaco.ajustes`. O item do 1º nível
-  mostra o que vale ("Modo de jogo · 4 min · Normal"; no TM "Partida e cenas · 6 min · Difícil"; revisão A2). Com o pedido
-  travando (`ajustesFixos`) a linha fica À VISTA e travada (`aria-disabled`, apagada, sem as setas, com o cadeado depois do valor;
-  revisão A6 — antes sumia e a pessoa não via o nível). Escondida nos treinos, no Livre, nos Pênaltis, no online (o "Modo de jogo"
-  some) e no fim do jogo do TM. O modo escolhido (`aria-pressed`) tem o FUNDO verde-escuro e não a borda verde, que é a marca do
-  foco (revisão A4). No celular deitado ela ocupa a célula vazia da grade (a altura do nível não muda); em ≤ 600 × 480 px os 4
-  botões das duas linhas de pares usam o MESMO padding de 11 px (o "Dificuldade" não cabia com 16; revisão A5: com 8 só nela, o
-  texto ficava desalinhado do vizinho). `teste-pausa-tela` P11 (e os 2 ciclos no P10; no fim do jogo, pelo toque, os ciclos andam a
-  partir da escolha e o "Jogar de novo" começa com ela).
+  mostra o que vale ("Modo de jogo · 4 min · Normal"; no TM "Partida e cenas · 6 min · Difícil"; revisão A2) — com a janela de até
+  480 px de altura (o celular deitado) só o nível ("Normal"): os dois cortavam em 568×320 e 640×360 (`hud.js escreverEstadoModo`).
+  Com o pedido travando (`ajustesFixos`) a linha fica À VISTA e travada (`aria-disabled`, apagada, sem as setas, com o cadeado
+  depois do valor; revisão A6 — antes sumia e a pessoa não via o nível). Escondida nos treinos, no Livre, nos Pênaltis, no online
+  (o "Modo de jogo" some) e no fim do jogo do TM. O modo escolhido (`aria-pressed`) tem o FUNDO verde-escuro e não a borda verde,
+  que é a marca do foco (revisão A4). No celular deitado ela ocupa a célula vazia da grade (a altura do nível não muda); em ≤ 600 ×
+  480 px os 4 botões das duas linhas de pares usam o MESMO padding de 11 px (o "Dificuldade" não cabia com 16; revisão A5: com 8 só
+  nela, o texto ficava desalinhado do vizinho). `teste-pausa-tela` P11 (e os 2 ciclos no P10; no fim do jogo, pelo toque, os ciclos
+  andam a partir da escolha e o "Jogar de novo" começa com ela).
 - **A tela antes do jogo** (item 64): `prepartida.js dadosDaPartida` devolve `dificuldade: {curta: 'Normal', longa: 'Dificuldade:
   Normal'}` (`textoDificuldade`; null no online, no Livre e nos Pênaltis); a linha de informação diz "2 × 4 min | Normal" no
   celular e "2 tempos de 4 min | Dificuldade: Normal" no PC; o corte por prioridade ganhou o passo `dificuldadeCurta` (a longa vira
@@ -5021,6 +5022,10 @@ Fácil > Lenda; o Difícil e o Lenda quase empatam no resultado (o Lenda se sepa
   main, partida, ajustes-partida, config, as IAs, hud e o index; quase tudo comentário) e a 647,4 KB depois da revisão (+5,7 KB:
   a linha travada com o cadeado, o ‹ ›, o estado do item e o nivelDoPasso no hud, no CSS e no ajustes-partida; o config e as IAs
   encolheram); acima do mínimo de 120 KB, nada sob demanda mudou (os 37 continuam fora).
+- **Ficam** (FILA): os tempos do `teste-dificuldade` e do `teste-pausa-tela` no `tempos-ci.mjs` (item 114); o que não rodou depois
+  da revisão — `testar-online3d`, `testar-3d --publica`, `teste-online-tela`, `testar-penaltis`, `testar-livre`, o Viverde e o
+  celular de verdade (item 115); a distância entre os níveis vizinhos (item 116); o ← → nos ciclos e a duração no item do celular
+  (item 117); o TM usar a `dificuldade` e o `minutosPorTempo` do resultado (item 118).
 
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 
