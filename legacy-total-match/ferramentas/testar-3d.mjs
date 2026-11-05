@@ -131,9 +131,13 @@ if (fr) {
   confere("Ultimate: pedido v2 com jogo neutro", ped.v === 2 && ped.neutro === true, ped);
   // (Rivais não é mata-mata: o empate é o resultado — a cena do pós-jogo inteira no 3D)
   confere("Ultimate: o pedido diz que o empate não continua (partida.empateContinua false)", ped.empCont === false, ped);
+  // (na pro, espera o 3D carregar as fotos de quem está em campo antes de ler: a pré-carga sai com o navegador ocioso, até 1,5 s
+  // depois do pronto — lido antes, o estado das fotos dependia do momento; revisão O1)
+  if (!PUBLICA) await esperaFotos(fr);
   const fu = await fotosDoPedido(fr);
-  confere("Ultimate: as fotos no pedido (item 31) — " + (PUBLICA ? "nenhuma na pública" : "as cartas com foto real na pro, todas válidas"),
-    PUBLICA ? fu.lados.every(l => l.total === 0) : fu.lados[0].total + fu.lados[1].total >= 1 && fu.lados.every(l => l.ruins.length === 0), fu);
+  confere("Ultimate: as fotos no pedido (item 31) — " + (PUBLICA ? "nenhuma na pública" : "as cartas com foto real na pro, todas válidas e as de quem está em campo carregadas pelo 3D"),
+    PUBLICA ? fu.lados.every(l => l.total === 0) : fu.lados[0].total + fu.lados[1].total >= 1 && fu.lados.every(l => l.ruins.length === 0)
+      && (fu.lados[0].tit + fu.lados[1].tit === 0 || (!!fu.fotos && fu.fotos.pedidas >= 1 && fu.fotos.prontas === fu.fotos.pedidas && fu.fotos.erros === 0)), fu);
   await print("02-ultimate-3d");
   const pausa = await pausaDo3d(fr);
   confere("Ultimate: pausa com Simular o resto (sem Reiniciar nem Modo de jogo)", pausa.some(x => /^Simular o resto/.test(x)) && !pausa.some(x => /Reiniciar|Modo de jogo/.test(x)), pausa);
