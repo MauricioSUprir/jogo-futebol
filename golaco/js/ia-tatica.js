@@ -30,7 +30,7 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, IA_PESSOA, TATICA, ACOES, ENTRADA, GOLEIRO, DIFICULDADE } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, IA_PESSOA, TATICA, ACOES, ENTRADA, GOLEIRO, DIFICULDADE, CLASSICO } from './config.js';
 import { MD } from './matdet.js';
 import { difAng, clamp, lerp } from './mat.js';
 import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
@@ -68,6 +68,22 @@ for (const n of DIFICULDADE.niveis) {
   if (D.le != null) LE_D[n] = D.le;
   if (D.contencao != null) CONTEM_D[n] = IA_DEFESA.contencao.map(v => Math.max(1.25, v + D.contencao));
   if (D.contrapressao) CONTRA_D[n] = { ...IA_DEFESA.contrapressao, ...D.contrapressao };
+}
+// o clássico (item 35; config.js CLASSICO): o 1º homem contém e aperta mais perto (contencaoMenos/apertoMenos m), por cima do
+// nível, com os pisos (1,25 e 0,6) — os DOIS times com m.classico (não é volume de pressão: o mesmo papel, mais perto da bola)
+const CONTEM_C = IA_DEFESA.contencao.map(v => Math.max(1.25, v - CLASSICO.contencaoMenos)), CONTEM_DC = {};
+for (const n of DIFICULDADE.niveis) CONTEM_DC[n] = (CONTEM_D[n] ?? IA_DEFESA.contencao).map(v => Math.max(1.25, v - CLASSICO.contencaoMenos));
+const APERTO_C = IA_DEFESA.aperto.map(v => Math.max(0.6, v - CLASSICO.apertoMenos));
+/** A distância de contenção do 1º homem do time t, por pressão (a dificuldade contra a pessoa e o clássico). */
+export function contencaoDoTime(m, t) {
+  const nv = nivelContra(m, t);
+  if (m.classico) return nv ? CONTEM_DC[nv] : CONTEM_C;
+  return (nv && CONTEM_D[nv]) || IA_DEFESA.contencao;
+}
+/** A distância da bola em que o 1º homem aperta no gatilho, por pressão (o clássico); sem ele, o IA_DEFESA.aperto. */
+export function apertoDoTime(m, t) {
+  void t;
+  return m.classico ? APERTO_C : IA_DEFESA.aperto;
 }
 
 /**
@@ -999,9 +1015,9 @@ function semBola(m, j, f) {
   if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento || B.rapido)) {
     if (B.rapido) { const e = acompanhar(m, j, s, B, meuGol, extra, B.aperta1 ? 'aperta' : 'contem'); if (e) return e; }
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
-    // (a dificuldade, item 33: a que distância ele contém o condutor da pessoa — DIFICULDADE.contencao, CONTEM_D)
-    const nvC = nivelContra(m, j.time);
-    return conter(m, j, s, B, meuGol, ((nvC && CONTEM_D[nvC]) || IA_DEFESA.contencao)[p], extra);
+    // (a dificuldade, item 33: a que distância ele contém o condutor da pessoa — DIFICULDADE.contencao, CONTEM_D; e o clássico,
+    // item 35: mais perto, os dois times — contencaoDoTime)
+    return conter(m, j, s, B, meuGol, contencaoDoTime(m, j.time)[p], extra);
   }
   // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento; com o
   // condutor rápido, também — cobrindo pela velocidade)
@@ -1483,7 +1499,8 @@ function apertar(m, j, s, B, meuGol, extra, ramo, lado2 = 0) {
   if (ramo === 'contra') pontoPressao(m, B, meuGol, IA_DEFESA.contrapressao.dist, _t, IA_DEFESA.antecipaContem);
   // (condutor lento: o 1º mira lento.aperto m da bola — com aperto[p] = 1,5 m e o "chegou" do para() ele parava fora do
   // alcance do bote, 0,65 m; a 0,2 m a colisão dos corpos o deixa a ~0,6 m do condutor e a 0,26–0,4 m da bola)
-  else pontoPressao(m, B, meuGol, B.lento && !lado2 ? IA_DEFESA.lento.aperto : IA_DEFESA.aperto[m.times[j.time].tatica.pressao], _t);
+  // (o clássico, item 35: aperta mais perto — apertoDoTime; o lento.aperto e a contrapressão como estão)
+  else pontoPressao(m, B, meuGol, B.lento && !lado2 ? IA_DEFESA.lento.aperto : apertoDoTime(m, j.time)[m.times[j.time].tatica.pressao], _t);
   if (lado2) {
     // o 2º fecha o lado de dentro (para o meio do campo), sem disputar o mesmo ponto com o 1º
     const gx = _t.x - B.foco.x, gz = _t.z - B.foco.z, g = MD.hypot(gx, gz) || 1;
