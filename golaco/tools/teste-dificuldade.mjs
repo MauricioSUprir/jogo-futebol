@@ -36,6 +36,7 @@
 //   node tools/teste-dificuldade.mjs --so portao           (só D0–D3, rápido; --so medida: só D0 e D4–D8, a triagem)
 //   node tools/teste-dificuldade.mjs --set DIFICULDADE.lenda.boteIA.chancePorPasso=0.2   (triagem; antes de carregar a lógica)
 //   node tools/teste-dificuldade.mjs --json saida.json [--normal-de outra.json]   (guarda as partidas; reaproveita as do Normal)
+//   node tools/teste-dificuldade.mjs --completo --de s1-8.json,s9-16.json --so medida   (o D7 com partidas já jogadas)
 //   node tools/teste-dificuldade.mjs --js <pasta>          (outra lógica: a base 8871b09d REPROVA)
 //   node tools/teste-dificuldade.mjs --base <pasta js>     (D2 também contra a base)
 // Sai com código 1 se alguma meta reprovar.
@@ -60,6 +61,8 @@ const PAR = Math.max(1, Math.min(+arg('--par', 3), os.cpus().length || 1));
 const SETS = args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []));
 const JSON_OUT = arg('--json', null);
 const NORMAL_DE = arg('--normal-de', null);
+// (--de a.json,b.json: as partidas já jogadas — de qualquer nível — guardadas por --json; as que estão lá não rodam de novo)
+const DE = (arg('--de', '') || '').split(',').filter(Boolean);
 const SO = arg('--so', null);
 const BOOT = 2000;
 const CADA = 300;
@@ -276,9 +279,13 @@ async function principal() {
   const tarefasJ = [];
   let normalDe = null;
   if (NORMAL_DE && fs.existsSync(NORMAL_DE)) normalDe = JSON.parse(fs.readFileSync(NORMAL_DE, 'utf8')).filter(r => r.nivel === 'normal' && r.min === MIN);
+  for (const f of DE) {
+    const l = JSON.parse(fs.readFileSync(f, 'utf8')).filter(r => r.min === MIN && NIVEIS.includes(r.nivel));
+    normalDe = [...(normalDe ?? []), ...l.filter(r => !(normalDe ?? []).some(o => o.nivel === r.nivel && o.rot === r.rot && o.sem === r.sem))];
+  }
   if (SO !== 'portao') {
     for (const nivel of NIVEIS) for (const rot of ROTS) for (let s = SEM0; s < SEM0 + NSEM; s++) {
-      if (nivel === 'normal' && normalDe && normalDe.some(r => r.rot === rot && r.sem === s)) continue;
+      if (normalDe && normalDe.some(r => r.nivel === nivel && r.rot === rot && r.sem === s)) continue;
       tarefasJ.push({ tipo: 'jogo', nivel, rot, sem: s, min: MIN });
     }
   }
@@ -487,7 +494,7 @@ async function principal() {
   if (semPar) reg('as partidas chegam ao fim', `${semPar} não chegaram`, 'todas', false);
   console.log(tab.map(l => l.join(' | ')).join('\n'));
   console.log('\npor roteiro:\n' + tabR.map(l => l.join(' | ')).join('\n'));
-  console.log(`\n${jogos.length} partidas de 2 × ${MIN} min (${ROTS.join(', ')} × ${NSEM} sementes desde ${SEM0} × ${NIVEIS.join(', ')}${normalDe ? '; o Normal de ' + NORMAL_DE : ''}) · ${tJogos.toFixed(0)} s`);
+  console.log(`\n${jogos.length} partidas de 2 × ${MIN} min (${ROTS.join(', ')} × ${NSEM} sementes desde ${SEM0} × ${NIVEIS.join(', ')}${normalDe ? `; ${jogos.length - tarefasJ.length} reaproveitadas (--normal-de/--de)` : ''}) · ${tJogos.toFixed(0)} s`);
   return fechar();
 
   function fechar() {

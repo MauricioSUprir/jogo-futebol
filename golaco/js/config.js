@@ -1714,21 +1714,28 @@ export const IA_PESSOA = {
 //   boteIA {chancePorPasso, descanso}: ACOES.boteIA (a vontade de tentar o bote com a bola ao alcance e a espera depois; sim.js)
 //   engaja: m somados à linha de engajamento IA_PESSOA.engaja (teto 105; ia-tatica.js)
 //   encurta: a fração do caminho de IA_PESSOA.encurta[2] (quem guarda a zona encurta no gatilho; ia-tatica.js)
-//   utilidade {chute, passeAntecipa}: por cima do UTIL_P (IA_ATAQUE.utilidade + IA_PESSOA.utilidade; a vontade de chutar e a
-//     leitura da defesa da pessoa no passe; ia-ataque.js)
-//   avaliaTicks: IA_ATAQUE.condutor.avaliaTicks (quantas vezes por segundo o condutor da IA pensa; ia-ataque.js)
+//   utilidade {chute, chuteLonge, chutePosse, passeAntecipa}: por cima do UTIL_P (IA_ATAQUE.utilidade + IA_PESSOA.utilidade): a
+//     vontade de chutar (de dentro e de fora da área, e o quanto custa perder a posse no chute) e a leitura da defesa da pessoa no
+//     passe (ia-ataque.js; a execução do chute não muda)
+//   avaliaTicks: IA_ATAQUE.condutor.avaliaTicks (de quantos em quantos ticks o condutor da IA pensa; ia-ataque.js)
 //   le: IA_DEFESA.livre.le (o tempo para ler o passe da pessoa antes de ir cortar; só MAIS LENTO; ia-tatica.js cortaPasse)
 //   erro: multiplica o erro do passe e do chute da IA (só ≥ 1, só no Fácil; acoes.js executarAcao)
 //   reacaoGoleiro: GOLEIRO.reacao do goleiro da IA (só mais lento; goleiro.js lerChute)
-// Calibrados contra os 4 roteiros da pessoa (tools/teste-dificuldade.mjs: botes e chutes da IA pareados).
+// Calibrados contra os 4 roteiros da pessoa (tools/teste-dificuldade.mjs, 32 partidas pareadas por nível; PESQUISA-DIFICULDADE.md
+// §10): botes da IA por minuto de posse da pessoa 0,61 / 1 / 1,25 / 1,54 × o Normal; chutes da IA 0,67 / 1 / 1,18 / 1,31.
+// A vontade de chutar SATURA (com chute ≥ ~5 e chuteLonge 1 a decisão não muda mais: as mesmas partidas bit a bit): o que põe a
+// IA mais vezes em posição de chute é a bola de volta mais cedo (bote, engajamento, encurtar) e pensar mais rápido (avaliaTicks 5
+// no Difícil e no Lenda, 0,083 s; com 4 no Lenda os chutes caíram a 1,18 na mesma amostra). Fácil: menos bote e pressão, mais
+// lento para ler e decidir, chuta menos (de fora quase nunca) e erra um pouco mais.
 export const DIFICULDADE = {
   niveis: ['facil', 'normal', 'dificil', 'lenda'],
-  facil: { boteIA: { chancePorPasso: 0.045, descanso: 75 }, engaja: -6, encurta: 0.15,
-    utilidade: { chute: 2.2, passeAntecipa: 0.25 }, avaliaTicks: 9, le: 0.30, erro: 1.2, reacaoGoleiro: [0.30, 0.24] },
+  facil: { boteIA: { chancePorPasso: 0.025, descanso: 110 }, engaja: -8, encurta: 0.10,
+    utilidade: { chute: 1.2, chuteLonge: 0.05, chutePosse: 0.7, passeAntecipa: 0.2 }, avaliaTicks: 9, le: 0.35, erro: 1.2, reacaoGoleiro: [0.30, 0.24] },
   normal: {},
-  dificil: { boteIA: { chancePorPasso: 0.11, descanso: 38 }, engaja: 2, encurta: 0.35, utilidade: { chute: 3.4, passeAntecipa: 0.6 } },
-  lenda: { boteIA: { chancePorPasso: 0.15, descanso: 30 }, engaja: 4, encurta: 0.40, utilidade: { chute: 3.8, passeAntecipa: 0.7 },
-    avaliaTicks: 5 },
+  dificil: { boteIA: { chancePorPasso: 0.12, descanso: 34 }, engaja: 3, encurta: 0.38,
+    utilidade: { chute: 4.6, chuteLonge: 0.65, chutePosse: 0.3, passeAntecipa: 0.6 }, avaliaTicks: 5 },
+  lenda: { boteIA: { chancePorPasso: 0.22, descanso: 20 }, engaja: 6, encurta: 0.50,
+    utilidade: { chute: 5.6, chuteLonge: 1.0, chutePosse: 0.2, passeAntecipa: 0.7 }, avaliaTicks: 5 },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
