@@ -1,31 +1,13 @@
-/* ===== sw.js — cache offline do MindTrack ===== */
-const CACHE = 'mindtrack-v17';
-const ARQUIVOS = [
-  './', './index.html', './manifest.webmanifest',
-  './css/app.css', './css/visual.css', './assets/logo.svg', './assets/marca-dagua.svg',
-  './assets/fontes/anton-latin.woff2', './assets/fontes/inter-latin.woff2', './js/icones.js', './js/apresentacoes-desenho.js', './js/relatorio-pais.js', './js/views/apresentacoes.js', './assets/icon.svg', './assets/icon-maskable.svg',
-  './js/app.js', './js/store.js', './js/seed.js', './js/engine.js', './js/ai.js', './js/ui.js', './js/util.js',
-  './js/produto.js', './js/auth.js', './js/api.js', './js/fotos.js', './js/relogio.js', './js/respostas-locais.js', './js/conexoes-importar.js',
-  './js/views/comum.js', './js/views/inicio.js', './js/views/agenda.js', './js/views/tarefas.js',
-  './js/views/provas.js', './js/views/materias.js', './js/views/aprender.js', './js/views/questoes.js',
-  './js/views/flashcards.js', './js/views/revisao.js', './js/views/foco.js', './js/views/desempenho.js',
-  './js/views/conquistas.js', './js/views/biblioteca.js', './js/views/studyai.js', './js/views/config.js',
-  './js/views/quickadd.js', './js/views/busca.js', './js/views/perfil.js',
-  './js/views/entrar.js', './js/views/escola.js', './js/views/conexoes.js', './js/views/relogio.js', './js/views/planos.js', './js/views/pagamento.js', './js/views/criador.js', './js/views/termos.js',
-];
-
-self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ARQUIVOS)).then(() => self.skipWaiting()));
-});
+/* O MindTrack AI mudou para https://guidrodrigues21-a11y.github.io/mindtrack-ai/
+   Este service worker só existe para DESLIGAR o app antigo nos celulares que já
+   tinham ele instalado: apaga o cache, se desinstala e recarrega a página, que
+   agora é o redirecionamento (que leva os dados junto). */
+self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
-});
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin) return;   // nunca intercepta a API da Anthropic
-  e.respondWith(
-    fetch(e.request)
-      .then((r) => { const cp = r.clone(); caches.open(CACHE).then((c) => c.put(e.request, cp)); return r; })
-      .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html'))),
-  );
+  e.waitUntil((async () => {
+    for (const k of await caches.keys()) await caches.delete(k);
+    await self.registration.unregister();
+    const abertas = await self.clients.matchAll({ type: 'window' });
+    for (const c of abertas) c.navigate(c.url);
+  })());
 });
