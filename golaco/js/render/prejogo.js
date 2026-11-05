@@ -517,6 +517,8 @@ export function criarPrejogo(ctx) {
       folha: t => { const r = tela.escalacao.folha(t).getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; },
       get pular() { const r = tela.botaoPular.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, visivel: tela.pularVisivel }; },
       info: t => { const f = tela.escalacao.folha(t).querySelector('.pj-esc-info'); const r = f.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; },
+      /** O campo em pé da folha t (item 29; só leitura): retângulo, viewBox, largura desenhada (m) e a conta das cartas. */
+      campo: t => tela.escalacao.campo(t),
     },
   };
 

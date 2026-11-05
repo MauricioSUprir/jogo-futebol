@@ -1,6 +1,17 @@
 /* GOLAÇO — pré-jogo (js/prejogo-tela.js, js/escalacao-tela.js): abertura, faixas de cinema, preto das transições,
    botão Pular e a escalação de cada time no campinho. Enquanto html.prejogo: nada do HUD nem dos controles de toque
    (sem narração: o pré-jogo só tem o nome do jogo na abertura e os dados da escalação). Margens seguras em tudo. */
+/* a TM Cond (Barlow Condensed ExtraBold, OFL; a letra da carta do TM): os nomes de camisa da escalação (item 29) e as fichas da
+   tela antes do jogo (css/prepartida.css, item 64). Só baixa quando um texto com ela aparece (com webdriver o pré-jogo e a tela
+   ficam desligados: nunca baixa — tools/teste-carga.mjs) */
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* a RESERVA da TM Cond na escalação, enquanto ela não chega (ou se não chegar): a letra do sistema ENCOLHIDA (size-adjust) para
+   nunca passar da largura da TM Cond — a conta das cartas é da TM Cond, e a reserva larga sem ajuste punha "…" nos nomes (revisão
+   V5). A razão TM Cond ÷ reserva medida no Chromium nos nomes do elenco e do TM: Arial/Liberation/FreeSans 0,72–0,82 (média 0,77),
+   DejaVu 0,63–0,74; o ajuste fica no mínimo de cada uma */
+@font-face { font-family: 'TM Cond reserva'; font-style: normal; font-weight: 800; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold'), local('Helvetica Bold'), local('Helvetica-Bold'), local('Roboto Bold'), local('Roboto-Bold'), local('FreeSans Bold'), local('FreeSansBold'); size-adjust: 71%; }
+@font-face { font-family: 'TM Cond reserva larga'; font-style: normal; font-weight: 800; src: local('DejaVu Sans Bold'), local('DejaVuSans-Bold'); size-adjust: 62%; }
 html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinheta { display: none !important; }
 
 .prejogo { position: fixed; inset: 0; z-index: 30; overflow: hidden; touch-action: none; cursor: pointer; color: var(--texto); font-family: var(--fonte); }
@@ -43,8 +54,11 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
 .prejogo.na-abertura .pj-pular { display: none; }
 
 /* ------------------------------------------------------------------ escalação */
+/* o campinho EM PÉ (item 29): a coluna do time (do tamanho do conteúdo, até 34vw) e o grupo do campo (largura = o campo + o que
+   as cartas das pontas passam da lateral, pelo js/escalacao-tela.js) lado a lado, centrados juntos na área segura */
 .pj-esc {
-  position: absolute; inset: 0; display: grid; grid-template-columns: minmax(136px, 25%) 1fr; gap: clamp(10px, 2vw, 28px);
+  --esc-col: clamp(118px, 34vw, 440px);
+  position: absolute; inset: 0; display: grid; grid-template-columns: fit-content(var(--esc-col)) auto; justify-content: center; gap: clamp(10px, 2vw, 28px);
   padding: calc(var(--sa-t) + clamp(10px, 3.4vh, 30px)) calc(var(--sa-r) + clamp(12px, 3vw, 40px)) calc(var(--sa-b) + clamp(10px, 3.4vh, 30px)) calc(var(--sa-l) + clamp(12px, 3vw, 40px));
   pointer-events: none; will-change: transform;
 }
@@ -53,13 +67,18 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
 .pj-esc-faixa { display: block; width: clamp(34px, 5vw, 56px); height: 6px; border-radius: 3px; background: var(--cor-time, var(--verde)); }
 .pj-esc-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto-2); }
 .pj-esc-nome { margin: 0; font-size: clamp(20px, 3.3vw, 46px); font-weight: 900; line-height: 1.02; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+/* o nome longo (> 22 letras, só do TM: "Sociedade Esportiva Recreativa…") menor e em até 3 linhas — o bloco de 4–5 linhas a 46 px
+   pesava mais que o campo (revisão V6); o nome inteiro fica no aria-label da folha */
+.pj-esc-nome.longo { font-size: clamp(18px, 2.2vw, 30px); line-height: 1.08; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .pj-esc-forma { font-size: clamp(15px, 1.9vw, 24px); font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
-.pj-esc-area { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; }
+.pj-esc-area { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; justify-self: center; }
+/* (overflow visível: no aperto a carta da ponta fica sobre a lateral — no máximo meia carta para fora; só as LINHAS ficam recortadas
+   pelo canto arredondado: os cantos vivos do retângulo de 0,5 m furavam a curva da borda — revisões A2/V3) */
 .pj-esc-campo {
-  position: relative; flex: none; border-radius: 12px; overflow: hidden;
+  position: relative; flex: none; border-radius: 12px; overflow: visible;
   background: rgba(11, 36, 22, 0.8); border: 1px solid rgba(25, 224, 122, 0.34); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
 }
-.pj-esc-linhas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pj-esc-linhas { position: absolute; inset: 0; width: 100%; height: 100%; clip-path: inset(0 round 11px); }
 .pj-esc-linhas * { fill: none; stroke: rgba(25, 224, 122, 0.4); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .pj-carta {
   position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -67,17 +86,28 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
   border-radius: 9px; box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45); line-height: 1; overflow: hidden;
 }
 .pj-num { font-weight: 900; font-size: calc(var(--ch, 60px) * 0.34); font-variant-numeric: tabular-nums; }
-.pj-nome { font-weight: 700; font-size: clamp(10px, calc(var(--ch, 60px) * 0.19), 15px); white-space: nowrap; max-width: 94%; overflow: hidden; text-overflow: clip; }
-.pj-pos { font-weight: 800; font-size: clamp(10px, calc(var(--ch, 60px) * 0.15), 12px); color: var(--verde); letter-spacing: 0.05em; }
+/* o nome de camisa em TM Cond 800, caixa normal, no tamanho da conta (--fn: a letra mínima do §7.4/§7.5); a entrelinha 1,25 não
+   corta os traços de baixo (g, y, ç); o que não cabe sai com "…" (só os nomes de estresse) */
+.pj-nome {
+  font-family: 'TM Cond', 'Barlow Condensed', 'TM Cond reserva', 'TM Cond reserva larga', sans-serif; font-weight: 800; font-size: var(--fn, 11px); line-height: 1.25;
+  white-space: nowrap; max-width: 94%; overflow: hidden; text-overflow: ellipsis;
+}
+/* a posição na MESMA TM Cond da carta, quase sem espaçamento e um pouco apagada: número > nome > posição (na face larga e espaçada
+   da interface, em verde cheio, "ZAG" pesava mais que o nome — revisão V4); o tamanho continua o da regra §7.5 */
+.pj-pos {
+  font-family: 'TM Cond', 'Barlow Condensed', 'TM Cond reserva', 'TM Cond reserva larga', sans-serif; font-weight: 800; font-size: var(--fp, 11px);
+  color: var(--verde); letter-spacing: 0.02em; opacity: 0.78;
+}
+/* a carta baixa demais para as 3 linhas: a posição sai (fica no aria-label da carta) */
+.pj-carta.sem-pos .pj-pos { display: none; }
 
-/* tela estreita (celular pequeno): a coluna do time fica mais magra */
+/* tela estreita (celular pequeno): o nome do time menor */
 @media (max-width: 620px) {
-  .pj-esc { grid-template-columns: minmax(118px, 24%) 1fr; }
   .pj-esc-nome { font-size: 19px; }
 }
 /* janela em pé (PC estreito): a coluna do time em cima, o campinho embaixo */
 @media (orientation: portrait) {
-  .pj-esc { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .pj-esc { grid-template-columns: 1fr; grid-template-rows: auto 1fr; justify-content: stretch; }
   .pj-esc-info { padding-bottom: 0; }
 }
 @media (prefers-reduced-motion: reduce) { .pj-ab-chama { animation: none; } }

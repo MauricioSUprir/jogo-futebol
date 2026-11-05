@@ -974,11 +974,46 @@ mudou.
   toque da camada, o Enter/Espaço na captura e o Ⓐ do controle — e `.muda` esconde a abertura; o Ⓐ é lido sempre (`lerPad`)
   e, quando a camada volta a ouvir (`mudo(false)`, `mostrar(true)`), um Ⓐ que já estava apertado NÃO conta como aperto novo (o
   do "Jogar partida" pulava o bloco das cenas; revisão A1 do item 64).
-- **`js/escalacao-tela.js`** (DOM): `criarEscalacaoTela(raiz)` → `{montar(times), mostrar(e) (escalacaoEm + tau),
-  esconder(), estado, cartas(t), folha(t)}`; `tamanhoEscalacao(W, H, vertical)` (cartas até 120 × 76; passo ≥ carta + 10
-  px). Usa `posicaoNaTela` (editor-time.js) e `svgCampinho` (campinho.js). O movimento sai do relógio do roteiro (nada de
-  transição do CSS: o relógio manual dos testes e prints vale).
-- **`js/campinho.js`** (puro): `svgCampinho(vertical)` → `{viewBox, html}` (o editor passou a usar; layout idêntico).
+- **`js/escalacao-tela.js`** (DOM; desde o item 29 o campinho EM PÉ — dono, 17/10: "o campinho da escalação do jogo EM PÉ
+  (retrato), não deitado"): `criarEscalacaoTela(raiz, ident)` → `{montar(times), mostrar(e) (escalacaoEm + tau), esconder(),
+  estado, cartas(t), folha(t), campo(t)}`. Puras e exportadas: `ESCALACAO` (L/A do campo 0,80 — a Globo 2025 — até o teto
+  0,85; o passo-alvo 0,164 × a altura (o da Globo: o CENTRO das cartas das pontas ~9% para dentro; a borda decide, abaixo);
+  folga 10 px; `margem` 6 / `margemMin` 5; a carta até 120 px de largura e 44–76 de altura; as letras; fora do `config.js`, que
+  é do fecho), `tamanhoEscalacao(W, H, {larguraNome, alturaTela, caixa})` → `{w, h, cw, ch, passo, inset, fora, fonteNome,
+  fontePos, comPos, largura, teto, naLinha}` (W = a largura máxima do grupo do campo, H = a altura da área = a altura do
+  campo; `larguraNome(px)` = o nome mais largo do conjunto — os 22 titulares para a altura, os 11 da folha para a carta
+  (`tamanhosDasFolhas`); celular = `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem (revisão V1: as pontas NUNCA tangentes à lateral): as cartas das
+  pontas DENTRO, com a borda a `margem` 6 px da lateral (mínimo `margemMin` 5) — o campo alarga de 0,80 até 0,85 —, na letra da
+  conta e depois na mínima da tela (§7.4/§7.5 do PESQUISA-ESTADIO: celular 11, 568×320 10, PC 13); senão as pontas SOBRE a
+  linha, centradas nela (inset 0, `naLinha`; meia carta para fora, `fora`); senão o nome sai com "…" (`teto`; só os de
+  estresse). `caixa: {w, h}` = o campo já decidido (só as cartas saem da conta). A linha da posição sai (`sem-pos`, a posição
+  fica no `aria-label`) se a carta não comporta as 3 linhas (`comPos`). Janela de PC em pé: a altura desce até o grupo caber e,
+  se o nome segurar a carta, a letra e as cartas pela largura), `posicaoCarta(vaga, tam)` (o centro: x = inset + (col + 2) ·
+  passo; y pela grade de 5 filas do `posicaoNaTela(…, true)`: o GOL embaixo, o LE à esquerda), `nomesTitulares(times)` e
+  `larguraNomes(nomes)` (TM Cond 800, caixa normal: a maior entre a tabela exata e a dos avanços arredondados ao px) e
+  `tamanhosDasFolhas(W, H, {larguras: [l0, l1], alturaTela})` → `[T0, T1]` (revisões A1/V2): as DUAS folhas com a MESMA caixa
+  do campo — a altura pela conta dos 22 nomes, a largura pela maior das duas folhas (cada uma com os 11 nomes dela; volta à dos
+  22 se o grupo não couber) — e a carta, a letra e o inset de cada folha pelos nomes dela. O layout refaz as duas juntas: a
+  escondida é medida sem aparecer (visibility), a largura do grupo sai da coluna MAIS LARGA das duas e a altura da menor; na
+  janela em pé as colunas ficam com a altura da maior. O campo tem o mesmo tamanho e o mesmo topo nas duas. `campo(t)` (só
+  leitura; também `prejogo.escalacao.campo(t)`) → `{x, y, w, h, viewBox, largura, cw, ch, fonteNome, fontePos, comPos, inset,
+  fora, teto}`. O nome do time acima de `ESCALACAO.nomeTimeLongo` (22) letras ganha `.longo` (menor, em até 3 linhas; revisão V6).
+  As linhas do campo recortadas pelo canto arredondado (`clip-path` só no SVG; as cartas podem passar da lateral); a posição na
+  TM Cond, mais leve que o nome; a reserva da TM Cond = faces `local()` com `size-adjust` (`css/prejogo.css`, revisão V5). O
+  layout refaz a conta SEM os tamanhos de antes (o campo velho seguraria a linha da grade e o grupo largo
+  espremeria a coluna do time) quando a folha, a área, a coluna ou a altura da tela mudam; o `montar` pede a TM Cond com o
+  texto dos nomes (`document.fonts.load`). O movimento sai do relógio do roteiro (nada de transição do CSS: o relógio manual
+  dos testes e prints vale); a cascata das cartas sobe do gol ao ataque.
+- **`js/campinho.js`** (puro): `svgCampinho(vertical, largura?)` → `{viewBox, html}`. `largura` (m; item 29), em pé e > 68:
+  as laterais até ela e a linha do meio na largura toda, o círculo (r 9,15) e as áreas (40,32 × 16,5 e 18,32 × 5,5) no tamanho
+  real e centrados, viewBox `0 0 <largura> 105` — só a distância entre as laterais estica (o FM26). Sem ela, a saída de sempre
+  byte a byte (o editor e a pausa; `teste-escalacao-campo` N3 compara com o hash da base). `posicaoNaTela(vaga, W, H, cw, ch,
+  vertical)` não mudou.
+- **`js/letra-cond.js`** (puro, item 29): `AVANCO` (os avanços da TM Cond 800 em 1/1000 em, latin-1), `larguraCond(texto, px,
+  caixaAlta = true)` (a conta do nome que não espera a fonte; o `prepartida.js` reexporta — a mesma função) e
+  `larguraCondInteira(...)` (cada avanço arredondado ao px: o Chromium sem posição subpixel do texto — Linux, o CI — dá até
+  +0,5 px por letra). O `@font-face` da TM Cond mora no `css/prejogo.css` (do download inicial; a fonte só baixa quando um
+  texto com ela aparece — com webdriver, nunca: `teste-carga`); o `css/prepartida.css` usa o mesmo.
 - **`som.js`**: `cena({ganho, filtro})` / `cena(null)` (substitui o alvo do barramento e do passa-baixas da pausa);
   `cenaPre`. **`jogador3d.js`**: `KITS.arbitro`.
 - **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
@@ -990,10 +1025,17 @@ mudou.
   submenu "Modo de jogo": o próximo modo; `#estado-prejogo` mostra o atual; com a tela antes do jogo aberta, a escolha nova
   vale no Jogar), API `__golaco.prejogo` (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(),
   pularTudo(), irPara(t), comecar(), iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel,
-  time, cheia, cartas(t), folha(t), pular, info(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo,
+  time, cheia, cartas(t), folha(t), pular, info(t), campo(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo,
   fora}`); `quadro()` passa `parado` = `retratoBloqueado()`; `desenhar()` desenha o pré-jogo quando ele está ativo.
-- **Testes**: `tools/teste-cortejo.mjs` e `tools/teste-prejogo-roteiro.mjs` (Node, padrão do CI), `tools/teste-prejogo.mjs`
-  (navegador, CI), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
+- **Testes**: `tools/teste-cortejo.mjs`, `tools/teste-prejogo-roteiro.mjs` e `tools/teste-escalacao-campo.mjs` (item 29: as
+  contas da escalação em pé, N1–N5: em pé e no teto, a carta e a letra, o campinho do editor e da pausa byte a byte, a janela
+  em pé, a mesma caixa nas duas folhas) (Node, padrão do CI), `tools/teste-prejogo.mjs` (navegador, CI; itens 4b e 15: a
+  escalação em pé E1–E14 — em pé, o GOL embaixo, o lado, as linhas recortadas, as cartas no campo, a letra, nada cortado nem
+  pela tinta nem por fração de px, sem rolar, a mesma caixa nas duas folhas, o Pular, a TM Cond, as pontas nunca tangentes, o
+  nome do time em ≤ 3 linhas, a faixa da carta na cor do time — em 11 telas do PC e no celular; com `?tm` e nomes longos em 5
+  telas — `lib/pedidos-tm.mjs PED_NOMES_LONGOS` —, o pedido misto `PED_NOMES_MISTOS` (colunas diferentes, a mesma caixa, as
+  pontas do time de nomes curtos dentro) e 568×320 com o arquivo da TM Cond bloqueado (a reserva não corta nome); `--so-esc` roda
+  só a escalação, ~1m40s), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
@@ -1934,7 +1976,8 @@ em `PESQUISA-ESTADIO.md` §7.5. A ORDEM do começo passa a ser: tela antes do jo
 antes. **Só
 DOM, CSS e página**: os novos `js/prepartida.js` (puro, FORA do fecho: nenhuma constante no `config.js`), `js/prepartida-tela.js`
 + `css/prepartida.css` + `assets/tm/fontes/tmcond-800-latin(-ext).woff2` (a TM Cond 800 = Barlow Condensed ExtraBold, OFL, a
-letra da carta do TM) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
+letra da carta do TM; desde o item 29 o `@font-face` dela e a tabela de avanços — `js/letra-cond.js` — são comuns com a escalação
+do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
 `editor-time.js`, `online-pagina.js`. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS: a tela segura o laço no tick 0
 (nenhum passo) e nada dela vai ao passo.
 - **Quando aparece** (`main.js prepartidaLigada`): em todo JOGO — partida, TM (também o Rumo ao Estrelato), Livre, Pênaltis e
@@ -2599,7 +2642,8 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: o Estádio Total Match (seção "Estádio de cada clube"),
   torcida 45% misturada; `publico` 0,1–1 = ocupação.
 - **Página**: `render/identidade-pagina.js identidadeDaPagina()` — null sem `?tm` (identidade.js nem é baixado: import
-  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores) ANTES de
+  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores — a letra 30/38 desce só
+  quando a sigla passa de `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, `larguraSiglaEm`: revisão V9 do item 29) ANTES de
   `criarCampo`/`criarTorcida`. main.js: `IDENT` → `criarCampo({identidade})`, `criarTorcida({identidade, mascara:
   mascaraDaIdentidade})`, `jog3d.definirKits(IDENT.kits)`, `criarPrejogo({identidade})`, `COR_TIME` (faixa ENTRA/SAI) e
   `timesDoMundo` com `extrasPlacar` (`{escudoUrl, cor, corTexto, mapa}` → hud.js `<symbol id="escudo-tm-i">` com `<image>`,
@@ -2612,7 +2656,9 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   túnel, cantos, torcedores), `prejogo-tela.js` (escudos e estádio na abertura), `escalacao-tela.js` (escudo e cor).
 - **Teste**: `teste-identidade` (Node, padrão): padrão = constantes de hoje (torcida byte a byte), ΔE₀₀ nos pares de Sharma
   et al., 7 pedidos difíceis (dois vermelhos, azul × árbitro azul, preto-e-branco × branco-e-preto, 3 uniformes iguais,
-  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro).
+  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro); seção G
+  (item 29, revisão V9): a sigla do escudo de reserva cabe em ≤ `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, e as que já
+  cabiam ficam no tamanho de antes (30 com 3 letras, 38 com 2).
 
 ## Estádio de cada clube no pré-jogo (Total Match, 15/10)
 Pedido do dono: na edição pro (licenciada) o estádio REAL do mandante; na pública, o Estádio Golaço com o nome do jogo. Só

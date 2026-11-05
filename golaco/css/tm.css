@@ -302,8 +302,10 @@ html.tm .pj-esc-rotulo::before { content: ""; flex: none; width: 22px; height: 1
 html.tm .pj-esc-nome { font-weight: 800; letter-spacing: -0.02em; }
 html.tm .pj-esc-forma { color: var(--tm-verde-cl); font-weight: 700; }
 html.tm .pj-esc-campo { background: rgba(10, 29, 18, 0.82); border-color: rgba(34, 197, 94, 0.34); border-radius: 14px; }
+html.tm .pj-esc-linhas { clip-path: inset(0 round 13px); }
 html.tm .pj-esc-linhas * { stroke: rgba(34, 197, 94, 0.4); }
-html.tm .pj-carta { background: rgba(11, 17, 14, 0.95); border-color: var(--tm-linha2); border-radius: 10px; }
+/* (a faixa de cima da carta na cor do time, como fora do TM: o atalho border-color a apagava — revisão V7) */
+html.tm .pj-carta { background: rgba(11, 17, 14, 0.95); border-color: var(--tm-linha2); border-top-color: var(--cor-time, var(--tm-verde-cl)); border-radius: 10px; }
 html.tm .pj-pos { color: var(--tm-verde-cl); }
 
 /* ------------------------------------------------------------------ Editar time (os cartões e as abas do TM) */

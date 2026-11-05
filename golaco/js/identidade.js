@@ -454,10 +454,23 @@ export function svgEscudoSigla(sigla, cor1, cor2) {
   const c1 = corValida(cor1) ?? '#808890';
   let c2 = corValida(cor2) ?? textoSobre(c1);
   if (deltaE(c1, c2) < 15) c2 = textoSobre(c1);
-  const s = esc(String(sigla || '').slice(0, 3));
+  const bruta = String(sigla || '').slice(0, 3), s = esc(bruta);
+  // a letra desce só quando a sigla não cabe na área de dentro do escudo (as de letras largas: "AAW", "CAM")
+  const fs = Math.min(bruta.length > 2 ? 30 : 38, Math.floor(10 * SIGLA_CABE / Math.max(0.1, larguraSiglaEm(bruta))) / 10);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="220" viewBox="0 0 100 110">`
     + `<path d="M50 6 93 19V55c0 25-18.5 42-43 49.5C25.5 97 7 80 7 55V19z" fill="${c1}" stroke="${c2}" stroke-width="7" stroke-linejoin="round"/>`
-    + `<text x="50" y="66" text-anchor="middle" font-family="Inter, system-ui, Arial, sans-serif" font-weight="900" font-size="${s.length > 2 ? 30 : 38}" fill="${c2}">${s}</text></svg>`;
+    + `<text x="50" y="66" text-anchor="middle" font-family="Inter, system-ui, Arial, sans-serif" font-weight="900" font-size="${fs}" fill="${c2}">${s}</text></svg>`;
+}
+/**
+ * A largura (em) da sigla na DejaVu Sans Bold — a mais larga das letras do sistema que o <img> do SVG usa (ele não vê as fontes da
+ * página): medida no Chromium. O escudo de reserva tem ~77 de largura por dentro do contorno na linha de base; SIGLA_CABE deixa
+ * ~3,5 de folga de cada lado (revisão V9 do item 29: "AAW" a 30 passava da área e encostava no contorno branco).
+ */
+const LARG_SIGLA = { A: 0.774, B: 0.762, C: 0.734, D: 0.83, E: 0.683, F: 0.683, G: 0.821, H: 0.837, I: 0.372, J: 0.372, K: 0.775, L: 0.637, M: 0.995,
+  N: 0.837, O: 0.85, P: 0.733, Q: 0.85, R: 0.77, S: 0.72, T: 0.682, U: 0.812, V: 0.774, W: 1.103, X: 0.771, Y: 0.724, Z: 0.725 };
+export const SIGLA_CABE = 70;
+export function larguraSiglaEm(sigla) {
+  return [...String(sigla || '')].reduce((w, c) => w + (LARG_SIGLA[c.toUpperCase()] ?? (/[0-9]/.test(c) ? 0.696 : 0.85)), 0);
 }
 export function urlEscudoSigla(sigla, cor1, cor2) {
   return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgEscudoSigla(sigla, cor1, cor2));

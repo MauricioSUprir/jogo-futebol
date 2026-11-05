@@ -9,6 +9,7 @@ import { PASSO } from './config.js';
 import { FORMACOES } from './formacoes.js';
 import { ELENCOS, fichaDe, notaExibida, notaTime, estrelas, h32 } from './elenco.js';
 import { posicaoTatica, TATICA_PADRAO } from './tatica.js';
+import { larguraCond } from './letra-cond.js';
 
 /** As constantes da tela (medidas da maquete da proposta FC e as contas da proposta do celular; spec §1). */
 export const PREPARTIDA = Object.freeze({
@@ -38,16 +39,9 @@ export const PREPARTIDA = Object.freeze({
 });
 
 // ------------------------------------------------------------------------------------------------ medidas de texto
-// avanços da TM Cond 800 (Barlow Condensed ExtraBold, a letra da carta do TM) em 1/1000 em, de U+0020 a U+00FF (latin-1);
-// medidos da fonte (assets/tm/fontes/tmcond-800-latin.woff2) — a conta do nome não espera a fonte chegar
-const AVANCO = [200, 289, 385, 626, 454, 761, 624, 188, 343, 343, 362, 437, 223, 337, 235, 444, 456, 294, 451, 446, 508, 450, 451, 422, 446, 446, 298, 246, 437, 437, 437, 462, 760, 508, 477, 470, 480, 441, 427, 473, 483, 235, 462, 505, 437, 558, 522, 479, 474, 467, 481, 454, 485, 480, 506, 707, 490, 492, 419, 360, 444, 360, 432, 437, 234, 457, 453, 445, 453, 446, 305, 451, 455, 223, 223, 465, 219, 685, 455, 452, 456, 456, 336, 426, 299, 455, 456, 635, 462, 442, 377, 370, 201, 370, 500, 426, 426, 426, 426, 426, 426, 0, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 426, 200, 289, 445, 522, 587, 534, 201, 454, 391, 776, 298, 454, 437, 0, 433, 280, 359, 437, 273, 289, 234, 458, 530, 235, 162, 161, 301, 454, 735, 701, 815, 462, 508, 508, 508, 508, 508, 508, 775, 470, 441, 441, 441, 441, 235, 235, 235, 235, 506, 522, 479, 479, 479, 479, 479, 409, 517, 480, 480, 480, 480, 492, 473, 471, 457, 457, 457, 457, 457, 457, 698, 445, 446, 446, 446, 446, 197, 197, 197, 197, 456, 455, 452, 452, 452, 452, 452, 437, 459, 455, 455, 455, 455, 442, 451, 442];
-/** Largura (px) do texto em TM Cond 800 a `px` (caixa alta: o nome de camisa na ficha); fora do latin-1, 0,5 em por letra. */
-export function larguraCond(texto, px, caixaAlta = true) {
-  const s = caixaAlta ? String(texto).toUpperCase() : String(texto);
-  let w = 0;
-  for (const ch of s) { const c = ch.codePointAt(0); w += c >= 32 && c <= 255 ? AVANCO[c - 32] : 500; }
-  return w / 1000 * px;
-}
+// a largura do nome em TM Cond 800 (a tabela de avanços) mora no letra-cond.js: a escalação do pré-jogo (item 29) usa a mesma
+// conta sem baixar esta tela; reexportada aqui para quem já importa daqui
+export { larguraCond };
 /** Largura aproximada (px) do texto em Inter 600–800 a `px` (a conta do corte da info e do ícone das abas; a tela mede de verdade). */
 export function larguraInter(texto, px, peso = 600) {
   let w = 0;

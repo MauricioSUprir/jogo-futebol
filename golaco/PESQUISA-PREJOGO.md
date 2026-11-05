@@ -114,6 +114,7 @@ torcedores nunca entram no quadro): 6 peças em vez de 12.
 | Cenas antes da saída de bola | 0 (abre na saída; apito no carregamento) | 12 planos, 60,5 s (curto 20 s) | ≥ 11 planos, 50–65 s |
 | Escalações no campinho | não havia | mandante 10,0 s e visitante 10,0 s inteiras na tela, o mesmo fundo | 10 ± 0,2 s cada |
 | Nada encosta na escalação (568×320 a 1920×1080) | — | folga mín. 10 px, letra ≥ 10 px, 0 fora, 0 cortado, Pular sem encostar | ≥ 6 px, ≥ 10 px |
+| Escalação em pé (item 29; §9): 11 telas do PC, o celular, `?tm` com nomes longos e o pedido misto | deitada (L/A 1,30–1,68), o GOL à esquerda | em pé (L/A 0,80–0,85), o GOL embaixo, o círculo redondo, a letra do §7.4/§7.5, a tinta do nome inteira, TM Cond, as pontas 6 px para dentro ou sobre a linha, a mesma caixa nas duas folhas | E1–E14 do `teste-prejogo` 4b/15 |
 | Cortejo: pé plantado / pé que salta / corpos | — | 0 m/s / razão 0,90 / ≥ 0,85 m | ≤ 0,05 / ≤ 1 / ≥ 0,6 m |
 | Fila: vaga / rumo / último parado | — | 4 cm / 0° / 42,4 s | ≤ 10 cm / ≤ 5° / ≤ 50 s |
 | Trilhos dentro de sólidos (3 modos + abertura, 1200 pontos) | — | 0 | 0 |
@@ -147,3 +148,128 @@ muda AQUI:
 - **O Personalizar antes do jogo** recria o mundo do tick 0 com a escalação nova; o diretor refaz o cortejo, os treinadores, as
   fotos e as escalações (`refazerTimes`) sem remontar o lado de fora — o reserva escalado sai do túnel e aparece na escalação.
 - **Toques até o jogo** na partida com o pré-jogo: 2, como antes (Jogar + Pular no lugar de toque para começar + Pular).
+
+## 9. A escalação em pé (item 29, 05/11)
+
+Pedido do dono (17/10): "o campinho da escalação do jogo EM PÉ (retrato), não deitado". Antes, o `escalacao-tela.js` decidia
+`vertical = W/H < 0,95` pela ÁREA do campinho (a tela menos a coluna do time), sempre deitada no celular e no PC: o campo saía
+deitado com o gol à esquerda em todas as telas (só a janela de PC em pé virava). O nó era a LARGURA: em pé, as 5 filas ficam na
+altura (a carta com a altura de antes) e 5 cartas lado a lado têm de caber numa caixa mais estreita que alta — com a letra do
+sistema (a DejaVu dos testes, larga) não cabia no celular; com a TM Cond (a letra das fichas da tela antes do jogo) cabe.
+
+**Fontes e o que foi aproveitado de cada uma:**
+
+| fonte | aproveitado |
+|---|---|
+| Globo 2025, Brasileirão (o pacote do Premiere) | o gol embaixo; o campo INTEIRO plano achatado a L/A 0,80; os jogadores das pontas ~9% para dentro das laterais. A caixa alta dos nomes ficou de fora (escolha do dono, abaixo) |
+| Football Manager 26 (a tela da tática) | as marcas no tamanho real e só a distância entre as laterais esticada (o círculo redondo; o FM estica ~1,45×, aqui 1,24–1,31×) |
+| Copa 2026 (FIFA) | o gol embaixo e a escalação de UM time em pé ao lado da coluna. A metade do campo ficou como alternativa (não é retrato) |
+| Premier League 2023/24–2025/26 | a ordem goleiro → defesa → meio → ataque (a cascata das cartas sobe do gol ao ataque); o campo deitado é o gráfico dos DOIS times, o de um time é em pé |
+| EA FC 26 (Team Management), FC Mobile 26/27, FC 27 (pacote Bundesliga e "MUN") | o goleiro embaixo é a regra dos jogos; a coluna à esquerda + o campo em pé é o nosso modelo |
+| LFU 2025 (Prime Video, Record, CazéTV) | contraexemplo: o goleiro EM CIMA; ficamos com a Globo, a Copa e os jogos |
+| PESQUISA-ESTADIO §7.4/§7.5 (Apple HIG, Material, WCAG, XAG, Valve) | a letra: nome ≥ 10 px em 568×320 e ≥ 11 nos outros celulares, informação ≥ 11, PC ≥ 13 |
+| A ficha do item 64 (`prepartida.js`) | a TM Cond 800 e a tabela de avanços (a conta não espera a fonte) |
+
+**Decisões** (as recomendadas da especificação; o dono pode trocar):
+- O campo inteiro em pé a L/A 0,80, alargando até 0,85; as cartas das pontas para dentro das laterais (na 1ª versão o centro
+  ~9% para dentro, como na Globo; desde a revisão a borda a 6 px da lateral) e, no aperto, centradas sobre a linha (meia carta
+  para fora; §9.1). Alternativas: a escala real 0,648 com as pontas sobre as
+  laterais; a metade do campo (Copa 2026; cartas maiores, mas o desenho fica deitado, L/A 1,3); as cartas sempre dentro das
+  laterais (com camisas de 10 letras do TM em 568×320 a caixa passa de quadrada: não cabe).
+- O nome de camisa em TM Cond 800, caixa NORMAL (a caixa alta da Globo/Copa custa ~14% de largura: com camisas de 10 letras do
+  TM, 4 nomes sairiam com "…" em 568×320). O número na letra de antes; a posição, na 1ª versão também, desde a revisão na TM Cond
+  e mais leve que o nome (§9.1).
+- Ao lado do campo, a coluna de antes (escudo com `?tm`, a faixa, "Escalação", o nome e a formação; sem técnico nem reservas),
+  agora do tamanho do conteúdo (até 34vw) e centrada junto com o campo. O goleiro numa fila própria.
+- A posição sobe de 10 para 11 px nos celulares a partir de 350 px de altura (568×320 continua com 10); o nome com entrelinha
+  1,25 (os traços de baixo de g, y, ç saíam cortados).
+- **A largura do nome na tela** (achado na implementação): o Chromium sem posição subpixel do texto (Linux, o CI) arredonda o
+  avanço de cada letra ao px — "Mmmmmmmmmm" a 14,44 px dá 97,1 px pela tabela e 98 na tela, e saía com "…" numa carta de 106
+  px. A conta usa a maior entre a tabela exata e a dos avanços arredondados (`letra-cond.js larguraCondInteira`), e o teste
+  confere o corte também por fração de px (a largura do texto no canvas × a caixa).
+- A janela de PC em pé: a coluna em cima e o campo embaixo; se a largura não dá, a altura desce e, se o nome mais largo segurar
+  a carta, a letra e as cartas pela largura.
+
+**Antes → depois** (o `teste-prejogo --so-esc` do código final, depois da revisão §9.1; elenco fictício; o campo é o mesmo nas
+duas folhas, a carta e a letra são as da folha do mandante — desde a revisão cada folha tem as cartas pelos nomes dela):
+
+| tela | antes: o campo (L/A) | depois: o campo (L/A) | carta antes → depois | nome / posição (px) antes → depois |
+|---|---|---|---|---|
+| 844×390 | 578×364 (1,59), o GOL à esquerda | 302×364 (0,83), o GOL embaixo | 105×62 → 50×62 | 11,8 / 10 → 11,8 / 11 |
+| 844×390 com entalhe | 508×343 (1,48) | 287×343 (0,84) | 91×58 → 47×58 | 11,0 / 10 → 11,0 / 11 |
+| 667×375 | 457×350 (1,31) | 289×350 (0,83) | 81×59 → 47×59 | 11,2 / 10 → 11,2 / 11 |
+| 640×360 | 438×336 (1,30) | 285×336 (0,85) | 77×56 → 47×56 | 10,6 / 10 → 11 / 11 |
+| 568×320 | 394×298 (1,32) | 247×298 (0,83) | 68×49 → 43×49 | 10 / 10 → 10 / 10 |
+| 1280×720 | 877×604 (1,45) | 553×671 (0,82) | 120×76 → 100×76 | 14,4 / 11,4 (igual) |
+| 1366×600 | 937×559 (1,68) | 460×559 (0,82) | 120×76 → 81×76 | igual |
+| 1440×900 (16:10) | 992×683 (1,45) | 684×840 (0,81) | 120×76 (igual) | igual |
+| 1024×768 (4:3) | 701×483 (1,45) | 589×716 (0,82) | 120×76 → 107×76 | igual |
+| 1920×1080 | 1352×931 (1,45) | 816×1020 (0,80) | 120×76 (igual) | igual |
+| 800×1000 (janela de PC em pé) | 752×830 (0,91; o círculo achatado, 1,40) | 677×830 (0,82; o círculo redondo) | 120×76 (igual) | igual |
+| `?tm`, nomes longos | deitado; 3 nomes de estresse cortados | 568×320 253×298 (0,85), 640×360 285×336 (0,85), 844×390 com entalhe 291×343 (0,85), 1366×600 468×559 (0,84), 1920×1080 816×1020 (0,80) | celular 51–56, PC 81–120 | celular: só os 3 de estresse com "…"; PC: nenhum |
+| `?tm`, pedido misto (`PED_NOMES_MISTOS`: camisas curtas × longas) | deitado | 1280×1024 742×928 (0,80), 844×390 300×364 (0,82), a mesma caixa nas duas folhas | 844×390: mandante 49, visitante 59 | nenhum cortado |
+
+A tinta do nome (os traços de baixo de g, y, ç) saía da caixa em 11 das 16 telas medidas na base; agora em nenhuma. A
+letra do nome em TM Cond em todas (antes, a do sistema). A borda da carta da ponta até a lateral, que na 1ª versão ficava a 0–1,7
+px (tangente), ficou a 6–11 px ou sobre a linha (§9.1). Os tempos não mudaram (cada escalação inteira 10,0 e 10,0 s; as duas
+juntas 0,55 s); o celular Média no pré-jogo, plano a plano, igual à base (a escalação 31 chamadas e 128 mil triângulos; o pior
+plano, o aéreo, 40 e 128,1 mil, como na base: a mudança é só DOM). Download inicial +20 KB (a 1ª versão +14: o
+`escalacao-tela.js` com a conta e os comentários +8,9, o `letra-cond.js` +2,8, o `@font-face` no `prejogo.css` +1,9, o
+`campinho.js` +0,6; a revisão +6: as duas folhas juntas, as reservas da TM Cond, o nome longo do time, o escudo de reserva;
+folga 720 → 700 KB, a meta é ≥ 120). As 5 mutações da especificação (a escalação da base, a carta sem o nome, a entrelinha 1, o
+nome sem a TM Cond e o campinho sem a largura) reprovam o 4b ou o `teste-escalacao-campo` (a 2ª e a 3ª refeitas no fim da implementação, antes da revisão).
+`hash-igual` e `hash-partida` (104 hashes) IGUAIS, `fecho-hash --diff` 0.
+
+**Riscos que ficam:** antes de a TM Cond chegar a letra de reserva sai encolhida e menor (§9.1, V5); se o `local()` não casar
+com a letra do aparelho (o Android sem a Roboto Bold por esse nome), fica a sans-serif sem o ajuste e pode pôr "…" nos primeiros
+quadros, sobretudo no modo "só a escalação" (o `montar` pede a fonte com o texto dos nomes; a cascata só começa em 0,12 s;
+`font-display: swap`) — conferir num celular de verdade. A coluna do tamanho do conteúdo muda o x do campo entre as duas folhas
+(16–26 px com o elenco fictício; no pedido misto em 844×390, pela conta, ~88 px: a metade da diferença das colunas, 111 × 287 px),
+durante o deslize da troca. As cartas ficam mais estreitas que as deitadas (celular 68–105 → 43–56 px, PC 120 → 81–120), com as
+letras iguais ou maiores. A janela de PC em pé com `?tm` e nomes longos não está no item 15 (a mesma caixa nela é garantida pela
+conta: as colunas com a altura da maior). Janelas de PC em pé com menos de ~280–360 px de largura, ou com menos de 272 px de
+altura, ainda sobrepõem cartas na vertical (a carta mínima de 44 px, como na base, que nessas janelas já sobrepunha na horizontal).
+O tempo do `teste-prejogo` no CI é estimado (item 109).
+
+### 9.1 A revisão (05/11): as pontas, as duas folhas e o acabamento
+
+Os achados confirmados da revisão do item 29 (um commit cada — menos A1, V1 e V2, juntos por serem o mesmo bloco da conta —; o
+teste que reprova antes em cada um):
+- **As pontas nunca tangentes à lateral (V1).** A conta do "~9% para dentro" copiou da Globo o CENTRO da carta, mas lá o quadrado
+  tem 7% da largura do campo (36/520) e a nossa carta 17% (50/291): a borda caía a 0–1,7 px da lateral em todas as telas (568×320:
+  1 px para fora) e as 11 cartas coincidiam com a moldura. Agora o campo alarga (0,80 → até 0,85, o teto: 105 × 0,85 = 89,25 m,
+  a largura máxima da Regra 1) até a borda da carta da ponta ficar 6 px para dentro (`ESCALACAO.margem`; mínimo 5) e, quando nem o
+  teto dá, a carta fica SOBRE a linha, centrada nela (inset 0) — nunca no meio do caminho. 568×320 do fictício: a folha do
+  mandante sobre a linha (a carta de 43 px não cabe com margem nem a 0,85), a do visitante dentro; com os nomes do TM nos
+  celulares, sobre a linha. A borda da carta da ponta até a lateral (folha do mandante / do visitante): 844×390 0,0 → 6,0 / 7,4
+  px; 640×360 0,0 → 6,0 / 10,8; 1280×720 0,4 → 6,4; 1366×600 0,1 → 6,1; 568×320 −1 (para fora) → sobre a linha / 6,0. Com os
+  nomes realistas do TM, a folha de camisas curtas a 6,0 px em 844×390 (antes −3 a −13,5 px, tangente ou um pouco fora). O teto
+  0,865 foi testado e voltou a 0,85: a largura desenhada passava dos 89,25 m (E4, N1). `teste-prejogo` E12 e `teste-escalacao-campo`
+  N1.
+- **A mesma caixa nas duas folhas, as cartas de cada uma pelos nomes dela (A1, V2).** A coluna é do tamanho do nome do time e
+  cada folha media só a dela: com nomes de larguras diferentes (PC 1280×1024, um nome de ~22+ letras) os campos saíam com
+  tamanho e topo diferentes (771×964 topo 30 × 742×928 topo 48). E a carta dos 22 nomes ia também ao time de nomes curtos (as
+  pontas dele até meia carta para fora sem precisar). Agora `tamanhosDasFolhas`: a largura do grupo pela coluna MAIS LARGA das
+  duas (a escondida medida sem aparecer), a altura pela conta dos 22 e a menor das áreas, a largura do campo pela maior das duas
+  folhas; a carta, a letra e o inset de cada folha pelos 11 nomes dela. O pedido misto novo (`PED_NOMES_MISTOS`: "Rio Azul" de
+  camisas curtas × "Sociedade Esportiva…" de camisas longas) no `teste-prejogo` 15 e no N5.
+- **As linhas recortadas pelo canto (A2, V3):** `clip-path: inset(0 round 11px)` (13 com `?tm`) só no SVG; os cantos vivos do
+  retângulo de 0,5 m furavam a curva da borda depois que o campo passou a `overflow: visible`. E4.
+- **A posição mais leve que o nome (V4):** a mesma TM Cond, 0,02 em, opacidade 0,78 (o FC Mobile 26 e o FC 26 põem a posição
+  pequena e apagada; Globo e Copa nem a mostram). E11.
+- **A reserva da TM Cond (V5):** faces `local()` com `size-adjust` no mínimo da razão TM Cond ÷ reserva medida no Chromium nos
+  nomes do elenco e do TM (Arial/Liberation/Helvetica/Roboto/FreeSans 71%, razão 0,72–0,82; DejaVu 62%, 0,63–0,74) — a técnica
+  do `size-adjust` para a fonte de reserva (CSS Fonts 5). Com o arquivo bloqueado, 568×320: 10 de 22 nomes com "…" → 0. A letra
+  de reserva sai menor que a TM Cond (só enquanto ela não chega, ou se falhar). `teste-prejogo` 15.
+- **O nome longo do time (V6):** acima de 22 letras (só nomes do TM) clamp(18 px, 2,2vw, 30 px) em até 3 linhas (antes 4–5
+  linhas a 27–46 px, mais pesado que o campo). E13.
+- **A faixa da carta com `?tm` (V7):** o atalho `border-color` do `tm.css` apagava a cor do time no topo. E14.
+- Fora do item, baratos: a sigla de letras largas no escudo de reserva (V9: "AAW" a 30 encostava no contorno; a letra desce pela
+  largura na DejaVu Sans Bold, `teste-identidade` G) e o comentário da pausa no `index.html` que fechava antes da hora (V10: o
+  `") -->"` solto no canto da tela; `teste-carga`).
+- Ficou de fora: o corte do nome de camisa em 10 letras sem marca do `tm-times.js camisaDe` (V8: "Evangelista" → "Evangelist";
+  muda o nome da camisa em todo o jogo do TM e o `tm-times.js` é do fecho — item 108 da FILA).
+- Da bateria (não confirmados como defeito do item): o item 1 do `teste-tm-tela` ("o jogo anda", > 30 passos em 2,5 s) deu 27 com
+  outro navegador rodando junto e 39 sozinho (a base 43; lado a lado, a base também reprovou, no item 3) — com webdriver o pré-jogo
+  nem liga (item 81 da FILA); o tempo do `teste-prejogo` (712–1063 s aqui, conforme a carga) no `tempos-ci.mjs` é estimado, 430 s
+  (item 109).
