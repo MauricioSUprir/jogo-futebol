@@ -45,7 +45,6 @@ const fnv = s => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^=
 
 // a largura do nome (TM Cond 800, caixa normal): o módulo novo, ou a tabela do prepartida.js na base
 const larguraCond = LC.larguraCond ?? PP.larguraCond;
-const larguraDe = nomes => { const em = nomes.reduce((m, n) => Math.max(m, larguraCond(n, 1000, false)), 0) / 1000; return px => em * px; };
 const FICT = Object.values(ELENCOS).flatMap(el => (el.jogadores || []).map(j => fichaDe(j.id ?? j)?.camisa)).filter(Boolean);
 const CONJUNTOS = [['fictício', FICT], ['TM 10 letras', CAM_LONGAS], ['estresse', [...CAM_LONGAS, ...CAM_ESTRESSE]]];
 // as telas: a área útil pela conta do css/prejogo.css (margens clamp(...) e o entalhe simulado: --sa-l/r 47, --sa-b 21)
@@ -60,7 +59,10 @@ function area(vw, vh, sl, sb) {
 }
 const minimos = vh => (vh <= 480 ? (vh < 350 ? { nome: 10, pos: 10 } : { nome: 11, pos: 11 }) : { nome: 13, pos: 11 });
 const tam = (W, H, nomes, vh) => ESC.tamanhoEscalacao(W, H, { larguraNome: larguraDe(nomes), alturaTela: vh });
-const cabeNaCarta = (n, T) => larguraCond(n, T.fonteNome, false) <= 0.94 * (T.cw - 2) + 0.01;
+// (cabe pela tabela exata e pela dos avanços arredondados ao px — o Chromium sem posição subpixel do texto)
+const larguraTela = (n, px) => Math.max(larguraCond(n, px, false), LC.larguraCondInteira ? LC.larguraCondInteira(n, px, false) : 0);
+const cabeNaCarta = (n, T) => larguraTela(n, T.fonteNome) <= 0.94 * (T.cw - 2) + 0.01;
+const larguraDe = nomes => px => nomes.reduce((m, n) => Math.max(m, larguraTela(n, px)), 0);
 
 // ------------------------------------------------------------------ N1
 {

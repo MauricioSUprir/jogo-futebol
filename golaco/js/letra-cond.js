@@ -12,3 +12,14 @@ export function larguraCond(texto, px, caixaAlta = true) {
   for (const ch of s) { const c = ch.codePointAt(0); w += c >= 32 && c <= 255 ? AVANCO[c - 32] : 500; }
   return w / 1000 * px;
 }
+/**
+ * A mesma largura com o avanço de cada letra arredondado ao px inteiro: o Chromium sem posição subpixel do texto (Linux, o
+ * navegador dos testes e do CI) arredonda o avanço de cada letra — até +0,5 px por letra (a 14,44 px, "Mmmmmmmmmm" dá 97,1 px
+ * pela tabela e 98 na tela). Quem não pode cortar o nome (a escalação do pré-jogo, item 29) usa a maior das duas.
+ */
+export function larguraCondInteira(texto, px, caixaAlta = true) {
+  const s = caixaAlta ? String(texto).toUpperCase() : String(texto);
+  let w = 0;
+  for (const ch of s) { const c = ch.codePointAt(0); w += Math.round((c >= 32 && c <= 255 ? AVANCO[c - 32] : 500) / 1000 * px); }
+  return w;
+}

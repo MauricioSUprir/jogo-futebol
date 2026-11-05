@@ -1,11 +1,16 @@
-// Campinho (as linhas do campo de 105 × 68 em SVG): o MESMO desenho no "Editar time" (editor-time.js) e na
-// escalação do pré-jogo (escalacao-tela.js), e a posição de cada vaga nele (posicaoNaTela). Puro: devolve o viewBox e
-// o conteúdo do <svg> (sem DOM). Deitado: gol à esquerda; em pé: gol embaixo. Traço fino que não escala (o CSS de
-// quem usa põe o estilo).
+// Campinho (as linhas do campo de 105 × 68 em SVG): o MESMO desenho no "Editar time" (editor-time.js), na pausa
+// (pausa-tela.js, o meio-campo em pé) e na escalação do pré-jogo (escalacao-tela.js), e a posição de cada vaga nele
+// (posicaoNaTela). Puro: devolve o viewBox e o conteúdo do <svg> (sem DOM). Deitado: gol à esquerda; em pé: gol embaixo.
+// Traço fino que não escala (o CSS de quem usa põe o estilo).
 import { CAMPO } from './config.js';
 
-/** {viewBox, html} das linhas do campinho (vertical = em pé). */
-export function svgCampinho(vertical) {
+/**
+ * {viewBox, html} das linhas do campinho (vertical = em pé). largura (m, opcional; item 29, a escalação do pré-jogo): em pé e
+ * maior que a do campo (68), as laterais vão até ela e a linha do meio ocupa a largura toda, com o círculo e as áreas no tamanho
+ * real, centrados — só a distância entre as laterais estica (o círculo continua redondo numa caixa de L/A = largura/105). Sem
+ * ela, a saída é a de sempre, byte a byte (o editor e a pausa).
+ */
+export function svgCampinho(vertical, largura) {
   const L = CAMPO.meioX * 2, A = CAMPO.meioZ * 2;
   const ar = 16.5, al = 40.32, pr = 5.5, pl = 18.32, rc = 9.15;
   if (!vertical) {
@@ -17,12 +22,14 @@ export function svgCampinho(vertical) {
         + `<rect x="0.5" y="${(A - pl) / 2}" width="${pr}" height="${pl}"/><rect x="${L - pr - 0.5}" y="${(A - pl) / 2}" width="${pr}" height="${pl}"/>`,
     };
   }
+  // B = a largura desenhada em pé (com B = A as mesmas contas de sempre: as mesmas strings)
+  const B = largura > A ? largura : A;
   return {
-    viewBox: `0 0 ${A} ${L}`,
-    html: `<rect x="0.5" y="0.5" width="${A - 1}" height="${L - 1}"/><line x1="0.5" y1="${L / 2}" x2="${A - 0.5}" y2="${L / 2}"/>`
-      + `<ellipse cx="${A / 2}" cy="${L / 2}" rx="${rc}" ry="${rc}"/>`
-      + `<rect x="${(A - al) / 2}" y="0.5" width="${al}" height="${ar}"/><rect x="${(A - al) / 2}" y="${L - ar - 0.5}" width="${al}" height="${ar}"/>`
-      + `<rect x="${(A - pl) / 2}" y="0.5" width="${pl}" height="${pr}"/><rect x="${(A - pl) / 2}" y="${L - pr - 0.5}" width="${pl}" height="${pr}"/>`,
+    viewBox: `0 0 ${B} ${L}`,
+    html: `<rect x="0.5" y="0.5" width="${B - 1}" height="${L - 1}"/><line x1="0.5" y1="${L / 2}" x2="${B - 0.5}" y2="${L / 2}"/>`
+      + `<ellipse cx="${B / 2}" cy="${L / 2}" rx="${rc}" ry="${rc}"/>`
+      + `<rect x="${(B - al) / 2}" y="0.5" width="${al}" height="${ar}"/><rect x="${(B - al) / 2}" y="${L - ar - 0.5}" width="${al}" height="${ar}"/>`
+      + `<rect x="${(B - pl) / 2}" y="0.5" width="${pl}" height="${pr}"/><rect x="${(B - pl) / 2}" y="${L - pr - 0.5}" width="${pl}" height="${pr}"/>`,
   };
 }
 

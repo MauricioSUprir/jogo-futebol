@@ -19,7 +19,8 @@
 //      distorção (viewBox "0 0 L 105", 68 ≤ L ≤ 89,3; o círculo redondo ± 3%; a grande área de baixo 40,32 × 16,5 ± 3% e
 //      colada à linha de fundo); E5 as cartas no campo (o centro dentro dele ± 1 px), na área segura, folga ≥ 9 px; E6 a letra
 //      mínima (§7.4/§7.5: altura da tela ≤ 480 → nome e posição ≥ 11, ≥ 10 com altura < 350; PC → nome ≥ 13, posição ≥ 11;
-//      número ≥ 16); E7 nada cortado (na largura e a TINTA do nome dentro da caixa dele: os traços de baixo de g, y, ç); E8
+//      número ≥ 16); E7 nada cortado (na largura — também por fração de px: a largura do texto no canvas × a caixa — e a TINTA
+//      do nome dentro da caixa dele: os traços de baixo de g, y, ç); E8
 //      sem rolar (documento, #prejogo, a folha, a coluna) e a coluna ≥ 8 px do grupo do campo; E9 a mesma caixa nas duas
 //      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome em TM Cond (carregada);
 //  15) a escalação com ?tm e nomes LONGOS (tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS: os dois nomes de time mais compridos e
@@ -232,10 +233,12 @@ async function conferirEmPe(pg, t) {
     const cortados = [], elipse = [], tinta = [];
     for (const c of cartas) {
       const nm = c.d.querySelector('.pj-nome'), st = getComputedStyle(nm);
-      if (nm.scrollWidth > nm.clientWidth + 1) { cortados.push(nm.textContent); if (st.textOverflow === 'ellipsis') elipse.push(nm.textContent); }
       ctx.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
       const m = ctx.measureText(nm.textContent);
-      const hb = nm.getBoundingClientRect().height, lh = Number.isFinite(parseFloat(st.lineHeight)) ? parseFloat(st.lineHeight) : hb;
+      // cortado: também o que passa por fração de px (o "…" aparece; o scrollWidth/clientWidth arredondados não veem)
+      const rn = nm.getBoundingClientRect();
+      if (nm.scrollWidth > nm.clientWidth + 1 || m.width > rn.width + 0.05) { cortados.push(nm.textContent); if (st.textOverflow === 'ellipsis') elipse.push(nm.textContent); }
+      const hb = rn.height, lh = Number.isFinite(parseFloat(st.lineHeight)) ? parseFloat(st.lineHeight) : hb;
       const base = (lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
       const topo = base - m.actualBoundingBoxAscent, fundo = base + m.actualBoundingBoxDescent;
       if (topo < -0.5 || fundo > hb + 0.5) tinta.push(`${nm.textContent} (${f1(topo)}..${f1(fundo)} em ${f1(hb)})`);
