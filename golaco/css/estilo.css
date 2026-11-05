@@ -1064,6 +1064,8 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 @keyframes autor-gol-entra { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
 @keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(8px); } }
 @media (prefers-reduced-motion: reduce) { .autor-gol.visivel, .autor-gol.saindo { animation: none; } }
+/* a pausa aberta no meio da cena: o cartão do meu time da pausa mora no mesmo canto — o do autor espera atrás dela, escondido */
+html.pausa-aberta .autor-gol { visibility: hidden; }
 
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa,
