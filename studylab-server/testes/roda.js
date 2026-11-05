@@ -10,10 +10,15 @@ process.env.LIMITE_DIARIO = '3';        // limite do Pro no teste
 process.env.LIMITE_DIARIO_PLUS = '8';   // limite do Plus no teste
 process.env.FOTOS_DIA = '2';            // fotos/dia do Pro no teste
 process.env.FOTOS_DIA_PLUS = '10';
-process.env.FREIO_IP = '5000';          // o freio por IP não atrapalha o teste
+process.env.FREIO_IP = '5000';
+process.env.CACHE_IA = '0';             // cada seção liga o cache só quando testa ele          // o freio por IP não atrapalha o teste
 process.env.MP_ACCESS_TOKEN = 'APP_USR-falso';
 process.env.MP_PUBLIC_KEY = 'APP_USR-publica';
 delete process.env.DATABASE_URL;
+process.env.GOOGLE_CLIENT_ID = 'cliente-teste.apps.googleusercontent.com';
+process.env.GOOGLE_CLIENT_SECRET = 'segredo-google-teste';
+process.env.URL_SERVIDOR = `http://localhost:${process.env.PORT}`;
+process.env.DUELO_ESCALA = '0.02';      // duelos 50× mais rápidos no teste
 
 const BASE = `http://localhost:${process.env.PORT}`;
 const { montarBRCode } = await import('./brcode.js');
@@ -23,7 +28,16 @@ const fetchReal = globalThis.fetch;
 let chamadasClaude = 0;
 let ultimoModelo = '';
 let ultimoGemini = null;
+let chamadasGemini = [];                // modelos chamados, em ordem
+const geminiFalha = {};                 // modelo → { status, msg } para simular cota/sumiço
 let assinaturasMP = 0;
+const whatsappEnviados = [];
+const emailsEnviados = [];   // e-mails do código (Brevo falso)
+let brevoCai = false;
+/* ---- Google dublado: o "code" diz quem entra e o que foi permitido ---- */
+const google = { revogados: [], refreshPedidos: 0, codigos: {} };
+const jwtFalso = (p) => ['e30', Buffer.from(JSON.stringify(p)).toString('base64url'), 'x'].join('.');
+const resp = (d, status = 200) => new Response(JSON.stringify(d), { status, headers: { 'content-type': 'application/json' } });
 let pixConsultas = 0;
 globalThis.fetch = async (url, opcoes) => {
   const alvo = String(url);
@@ -95,8 +109,17 @@ globalThis.fetch = async (url, opcoes) => {
   // ---- Gemini dublado ----
   if (alvo.includes('generativelanguage')) {
     const corpo = JSON.parse(opcoes.body);
+    const modelo = (alvo.match(/models\/([^:]+):/) || [])[1] || '';
+    chamadasGemini.push(modelo);
+    const pensa = corpo.generationConfig.thinkingConfig?.thinkingLevel || null;
+    const f = geminiFalha[modelo];
+    if (f && !(f.soComPensar && !pensa)) {
+      return new Response(JSON.stringify({ error: { code: f.status, message: f.msg, details: f.details || [] } }),
+        { status: f.status, headers: { 'content-type': 'application/json' } });
+    }
     ultimoGemini = {
-      model: (alvo.match(/models\/([^:]+):/) || [])[1] || '',
+      model: modelo,
+      pensa,
       temFoto: JSON.stringify(corpo.contents).includes('inline_data'),
       schemaLimpo: corpo.generationConfig.responseSchema
         ? !JSON.stringify(corpo.generationConfig.responseSchema).includes('additionalProperties') : null,
@@ -116,6 +139,54 @@ globalThis.fetch = async (url, opcoes) => {
       usage: { input_tokens: 120, output_tokens: 45 },
       stop_reason: 'end_turn',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
+  if (alvo === 'https://api.brevo.com/v3/smtp/email') {
+    if (brevoCai) return resp({ message: 'fora do ar' }, 500);
+    emailsEnviados.push({ chave: opcoes.headers['api-key'], corpo: JSON.parse(opcoes.body) });
+    return resp({ messageId: '<1@brevo>' }, 201);
+  }
+  if (alvo.startsWith('https://graph.facebook.com/')) {
+    whatsappEnviados.push({ url: alvo, corpo: JSON.parse(opcoes.body), auth: opcoes.headers.authorization });
+    return resp({ messages: [{ id: 'wamid.1' }] });
+  }
+  if (alvo === 'https://oauth2.googleapis.com/token') {
+    const c = new URLSearchParams(String(opcoes.body));
+    if (c.get('client_secret') !== 'segredo-google-teste') return resp({ error: 'invalid_client' }, 401);
+    if (c.get('grant_type') === 'refresh_token') {
+      google.refreshPedidos++;
+      if (c.get('refresh_token') === 'rt-revogado') return resp({ error: 'invalid_grant' }, 400);
+      return resp({ access_token: `at-de-${c.get('refresh_token')}`, expires_in: 3599 });
+    }
+    const d = google.codigos[c.get('code')];
+    if (!d || c.get('redirect_uri') !== `${process.env.URL_SERVIDOR}/conexoes/google/volta`) return resp({ error: 'invalid_grant' }, 400);
+    return resp({
+      access_token: 'at-1', expires_in: 3599, scope: d.scope, ...(d.refresh ? { refresh_token: d.refresh } : {}),
+      id_token: jwtFalso({ iss: 'https://accounts.google.com', aud: d.aud || process.env.GOOGLE_CLIENT_ID,
+        sub: d.sub, email: d.email, name: d.nome, exp: Math.floor(Date.now() / 1000) + 3600 }),
+    });
+  }
+  if (alvo === 'https://oauth2.googleapis.com/revoke') { google.revogados.push(new URLSearchParams(String(opcoes.body)).get('token')); return resp({}); }
+  if (alvo.startsWith('https://www.googleapis.com/calendar/v3/calendars/primary/events')) {
+    if (opcoes?.headers?.authorization !== 'Bearer at-de-rt-agenda') return resp({}, 401);
+    const d = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+    return resp({ items: [
+      { id: 'e1', summary: 'Prova de Matemática', start: { date: d(5) }, end: { date: d(6) } },
+      { id: 'e2', summary: 'Férias de julho', start: { date: d(30) }, end: { date: d(45) } },
+      { id: 'e3', summary: 'Dentista', start: { dateTime: `${d(2)}T15:30:00-03:00` }, end: { dateTime: `${d(2)}T16:30:00-03:00` } },
+      { id: 'e4', summary: 'Cancelado', status: 'cancelled', start: { date: d(3) } },
+    ] });
+  }
+  if (alvo.startsWith('https://classroom.googleapis.com/v1/')) {
+    if (opcoes?.headers?.authorization !== 'Bearer at-de-rt-class') return resp({}, 401);
+    if (alvo.includes('/courses?')) return resp({ courses: [{ id: 'c1', name: 'Biologia 2º A' }] });
+    if (alvo.includes('/studentSubmissions')) return resp({ studentSubmissions: [{ courseWorkId: 'w2', state: 'TURNED_IN' }] });
+    const fut = new Date(Date.now() + 4 * 86400000);
+    return resp({ courseWork: [
+      { id: 'w1', title: 'Lista de genética', alternateLink: 'https://classroom.google.com/c/x/a/w1',
+        dueDate: { year: fut.getUTCFullYear(), month: fut.getUTCMonth() + 1, day: fut.getUTCDate() } },
+      { id: 'w2', title: 'Trabalho sobre células' },
+      { id: 'w3', title: 'Atividade velha', dueDate: { year: 2020, month: 1, day: 1 } },
+    ] });
   }
   return fetchReal(url, opcoes);
 };
@@ -457,7 +528,8 @@ console.log('\n== Gemini (a IA grátis) ==');
 
   const r = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: 'oi pelo gemini' } });
   conferir(r.status === 200 && r.dados.texto.includes('o gemini disse'), 'pergunta respondida pelo Gemini', r.dados.erro || r.dados.texto);
-  conferir(ultimoGemini?.model === 'gemini-2.5-flash', 'usa o modelo padrão do Gemini', ultimoGemini?.model);
+  conferir(ultimoGemini?.model === 'gemini-3.6-flash', 'começa pelo 1º degrau da escada normal (gemini-3.6-flash)', ultimoGemini?.model);
+  conferir(ultimoGemini?.pensa === 'low', 'pergunta normal pensa pouco (thinkingLevel low)', String(ultimoGemini?.pensa));
 
   const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
   const rf = await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'que foto é essa?' }] } });
@@ -481,6 +553,489 @@ console.log('\n== Gemini (a IA grátis) ==');
   conferir(forcado.dados.provedor === 'gemini', 'PROVEDOR=gemini força o Gemini mesmo com a chave da Claude');
   delete process.env.PROVEDOR;
   delete process.env.GEMINI_API_KEY;
+}
+
+console.log('\n== escada do Gemini: o modelo bom que dura ==');
+{
+  const { zerarEscada, limparCache } = await import('../src/ia.js');
+  const chaveClaude = process.env.ANTHROPIC_API_KEY;
+  delete process.env.ANTHROPIC_API_KEY;
+  process.env.GEMINI_API_KEY = 'AIza-falsa';
+  let n = 0;
+  const aluno = async (codigo = 'TESTE7') => {
+    const e = await pedir('POST', '/entrar', { corpo: { teste: { id: `escada-${n++}`, email: 'e@e.com', nome: 'E' } } });
+    await pedir('POST', '/codigo', { token: e.dados.token, corpo: { codigo } });
+    return e.dados.token;
+  };
+  const perguntaNova = (t, extra = {}) => pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: `p${Math.random()}`, ...extra } });
+
+  // 1) o melhor esgotou a cota do dia → desce sem o aluno ver erro, e não insiste
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 429, msg: 'Quota exceeded for metric: generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash GenerateRequestsPerDayPerProjectPerModel-FreeTier' };
+  let t = await aluno();
+  chamadasGemini = [];
+  let r = await perguntaNova(t);
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.5-flash-lite',
+    'cota do dia esgotada: desce para o gemini-3.5-flash-lite e responde', chamadasGemini.join(','));
+  chamadasGemini = [];
+  r = await perguntaNova(t);
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.5-flash-lite',
+    'na pergunta seguinte nem tenta o esgotado (não gasta chamada)', chamadasGemini.join(','));
+  const saude = await pedir('GET', '/saude');
+  conferir(!!saude.dados.foraDaCota?.['gemini-3.6-flash'], 'a saúde mostra quem está sem cota e até quando', JSON.stringify(saude.dados.foraDaCota));
+  delete geminiFalha['gemini-3.6-flash'];
+
+  // 2) tarefa simples vai direto aos leves; o Plus começa no topo
+  zerarEscada();
+  chamadasGemini = [];
+  r = await perguntaNova(t, { esforco: 'low' });
+  conferir(chamadasGemini[0] === 'gemini-3.5-flash-lite' && ultimoGemini.pensa === 'minimal',
+    'tarefa simples (esforço baixo) vai direto ao leve, pensando o mínimo', `${chamadasGemini[0]} ${ultimoGemini.pensa}`);
+  const tp = await aluno('PROFESSOR');
+  chamadasGemini = [];
+  r = await perguntaNova(tp);
+  conferir(chamadasGemini[0] === 'gemini-3.8-flash', 'assinante Plus começa no melhor (gemini-3.8-flash)', chamadasGemini[0]);
+
+  // 3) modelo que saiu do ar é pulado; modelo que recusa o pensamento tenta de novo sem ele
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 404, msg: 'models/gemini-3.6-flash is not found for API version v1beta' };
+  chamadasGemini = [];
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.5-flash-lite', 'modelo que sumiu é pulado', chamadasGemini.join(','));
+  delete geminiFalha['gemini-3.6-flash'];
+  zerarEscada();
+  geminiFalha['gemini-3.6-flash'] = { status: 400, msg: 'thinking_level is not supported for this model', soComPensar: true };
+  chamadasGemini = [];
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 200 && chamadasGemini.join(',') === 'gemini-3.6-flash,gemini-3.6-flash' && ultimoGemini.pensa === null,
+    'modelo que recusa o thinkingLevel: o mesmo modelo de novo, sem ele', `${chamadasGemini.join(',')} ${ultimoGemini.pensa}`);
+  delete geminiFalha['gemini-3.6-flash'];
+
+  // 4) todos sem cota → mensagem clara (e as perguntas rápidas continuam no app)
+  zerarEscada();
+  for (const m of ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-2.5-flash-lite']) {
+    geminiFalha[m] = { status: 429, msg: 'Quota exceeded GenerateRequestsPerDayPerProjectPerModel-FreeTier' };
+  }
+  r = await perguntaNova(await aluno());
+  conferir(r.status === 429 && /limite de hoje/.test(r.dados.erro), 'escada inteira sem cota: aviso de limite do dia', r.dados.erro);
+  for (const m of Object.keys(geminiFalha)) delete geminiFalha[m];
+  zerarEscada();
+
+  // 5) cache: a mesma pergunta não gasta a IA de novo nem o limite do aluno
+  delete process.env.CACHE_IA;
+  limparCache();
+  t = await aluno();
+  chamadasGemini = [];
+  const igual = { system: 'Explique de forma simples.', conteudo: 'fotossíntese' };
+  const r1 = await pedir('POST', '/ia', { token: t, corpo: igual });
+  const r2 = await pedir('POST', '/ia', { token: t, corpo: igual });
+  const eu = await pedir('GET', '/eu', { token: t });
+  conferir(r1.dados.texto === r2.dados.texto && chamadasGemini.length === 1, 'pergunta repetida volta do cache (1 chamada só)', String(chamadasGemini.length));
+  conferir(eu.dados.uso.chamadasHoje === 1, 'a resposta do cache não conta no limite do aluno', String(eu.dados.uso.chamadasHoje));
+  const foto = { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: 'aGVsbG8=' } };
+  chamadasGemini = [];
+  await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'x' }] } });
+  await pedir('POST', '/ia', { token: t, corpo: { system: 'a', conteudo: [foto, { type: 'text', text: 'x' }] } });
+  conferir(chamadasGemini.length === 2, 'pergunta com foto nunca vem do cache', String(chamadasGemini.length));
+  process.env.CACHE_IA = '0';
+
+  process.env.ANTHROPIC_API_KEY = chaveClaude;
+  delete process.env.GEMINI_API_KEY;
+}
+
+console.log('\n== conexões (Google e calendário por link) ==');
+{
+  const { decifrar } = await import('../src/conexoes.js');
+  const volta = 'http://localhost:9999/studylab/';
+  const G = 'https://www.googleapis.com/auth/';
+  const voltar = async (urlGoogle, code) => {
+    const estado = new URL(urlGoogle).searchParams.get('state');
+    const r = await fetchReal(`${BASE}/conexoes/google/volta?code=${code}&state=${encodeURIComponent(estado)}`, { redirect: 'manual' });
+    const loc = r.headers.get('location') || '';
+    return { status: r.status, loc, p: new URLSearchParams(loc.split('?')[1] || '') };
+  };
+
+  const cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.google === true && cfg.dados.drive === null, 'config diz que o Google está ligado (o seletor do Drive precisa da chave)', JSON.stringify(cfg.dados));
+
+  // 1) conta de aparelho não usa as Conexões…
+  const ap = await pedir('POST', '/entrar', { corpo: { dispositivo: { id: 'ap_conex', segredo: 's3', nome: 'Lia' } } });
+  await pedir('POST', '/codigo', { token: ap.dados.token, corpo: { codigo: 'TESTE7' } });
+  let r = await pedir('GET', '/conexoes', { token: ap.dados.token });
+  conferir(r.status === 403 && /entre com o Google/i.test(r.dados.erro), 'sem conta Google, as Conexões recusam', `${r.status} ${r.dados.erro}`);
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: ap.dados.token, corpo: { servico: 'agenda', volta } });
+  conferir(r.status === 403, 'nem dá para começar a ligar a Agenda sem conta');
+
+  // 2) …até entrar com o Google: a conta de aparelho vira conta Google (o plano fica)
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: ap.dados.token, corpo: { servico: 'conta', volta } });
+  const urlConta = new URL(r.dados.url);
+  conferir(urlConta.origin === 'https://accounts.google.com' && urlConta.searchParams.get('redirect_uri') === `${BASE}/conexoes/google/volta`
+    && urlConta.searchParams.get('scope') === 'openid email profile', 'entrar: leva ao Google só com nome e e-mail', r.dados.url.slice(0, 80));
+  const ruim = await pedir('POST', '/conexoes/google/iniciar', { corpo: { servico: 'conta', volta: 'javascript:alert(1)' } });
+  conferir(ruim.status === 400, 'endereço de volta esquisito é recusado');
+  google.codigos['cod-lia'] = { sub: 'g-lia', email: 'lia@gmail.com', nome: 'Lia Souza', scope: 'openid email profile' };
+  let v = await voltar(r.dados.url, 'cod-lia');
+  conferir(v.status === 302 && v.loc.startsWith(`${volta}#/conexoes?entrou=`), 'Google volta para o app com um tíquete', v.loc.slice(0, 70));
+  const troca = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(troca.status === 200 && troca.dados.usuario.id === 'ap_conex' && troca.dados.usuario.provedor === 'google'
+    && troca.dados.usuario.email === 'lia@gmail.com', 'tíquete vira sessão na MESMA conta, agora Google', JSON.stringify(troca.dados.usuario));
+  conferir(troca.dados.plano === 'pro', 'o plano da conta de aparelho continua valendo', troca.dados.plano);
+  const deNovo = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(deNovo.status === 401, 'o tíquete só vale uma vez');
+  const t = troca.dados.token;
+
+  // 2b) entrar de novo pelo Google (outro aparelho) acha a mesma conta
+  r = await pedir('POST', '/conexoes/google/iniciar', { corpo: { servico: 'conta', volta } });
+  v = await voltar(r.dados.url, 'cod-lia');
+  const outra = await pedir('POST', '/conta/troca', { corpo: { ticket: v.p.get('entrou') } });
+  conferir(outra.dados.usuario?.id === 'ap_conex', 'em outro aparelho, o mesmo Google entra na mesma conta', outra.dados.usuario?.id);
+
+  // 3) Google Agenda
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'agenda', volta } });
+  const ua = new URL(r.dados.url).searchParams;
+  conferir(ua.get('access_type') === 'offline' && ua.get('scope').includes(`${G}calendar.events.readonly`) && ua.get('login_hint') === 'lia@gmail.com',
+    'Agenda: pede só leitura dos eventos, com acesso contínuo', ua.get('scope'));
+  google.codigos['cod-agenda-sem'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: 'openid email', refresh: 'rt-x' };
+  v = await voltar(r.dados.url, 'cod-agenda-sem');
+  conferir(v.p.get('erro') === 'faltou_permissao' && google.revogados.includes('rt-x'), 'desmarcou a permissão no Google: avisa e não guarda nada');
+  google.codigos['cod-agenda'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: `openid email ${G}calendar.events.readonly`, refresh: 'rt-agenda' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'agenda', volta } });
+  v = await voltar(r.dados.url, 'cod-agenda');
+  conferir(v.p.get('ok') === 'agenda', 'Agenda conectada', v.loc);
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'agenda' } });
+  const titulos = (r.dados.itens || []).map((i) => `${i.tipo}:${i.titulo}`);
+  conferir(r.status === 200 && titulos.join('|') === 'prova:Prova de Matemática|ferias:Férias de julho|evento:Dentista',
+    'sincroniza: prova vira prova, férias com período, cancelado fica de fora', titulos.join('|'));
+  const ferias = r.dados.itens?.find((i) => i.tipo === 'ferias');
+  conferir(ferias && ferias.ate > ferias.data && !r.dados.itens.find((i) => i.titulo === 'Prova de Matemática').ate, 'dia inteiro: o fim do Google (exclusivo) vira o último dia certo');
+  conferir(r.dados.itens?.find((i) => i.titulo === 'Dentista')?.hora === '15:30', 'evento com horário guarda a hora');
+
+  // 4) segredo cifrado no banco
+  const { conexaoDe } = await import('../src/db.js');
+  const guardada = await conexaoDe('ap_conex', 'agenda');
+  conferir(guardada && !guardada.segredo.includes('rt-agenda') && decifrar(guardada.segredo) === 'rt-agenda', 'refresh token guardado cifrado');
+
+  // 5) Classroom
+  google.codigos['cod-class'] = { sub: 'g-lia-escola', email: 'lia@escola.edu.br', scope: `openid ${G}classroom.courses.readonly ${G}classroom.coursework.me.readonly`, refresh: 'rt-class' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'classroom', volta } });
+  v = await voltar(r.dados.url, 'cod-class');
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'classroom' } });
+  const at = r.dados.atividades || [];
+  conferir(at.length === 2 && at[0].materia === 'Biologia 2º A' && at[0].entrega && !at[0].feita && at[1].feita,
+    'Classroom: atividades com a turma, a entrega e o que já foi entregue (a velha fica de fora)', JSON.stringify(at).slice(0, 160));
+  const lista = await pedir('GET', '/conexoes', { token: t });
+  const cl = lista.dados.conexoes?.find((c) => c.servico === 'classroom');
+  conferir(cl?.conta === 'lia@escola.edu.br' && !!cl.sincronizadoEm && !JSON.stringify(lista.dados).includes('rt-'),
+    'lista mostra a conta da escola (pode ser outro Google) e nunca o token', JSON.stringify(lista.dados).slice(0, 160));
+
+  // 6) Drive: token curto para o seletor
+  google.codigos['cod-drive'] = { sub: 'g-lia', email: 'lia@gmail.com', scope: `openid ${G}drive.file`, refresh: 'rt-agenda' };
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: t, corpo: { servico: 'drive', volta } });
+  await voltar(r.dados.url, 'cod-drive');
+  r = await pedir('POST', '/conexoes/google/token', { token: t, corpo: { servico: 'drive' } });
+  conferir(r.status === 200 && r.dados.accessToken === 'at-de-rt-agenda', 'Drive: entrega só um acesso curto para escolher os arquivos');
+
+  // 7) remover: só revoga no Google quando nenhuma outra conexão usa o mesmo login
+  google.revogados = [];
+  await pedir('POST', '/conexoes/remover', { token: t, corpo: { servico: 'drive' } });
+  conferir(!google.revogados.includes('rt-agenda') && !!(await conexaoDe('ap_conex', 'agenda')), 'tirar o Drive não derruba a Agenda (mesmo Google)');
+  await pedir('POST', '/conexoes/remover', { token: t, corpo: { servico: 'agenda' } });
+  conferir(google.revogados.includes('rt-agenda') && !(await conexaoDe('ap_conex', 'agenda')), 'tirar a Agenda revoga no Google e apaga daqui');
+
+  // 8) permissão tirada lá no Google → conexão sai e o app pede para conectar de novo
+  const { salvarConexao } = await import('../src/db.js');
+  const { cifrar } = await import('../src/conexoes.js');
+  await salvarConexao({ usuarioId: 'ap_conex', servico: 'agenda', conta: 'x', segredo: cifrar('rt-revogado') });
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'agenda' } });
+  conferir(r.status === 410 && !(await conexaoDe('ap_conex', 'agenda')), 'permissão revogada no Google: 410 e a conexão some', `${r.status} ${r.dados.erro}`);
+
+  // 9) calendário por link (.ics)
+  const http = await import('node:http');
+  const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10).replace(/-/g, '');
+  const ics = ['BEGIN:VCALENDAR', 'X-WR-CALNAME:Colégio Exemplo', 'BEGIN:VEVENT', 'UID:x1', 'SUMMARY:Simulado ENEM',
+    `DTSTART;VALUE=DATE:${amanha}`, 'END:VEVENT', 'BEGIN:VEVENT', 'UID:x2', 'SUMMARY:Reunião de pais',
+    `DTSTART:${amanha}T220000Z`, 'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
+  const srvIcs = http.createServer((q, s2) => {
+    if (q.url === '/pula') { s2.writeHead(302, { location: 'http://169.254.169.254/latest/meta-data' }); return s2.end(); }
+    s2.writeHead(200, { 'content-type': 'text/calendar' }); s2.end(q.url === '/nada' ? '<html>oi</html>' : ics);
+  });
+  await new Promise((ok2) => srvIcs.listen(4799, ok2));
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://127.0.0.1:4799/cal.ics' } });
+  conferir(r.status === 400 && /não é público/.test(r.dados.erro), 'link para a rede interna é recusado', `${r.status} ${r.dados.erro}`);
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/cal.ics' } });
+  conferir(r.status === 400, 'nome que aponta para a própria máquina também', `${r.status} ${r.dados.erro}`);
+  process.env.ICS_PERMITIR_LOCAL = '1';     // só no teste: o "calendário da escola" roda aqui mesmo
+  const { normalizarLinkIcs } = await import('../src/conexoes.js');
+  conferir(normalizarLinkIcs('webcal://p01-caldav.icloud.com/x.ics').startsWith('https://'), 'link webcal (iCloud, Outlook) vira https');
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/cal.ics' } });
+  conferir(r.status === 200 && r.dados.nome === 'Colégio Exemplo' && r.dados.itens.map((i) => i.tipo).join() === 'simulado,reuniao',
+    'calendário por link: nome e eventos com tipo', JSON.stringify(r.dados).slice(0, 160));
+  conferir(r.dados.itens[1].hora === '19:00', 'horário em UTC vira o de Brasília', r.dados.itens[1].hora);
+  const icsGuardado = await conexaoDe('ap_conex', 'ics');
+  conferir(icsGuardado && !icsGuardado.segredo.includes('4799'), 'o link privado do calendário também fica cifrado');
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/nada' } });
+  conferir(r.status === 400 && /não devolveu um calendário/.test(r.dados.erro), 'página que não é calendário: erro claro');
+  delete process.env.ICS_PERMITIR_LOCAL;
+  r = await pedir('POST', '/conexoes/sincronizar', { token: t, corpo: { servico: 'ics' } });
+  conferir(r.status === 400, 'mesmo um link já salvo não consegue ir para a rede interna');
+  process.env.ICS_PERMITIR_LOCAL = '1';
+  r = await pedir('POST', '/conexoes/ics', { token: t, corpo: { url: 'http://localhost:4799/pula' } });
+  delete process.env.ICS_PERMITIR_LOCAL;
+  conferir(r.status === 400 && /não é público/.test(r.dados.erro),
+    'redirecionamento para endereço interno não é seguido', `${r.status} ${r.dados.erro}`);
+  srvIcs.close();
+}
+
+console.log('\n== criar conta (nome, e-mail, número, senha, foto) e WhatsApp ==');
+{
+  const foto = 'data:image/jpeg;base64,' + Buffer.from('foto-fake').toString('base64');
+  let r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@', telefone: '11987654321', senha: '12345678' } });
+  conferir(r.status === 400 && /e-mail/.test(r.dados.erro), 'e-mail errado é recusado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@escola.com', telefone: '123', senha: '12345678' } });
+  conferir(r.status === 400 && /DDD/.test(r.dados.erro), 'número sem DDD é recusado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@escola.com', telefone: '11987654321', senha: '123' } });
+  conferir(r.status === 400 && /8 caracteres/.test(r.dados.erro), 'senha curta é recusada');
+
+  // o aluno já usava o app pelo aparelho, com o Pro: a conta nova é a MESMA (o plano fica)
+  const ap = await pedir('POST', '/entrar', { corpo: { dispositivo: { id: 'ap_conta_email', segredo: 'segredo-123', nome: 'Gui' } } });
+  await pedir('POST', '/codigo', { token: ap.dados.token, corpo: { codigo: 'TESTE7' } });
+  r = await pedir('POST', '/conta/criar', { token: ap.dados.token, corpo: { nome: 'Guilherme Rodrigues', email: 'Gui@Escola.com', telefone: '(11) 98765-4321', senha: 'senha-forte-1', foto } });
+  conferir(r.status === 200 && r.dados.usuario.id === 'ap_conta_email' && r.dados.usuario.provedor === 'email' && r.dados.plano === 'pro',
+    'cria a conta na mesma conta do aparelho (o Pro continua)', JSON.stringify(r.dados.usuario));
+  conferir(r.dados.usuario.telefone === '5511987654321' && r.dados.usuario.foto === foto, 'guarda o número no formato do WhatsApp e a foto');
+  conferir(r.dados.whatsapp === 'desligado' && whatsappEnviados.length === 0, 'sem as chaves do WhatsApp, nada é enviado (e a conta é criada)');
+  const { contaPorEmail } = await import('../src/db.js');
+  const guardada = await contaPorEmail('gui@escola.com');
+  conferir(guardada && !String(guardada.senha_hash).includes('senha-forte-1') && guardada.senha_hash.startsWith('scrypt$'), 'a senha é guardada só como hash');
+
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Outro', email: 'gui@escola.com', telefone: '11911112222', senha: '12345678' } });
+  conferir(r.status === 409, 'e-mail repetido: pede para entrar');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'GUI@escola.com', senha: 'errada123' } });
+  conferir(r.status === 401, 'senha errada não entra');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'gui@escola.com', senha: 'senha-forte-1' } });
+  conferir(r.status === 200 && r.dados.usuario.id === 'ap_conta_email' && r.dados.plano === 'pro', 'entra com e-mail e senha em outro aparelho (com o plano)');
+
+  // com as chaves, a boas-vindas sai pelo WhatsApp
+  process.env.WHATSAPP_TOKEN = 'token-whats'; process.env.WHATSAPP_NUMERO_ID = '1234567890'; process.env.WHATSAPP_TEMPLATE = 'boas_vindas';
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Lara Souza', email: 'lara@escola.com', telefone: '21 99876-5432', senha: '12345678' } });
+  const w = whatsappEnviados[0];
+  conferir(r.dados.whatsapp === 'enviado' && w?.url.includes('/1234567890/messages') && w.corpo.to === '5521998765432'
+    && w.corpo.template.name === 'boas_vindas' && w.corpo.template.language.code === 'pt_BR'
+    && w.corpo.template.components[0].parameters[0].text === 'Lara' && w.auth === 'Bearer token-whats',
+    'com as chaves, manda a boas-vindas no WhatsApp com o primeiro nome', JSON.stringify(w?.corpo));
+  delete process.env.WHATSAPP_TOKEN; delete process.env.WHATSAPP_NUMERO_ID; delete process.env.WHATSAPP_TEMPLATE;
+
+  // Conexões: conta de e-mail entra, mas só no Pro
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: r.dados.token, corpo: { servico: 'agenda', volta: 'http://localhost:9999/x/' } });
+  conferir(r.status === 402 && /Pro/.test(r.dados.erro), 'Conexões são do Pro', `${r.status} ${r.dados.erro}`);
+  const pro = await pedir('POST', '/conta/entrar', { corpo: { email: 'gui@escola.com', senha: 'senha-forte-1' } });
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: pro.dados.token, corpo: { servico: 'agenda', volta: 'http://localhost:9999/x/' } });
+  conferir(r.status === 200 && r.dados.url.startsWith('https://accounts.google.com/'), 'com o Pro, a conta de e-mail liga a Agenda');
+}
+
+console.log('\n== código de verificação por e-mail ==');
+{
+  const codigoDe = (para) => {
+    const m = [...emailsEnviados].reverse().find((e) => e.corpo.to[0].email === para);
+    return m ? /(\d{6})/.exec(m.corpo.textContent)[1] : null;
+  };
+  let r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com' } });
+  conferir(r.status === 503, 'sem as chaves do e-mail, o código avisa que não está ligado');
+  let cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.email === false, 'o app sabe que o e-mail está desligado (cria conta sem código)');
+
+  process.env.BREVO_API_KEY = 'chave-brevo'; process.env.EMAIL_REMETENTE = 'mindtrack@teste.com';
+  cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.email === true, 'com as chaves, o app pede o código');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678' } });
+  conferir(r.status === 400 && /[Cc]ódigo/.test(r.dados.erro), 'sem o código, a conta não é criada', r.dados.erro);
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'Maria@Escola.com', nome: 'Maria Lima' } });
+  const e1 = emailsEnviados[0];
+  conferir(r.status === 200 && e1?.chave === 'chave-brevo' && e1.corpo.to[0].email === 'maria@escola.com'
+    && e1.corpo.sender.email === 'mindtrack@teste.com' && /criar a conta/.test(e1.corpo.subject) && /Oi, Maria!/.test(e1.corpo.htmlContent),
+    'manda o e-mail com o código pelo Brevo', JSON.stringify(e1?.corpo?.subject));
+  const cod = codigoDe('maria@escola.com');
+  conferir(/^\d{6}$/.test(cod) && !JSON.stringify(r.dados).includes(cod), 'o código tem 6 números e não volta na resposta');
+  const errado = cod === '000000' ? '111111' : '000000';
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678', codigo: errado } });
+  conferir(r.status === 400 && /4 tentativa/.test(r.dados.erro), 'código errado: recusa e conta as tentativas', r.dados.erro);
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678', codigo: cod } });
+  conferir(r.status === 200 && r.dados.usuario.provedor === 'email', 'com o código certo, a conta nasce');
+  const { contaPorEmail } = await import('../src/db.js');
+  conferir((await contaPorEmail('maria@escola.com')).email_verificado === true, 'o e-mail fica marcado como confirmado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria2@escola.com', telefone: '11987650000', senha: '12345678', codigo: cod } });
+  conferir(r.status === 400, 'o código de um e-mail não serve para outro');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com' } });
+  conferir(r.status === 409, 'pedir código de criar para e-mail que já tem conta: manda entrar');
+
+  // 5 erros e o código morre
+  await pedir('POST', '/conta/codigo', { corpo: { email: 'teo@escola.com' } });
+  const codTeo = codigoDe('teo@escola.com');
+  const ruim = codTeo === '123456' ? '654321' : '123456';
+  for (let i = 0; i < 5; i++) r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Teo', email: 'teo@escola.com', telefone: '11987650001', senha: '12345678', codigo: ruim } });
+  conferir(/muitas vezes/.test(r.dados.erro), 'na 5ª tentativa errada o código é cancelado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Teo', email: 'teo@escola.com', telefone: '11987650001', senha: '12345678', codigo: codTeo } });
+  conferir(r.status === 400 && /vencido/.test(r.dados.erro), 'depois disso nem o código certo vale (pede outro)');
+
+  // freio: 3 códigos por e-mail a cada 10 min
+  for (let i = 0; i < 3; i++) r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ze@escola.com' } });
+  conferir(r.status === 200, '3 códigos seguidos podem');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ze@escola.com' } });
+  conferir(r.status === 429, 'o 4º código em 10 min é freado (ninguém lota a caixa de alguém)');
+
+  // esqueci a senha
+  const antes = emailsEnviados.length;
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ninguem@escola.com', motivo: 'senha' } });
+  conferir(r.status === 200 && emailsEnviados.length === antes, 'e-mail sem conta: responde igual e não manda nada');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com', motivo: 'senha' } });
+  const codSenha = codigoDe('maria@escola.com');
+  conferir(r.status === 200 && /trocar a senha/.test(emailsEnviados.at(-1).corpo.subject) && codSenha !== cod, 'esqueci a senha: chega um código novo');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'curta' } });
+  conferir(r.status === 400 && /8 caracteres/.test(r.dados.erro), 'senha nova curta é recusada');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'senha-nova-99' } });
+  conferir(r.status === 200 && r.dados.token && r.dados.usuario.email === 'maria@escola.com', 'com o código, troca a senha e já entra');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'maria@escola.com', senha: '12345678' } });
+  conferir(r.status === 401, 'a senha antiga deixa de valer');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'maria@escola.com', senha: 'senha-nova-99' } });
+  conferir(r.status === 200, 'a senha nova entra');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'outra-senha-1' } });
+  conferir(r.status === 400, 'o código é de uso único');
+
+  brevoCai = true;
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'bia@escola.com' } });
+  conferir(r.status === 502 && /Tente de novo/.test(r.dados.erro), 'se o Brevo cair, avisa para tentar de novo');
+  brevoCai = false;
+  const saude = await pedir('GET', '/saude');
+  conferir(saude.dados.emailConfigurado === true, '/saude mostra o e-mail ligado');
+  const textoTudo = JSON.stringify(emailsEnviados.map((e) => e.corpo.htmlContent));
+  conferir(!textoTudo.includes('chave-brevo'), 'a chave nunca vai no e-mail');
+  delete process.env.BREVO_API_KEY; delete process.env.EMAIL_REMETENTE;
+}
+
+console.log('\n== amizades, chat, foguinho e duelo em tempo real ==');
+{
+  const entrar = async (id, nome) => (await pedir('POST', '/entrar', { corpo: { teste: { id, email: `${id}@x.com`, nome } } })).dados.token;
+  const ta = await entrar('soc-ana', 'Ana'), tb = await entrar('soc-beto', 'Beto'), tc = await entrar('soc-caio', 'Caio');
+  /** Abre o canal de tempo real como o celular faz e junta os eventos. */
+  async function canal(token) {
+    const { dados } = await pedir('POST', '/tempo-real/ticket', { token });
+    const ctrl = new AbortController();
+    const r = await fetchReal(`${BASE}/tempo-real?ticket=${encodeURIComponent(dados.ticket)}`, { signal: ctrl.signal });
+    const eventos = [];
+    (async () => {
+      const leitor = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      try {
+        for (;;) {
+          const { value, done } = await leitor.read(); if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let k; while ((k = buf.indexOf('\n\n')) >= 0) {
+            const bloco = buf.slice(0, k); buf = buf.slice(k + 2);
+            const ev = /^event: (.+)$/m.exec(bloco)?.[1]; const dt = /^data: (.+)$/m.exec(bloco)?.[1];
+            if (ev) eventos.push({ ev, dados: JSON.parse(dt) });
+          }
+        }
+      } catch { /* fechou */ }
+    })();
+    return { eventos, fechar: () => ctrl.abort(), status: r.status, esperar: async (nome, filtro = () => true, ms = 4000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) { const e = eventos.find((x) => x.ev === nome && filtro(x.dados)); if (e) return e.dados; await new Promise((ok) => setTimeout(ok, 15)); }
+      return null;
+    } };
+  }
+
+  // perfil
+  let r = await pedir('GET', '/social/amigos', { token: ta });
+  conferir(r.status === 412, 'sem perfil, pede para criar o apelido primeiro', String(r.status));
+  r = await pedir('POST', '/social/perfil', { token: ta, corpo: { apelido: 'Ana Clara', nome: 'Ana' } });
+  conferir(r.status === 400, 'apelido com espaço é recusado');
+  r = await pedir('POST', '/social/perfil', { token: ta, corpo: { apelido: 'ana.clara', nome: 'Ana Clara', avatar: '🦊' } });
+  conferir(r.status === 200 && r.dados.perfil.apelido === 'ana.clara' && r.dados.perfil.avatar === '🦊', 'cria o perfil com apelido e avatar');
+  await pedir('POST', '/social/perfil', { token: tb, corpo: { apelido: 'beto_estuda', nome: 'Beto Silva', avatar: '🐼' } });
+  await pedir('POST', '/social/perfil', { token: tc, corpo: { apelido: 'caio', nome: 'Caio' } });
+  r = await pedir('POST', '/social/perfil', { token: tc, corpo: { apelido: 'ANA.CLARA', nome: 'x' } });
+  conferir(r.status === 409, 'apelido de outra pessoa é recusado (sem diferenciar maiúscula)');
+
+  // busca e pedido
+  r = await pedir('GET', '/social/buscar?q=bet', { token: ta });
+  conferir(r.dados.resultados?.length === 1 && r.dados.resultados[0].apelido === 'beto_estuda' && r.dados.resultados[0].relacao === 'nenhuma', 'acha pelo começo do apelido');
+  r = await pedir('GET', '/social/buscar?q=silva', { token: ta });
+  conferir(r.dados.resultados?.[0]?.apelido === 'beto_estuda', 'acha pelo nome');
+  const ca = await canal(ta), cb = await canal(tb);
+  conferir(ca.status === 200 && cb.status === 200, 'os dois celulares conectam no tempo real');
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'oi' } });
+  conferir(r.status === 403, 'antes de ser amigo, não dá para mandar mensagem');
+  r = await pedir('POST', '/social/amizade', { token: ta, corpo: { apelido: 'beto_estuda' } });
+  const pedidoChegou = await cb.esperar('amizade', (d) => d.tipo === 'pedido');
+  conferir(r.dados.status === 'enviado' && pedidoChegou?.de?.apelido === 'ana.clara', 'pedido de amizade chega na hora no outro celular');
+  r = await pedir('GET', '/social/amigos', { token: tb });
+  conferir(r.dados.recebidos?.[0]?.apelido === 'ana.clara', 'aparece em "pedidos recebidos"');
+  r = await pedir('POST', '/social/amizade/responder', { token: tb, corpo: { id: 'soc-ana', aceitar: true } });
+  const aceitou = await ca.esperar('amizade', (d) => d.tipo === 'aceita');
+  conferir(r.dados.status === 'amigos' && !!aceitou, 'aceitar avisa quem pediu');
+
+  // foguinho
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  await pedir('POST', '/social/atividade', { token: ta, corpo: { sequencia: 5, ultimoDia: hoje } });
+  await pedir('POST', '/social/atividade', { token: tb, corpo: { sequencia: 2, ultimoDia: hoje } });
+  r = await pedir('GET', '/social/amigos', { token: ta });
+  const beto = r.dados.amigos?.find((x) => x.apelido === 'beto_estuda');
+  conferir(beto?.sequencia === 2 && beto.fogoJuntos === 1 && beto.online === true, 'mostra o foguinho do amigo, o foguinho juntos e se está online', JSON.stringify(beto));
+
+  // chat
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'Bora estudar pra prova? 📚🔥 me chama no 11 98765-4321 ou www.site.com' } });
+  const msg = await cb.esperar('mensagem', (d) => d.de === 'soc-ana');
+  conferir(msg && msg.texto.includes('📚🔥') && !msg.texto.includes('98765') && msg.texto.includes('[número removido]') && msg.texto.includes('[link removido]'),
+    'mensagem com emoji chega na hora, sem telefone e sem link', msg?.texto);
+  r = await pedir('GET', '/social/amigos', { token: tb });
+  conferir(r.dados.amigos?.[0]?.naoLidas === 1, 'conta a não lida');
+  await pedir('POST', '/social/lidas', { token: tb, corpo: { de: 'soc-ana' } });
+  r = await pedir('GET', '/social/mensagens/soc-ana', { token: tb });
+  conferir(r.dados.mensagens?.length === 1 && r.dados.mensagens[0].lida === true, 'histórico da conversa, marcado como lido');
+  r = await pedir('GET', '/social/mensagens/soc-ana', { token: tc });
+  conferir(r.status === 403, 'quem não é amigo não lê a conversa');
+
+  // duelo em tempo real
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-beto', tema: 'Revolução Francesa' } });
+  conferir(r.status === 402, 'duelo com tema livre (IA) é do Pro');
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-beto', materia: 'História' } });
+  const id = r.dados.duelo?.id;
+  const convite = await cb.esperar('duelo:convite', (d) => d.id === id);
+  conferir(!!id && convite?.jogadores?.['soc-ana']?.apelido === 'ana.clara', 'convite de duelo chega na hora');
+  await pedir('POST', `/duelos/${id}/aceitar`, { token: tb });
+  const [ia, ib] = [await ca.esperar('duelo:inicio'), await cb.esperar('duelo:inicio')];
+  conferir(ia && ib && ia.total === 5, 'os dois recebem o início ao mesmo tempo');
+  let fim = null;
+  for (let i = 0; i < 5; i++) {
+    const [pa, pb] = [await ca.esperar('duelo:pergunta', (d) => d.i === i), await cb.esperar('duelo:pergunta', (d) => d.i === i)];
+    if (i === 0) conferir(pa && pb && pa.enunciado === pb.enunciado && JSON.stringify(pa.opcoes) === JSON.stringify(pb.opcoes) && pa.correta === undefined,
+      'mesma pergunta nos dois celulares, sem a resposta certa', pa?.enunciado);
+    // Ana responde certo (descobre pela revelação da rodada anterior não dá: chuta 0; Beto chuta 1)
+    await pedir('POST', `/duelos/${id}/responder`, { token: ta, corpo: { i, opcao: 0 } });
+    if (i === 0) conferir(!!(await cb.esperar('duelo:respondeu', (d) => d.i === 0 && d.quem === 'soc-ana')), 'o outro vê que você respondeu (não o quê)');
+    await pedir('POST', `/duelos/${id}/responder`, { token: tb, corpo: { i, opcao: 1 } });
+    const rev = await ca.esperar('duelo:revelar', (d) => d.i === i);
+    if (i === 0) conferir(rev && typeof rev.correta === 'number' && rev.respostas['soc-ana'] && rev.respostas['soc-beto'], 'revela a certa e o que cada um marcou');
+  }
+  fim = await ca.esperar('duelo:fim', () => true, 5000);
+  const fimB = await cb.esperar('duelo:fim', () => true, 5000);
+  conferir(fim && fimB && JSON.stringify(fim.placar) === JSON.stringify(fimB.placar), 'placar final igual nos dois celulares', JSON.stringify(fim?.placar));
+  r = await pedir('GET', '/duelos/placar?amigo=soc-beto', { token: ta });
+  conferir(r.dados.eu + r.dados.ele + r.dados.empates === 1, 'o duelo fica no histórico');
+
+  // amigo offline não recebe duelo; desistir dá a vitória ao outro
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-caio' } });
+  conferir(r.status === 403, 'não dá para duelar com quem não é amigo');
+
+  // bloquear corta tudo
+  await pedir('POST', '/social/bloquear', { token: tb, corpo: { id: 'soc-ana' } });
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'oi?' } });
+  conferir(r.status === 403, 'bloqueado: não manda mais mensagem');
+  r = await pedir('GET', '/social/buscar?q=beto', { token: ta });
+  conferir(!r.dados.resultados?.length, 'e nem acha mais a pessoa na busca');
+  r = await pedir('POST', '/social/denunciar', { token: tb, corpo: { id: 'soc-ana', motivo: 'spam' } });
+  const { _denunciasMem } = await import('../src/social-db.js');
+  conferir(r.status === 200 && _denunciasMem().length === 1, 'denúncia fica guardada');
+  ca.fechar(); cb.fechar();
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

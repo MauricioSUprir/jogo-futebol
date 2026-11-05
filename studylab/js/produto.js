@@ -11,7 +11,7 @@ export const GOOGLE_CLIENT_ID = '';
  *  Depois de publicar no Railway, cole aqui a URL que ele te der.
  *  Ex.: 'https://studylab-server-production.up.railway.app'
  *  Vazio = o app funciona sozinho, com conta local e Pro só por código. */
-export const SERVIDOR = '';
+export const SERVIDOR = 'https://mindtrack-servidor.onrender.com';
 
 /** Planos e preços mostrados na tela de assinatura.
  *  Dois níveis: Pro e Plus. Os PREÇOS DE VERDADE ficam no servidor

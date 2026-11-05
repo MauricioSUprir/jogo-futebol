@@ -16,9 +16,10 @@ cp -r financas-casa/. _site/financas-casa/
 # LookLab (estilista digital) fica em /looklab/
 mkdir -p _site/looklab
 cp -r looklab/. _site/looklab/
-# StudyLab fica em /studylab/
+# /studylab/ no Pages = só o redirecionamento do endereço antigo (o app MindTrack AI fica no Render,
+# que baixa a pasta studylab/ deste repositório: ver studylab/README.md)
 mkdir -p _site/studylab
-cp -r studylab/. _site/studylab/
+cp -r studylab-endereco-antigo/. _site/studylab/
 # KATSEYE Central fica em /katseye-central/
 mkdir -p _site/katseye-central
 cp -r katseye-central/. _site/katseye-central/

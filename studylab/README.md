@@ -8,7 +8,11 @@ App **100% estático** (HTML + CSS + JavaScript puro, sem build). Tudo é salvo 
 navegador e funciona **offline** (PWA, dá para instalar na tela inicial). Entra com o Google
 ou sem conta, e o **MindTrack AI** é o recurso do plano pago.
 
-> Abra o `index.html` no navegador ou acesse pelo link do GitHub Pages: **/studylab/**
+> **App:** https://mindtrack-ai-ws6c.onrender.com/ · **Apresentação:** https://mindtrack-ai-ws6c.onrender.com/apresentacao/
+> O servidor (IA, contas e pagamento) fica em `studylab-server/`, publicado no Render.
+> **Publicar o app:** o site estático do Render baixa esta pasta do commit em `APP_COMMIT` (variável do site no
+> Render). Depois do merge, troque o `APP_COMMIT` pelo commit novo da `main`. O GitHub Pages NÃO publica esta pasta:
+> em `/studylab/` ele publica só o redirecionamento de `studylab-endereco-antigo/`.
 
 ---
 

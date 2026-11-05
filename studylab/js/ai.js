@@ -157,21 +157,24 @@ Regras invioláveis:
 - Use os dados reais do aluno que forem fornecidos. NUNCA invente notas, porcentagens, datas ou desempenho que não estejam no contexto.
 - Se faltar informação, diga o que falta em vez de supor.
 - Seja específico e acionável: diga o que fazer, por quanto tempo e por quê.
-- Não use formatação com asteriscos de markdown; escreva em texto corrido curto, listas com "•" quando ajudar.`;
+- Não use formatação com asteriscos de markdown; escreva em texto corrido curto, listas com "•" quando ajudar.
+- Seja breve: responda no tamanho que a pergunta pede (em geral até 8 linhas).`;
 
 /* ==========================================================
    CHAT / ME EXPLICA / SOCRÁTICO
    ========================================================== */
 export async function chat(historico, pergunta, fotos = []) {
   const ctx = contextoDoAluno();
-  const conversa = historico.slice(-10).map((m) => `${m.autor === 'me' ? 'ALUNO' : 'STUDY AI'}: ${m.txt}`).join('\n');
+  // economia: só as 6 últimas falas (sem as respostas instantâneas do app), cada uma até 600 letras
+  const conversa = historico.filter((m) => !m.local).slice(-6)
+    .map((m) => `${m.autor === 'me' ? 'ALUNO' : 'MINDTRACK AI'}: ${String(m.txt).slice(0, 600)}`).join('\n');
   const texto = `${conversa ? `Conversa até agora:\n${conversa}\n\n` : ''}ALUNO: ${pergunta}`;
   return chamar({
     system: `${REGRAS}\n\nCONTEXTO DO ALUNO (dados reais do app):\n${ctx}`
       + (fotos.length ? '\nO aluno anexou foto(s) — leia com atenção o que está nelas antes de responder.' : ''),
     // com fotos, o conteúdo vira uma lista de blocos: as imagens + a pergunta
     conteudo: fotos.length ? [...fotos, { type: 'text', text: texto }] : texto,
-    esforco: 'medium', maxTokens: 3000,
+    esforco: 'medium', maxTokens: 1500,
   });
 }
 
@@ -508,4 +511,96 @@ export function observacoesLocais() {
   const top = Object.entries(dias).sort((a, b) => b[1] - a[1])[0];
   if (top && s.sessoes.length > 8) out.push(`Seu dia mais produtivo costuma ser ${['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][top[0]]}.`);
   return out;
+}
+
+/* ==========================================================
+   CALENDÁRIO DA ESCOLA POR FOTO (Minha Escola → Calendário)
+   Uma chamada só lê o calendário impresso/PDF/print e devolve a lista; o
+   aluno confere e escolhe o que importar (nada entra sozinho).
+   ========================================================== */
+const SCHEMA_CALENDARIO = {
+  type: 'object', additionalProperties: false, required: ['itens'],
+  properties: {
+    itens: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['tipo', 'titulo', 'data'],
+        properties: {
+          tipo: { type: 'string', enum: ['prova', 'teste', 'trabalho', 'simulado', 'feriado', 'ferias', 'bimestre', 'reuniao', 'escolar'] },
+          titulo: { type: 'string' },
+          data: { type: 'string', description: 'AAAA-MM-DD' },
+          ate: { type: 'string', description: 'AAAA-MM-DD, só para período (férias, recesso, semana de provas); vazio se for um dia' },
+          materia: { type: 'string', description: 'nome da matéria, se houver; vazio se não' },
+        },
+      },
+    },
+  },
+};
+
+export async function lerCalendarioEscolar({ fotos = [], texto = '' }) {
+  const ano = new Date().getFullYear();
+  const materias = st().materias.map((m) => m.nome).join(', ') || '(nenhuma cadastrada)';
+  const pedido = `${texto ? `Texto do calendário:\n"""\n${String(texto).slice(0, 15000)}\n"""\n\n` : ''}`
+    + 'Extraia TODAS as datas deste calendário escolar: provas, testes, trabalhos, simulados, feriados, férias/recessos, '
+    + 'início/fim de bimestre, reuniões e eventos da escola.';
+  const r = await chamar({
+    system: `${REGRAS}
+Você lê calendários escolares brasileiros (foto, print ou texto) e devolve as datas em JSON.
+- Datas no formato AAAA-MM-DD. Sem ano escrito, use ${ano} (ou ${ano + 1} se o mês já passou e o calendário é do ano seguinte).
+- Período (ex.: "férias de 10 a 25/07", "semana de provas") vira um item com data e ate.
+- "materia": use o nome mais parecido desta lista quando der: ${materias}.
+- Não invente: se não tem certeza da data, deixe o item de fora.`,
+    conteudo: fotos.length ? [...fotos, { type: 'text', text: pedido }] : pedido,
+    schema: SCHEMA_CALENDARIO, maxTokens: 4000, esforco: 'medium',
+  });
+  return (r.itens || []).filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.data));
+}
+
+/* ---------- Apresentações (slides prontos para editar e baixar em PowerPoint) ---------- */
+const SCHEMA_APRESENTACAO = {
+  type: 'object', additionalProperties: false, required: ['titulo', 'slides'],
+  properties: {
+    titulo: { type: 'string' },
+    subtitulo: { type: 'string' },
+    slides: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['tipo', 'titulo'],
+        properties: {
+          tipo: { type: 'string', enum: ['capa', 'topicos', 'duas_colunas', 'destaque', 'pergunta', 'fim'] },
+          titulo: { type: 'string' },
+          texto: { type: 'string', description: 'uma frase curta (destaque, capa, pergunta, fim); vazio nos outros' },
+          topicos: { type: 'array', items: { type: 'string' }, description: '3 a 5 tópicos curtos (até 12 palavras cada)' },
+          esquerda: { type: 'array', items: { type: 'string' }, description: 'só em duas_colunas' },
+          direita: { type: 'array', items: { type: 'string' }, description: 'só em duas_colunas' },
+          rotuloEsquerda: { type: 'string' },
+          rotuloDireita: { type: 'string' },
+          notas: { type: 'string', description: 'o que o aluno fala neste slide (2 a 4 frases)' },
+        },
+      },
+    },
+  },
+};
+
+/** Gera a apresentação em UMA chamada (JSON). O app desenha, edita e exporta sem IA. */
+export async function gerarApresentacao({ tema, materia = '', qtd = 8, publico = 'turma', detalhes = '' }) {
+  const n = Math.max(4, Math.min(12, Number(qtd) || 8));
+  const serie = st().perfil?.serie ? ` (${st().perfil.serie})` : '';
+  const r = await chamar({
+    system: `${REGRAS}
+Você monta apresentações escolares em português do Brasil para um aluno${serie} apresentar ${publico === 'professor' ? 'para o professor' : 'para a turma'}.
+- Exatamente ${n} slides. O 1º é "capa" e o último é "fim" (agradecimento + 1 pergunta para a turma).
+- No meio, misture "topicos" (a maioria), 1 "duas_colunas" quando houver comparação, 1 "destaque" com um dado ou frase forte e, se couber, 1 "pergunta".
+- Texto de slide é CURTO (tópicos de até 12 palavras); a explicação vai nas "notas", que é o que o aluno fala.
+- Conteúdo correto e no nível da série; nada inventado (sem números ou citações de que você não tenha certeza).`,
+    conteudo: `Tema: ${String(tema).slice(0, 300)}${materia ? `\nMatéria: ${materia}` : ''}${detalhes ? `\nO que o professor pediu / detalhes:\n${String(detalhes).slice(0, 2000)}` : ''}`,
+    schema: SCHEMA_APRESENTACAO, maxTokens: 6000, esforco: 'medium',
+  });
+  const slides = (r.slides || []).filter((x) => x && x.titulo).slice(0, 12).map((x) => ({
+    tipo: x.tipo || 'topicos', titulo: String(x.titulo).slice(0, 120), texto: x.texto || '',
+    topicos: (x.topicos || []).slice(0, 6), esquerda: (x.esquerda || []).slice(0, 6), direita: (x.direita || []).slice(0, 6),
+    rotuloEsquerda: x.rotuloEsquerda || '', rotuloDireita: x.rotuloDireita || '', notas: x.notas || '',
+  }));
+  if (!slides.length) throw new Error('Não consegui montar os slides agora. Tente de novo com mais detalhes do tema.');
+  return { titulo: r.titulo || tema, subtitulo: r.subtitulo || '', slides };
 }

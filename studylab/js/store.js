@@ -3,13 +3,13 @@ import { uid, iso, today, addDays } from './util.js';
 import { seedInicial } from './seed.js';
 
 const KEY = 'studylab.v1';
-const SCHEMA = 5;
+const SCHEMA = 6;
 
 /* ---------- estado padrão ---------- */
 export function estadoVazio() {
   return {
     schema: SCHEMA,
-    perfil: { nome: '', serie: '', ano: new Date().getFullYear(), avatar: '🎓', tema: 'escuro', onboarding: false },
+    perfil: { nome: '', serie: '', ano: new Date().getFullYear(), avatar: '🎓', tema: 'claro', onboarding: false },
     conta: {
       plano: 'free',            // free | pro | plus
       desde: iso(), proAte: null, planoId: null, codigo: null,
@@ -38,6 +38,10 @@ export function estadoVazio() {
     // Minha Escola: o que o aluno está aprendendo em cada matéria, escrito por
     // ele. As fotos ficam no IndexedDB (fotos.js) — aqui só o texto.
     escola: {},                 // { [materiaId]: { texto, em } }
+    relogio: {},             // cronômetro e timer (ver js/relogio.js)
+    apresentacoes: [],       // slides (views/apresentacoes.js)
+    conexoes: {},
+    social: null,            // meu perfil de amigos { apelido, nome, avatar } (o resto fica no servidor)
     lidas: [],  // notificações já lidas
   };
 }
@@ -69,6 +73,8 @@ function migrar(d) {
     d.conta = { ...estadoVazio().conta, ...d.conta, provedor: d.conta?.provedor || 'local' };
     if (d.ia?.chave) { d.ia.chaveCriador = d.ia.chave; delete d.ia.chave; }
   }
+  // visual novo (branco): o escuro era só o padrão antigo, então todo mundo passa para o claro uma vez
+  if (d.schema < 6 && d.perfil) d.perfil.tema = 'claro';
   d.schema = SCHEMA;
   // garante que campos novos existam mesmo em dados antigos
   const base = estadoVazio();

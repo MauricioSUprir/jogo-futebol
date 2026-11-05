@@ -12,7 +12,7 @@ const url = (rota) => `${enderecoServidor()}${rota}`;
 async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, timeout = 150000 } = {}) {
   if (!temServidor()) throw new Error('Servidor do MindTrack não configurado.');
   const token = st().conta.token;
-  if (comToken && !token) throw new Error('Entre com o Google para usar o MindTrack AI.');
+  if (comToken === true && !token) throw new Error('Entre com o Google para usar o MindTrack AI.');
 
   const ctrl = new AbortController();
   const relogio = setTimeout(() => ctrl.abort(), timeout);
@@ -20,7 +20,7 @@ async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, tim
   try {
     r = await fetch(url(rota), {
       method: metodo,
-      headers: { 'content-type': 'application/json', ...(comToken ? { authorization: `Bearer ${token}` } : {}) },
+      headers: { 'content-type': 'application/json', ...(comToken && token ? { authorization: `Bearer ${token}` } : {}) },
       body: corpo ? JSON.stringify(corpo) : undefined,
       signal: ctrl.signal,
     });
@@ -51,6 +51,8 @@ export function aplicarConta(d) {
       s.conta.nome = d.usuario.nome || s.conta.nome;
       s.conta.email = d.usuario.email || s.conta.email;
       if (d.usuario.foto) s.conta.foto = d.usuario.foto;
+      if (['google', 'email'].includes(d.usuario.provedor)) s.conta.provedor = d.usuario.provedor;   // conta de verdade
+      if (d.usuario.telefone) s.conta.telefone = d.usuario.telefone;
     }
     if (d.plano) {
       s.conta.plano = d.plano;
@@ -120,3 +122,43 @@ export const pagarComCartaoNoServidor = (planoId, cartao) =>
   chamar('/pagar/cartao', { metodo: 'POST', corpo: { planoId, cartao } });
 
 export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });
+
+/** Mantém o servidor do Render acordado enquanto o app está aberto e visível
+ *  (o plano grátis dorme depois de 15 min sem ninguém chamar). Quem acorda o
+ *  servidor de madrugada é o robô do GitHub (.github/workflows/mindtrack-acordar.yml). */
+let cutucando = null;
+export function manterServidorAcordado(intervaloMs = 10 * 60000) {
+  if (cutucando || !temServidor()) return;
+  const cutucar = () => {
+    if (document.hidden) return;
+    fetch(url('/saude'), { cache: 'no-store' }).catch(() => { /* fora do ar ou sem internet: tenta na próxima */ });
+  };
+  cutucar();
+  cutucando = setInterval(cutucar, intervaloMs);
+}
+
+/* ---------- Conexões (Google Agenda, Classroom, Drive, calendário por link) ---------- */
+export const configConexoes = () => chamar('/conexoes/config', { comToken: false, timeout: 30000 });
+/** Endereço do Google para entrar ou ligar um app. 'conta' = entrar (usa a sessão do aparelho, se houver, para não perder o plano). */
+export const iniciarGoogle = (servico) => chamar('/conexoes/google/iniciar', {
+  metodo: 'POST', comToken: 'se-tiver',
+  corpo: { servico, volta: `${location.origin}${location.pathname}` },
+});
+export const trocarTicket = (ticket) =>
+  chamar('/conta/troca', { metodo: 'POST', corpo: { ticket }, comToken: false }).then((d) => { aplicarConta(d); return d; });
+export const listarConexoes = () => chamar('/conexoes');
+export const sincronizarConexao = (servico) => chamar('/conexoes/sincronizar', { metodo: 'POST', corpo: { servico }, timeout: 60000 });
+export const ligarCalendarioPorLink = (link) => chamar('/conexoes/ics', { metodo: 'POST', corpo: { url: link }, timeout: 60000 });
+export const acessoDoDrive = () => chamar('/conexoes/google/token', { metodo: 'POST', corpo: { servico: 'drive' } });
+export const removerConexao = (servico) => chamar('/conexoes/remover', { metodo: 'POST', corpo: { servico } });
+
+/* ---------- conta com e-mail e senha ---------- */
+export const criarContaNoServidor = (d) =>
+  chamar('/conta/criar', { metodo: 'POST', corpo: d, comToken: 'se-tiver', timeout: 60000 }).then((r) => { aplicarConta(r); return r; });
+/** Código de 6 números no e-mail: motivo 'criar' (conta nova) ou 'senha' (esqueci a senha). */
+export const pedirCodigo = (email, motivo = 'criar', nome = '') =>
+  chamar('/conta/codigo', { metodo: 'POST', corpo: { email, motivo, nome }, comToken: false, timeout: 60000 });
+export const novaSenha = (email, codigo, senha) =>
+  chamar('/conta/nova-senha', { metodo: 'POST', corpo: { email, codigo, senha }, comToken: false, timeout: 60000 }).then((r) => { aplicarConta(r); return r; });
+export const entrarComEmail = (email, senha) =>
+  chamar('/conta/entrar', { metodo: 'POST', corpo: { email, senha }, comToken: false }).then((r) => { aplicarConta(r); return r; });

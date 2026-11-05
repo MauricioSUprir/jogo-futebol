@@ -559,7 +559,10 @@ export function agendaDoDia(dataISO = iso()) {
   for (const t of s.tarefas.filter((t) => t.prazo === dataISO && t.status !== 'concluido')) itens.push({ tipo: 'tarefa', hora: '', titulo: t.titulo, materiaId: t.materiaId, refId: t.id });
   for (const p of s.provas.filter((p) => p.data === dataISO)) itens.push({ tipo: 'prova', hora: '', titulo: p.titulo, materiaId: p.materiaId, refId: p.id });
   for (const p of s.provas) for (const b of (p.plano || []).filter((b) => b.data === dataISO && !b.feito)) itens.push({ tipo: 'plano', hora: '', titulo: `${b.titulo} (${b.minutos}min)`, materiaId: p.materiaId, refId: p.id });
-  for (const e of s.eventos.filter((e) => e.data === dataISO)) itens.push({ tipo: e.tipo, hora: e.hora || '', titulo: e.titulo, materiaId: e.materiaId, refId: e.id });
+  // evento com período (férias, semana de provas) aparece em todos os dias dele
+  for (const e of s.eventos.filter((e) => e.data === dataISO || (e.ate && e.data <= dataISO && dataISO <= e.ate))) {
+    itens.push({ tipo: e.tipo, hora: e.hora || '', titulo: e.titulo, materiaId: e.materiaId, refId: e.id });
+  }
   const rev = dataISO === iso() ? filaRevisao().total : 0;
   if (rev) itens.push({ tipo: 'revisao', hora: '', titulo: `${rev} itens para revisar`, materiaId: null });
   return itens.sort((a, b) => (a.hora || 'zz').localeCompare(b.hora || 'zz'));

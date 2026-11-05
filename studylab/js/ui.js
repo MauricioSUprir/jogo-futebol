@@ -47,9 +47,14 @@ export function kpi(valor, rotulo, extra = '') {
 export function barra(v, cls = '') {
   return h('div', { class: `bar ${cls}` }, h('i', { style: { width: `${clamp(v, 0, 100)}%` } }));
 }
+/* O emoji do começo do título fica num <span> separado: no visual editorial
+   (títulos grandes em Anton) ele vira um selo pequeno ao lado, sem pesar. */
+const EMOJI_INICIAL = /^(\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic})*)\s*/u;
 export function titulo(t, sub = '', ...acoes) {
+  const m = typeof t === 'string' ? t.match(EMOJI_INICIAL) : null;
+  const cab = m ? h('h1', {}, h('span', { class: 'page-h__emo', 'aria-hidden': 'true' }, m[1]), t.slice(m[0].length)) : h('h1', {}, t);
   return h('div', { class: 'page-h' },
-    h('div', {}, h('h1', {}, t), sub ? h('p', {}, sub) : null),
+    h('div', {}, cab, sub ? h('p', {}, sub) : null),
     acoes.filter(Boolean).length ? h('div', { class: 'sp' }, ...acoes.filter(Boolean)) : null);
 }
 export const vazio = (tit, txt, acao = null) =>
@@ -217,10 +222,16 @@ export const RECURSOS = [
   { id: 'ia_flashcards', nome: 'Criar flashcards a partir de qualquer material', nivel: 'pro' },
   { id: 'ia_resumo', nome: 'Resumos inteligentes e mapas mentais', nivel: 'pro' },
   { id: 'ia_arquivos', nome: 'Ler PDF e foto da atividade', nivel: 'pro' },
+  { id: 'ia_apresentacao', nome: 'Apresentações prontas pela IA (baixa em PowerPoint)', nivel: 'pro' },
+  { id: 'conexoes', nome: 'Conexões: Google Agenda, Classroom, Drive e calendário por link', nivel: 'pro' },
+  { id: 'ia_duelo', nome: 'Duelos com tema livre (a IA cria as perguntas)', nivel: 'pro' },
+  { id: 'relatorio_pais', nome: 'Relatório semanal para os responsáveis (WhatsApp ou PDF)', nivel: 'pro' },
 
   { id: 'ia_analise', nome: 'Análise dos seus simulados e pontos fracos', nivel: 'plus' },
   { id: 'ia_redacao', nome: 'Correção de redação com nota e comentários', nivel: 'plus' },
   { id: 'ia_plano', nome: 'Plano de estudos da semana montado pela IA', nivel: 'plus' },
+  { id: 'ia_topo', nome: 'Sempre o modelo de IA mais forte primeiro', nivel: 'plus' },
+  { id: 'suporte', nome: 'Suporte prioritário e novidades antes de todo mundo', nivel: 'plus' },
 ];
 
 export const RECURSOS_PRO = RECURSOS.filter((r) => r.nivel === 'pro');

@@ -43,25 +43,37 @@ e um freio por IP.
 
 ## Começar DE GRAÇA (Gemini)
 
-Não quer gastar nada para testar? O servidor também fala com o **Gemini**, do Google,
-que tem uma faixa gratuita **sem cartão**:
+Não quer gastar nada? O servidor fala com o **Gemini**, do Google, que tem uma faixa
+gratuita **sem cartão**:
 
 1. Entre em [aistudio.google.com](https://aistudio.google.com) com uma conta Google
    → **Get API key** → crie a chave.
-2. No Railway, em vez de `ANTHROPIC_API_KEY`, configure `GEMINI_API_KEY`.
-3. Pronto: o MindTrack AI funciona de verdade, custo zero.
+2. No Render/Railway, configure `GEMINI_API_KEY`.
 
-Regras de convivência das chaves:
+### A escada de modelos (o "modelo bom que dura")
 
-- Só `GEMINI_API_KEY` → usa o Gemini (grátis).
-- Só `ANTHROPIC_API_KEY` → usa a Claude (paga por uso).
-- As duas → a **Claude vence** (mais estável para quem paga); `PROVEDOR=gemini` inverte.
-- `MODELO_GEMINI` troca o modelo do Gemini (padrão `gemini-2.5-flash`).
+No plano grátis o Google dá **poucas** perguntas por dia aos modelos melhores e bem mais aos
+leves — e o limite é do **projeto inteiro**, não de cada aluno. Por isso cada pergunta sobe uma
+escada, do melhor para o mais leve; quando um modelo esgota a cota (erro 429), o servidor anota
+até quando (a cota diária renova à meia-noite do Pacífico) e **pula direto** para o próximo, sem
+gastar chamada testando de novo. Modelo que saiu do ar (404) é pulado por 6 h.
 
-⚠️ O limite do plano grátis do Gemini é **do app inteiro**, não por aluno — serve para
-testar e para os primeiros usuários, mas quando houver assinantes pagando, ponha a
-chave da Claude para ninguém ficar na fila (os limites por aluno continuam valendo
-igual nos dois provedores).
+| Escada | Quando | Degraus (padrão) | Variável |
+| --- | --- | --- | --- |
+| topo | assinante Plus, redação, plano da semana | 3.8-flash → 3.6-flash → 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI_TOPO` |
+| normal | chat, explicações, questões | 3.6-flash → 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI` |
+| leve | resumos, flashcards, dividir tarefa | 3.5-flash-lite → 3.1-flash-lite → 2.5-flash-lite | `MODELOS_GEMINI_LEVE` |
+
+(os nomes são `gemini-…`; as variáveis recebem listas separadas por vírgula.) O `/saude` mostra a
+escada e quem está sem cota (`foraDaCota`).
+
+Outras economias: o "pensamento" dos Gemini 3 vai no mínimo necessário (`thinkingLevel`
+minimal/low/medium pelo esforço do pedido — pensar gasta tokens da cota); respostas iguais
+(mesmo pedido, sem foto) voltam de um **cache** de 12 h e não contam no limite do aluno
+(`CACHE_IA=0` desliga); e o próprio app responde sem IA as perguntas comuns ("o que estudo
+agora?", "minhas provas", "plano de hoje"…, em `studylab/js/respostas-locais.js`).
+
+Com as duas chaves (Gemini e Claude), a Claude vence; `PROVEDOR=gemini` inverte.
 
 ---
 
@@ -157,6 +169,48 @@ Enquanto testa, use as **credenciais de teste** do Mercado Pago: o fluxo é idê
 dinheiro de verdade se move.
 
 ---
+
+## Ligar as Conexões (conta Google, Agenda, Classroom, Drive)
+
+A aba **Conexões** do app só funciona com conta: o aluno entra com o Google e o que ele liga fica salvo
+aqui no servidor, cifrado. Tudo é grátis. Passo a passo no [Google Cloud](https://console.cloud.google.com/):
+
+1. **Criar o projeto**: no topo, *Selecionar projeto → Novo projeto* → nome `MindTrack AI`.
+2. **Ligar as APIs**: em *APIs e serviços → Biblioteca*, ative **Google Calendar API**, **Google Classroom API**,
+   **Google Drive API** e **Google Picker API**.
+3. **Tela de consentimento** (*APIs e serviços → Tela de permissão OAuth*): tipo **Externo**, nome `MindTrack AI`,
+   seu e-mail de suporte e de contato. Em *Escopos*, adicione:
+   `calendar.events.readonly`, `classroom.courses.readonly`, `classroom.coursework.me.readonly` e `drive.file`.
+   Em *Usuários de teste*, coloque os e-mails de quem vai testar (até 100).
+4. **Cliente OAuth** (*Credenciais → Criar credenciais → ID do cliente OAuth*): tipo **Aplicativo da Web**.
+   - *Origens JavaScript autorizadas*: `https://mauriciosuprir.github.io`
+   - *URIs de redirecionamento autorizados*: `https://mindtrack-servidor.onrender.com/conexoes/google/volta`
+     (o `/saude` mostra esse endereço em `enderecoDeVoltaGoogle`).
+   Copie o **ID do cliente** e a **chave secreta do cliente**.
+5. **Chave do seletor do Drive** (*Credenciais → Criar credenciais → Chave de API*): restrinja a
+   *Referenciadores HTTP* `https://mauriciosuprir.github.io/*` e à *Google Picker API*.
+   O **número do projeto** está em *Painel do projeto → Informações do projeto*.
+6. **No Render** (*mindtrack-servidor → Environment*), cole:
+
+| Variável | O que é |
+|---|---|
+| `GOOGLE_CLIENT_ID` | ID do cliente (termina em `.apps.googleusercontent.com`) |
+| `GOOGLE_CLIENT_SECRET` | chave secreta do cliente — **só no servidor, nunca no app** |
+| `GOOGLE_API_KEY` | a chave do passo 5 (é pública, mas fica restrita ao site) |
+| `GOOGLE_PROJETO` | o número do projeto (só dígitos) |
+
+Pronto: o `/saude` passa a dizer `"conexoesProntas": true`.
+
+**Importante enquanto o app está "Em teste" no Google:** só os usuários de teste conseguem entrar, e o Google
+derruba a permissão da Agenda/Classroom depois de **7 dias** (o app avisa e o aluno conecta de novo em 2 toques).
+Para liberar para todo mundo, peça a *verificação* do app na tela de consentimento (o Google pede página de
+privacidade e um vídeo mostrando o uso; o `drive.file` não precisa de verificação). A **Classroom** de escola
+pode estar bloqueada pelo administrador da escola — nesse caso o app mostra o aviso do Google.
+
+**O que o servidor guarda:** só o *refresh token* (AES-256-GCM, chave derivada do `SEGREDO`) e o e-mail da
+conta ligada. Trocar o `SEGREDO` desliga todas as conexões (o aluno conecta de novo). O MindTrack só **lê**.
+O calendário por link (.ics) não precisa de nada disso; ele só baixa de endereços públicos (bloqueia a rede
+interna, também depois de redirecionamentos) e no máximo 2 MB.
 
 ## Quanto custa (a conta que decide o preço)
 

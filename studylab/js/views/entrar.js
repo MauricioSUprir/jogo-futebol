@@ -2,9 +2,10 @@
    Aparece uma única vez, antes do app. Nada de dados de exemplo: o aluno diz
    quem é e quais matérias tem, e o MindTrack começa com a escola dele.         */
 import { h, iso } from '../util.js';
-import { st, set, entrarComo, novaMateria, concluirOnboarding, carregarExemplo } from '../store.js';
+import { st, set, novaMateria, concluirOnboarding, carregarExemplo } from '../store.js';
 import { toast, inp, sel, campo, segmento, modal, fecharModal } from '../ui.js';
-import { botaoGoogle, googleConfigurado } from '../auth.js';
+import { temServidor, criarContaNoServidor, entrarComEmail, pedirCodigo, novaSenha, configConexoes, iniciarGoogle, trocarTicket, garantirSessao } from '../api.js';
+import { comprimirImagem } from '../fotos.js';
 
 /* ---------- catálogo de matérias por nível ---------- */
 const M = (nome, emoji, cor) => ({ nome, emoji, cor });
@@ -99,6 +100,16 @@ export function abrirEntrada(aoConcluir) {
 
   const fechar = () => { tela.remove(); document.body.style.overflow = ''; aoConcluir?.(); };
 
+  const ticket = (/[?&]entrou=([^&]+)/.exec(location.hash) || [])[1];
+  if (ticket) {
+    history.replaceState(null, '', `${location.pathname}${location.search}#/ai`);   // antes da tela de Conexões ver
+    tela.replaceChildren(h('div', { class: 'center' }, MARCA(72), h('p', { class: 'muted' }, 'Entrando com o Google…')));
+    trocarTicket(decodeURIComponent(ticket))
+      .then((r) => { dados.nome = (r.usuario?.nome || '').split(' ')[0]; passo = 1; pintar(); })
+      .catch((e) => { toast(e.message, 'bad'); passo = 0; pintar(); });
+    return;
+  }
+
   const cabecalho = (titulo, sub) => h('div', { class: 'center mb' },
     h('h1', { style: { fontSize: '22px', fontWeight: 800 } }, titulo),
     sub ? h('p', { class: 'muted small', style: { margin: '6px auto 0', maxWidth: '46ch' } }, sub) : null);
@@ -115,46 +126,218 @@ export function abrirEntrada(aoConcluir) {
     class: 'card', style: { width: 'min(460px,100%)', margin: '0 auto', textAlign: 'left' },
   }, ...kids);
 
-  /* ---------- passo 0: entrar ---------- */
+  /* ---------- passo 0: criar conta (ou entrar) — o questionário só vem depois ---------- */
   function boasVindas() {
-    const google = h('div', { style: { display: 'flex', justifyContent: 'center', minHeight: '44px' } });
-    const erroG = h('p', { class: 'tiny', style: { color: 'var(--bad)', textAlign: 'center' } });
+    let modo = 'criar';          // 'criar' | 'entrar' | 'codigo' (conta nova) | 'esqueci'
+    let foto = '';
+    let comCodigo = false;       // o servidor manda o código por e-mail? (vem do /conexoes/config)
+    let esqueciEtapa = 1;
+    const erro = h('p', { class: 'tiny', role: 'alert', style: { color: 'var(--bad)', textAlign: 'center', minHeight: '16px', margin: '8px 0 0' } });
+    const caixaGoogle = h('div', {});
+    const formulario = h('div', {});
 
-    const conteudo = h('div', { style: { width: 'min(420px,100%)', margin: '0 auto' } },
-      MARCA(88),
-      h('div', { class: 'center', style: { marginTop: '14px' } },
-        h('div', { class: 'wordmark', style: { fontSize: '30px' } }, 'MindTrack', h('span', {}, ' AI')),
-        h('div', { class: 'tagline', style: { marginTop: '6px' } }, 'Estude', h('i', {}, '.'), ' Pratique', h('i', {}, '.'), ' Evolua', h('i', {}, '.'))),
-      h('p', { class: 'muted center', style: { margin: '16px auto 20px', maxWidth: '38ch' } },
-        'Sua vida escolar organizada: o que fazer agora, o que está atrasado, quando revisar e quanto falta para a prova.'),
-      googleConfigurado() ? google : null, erroG,
-      googleConfigurado()
-        ? h('div', { class: 'flexb', style: { justifyContent: 'center', gap: '10px', margin: '14px 0 6px', color: 'var(--dim2)' } },
-          h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }),
-          h('span', { class: 'tiny' }, 'ou'),
-          h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }))
-        : null,
-      h('button', {
-        class: googleConfigurado() ? 'btn btn--blk' : 'btn btn--p btn--blk btn--xl',
-        style: googleConfigurado() ? { height: '44px' } : {},
-        onclick: () => { entrarComo({ provedor: 'local' }); passo = 1; pintar(); },
-      }, googleConfigurado() ? 'Continuar sem conta' : '▶ Começar'),
-      h('p', { class: 'tiny muted center mt' },
-        'Seus dados ficam no seu aparelho. Sem conta, eles não passam para outro celular.'),
-      h('p', { class: 'tiny muted center', style: { marginTop: '8px' } },
-        'Ao continuar você aceita os ',
-        h('a', { href: '#/termos' }, 'Termos de uso'), ' e a ',
-        h('a', { href: '#/termos?aba=privacidade' }, 'Política de privacidade'), '.',
-        h('br'), 'Menor de 18 anos? Use com a autorização de um responsável.'),
+    const nome = inp({ placeholder: 'Seu nome', autocomplete: 'name' });
+    const email = inp({ placeholder: 'seu@email.com', type: 'email', autocomplete: 'email', inputmode: 'email' });
+    const telefone = inp({ placeholder: '(11) 98765-4321', type: 'tel', autocomplete: 'tel', inputmode: 'tel' });
+    const senha = inp({ placeholder: 'Pelo menos 8 caracteres', type: 'password', autocomplete: 'new-password' });
+    const emailEntrar = inp({ placeholder: 'seu@email.com', type: 'email', autocomplete: 'email', inputmode: 'email' });
+    const codigo = inp({ placeholder: '000000', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, class: 'inp conta-codigo' });
+    const codigoSenha = inp({ placeholder: '000000', inputmode: 'numeric', autocomplete: 'one-time-code', maxlength: 6, class: 'inp conta-codigo' });
+    const senhaNova = inp({ placeholder: 'Pelo menos 8 caracteres', type: 'password', autocomplete: 'new-password' });
+    for (const c of [codigo, codigoSenha]) c.addEventListener('input', () => { c.value = c.value.replace(/\D/g, '').slice(0, 6); });
+    const senhaEntrar = inp({ placeholder: 'Sua senha', type: 'password', autocomplete: 'current-password' });
+    const aceite = h('input', { type: 'checkbox', id: 'aceite' });
+    const previa = h('div', { class: 'conta-foto', 'aria-hidden': 'true' }, '📷');
+    const arquivo = h('input', { type: 'file', accept: 'image/*', hidden: true });
+    arquivo.addEventListener('change', async () => {
+      const f = arquivo.files?.[0]; arquivo.value = '';
+      if (!f) return;
+      try {
+        foto = await comprimirImagem(f, { max: 256, qualidade: 0.8 });
+        previa.replaceChildren(h('img', { src: foto, alt: 'Sua foto' }));
+      } catch (e) { erro.textContent = e.message; }
+    });
+
+    const enviar = async (botao, acao) => {
+      erro.textContent = '';
+      if (!temServidor()) { erro.textContent = 'O servidor do MindTrack não está ligado agora.'; return; }
+      const texto = botao.textContent;
+      botao.disabled = true; botao.textContent = 'Um instante…';
+      try { await acao(); } catch (e) { erro.textContent = e.message; }
+      botao.disabled = false;
+      if (botao.textContent === 'Um instante…') botao.textContent = texto;   // a etapa pode ter trocado o texto
+    };
+
+    const dadosConta = () => ({
+      nome: nome.value.trim(), email: email.value.trim(), telefone: telefone.value.trim(), senha: senha.value, foto,
+    });
+    const conferirCampos = () => {
+      if (nome.value.trim().length < 2) throw new Error('Escreva seu nome.');
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim())) throw new Error('Esse e-mail não parece certo.');
+      if (telefone.value.replace(/\D/g, '').length < 10) throw new Error('Coloque o WhatsApp com DDD.');
+      if (senha.value.length < 8) throw new Error('A senha precisa ter pelo menos 8 caracteres.');
+      if (!aceite.checked) throw new Error('Marque que você leu e aceita os termos.');
+    };
+    const contaCriada = (r) => {
+      set((x) => { x.conta.foto = foto || x.conta.foto; });
+      dados.nome = nome.value.trim().split(' ')[0];
+      toast(r.whatsapp === 'enviado' ? 'Conta criada! Mandamos uma mensagem no seu WhatsApp 📲' : 'Conta criada! 🎉', 'good');
+      passo = 1; pintar();
+    };
+
+    const btnCriar = h('button', {
+      class: 'btn btn--p btn--blk btn--xl mt', onclick: () => enviar(btnCriar, async () => {
+        conferirCampos();
+        if (comCodigo) {                       // 1º o código no e-mail, depois a conta
+          await pedirCodigo(email.value.trim(), 'criar', nome.value.trim());
+          modo = 'codigo'; pintarForm();
+          setTimeout(() => codigo.focus(), 50);
+          return;
+        }
+        const r = await criarContaNoServidor(dadosConta());
+        contaCriada(r);
+      }),
+    }, 'Criar minha conta');
+
+    const btnConfirmar = h('button', {
+      class: 'btn btn--p btn--blk btn--xl mt', onclick: () => enviar(btnConfirmar, async () => {
+        if (!/^\d{6}$/.test(codigo.value)) throw new Error('O código tem 6 números.');
+        contaCriada(await criarContaNoServidor({ ...dadosConta(), codigo: codigo.value }));
+      }),
+    }, 'Confirmar e criar a conta');
+    codigo.addEventListener('input', () => { if (codigo.value.length === 6) btnConfirmar.click(); });
+
+    // reenviar: espera 30 s entre um e outro
+    let esperaAte = 0, relogio = null;
+    const btnReenviar = h('button', { class: 'btn btn--sm', type: 'button' }, 'Reenviar código');
+    const armarReenvio = () => {
+      esperaAte = Date.now() + 30000; clearInterval(relogio);
+      const tique = () => {
+        const s = Math.ceil((esperaAte - Date.now()) / 1000);
+        btnReenviar.disabled = s > 0;
+        btnReenviar.textContent = s > 0 ? `Reenviar em ${s}s` : 'Reenviar código';
+        if (s <= 0) clearInterval(relogio);
+      };
+      tique(); relogio = setInterval(tique, 1000);
+    };
+    const reenviar = (motivo, emailDe) => async () => {
+      erro.textContent = '';
+      btnReenviar.disabled = true;
+      try { await pedirCodigo(emailDe(), motivo, nome.value.trim()); toast('Mandamos outro código 📩', 'good'); armarReenvio(); }
+      catch (e) { erro.textContent = e.message; btnReenviar.disabled = false; }
+    };
+
+    // esqueci a senha: e-mail → código + senha nova
+    const btnEsqueci = h('button', {
+      class: 'btn btn--p btn--blk btn--xl mt', onclick: () => enviar(btnEsqueci, async () => {
+        if (esqueciEtapa === 1) {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(emailEntrar.value.trim())) throw new Error('Escreva o e-mail da sua conta.');
+          await pedirCodigo(emailEntrar.value.trim(), 'senha');
+          esqueciEtapa = 2; pintarForm(); setTimeout(() => codigoSenha.focus(), 50);
+          return;
+        }
+        if (!/^\d{6}$/.test(codigoSenha.value)) throw new Error('O código tem 6 números.');
+        if (senhaNova.value.length < 8) throw new Error('A senha nova precisa ter pelo menos 8 caracteres.');
+        const r = await novaSenha(emailEntrar.value.trim(), codigoSenha.value, senhaNova.value);
+        dados.nome = (r.usuario?.nome || '').split(' ')[0];
+        toast('Senha nova salva! 🔑', 'good');
+        passo = 1; pintar();
+      }),
+    }, 'Mandar o código');
+
+    const btnEntrar = h('button', {
+      class: 'btn btn--p btn--blk btn--xl mt', onclick: () => enviar(btnEntrar, async () => {
+        const r = await entrarComEmail(emailEntrar.value.trim(), senhaEntrar.value);
+        dados.nome = (r.usuario?.nome || '').split(' ')[0];
+        toast(`Que bom te ver de novo, ${dados.nome || 'estudante'}!`, 'good');
+        passo = 1; pintar();
+      }),
+    }, 'Entrar');
+
+    const linkTexto = (texto, fn) => h('button', { class: 'conta-link', type: 'button', onclick: fn }, texto);
+    const pintarForm = () => {
+      erro.textContent = '';
+      abas.hidden = modo === 'codigo' || modo === 'esqueci';
+      if (modo === 'codigo') {
+        btnReenviar.onclick = reenviar('criar', () => email.value.trim());
+        armarReenvio();
+        formulario.replaceChildren(h('div', { class: 'conta-passo' },
+          h('div', { class: 'conta-envelope', 'aria-hidden': 'true' }, '📩'),
+          h('h3', {}, 'Confira seu e-mail'),
+          h('p', { class: 'small muted' }, 'Mandamos um código de 6 números para ', h('b', {}, email.value.trim()), '. Pode estar no spam.'),
+          campo('Código', codigo), btnConfirmar,
+          h('div', { class: 'flexb', style: { justifyContent: 'space-between', marginTop: '10px' } },
+            linkTexto('← Trocar o e-mail', () => { modo = 'criar'; codigo.value = ''; pintarForm(); }), btnReenviar)));
+        return;
+      }
+      if (modo === 'esqueci') {
+        btnEsqueci.textContent = esqueciEtapa === 1 ? 'Mandar o código' : 'Salvar a senha nova';
+        if (esqueciEtapa === 2) { btnReenviar.onclick = reenviar('senha', () => emailEntrar.value.trim()); armarReenvio(); }
+        formulario.replaceChildren(h('div', { class: 'conta-passo' },
+          h('h3', {}, 'Esqueci a senha'),
+          esqueciEtapa === 1
+            ? h('div', {}, h('p', { class: 'small muted' }, 'Escreva o e-mail da conta. Mandamos um código para você criar uma senha nova.'), campo('E-mail', emailEntrar))
+            : h('div', {}, h('p', { class: 'small muted' }, 'Mandamos o código para ', h('b', {}, emailEntrar.value.trim()), '.'),
+              campo('Código', codigoSenha), campo('Senha nova', senhaNova)),
+          btnEsqueci,
+          h('div', { class: 'flexb', style: { justifyContent: 'space-between', marginTop: '10px' } },
+            linkTexto('← Voltar para entrar', () => { modo = 'entrar'; esqueciEtapa = 1; pintarForm(); }),
+            esqueciEtapa === 2 ? btnReenviar : null)));
+        return;
+      }
+      formulario.replaceChildren(modo === 'criar'
+        ? h('div', {},
+          h('div', { class: 'conta-foto-linha' },
+            h('button', { class: 'conta-foto-btn', type: 'button', onclick: () => arquivo.click(), 'aria-label': 'Escolher foto' }, previa),
+            h('div', { class: 'small muted' }, h('b', { style: { color: 'var(--txt)' } }, 'Sua foto'), h('br'), 'opcional — toque para escolher')),
+          arquivo,
+          campo('Nome', nome), campo('E-mail', email), campo('WhatsApp (com DDD)', telefone), campo('Senha', senha),
+          h('label', { class: 'conta-aceite small', for: 'aceite' }, aceite,
+            h('span', {}, 'Li e aceito os ', h('a', { href: '#/termos', target: '_blank' }, 'Termos'), ' e a ',
+              h('a', { href: '#/termos?aba=privacidade', target: '_blank' }, 'Privacidade'),
+              '. Se tenho menos de 18 anos, meu responsável autorizou.')),
+          btnCriar)
+        : h('div', {}, campo('E-mail', emailEntrar), campo('Senha', senhaEntrar), btnEntrar,
+          comCodigo ? h('div', { class: 'center', style: { marginTop: '10px' } },
+            linkTexto('Esqueci a senha', () => { modo = 'esqueci'; esqueciEtapa = 1; pintarForm(); })) : null));
+    };
+
+    const abas = segmento([{ v: 'criar', t: 'Criar conta' }, { v: 'entrar', t: 'Já tenho conta' }], modo, (v) => { modo = v; pintarForm(); });
+    abas.classList.add('conta-abas');
+
+    const conteudo = h('div', { style: { width: 'min(440px,100%)', margin: '0 auto' } },
+      MARCA(72),
+      h('div', { class: 'center', style: { margin: '10px 0 16px' } },
+        h('div', { class: 'marca marca--escura' }, 'MindTrack', h('b', {}, 'AI')),
+        h('p', { class: 'muted small', style: { margin: '8px auto 0', maxWidth: '36ch' } },
+          'Crie sua conta para começar. Seus estudos ficam salvos e seus amigos te encontram.')),
+      caixa(abas, h('div', { class: 'mt' }, formulario), erro, caixaGoogle),
       h('div', { class: 'center mt2' },
         h('button', {
           class: 'btn btn--sm', style: { background: 'none', border: 0, color: 'var(--dim2)' },
           onclick: () => { carregarExemplo(); toast('App aberto com dados de exemplo', 'good'); fechar(); },
         }, 'ver o app com dados de exemplo')));
-
+    pintarForm();
     tela.replaceChildren(conteudo);
-    if (googleConfigurado()) {
-      botaoGoogle(google, () => { passo = 1; pintar(); }, (e) => { erroG.textContent = e.message; });
+
+    // "Entrar com o Google": só aparece quando o Google estiver ligado no servidor
+    if (temServidor()) {
+      configConexoes().then((c) => {
+        comCodigo = !!c.email;
+        if (comCodigo && modo === 'entrar') pintarForm();      // mostra o "Esqueci a senha"
+        if (!c.google) return;
+        caixaGoogle.replaceChildren(
+          h('div', { class: 'flexb', style: { gap: '10px', margin: '14px 0 10px', color: 'var(--dim2)' } },
+            h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } }), h('span', { class: 'tiny' }, 'ou'),
+            h('span', { style: { flex: 1, height: '1px', background: 'var(--line)' } })),
+          h('button', {
+            class: 'btn btn--blk conx-google', onclick: async (e) => {
+              e.target.disabled = true;
+              try { await garantirSessao().catch(() => null); location.assign((await iniciarGoogle('conta')).url); }
+              catch (err) { erro.textContent = err.message; e.target.disabled = false; }
+            },
+          }, h('span', { class: 'conx-g' }, 'G'), 'Entrar com o Google'));
+      }).catch(() => {});
     }
   }
 

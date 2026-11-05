@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MindTrack AI mudou de endereço</title>
+<meta name="robots" content="noindex" />
+<link rel="canonical" href="https://mindtrack-ai-ws6c.onrender.com/" />
+<style>
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a0b10;color:#f0ead9;font-family:system-ui,Arial,sans-serif;text-align:center;padding:24px}
+  a{color:#3ec9f5;font-weight:700}
+</style>
+</head>
+<body>
+  <div>
+    <h1>O MindTrack AI mudou de endereço</h1>
+    <p>Levando você (e os seus dados) para o novo endereço…</p>
+    <p>Se não abrir sozinho, toque aqui: <a id="ir" href="https://mindtrack-ai-ws6c.onrender.com/">mindtrack-ai-ws6c.onrender.com</a></p>
+  </div>
+<script>
+  /* O MindTrack AI saiu do jogo-futebol para o repositório próprio.
+     Os dados de estudo ficam no navegador, presos a ESTE endereço: então eles
+     vão junto, depois do # (que nunca é enviado a servidor nenhum), e o app novo
+     importa na hora. Fotos e arquivos da Minha Escola não vão (são grandes). */
+  (async () => {
+    const NOVO = 'https://mindtrack-ai-ws6c.onrender.com/';
+    let destino = NOVO + location.hash;
+    try {
+      // tira o app antigo do celular (o service worker guardava a versão velha)
+      const regs = await navigator.serviceWorker?.getRegistrations?.() || [];
+      await Promise.all(regs.filter((r) => r.scope.includes('/studylab/')).map((r) => r.unregister()));
+      for (const k of (await caches?.keys?.()) || []) if (/^(mindtrack|studylab)/.test(k)) await caches.delete(k);
+    } catch { /* segue */ }
+    try {
+      const dados = localStorage.getItem('studylab.v1');
+      if (dados && dados.length < 1500000) {
+        const b64 = btoa(unescape(encodeURIComponent(dados)));
+        destino = NOVO + '#migrar=' + b64;
+      }
+    } catch { /* sem dados ou sem acesso: só redireciona */ }
+    document.getElementById('ir').href = destino;
+    location.replace(destino);
+  })();
+</script>
+</body>
+</html>

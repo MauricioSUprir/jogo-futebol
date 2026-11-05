@@ -64,6 +64,7 @@ svg.mark{width:100%;height:auto;display:block}
   font-weight:600;font-size:14px
 }
 .side__nav a span.i{width:20px;text-align:center}
+.side__grupo{margin:12px 12px 4px;font-size:10.5px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--dim2)}
 .side__nav a:hover{background:var(--panel2);color:var(--txt)}
 .side__nav a.on{background:linear-gradient(90deg,rgba(62,201,245,.20),transparent);color:var(--txt)}
 .side__nav a.on span.i{filter:drop-shadow(0 0 6px rgba(62,201,245,.7))}
@@ -301,3 +302,22 @@ svg.chart{width:100%;height:auto;display:block;overflow:visible}
 .hr{height:1px;background:var(--line);margin:14px 0;border:0}
 .flexb{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .sp{margin-left:auto}
+
+/* ===== Conexões ===== */
+.conx-grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.conx { display: flex; flex-direction: column; gap: 8px; }
+.conx .flexb { margin-top: auto; flex-wrap: wrap; }
+.conx-topo { display: flex; align-items: center; gap: 10px; }
+.conx-topo .chip { margin-left: auto; }
+.conx-ic { font-size: 22px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--bg2, rgba(127,127,127,.12)); }
+.conx--on { box-shadow: inset 0 0 0 2px var(--acc, #3ec9f5); }
+.conx--trancado, .conx--breve { opacity: .62; }
+.conx-conta { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.conx-foto { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; display: grid; place-items: center; font-weight: 800; background: var(--bg2, rgba(127,127,127,.15)); }
+.conx-portao { text-align: center; padding: 28px 20px; }
+.conx-portao h2 { margin: 6px 0; }
+.conx-portao p { max-width: 520px; margin: 8px auto 16px; }
+.conx-portao__ic { font-size: 40px; }
+.conx-google { display: inline-flex; align-items: center; gap: 10px; }
+.conx-g { width: 24px; height: 24px; border-radius: 50%; background: #fff; color: #4285f4; font-weight: 900; display: grid; place-items: center; }
+.conx details ul { padding-left: 18px; margin: 6px 0 0; }
