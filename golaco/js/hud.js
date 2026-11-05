@@ -119,7 +119,7 @@ export function criarHud(opc) {
   const ag = el.autorGol ? {
     sr: el.autorGol.querySelector('.ag-sr'), foto: el.autorGol.querySelector('.ag-foto'), img: el.autorGol.querySelector('.ag-foto img'),
     use: el.autorGol.querySelector('.ag-escudo use'), sigla: el.autorGol.querySelector('.ag-sigla'), num: el.autorGol.querySelector('.ag-num'),
-    completo: el.autorGol.querySelector('.ag-nome-completo'), curto: el.autorGol.querySelector('.ag-nome-curto'),
+    nome: el.autorGol.querySelector('.ag-nome'),
   } : null;
   // a largura que sobra à direita do placar (refeita no resize enquanto o cartão está na tela)
   const medirAutorGol = () => {
@@ -1391,7 +1391,7 @@ export function criarHud(opc) {
     get tercoTipo() { return tercoTipo; },
     /**
      * O CARTÃO DO AUTOR do gol na comemoração (item 31; o canto de cima à direita, na linha do placar, dentro da camada
-     * #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, curto, foto}
+     * #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, foto}
      * — a foto (só a da edição pro do TM, já decodificada: main.js fotoPronta) ou null = só o texto, numa linha. Exceção
      * escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI e as tarjas das cenas): só dentro da
      * cena, nunca com a bola rolando; sem minuto nem "GOL". Não pega toque (o toque na camada pula a cena). spec.fotoEl: a
@@ -1409,8 +1409,7 @@ export function criarHud(opc) {
       ag.sigla.textContent = spec.sigla ?? '';
       if (spec.escudo) ag.use.setAttribute('href', spec.escudo); else ag.use.removeAttribute('href');
       ag.num.textContent = String(spec.num ?? '');
-      ag.completo.textContent = spec.nome ?? '';
-      ag.curto.textContent = spec.curto ?? spec.nome ?? '';
+      ag.nome.textContent = spec.nome ?? '';
       e.style.setProperty('--cor-time', spec.cor1 || '');
       e.style.setProperty('--cor-time-texto', spec.cor2 || '');
       ag.sr.textContent = `Autor do gol: ${spec.nome ?? ''}${spec.num !== '' && spec.num != null ? `, camisa ${spec.num}` : ''}${spec.nomeTime ? `, ${spec.nomeTime}` : ''}`;
@@ -1448,7 +1447,7 @@ export function criarHud(opc) {
       };
       // (visível de verdade: a pausa aberta e o replay o escondem por visibility — css/estilo.css)
       const vis = !e.hidden && !!e.offsetParent && getComputedStyle(e).visibility !== 'hidden';
-      const nomeEl = [ag.completo, ag.curto].find(n => n.getClientRects().length > 0) ?? null;
+      const nomeEl = ag.nome.getClientRects().length > 0 ? ag.nome : null;
       const fotoVis = vis && !ag.foto.hidden && ag.foto.getClientRects().length > 0;
       return {
         visivel: vis, saindo: e.classList.contains('saindo'), foto: fotoVis && ag.img.complete && ag.img.naturalWidth > 0,

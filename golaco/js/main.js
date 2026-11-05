@@ -1606,7 +1606,9 @@ function dadosAutorGol(id, t) {
   return {
     id, sigla: el?.sigla ?? hud.times[t]?.sigla ?? '', nomeTime: el?.nome ?? hud.times[t]?.nome ?? '', cor1: ct.cor, cor2: ct.texto,
     escudo: document.getElementById(`escudo-${t}`)?.getAttribute('href') ?? null,
-    num: f.num ?? '', nome: f.nome ?? String(id), curto: f.camisa ?? f.nome ?? String(id), foto: fotoPronta(id),
+    // o nome COMPLETO também no celular (o de camisa do tm-times corta o último nome em 10 letras sem reticências — "Evangelist" —
+    // e no nome composto fica só o fim: revisão V1); o que não couber corta com reticências no --ag-esq
+    num: f.num ?? '', nome: f.nome ?? String(id), foto: fotoPronta(id),
     // a mesma <img> já decodificada da pré-carga: pinta no 1º quadro do cartão
     fotoEl: FOTOS.ok.has(id) ? FOTOS.im.get(id) ?? null : null,
   };

@@ -133,7 +133,7 @@ async function acompanhar(pg, gol, opc = {}) {
         }
         out.q.push({ t: e.t, fase: e.fase, plano: e.plano, estado: e.estado, tick: m.tick, alt: tela ? tela.altura : 0, dentro: !!(tela && tela.dentro), minuto: g.estado().relogio.minuto, parada,
           gol: document.getElementById('gol-tela').classList.contains('visivel'), mapa: vis('minimapa'), menu: vis('btn-menu'), painel: vis('#hud .painel-jogo'), placar: vis('#hud .placar'),
-          n: out.n, rp: !!rp?.ativo, ca: e.cartao ?? null, co: !!e.contra, cu: !!e.curta, ag: ag ? { saindo: ag.saindo, foto: ag.foto, fotoSrc: ag.fotoSrc, num: ag.num, nome: ag.nome, caixa: ag.caixa, fotoCaixa: ag.fotoCaixa, letraNum: ag.letraNum, letraNome: ag.letraNome } : null,
+          n: out.n, rp: !!rp?.ativo, ca: e.cartao ?? null, co: !!e.contra, cu: !!e.curta, ag: ag ? { saindo: ag.saindo, foto: ag.foto, fotoSrc: ag.fotoSrc, num: ag.num, nome: ag.nome, caixa: ag.caixa, fotoCaixa: ag.fotoCaixa, letraNum: ag.letraNum, letraNome: ag.letraNome, cortado: ag.cortado, textoCaixa: ag.textoCaixa } : null,
           ab: tela && !tela.atras ? { x0: tela.x0, y0: tela.y0, x1: tela.x1, y1: tela.y1 } : null });
         if (opc.pular && e.estado === 'rodando' && e.t >= opc.pular.em && !out.apertou) { out.apertou = { t: e.t, n: out.n }; window.__aperta = true; break; }
       } else if (m.partida.estado === 'gol' && !out.q.length) {
@@ -469,12 +469,21 @@ if (faz('F')) try {
 // H3/H4/H7: o pedido do TM (PED_A) com as fotos pela rota /__fotos/ desta origem
 const ORIGEM = new URL(srv.url).origin;
 /** Espera as fotos da edição pro assentarem (todas as pedidas prontas ou com erro); null sem a API (a base). */
+// (revisão V1) nomes com o último nome de mais de 10 letras: a camisa do tm-times corta em 10 sem reticências ("Albuquerqu") —
+// o cartão mostra o nome COMPLETO da ficha também no celular
+const PRENOMES = ['Rodrigo', 'Matheus', 'Gabriel', 'Leandro', 'Vinícius', 'Henrique', 'Eduardo', 'Fernando', 'Leonardo', 'Ricardo', 'Augusto', 'Benedito', 'Cristiano', 'Domingos', 'Emanuel', 'Fabrício', 'Gustavo', 'Heitor'];
+const nomesLongos = ped => {
+  for (const t of [ped.home, ped.away]) t.players.forEach((p, i) => { const n = PRENOMES[i % PRENOMES.length]; p.nomeCompleto = `${n} Albuquerque`; p.name = `${n[0]}. Albuquerque`; });
+  return ped;
+};
+/** A ficha do jogador (o nome completo e a camisa) na página. */
+const fichaNaPagina = (pg, id) => pg.evaluate(async id => { const { fichaDe } = await import('./js/elenco.js'); const f = fichaDe(id); return f ? { num: String(f.num), nome: f.nome, camisa: f.camisa } : null; }, id);
 const esperarFotos = (pg, ms = 45000) => pg.waitForFunction(() => { const f = window.__golaco.tm?.fotos; return !f || (f.pedidas >= 22 && f.prontas + f.erros >= f.pedidas); }, null, { timeout: ms, polling: 250 })
   .then(() => pg.evaluate(() => { const f = window.__golaco.tm?.fotos; return f ? { n: f.n, pedidas: f.pedidas, prontas: f.prontas, erros: f.erros } : null; })).catch(() => null);
 if (faz('H')) {
   // H3 celular 844×390, TM pro com as fotos
   try {
-    const ped = comFotos({ ...PED_A, id: 'f31cel' }, ORIGEM);
+    const ped = nomesLongos(comFotos({ ...PED_A, id: 'f31cel' }, ORIGEM));
     const P = await pagina(`?q=baixa&hora=noite&tm=${ped.id}&corpo=manequim&toque=1&entalhe=1`, { largura: 844, altura: 390, dpr: 1, toque: true, pedido: ped });
     try {
       const pg = P.pagina;
@@ -494,6 +503,9 @@ if (faz('H')) {
         'a do autor; 88–96; ≥ 22; ≥ 14', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 88 && lado <= 96 && a.letraNum >= 22 && a.letraNome >= 14);
       const e = encostos(r, c);
       meta('H2 celular 844×390 com o entalhe (?tm pro): sem encostar no placar nem no "Pular", na área segura; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+      const fi = await fichaNaPagina(pg, gol.autor);
+      meta('H10 celular 844×390 (com foto): o nome COMPLETO da ficha, sem cortar (não o da camisa, cortado em 10 letras)', a?.visivel ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
+        'o completo; sem reticências', !!a?.visivel && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
       // o gol contra no mesmo mundo
       const gc = await golRoteirizado(pg, { semente: 5, time: 0, contra: true });
       const rc = await acompanhar(pg, gc);
@@ -505,7 +517,7 @@ if (faz('H')) {
   } catch (e) { meta('H3 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H4 celular 568×320, TM público com as mesmas fotos no pedido
   try {
-    const ped = comFotos({ ...PED_A, id: 'f31pub' }, ORIGEM, { edicao: 'public' });
+    const ped = nomesLongos(comFotos({ ...PED_A, id: 'f31pub' }, ORIGEM, { edicao: 'public' }));
     const P = await pagina(`?q=baixa&hora=dia&tm=${ped.id}&corpo=manequim&toque=1`, { largura: 568, altura: 320, dpr: 1, toque: true, pedido: ped });
     try {
       const pg = P.pagina;
@@ -518,6 +530,9 @@ if (faz('H')) {
         'sem; 0; ≥ 22; ≥ 14', !!a && !a.foto && !a.fotoCaixa && P.fotos.pedidos === 0 && a.letraNum >= 22 && a.letraNome >= 14);
       const e = encostos(r, c);
       meta('H2 celular 568×320: sem encostar no placar nem no "Pular"; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+      const fi = await fichaNaPagina(pg, gol.autor);
+      meta('H10 celular 568×320 (sem foto): o nome COMPLETO da ficha, sem cortar', a ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
+        'o completo; sem reticências', !!a && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
     } finally { await P.fechar(); }
   } catch (e) { meta('H4 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H5 a cena curta e H6 pular com o cartão na tela (PC, sem ?tm)

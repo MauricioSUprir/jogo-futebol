@@ -1057,8 +1057,6 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 .ag-sigla { font-size: var(--ag-sigla); font-weight: 900; letter-spacing: 0.08em; line-height: 1; }
 .ag-num { flex: none; font-size: var(--ag-num); font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 0.95; }
 .ag-nome { display: block; max-width: 100%; min-width: 0; font-size: var(--ag-nome); font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; line-height: 1.15; }
-.ag-nome-curto { display: none; }
-@media (max-height: 519px) { .ag-nome-completo { display: none; } .ag-nome-curto { display: block; } }
 .autor-gol.visivel { animation: autor-gol-entra 0.3s ease-out both; }
 .autor-gol.saindo { animation: autor-gol-sai 0.2s ease-in both; }
 @keyframes autor-gol-entra { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
