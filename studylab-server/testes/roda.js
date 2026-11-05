@@ -31,6 +31,7 @@ let ultimoGemini = null;
 let chamadasGemini = [];                // modelos chamados, em ordem
 const geminiFalha = {};                 // modelo → { status, msg } para simular cota/sumiço
 let assinaturasMP = 0;
+const whatsappEnviados = [];
 /* ---- Google dublado: o "code" diz quem entra e o que foi permitido ---- */
 const google = { revogados: [], refreshPedidos: 0, codigos: {} };
 const jwtFalso = (p) => ['e30', Buffer.from(JSON.stringify(p)).toString('base64url'), 'x'].join('.');
@@ -136,6 +137,10 @@ globalThis.fetch = async (url, opcoes) => {
       usage: { input_tokens: 120, output_tokens: 45 },
       stop_reason: 'end_turn',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
+  if (alvo.startsWith('https://graph.facebook.com/')) {
+    whatsappEnviados.push({ url: alvo, corpo: JSON.parse(opcoes.body), auth: opcoes.headers.authorization });
+    return resp({ messages: [{ id: 'wamid.1' }] });
   }
   if (alvo === 'https://oauth2.googleapis.com/token') {
     const c = new URLSearchParams(String(opcoes.body));
@@ -772,6 +777,53 @@ console.log('\n== conexões (Google e calendário por link) ==');
   conferir(r.status === 400 && /não é público/.test(r.dados.erro),
     'redirecionamento para endereço interno não é seguido', `${r.status} ${r.dados.erro}`);
   srvIcs.close();
+}
+
+console.log('\n== criar conta (nome, e-mail, número, senha, foto) e WhatsApp ==');
+{
+  const foto = 'data:image/jpeg;base64,' + Buffer.from('foto-fake').toString('base64');
+  let r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@', telefone: '11987654321', senha: '12345678' } });
+  conferir(r.status === 400 && /e-mail/.test(r.dados.erro), 'e-mail errado é recusado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@escola.com', telefone: '123', senha: '12345678' } });
+  conferir(r.status === 400 && /DDD/.test(r.dados.erro), 'número sem DDD é recusado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Gui', email: 'gui@escola.com', telefone: '11987654321', senha: '123' } });
+  conferir(r.status === 400 && /8 caracteres/.test(r.dados.erro), 'senha curta é recusada');
+
+  // o aluno já usava o app pelo aparelho, com o Pro: a conta nova é a MESMA (o plano fica)
+  const ap = await pedir('POST', '/entrar', { corpo: { dispositivo: { id: 'ap_conta_email', segredo: 'segredo-123', nome: 'Gui' } } });
+  await pedir('POST', '/codigo', { token: ap.dados.token, corpo: { codigo: 'TESTE7' } });
+  r = await pedir('POST', '/conta/criar', { token: ap.dados.token, corpo: { nome: 'Guilherme Rodrigues', email: 'Gui@Escola.com', telefone: '(11) 98765-4321', senha: 'senha-forte-1', foto } });
+  conferir(r.status === 200 && r.dados.usuario.id === 'ap_conta_email' && r.dados.usuario.provedor === 'email' && r.dados.plano === 'pro',
+    'cria a conta na mesma conta do aparelho (o Pro continua)', JSON.stringify(r.dados.usuario));
+  conferir(r.dados.usuario.telefone === '5511987654321' && r.dados.usuario.foto === foto, 'guarda o número no formato do WhatsApp e a foto');
+  conferir(r.dados.whatsapp === 'desligado' && whatsappEnviados.length === 0, 'sem as chaves do WhatsApp, nada é enviado (e a conta é criada)');
+  const { contaPorEmail } = await import('../src/db.js');
+  const guardada = await contaPorEmail('gui@escola.com');
+  conferir(guardada && !String(guardada.senha_hash).includes('senha-forte-1') && guardada.senha_hash.startsWith('scrypt$'), 'a senha é guardada só como hash');
+
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Outro', email: 'gui@escola.com', telefone: '11911112222', senha: '12345678' } });
+  conferir(r.status === 409, 'e-mail repetido: pede para entrar');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'GUI@escola.com', senha: 'errada123' } });
+  conferir(r.status === 401, 'senha errada não entra');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'gui@escola.com', senha: 'senha-forte-1' } });
+  conferir(r.status === 200 && r.dados.usuario.id === 'ap_conta_email' && r.dados.plano === 'pro', 'entra com e-mail e senha em outro aparelho (com o plano)');
+
+  // com as chaves, a boas-vindas sai pelo WhatsApp
+  process.env.WHATSAPP_TOKEN = 'token-whats'; process.env.WHATSAPP_NUMERO_ID = '1234567890'; process.env.WHATSAPP_TEMPLATE = 'boas_vindas';
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Lara Souza', email: 'lara@escola.com', telefone: '21 99876-5432', senha: '12345678' } });
+  const w = whatsappEnviados[0];
+  conferir(r.dados.whatsapp === 'enviado' && w?.url.includes('/1234567890/messages') && w.corpo.to === '5521998765432'
+    && w.corpo.template.name === 'boas_vindas' && w.corpo.template.language.code === 'pt_BR'
+    && w.corpo.template.components[0].parameters[0].text === 'Lara' && w.auth === 'Bearer token-whats',
+    'com as chaves, manda a boas-vindas no WhatsApp com o primeiro nome', JSON.stringify(w?.corpo));
+  delete process.env.WHATSAPP_TOKEN; delete process.env.WHATSAPP_NUMERO_ID; delete process.env.WHATSAPP_TEMPLATE;
+
+  // Conexões: conta de e-mail entra, mas só no Pro
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: r.dados.token, corpo: { servico: 'agenda', volta: 'http://localhost:9999/x/' } });
+  conferir(r.status === 402 && /Pro/.test(r.dados.erro), 'Conexões são do Pro', `${r.status} ${r.dados.erro}`);
+  const pro = await pedir('POST', '/conta/entrar', { corpo: { email: 'gui@escola.com', senha: 'senha-forte-1' } });
+  r = await pedir('POST', '/conexoes/google/iniciar', { token: pro.dados.token, corpo: { servico: 'agenda', volta: 'http://localhost:9999/x/' } });
+  conferir(r.status === 200 && r.dados.url.startsWith('https://accounts.google.com/'), 'com o Pro, a conta de e-mail liga a Agenda');
 }
 
 console.log('\n== amizades, chat, foguinho e duelo em tempo real ==');

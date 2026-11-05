@@ -23,7 +23,7 @@ import {
   migrar, salvarUsuario, entrarPorDispositivo, assinaturaAtiva, criarAssinatura, cancelarAssinatura,
   usarCodigo, criarCodigo, usoDoDia, usoDoMes, registrarUso, numeros, emMemoria,
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
-  usuarioPorId, entrarComGoogle, salvarConexao, conexoesDo, conexaoDe, apagarConexao, marcarSincronizado,
+  usuarioPorId, entrarComGoogle, salvarConexao, criarContaEmail, contaPorEmail, senhaConfere, atualizarFoto, conexoesDo, conexaoDe, apagarConexao, marcarSincronizado,
 } from './db.js';
 import {
   SERVICOS_GOOGLE, googleLigado, configPublica, urlAutorizacao, lerEstado, trocarCodigo, quemEntrou,
@@ -32,6 +32,7 @@ import {
 } from './conexoes.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
 import { criarRotasSociais } from './social.js';
+import { whatsappLigado, normalizarTelefone, enviarBoasVindas } from './whatsapp.js';
 import { migrarSocial } from './social-db.js';
 import {
   perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso, escadaGemini, estadoEscada, tamanhoCache,
@@ -134,6 +135,7 @@ const rotas = {
       chaveConfigurada: temChaveIA(),
       googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,     // opcional: dá para usar conta de aparelho
       conexoesProntas: googleLigado(),                       // conta Google + Agenda/Classroom/Drive
+      whatsappConfigurado: whatsappLigado(),                 // boas-vindas no WhatsApp ao criar conta
       enderecoDeVoltaGoogle: urlDeVolta(),                   // é este que vai no Google Cloud
       pagamentoConfigurado: pagamentoLigado(),
       studyAiPronto: temChaveIA() && !!process.env.SEGREDO,
@@ -396,6 +398,48 @@ const rotas = {
     }
   },
 
+  /* ---------- conta com e-mail e senha (o app pede antes do questionário) ---------- */
+  'POST /conta/criar': async (req) => {
+    const c = await lerCorpo(req, 400000);
+    const nome = String(c.nome || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const email = String(c.email || '').trim().toLowerCase();
+    const telefone = normalizarTelefone(c.telefone);
+    const senha = String(c.senha || '');
+    const foto = String(c.foto || '');
+    if (nome.length < 2) throw Object.assign(new Error('Escreva seu nome.'), { status: 400 });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) || email.length > 120) throw Object.assign(new Error('Esse e-mail não parece certo.'), { status: 400 });
+    if (!telefone) throw Object.assign(new Error('Número com DDD, só números (ex.: 11 98765-4321).'), { status: 400 });
+    if (senha.length < 8 || senha.length > 100) throw Object.assign(new Error('A senha precisa ter pelo menos 8 caracteres.'), { status: 400 });
+    if (foto && (!/^data:image\/(jpeg|png|webp);base64,[\w+/=]+$/.test(foto) || foto.length > 200000)) {
+      throw Object.assign(new Error('Foto em formato inesperado (use JPG ou PNG).'), { status: 400 });
+    }
+    if (muitasBatidas(`conta:${ipDe(req)}`, 5, 3600000)) throw Object.assign(new Error('Muitas contas criadas daqui. Tente mais tarde.'), { status: 429 });
+    const atual = await alunoDaRequisicao(req);                 // conta do aparelho: vira a conta de verdade
+    const u = await criarContaEmail({ nome, email, telefone, senha, foto }, atual?.id || null);
+    if (!u) throw Object.assign(new Error('Esse e-mail já tem conta. Toque em "Já tenho conta" para entrar.'), { status: 409 });
+    const whatsapp = await enviarBoasVindas({ telefone, nome });
+    return { ...(await respostaDeEntrada(u)), whatsapp };
+  },
+
+  'POST /conta/entrar': async (req) => {
+    const { email, senha } = await lerCorpo(req);
+    const e = String(email || '').trim().toLowerCase();
+    if (muitasBatidas(`login:${ipDe(req)}:${e}`, 8, 600000)) throw Object.assign(new Error('Muitas tentativas. Espere 10 minutos.'), { status: 429 });
+    const u = await contaPorEmail(e);
+    if (!u || !senhaConfere(senha, u.senha_hash)) throw Object.assign(new Error('E-mail ou senha errados.'), { status: 401 });
+    return respostaDeEntrada(u);
+  },
+
+  'POST /conta/foto': async (req) => {
+    const aluno = await exigirAluno(req);
+    const { foto } = await lerCorpo(req, 400000);
+    if (!/^data:image\/(jpeg|png|webp);base64,[\w+/=]+$/.test(String(foto || '')) || foto.length > 200000) {
+      throw Object.assign(new Error('Foto em formato inesperado (use JPG ou PNG).'), { status: 400 });
+    }
+    await atualizarFoto(aluno.id, foto);
+    return { ok: true };
+  },
+
   'POST /conta/troca': async (req) => {
     const { ticket } = await lerCorpo(req);
     const id = await usarTicket(ticket);
@@ -405,7 +449,7 @@ const rotas = {
   },
 
   'GET /conexoes': async (req) => {
-    const u = await exigirContaGoogle(req);
+    const u = await exigirContaGoogle(req, { pro: false });
     const lista = await conexoesDo(u.id);
     return {
       conexoes: lista.map((c) => ({
@@ -520,6 +564,8 @@ const rotasDinamicas = [
   },
 ];
 
+const ipDe = (req) => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+
 /* ---------- conexões: utilidades ---------- */
 const REDIRECIONA = Symbol('redireciona');
 const URL_APP = (process.env.URL_APP || 'https://guidrodrigues21-a11y.github.io/mindtrack-ai/').replace(/#.*$/, '');
@@ -535,13 +581,16 @@ function conferirVolta(volta) {
   return `${u.origin}${u.pathname}${u.search}`;
 }
 
-/** As Conexões só funcionam com conta de verdade (entrou com o Google). */
-async function exigirContaGoogle(req) {
+/** As Conexões precisam de conta de verdade (Google ou e-mail e senha) e são do Pro. */
+async function exigirContaGoogle(req, { pro = true } = {}) {
   const aluno = await exigirAluno(req);
   const u = await usuarioPorId(aluno.id);
   if (!u) throw Object.assign(new Error('Faça login de novo.'), { status: 401 });
-  if (u.provedor !== 'google') {
-    throw Object.assign(new Error('As Conexões precisam de uma conta: entre com o Google primeiro.'), { status: 403, precisaConta: true });
+  if (!['google', 'email'].includes(u.provedor)) {
+    throw Object.assign(new Error('As Conexões precisam de uma conta: crie sua conta ou entre com o Google.'), { status: 403, precisaConta: true });
+  }
+  if (pro && !(await assinaturaAtiva(u.id))) {
+    throw Object.assign(new Error('As Conexões são do MindTrack Pro.'), { status: 402, precisaPro: true });
   }
   return u;
 }
@@ -550,7 +599,7 @@ async function respostaDeEntrada(u) {
   const token = await criarSessao({ id: u.id, email: u.email || '', nome: u.nome || '' });
   const assinatura = await assinaturaAtiva(u.id);
   return {
-    token, usuario: { id: u.id, nome: u.nome, email: u.email || '', foto: u.foto || '', provedor: u.provedor || 'google' },
+    token, usuario: { id: u.id, nome: u.nome, email: u.email || '', foto: u.foto || '', telefone: u.telefone || '', provedor: u.provedor || 'google' },
     ...resumoAssinatura(assinatura),
   };
 }
