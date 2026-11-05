@@ -436,9 +436,9 @@ elencos antes do código.
   o [<] volta sem simular a disputa (`tm3d:sair`); os discos da Visão tática com papel e nome para o leitor de tela e as áreas
   desenhadas; no toque, sem anel de foco; a aba do foco com um indicador só; a camisa escura aparece no busto e na barra; o
   clássico sem repetir "Clássico"; a letra do resto ≥ 11/12 px também no VOCÊ (que subiu para cima do filete), na ordem dos
-  cobradores, nas teclas e na competição. Ficaram (decisão do dono ou maiores; FILA itens 100–107): as fotos nas fichas (item
-  31), o fundo desfocado e sem o 3D competindo (item 102), o nome embaixo de cada disco (item 103), o selo grande da competição
-  no PC (item 104), a moldura mais fina (gosto: "Depende do dono" 19) e o editor com a cara da tela (item 105).
+  cobradores, nas teclas e na competição. Ficaram (decisão do dono ou maiores; FILA itens 100–107): as fotos nas fichas (feitas
+  no item 31: §10.1), o fundo desfocado e sem o 3D competindo (item 102), o nome embaixo de cada disco (item 103), o selo
+  grande da competição no PC (item 104), a moldura mais fina (gosto: "Depende do dono" 19) e o editor com a cara da tela (item 105).
 - **Antes → depois** (base 30ce999f × o item 64; `teste-prepartida-tela`, `teste-carga`, os hashes; na base o teste novo passa 7
   de 18 medidas e reprova 11):
 
@@ -645,7 +645,7 @@ pelves a ≥ 0,47 m; pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; quem 
 por tick (22 atores; a simulação custa ~0,6 ms por passo); hash do mundo igual antes e depois; a saída no mesmo tick (gol +
 150) com o mesmo hash que sem a cena.
 
-### 10.1 O cartão do autor do gol: a foto, o número e o nome (item 31, dono 17/10; `js/autor-cartao.js`, `js/tm-fotos.js`, `hud.js`, `main.js`, `css/estilo.css`, `css/tm.css`, `legacy-total-match/js/tm3d.js`)
+### 10.1 O cartão do autor do gol: a foto, o número e o nome (item 31, dono 17/10; `js/autor-cartao.js`, `js/tm-fotos.js`, `hud.js`, `main.js`, `css/estilo.css`, `css/tm.css`, `js/prepartida-tela.js`, `css/prepartida.css`, `legacy-total-match/js/tm3d.js`)
 
 "Na cena de comemoração, a FOTO do autor com o número e o nome; a foto vem do pedido do TM." O cartão entra 0,4 s depois do
 1º corte da cena (o "GOL!" sai nele: um texto por vez), fica 3,5 s (a cena curta, 2,6 s) e sai pelo menos 0,5 s antes do
@@ -680,10 +680,14 @@ o último nome em 10 letras sem reticências ("Evangelist", e no nome composto s
 número vai na pílula (17,8 / 15,6 px) e a coluna fica no meio da foto; (V4) sem foto, a barra tinha 35–47 px ao lado de um placar
 de 26–30 — agora a mesma altura; (V2) a camisa de outro clube na foto (Samuel Lino com a do Atlético de Madrid): o pé da foto
 escurece até o fundo do cartão (luminância das linhas a 80/90/97% da altura: 38/28/21); enquadrar foto a foto pela caixa do rosto
-fica com o dono.
+fica com o dono (item 112). Também da revisão: sem espaço no localStorage o TM grava o pedido sem as fotos (R2: o 3D abre) e o
+selo "Conexão instável" do online espera a cena (R3).
 
 O que ficou sem confirmar: nenhum vídeo medido quadro a quadro (o YouTube pediu verificação de robô); Champions, LaLiga,
-Bundesliga, Globo, Premiere, CazéTV e eFootball sem captura do grafismo do autor.
+Bundesliga, Globo, Premiere, CazéTV e eFootball sem captura do grafismo do autor. Ficaram para depois (FILA): a foto nas cartas
+da escalação do pré-jogo (item 110: no celular não cabe sem refazer o item 29), os tempos do CI (item 111), o enquadramento foto a
+foto (item 112) e o que não rodou — o online com edições diferentes, o Livre e os Pênaltis com as fotos, a foto ao lado do boneco
+fora dos rostos reais (revisão V5, item 113); a foto chegando pela rede de um celular de verdade só o dono confere.
 
 ## 11. Cena de substituição e faixa ENTRA/SAI (`js/substituicao.js`, `render/placa-subst.js`, `main.js`, `hud.js`; pedido do dono de 12/10)
 

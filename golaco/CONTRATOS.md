@@ -569,7 +569,8 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   null)`, `estadoSaot`. `main.js desenharReplay`: na análise só os jogadores do lance (`soDaCena`, lista de referências;
   `jogador3d.js` não muda), `linhaImped.mostrarSaot`, `hud.terco(...)` só com `decidido`; `fimReplay` apaga os dois.
   Cores: impedimento #ff3b30, legal #19e07a, parede branco-gelo #eef6ff, plano neutro #d8dee2, pulso #6fc3ff.
-- **Selo e terço de baixo** — a ÚNICA exceção à "sem narração" (dono, 12/10): `index.html #terco` (irmão de `#replay`,
+- **Selo e terço de baixo** — a exceção à "sem narração" de 12/10 (dono; a única naquele dia: depois vieram a faixa ENTRA/SAI,
+  o nome do condutor, as tarjas das cenas e o cartão do autor do gol, item 31): `index.html #terco` (irmão de `#replay`,
   z-index 31, `pointer-events: none`, `data-caixa="terco"`, canto de baixo à esquerda), `hud.terco(spec | null)` (só mexe
   no DOM quando o tipo muda; `spec.tipo` 'impedimento' → "IMPEDIMENTO", 'legal' → "POSIÇÃO LEGAL"; exatamente esses
   textos, sem nome nem minuto; a cena de substituição acrescenta o tipo dela), `hud.tercoTipo`. Só no quadro final da
@@ -802,15 +803,16 @@ Constantes em `config.js COMEMORACAO`.
 - **HUD (`hud.js`, `index.html`, `css/estilo.css`)**: `hud.comemoracao(ativo)` (classe `em-comemoracao`: minimapa, menu,
   avisos, barra de força, cartão, dica, painel, faixa e botões de toque somem — só o placar e o "GOL!" até o 1º corte;
   camada `#comemoracao` com o "Pular" só com toque, ≥ 48 px no canto de baixo à direita), `hud.cortina()` (a faixa verde).
-- **Cartão do autor (item 31; dono, 17/10: "a FOTO do autor com o número e o nome"; `PESQUISA-ESTADIO.md` §10.1)**:
+- **Cartão do autor (item 31, PR #615; dono, 17/10: "a FOTO do autor com o número e o nome"; `PESQUISA-ESTADIO.md` §10.1)**:
   `#autor-gol` DENTRO da camada `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à DIREITA na linha do
   placar (o único lugar medido livre do autor, dos outros e do HUD em todos os planos, PC e celular). Mostra a foto (só a da
   edição pro do TM, abaixo) e a coluna [pílula do time: escudo + sigla | número / NOME]: o nome COMPLETO da ficha é a linha
   principal (peso 800), também no celular (o de camisa do `tm-times` corta o último nome em 10 letras sem reticências —
   revisão V1), o número vai na pílula depois de um filete (1,3 × a sigla — revisão V3) e a coluna fica centrada na altura da
-  foto; o pé da foto escurece até a cor do fundo do cartão (42% de baixo: a camisa de outro clube some quase toda — revisão
-  V2). Sem minuto nem "GOL"; sem foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`; os topos e os pés alinhados,
-  as letras 0,6/0,55 × a altura — revisão V4) — nada desenhado no lugar. Medidas pela altura da janela: foto
+  foto; o pé da foto escurece até a cor do fundo do cartão (42% de baixo: some a maior parte da camisa de outro clube, mas as
+  listras logo abaixo do queixo continuam — revisão V2; o enquadramento foto a foto é o item 112). Sem minuto nem "GOL"; sem
+  foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`; os topos e os pés alinhados, as letras 0,6/0,55 × a altura —
+  revisão V4) — nada desenhado no lugar. Medidas pela altura da janela: foto
   `clamp(96px, 18vh, 196px)` no PC e `clamp(64px, 23.5vh, 96px)` no celular deitado, nome `clamp(22px, 4vh, 40px)` /
   `clamp(18px, 5.4vh, 20px)`, sigla 13–20 / 12 px; `max-width` até a direita do placar + 12 px (o hud mede: `--ag-esq`; o nome
   que não couber corta com reticências). Quando: `js/autor-cartao.js`
@@ -820,7 +822,8 @@ Constantes em `config.js COMEMORACAO`.
   a cada quadro (o `kFim` encurta). A página (`main.js quadroCartaoAutor`) anda pelo relógio da CENA (parado na pausa; a
   animação do CSS só enfeita: entra 0,3 s, sai 0,2 s) e mexe no DOM só nas trocas de fase; nunca antes do 1º corte; os dados
   (`dadosAutorGol`, a montagem da tarja das cenas) são lidos na entrada — com a foto já decodificada, a MESMA `<img>` da
-  pré-carga (pinta no 1º quadro) —, e o cartão nunca muda de forma depois. Pular, a cena encerrada (saída, intervalo, fim,
+  pré-carga (pinta no 1º quadro) —, e o cartão nunca muda de forma depois (só a foto que falhar depois de entrar — cache
+  limpo, rede — o deixa só com o texto, na hora: `hud.js fotoFalhou`). Pular, a cena encerrada (saída, intervalo, fim,
   Reiniciar, Simular o resto, a cena do cartão no gol + 149) = some na hora (`apagarCartaoAutor`). Com a pausa aberta e no
   "Replay" da pausa pedido no meio da cena (o comando não espera a cena: a jogada com a bola rolando, a marca REPLAY no mesmo
   canto) ele fica escondido (`html.pausa-aberta`/`html.em-replay`, `visibility`; revisão R1) e volta onde estava se a cena
@@ -836,7 +839,8 @@ Constantes em `config.js COMEMORACAO`.
   `fotoAceita` só deixa `data:image/(jpeg|png|webp);base64` até 48 000 caracteres ou http(s) absoluto da MESMA origem.
   `garantirFoto(id)` pede uma vez (os 22 em campo, quem entra na substituição, o autor no gol) e decodifica (`img.decode()`);
   `fotoPronta(id)` só devolve a já decodificada. API `__golaco.tm.fotos` ({n, pedidas, prontas, erros, primeiraEm, prontoEm,
-  de(id)}).
+  de(id)}). Sem `?tm` (e na edição pública) o `tm-fotos.js` e as fotos nunca são pedidos, nem na pré-carga (`teste-carga`,
+  lista `SO_TM_ARQ`; `teste-comemoracao-tela` H4: 0 pedidos).
 - **API (`window.__golaco.comemoracao`)**: `ativa`, `estado` ({fase, t, duracao, k, estado: 'rodando' | 'solta', rapida,
   autor, alvo, variante, corrida, curta, time, golTick, colegas, reacao, contra, plano, kFinal, kFimFinal, kFimAbraco,
   kFim, kPulo, cartao: {id, entra, sai, fase, mostrado, foto} | null}), `cartaoTela` (o `hud.autorGolEstado`), `atores()`,
@@ -2161,14 +2165,15 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   `pixelRatio` baixo atrás da tela (item 102, decisão do dono); o nome embaixo de cada disco da Visão tática (item 103); o selo
   grande da competição no alto do PC (item 104); o Editar time com a cara da tela (item 105); a "tela cedo", durante o
   carregamento (item 106, decisão do dono); o Personalizar no online (item 107, decisão do dono); as FOTOS no lugar do busto
-  (item 31, só a edição pro); a dificuldade e o clima na linha de informação (item 33). Nada foi medido num celular de verdade.
+  (feitas no item 31, #615, só a edição pro: abaixo); a dificuldade e o clima na linha de informação (item 33). Nada foi medido
+  num celular de verdade.
 
-- **A foto da edição pro nas fichas (item 31)**: `criarPrepartida({…, fotoDe(id)})` (a página passa `fotoPronta`: só a já
+- **A foto da edição pro nas fichas (item 31, #615)**: `criarPrepartida({…, fotoDe(id)})` (a página passa `fotoPronta`: só a já
   decodificada) e `pp.fotoChegou(id, u)` (a página liga `FOTOS.aoChegar`): a `<img class="pp-foto">` entra no `.pp-miolo` POR
   CIMA do busto (a reserva: sem foto, com erro, no regime de emergência sem rosto), recortada pelo chanfro — a ficha não muda de
   medida (L1 do `teste-prepartida` intocado). As fotos chegam depois do `pronto` e trocam o busto ficha a ficha (fade de 0,2 s),
-  sem refazer a tela. As cartas da escalação do pré-jogo (item 29) ficam sem foto (não cabem no celular). Teste:
-  `teste-prepartida-tela` E22 (`--so fotos`).
+  sem refazer a tela. As cartas da escalação do pré-jogo (item 29) ficam sem foto (não cabem no celular: item 110); as fichas
+  não têm o degradê do pé da foto do cartão do autor (item 112). Teste: `teste-prepartida-tela` E22 (`--so fotos`).
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -2664,7 +2669,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   fecha pré-jogo, replay, comemoração, substituição e editor, a IA joga pelo humano (`entradaDemoPartida`) e `passoPartida` roda
   em pedaços de 30 ms por quadro SEM desenhar, com a faixa "Simulando o resto da partida… 63' · FLA 1 × 0 PAL"; no apito, a faixa
   do fim. `window.__golaco.tm = {id, pedido, humano, trava, mapa, controlado, simulando, mensagens, sumula(), resultado(),
-  simularResto() (Promise), resultadoGravado()}` (null sem `?tm`).
+  simularResto() (Promise), resultadoGravado(), fotos (item 31: as da edição pro, contrato "Comemoração do gol")}` (null sem
+  `?tm`).
 - **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
   como "Cenas da partida" (pré-jogo e substituição, sem os treinos), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
   fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
@@ -2675,7 +2681,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   TM imitado por um quadro pai na mesma origem: pronto, pausa, Simular o resto, faixa, `tm3d:fim`, Estrelato no celular, sem
   `?tm` nada muda; `--pedido <arquivo>` usa um pedido de verdade do TM).
 
-- **A FOTO do jogador (item 31)**: campo OPCIONAL `foto` em cada jogador do pedido (`home/away.players[i]`), só na edição PRO
+- **A FOTO do jogador (item 31, #615)**: campo OPCIONAL `foto` em cada jogador do pedido (`home/away.players[i]`), só na edição PRO
   (o `tm3d.js` confere `TM.storage.edition()`: o `TM.img.playerPhotoUrl` não confere e devolve o `player.photo` também na
   pública): a foto real de licença livre do TM (`assets/jogadores/…`, em endereço ABSOLUTO pelo `abs`) ou a importada pela
   carreira própria (`data:image/jpeg|png|webp`, até 48 000 caracteres cada e 240 000 por time; acima, a foto fica de fora). O
