@@ -588,7 +588,7 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
   texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
   dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
-- **Tela antes do jogo** (item 64, PR #603; dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o
+- **Tela antes do jogo** (item 64, PR #613; dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o
   Total Match com cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do
   dono" 19; o que ficou nos itens 100–107): a pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo
   ao Estrelato, Livre, Pênaltis, online) ANTES do pré-jogo; nos treinos não. Barra com os dois times e a hora; estádio · data ·

@@ -33,7 +33,7 @@
 | 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599; o tempo dos lugares do estádio genérico no CI do #600) | 3,5 |
 | 92 | 🔎 Os tempos dos testes da mira na divisão do CI: acertar pelo log do 1º CI do #601 | 0,25 |
 | 93 | 🔎 O tempo do teste da pausa na divisão do CI: acertar pelo log do 1º CI do #602 | 0,25 |
-| 100 | 🔎 O tempo do teste da tela antes do jogo na divisão do CI: acertar pelo log do 1º CI do #603 | 0,25 |
+| 100 | 🔎 O tempo do teste da tela antes do jogo na divisão do CI: acertar pelo log do 1º CI do #613 | 0,25 |
 | 101 | 🔎 O que ficou fora do teste da tela antes do jogo: o tempo até ela aparecer e do Jogar ao 1º plano, o download com o TM, 4 das 5 provas de que o teste reprova sem a correção, a espera de 100 s no online e o tempo do "Simular partida" | 2 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
 
@@ -88,7 +88,7 @@
 | 34 | ✅ ⭐ **Botão de CARRINHO**: L e X na defesa (com a bola alta, lançamento) e o botão "CARRIN." no celular; desliza na bola pela perna desenhada, quem erra fica ~1,2 s no chão, falta e cartão pela Regra 12 (#597) | 14 |
 | 66 | ✅ **Câmera**: segue a bola (atraso p90 9,5 → 5,7 m, miolo 94,5 → 98,3%), a área inteira no último terço (15,9 → 96,7% com a bola nela), 6% mais aberta e o escanteio da pessoa alto (a área 7,7 → 23,6% da tela); na bola muito alta o gramado e os jogadores ficam no quadro, e no Rumo ao Estrelato o seu jogador fica no quadro (#600) | 8 |
 | 58 | ✅ **Menu de pausa igual ao do FC 24**: o jogo parado à vista, a lista de texto à esquerda (Voltar ao jogo, Editar time, Estatísticas, Replay, Opções, …) e o campinho do seu time no canto direito (número, nome, cartões, quem entra e "você"; tocar nele abre o Editar time); cabe sem rolar até o celular pequeno, com teclado, controle e toque; no PC também nas telas 4:3, 5:4 e 16:10 e na janela baixa (#602) | 8 |
-| 64 | ✅ **Tela antes do jogo** (todo modo) no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas (busto, nota, nome na letra da carta do TM), o selo da tática; Jogar partida · Visão tática (com e sem a bola) · Personalizar (+ Simular partida no TM); no online o "Pronto" dos dois; o "Jogar" liga o som e começa o pré-jogo; cabe sem rolar do celular pequeno ao PC, com teclado, controle, toque e leitor de tela (#603) | 16 |
+| 64 | ✅ **Tela antes do jogo** (todo modo) no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas (busto, nota, nome na letra da carta do TM), o selo da tática; Jogar partida · Visão tática (com e sem a bola) · Personalizar (+ Simular partida no TM); no online o "Pronto" dos dois; o "Jogar" liga o som e começa o pré-jogo; cabe sem rolar do celular pequeno ao PC, com teclado, controle, toque e leitor de tela (#613) | 16 |
 | 65 | ✅ **Mira das bolas paradas** minimalista, com a cara do TM: a linha fina branca com contorno (4 px no celular, antes até 11), o anel verde onde a bola cai, o arco verde da curva junto da bola, sem painel nem texto; no celular a curva é segurar o CHUTE ou o LANÇAMENTO e ARRASTAR o polegar para o lado (os 2 botões CURVA saíram: o HUD da cobrança 14,5 → 10,8% no celular pequeno); teclado e controle iguais; o dedo que já estava no botão antes de a mira aparecer também arrasta (#601) | 8 |
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
 | 60 | ✅ **Nome do jogador com a bola nos cantos de baixo** (o time da esquerda do placar à esquerda, o da direita à direita), sem piscar e sem pegar toque (#598) | 1,5 |
@@ -195,7 +195,7 @@
 
 ## ✅ Entregue nesta rodada
 
-- 🏟️ A tela antes do jogo no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas, Jogar partida · Visão tática · Personalizar (+ Simular partida no TM), em todo jogo antes do pré-jogo; o "Jogar" liga o som (item 64, #603)
+- 🏟️ A tela antes do jogo no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas, Jogar partida · Visão tática · Personalizar (+ Simular partida no TM), em todo jogo antes do pré-jogo; o "Jogar" liga o som (item 64, #613)
 - ⏸️ A pausa igual à do FC 24: a lista à esquerda, as opções num submenu e o campinho do seu time no canto direito (item 58, #602)
 - 🎯 A mira das bolas paradas minimalista, com a cara do TM: a linha fina branca, o anel onde a bola cai e o arco da curva junto da bola, sem painel nem texto; no celular a curva é arrastar o polegar no CHUTE ou no LANÇAMENTO (item 65, #601)
 - 🎥 A câmera que acompanha a bola e mostra a área: menos atraso, a bola mais no centro, a área inteira quando a bola está nela, 6% mais aberta e o escanteio que você cobra visto do alto (item 66, #600)

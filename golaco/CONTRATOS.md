@@ -1928,7 +1928,7 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
 
 ## Tela antes do jogo (item 64; 04/11) — a pré-partida do EA FC com a cara do TM (contrato)
 Pedido do dono (23/10, com o print da pré-partida do FC): "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e
-etc, mas é do mesmo nível" (FILA item 64, PR #603; as escolhas no "Depende do dono" 19; o que ficou nos itens 100–107). Pesquisa
+etc, mas é do mesmo nível" (FILA item 64, PR #613; as escolhas no "Depende do dono" 19; o que ficou nos itens 100–107). Pesquisa
 em `PESQUISA-ESTADIO.md` §7.5. A ORDEM do começo passa a ser: tela antes do jogo → (o "Jogar") → pré-jogo cinematográfico
 (contrato "Pré-jogo") → o apito da saída; sem a tela (webdriver, `?prepartida=0`, a reserva), a abertura "Toque para começar" de
 antes. **Só
