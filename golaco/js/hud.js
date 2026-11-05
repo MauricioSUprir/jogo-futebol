@@ -151,7 +151,7 @@ export function criarHud(opc) {
   // o "+N" e o formato de agora — só escreve o que muda
   const relogioVisto = { visivel: null, seg: null, est: null, an: null, min: null, dec: null, texto: null, extra: null, formato: null };
   let timerFaixa = null;
-  let modoAtual = null, fimDeJogo = false;
+  let modoAtual = null, fimDeJogo = false, ajustesFixos = false;
   let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução', penaltis: 'pênaltis', livre: 'modo livre' };
   /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
@@ -477,6 +477,10 @@ export function criarHud(opc) {
     raiz.classList.toggle('em-livre', livre);
     const so = livre ? 'livre' : penaltis ? 'penaltis' : partida ? 'partida' : 'treino';
     document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = !b.dataset.so.split(' ').includes(so); });
+    // a linha "Duração | Dificuldade" (item 33): some com o pedido do TM travando (ajustesFixos) e no fim do jogo do TM (lá não
+    // há "Jogar de novo"); fora do TM, no fim ela fica e muda a escolha do "Jogar de novo"
+    const linhaAj = $('linha-ajustes');
+    if (linhaAj && (ajustesFixos || (opc.tm && partida && fimDeJogo))) linhaAj.hidden = true;
     // marcador de treino só no treino de condução (no de ataque a defesa já marca)
     if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
     if (el.estadoModo) el.estadoModo.textContent = NOME_MODO[modoAtual] ?? '';
@@ -493,14 +497,15 @@ export function criarHud(opc) {
     }
     // Total Match (?tm): a partida é a do TM — sem Reiniciar nem a troca para os treinos (voltariam ao Golaço ×
     // Ventania), com "Simular o resto" (até o apito) e, no fim, "Voltar ao Total Match"; com a trava ("só o meu
-    // jogador"), sem Editar time. O submenu vira "Cenas da partida": só o pré-jogo e a cena de substituição
+    // jogador"), sem Editar time. O submenu vira "Partida e cenas" (item 33; era "Cenas da partida"): a duração e a
+    // dificuldade, o pré-jogo e as cenas
     if (opc.tm) {
       if (el.reiniciarPartida) el.reiniciarPartida.hidden = true;
       const modos = $('btn-modos');
       const txModos = modos?.querySelector('.item-txt');
-      if (txModos && txModos.textContent !== 'Cenas da partida') txModos.textContent = 'Cenas da partida';
+      if (txModos && txModos.textContent !== 'Partida e cenas') txModos.textContent = 'Partida e cenas';
       const tit = $('titulo-modos');
-      if (tit && tit.textContent !== 'Cenas da partida') tit.textContent = 'Cenas da partida';
+      if (tit && tit.textContent !== 'Partida e cenas') tit.textContent = 'Partida e cenas';
       if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }
       if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; if (b.parentElement?.classList.contains('linha-cenas')) b.parentElement.hidden = true; });
       const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
@@ -1264,6 +1269,10 @@ export function criarHud(opc) {
         el.opa.value = String(Math.round(e.toqueOpacidade * 100));
         el.saidaOpa.textContent = `${Math.round(e.toqueOpacidade * 100)}%`;
       }
+      // o tempo de jogo e a dificuldade (item 33): os textos da linha do "Modo de jogo" e a trava do pedido do TM
+      if (typeof e.duracao === 'string') { const d = $('estado-duracao'); if (d && d.textContent !== e.duracao) d.textContent = e.duracao; }
+      if (typeof e.dificuldade === 'string') { const d = $('estado-dificuldade'); if (d && d.textContent !== e.dificuldade) d.textContent = e.dificuldade; }
+      if (typeof e.ajustesFixos === 'boolean' && e.ajustesFixos !== ajustesFixos) { ajustesFixos = e.ajustesFixos; aplicarModoNoMenu(); }
     },
     mostrarQps(v) { el.qps.hidden = !v; },
     get qpsVisivel() { return !el.qps.hidden; },

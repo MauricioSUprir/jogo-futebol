@@ -753,6 +753,9 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   /* (o par do Livre em 568×320: "Bola no meu pé" entrava 2,4 px no padding da direita — com o "…" de segurança do .item-txt ele
      cortaria; 3 px a menos de cada lado dão a folga sem tirar a barra do foco de perto do texto) */
   #menu .linha-par > .btn { padding: 0 3px 0 8px; }
+  /* (a linha "Duração | Dificuldade" do item 33: em 568×320 o "Dificuldade" — 78 px de texto — não cabia nos 73,5 px de dentro
+     do botão com o padding de 16 px; com 8 px sobram 89,5 px) */
+  #menu #linha-ajustes .btn { padding: 4px 8px; }
   #menu .opcao { min-height: 32px; }
   #menu .segmentado button { height: 30px; padding: 0 8px; }
 }

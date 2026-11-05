@@ -53,6 +53,9 @@ export const COMANDOS = [
   { nome: 'Pré-jogo (ciclo)', sub: '#btn-modos', sel: '#btn-prejogo', c: 'prejogo-ciclo', so: 'todos' },
   { nome: 'Substituição (ciclo)', sub: '#btn-modos', sel: '#btn-subst', c: 'subst-ciclo', so: 'todos' },
   { nome: 'Cenas (ciclo)', sub: '#btn-modos', sel: '#btn-cenas', c: 'cenas-ciclo', so: 'todos' },
+  // (item 33: a duração e a dificuldade, só na partida)
+  { nome: 'Duração (ciclo)', sub: '#btn-modos', sel: '#btn-duracao', c: 'duracao-ciclo', so: 'partida' },
+  { nome: 'Dificuldade (ciclo)', sub: '#btn-modos', sel: '#btn-dificuldade', c: 'dificuldade-ciclo', so: 'partida' },
   { nome: 'Treino: Recomeçar', sel: '#menu-acoes [data-cmd="recomecar"]', c: 'recomecar', so: 'treino' },
   { nome: 'Treino: Máquina de passes', sel: '#menu-acoes [data-cmd="maquina"]', c: 'maquina', so: 'treino' },
   { nome: 'Treino: Marcador', sel: '#menu-acoes [data-cmd="marcador"]', c: 'marcador', so: 'conducao' },
@@ -63,8 +66,39 @@ export const COMANDOS = [
 ];
 /** Os comandos só registrados (o mundo não muda no meio do teste: modo, replay, editor, qualidade, horário, cenas...). */
 export const SECOS = ['editar-time', 'replay', 'ajuda', 'reiniciar-partida', 'qualidade', 'camera', 'minimapa', 'replayAuto', 'hora', 'som', 'volume', 'nomes',
-  'toqueTamanho', 'toqueOpacidade', 'modo', 'prejogo-ciclo', 'subst-ciclo', 'cenas-ciclo', 'recomecar', 'maquina', 'marcador', 'livre-jogadores', 'livre-camera',
+  'toqueTamanho', 'toqueOpacidade', 'modo', 'prejogo-ciclo', 'subst-ciclo', 'cenas-ciclo', 'duracao-ciclo', 'dificuldade-ciclo', 'recomecar', 'maquina', 'marcador', 'livre-jogadores', 'livre-camera',
   'livre-recomecar', 'simular-resto', 'voltar-tm', 'tela-cheia'];
+
+/**
+ * A linha "Duração | Dificuldade" do "Modo de jogo" (item 33; o P11 do teste-pausa-tela): abre o submenu e mede se ela aparece,
+ * se o RÓTULO de cada botão (o nó de texto antes do <small>) cabe dentro do conteúdo dele (até a borda menos o padding), se o
+ * <small> corta, e a altura do nível com ela e sem ela (escondida só na hora da medida: no celular deitado ela mora na célula
+ * vazia da grade de 2 colunas e não pode mudar a altura). Roda NA PÁGINA.
+ */
+export const LINHA_AJUSTES = () => {
+  const g = window.__golaco;
+  g.fecharMenu(); g.abrirMenu();
+  const bm = document.getElementById('btn-modos');
+  if (!bm || bm.hidden || !bm.getClientRects().length) return { submenu: false, visivel: false };
+  bm.click();
+  const linha = document.getElementById('linha-ajustes');
+  const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
+  const nivel = document.getElementById('menu-modos');
+  const alturaNivel = () => { const f = [...nivel.children].filter(vis); const r = nivel.getBoundingClientRect(); return f.length ? Math.max(...f.map(x => x.getBoundingClientRect().bottom)) - r.top : 0; };
+  if (!vis(linha)) return { submenu: true, visivel: false, existe: !!linha, h: alturaNivel() };
+  const btns = [...linha.querySelectorAll('.btn')].map(bt => {
+    const r = bt.getBoundingClientRect(), s = bt.querySelector('small'), cs = getComputedStyle(bt);
+    const rg = document.createRange(); rg.selectNodeContents(bt.firstChild); const rt = rg.getBoundingClientRect();
+    return { id: bt.id, w: +r.width.toFixed(1), h: +r.height.toFixed(1), rotulo: bt.firstChild.textContent.trim(), rotuloW: +rt.width.toFixed(1),
+      cabe: rt.right <= r.right - parseFloat(cs.paddingRight) + 0.5 && rt.left >= r.left + parseFloat(cs.paddingLeft) - 0.5,
+      small: s ? s.textContent : null, smallCorta: s ? s.scrollWidth > s.clientWidth + 0.5 : null };
+  });
+  const com = alturaNivel();
+  linha.style.display = 'none';
+  const sem = alturaNivel();
+  linha.style.display = '';
+  return { submenu: true, visivel: true, btns, h: +com.toFixed(1), hSem: +sem.toFixed(1), titulo: document.getElementById('titulo-modos')?.textContent ?? null };
+};
 
 /** A pausa como está na tela agora (o nível à vista). ordem/margem: só informam; o teste decide. */
 export const MEDIR = () => {
