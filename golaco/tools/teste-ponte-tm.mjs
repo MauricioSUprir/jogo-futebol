@@ -46,6 +46,13 @@
 //      sem as fotos importadas (data:) e, se ainda faltar, sem foto nenhuma — a foto sai, o jogo 3D não (antes o setItem falhava e o
 //      TM simulava a partida que antes das fotos abria em 3D). Lê o tm3d.js da pasta do TM (--tm, ou ao lado da --js) num vm.
 //
+//  P12 (item 33: o tempo de jogo e a dificuldade no pedido; js/ajustes-partida.js, fora do fecho) ajustesDoPedido: sem
+//      `partida` → nulos; minutosPorTempo 6 → 6 e 7/"abc"/−1 → null; dificuldade 'dificil' → 'dificil' e 'Difícil' → null; o
+//      pedido do online (modo 'online') → a duração do anfitrião e NUNCA a dificuldade; ajustesFixos → fixos. A partida do pedido
+//      com eles: ticksPorTempo 21 600 (6 min), m.dificuldade 'dificil' ('normal': sem o campo), com a trava (B) a dificuldade vale
+//      contra o travado em campo (nivelContra do time da IA não-nulo) e o resultadoComAjustes põe a mais fácil usada e a duração
+//      (não no online nem no Livre). Na versão sem js/ajustes-partida.js REPROVA.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -637,6 +644,56 @@ if (typeof SU.melhorEmCampo === 'function') {
     const ruins = [];
     for (const [nome, cota, ok] of casos) { const r = grava(cota, monta()); if (!ok(r)) ruins.push(`${nome} (${r.ok ? 'gravou' : 'não gravou'}; ${JSON.stringify(conta(r.txt))})`); }
     reg('P11 o TM sem espaço no localStorage: o pedido grava sem as fotos importadas e, se faltar, sem foto nenhuma (4 cotas)', `${nCom} → ${nSemData} → ${nSemNada} caracteres; ${ruins.join('; ') || 'os 4 casos certos'}`, 'os 4 casos certos', ruins.length === 0);
+  }
+}
+
+// ------------------------------------------------------------------ P12 o tempo de jogo e a dificuldade do pedido (item 33)
+{
+  let AJ = null;
+  try { AJ = await imp('ajustes-partida.js'); } catch (_) { AJ = null; }
+  if (!AJ || typeof P.definirDificuldade !== 'function') {
+    reg('P12 o tempo de jogo e a dificuldade no pedido (item 33)', 'sem js/ajustes-partida.js ou sem a dificuldade no partida.js', 'existe', false);
+  } else {
+    const comP = (ped, partida) => ({ ...ped, partida: { ...ped.partida, ...partida } });
+    const casos = [
+      ['sem partida', { v: 2 }, { minutosPorTempo: null, dificuldade: null, fixos: false }],
+      ['6 min', comP(PED_A, { minutosPorTempo: 6 }), { minutosPorTempo: 6, dificuldade: null, fixos: false }],
+      ['7 min', comP(PED_A, { minutosPorTempo: 7 }), { minutosPorTempo: null, dificuldade: null, fixos: false }],
+      ['"abc"', comP(PED_A, { minutosPorTempo: 'abc' }), { minutosPorTempo: null, dificuldade: null, fixos: false }],
+      ['−1', comP(PED_A, { minutosPorTempo: -1 }), { minutosPorTempo: null, dificuldade: null, fixos: false }],
+      ['dificil', comP(PED_A, { dificuldade: 'dificil' }), { minutosPorTempo: null, dificuldade: 'dificil', fixos: false }],
+      ['"Difícil"', comP(PED_A, { dificuldade: 'Difícil' }), { minutosPorTempo: null, dificuldade: null, fixos: false }],
+      ['online', { ...comP(PED_A, { minutosPorTempo: 8, dificuldade: 'lenda' }), modo: 'online' }, { minutosPorTempo: 8, dificuldade: null, fixos: false }],
+      ['fixos', comP(PED_A, { minutosPorTempo: 4, dificuldade: 'lenda', ajustesFixos: true }), { minutosPorTempo: 4, dificuldade: 'lenda', fixos: true }],
+    ];
+    const ruins = casos.filter(([, ped, quer]) => JSON.stringify(AJ.ajustesDoPedido(ped)) !== JSON.stringify(quer)).map(([n, ped]) => `${n} → ${JSON.stringify(AJ.ajustesDoPedido(ped))}`);
+    reg('P12 ajustesDoPedido: a lista das durações, os 4 níveis, o online sem dificuldade, a trava', ruins.length ? ruins.join('; ') : `os ${casos.length} casos certos`, `os ${casos.length} casos certos`, !ruins.length);
+    // a partida do pedido com eles (como o main.js: os ajustes do pedido no criarPartida)
+    const T = (() => { const t = TT.timesDoPedido(comP(PED_A, { minutosPorTempo: 6, dificuldade: 'dificil' })); registrar(t); return t; })();
+    const aj = AJ.ajustesDoPedido(comP(PED_A, { minutosPorTempo: 6, dificuldade: 'dificil' }));
+    const m6 = P.criarPartida({ semente: 3, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano, trava: T.trava, minutosPorTempo: aj.minutosPorTempo, dificuldade: aj.dificuldade });
+    const mN = P.criarPartida({ semente: 3, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano, trava: T.trava, dificuldade: 'normal' });
+    // a trava (B): o travado em campo; a pessoa joga (a entrada vazia da página, sem a marca da IA) → a dificuldade vale no time da IA
+    const TBd = TT.timesDoPedido(comP(PED_B, { dificuldade: 'lenda' }));
+    registrar(TBd);
+    const mB = P.criarPartida({ semente: 3, minutosPorTempo: MIN, elencos: TT.ELENCOS_TM, times: TBd.times, humano: TBd.humano, trava: TBd.trava, dificuldade: 'lenda' });
+    const T_ = await imp('tatica.js');
+    let liga = 0;
+    for (let i = 0; i < 300; i++) { P.passoPartida(mB, { x: 0, z: 0, botoes: 0 }); if (T_.nivelContra(mB, 1 - mB.timeHumano) && !T_.nivelContra(mB, mB.timeHumano)) liga++; }
+    reg('P12 a partida do pedido: 6 min = 21 600 ticks, m.dificuldade "dificil", o Normal sem o campo, a trava (B) com o Lenda valendo contra o travado',
+      `ticks ${m6.partida.ticksPorTempo}; dificuldade ${m6.dificuldade ?? '—'}; Normal ${'dificuldade' in mN ? 'COM o campo' : 'sem o campo'}; trava ${mB.trava ? 'em campo' : 'sem trava'}, ${liga}/300 passos ligados`,
+      '21600; dificil; sem o campo; em campo, 300/300', m6.partida.ticksPorTempo === 21600 && m6.dificuldade === 'dificil' && !('dificuldade' in mN) && !!mB.trava && liga === 300);
+    // o resultado ao TM: a mais fácil usada e a duração no apito (só na partida; o online sem a dificuldade)
+    const r0 = { homeGoals: 1, awayGoals: 0 };
+    const rA = AJ.resultadoComAjustes(r0, { maisFacil: 'facil' }, m6);
+    const mOn = P.criarPartida({ semente: 3, humanos: [0, 1] }); mOn.online = true;
+    const rOn = AJ.resultadoComAjustes(r0, { maisFacil: 'lenda' }, mOn);
+    const L = await imp('livre.js');
+    const rLv = AJ.resultadoComAjustes(r0, { maisFacil: 'lenda' }, L.criarLivre({ semente: 3 }));
+    const okR = rA.dificuldade === 'facil' && rA.minutosPorTempo === 6 && rA.homeGoals === 1 && !('dificuldade' in r0) && !('dificuldade' in rOn) && rOn.minutosPorTempo === 4 && rLv === r0
+      && AJ.maisFacil('lenda', 'dificil') === 'dificil' && AJ.maisFacil('facil', 'normal') === 'facil';
+    reg('P12 resultadoComAjustes: a dificuldade mais fácil usada e a duração no apito; o online sem a dificuldade; o Livre igual',
+      `partida ${JSON.stringify(rA)}; online ${JSON.stringify(rOn)}; Livre ${rLv === r0 ? 'igual' : JSON.stringify(rLv)}`, 'facil/6; sem dificuldade/4; igual', okR);
   }
 }
 

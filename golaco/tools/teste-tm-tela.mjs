@@ -5,7 +5,8 @@
 //      do pedido; o humano controla um jogador do time 0; o jogo anda uns segundos.
 //   1c PC, pedido A (item 32; dono, 17/10: "o placar com mais a cara do Total Match, um pouco MAIOR e o relógio com os
 //      SEGUNDOS"): o placar com 30 px, o #relogio em MM:SS na Inter TM (data-fontes-tm="ok") e o símbolo do TM na marca.
-//   2  A pausa do TM: com "Simular o resto", "Editar time" e "Cenas da partida" (pré-jogo e substituição), sem
+//   2  A pausa do TM: com "Simular o resto", "Editar time" e "Partida e cenas" (a duração e a dificuldade — item 33 —, o pré-jogo e
+//      as cenas; era "Cenas da partida"), sem
 //      "Reiniciar partida" nem os treinos.
 //   3  "Simular o resto": a faixa "Simulando o resto da partida…" com minuto e placar, a partida chega ao apito, a faixa do
 //      fim tem "Voltar ao Total Match", o resultado já está em localStorage["tm3d:resultado:<id>"] (formato do contrato,
@@ -16,7 +17,7 @@
 //   4  "Voltar ao Total Match" (clique de verdade): o pai recebe 'tm3d:fim' com o MESMO resultado gravado.
 //   5  Celular 844×390 com toque, pedido B (Rumo ao Estrelato: o usuário é o visitante e controla SÓ o centroavante):
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
-//      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Cenas da partida").
+//      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Partida e cenas").
 //   5b Celular (itens 59 e 60): o travado com a bola mostra o nome no canto de baixo à DIREITA (o humano é o visitante: o time
 //      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar — inteira: o recorte do raio
 //      do cartão deixa ≥ 85% da altura dela na coluna do meio (com o raio de 8 px, ~64%: a faixa virava um ")").
@@ -102,8 +103,11 @@ async function itensDaPausa(fr) {
   await esperar(fr, () => !document.getElementById('menu').hidden, null, 10000);
   const itens = {};
   for (const [k, sel] of Object.entries({ simular: '#btn-simular-resto', editar: '#menu [data-cmd="editar-time"]', reiniciar: '#btn-reiniciar-partida', modos: '#btn-modos', voltar: '#btn-voltar-tm', continuar: '#btn-continuar' })) itens[k] = await visivel(fr, sel);
-  // os treinos no submenu (no TM o submenu é "Cenas da partida": só o pré-jogo e a substituição)
+  // os treinos no submenu (no TM o submenu é "Partida e cenas": a duração e a dificuldade, o pré-jogo e as cenas)
   itens.treinos = await fr.evaluate(() => [...document.querySelectorAll('#menu-modos [data-cmd="modo"]')].some(b => !b.hidden));
+  // (item 33: o nome do submenu e a linha "Duração | Dificuldade" dentro dele, sem ajustesFixos no pedido)
+  const sub = await fr.evaluate(() => ({ nome: document.querySelector('#btn-modos .item-txt')?.textContent ?? '', linha: !document.getElementById('linha-ajustes')?.hidden }));
+  itens.partidaECenas = sub.nome === 'Partida e cenas' && sub.linha;
   return itens;
 }
 const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k).join(', ') || 'nada';
@@ -137,8 +141,8 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     `${pl.h.toFixed(1)} px · "${pl.txt}" em ${pl.fonte} (fontes ${pl.fontes}, Inter TM 800 ${pl.check ? 'carregada' : 'NÃO'}) · marca ${pl.marca ?? 'ausente'}`,
     Math.abs(pl.h - 30) <= 0.5 && /^\d{2}:\d{2}$/.test(pl.txt) && /^"?Inter TM/.test(pl.fonte) && pl.fontes === 'ok' && pl.check && /simbolo\.png/.test(pl.marca ?? ''));
   const it = await itensDaPausa(fr);
-  meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Cenas da partida; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
-    it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar);
+  meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Partida e cenas com a duração e a dificuldade; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
+    it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar && it.partidaECenas);
   const tickSim0 = await fr.evaluate(() => window.__golaco.mundo.tick);
   // 3b (item 32): a conta do texto do relógio (relogio-placar.js, a mesma do hud) carregada ANTES (as leituras do 3b ficam
   // síncronas: nenhum pedaço da simulação entra entre ler o #relogio e ler o mundo)

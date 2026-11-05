@@ -54,7 +54,8 @@
     rivalry: true,          // rivalidades: clássicos + transferências raras entre rivais
     evoRate: "media",       // taxa de evolução dos atletas: rapida | media | demorada
     theme: "dark",          // dark (preto+verde) | light (branco+verde)
-    partidas3d: "perguntar" // jogos do seu time: perguntar | 3d (sempre em 3D) | simular
+    partidas3d: "perguntar", // jogos do seu time: perguntar | 3d (sempre em 3D) | simular
+    tempo3d: 4              // minutos reais de cada tempo nas partidas em 3D: 3 | 4 | 5 | 6 | 8 | 10 (o placar mostra os 90)
   };
 
   TM.storage = {
