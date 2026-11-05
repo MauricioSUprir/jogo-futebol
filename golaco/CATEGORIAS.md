@@ -103,11 +103,10 @@
 | 30 | Cena de substituição no online | 4 |
 | 31 | ✅ **Foto do autor do gol com o número e o nome na comemoração**: o cartão no canto de cima à direita, na linha do placar (foto da edição pro do TM, a pílula com escudo, sigla e número e o NOME completo como a linha principal, também no celular; sem foto, uma linha da altura do placar), 3,5 s na tela a partir de 0,4 s depois do 1º corte, nunca no gol contra nem com a bola rolando; e a mesma foto no lugar do busto nas fichas da tela antes do jogo (#615) | 7 |
 | 33 | ✅ **Escolher o tempo de jogo e a dificuldade**: 3 a 10 min por tempo e Fácil/Normal/Difícil/Lenda na pausa ("Modo de jogo"; no TM, "Partida e cenas"), na tela antes do jogo ("2 × 4 min \| Normal") e pela Config do TM; nas Batalhas do Ultimate a dificuldade é a da Batalha, travada; a dificuldade muda só a IA adversária, sem mexer em atributo nem física (o Normal é o jogo de hoje): nos testes contra um jogador roteirizado, a IA marca ~0,65 gol por partida no Fácil, 0,9 no Normal, 1,07 no Difícil e 1,2 no Lenda (#618) | 9 |
-| 35 | ✅ **Clássico mais pegado**: no clássico (o TM manda quem é rival de quem) os jogadores da IA dos DOIS times entram mais no bote e o batido segura mais quem escapa; o árbitro é o mesmo: faltas ~2,1 → 3,0 por partida (+42%), botes +34%, amarelos +34%, gols e chutes iguais; o seu jogador não muda (o bote dele é o botão) | 9 |
+| 35 | ✅ **Clássico mais pegado**: no clássico (o TM manda quem é rival de quem) os jogadores da IA dos DOIS times entram mais no bote e o batido segura mais quem escapa; o árbitro é o mesmo: faltas ~2,1 → 3,0 por partida (+42%), botes +34%, amarelos de iguais a +50% conforme a amostra, gols e chutes iguais; o seu jogador não muda (o bote dele é o botão) | 9 |
 | 119 | 🔎 O teste da pressão também com o clássico (informativo) | 1 |
 | 120 | 🔎 ⏳ Cartão sem falta no clássico (reclamação, conduta): seria do árbitro | 4 |
 | 121 | 🔎 ⏳ O bote fisicamente mais forte no clássico (chegar mais rápido: mais falta por contato) | 3 |
-| 122 | 🔎 A medida grande do clássico (`--completo`) | 0,5 |
 | 123 | 🔎 O tempo do teste do clássico no CI | 0,2 |
 | 76 | 🔎 Quem sofre o carrinho cai e levanta (hoje só perde velocidade e o domínio) | 8 |
 | 80 | 🔎 ⏳ Carrinho: menos falta antes da bola (o atacante pular o carrinho, ou o contato colado na bola contar como bola primeiro) | 6 |

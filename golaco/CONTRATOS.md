@@ -5128,6 +5128,9 @@ cena de cartão a mais a cada 6 partidas e mais replays de falta perto da área 
   `tools/lib/classico-medidas.mjs` (ganchos que só leem). Na base 29d67bad reprova 6 (K0, K1, K2, K3, C1, C2). Mutações: o árbitro
   × 1,3 no clássico → K4; o `cfgBote` sempre do clássico → K0 e K2; `m.classico = !!opc.classico` → K1 e K2; o `BOTE_C` com outro
   `vParado` → K0; o portão só contra a pessoa → K2 (a demo igual); o clássico no `semAtropelar` → K4; a tabela neutra → C1 e C2.
+  O `--completo` (96 por braço + 32 por nível; a medida do dono, fora do CI) PASSOU: botes 1,43 [1,36–1,52], faltas esperadas
+  1,46, marcadas 1,35 [1,17–1,57], chance por contato 1,00, amarelos 0,98 [0,70–1,36] (o amarelo por falta 0,73), os 4 degraus do
+  C10 provados.
 - `teste-ponte-tm` P13 (o `classicoDoPedido`), `teste-prepartida-tela` E25 (o selo com `?classico=1`), `teste-faltas-sentido
   --classico` (B1–B4 com o clássico: 0,00 · 0,25 · 5,75/0,13/0,50 · 0,00 — passa), `painel-equilibrio --classico` (a versão medida
   com o clássico, a base sem: 48 partidas IA × IA, sementes 1001–1048 — faltas 2,2 → 3,1, amarelos 0,60 → 0,56, vermelhos 0,02 →

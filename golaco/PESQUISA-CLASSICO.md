@@ -566,4 +566,10 @@ do item 33) — o Lenda continua acima pelo resto da dificuldade (engaja, encurt
 - `painel-equilibrio --classico --base <29d67bad> --n 48` (IA × IA, sementes 1001–1048): faltas 2,2 → 3,1, amarelos 0,60 → 0,56,
   vermelhos 0,02 → 0,10 (5 em 48), gols 1,77 → 1,90, chutes 9,0 → 8,8, roubadas no bote 4,06 → 5,81, passe 86,4 → 86,9%, goleiro de
   6 a 16,5 m 61,7 → 50,4% (128/119 chutes; amostra pequena, informativo).
-- **Não rodou:** o `--completo` (96 por braço; FILA item 122) e o celular de verdade.
+- **O `--completo`** (96 por braço: demo 1–32 + 4 roteiros × 1–16; + Fácil+C e Lenda+C × 4 × 8; as 128 do CI reaproveitadas):
+  PASSOU — botes 1,43 [1,36–1,52], faltas esperadas 1,46 [1,33–1,63], marcadas 1,35 [1,17–1,57], chance por contato 1,00
+  [0,90–1,11] (só o bote 1,09), amarelos 0,98 [0,70–1,36] e o amarelo por falta 0,73 [0,55–0,96] (o que sobe é o segurar sem
+  cartão), vermelhos 4 em 96 com o clássico (6 em 96 sem; Lenda+C 0 em 32), gols 1,14 [0,97–1,33], chutes 0,99, volume 0,98; o
+  C10 com os 4 degraus provados (Fácil+C/Normal+C 0,58, Normal+C/Lenda+C 0,88 [0,81–0,95], Fácil+C/Normal sem 0,89 [0,81–0,98]).
+  Os amarelos variam muito entre amostras (+15% a +59% antes, −2% aqui): com ~0,5 por partida, 96 partidas não separam.
+- **Não rodou:** o celular de verdade.
