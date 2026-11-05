@@ -981,16 +981,25 @@ mudou.
   120 px de largura e 44–76 de altura; as letras; fora do `config.js`, que é do fecho), `tamanhoEscalacao(W, H, {larguraNome,
   alturaTela})` → `{w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto}` (W = a largura máxima do
   grupo do campo, H = a altura da área = a altura do campo; `larguraNome(px)` = o nome mais largo dos 22 titulares; celular =
-  `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem: o campo alarga de 0,80 até 0,85 e as cartas das pontas chegam
-  à lateral (no máximo meia carta para fora, `fora`); a letra do nome desce ao mínimo da tela (§7.4/§7.5 do PESQUISA-ESTADIO:
-  celular 11, 568×320 10, PC 13); o nome sai com "…" (`teto`; só os de estresse). A linha da posição sai (`sem-pos`, a posição
+  `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem (revisão V1: as pontas NUNCA tangentes à lateral): as cartas das
+  pontas DENTRO, com a borda a `margem` 6 px da lateral (mínimo `margemMin` 5) — o campo alarga de 0,80 até 0,85 —, na letra da
+  conta e depois na mínima da tela (§7.4/§7.5 do PESQUISA-ESTADIO: celular 11, 568×320 10, PC 13); senão as pontas SOBRE a
+  linha, centradas nela (inset 0, `naLinha`; meia carta para fora, `fora`); senão o nome sai com "…" (`teto`; só os de
+  estresse). `caixa: {w, h}` = o campo já decidido (só as cartas saem da conta). A linha da posição sai (`sem-pos`, a posição
   fica no `aria-label`) se a carta não comporta as 3 linhas (`comPos`). Janela de PC em pé: a altura desce até o grupo caber e,
   se o nome segurar a carta, a letra e as cartas pela largura), `posicaoCarta(vaga, tam)` (o centro: x = inset + (col + 2) ·
   passo; y pela grade de 5 filas do `posicaoNaTela(…, true)`: o GOL embaixo, o LE à esquerda), `nomesTitulares(times)` e
-  `larguraNomes(nomes)` (TM Cond 800, caixa normal: a maior entre a tabela exata e a dos avanços arredondados ao px). As DUAS
-  folhas usam a mesma conta (os 22 nomes, a mesma altura): o campo tem o mesmo tamanho e o mesmo topo nas duas. `campo(t)` (só
+  `larguraNomes(nomes)` (TM Cond 800, caixa normal: a maior entre a tabela exata e a dos avanços arredondados ao px) e
+  `tamanhosDasFolhas(W, H, {larguras: [l0, l1], alturaTela})` → `[T0, T1]` (revisões A1/V2): as DUAS folhas com a MESMA caixa
+  do campo — a altura pela conta dos 22 nomes, a largura pela maior das duas folhas (cada uma com os 11 nomes dela; volta à dos
+  22 se o grupo não couber) — e a carta, a letra e o inset de cada folha pelos nomes dela. O layout refaz as duas juntas: a
+  escondida é medida sem aparecer (visibility), a largura do grupo sai da coluna MAIS LARGA das duas e a altura da menor; na
+  janela em pé as colunas ficam com a altura da maior. O campo tem o mesmo tamanho e o mesmo topo nas duas. `campo(t)` (só
   leitura; também `prejogo.escalacao.campo(t)`) → `{x, y, w, h, viewBox, largura, cw, ch, fonteNome, fontePos, comPos, inset,
-  fora, teto}`. O layout refaz a conta SEM os tamanhos de antes (o campo velho seguraria a linha da grade e o grupo largo
+  fora, teto}`. O nome do time acima de `ESCALACAO.nomeTimeLongo` (22) letras ganha `.longo` (menor, em até 3 linhas; revisão V6).
+  As linhas do campo recortadas pelo canto arredondado (`clip-path` só no SVG; as cartas podem passar da lateral); a posição na
+  TM Cond, mais leve que o nome; a reserva da TM Cond = faces `local()` com `size-adjust` (`css/prejogo.css`, revisão V5). O
+  layout refaz a conta SEM os tamanhos de antes (o campo velho seguraria a linha da grade e o grupo largo
   espremeria a coluna do time) quando a folha, a área, a coluna ou a altura da tela mudam; o `montar` pede a TM Cond com o
   texto dos nomes (`document.fonts.load`). O movimento sai do relógio do roteiro (nada de transição do CSS: o relógio manual
   dos testes e prints vale); a cascata das cartas sobe do gol ao ataque.
@@ -2627,7 +2636,8 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: o Estádio Total Match (seção "Estádio de cada clube"),
   torcida 45% misturada; `publico` 0,1–1 = ocupação.
 - **Página**: `render/identidade-pagina.js identidadeDaPagina()` — null sem `?tm` (identidade.js nem é baixado: import
-  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores) ANTES de
+  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores — a letra 30/38 desce só
+  quando a sigla passa de `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, `larguraSiglaEm`: revisão V9 do item 29) ANTES de
   `criarCampo`/`criarTorcida`. main.js: `IDENT` → `criarCampo({identidade})`, `criarTorcida({identidade, mascara:
   mascaraDaIdentidade})`, `jog3d.definirKits(IDENT.kits)`, `criarPrejogo({identidade})`, `COR_TIME` (faixa ENTRA/SAI) e
   `timesDoMundo` com `extrasPlacar` (`{escudoUrl, cor, corTexto, mapa}` → hud.js `<symbol id="escudo-tm-i">` com `<image>`,

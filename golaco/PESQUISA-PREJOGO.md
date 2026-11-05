@@ -216,3 +216,37 @@ campinho sem a largura) reprovam o 4b ou o `teste-escalacao-campo`.
 modo "só a escalação" (o `montar` pede a fonte com o texto dos nomes; a cascata só começa em 0,12 s; `font-display: swap`); a
 coluna do tamanho do conteúdo muda o x do campo entre as duas folhas (até ~30 px, durante o deslize); as cartas ficam mais
 estreitas que as deitadas (celular 68–105 → 43–62 px, PC 120 → 81–120), com as letras iguais ou maiores.
+
+### 9.1 A revisão (05/11): as pontas, as duas folhas e o acabamento
+
+Os achados confirmados da revisão do item 29 (um commit cada; o teste que reprova antes em cada um):
+- **As pontas nunca tangentes à lateral (V1).** A conta do "~9% para dentro" copiou da Globo o CENTRO da carta, mas lá o quadrado
+  tem 7% da largura do campo (36/520) e a nossa carta 17% (50/291): a borda caía a 0–1,7 px da lateral em todas as telas (568×320:
+  1 px para fora) e as 11 cartas coincidiam com a moldura. Agora o campo alarga (0,80 → até 0,85, o teto: 105 × 0,85 = 89,25 m,
+  a largura máxima da Regra 1) até a borda da carta da ponta ficar 6 px para dentro (`ESCALACAO.margem`; mínimo 5) e, quando nem o
+  teto dá, a carta fica SOBRE a linha, centrada nela (inset 0) — nunca no meio do caminho. 568×320 do fictício: a folha do
+  mandante sobre a linha (a carta de 43 px não cabe com margem nem a 0,85), a do visitante dentro; com os nomes do TM nos
+  celulares, sobre a linha. `teste-prejogo` E12 e `teste-escalacao-campo` N1.
+- **A mesma caixa nas duas folhas, as cartas de cada uma pelos nomes dela (A1, V2).** A coluna é do tamanho do nome do time e
+  cada folha media só a dela: com nomes de larguras diferentes (PC 1280×1024, um nome de ~22+ letras) os campos saíam com
+  tamanho e topo diferentes (771×964 topo 30 × 742×928 topo 48). E a carta dos 22 nomes ia também ao time de nomes curtos (as
+  pontas dele até meia carta para fora sem precisar). Agora `tamanhosDasFolhas`: a largura do grupo pela coluna MAIS LARGA das
+  duas (a escondida medida sem aparecer), a altura pela conta dos 22 e a menor das áreas, a largura do campo pela maior das duas
+  folhas; a carta, a letra e o inset de cada folha pelos 11 nomes dela. O pedido misto novo (`PED_NOMES_MISTOS`: "Rio Azul" de
+  camisas curtas × "Sociedade Esportiva…" de camisas longas) no `teste-prejogo` 15 e no N5.
+- **As linhas recortadas pelo canto (A2, V3):** `clip-path: inset(0 round 11px)` (13 com `?tm`) só no SVG; os cantos vivos do
+  retângulo de 0,5 m furavam a curva da borda depois que o campo passou a `overflow: visible`. E4.
+- **A posição mais leve que o nome (V4):** a mesma TM Cond, 0,02 em, opacidade 0,78 (o FC Mobile 26 e o FC 26 põem a posição
+  pequena e apagada; Globo e Copa nem a mostram). E11.
+- **A reserva da TM Cond (V5):** faces `local()` com `size-adjust` no mínimo da razão TM Cond ÷ reserva medida no Chromium nos
+  nomes do elenco e do TM (Arial/Liberation/Helvetica/Roboto/FreeSans 71%, razão 0,72–0,82; DejaVu 62%, 0,63–0,74) — a técnica
+  do `size-adjust` para a fonte de reserva (CSS Fonts 5). Com o arquivo bloqueado, 568×320: 10 de 22 nomes com "…" → 0. A letra
+  de reserva sai menor que a TM Cond (só enquanto ela não chega, ou se falhar). `teste-prejogo` 15.
+- **O nome longo do time (V6):** acima de 22 letras (só nomes do TM) clamp(18 px, 2,2vw, 30 px) em até 3 linhas (antes 4–5
+  linhas a 27–46 px, mais pesado que o campo). E13.
+- **A faixa da carta com `?tm` (V7):** o atalho `border-color` do `tm.css` apagava a cor do time no topo. E14.
+- Fora do item, baratos: a sigla de letras largas no escudo de reserva (V9: "AAW" a 30 encostava no contorno; a letra desce pela
+  largura na DejaVu Sans Bold, `teste-identidade` G) e o comentário da pausa no `index.html` que fechava antes da hora (V10: o
+  `") -->"` solto no canto da tela; `teste-carga`).
+- Ficou de fora: o corte do nome de camisa em 10 letras sem marca do `tm-times.js camisaDe` (V8: "Evangelista" → "Evangelist";
+  muda o nome da camisa em todo o jogo do TM — fica para quem mexer na ponte).
