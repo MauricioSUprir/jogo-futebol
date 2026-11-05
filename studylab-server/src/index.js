@@ -56,8 +56,10 @@ const LIMITES = {
   },
 };
 const MODO_TESTE = process.env.MODO_TESTE === '1';
-const ORIGENS = (process.env.ORIGENS || 'https://mauriciosuprir.github.io')
-  .split(',').map((o) => o.trim()).filter(Boolean);
+/* Sites do app que podem falar com o servidor: os de sempre + os da variável ORIGENS.
+   O app mora em guidrodrigues21-a11y.github.io/mindtrack-ai/ (o antigo, no jogo-futebol, só redireciona). */
+const ORIGENS = [...new Set(['https://guidrodrigues21-a11y.github.io', 'https://mauriciosuprir.github.io',
+  ...(process.env.ORIGENS || '').split(',')].map((o) => o.trim()).filter(Boolean))];
 
 /* ---------- utilidades ---------- */
 function cors(req, res) {
@@ -518,7 +520,7 @@ const rotasDinamicas = [
 
 /* ---------- conexões: utilidades ---------- */
 const REDIRECIONA = Symbol('redireciona');
-const URL_APP = (process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/#.*$/, '');
+const URL_APP = (process.env.URL_APP || 'https://guidrodrigues21-a11y.github.io/mindtrack-ai/').replace(/#.*$/, '');
 
 /** O "volta" vem do app: só aceitamos páginas dos sites autorizados (ORIGENS). */
 function conferirVolta(volta) {

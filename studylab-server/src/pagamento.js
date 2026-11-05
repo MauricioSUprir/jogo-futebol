@@ -58,7 +58,7 @@ export async function criarAssinatura({ planoId, usuario }) {
   planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
-  const voltarPara = `${(process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/\/$/, '')}/#/planos`;
+  const voltarPara = `${(process.env.URL_APP || 'https://guidrodrigues21-a11y.github.io/mindtrack-ai/').replace(/\/$/, '')}/#/planos`;
 
   const d = await mp('/preapproval', {
     metodo: 'POST',
@@ -88,7 +88,7 @@ export async function criarPagamentoUnico({ planoId, usuario }) {
   planoId = normalizarPlanoId(planoId);
   const plano = PLANOS[planoId];
   if (!plano) throw Object.assign(new Error('Plano desconhecido'), { status: 400 });
-  const app = (process.env.URL_APP || 'https://mauriciosuprir.github.io/jogo-futebol/studylab/').replace(/\/$/, '');
+  const app = (process.env.URL_APP || 'https://guidrodrigues21-a11y.github.io/mindtrack-ai/').replace(/\/$/, '');
   const voltar = `${app}/#/planos`;
 
   const d = await mp('/checkout/preferences', {
