@@ -889,6 +889,9 @@ export const IA = {
 // simplificados (a regra IFAB completa é da Etapa 4) e substituições da Regra 3 (5 em 3 paradas).
 export const PARTIDA = {
   minutosPorTempo: 4,         // minutos REAIS por tempo (o relógio mostra 45' por tempo)
+  // as durações que a pessoa escolhe (item 33; dono, 17/10: "editar o TEMPO de jogo"): minutos REAIS por tempo, o padrão (4)
+  // entre elas. FC 25–27: 3–10, 15, 20 (o 15 e o 20 ficam de fora: o painel nunca foi medido nisso). partida.js mudarDuracao
+  duracoes: [3, 4, 5, 6, 8, 10],
   intervalo: 3,               // s de faixa "Intervalo" antes da saída do 2º tempo
   golPausa: 2.5,              // s entre o gol e a saída (os 150 ticks do treino)
   foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
