@@ -305,7 +305,7 @@ const prefs = lerPrefs();
 // aparelhos; o ticksPorTempo está no hash do lockstep) > golaco.prefs.v1 (fora do TM e do online) > o padrão (4 min, Normal).
 // maisFacil: a dificuldade mais fácil em que a pessoa JOGOU pelo menos um passo na partida em andamento (vai ao resultado do TM;
 // rodarPasso, nivelDoPasso: um nível só atravessado no ciclo da pausa não conta); fixos: o pedido trava os dois (as Batalhas do
-// Ultimate: a linha some da pausa).
+// Ultimate: a linha fica travada na pausa, com o cadeado).
 const AJ_PEDIDO = TM ? ajustesDoPedido(PEDIDO_TM) : { minutosPorTempo: null, dificuldade: null, fixos: false };
 const DIF_PARAM = nivelValido(params.get('dif'));
 const ajustes = {
@@ -3292,7 +3292,7 @@ function duracaoAtual() {
 }
 /** O nível que vale agora: o do mundo na partida em andamento (o Normal sem o campo), senão o escolhido na página. */
 function dificuldadeAtual() { return partidaViva() ? (mundo.dificuldade ?? 'normal') : ajustes.dificuldade; }
-/** Os rótulos da linha "Duração | Dificuldade" do "Modo de jogo" (item 33) e se ela aparece (ajustesFixos: some). */
+/** Os rótulos da linha "Duração | Dificuldade" do "Modo de jogo" (item 33) e se ela está travada (ajustesFixos). */
 function marcarAjustes() {
   hud?.definirEstado({ duracao: textoDuracao(duracaoAtual()), dificuldade: textoNivel(dificuldadeAtual()), ajustesFixos: ajustes.fixos || ONLINE });
 }

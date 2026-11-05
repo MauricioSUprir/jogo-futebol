@@ -2674,7 +2674,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   simularResto() (Promise), resultadoGravado(), fotos (item 31: as da edição pro, contrato "Comemoração do gol")}` (null sem
   `?tm`).
 - **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
-  como "Partida e cenas" (a duração e a dificuldade — item 33, sem elas com `partida.ajustesFixos` e no fim —, o pré-jogo e as
+  como "Partida e cenas" (a duração e a dificuldade — item 33, travadas com `partida.ajustesFixos` e sem elas no fim —, o pré-jogo e as
   cenas, sem os treinos; era "Cenas da partida"), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
   fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
   58)"); sem "Editar time" com a trava. `faixa({..., botaoTexto,
@@ -4933,40 +4933,59 @@ dificuldade padrão (4 min, Normal) nada muda**: `hash-igual` e `hash-partida` I
 | `boteIA.chancePorPasso` / `descanso` | `ACOES.boteIA` (a vontade de tentar o bote com a bola ao alcance; o alcance e a chance de ganhar não mudam) | `sim.js boteIA` | 0,025 / 110 | 0,08 / 45 | 0,12 / 34 | 0,22 / 20 |
 | `engaja` (m) | `IA_PESSOA.engaja` (a linha de engajamento, teto 105) | `ia-tatica.js blocoDoTime` | −8 | 0 | +3 | +6 |
 | `encurta` | `IA_PESSOA.encurta[2]` (quem guarda a zona encurta no gatilho) | `ia-tatica.js` (o ponto da zona) | 0,10 | 0,30 | 0,38 | 0,50 |
-| `utilidade.chute` / `chuteLonge` / `chutePosse` | `UTIL_P` (a vontade de chutar; a execução não muda) | `ia-ataque.js decidir` (`utilDe`) | 1,2 / 0,05 / 0,7 | 3,0 / 0,25 / 0,5 | 4,6 / 0,65 / 0,3 | 5,6 / 1,0 / 0,2 |
+| `contencao` (m) | `IA_DEFESA.contencao` (a distância do 1º homem contendo; nunca abaixo de 1,25) | `ia-tatica.js semBola` (o `conter` do 1º homem) | +1,0 | 0 | −0,4 | −0,6 |
+| `contrapressao` {s, max} | `IA_DEFESA.contrapressao` (quanto tempo e quantos vão no condutor depois da perda) | `ia-tatica.js blocoDoTime` | [0,1,3] / [0,1,2] | [0,3,5] / [0,2,3] | [0,4,6] / [0,2,3] | [0,5,7] / [0,3,3] |
+| `utilidade.chute` / `chuteLonge` | `UTIL_P` (a vontade de chutar e o peso relativo do chute de fora; a execução não muda) | `ia-ataque.js decidir` (`utilDe`) | 2,0 / 0,6 | 3,0 / 0,25 | 3,6 / — | 4,2 / — |
 | `utilidade.passeAntecipa` (s) | `IA_PESSOA.utilidade.passeAntecipa` (o passe lê a defesa da pessoa N s à frente) | idem | 0,2 | 0,5 | 0,6 | 0,7 |
-| `avaliaTicks` | `IA_ATAQUE.condutor.avaliaTicks` (de quantos em quantos ticks o condutor pensa) | `ia-ataque.js condutorTatico` | 9 (0,15 s) | 6 (0,1 s) | 5 | 5 (0,083 s) |
 | `le` (s) | `IA_DEFESA.livre.le` (ler o passe da pessoa antes de ir cortar; só mais lento) | `ia-tatica.js cortaPasse` | 0,35 | 0,20 | — | — |
-| `erro` | × o erro do passe e do chute (só ≥ 1) | `acoes.js executarAcao` | 1,2 | — | — | — |
-| `reacaoGoleiro` (s) | `GOLEIRO.reacao` do goleiro da IA (só mais lento) | `goleiro.js lerChute` | [0,30; 0,24] | [0,25; 0,19] | — | — |
+| `erroChute` | × o erro do CHUTE (só ≥ 1, só no Fácil) | `acoes.js executarAcao` | 1,5 | — | — | — |
 
-Medido (`teste-dificuldade`, 32 partidas pareadas por nível, 4 roteiros × sementes 1–8; razão ao Normal [p5–p95 do bootstrap]): botes
-da IA por minuto de posse da pessoa 0,61 [0,55–0,67] / 1 / 1,25 [1,12–1,41] / 1,54 [1,38–1,73]; chutes da IA 0,67 [0,56–0,81] / 1 /
-1,18 [1,02–1,37] / 1,31 [1,12–1,55]; chutes da pessoa 1,85 / 1 / 1,19 / 0,82; faltas da IA no Lenda 1,45× [1,12–1,88]. A vontade de
-chutar SATURA (com `chute` ≥ ~5 e `chuteLonge` 1 a decisão não muda mais — as mesmas partidas, bit a bit): o que mais põe a IA em
-posição de chute é ter a bola de volta mais cedo (bote, engajamento, encurtar) e pensar mais rápido (`avaliaTicks` 5).
+Regras da tabela (o D0 do `teste-dificuldade` confere): a vontade de chutar até 4,2; nos níveis de cima o `chuteLonge` (o peso
+RELATIVO do chute de fora) nunca passa o do Normal — subir trocava a chance boa pelo chute de longe: mais chutes e menos gols (revisões
+A4/B2) —; no Fácil ele pode subir (chutar de longe à toa é decidir pior: o Fácil que só chutava de perto convertia mais, revisão B3).
+Saíram na revisão (sem efeito medível, B4): `avaliaTicks`, o `erro` do passe e a `reacaoGoleiro` (o `goleiro.js` saiu do diff do
+fecho: ficam `acoes`, `config`, `ia-ataque`, `ia-tatica`, `partida`, `sim` e `tatica`).
+
+Medido pelo RESULTADO (`teste-dificuldade`, partidas pareadas contra os 4 roteiros, 2 × 4 min; duas amostras de 64 por nível,
+sementes 1–16 e 17–32; `PESQUISA-DIFICULDADE.md` §11): gols da IA por partida 0,64 / 0,89 / 1,08 / 1,22 e 0,66 / 0,88 / 1,06 / 1,17
+(antes da revisão 0,83 / 0,89 / 0,95 / 0,94); saldo da pessoa −0,16 / −0,64 / −0,81 / −0,88 e −0,24 / −0,47 / −0,76 / −0,86; xG da
+IA 0,80 / 1 / 1,24 / 1,46 e 0,63 / 1 / 1,12 / 1,09 do Normal; botes da IA 0,52 / 1 / 1,24 / 1,51 do Normal; chutes da pessoa 1,55–1,77
+/ 1 / 0,79–0,86 / 0,73–0,84; faltas da IA no Lenda 1,40–1,50×. Provados nas duas amostras: gols da IA Fácil < Lenda e saldo da pessoa
+Fácil > Lenda; o Difícil e o Lenda quase empatam no resultado (o Lenda se separa pelo aperto e pelas faltas).
 - **Fora da v1:** a "gestão de jogo pelo placar" do Lenda (Competitor Mode); o goleiro da IA que se entrega no pênalti; a
-  dificuldade no Livre e nos Pênaltis (Normal); a contrapressão por nível e o "2º melhor passe" do Fácil (a reserva da
-  especificação: não foi preciso).
+  dificuldade no Livre e nos Pênaltis (Normal); o "2º melhor passe" do Fácil e o `antecipaPressao` (a reserva da especificação; a
+  contrapressão por nível entrou na revisão).
 
 ### Onde se escolhe (página, fora do fecho)
 
-- **`js/ajustes-partida.js`** (puro, só importa o `config.js`; no download inicial): `DURACOES`, `NIVEIS`, `NOME_NIVEL`,
-  `minutosValidos`, `nivelValido`, `ajustesDoPedido(pedido)` → `{minutosPorTempo | null, dificuldade | null, fixos}` (o online:
-  nunca a dificuldade), `proximaDuracao` (fora da lista — o `?min` dos testes — vai à menor opção maior), `proximoNivel`,
-  `maisFacil`, `textoDuracao` ("2 × 4 min"), `textoNivel` e `resultadoComAjustes(r, ajustes, m)`.
+- **`js/ajustes-partida.js`** (puro, importa o `config.js` e o `tatica.js` — só LÊ o mundo —; fora do fecho; no download inicial):
+  `DURACOES`, `NIVEIS`, `NOME_NIVEL`, `minutosValidos`, `nivelValido`, `ajustesDoPedido(pedido)` → `{minutosPorTempo | null,
+  dificuldade | null, fixos}` (o online: nunca a dificuldade), `proximaDuracao` (fora da lista — o `?min` dos testes — vai à menor
+  opção maior), `proximoNivel`, `duracaoAnterior`/`nivelAnterior` (o ‹), `maisFacil`, `nivelDoPasso(m)` (o nível que o passo que
+  acabou usou contra a pessoa, ou null), `textoDuracao` ("2 × 4 min"), `textoNivel` e `resultadoComAjustes(r, ajustes, m)`.
 - **`main.js ajustes`** = `{minutosPorTempo, dificuldade, maisFacil, fixos}`: a escolha mora na PÁGINA e sobrevive ao Personalizar,
   ao Jogar de novo, ao Reiniciar e à troca de modo (todos recriam o mundo pelo `criarMundoTreino`). O começo: `?min`/`?dif` > o
   pedido do TM (no online, só a duração, a do anfitrião) > `golaco.prefs.v1` (fora do TM e do online) > 4 min, Normal. A pausa
   muda a escolha da página (salva fora do TM e do online) e, na partida em andamento, o mundo (`mudarDuracao`/`definirDificuldade`);
-  no fim do jogo fora do TM muda só a escolha (o "Jogar de novo"). `maisFacil`: a dificuldade mais fácil usada na partida (zera na
-  partida nova e no tick 0).
+  no fim do jogo fora do TM muda só a escolha (o "Jogar de novo"): lá os rótulos e o próximo valor do ciclo saem da escolha da
+  página, não do mundo que acabou (`partidaViva`; revisão A1 — lendo o mundo, o ciclo travava num valor e o rótulo mostrava o da
+  partida jogada). `maisFacil`: a dificuldade mais fácil em que a pessoa JOGOU pelo menos um passo (`ajustes-partida.js
+  nivelDoPasso` depois de cada `rodarPasso`: só a partida, com uma pessoa jogando contra a IA — a demo, o Simular o resto e o online
+  não contam); zera na partida nova; um nível só atravessado no ciclo da pausa não conta (revisão A3); sem nenhum passo jogado, o
+  resultado diz 'normal' (a IA × IA, onde a dificuldade não age).
 - **A pausa** (`index.html #linha-ajustes`, `data-so="partida"`): a linha "Duração | Dificuldade" no "Modo de jogo" (no TM o
-  submenu passa a se chamar "Partida e cenas"), dois botões de ciclo (`duracao-ciclo`: 3 → 4 → 5 → 6 → 8 → 10; `dificuldade-ciclo`:
-  Fácil → Normal → Difícil → Lenda) e os comandos `duracao`/`dificuldade` (v) da API `__golaco.ajustes`. Escondida nos treinos, no
-  Livre, nos Pênaltis, no online (o "Modo de jogo" some), com o pedido travando (`ajustesFixos`) e no fim do jogo do TM. No celular
-  deitado ela ocupa a célula vazia da grade (a altura do nível não muda); em ≤ 600 × 480 px o padding dela é 8 px (o "Dificuldade"
-  não cabia com 16). `teste-pausa-tela` P11 (e os 2 ciclos no P10).
+  submenu passa a se chamar "Partida e cenas"), dois botões de ciclo ‹ valor › (`data-ciclo`; `duracao-ciclo`: 3 → 4 → 5 → 6 → 8 →
+  10; `dificuldade-ciclo`: Fácil → Normal → Difícil → Lenda; o toque ou o clique no TERÇO DA ESQUERDA volta um valor — v
+  'anterior', `duracaoAnterior`/`nivelAnterior` —, o resto do botão, o Enter e o Ⓐ andam; revisão A3: o teclado e o controle só
+  andam, as setas continuam movendo o foco) e os comandos `duracao`/`dificuldade` (v) da API `__golaco.ajustes`. O item do 1º nível
+  mostra o que vale ("Modo de jogo · 4 min · Normal"; no TM "Partida e cenas · 6 min · Difícil"; revisão A2). Com o pedido
+  travando (`ajustesFixos`) a linha fica À VISTA e travada (`aria-disabled`, apagada, sem as setas, com o cadeado depois do valor;
+  revisão A6 — antes sumia e a pessoa não via o nível). Escondida nos treinos, no Livre, nos Pênaltis, no online (o "Modo de jogo"
+  some) e no fim do jogo do TM. O modo escolhido (`aria-pressed`) tem o FUNDO verde-escuro e não a borda verde, que é a marca do
+  foco (revisão A4). No celular deitado ela ocupa a célula vazia da grade (a altura do nível não muda); em ≤ 600 × 480 px os 4
+  botões das duas linhas de pares usam o MESMO padding de 11 px (o "Dificuldade" não cabia com 16; revisão A5: com 8 só nela, o
+  texto ficava desalinhado do vizinho). `teste-pausa-tela` P11 (e os 2 ciclos no P10; no fim do jogo, pelo toque, os ciclos andam a
+  partir da escolha e o "Jogar de novo" começa com ela).
 - **A tela antes do jogo** (item 64): `prepartida.js dadosDaPartida` devolve `dificuldade: {curta: 'Normal', longa: 'Dificuldade:
   Normal'}` (`textoDificuldade`; null no online, no Livre e nos Pênaltis); a linha de informação diz "2 × 4 min | Normal" no
   celular e "2 tempos de 4 min | Dificuldade: Normal" no PC; o corte por prioridade ganhou o passo `dificuldadeCurta` (a longa vira
@@ -4989,11 +5008,19 @@ posição de chute é ter a bola de volta mais cedo (bote, engajamento, encurtar
 
 ### Testes
 
-- `teste-partida` T1–T5 (a duração), `teste-dificuldade` D0–D8 (CI: 4 níveis × 4 roteiros × 8 sementes = 128 partidas),
+- `teste-partida` T1–T5 (a duração), `teste-dificuldade` D0–D9 (CI: 4 níveis × 4 roteiros × 8 sementes = 128 partidas),
   `teste-ponte-tm` P12, `teste-prepartida` L3b, `teste-pausa-tela` P11, `teste-prepartida-tela` E23–E24b. Na base 8871b09d todos
-  reprovam. O `--completo` (16 sementes, o D7: todos os degraus vizinhos provados) fica FORA do CI: hoje reprova nos chutes da IA
-  entre vizinhos (Normal < Difícil 0,89 [0,77–1,03], Difícil < Lenda 0,88 [0,76–1,02]) e no ponto do Difícil (1,13 < 1,15) —
-  `PESQUISA-DIFICULDADE.md` §10; as sementes 9–16 erram os pontos do CI por pouco (FILA, "Depende do dono" 22).
+  reprovam; o `teste-dificuldade` novo reprova também a calibração de antes da revisão (D0 e o xG do D5; nas sementes 9–16 o D9: o
+  Lenda marcava menos que o Difícil, provado). As metas do CI reprovam só quando a amostra PROVA (revisão A2): os pontos pelo p5/p95,
+  as provas exigidas são as que passaram nos 4 blocos de 8 sementes de 1 a 32 (botes Fácil < Normal < Lenda, xG da IA Fácil < Lenda,
+  chutes da pessoa Fácil > Lenda, faltas do Lenda, nenhum lado errado provado nos gols da IA e no saldo da pessoa). O `--completo` (16
+  sementes: os pontos exatos, o D7 com todos os degraus vizinhos provados nos botes e no xG, e o D9 com Fácil < Lenda provado no
+  resultado) é a medida do DONO, fora do CI e não é passo antes do merge: hoje reprova no D7 (xG Normal < Difícil e Difícil < Lenda)
+  e, nas sementes 17–32, também no ponto do Lenda no xG (1,09 < 1,15) — FILA, "Depende do dono" 22.
+- **Download inicial sem `?tm`** (`teste-carga`): a folga até os 4 MB foi de 676,5 KB (8871b09d) a 653,1 KB no item 33 (+23,4 KB:
+  main, partida, ajustes-partida, config, as IAs, hud e o index; quase tudo comentário) e a 647,4 KB depois da revisão (+5,7 KB:
+  a linha travada com o cadeado, o ‹ ›, o estado do item e o nivelDoPasso no hud, no CSS e no ajustes-partida; o config e as IAs
+  encolheram); acima do mínimo de 120 KB, nada sob demanda mudou (os 37 continuam fora).
 
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 

@@ -670,3 +670,70 @@ nas sementes 1–8 e erram por pouco nas 9–16 (o efeito do Difícil nos chutes
 sementes os botes e os chutes do Difícil passam (1,25 e 1,20), mas o Lenda passou a deixar a pessoa chutar MAIS que o Difícil
 (chutes da pessoa Difícil 0,72 × Lenda 0,84: "Difícil < Lenda" provado no lado errado, o D6 reprova) e os chutes Difícil < Lenda
 continuam sem prova (0,93 [0,81–1,07]). Ficou a tabela final.
+
+## 11. A revisão (05/11): calibrar pelo RESULTADO
+
+As revisões do item 33 mostraram que a tabela da §10 acertava os SUBSTITUTOS (botes e chutes da IA) e errava o que a pessoa sente:
+os gols da IA não mudavam entre os níveis (0,83 / 0,89 / 0,95 / 0,94 por partida) e o Lenda não era mais difícil que o Difícil. A
+causa medida (revisão B2): o `chuteLonge` 0,65/1,0 e o `chutePosse` 0,3/0,2 do Difícil e do Lenda trocavam a chance boa pelo chute de
+longe (chutes da IA de mais de 20 m: 8 / 21 / 44 / 51%; gol por chute 24 / 20 / 16 / 15%). E o Fácil, que perdia a vontade de chutar
+de fora (`chuteLonge` 0,05), só chutava de perto e convertia MAIS (revisão B3). Três alavancas não mexiam em nada que se meça
+(revisão B4): `avaliaTicks` (o tempo com a bola do condutor da IA ficou 0,85–0,87 s em todos), o `erro` ×1,2 no passe (passe certo
+82–83%) e a `reacaoGoleiro` (defesas do goleiro da IA 63 / 58 / 67 / 56%).
+
+**O que mudou** (`config.js DIFICULDADE`; o Normal continua o jogo de hoje, bit a bit):
+
+| | Fácil | Difícil | Lenda |
+|---|---|---|---|
+| `utilidade.chute` | 1,2 → **2,0** (a vontade de chutar de DENTRO cai a 2/3 da do Normal) | 4,6 → **3,6** | 5,6 → **4,2** (o teto da reserva A1 da especificação) |
+| `utilidade.chuteLonge` | 0,05 → **0,6** (o chute de fora vale 1,2, mais que no Normal: chutar de longe à toa é decidir PIOR) | 0,65 → **o do Normal** (0,25) | 1,0 → **o do Normal** |
+| `utilidade.chutePosse` | 0,7 → o do Normal | 0,3 → o do Normal | 0,2 → o do Normal |
+| `contrapressao` (s / quantos, na Média) | **1 s / 1** (era o do Normal, 3 s / 2) | **4 s / 2** | **5 s / 3** (a reserva V4) |
+| `contencao` (m somados à do 1º homem) | **+1,0** | **−0,4** | **−0,6** (revisão B5) |
+| `erroChute` (só o chute) | **1,5** (era `erro` 1,2 no passe e no chute) | — | — |
+| `avaliaTicks`, `reacaoGoleiro` | **saíram** (sem efeito medível; o `goleiro.js` saiu do fecho do diff) | `avaliaTicks` saiu | `avaliaTicks` saiu |
+
+O bote, o engajamento, o encurtar, a leitura do passe (`le`) e o `passeAntecipa` ficaram como na §10.
+
+**Medido** (`teste-dificuldade`, as mesmas partidas pareadas: 4 roteiros × 16 sementes = 64 por nível, duas amostras independentes;
+o saldo é o da pessoa, gols dela − gols da IA, por partida):
+
+| Medida | Antes (sementes 1–16) | Depois, sementes 1–16 | Depois, sementes 17–32 |
+|---|---|---|---|
+| gols da IA por partida, F / N / D / L | 0,83 / 0,89 / 0,95 / 0,94 | **0,64 / 0,89 / 1,08 / 1,22** | **0,66 / 0,88 / 1,06 / 1,17** |
+| saldo da pessoa | −0,49 / −0,64 / −0,65 / −0,78 | **−0,16 / −0,64 / −0,81 / −0,88** | **−0,24 / −0,47 / −0,76 / −0,86** |
+| V/E/D da pessoa | 12/24/28 · 9/27/28 · 10/21/33 · 7/24/33 | 13/31/20 · 9/27/28 · 8/22/34 · 12/16/36 | 11/31/22 · 13/28/23 · 5/27/32 · 11/14/39 |
+| xG da IA por partida | 0,75 / 0,66 / 0,67 / 0,75 | 0,53 / 0,66 / 0,82 / 0,97 | 0,48 / 0,76 / 0,84 / 0,82 |
+| chutes da IA (de até 20 m) | 3,52 (3,38) / 4,89 (3,75) / 5,52 (2,78) / 6,23 (3,28) | 3,89 (2,53) / 4,89 (3,75) / 5,66 (4,36) / 6,28 (4,92) | 3,47 (2,30) / 4,83 (3,91) / 5,58 (4,39) / 5,58 (4,14) |
+| botes da IA (razão ao Normal) | 0,61 / 1 / 1,20 / 1,52 | 0,52 / 1 / 1,24 / 1,51 | 0,53 / 1 / 1,26 / 1,52 |
+| chutes da pessoa (razão) | 1,62 / 1 / 0,94 / 0,71 | 1,55 / 1 / 0,86 / 0,73 | 1,77 / 1 / 0,79 / 0,84 |
+| faltas da IA por partida | 1,81 / 2,44 / 2,83 / 3,27 | 1,86 / 2,44 / 2,61 / 3,41 | 2,08 / 2,27 / 2,77 / 3,41 |
+
+Nas 128 partidas por nível: gols da IA **0,65 / 0,89 / 1,07 / 1,20** e saldo da pessoa **−0,20 / −0,56 / −0,79 / −0,87** — os quatro
+níveis em ordem nas duas amostras. Provado (bootstrap pareado, 90%): gols da IA Fácil < Lenda (0,53 [0,37–0,72] e 0,56 [0,40–0,75]) e
+saldo da pessoa Fácil > Lenda (+0,72 [0,38–1,08] e +0,63 [0,30–0,97]); Fácil > Normal no saldo numa amostra (+0,48 [0,16–0,83]) e não
+na outra (+0,23 [−0,05–0,52]); Normal > Difícil no saldo numa (+0,30 [0,05–0,56]). Entre Difícil e Lenda o resultado é quase o mesmo
+(gols da IA 1,07 × 1,20; saldo −0,79 × −0,87): o Lenda se separa pelo aperto (botes 1,51× contra 1,25×, faltas 3,4 contra 2,7).
+
+**Leituras:**
+- O que põe gol na conta é a chance boa: com a vontade de chutar até 4,2 e o chute de fora no peso do Normal, a bola recuperada mais
+  cedo (bote, engajamento, contrapressão) vira chute de PERTO (de até 20 m: 3,75 → 4,92 no Lenda) em vez de chute de longe.
+- O Fácil é fácil pelos dois lados: a IA chuta menos de perto e erra mais o chute, e a pessoa chuta 1,6–1,8× mais (a IA aperta
+  metade e quase não faz contrapressão).
+- A distância que a pessoa vê do 1º defensor 0,5 s e 1 s depois do domínio quase não mudou (3,8 / 4,1 / 4,0 / 4,0 m e 3,2 / 3,4 /
+  3,3 / 3,2 m): a `contencao` vale só no ramo 'contem', e no Fácil a posse com o defensor colado sobrevive mais (ele quase não dá o
+  bote) — a mesma seleção da revisão B5. Ficou a alavanca (o sentido é o do FC), sem efeito medível nessa régua.
+- O ponto do Lenda no xG (≥ 1,15) e os degraus vizinhos no xG (Normal < Difícil, Difícil < Lenda) não se provam em toda amostra de 64
+  (sementes 17–32: Lenda 1,09, Difícil < Lenda 1,03 [0,87–1,24]): a distância entre vizinhos continua para o dono ("Depende do dono"
+  22).
+
+**O teste** (revisão A2: a meta só reprova quando PROVA): no CI (sementes 1–8) os pontos reprovam só com o p5/p95 do lado errado; as
+provas exigidas são as que passam em TODA amostra de 32 partidas medida (os 4 blocos de 8 sementes de 1 a 32): botes Fácil < Normal
+< Lenda, xG Fácil < Lenda, chutes da pessoa Fácil > Lenda, faltas do Lenda ≤ 1,8× e nenhum lado errado provado nos gols da IA e no
+saldo (D9). O `--completo` (16 sementes) é a medida do dono, fora do CI e não é passo antes do merge: os pontos exatos, os vizinhos
+provados (D7) e o resultado Fácil < Lenda provado (D9); nas sementes 1–16 reprova só no D7 (xG Normal < Difícil 0,80 [0,65–1,00],
+Difícil < Lenda 0,85 [0,68–1,05]).
+
+**Desvio da especificação registrado** (revisão B3 da duração): com a duração de destino abaixo de 0,75 min (T' < 2700 ticks, só pelo
+`?min` e pela API; o ciclo da pausa nunca vai abaixo de 3 min) o `mudarDuracao` mantém o MINUTO e o segundo mostrado pode voltar
+alguns segundos (o T2 do `teste-partida` conta 592 casos, informativo); com as 6 opções o segundo fica IGUAL em todos os casos.

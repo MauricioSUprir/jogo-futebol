@@ -573,8 +573,11 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
       jogo; livre em tudo, sem a trava das Batalhas.
     - **Níveis**: os 4 do TM — Fácil ≈ Amador/Semi-Pro, Normal = o jogo de hoje (≈ Profissional/Classe Mundial), Difícil ≈ Lendário,
       Lenda ≈ Ultimate (aplicada). Alternativa: um 5º nível entre o Normal e o Difícil (fora do TM, que tem 4).
-    - **Alavancas**: só vontade, decisão e reação da IA adversária; o erro ×1,2 e a reação do goleiro +0,05 s só no Fácil; nada de
-      atributo, física ou alcance (aplicada). Alternativa: o Fácil só por decisão (sem o erro e sem o goleiro).
+    - **Alavancas**: só vontade, decisão e reação da IA adversária; nada de atributo, física ou alcance (aplicada). Na revisão a
+      calibração passou a ser pelo RESULTADO (os gols da IA não mudavam entre os níveis): a vontade de chutar até 4,2 e o chute de
+      fora no peso do Normal nos níveis de cima; no Fácil menos vontade de chutar de dentro, mais de longe e o erro do CHUTE ×1,5;
+      a contrapressão e a contenção por nível; saíram o `avaliaTicks`, o erro do passe e a reação do goleiro (sem efeito medível).
+      Alternativa: o Fácil só por decisão (sem o erro do chute).
     - **Livre e Pênaltis**: Normal, sem a escolha (aplicada). Alternativa: valer no Livre (a IA comprimida) e o goleiro da IA que se
       entrega no pênalti do Fácil.
     - **Pausa**: a linha "Duração | Dificuldade" no "Modo de jogo"; no TM o submenu passou a "Partida e cenas" (aplicada). Alternativa:
@@ -590,12 +593,17 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
     - **O Lenda sem a "gestão de jogo pelo placar"** (o Competitor Mode do FC) na v1 (aplicada). Alternativa: um item seguinte.
     - **Os pontos e recompensas por dificuldade no TM** (o resultado já traz a dificuldade mais fácil usada e a duração): o TM ainda
       não usa os dois campos.
-    - **A distância entre os níveis vizinhos** (medido, `PESQUISA-DIFICULDADE.md` §10): Fácil < Normal < Lenda se prova em toda
-      amostra (botes 0,61 / 1,25 / 1,54 e chutes da IA 0,67 / 1,18 / 1,31 do Normal nas sementes do CI); entre VIZINHOS os chutes da IA
-      não se provam com 64 partidas por nível (Normal < Difícil 0,89 [0,77–1,03], Difícil < Lenda 0,88 [0,76–1,02]) e nas sementes
-      9–16 os pontos do CI erram por pouco (Difícil 1,15 nos botes, chutes 0,77 / 1,08 / 1,24). Recomendado: assim (a vontade de chutar
-      satura; mais força no Difícil, a rodada 7, fez o Lenda deixar a pessoa chutar mais que o Difícil). Alternativa: separar mais os
-      níveis por outra alavanca (a contrapressão por nível, o `antecipaPressao`), ~3 h com a mesma régua.
+    - **A distância entre os níveis vizinhos** (medido na revisão, `PESQUISA-DIFICULDADE.md` §11, 128 partidas por nível): os gols
+      da IA 0,65 / 0,89 / 1,07 / 1,20 por partida e o saldo da pessoa −0,20 / −0,56 / −0,79 / −0,87 ficam em ordem nas duas amostras
+      (antes, 0,83 / 0,89 / 0,95 / 0,94: os gols não mudavam); Fácil < Lenda se prova no resultado; entre VIZINHOS o resultado e o xG
+      da IA não se provam com 64 partidas, e o Difícil e o Lenda quase empatam no placar (o Lenda se separa pelo aperto: botes 1,51×
+      contra 1,25×, faltas 3,4 contra 2,7). O CI só exige o que se prova em toda amostra de 32; o `--completo` (a medida do dono)
+      reprova no D7. Recomendado: assim. Alternativa: separar o Lenda do Difícil no ataque (mais contrapressão, `antecipaPressao`),
+      ~3 h com a mesma régua.
+    - **A dificuldade no item do 1º nível da pausa** (revisão A2): no PC "Modo de jogo · 4 min · Normal", no celular deitado só
+      "Normal" (em 568×320 os dois não cabem sem cortar; aplicada). Alternativa: "Dif. Normal" na linha de informação do celular (7b).
+    - **O ciclo ‹ ›** (revisão A3): o toque/clique no terço da esquerda volta um valor; o teclado e o controle só andam (aplicada).
+      Alternativa: ←/→ mudando o valor com o foco no botão (como o FC), o que muda a navegação das setas na pausa.
 
 ## Obsoleto
 
