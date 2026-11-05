@@ -940,6 +940,19 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Lições: dificuldade se calibra pelo RESULTADO (gols, xG, saldo), não pelos substitutos — subir a vontade de chutar de longe
   dava mais chutes e menos gols; meta de ponto calibrada nas sementes do CI reprova em outras sementes: a meta só reprova quando
   a amostra PROVA (p5/p95).
+- **Clássico pegado (item 35)** (dono, 17/10: "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores ... não pelo
+  árbitro"; contrato "Clássico pegado (item 35)", `PESQUISA-CLASSICO.md`): `m.classico` só com `criarPartida({classico: true})`
+  (AUSENTE no resto, fora do hash; o pedido do TM `partida.classico` pelo `ajustes-partida.js classicoDoPedido` — no online, o do
+  anfitrião —, `?classico=1|0`; nunca no Livre nem nos Pênaltis; o TM não mudou). `config.js CLASSICO` {vontade 2,6, descansoMin
+  16, boteTeto 0,26, segura 2}: a vontade do bote como TAXA por cima do nível da dificuldade (`sim.js cfgBote`, objetos novos na
+  carga; o Normal 0,08/45 → 0,195/17) e o batido que segura mais (`faltas.js faltaTatica(…, segura)`, a decisão do jogador) — os
+  DOIS times (todo `guiadoPelaIA`), nunca o controlado; o árbitro IGUAL. Faltas +42% (2,1 → 3,0 por partida), botes +34%, a chance
+  por contato +4% (o real), gols/chutes iguais. Testes: `teste-classico` (CI: K0–K4 e KI estruturais, C1–C11 pareados que
+  reprovam só quando provam; o K4 prova o árbitro igual em 1 440 cenas), `teste-ponte-tm` P13, `teste-prepartida-tela` E25,
+  `teste-faltas-sentido --classico`, `painel-equilibrio --classico`. Lições: a vontade do bote SATURA (o bote mais cedo fecha a
+  janela: ×2,4 na chance deu +25–32% de botes) e SUBSTITUI a falta do batido (sozinha, faltas +3–6%); o 1º homem mais perto deu
+  MENOS botes e mais falta por contato — medir botes, faltas esperadas (Σ p do árbitro, menos ruído que as marcadas) e a chance
+  por contato juntos, com 64+ partidas pareadas e outras sementes antes de decidir.
 - **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
   pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
   `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas

@@ -5027,6 +5027,114 @@ Fácil > Lenda; o Difícil e o Lenda quase empatam no resultado (o Lenda se sepa
   celular de verdade (item 115); a distância entre os níveis vizinhos (item 116); o ← → nos ciclos e a duração no item do celular
   (item 117); o TM usar a `dificuldade` e o `minutosPorTempo` do resultado (item 118).
 
+## Clássico pegado (item 35; 05/11; contrato)
+
+Pedido do dono (17/10): "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não
+pelo árbitro (o pedido do TM já traz `partida.classico`)". Pesquisa e calibração em `PESQUISA-CLASSICO.md` (226 clássicos reais:
+faltas +11% [+8; +14], os quentes +25–50%; dois terços de MAIS DISPUTAS; a falta por disputa +4%; a pressão por minuto igual).
+**Sem o clássico nada muda**: `hash-igual` e `hash-partida` IGUAIS; o campo `m.classico` nem existe.
+
+### A marca
+
+- `m.classico === true` só quando ligado; AUSENTE no resto (nunca `false` escrito), FORA do hash (como o `m.dificuldade`): só o
+  comportamento muda o hash. `criarPartida({classico})` liga só com `=== true` (`'sim'`, `1`, `'true'` não). Vale com 1 ou 2
+  humanos (o online) e na IA × IA. Não muda no meio da partida (é quem joga contra quem: sem botão na pausa, sem prefs). O Livre e
+  os Pênaltis montam o próprio `opc` do `criarPartida`: nunca o recebem.
+- **De onde vem** (página, fora do fecho): `?classico=1|0` (testes, demo, prints; por cima do pedido) > o pedido do TM
+  (`ajustes-partida.js classicoDoPedido(pedido)`: `partida.classico === true`; no online, o pedido do ANFITRIÃO, o mesmo objeto nos
+  dois aparelhos — um lado com e o outro sem dessincronizaria, e o hash do lockstep acusaria) > desligado. Função à parte do
+  `ajustesDoPedido` (o P12 do `teste-ponte-tm` compara aquele objeto inteiro). `main.js criarMundoTreino` (ramo 'partida') passa
+  `{classico: true}` só ligado: Jogar de novo, Reiniciar, Personalizar e a troca de modo levam junto; o Simular o resto continua no
+  MESMO mundo (IA × IA: o clássico vale nos dois times).
+- **A tela antes do jogo**: com `?tm`, o selo do TM como antes (o `nomeClassico`); fora do TM, com a partida pegada, "Clássico" (o
+  selo `pp-classico` no PC, "Clássico · " no estádio no celular).
+- **O TM não muda** (v377): o pedido já trazia `partida.classico` (`tm3d.js partidaDe`: o `derby` da carreira ou `areRivals`;
+  `online3d.js montaPedido`). A Config "Rivalidade" do TM não é lida (a simulação 2D também não a lê).
+
+### A agressividade (`config.js CLASSICO`, só alavancas do JOGADOR)
+
+| Chave | Cobre | Valor | Onde |
+|---|---|---|---|
+| `vontade` | `ACOES.boteIA.chancePorPasso` como TAXA: `p' = max(p, min(boteTeto, 1 − (1 − p)^vontade))`; e o `descanso` ÷ vontade: `d' = min(d, max(descansoMin, round(d / vontade)))` | **2,6** (Normal 0,08/45 → 0,195/17) | `sim.js boteClassico` (na carga, `MD.pow`), `cfgBote` |
+| `boteTeto` / `descansoMin` | o envelope já jogado no item 33 (a rodada 7 da dificuldade) | 0,26 / 16 | idem |
+| `segura` | × a DECISÃO do batido colado atrás do condutor de segurar (`FALTAS.tatica.chancePorPasso` no ataque promissor, `semSPA` fora dele) | **2** | `faltas.js faltaTatica(m, d, c, segura = 1)`, passado pelo `sim.js boteIA` só com `m.classico` |
+
+- **Os dois times, nunca o controlado:** o `boteIA` só roda para `guiadoPelaIA` (a IA × IA, o Simular o resto, a IA contra a
+  pessoa e os companheiros dela, inclusive o chamado da PRESSÃO); o controlado tem o botão (DIVIDIDA, CARRINHO, CONTER) e ele NÃO
+  muda. Portão próprio (`m.classico`), não o `nivelContra`/`contraPessoa`.
+- **No código:** `boteClassico` monta UMA vez na carga objetos NOVOS (`BOTE_C`, `BOTE_DC[nível]`) com o resto do `ACOES.boteIA`
+  copiado (alcance, colada, encostada, `vParado` — o árbitro lê o `ACOES.boteIA.vParado` direto); `cfgBote(m, t)` escolhe (sem o
+  clássico, a MESMA expressão de antes: o mesmo objeto, nenhum sorteio a mais). `segura = 1` multiplica por 1: o mesmo número.
+- **Por que o `segura`:** a vontade satura (o bote mais cedo fecha a janela: as oportunidades caem ~45%) e SUBSTITUI a falta do
+  batido (que não fica mais colado atrás do condutor): só com a vontade, botes +25% e faltas +3–6%. A decisão de segurar é do
+  jogador; o apito (sempre falta) e o cartão (SPA → amarelo, segurar → sem) são os do árbitro de sempre.
+- **Ficaram fora (a triagem, `PESQUISA-CLASSICO.md` §6):** o 1º homem contendo/apertando mais perto (botes +4% e a chance por
+  contato +16%), a bola encostada com mais diferença de velocidade (+2–7% de botes, a chance por contato mais alta). **Ficam
+  iguais de propósito:** a carga e as regras de RESPONSABILIDADE (`IA_DEFESA.desvio`, `semAtropelar.chega`, o batido que passa
+  adiante, a trava do chamado `boteContidoDoChamado` — mexer nelas cria a falta "de quem só corria", `teste-faltas-sentido` B2), o
+  `apertoArranca` (chegar mais rápido sobe a chance POR CONTATO pela régua), a DIVIDIDA e o carrinho da pessoa, a disputa pelo
+  alto (nenhuma falta nasce no alto: item 28), o volume de pressão (engaja, encurta, contrapressão, recomposição, bola livre,
+  condutor lento: no real a pressão por minuto não sobe; o jogo já corre acima do real, D8), a física e o alcance do bote, e o
+  ÁRBITRO inteiro (`faltas.js` e `FALTAS.*`, `partida.js decidirFalta/aplicarCartao`).
+
+### Com a dificuldade (item 33)
+
+A `DIFICULDADE` vale só no time da IA contra a pessoa (`nivelContra`); o clássico em todo `guiadoPelaIA`. No time da IA contra a
+pessoa os dois entram na MESMA conta, o clássico por cima do valor do nível; nos companheiros da pessoa, na IA × IA, no Simular o
+resto e no online, por cima do Normal. Bote (chance por passo / descanso): Fácil 0,025/110 → 0,064/42; Normal 0,08/45 → 0,195/17;
+Difícil 0,12/34 → 0,26/16; Lenda 0,22/20 → 0,26/16 (teto/piso: o Difícil e o Lenda iguais no bote; o Lenda continua acima pelo
+resto da dificuldade). O Fácil+C continua abaixo do Normal sem clássico (0,064 < 0,08; nos botes por minuto de posse da pessoa,
+0,90 [0,80–1,04] em 16 partidas). Medido (`teste-classico` C10, CI): Fácil+C/Normal+C 0,60 [0,55–0,65]; Normal+C/Lenda+C 0,87
+[0,76–1,00]; faltas da IA Lenda+C/Normal+C 1,07 [0,76–1,51] (guarda ≤ 1,8×); 0 vermelho em 16 partidas no Lenda+C.
+
+### O árbitro igual — como se prova
+
+1. **A régua idêntica** (`teste-classico` K4, determinística): 1 440 cenas montadas (chegada × velocidades do defensor e do
+   condutor × desarme × fora/dentro da área × chance clara, nos dois sentidos) em que `chanceFaltaBote`, `fatorForca(forcaContato)`,
+   `chanceFaltaDividida`, `chanceClara`, `ataquePromissor`, `faltaNoBote`, `faltaNaCarga`, `faltaTatica` (também com o mesmo
+   `segura`), `faltaNoCarrinho`, `montarFalta`, o `regrasPartida` com a falta pendente, a `chanceDividida` e o `semAtropelar` dão o
+   MESMO resultado e o MESMO `m.rng` com e sem `m.classico` (25 920 chamadas).
+2. **A chance média por contato** (C3b): Σ p ÷ N do árbitro nos botes e cargas avaliados, clássico ÷ sem — reprova se PROVAR fora
+   de [0,90; 1,10]. Medido: 1,00 / 1,12 / 1,01 nas três amostras; juntas (176 pares) 1,04 [0,97; 1,13] (o real, falta ÷ disputa
+   +4% [+2; +6]). Só no bote, 1,09 / 1,17 / 1,07: o bote sai no começo da janela, com o defensor ainda chegando (a MESMA régua:
+   `porVel`, `fatorForca`) — o "bote mais forte" do pedido no sentido de mais decidido.
+
+### O que muda para quem joga (2 × 4 min; as três amostras juntas: 176 partidas pareadas, 80 IA × IA e 96 contra os roteiros)
+
+| | sem → com (IA × IA) | razão | sem → com (contra os roteiros, a IA) | razão |
+|---|---|---|---|---|
+| botes (tentativas) | 5,88 → 8,39 | 1,43 [1,30–1,57] | 18,18 → 23,91 | 1,32 [1,25–1,39] |
+| faltas marcadas | 1,84 → 2,70 | 1,47 [1,25–1,75] | 2,35 → 3,25 | 1,38 [1,20–1,59] |
+| faltas esperadas (Σ p) | 1,86 → 2,73 | 1,47 [1,34–1,62] | 2,42 → 3,27 | 1,35 [1,22–1,49] |
+| amarelos | 0,60 → 0,69 | 1,15 [0,84–1,62] | 0,39 → 0,61 | 1,59 [1,14–2,29] |
+| vermelhos | 0,04 → 0,07 | — | 0,03 → 0,07 | — |
+| gols (os dois times) | 1,96 → 1,84 | 0,94 [0,82–1,08] | 1,39 → 1,58 | 1,14 [0,94–1,38] |
+| chutes (os dois times) | 8,79 → 8,65 | 0,98 [0,90–1,07] | 8,00 → 8,50 | 1,06 [0,98–1,16] |
+| bola rolando (min) | 7,99 → 7,92 | 0,99 [0,99–1,00] | 7,54 → 7,40 | 0,98 [0,97–0,99] |
+| volume (m/min, IA de linha) | 162,6 → 161,3 | 0,99 [0,98–1,00] | 176,6 → 174,6 | 0,99 [0,98–1,00] |
+
+Os companheiros da pessoa: tentativas 0,93 → 1,52 por partida, faltas 0,18 → 0,47. Na página: ~0,9 falta a mais por partida, ~1
+cena de cartão a mais a cada 6 partidas e mais replays de falta perto da área (classe B, o teto de 3 por tempo).
+
+### Testes
+
+- **`teste-classico`** (CI, padrão, 3 processos; ~690 s aqui com 2): K0 a tabela, K1 a marca, K2 o hash (sem × `false` × `'sim'`
+  IGUAIS; `true` DIFERENTE na demo e nos 4 roteiros), K3 os dois times e nunca o controlado (o cfg de cada tentativa =
+  `cfgBote`), K4 o árbitro igual, KI a instrumentação só lê; C1–C11 pareados (bootstrap estratificado por modo, as metas
+  reprovam só quando PROVAM): botes e faltas esperadas +25–50% (reprova se provar < +20% ou > +60%), chance por contato ±10%,
+  amarelos, vermelhos ≤ 0,2 (Poisson, também o Lenda+C), gols sem queda > 25% nem alta > 10% provadas, chutes sem queda > 15%,
+  bola rolando, volume/disparada/presença sem alta provada, a combinação com a dificuldade (no CI os degraus de ~10% vizinhos
+  reprovam só com o lado errado provado; no `--completo`, provados), os companheiros (informativo). Medida instrumentada:
+  `tools/lib/classico-medidas.mjs` (ganchos que só leem). Na base 29d67bad reprova 6 (K0, K1, K2, K3, C1, C2). Mutações: o árbitro
+  × 1,3 no clássico → K4; o `cfgBote` sempre do clássico → K0 e K2; `m.classico = !!opc.classico` → K1 e K2; o `BOTE_C` com outro
+  `vParado` → K0; o portão só contra a pessoa → K2 (a demo igual); o clássico no `semAtropelar` → K4; a tabela neutra → C1 e C2.
+- `teste-ponte-tm` P13 (o `classicoDoPedido`), `teste-prepartida-tela` E25 (o selo com `?classico=1`), `teste-faltas-sentido
+  --classico` (B1–B4 com o clássico: 0,00 · 0,25 · 5,75/0,13/0,50 · 0,00 — passa), `painel-equilibrio --classico` (a versão medida
+  com o clássico, a base sem).
+- **Sem recuo:** `hash-igual --ref 29d67bad --rapido` e `hash-partida --ref 29d67bad --sementes 2 --min 1 --par 2` IGUAIS;
+  `fecho-hash --diff 29d67bad`: `config.js`, `faltas.js`, `partida.js`, `sim.js` (o `ia-tatica.js` voltou à base); download
+  inicial sem `?tm` +5,3 KB (folga 642,2 KB).
+
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 
 Dono, 24/10: "a IA correr, tanto pra marcar, tanto pra atacar, pq ela não corre". Plano em 8 PRs (D1–D8; pesquisa e

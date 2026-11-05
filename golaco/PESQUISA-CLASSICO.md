@@ -548,3 +548,19 @@ Leituras:
 Fácil 0,025/110 → 0,064/42; Normal 0,080/45 → 0,195/17; Difícil 0,120/34 → 0,26/16 (teto/piso); Lenda 0,22/20 → 0,26/16. O
 Fácil+C continua abaixo do Normal sem clássico (0,064 < 0,08); Difícil+C e Lenda+C ficam iguais no bote (o teto do envelope
 do item 33) — o Lenda continua acima pelo resto da dificuldade (engaja, encurta, contenção, contrapressão).
+
+### 6.3 A conferência
+
+- **O teste do CI** (`teste-classico`, sementes 1–16 da demo + 4 roteiros × 1–8, 48 por braço, + Fácil+C e Lenda+C × 4 × 4):
+  PASSOU — botes 1,47 [1,35–1,60], faltas esperadas 1,45 [1,26–1,66], marcadas 1,43 [1,13–1,75], chance por contato 1,00
+  [0,87–1,15], amarelos 1,21, vermelhos 2 em 48 (Lenda+C 0 em 16), gols 1,25 [1,00–1,55] (sem lado provado), chutes 0,97, bola
+  rolando 0,99, volume 0,98; a combinação: Fácil+C/Normal+C 0,60 [0,55–0,65], Normal+C/Lenda+C 0,87 [0,76–1,00], Fácil+C/Normal sem
+  0,90 [0,80–1,04] (esses dois degraus de ~10–13% não se provam com 16 partidas por nível: no CI reprovam só pelo lado errado).
+- **As três amostras juntas** (176 partidas pareadas: 80 IA × IA e 96 contra os roteiros): botes 1,34 [1,28–1,40], faltas
+  marcadas 1,42 [1,28–1,58] (2,12 → 3,00 por partida), faltas esperadas 1,40 [1,30–1,51], amarelos 1,34 [1,05–1,71], vermelhos 0,03
+  → 0,07 por partida, pênaltis 0,07 → 0,09, gols 1,03 [0,91–1,15], chutes 1,03 [0,96–1,09], chance por contato 1,04 [0,97–1,13]
+  (o real: +4% [+2; +6]), bola rolando 0,99 [0,98–0,99], volume 0,99 [0,98–1,00]. IA × IA: faltas 1,47; contra os roteiros: 1,38.
+  Os companheiros da pessoa: tentativas 0,93 → 1,52 e faltas 0,18 → 0,47 por partida.
+- `teste-faltas-sentido --classico`: B1 0,00, B2 0,25, B3 5,75 · 0,13 · 0,50, B4 0,00 — PASSA (sem: 0,00 · 0,31 · 3,75 · 0,00 ·
+  0,38 · 0,00): mais contato, nenhuma falta "forçada" a mais.
+- **Não rodou:** o `--completo` (96 por braço; FILA item 122) e o celular de verdade.
