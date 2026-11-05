@@ -115,13 +115,15 @@ export const TEMPOS_NAVEGADOR = {
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
   // acertar pelo log do CI; a revisão somou 2 páginas no 15 — o pedido misto e a TM Cond bloqueada —, ~+40 s)
-  'teste-prejogo.mjs': 430,
+  // (item 109: 580,3 s no log do CI do #614, navegador)
+  'teste-prejogo.mjs': 580,
   // (item 64: 498 s aqui com o online — 3 pares de abas —, a máquina dividida com o hash-partida; a revisão somou o E4b/E5b em 3
   // páginas × 7 telas, o E11b, o E19b e os Pênaltis do TM: 573 s aqui com outra página junto; acertar pelo log do CI)
   // (item 100: 440,6 s no log do 1º CI do #613, navegador 2 de 3)
+  // (item 109: 549,1 s no log do CI do #614, navegador, antes do item 31)
   // (item 31: + o E22, 4 páginas ?tm com as fotos — 844×390, 1280×720, a pública e a de 404 —; ~+50 s estimado; acertar pelo log
-  // do CI)
-  'teste-prepartida-tela.mjs': 490,
+  // do CI — item 111)
+  'teste-prepartida-tela.mjs': 600,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o

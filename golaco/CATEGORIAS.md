@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~30 h
+## 🛠️ B. Correções e regras — ~29 h
 
 | nº | o que é | horas |
 |---|---|---|
@@ -37,8 +37,8 @@
 | 101 | 🔎 O que ficou fora do teste da tela antes do jogo: o tempo até ela aparecer e do Jogar ao 1º plano, o download com o TM, 4 das 5 provas de que o teste reprova sem a correção, a espera de 100 s no online e o tempo do "Simular partida" | 2 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
 | 108 | 🔎 O nome de camisa do TM com mais de 10 letras sai cortado no meio, sem marca ("Evangelista" vira "Evangelist"): cortar com "…" ou usar outra parte do nome | 1 |
-| 109 | 🔎 O tempo do teste do pré-jogo na divisão do CI (hoje a estimativa de 430 s), do log do 1º CI do #614 | 0,25 |
-| 111 | 🔎 Os tempos dos testes da comemoração e da tela antes do jogo na divisão do CI (hoje as estimativas de 150 e 490 s), do log do 1º CI do #615 | 0,25 |
+| 109 | ✅ O tempo do teste do pré-jogo na divisão do CI: 580 s, do log do CI (#614; no #615) | 0,25 |
+| 111 | 🔎 Os tempos dos testes da comemoração e da tela antes do jogo na divisão do CI (hoje 150 s estimados e 600 s: 549 do log do #614 + ~50 estimados), do log do 1º CI do #615 | 0,25 |
 | 113 | 🔎 Conferir rodando o que a foto do autor não rodou: o online com uma pessoa na edição pro e a outra na pública, o aviso "Conexão instável" escondido na comemoração, as fotos nas fichas no Modo Livre e nos Pênaltis, e se o boneco parece com a foto (fora dos rostos reais) | 2 |
 
 ---
