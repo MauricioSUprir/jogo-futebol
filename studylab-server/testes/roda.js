@@ -32,6 +32,8 @@ let chamadasGemini = [];                // modelos chamados, em ordem
 const geminiFalha = {};                 // modelo → { status, msg } para simular cota/sumiço
 let assinaturasMP = 0;
 const whatsappEnviados = [];
+const emailsEnviados = [];   // e-mails do código (Brevo falso)
+let brevoCai = false;
 /* ---- Google dublado: o "code" diz quem entra e o que foi permitido ---- */
 const google = { revogados: [], refreshPedidos: 0, codigos: {} };
 const jwtFalso = (p) => ['e30', Buffer.from(JSON.stringify(p)).toString('base64url'), 'x'].join('.');
@@ -137,6 +139,11 @@ globalThis.fetch = async (url, opcoes) => {
       usage: { input_tokens: 120, output_tokens: 45 },
       stop_reason: 'end_turn',
     }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }
+  if (alvo === 'https://api.brevo.com/v3/smtp/email') {
+    if (brevoCai) return resp({ message: 'fora do ar' }, 500);
+    emailsEnviados.push({ chave: opcoes.headers['api-key'], corpo: JSON.parse(opcoes.body) });
+    return resp({ messageId: '<1@brevo>' }, 201);
   }
   if (alvo.startsWith('https://graph.facebook.com/')) {
     whatsappEnviados.push({ url: alvo, corpo: JSON.parse(opcoes.body), auth: opcoes.headers.authorization });
@@ -824,6 +831,85 @@ console.log('\n== criar conta (nome, e-mail, número, senha, foto) e WhatsApp ==
   const pro = await pedir('POST', '/conta/entrar', { corpo: { email: 'gui@escola.com', senha: 'senha-forte-1' } });
   r = await pedir('POST', '/conexoes/google/iniciar', { token: pro.dados.token, corpo: { servico: 'agenda', volta: 'http://localhost:9999/x/' } });
   conferir(r.status === 200 && r.dados.url.startsWith('https://accounts.google.com/'), 'com o Pro, a conta de e-mail liga a Agenda');
+}
+
+console.log('\n== código de verificação por e-mail ==');
+{
+  const codigoDe = (para) => {
+    const m = [...emailsEnviados].reverse().find((e) => e.corpo.to[0].email === para);
+    return m ? /(\d{6})/.exec(m.corpo.textContent)[1] : null;
+  };
+  let r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com' } });
+  conferir(r.status === 503, 'sem as chaves do e-mail, o código avisa que não está ligado');
+  let cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.email === false, 'o app sabe que o e-mail está desligado (cria conta sem código)');
+
+  process.env.BREVO_API_KEY = 'chave-brevo'; process.env.EMAIL_REMETENTE = 'mindtrack@teste.com';
+  cfg = await pedir('GET', '/conexoes/config');
+  conferir(cfg.dados.email === true, 'com as chaves, o app pede o código');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678' } });
+  conferir(r.status === 400 && /[Cc]ódigo/.test(r.dados.erro), 'sem o código, a conta não é criada', r.dados.erro);
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'Maria@Escola.com', nome: 'Maria Lima' } });
+  const e1 = emailsEnviados[0];
+  conferir(r.status === 200 && e1?.chave === 'chave-brevo' && e1.corpo.to[0].email === 'maria@escola.com'
+    && e1.corpo.sender.email === 'mindtrack@teste.com' && /criar a conta/.test(e1.corpo.subject) && /Oi, Maria!/.test(e1.corpo.htmlContent),
+    'manda o e-mail com o código pelo Brevo', JSON.stringify(e1?.corpo?.subject));
+  const cod = codigoDe('maria@escola.com');
+  conferir(/^\d{6}$/.test(cod) && !JSON.stringify(r.dados).includes(cod), 'o código tem 6 números e não volta na resposta');
+  const errado = cod === '000000' ? '111111' : '000000';
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678', codigo: errado } });
+  conferir(r.status === 400 && /4 tentativa/.test(r.dados.erro), 'código errado: recusa e conta as tentativas', r.dados.erro);
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria@escola.com', telefone: '11987650000', senha: '12345678', codigo: cod } });
+  conferir(r.status === 200 && r.dados.usuario.provedor === 'email', 'com o código certo, a conta nasce');
+  const { contaPorEmail } = await import('../src/db.js');
+  conferir((await contaPorEmail('maria@escola.com')).email_verificado === true, 'o e-mail fica marcado como confirmado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Maria Lima', email: 'maria2@escola.com', telefone: '11987650000', senha: '12345678', codigo: cod } });
+  conferir(r.status === 400, 'o código de um e-mail não serve para outro');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com' } });
+  conferir(r.status === 409, 'pedir código de criar para e-mail que já tem conta: manda entrar');
+
+  // 5 erros e o código morre
+  await pedir('POST', '/conta/codigo', { corpo: { email: 'teo@escola.com' } });
+  const codTeo = codigoDe('teo@escola.com');
+  const ruim = codTeo === '123456' ? '654321' : '123456';
+  for (let i = 0; i < 5; i++) r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Teo', email: 'teo@escola.com', telefone: '11987650001', senha: '12345678', codigo: ruim } });
+  conferir(/muitas vezes/.test(r.dados.erro), 'na 5ª tentativa errada o código é cancelado');
+  r = await pedir('POST', '/conta/criar', { corpo: { nome: 'Teo', email: 'teo@escola.com', telefone: '11987650001', senha: '12345678', codigo: codTeo } });
+  conferir(r.status === 400 && /vencido/.test(r.dados.erro), 'depois disso nem o código certo vale (pede outro)');
+
+  // freio: 3 códigos por e-mail a cada 10 min
+  for (let i = 0; i < 3; i++) r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ze@escola.com' } });
+  conferir(r.status === 200, '3 códigos seguidos podem');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ze@escola.com' } });
+  conferir(r.status === 429, 'o 4º código em 10 min é freado (ninguém lota a caixa de alguém)');
+
+  // esqueci a senha
+  const antes = emailsEnviados.length;
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'ninguem@escola.com', motivo: 'senha' } });
+  conferir(r.status === 200 && emailsEnviados.length === antes, 'e-mail sem conta: responde igual e não manda nada');
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'maria@escola.com', motivo: 'senha' } });
+  const codSenha = codigoDe('maria@escola.com');
+  conferir(r.status === 200 && /trocar a senha/.test(emailsEnviados.at(-1).corpo.subject) && codSenha !== cod, 'esqueci a senha: chega um código novo');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'curta' } });
+  conferir(r.status === 400 && /8 caracteres/.test(r.dados.erro), 'senha nova curta é recusada');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'senha-nova-99' } });
+  conferir(r.status === 200 && r.dados.token && r.dados.usuario.email === 'maria@escola.com', 'com o código, troca a senha e já entra');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'maria@escola.com', senha: '12345678' } });
+  conferir(r.status === 401, 'a senha antiga deixa de valer');
+  r = await pedir('POST', '/conta/entrar', { corpo: { email: 'maria@escola.com', senha: 'senha-nova-99' } });
+  conferir(r.status === 200, 'a senha nova entra');
+  r = await pedir('POST', '/conta/nova-senha', { corpo: { email: 'maria@escola.com', codigo: codSenha, senha: 'outra-senha-1' } });
+  conferir(r.status === 400, 'o código é de uso único');
+
+  brevoCai = true;
+  r = await pedir('POST', '/conta/codigo', { corpo: { email: 'bia@escola.com' } });
+  conferir(r.status === 502 && /Tente de novo/.test(r.dados.erro), 'se o Brevo cair, avisa para tentar de novo');
+  brevoCai = false;
+  const saude = await pedir('GET', '/saude');
+  conferir(saude.dados.emailConfigurado === true, '/saude mostra o e-mail ligado');
+  const textoTudo = JSON.stringify(emailsEnviados.map((e) => e.corpo.htmlContent));
+  conferir(!textoTudo.includes('chave-brevo'), 'a chave nunca vai no e-mail');
+  delete process.env.BREVO_API_KEY; delete process.env.EMAIL_REMETENTE;
 }
 
 console.log('\n== amizades, chat, foguinho e duelo em tempo real ==');

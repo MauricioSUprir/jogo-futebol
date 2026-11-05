@@ -103,6 +103,7 @@ export async function migrar() {
   // conta com e-mail e senha (criada no app): e-mail de login, telefone (WhatsApp) e foto
   await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login text`;
   await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone text NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verificado boolean NOT NULL DEFAULT false`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email_login ON usuarios (lower(email_login)) WHERE email_login IS NOT NULL`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google ON usuarios (google_sub) WHERE google_sub IS NOT NULL`;
   // Conexões: o que o aluno ligou (Google Agenda, Classroom, Drive, calendário por link).
@@ -175,11 +176,11 @@ export async function contaPorEmail(email) {
  * a MESMA conta vira conta de verdade: o plano e o histórico continuam.
  * Devolve null se o e-mail já tem conta.
  */
-export async function criarContaEmail({ nome, email, telefone, senha, foto = '' }, contaAtualId = null) {
+export async function criarContaEmail({ nome, email, telefone, senha, foto = '', verificado = false }, contaAtualId = null) {
   if (await contaPorEmail(email)) return null;
   const campos = {
     email: String(email).trim(), email_login: String(email).trim().toLowerCase(), nome, telefone, foto,
-    provedor: 'email', senha_hash: hashSenha(senha),
+    provedor: 'email', senha_hash: hashSenha(senha), email_verificado: !!verificado,
   };
   if (emMemoria) {
     const atual = contaAtualId && mem.usuarios.get(contaAtualId);
@@ -196,6 +197,16 @@ export async function criarContaEmail({ nome, email, telefone, senha, foto = '' 
   const id = `u_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
   const [u] = await sql`INSERT INTO usuarios ${sql({ id, ...campos })} RETURNING *`;
   return u;
+}
+
+/** Senha nova pelo código do e-mail (o e-mail fica confirmado). Devolve a conta ou null. */
+export async function trocarSenha(email, senha) {
+  const u = await contaPorEmail(email);
+  if (!u) return null;
+  const senha_hash = hashSenha(senha);
+  if (emMemoria) { Object.assign(u, { senha_hash, email_verificado: true }); return u; }
+  const [n] = await sql`UPDATE usuarios SET senha_hash = ${senha_hash}, email_verificado = true WHERE id = ${u.id} RETURNING *`;
+  return n || null;
 }
 
 export async function atualizarFoto(usuarioId, foto) {
