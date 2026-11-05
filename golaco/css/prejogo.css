@@ -83,7 +83,12 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
   font-family: 'TM Cond', 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif; font-weight: 800; font-size: var(--fn, 11px); line-height: 1.25;
   white-space: nowrap; max-width: 94%; overflow: hidden; text-overflow: ellipsis;
 }
-.pj-pos { font-weight: 800; font-size: var(--fp, 11px); color: var(--verde); letter-spacing: 0.05em; }
+/* a posição na MESMA TM Cond da carta, quase sem espaçamento e um pouco apagada: número > nome > posição (na face larga e espaçada
+   da interface, em verde cheio, "ZAG" pesava mais que o nome — revisão V4); o tamanho continua o da regra §7.5 */
+.pj-pos {
+  font-family: 'TM Cond', 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif; font-weight: 800; font-size: var(--fp, 11px);
+  color: var(--verde); letter-spacing: 0.02em; opacity: 0.78;
+}
 /* a carta baixa demais para as 3 linhas: a posição sai (fica no aria-label da carta) */
 .pj-carta.sem-pos .pj-pos { display: none; }
 

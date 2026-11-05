@@ -22,7 +22,7 @@
 //      número ≥ 16); E7 nada cortado (na largura — também por fração de px: a largura do texto no canvas × a caixa — e a TINTA
 //      do nome dentro da caixa dele: os traços de baixo de g, y, ç); E8
 //      sem rolar (documento, #prejogo, a folha, a coluna) e a coluna ≥ 8 px do grupo do campo; E9 a mesma caixa nas duas
-//      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome em TM Cond (carregada);
+//      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome e a posição em TM Cond (carregada);
 //      E12 as pontas nunca tangentes à lateral (a borda da carta ≥ 5 px para dentro, ou a carta centrada na lateral ± 1 px;
 //      revisão V1 do item 29);
 //      E4 também as linhas recortadas pelo canto arredondado do campo (clip-path com o raio: os cantos vivos do retângulo
@@ -268,8 +268,9 @@ async function conferirEmPe(pg, t) {
     if (pular !== 0) falhas.push(`E10 Pular ${pular < 0 ? 'invisível' : 'encosta em ' + pular}`);
     // E11 a TM Cond
     const fam = getComputedStyle(folha.querySelector('.pj-nome') || folha).fontFamily.replace(/["']/g, '');
+    const famPos = getComputedStyle(folha.querySelector('.pj-pos') || folha).fontFamily.replace(/["']/g, '');
     const carregada = [...document.fonts].some(ff => ff.family.replace(/["']/g, '') === 'TM Cond' && ff.status === 'loaded');
-    if (!(fam.startsWith('TM Cond') && carregada)) falhas.push(`E11 letra do nome "${fam.split(',')[0]}" (TM Cond carregada ${carregada})`);
+    if (!(fam.startsWith('TM Cond') && famPos.startsWith('TM Cond') && carregada)) falhas.push(`E11 letra do nome "${fam.split(',')[0]}", da posição "${famPos.split(',')[0]}" (TM Cond carregada ${carregada})`);
     // E12 as pontas nunca tangentes à lateral: a borda da carta ≥ 5 px para dentro, ou a carta centrada na lateral (± 1 px)
     let pontas = Infinity, pontaRuim = '';
     for (const c of cartas) {
