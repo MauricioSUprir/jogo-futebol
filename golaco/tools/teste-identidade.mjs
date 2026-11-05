@@ -447,6 +447,23 @@ if (I) {
   }
 }
 
+// G) o escudo de reserva com siglas de letras largas (revisão V9 do item 29: "AAW" a 30 passava da área e encostava no contorno):
+// a sigla na DejaVu Sans Bold (a mais larga das letras do sistema; larguras medidas no Chromium, em) cabe em ≤ 70 de largura (~3,5 de
+// folga de cada lado do contorno na linha de base) e as que já cabiam ficam no tamanho de antes (30 com 3 letras, 38 com 2)
+if (I?.svgEscudoSigla) {
+  const DEJAVU = { A: 0.774, B: 0.762, C: 0.734, D: 0.83, E: 0.683, F: 0.683, G: 0.821, H: 0.837, I: 0.372, J: 0.372, K: 0.775, L: 0.637, M: 0.995,
+    N: 0.837, O: 0.85, P: 0.733, Q: 0.85, R: 0.77, S: 0.72, T: 0.682, U: 0.812, V: 0.774, W: 1.103, X: 0.771, Y: 0.724, Z: 0.725 };
+  const ruins = [], medidas = [];
+  for (const [sg, antes] of [['AAW', null], ['WWW', null], ['MWM', null], ['CAM', null], ['SEB', 30], ['FLA', 30], ['RNF', 30], ['RN', 38], ['VAS', 30]]) {
+    const svg = I.svgEscudoSigla(sg, '#1e6fd9', '#ffffff');
+    const fs = +(svg.match(/font-size="([\d.]+)"/) || [])[1];
+    const w = [...sg].reduce((s, c) => s + DEJAVU[c], 0) * fs;
+    medidas.push(`${sg} ${fmt(fs, 1)} px → ${fmt(w, 1)}`);
+    if (!(w <= 70.5) || (antes != null && fs !== antes) || !svg.includes(`>${sg}<`)) ruins.push(`${sg}: letra ${fs}, largura ${fmt(w, 1)}`);
+  }
+  reg('G o escudo de reserva: a sigla de letras largas cabe dentro do contorno (DejaVu Sans Bold), as outras no tamanho de antes', ruins.length ? ruins.join('; ') : medidas.join('; '), '≤ 70 de largura; 30/38 nas que cabiam', ruins.length === 0);
+}
+
 console.log(tabelaTexto(linhas));
 console.log(falhas ? `\nteste-identidade: REPROVOU (${falhas})` : '\nteste-identidade: PASSOU');
 process.exit(falhas ? 1 : 0);
