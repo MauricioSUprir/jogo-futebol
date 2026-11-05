@@ -805,10 +805,15 @@ Constantes em `config.js COMEMORACAO`.
 - **Cartão do autor (item 31; dono, 17/10: "a FOTO do autor com o número e o nome"; `PESQUISA-ESTADIO.md` §10.1)**:
   `#autor-gol` DENTRO da camada `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à DIREITA na linha do
   placar (o único lugar medido livre do autor, dos outros e do HUD em todos os planos, PC e celular). Mostra a foto (só a da
-  edição pro do TM, abaixo), o escudo + a sigla na cor do time, o NÚMERO e o nome (completo no PC; o de camisa com menos de
-  520 px de altura); sem minuto nem "GOL"; sem foto, só o texto numa linha — nada desenhado no lugar. Medidas pela altura da
-  janela: foto `clamp(96px, 18vh, 196px)` no PC e `clamp(64px, 23.5vh, 96px)` no celular deitado, número 28–48 / 22–26 px,
-  nome 18–32 / 14–16 px; `max-width` até a direita do placar + 12 px (o hud mede: `--ag-esq`). Quando: `js/autor-cartao.js`
+  edição pro do TM, abaixo) e a coluna [pílula do time: escudo + sigla | número / NOME]: o nome COMPLETO da ficha é a linha
+  principal (peso 800), também no celular (o de camisa do `tm-times` corta o último nome em 10 letras sem reticências —
+  revisão V1), o número vai na pílula depois de um filete (1,3 × a sigla — revisão V3) e a coluna fica centrada na altura da
+  foto; o pé da foto escurece até a cor do fundo do cartão (42% de baixo: a camisa de outro clube some quase toda — revisão
+  V2). Sem minuto nem "GOL"; sem foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`; os topos e os pés alinhados,
+  as letras 0,6/0,55 × a altura — revisão V4) — nada desenhado no lugar. Medidas pela altura da janela: foto
+  `clamp(96px, 18vh, 196px)` no PC e `clamp(64px, 23.5vh, 96px)` no celular deitado, nome `clamp(22px, 4vh, 40px)` /
+  `clamp(18px, 5.4vh, 20px)`, sigla 13–20 / 12 px; `max-width` até a direita do placar + 12 px (o hud mede: `--ag-esq`; o nome
+  que não couber corta com reticências). Quando: `js/autor-cartao.js`
   (puro, estático, fora do fecho; as constantes `AUTOR_GOL` moram nele): `autorDoCartao(plano, gol)` = o autor só se ele é
   quem comemora (gol contra e sem autor = nada); `janelaCartao({rede, duracao, curta})` = entra `rede + 0,4` s (1,6 s), sai
   em `min(entra + 3,5 (curta 2,6), duracao − 0,5)`, null com menos de 1,5 s; `faseCartao(janela, t, duracao)` relê a duração
@@ -816,7 +821,10 @@ Constantes em `config.js COMEMORACAO`.
   animação do CSS só enfeita: entra 0,3 s, sai 0,2 s) e mexe no DOM só nas trocas de fase; nunca antes do 1º corte; os dados
   (`dadosAutorGol`, a montagem da tarja das cenas) são lidos na entrada — com a foto já decodificada, a MESMA `<img>` da
   pré-carga (pinta no 1º quadro) —, e o cartão nunca muda de forma depois. Pular, a cena encerrada (saída, intervalo, fim,
-  Reiniciar, Simular o resto, a cena do cartão no gol + 149) = some na hora (`apagarCartaoAutor`). `?autorGol=0` desliga só
+  Reiniciar, Simular o resto, a cena do cartão no gol + 149) = some na hora (`apagarCartaoAutor`). Com a pausa aberta e no
+  "Replay" da pausa pedido no meio da cena (o comando não espera a cena: a jogada com a bola rolando, a marca REPLAY no mesmo
+  canto) ele fica escondido (`html.pausa-aberta`/`html.em-replay`, `visibility`; revisão R1) e volta onde estava se a cena
+  continuar; o selo "Conexão instável" do online espera a comemoração (`html.em-comemoracao`; revisão R3). `?autorGol=0` desliga só
   ele (padrão ligado, também com webdriver: os testes de outros assuntos abrem com `?comemoracao=0`). No online, cada
   aparelho na sua cena (só desenho). Exceção escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa
   ENTRA/SAI, o nome do condutor e as tarjas das cenas): só dentro da cena, nunca com a bola rolando. Com `?tm`, a cara do TM
@@ -851,7 +859,9 @@ Constantes em `config.js COMEMORACAO`.
   encosta (placar, "Pular", área segura) e nunca sobre o autor (a pose desenhada) no PC, 844×390 com o entalhe, 568×320 e no
   gol natural; H3 a foto do tmId do autor no 1º quadro (`?tm` pro, a rota `/__fotos/` com JPGs do TM) e nada no gol contra
   (`golRoteirizado({contra: true})`); H4 o TM público sem foto e sem pedido; H5 a curta; H6 pular = some no quadro; H7 as
-  fotos em 404; H8 `?autorGol=0`. `teste-comemoracao` 15 (a janela, puro). Os testes de navegador que não são da comemoração
+  fotos em 404; H8 `?autorGol=0`; H9 o "Replay" da pausa com o cartão na tela (0 quadros juntos); H10 o nome completo no celular
+  (o último nome de 11 letras); H11 o nome maior que o número e a coluna no meio da foto; H12 sem foto na altura do placar.
+  `teste-comemoracao` 15 (a janela, puro). Os testes de navegador que não são da comemoração
   e atravessam um gol esperando a saída abrem com `?comemoracao=0` (`teste-estadio`, `teste-desempenho-celular` — que
   mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
 
@@ -2669,7 +2679,9 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   (o `tm3d.js` confere `TM.storage.edition()`: o `TM.img.playerPhotoUrl` não confere e devolve o `player.photo` também na
   pública): a foto real de licença livre do TM (`assets/jogadores/…`, em endereço ABSOLUTO pelo `abs`) ou a importada pela
   carreira própria (`data:image/jpeg|png|webp`, até 48 000 caracteres cada e 240 000 por time; acima, a foto fica de fora). O
-  "rae-me" do Rumo ao Estrelato nunca tem. O pedido continua `v: 2`; o `tm-times.js` não copia o campo (`teste-ponte-tm` P10e:
+  "rae-me" do Rumo ao Estrelato nunca tem. Sem espaço no localStorage (os saves do TM moram nele), o `abre3d` grava o pedido sem
+  as importadas e, se ainda faltar, sem foto nenhuma (`gravaPedido`, `TM.tm3d._gravaPedido`; `teste-ponte-tm` P11) — a foto
+  sai, o 3D não. O pedido continua `v: 2`; o `tm-times.js` não copia o campo (`teste-ponte-tm` P10e:
   `timesDoPedido` e o hash iguais com e sem fotos); o golaco lê pelo lado + `tmId` (`js/tm-fotos.js`, contrato "Comemoração do
   gol"). No online, a foto do time montado num aparelho pro aparece se o pedido do anfitrião for pro (como os rostos reais).
 

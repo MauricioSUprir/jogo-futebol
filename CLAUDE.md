@@ -458,13 +458,15 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `PESQUISA-ESTADIO.md` §10.1): `#autor-gol` dentro do `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à
   DIREITA na linha do placar (o único lugar livre do autor em todos os planos; no celular a steadicam põe o autor no terço
   esquerdo); foto (só a da edição pro do TM: o `tm3d.js` põe `foto` no pedido — TM v376 —, lida pelo lado + `tmId` em
-  `js/tm-fotos.js`, por `import()` depois do pronto, fora do hash), escudo + sigla, número e nome (completo no PC, de camisa no
-  celular); sem foto, só número e nome, nada desenhado no lugar. Entra 0,4 s depois do 1º corte, fica 3,5 s (curta 2,6), sai
+  `js/tm-fotos.js`, por `import()` depois do pronto, fora do hash; o pé dela escurece até o fundo do cartão), a pílula com escudo,
+  sigla e número, e o NOME completo como a linha principal (também no celular: a camisa do `tm-times` corta em 10 letras); sem
+  foto, uma linha só da altura do placar, nada desenhado no lugar. Entra 0,4 s depois do 1º corte, fica 3,5 s (curta 2,6), sai
   ≥ 0,5 s antes do replay (`js/autor-cartao.js`, puro; o relógio da cena); gol contra e sem autor = nada; pular = some;
-  `?autorGol=0` desliga só ele. Exceção escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI, o
+  escondido com a pausa aberta e no "Replay" da pausa (volta depois); `?autorGol=0` desliga só ele. Exceção escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI, o
   nome do condutor e as tarjas das cenas): só dentro da cena, nunca com a bola rolando, sem minuto nem "GOL". As fichas da tela
-  antes do jogo trocam o busto pela mesma foto. Testes: `teste-ponte-tm` P10, `teste-comemoracao` 15, `teste-comemoracao-tela`
-  H1–H8, `teste-prepartida-tela` E22, `testar-3d` (pro e `--publica`).
+  antes do jogo trocam o busto pela mesma foto. Sem espaço no localStorage, o TM grava o pedido sem as fotos (o 3D abre). Testes:
+  `teste-ponte-tm` P10–P11, `teste-comemoracao` 15, `teste-comemoracao-tela` H1–H12, `teste-prepartida-tela` E22, `testar-3d`
+  (pro e `--publica`).
 - **Cena de substituição + faixa ENTRA/SAI** (pedido de 12/10; `PESQUISA-ESTADIO.md` §11, contrato em `CONTRATOS.md`):
   `js/substituicao.js` (PURO; cópias, a mesma locomoção; Regra 3.3 — sai pelo ponto mais perto, entra pelo meio-campo depois)
   + `render/placa-subst.js` (quarto árbitro id 203); fila única `filaCenas` em main.js (gol → comemoração → replay → substituição

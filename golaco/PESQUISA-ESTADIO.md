@@ -656,11 +656,11 @@ já mostra, ou a importada pela carreira própria); sem foto, o número e o nome
 |---|---|---|
 | EA SPORTS FC Mobile 27 (captura da partida na Google Play) | Durante a comemoração, a carta do autor com a FOTO e uma barra com o escudo e o NOME (e o minuto) | Foto + escudo + nome dentro da cena. Não: o minuto (narração) nem o tamanho (52% da altura: aqui 27% no celular e 21% no PC) |
 | Premier League Productions 23/24–26/27 (MediaSpy, fórum "International sports presentation" #483; footyheadlines, os 20 flashes de 26/27) | O flash do gol ~3 s; o autor no placar, quase nunca com foto | O tempo de leitura (3,5 s); o "GOL!" só no flash e o cartão depois |
-| Copa do Mundo 2026 (footyheadlines; SVG Europe sobre os gráficos da Moov) e o guia de marca da EURO 2024 | A identificação do jogador é NÚMERO + NOME, letra grande, cor do time | Número + nome como a identificação; o chip do time na cor dele; sem minuto |
+| Copa do Mundo 2026 (footyheadlines; SVG Europe sobre os gráficos da Moov) e o guia de marca da EURO 2024 | A identificação do jogador é NÚMERO + NOME, cor do time; o número numa caixinha pequena e o NOME grande ("11 THEMBA ZWANE") | Número + nome como a identificação; o chip do time na cor dele; sem minuto. Na revisão (V3) o nome virou a linha principal e o número foi para a pílula do time, junto da sigla |
 | LIGR Systems — "Lower thirds explained"; Wasp3D — "Sports lower thirds" | Entrada em décimos de segundo, saída mais rápida que a entrada, "hold" de 4–7 s para nome + função; entender em ~2 s | Entra 0,3 s, sai 0,2 s, 3,5 s na tela (2 palavras + a foto) |
 | SVG (sportsvideo.org, 06/2026) — "Designing the modern scorebug" | O grafismo não pode brigar com o placar nem tapar a jogada | O canto livre medido (abaixo): nunca sobre o autor nem sobre o placar |
 | EA (portrait 160 px com transparência, ~11 KB; medido) | O recorte do jogador sem fundo | O TM tem bustos 220 × 220 COM o fundo: a foto inteira numa moldura, o leve aproximar 1,12× (o rosto em x 0,50 / y 0,44, 39% da largura) — nada recortado |
-| Apple HIG (Typography) e EBU R 95 | Mínimo de 11 pt; área segura de grafismo de 5% | Número ≥ 22 px e nome ≥ 14 px no celular; o cartão na linha do placar (`--m` + a área segura, como todo o HUD) |
+| Apple HIG (Typography) e EBU R 95 | Mínimo de 11 pt; área segura de grafismo de 5% | Nome 18–20 px e número 15,6 px no celular com foto (sem foto, 15,6/14,3 px em 568×320, a barra na altura do placar); o cartão na linha do placar (`--m` + a área segura, como todo o HUD) |
 | caniuse (WebP) e a medida das miniaturas (PIL, 200 fotos) | WebP de 96 px q80 = 1,97 KB (p95 2,62) | Não entrou: a JPG de 220 px que o TM já publica (~13 KB, a maioria já no cache do TM) — nenhum binário novo no repositório |
 
 **Onde** (o mapa, 7 casos × 2 telas × todos os planos): o canto de baixo à esquerda (o das tarjas) cobre o autor em 51–99% dos
@@ -671,6 +671,16 @@ curto demais; a cena dura fixo 6,3 s (normal) e 3,3–3,7 s (curta) depois do 1�
 abraço/reação (o canto continua livre neles). Medido (`teste-comemoracao-tela` H): entra em 1,60 s, fica 3,50 s (curta 2,60),
 some 2,2 s antes do replay (curta 0,48 s), 0 quadros sobre o autor (PC, 844×390 com o entalhe, 568×320 e o gol natural), a foto
 no 1º quadro do cartão (a <img> já decodificada da pré-carga), 92 px no celular deitado.
+
+**A revisão (05/11)**: (R1) o "Replay" da pausa pedido no meio da cena tocava com o cartão congelado por cima da jogada e da marca
+REPLAY (203 de 203 quadros) — agora escondido (0 de 203) e de volta depois; (V1) no celular o nome de camisa do `tm-times` cortava
+o último nome em 10 letras sem reticências ("Evangelist", e no nome composto só o fim) — agora o nome completo em todas as telas
+(cabe: "Lucas Evangelista" a 18 px em 568×320 deixa ~75 px de folga até o placar); (V3) o número era maior que o nome (31,7 ×
+21,6 px no PC) e a coluna ficava colada embaixo — agora o nome é a linha principal (28,8 px em 720 p, 20 px em 844×390), o
+número vai na pílula (17,8 / 15,6 px) e a coluna fica no meio da foto; (V4) sem foto, a barra tinha 35–47 px ao lado de um placar
+de 26–30 — agora a mesma altura; (V2) a camisa de outro clube na foto (Samuel Lino com a do Atlético de Madrid): o pé da foto
+escurece até o fundo do cartão (luminância das linhas a 80/90/97% da altura: 38/28/21); enquadrar foto a foto pela caixa do rosto
+fica com o dono.
 
 O que ficou sem confirmar: nenhum vídeo medido quadro a quadro (o YouTube pediu verificação de robô); Champions, LaLiga,
 Bundesliga, Globo, Premiere, CazéTV e eFootball sem captura do grafismo do autor.
