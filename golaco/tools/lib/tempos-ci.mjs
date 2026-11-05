@@ -84,6 +84,7 @@ export const TEMPOS_NODE = {
   'teste-prejogo-roteiro.mjs': 0.3,
   'teste-prejogo-roteiro.mjs --forma maracana': 0.3,
   'teste-prepartida.mjs': 1.6,
+  'teste-escalacao-campo.mjs': 0.5, // item 29 (medido: ~0,3 s aqui)
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
@@ -112,7 +113,9 @@ export const TEMPOS_NAVEGADOR = {
   'teste-controles.mjs': 64,
   'teste-editor-tela.mjs': 51,
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
-  'teste-prejogo.mjs': 298,
+  // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
+  // acertar pelo log do CI)
+  'teste-prejogo.mjs': 390,
   // (item 64: 498 s aqui com o online — 3 pares de abas —, a máquina dividida com o hash-partida; a revisão somou o E4b/E5b em 3
   // páginas × 7 telas, o E11b, o E19b e os Pênaltis do TM: 573 s aqui com outra página junto; acertar pelo log do CI)
   // (item 100: 440,6 s no log do 1º CI do #613, navegador 2 de 3)

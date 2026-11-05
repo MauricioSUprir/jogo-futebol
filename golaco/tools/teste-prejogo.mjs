@@ -11,7 +11,20 @@
 //      de fora a fachada cobre ≥ 25% da tela;
 //   4) escalação: 11 cartas com os titulares de estadoTime(t) na ordem das vagas, folga ≥ 6 px, nada fora da tela nem da
 //      área segura, letra ≥ 10 px, nada cortado e o botão Pular sem encostar em carta nem no nome do time — também em
-//      568×320, 667×375 e 1920×1080;
+//      568×320, 640×360, 667×375, 844×390 (com e sem entalhe), 1366×600, 1440×900, 1024×768, 1920×1080 e 800×1000 (em pé);
+//  4b) a escalação EM PÉ (item 29; dono, 17/10: "o campinho da escalação do jogo EM PÉ (retrato), não deitado"), nas duas
+//      folhas de cada uma dessas telas (o perfil do PC) e no celular 844×390 (dpr 2, toque), depois de a TM Cond chegar:
+//      E1 a caixa do campo em pé (altura ≥ 1,15 × largura); E2 o GOL embaixo (≥ 10 px abaixo de todas) e no meio (± 2 px);
+//      E3 o lado (na mesma fila, col menor → x menor ≥ 5 px; col < 0 à esquerda do meio, > 0 à direita); E4 as linhas sem
+//      distorção (viewBox "0 0 L 105", 68 ≤ L ≤ 89,3; o círculo redondo ± 3%; a grande área de baixo 40,32 × 16,5 ± 3% e
+//      colada à linha de fundo); E5 as cartas no campo (o centro dentro dele ± 1 px), na área segura, folga ≥ 9 px; E6 a letra
+//      mínima (§7.4/§7.5: altura da tela ≤ 480 → nome e posição ≥ 11, ≥ 10 com altura < 350; PC → nome ≥ 13, posição ≥ 11;
+//      número ≥ 16); E7 nada cortado (na largura e a TINTA do nome dentro da caixa dele: os traços de baixo de g, y, ç); E8
+//      sem rolar (documento, #prejogo, a folha, a coluna) e a coluna ≥ 8 px do grupo do campo; E9 a mesma caixa nas duas
+//      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome em TM Cond (carregada);
+//  15) a escalação com ?tm e nomes LONGOS (tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS: os dois nomes de time mais compridos e
+//      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E11 em 568×320, 640×360, 844×390 com entalhe,
+//      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…");
 //   5) pular: um clique/toque avança 1 bloco no mesmo quadro; Esc (PC) e o botão Pular (celular) vão direto ao jogo:
 //      o HUD volta, a partida continua no tick 0 com o hash de criarPartida (Node) e 600 passos dão o mesmo hash no Node
 //      e no Chromium;
@@ -34,7 +47,8 @@
 //      o estádio achado na base com o desenho dele (o Maracanã com a forma dele carregada), cada plano com cor, ≤ 40
 //      chamadas e ≤ 130 mil triângulos, a marquise escondida só no pré-jogo da 'nenhuma' (de volta no jogo) e 0 erros.
 // Na versão publicada não há pré-jogo (reprova no item 1).
-//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--so-tm (só o item 14)]
+//   node tools/teste-prejogo.mjs [--raiz <pasta do jogo>] [--so-tm (só o item 14)] [--so-esc (só os itens 4, 4b e 15, com
+//   ?prejogo=escalacao)]
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -43,8 +57,12 @@ import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
 const soTm = args.includes('--so-tm');
+const soEsc = args.includes('--so-esc');
 const imp = f => import(pathToFileURL(path.join(raiz, 'js', f)).href);
 const { criarPartida, passoPartida } = await imp('partida.js');
+const { FORMACOES } = await imp('formacoes.js');
+// as vagas de cada formação (fila/col) para o E3 (o lado de cada carta)
+const VAGAS = Object.fromEntries(Object.entries(FORMACOES).map(([k, f]) => [k, Object.fromEntries(f.vagas.map(v => [v.id, { fila: v.fila, col: v.col }]))]));
 const { hashMundo } = await imp('sim.js');
 const { BOTAO } = await imp('config.js');
 const SEMENTE = 3;
@@ -132,6 +150,151 @@ async function conferirEscalacao(pg, t) {
   }, t);
 }
 
+/**
+ * A escalação EM PÉ (item 29, 4b): E1–E11 da folha t, medidos no DOM (valem também na base, que reprova). Espera a TM Cond.
+ * Devolve {campo, falhas: [E…], resumo, cortados: [nomes], elipse: [nomes com text-overflow ellipsis]}.
+ */
+async function conferirEmPe(pg, t) {
+  await pg.evaluate(() => (document.fonts && document.fonts.load ? document.fonts.load('800 11px "TM Cond"').catch(() => null) : null));
+  return pg.evaluate(({ t, VAGAS }) => {
+    const g = window.__golaco, P = g.prejogo;
+    document.getElementById('prejogo').dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+    const W = innerWidth, H = innerHeight;
+    const css = getComputedStyle(document.documentElement);
+    const sa = k => parseFloat(css.getPropertyValue(k)) || 0;
+    const seg = { l: sa('--sa-l'), r: W - sa('--sa-r'), t: sa('--sa-t'), b: H - sa('--sa-b') };
+    const R = e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; };
+    const f1 = v => (Math.round(v * 10) / 10).toString().replace('.', ',');
+    const folha = document.querySelectorAll('.pj-esc')[t];
+    const campoEl = folha.querySelector('.pj-esc-campo'), areaEl = folha.querySelector('.pj-esc-area'), infoEl = folha.querySelector('.pj-esc-info');
+    const rc = R(campoEl), ra = R(areaEl), ri = R(infoEl);
+    const meio = rc.x + rc.w / 2;
+    const vagas = VAGAS[g.estadoTime(t).formacao] || {};
+    const cartas = [...folha.querySelectorAll('.pj-carta')].map(d => { const r = R(d); return { d, r, v: vagas[d.dataset.vaga], cx: r.x + r.w / 2, cy: r.y + r.h / 2, id: d.dataset.vaga }; });
+    const falhas = [], det = [];
+    // E1 em pé
+    if (!(rc.h >= 1.15 * rc.w)) falhas.push(`E1 caixa ${f1(rc.w)}×${f1(rc.h)} (L/A ${(rc.w / rc.h).toFixed(2)})`);
+    // E2 o GOL embaixo e no meio
+    const gol = cartas.find(c => c.v && c.v.fila === 0);
+    if (!gol) falhas.push('E2 sem o GOL');
+    else {
+      const acima = cartas.filter(c => c !== gol && !(gol.cy >= c.cy + 10)).map(c => c.id);
+      if (acima.length || Math.abs(gol.cx - meio) > 2) falhas.push(`E2 GOL ${acima.length ? 'não está abaixo de ' + acima.slice(0, 3).join('/') : ''} ${f1(gol.cx - meio)} px do meio`);
+    }
+    // E3 o lado
+    const lado = [];
+    for (const a of cartas) {
+      if (!a.v) { lado.push(a.id + '?'); continue; }
+      if (a.v.col < 0 && !(a.cx < meio)) lado.push(a.id);
+      if (a.v.col > 0 && !(a.cx > meio)) lado.push(a.id);
+      for (const b of cartas) if (b.v && a.v.fila === b.v.fila && a.v.col < b.v.col && !(a.cx <= b.cx - 5)) lado.push(`${a.id}/${b.id}`);
+    }
+    if (lado.length) falhas.push(`E3 lado: ${[...new Set(lado)].slice(0, 4).join(', ')}`);
+    // E4 as linhas em pé sem distorção
+    const svg = folha.querySelector('.pj-esc-linhas');
+    const viewBox = svg.getAttribute('viewBox') || '';
+    const vb = viewBox.trim().split(/\s+/).map(Number);
+    const elip = svg.querySelector('ellipse');
+    const re = elip ? R(elip) : null;
+    const rs = [...svg.querySelectorAll('rect')].map(R);
+    const grandes = rs.slice(1).sort((a, b) => b.w * b.h - a.w * a.h).slice(0, 2).sort((a, b) => (b.y + b.h) - (a.y + a.h));
+    const ga = grandes[0];
+    const circ = re ? re.w / re.h : NaN, gaLA = ga ? ga.w / ga.h : NaN, gaFundo = ga ? rc.y + rc.h - (ga.y + ga.h) : NaN;
+    const e4 = vb.length === 4 && vb[0] === 0 && vb[1] === 0 && vb[3] === 105 && vb[2] >= 68 && vb[2] <= 89.3 && Math.abs(circ - 1) <= 0.03
+      && Math.abs(gaLA / (40.32 / 16.5) - 1) <= 0.03 && gaFundo >= -1 && gaFundo <= 0.01 * rc.h + 2;
+    if (!e4) falhas.push(`E4 viewBox "${viewBox}", círculo ${circ.toFixed(2)}, grande área ${gaLA.toFixed(2)} a ${f1(gaFundo)} px do fundo`);
+    // E5 no campo, na área segura, folga
+    let folga = Infinity, par = '', foraCampo = [], foraSeg = 0;
+    cartas.forEach((c, i) => {
+      if (c.cx < rc.x - 1 || c.cx > rc.x + rc.w + 1 || c.cy < rc.y - 1 || c.cy > rc.y + rc.h + 1) foraCampo.push(c.id);
+      const a = c.r;
+      if (a.x < seg.l - 0.5 || a.y < seg.t - 0.5 || a.x + a.w > seg.r + 0.5 || a.y + a.h > seg.b + 0.5) foraSeg++;
+      for (let k = i + 1; k < cartas.length; k++) {
+        const b = cartas[k].r;
+        const gx = Math.max(b.x - (a.x + a.w), a.x - (b.x + b.w)), gy = Math.max(b.y - (a.y + a.h), a.y - (b.y + b.h));
+        if (Math.max(gx, gy) < folga) { folga = Math.max(gx, gy); par = `${c.id}/${cartas[k].id}`; }
+      }
+    });
+    if (foraCampo.length || foraSeg || !(folga >= 9)) falhas.push(`E5 fora do campo ${foraCampo.join('/') || 0}, fora da área segura ${foraSeg}, folga ${f1(folga)} (${par})`);
+    // E6 a letra mínima
+    const cel = H <= 480, peq = H < 350;
+    const mn = cel ? (peq ? { nome: 10, pos: 10 } : { nome: 11, pos: 11 }) : { nome: 13, pos: 11 };
+    const fonte = { num: Infinity, nome: Infinity, pos: Infinity };
+    let semPos = 0;
+    for (const c of cartas) for (const [k, sel] of [['num', '.pj-num'], ['nome', '.pj-nome'], ['pos', '.pj-pos']]) {
+      const st = getComputedStyle(c.d.querySelector(sel));
+      if (st.display === 'none') { if (k === 'pos') semPos++; continue; }
+      fonte[k] = Math.min(fonte[k], parseFloat(st.fontSize));
+    }
+    if (!(fonte.num >= 16 && fonte.nome >= mn.nome - 0.01 && (semPos === cartas.length || fonte.pos >= mn.pos - 0.01))) falhas.push(`E6 letra nº ${f1(fonte.num)} / nome ${f1(fonte.nome)} / pos ${f1(fonte.pos)} (mín. 16 / ${mn.nome} / ${mn.pos})`);
+    // E7 nada cortado: na largura e a tinta do nome dentro da caixa
+    const ctx = (window.__tpCanvas = window.__tpCanvas || document.createElement('canvas').getContext('2d'));
+    const cortados = [], elipse = [], tinta = [];
+    for (const c of cartas) {
+      const nm = c.d.querySelector('.pj-nome'), st = getComputedStyle(nm);
+      if (nm.scrollWidth > nm.clientWidth + 1) { cortados.push(nm.textContent); if (st.textOverflow === 'ellipsis') elipse.push(nm.textContent); }
+      ctx.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+      const m = ctx.measureText(nm.textContent);
+      const hb = nm.getBoundingClientRect().height, lh = Number.isFinite(parseFloat(st.lineHeight)) ? parseFloat(st.lineHeight) : hb;
+      const base = (lh - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      const topo = base - m.actualBoundingBoxAscent, fundo = base + m.actualBoundingBoxDescent;
+      if (topo < -0.5 || fundo > hb + 0.5) tinta.push(`${nm.textContent} (${f1(topo)}..${f1(fundo)} em ${f1(hb)})`);
+    }
+    if (tinta.length) falhas.push(`E7 tinta cortada: ${tinta.slice(0, 3).join(', ')}`);
+    // E8 sem rolar; a coluna longe do grupo do campo
+    const pj = document.getElementById('prejogo'), de = document.documentElement;
+    const rola = Math.max(0, de.scrollWidth - W) + Math.max(0, de.scrollHeight - H) + [pj, folha, infoEl].reduce((s, e) => s + Math.max(0, e.scrollHeight - e.clientHeight - 1), 0);
+    const vao = Math.max(ra.x - (ri.x + ri.w), ri.x - (ra.x + ra.w), ra.y - (ri.y + ri.h), ri.y - (ra.y + ra.h));
+    if (rola > 0 || !(vao >= 8)) falhas.push(`E8 rola ${f1(rola)} px; coluna a ${f1(vao)} px do campo`);
+    // E10 o Pular
+    const pu = P.escalacao.pular;
+    const toca = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+    let pular = -1;
+    if (pu.visivel) { pular = cartas.filter(c => toca(pu, c.r)).length + (toca(pu, R(folha.querySelector('.pj-esc-nome'))) ? 1 : 0); }
+    if (pular !== 0) falhas.push(`E10 Pular ${pular < 0 ? 'invisível' : 'encosta em ' + pular}`);
+    // E11 a TM Cond
+    const fam = getComputedStyle(folha.querySelector('.pj-nome') || folha).fontFamily.replace(/["']/g, '');
+    const carregada = [...document.fonts].some(ff => ff.family.replace(/["']/g, '') === 'TM Cond' && ff.status === 'loaded');
+    if (!(fam.startsWith('TM Cond') && carregada)) falhas.push(`E11 letra do nome "${fam.split(',')[0]}" (TM Cond carregada ${carregada})`);
+    const c0 = cartas[0]?.r;
+    const resumo = `campo ${f1(rc.w)}×${f1(rc.h)} (${(rc.w / rc.h).toFixed(2)}), viewBox ${vb.map(v => Math.round(v * 10) / 10).join(' ')}, carta ${c0 ? f1(c0.w) + '×' + f1(c0.h) : '—'}, letra ${f1(fonte.num)}/${f1(fonte.nome)}/${f1(fonte.pos)}, folga ${f1(folga)}`;
+    return { campo: rc, falhas, resumo, cortados, elipse, escudo: !!folha.querySelector('.pj-esc-escudo') };
+  }, { t, VAGAS });
+}
+
+/** O item 4 e o 4b nas telas da lista (o perfil do PC: dpr 1, sem toque). tela = {w, h, entalhe?, item4?}. */
+async function telasEscalacao(pg, telas, { prefixo = 'Escalação', cortadosOk = null } = {}) {
+  for (const T of telas) {
+    if (T.w !== pg.viewportSize().width || T.h !== pg.viewportSize().height) await pg.setViewportSize({ width: T.w, height: T.h });
+    await pg.evaluate(e => document.documentElement.classList.toggle('entalhe-simulado', !!e), !!T.entalhe);
+    const nome = `${T.w}×${T.h}${T.entalhe ? ' com entalhe' : ''}${T.rotulo ? ' ' + T.rotulo : ''}`;
+    let pior = { folga: Infinity, fora: 0, fonte: Infinity, cortados: 0, ordem: true, n: 11, pular: 0 };
+    const emPe = [];
+    for (const t of [0, 1]) {
+      await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; const p = pj.planos.find(q => q.id === `escalacao${t}`); pj.irPara(p.t0 + 2); g.relogio.avancar(16); g.relogio.avancar(16); }, t);
+      if (T.item4 !== false) {
+        const c = await conferirEscalacao(pg, t);
+        pior = { folga: Math.min(pior.folga, c.folga), fora: pior.fora + c.fora, fonte: Math.min(pior.fonte, c.fonte), cortados: pior.cortados + c.cortados, ordem: pior.ordem && c.ordemOk, n: Math.min(pior.n, c.n), pular: pior.pular + Math.abs(c.pularEncosta) };
+      }
+      emPe.push(await conferirEmPe(pg, t));
+    }
+    if (T.item4 !== false && !cortadosOk) meta(`${prefixo} em ${nome}: nada encosta`, `folga ${f1(pior.folga)} px; fora ${pior.fora}; letra ${f1(pior.fonte)} px; cortados ${pior.cortados}; Pular encosta ${pior.pular}`, '≥ 6 px; 0; ≥ 10 px; 0; 0', pior.n === 11 && pior.ordem && pior.folga >= 6 && pior.fora === 0 && pior.fonte >= 10 && pior.cortados === 0 && pior.pular === 0);
+    // E7 (na largura) e E9 (a mesma caixa nas duas folhas)
+    const falhas = [...emPe[0].falhas.map(x => 't0 ' + x), ...emPe[1].falhas.map(x => 't1 ' + x)];
+    const cortes = cortadosOk ? cortadosOk(emPe) : (emPe[0].cortados.length + emPe[1].cortados.length ? `E7 cortados: ${[...emPe[0].cortados, ...emPe[1].cortados].join(', ')}` : null);
+    if (cortes) falhas.push(cortes);
+    const [a, b] = [emPe[0].campo, emPe[1].campo];
+    if (!(Math.abs(a.w - b.w) <= 0.5 && Math.abs(a.h - b.h) <= 0.5 && Math.abs(a.y - b.y) <= 0.5)) falhas.push(`E9 caixas ${f1(a.w)}×${f1(a.h)} (topo ${f1(a.y)}) × ${f1(b.w)}×${f1(b.h)} (topo ${f1(b.y)})`);
+    const ids = [...new Set(falhas.map(x => x.match(/E\d+/)?.[0]).filter(Boolean))].sort((a, b) => +a.slice(1) - +b.slice(1));
+    meta(`${prefixo} em pé em ${nome} (E1–E11, as duas folhas)`, falhas.length ? `falham ${ids.join(' ')} — ` + falhas.slice(0, 4).join(' | ') + (falhas.length > 4 ? ` (+${falhas.length - 4})` : '') : `${emPe[0].resumo}; cortados ${emPe[0].cortados.length + emPe[1].cortados.length}`,
+      'em pé, GOL embaixo, lado, linhas, no campo, letra, nada cortado, sem rolar, a mesma caixa, Pular, TM Cond', falhas.length === 0);
+  }
+  await pg.evaluate(() => document.documentElement.classList.remove('entalhe-simulado'));
+}
+// as telas do item 4 e do 4b no perfil do PC (a 1280×720 do perfil: o item 4 já mediu)
+const TELAS_ESC = [{ w: 1280, h: 720, item4: false }, { w: 568, h: 320 }, { w: 640, h: 360 }, { w: 667, h: 375 }, { w: 844, h: 390 }, { w: 844, h: 390, entalhe: true },
+  { w: 1366, h: 600 }, { w: 1440, h: 900 }, { w: 1024, h: 768 }, { w: 1920, h: 1080 }, { w: 800, h: 1000, rotulo: '(janela em pé)' }];
+
 const srv = await servidor(0, raiz);
 const PERFIS = [
   { nome: 'PC 1280×720 Alta', largura: 1280, altura: 720, dpr: 1, q: 'alta', toque: false, pc: true },
@@ -140,7 +303,7 @@ const PERFIS = [
 const memoria = {};
 try {
   // ---------------------------------------------------------------- 1b) sem ?prejogo, com webdriver: não liga
-  if (!soTm) {
+  if (!soTm && !soEsc) {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?semente=${SEMENTE}&q=media`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 120000 });
@@ -155,7 +318,7 @@ try {
     await navegador.close();
   }
 
-  for (const P of soTm ? [] : PERFIS) {
+  for (const P of soTm || soEsc ? [] : PERFIS) {
     const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: P.largura, altura: P.altura, dpr: P.dpr, toque: P.toque });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=${P.q}&hora=dia${P.toque ? '&toque=1' : ''}`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
@@ -248,16 +411,8 @@ try {
       meta(`${P.nome}: escalação ${t === 0 ? 'do mandante' : 'do visitante'} — 11 titulares na ordem, nada encosta`, `${c.n} cartas (${c.nomes}); folga ${f1(c.folga)} px; fora ${c.fora}; letra ${f1(c.fonte)} px; cortados ${c.cortados}; Pular encosta ${c.pularEncosta < 0 ? "(invisível)" : c.pularEncosta}`, '11 na ordem; ≥ 6 px; 0; ≥ 10 px; 0; 0', c.n === 11 && c.ordemOk && c.folga >= 6 && c.fora === 0 && c.fonte >= 10 && c.cortados === 0 && c.pularEncosta === 0);
     }
     if (P.pc) {
-      for (const [w, h] of [[568, 320], [667, 375], [1920, 1080]]) {
-        await pg.setViewportSize({ width: w, height: h });
-        let pior = { folga: Infinity, fora: 0, fonte: Infinity, cortados: 0, ordem: true, n: 11, pular: 0 };
-        for (const t of [0, 1]) {
-          await pg.evaluate(t => { const g = window.__golaco, pj = g.prejogo; const p = pj.planos.find(q => q.id === `escalacao${t}`); pj.irPara(p.t0 + 2); g.relogio.avancar(16); g.relogio.avancar(16); }, t);
-          const c = await conferirEscalacao(pg, t);
-          pior = { folga: Math.min(pior.folga, c.folga), fora: pior.fora + c.fora, fonte: Math.min(pior.fonte, c.fonte), cortados: pior.cortados + c.cortados, ordem: pior.ordem && c.ordemOk, n: Math.min(pior.n, c.n), pular: pior.pular + Math.abs(c.pularEncosta) };
-        }
-        meta(`Escalação em ${w}×${h}: nada encosta`, `folga ${f1(pior.folga)} px; fora ${pior.fora}; letra ${f1(pior.fonte)} px; cortados ${pior.cortados}; Pular encosta ${pior.pular}`, '≥ 6 px; 0; ≥ 10 px; 0; 0', pior.n === 11 && pior.ordem && pior.folga >= 6 && pior.fora === 0 && pior.fonte >= 10 && pior.cortados === 0 && pior.pular === 0);
-      }
+      // 4) nas outras telas e 4b) a escalação em pé (item 29) em todas
+      await telasEscalacao(pg, TELAS_ESC);
       await pg.setViewportSize({ width: P.largura, height: P.altura });
       // ---------------------------------------------------------------- 2b) as duas escalações ~10 s cada (relógio de 50 ms)
       const tempos = await pg.evaluate(() => {
@@ -284,6 +439,8 @@ try {
       const h = await pg.evaluate(rot => window.__golaco.rodarPassos(rot.length, rot), roteiro(600));
       meta(`${P.nome}: 600 passos depois do pré-jogo (Node = Chromium)`, `Chromium ${hexa(h)} · Node ${hexa(NODE.h)}`, 'iguais', h === NODE.h);
     } else {
+      // 4b) a escalação em pé no celular de verdade (dpr 2, toque)
+      await telasEscalacao(pg, [{ w: P.largura, h: P.altura, item4: false, rotulo: '(celular, dpr 2, toque)' }]);
       // ---------------------------------------------------------------- 10) celular em pé no meio do pré-jogo
       await pg.evaluate(() => { const g = window.__golaco, pj = g.prejogo; pj.irPara(12); g.relogio.avancar(16); g.relogio.avancar(16); });
       await pg.setViewportSize({ width: P.altura, height: P.largura });
@@ -356,8 +513,44 @@ try {
     meta(`${P.nome}: sem erro no console`, `${erros.length}${erros.length ? ': ' + erros.slice(0, 2).join(' | ') : ''}`, '0', erros.length === 0);
     await navegador.close();
   }
-  // Esc no PC (pular tudo) e a memória (item 8)
+  // --so-esc: só os itens 4 e 4b (o perfil do PC com ?prejogo=escalacao) e o 15
+  if (soEsc) {
+    const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
+    await pg.goto(`${srv.url}?prejogo=escalacao&semente=${SEMENTE}&q=media&hora=dia&replay=0&comemoracao=0`, { waitUntil: 'load' });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
+    await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); g.prejogo?.comecar(); g.relogio.avancar(16); });
+    if (await pg.evaluate(() => !!window.__golaco.prejogo?.ativo)) await telasEscalacao(pg, TELAS_ESC.map(T => ({ ...T, item4: true })));
+    else meta('Pré-jogo só a escalação (?prejogo=escalacao) na página', 'não ligou', 'ativo', false);
+    meta('Só a escalação (--so-esc): sem erro no console', `${erros.length}${erros.length ? ': ' + erros.slice(0, 2).join(' | ') : ''}`, '0', erros.length === 0);
+    await navegador.close();
+  }
+  // ---------------------------------------------------------------- 15) a escalação com ?tm e nomes longos (item 29)
   if (!soTm) {
+    const { PED_NOMES_LONGOS, CAM_ESTRESSE } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
+    const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 1366, altura: 600 });
+    await contexto.addInitScript(p => { try { localStorage.setItem('tm3d:pedido:' + p.id, JSON.stringify(p)); } catch (_) { /* nada */ } }, PED_NOMES_LONGOS);
+    await pg.goto(`${srv.url}?tm=${PED_NOMES_LONGOS.id}&prejogo=escalacao&replay=0&comemoracao=0&semente=${SEMENTE}&q=media&hora=dia`, { waitUntil: 'load' });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
+    const ok = await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16); if (!g.prejogo) return false; g.prejogo.comecar(); g.relogio.avancar(16); return { ativo: g.prejogo.ativo, tm: document.documentElement.classList.contains('tm'), nomes: [0, 1].map(t => document.querySelectorAll('.pj-esc')[t]?.querySelector('.pj-esc-nome')?.textContent) }; });
+    if (!ok || !ok.ativo) meta('?tm com nomes longos: o pré-jogo (só a escalação) na página', 'não ligou', 'ativo', false);
+    else {
+      meta('?tm com nomes longos: a cara do TM e os dois nomes de time do pedido', `html.tm ${ok.tm}; ${ok.nomes.join(' × ')}`, `true; ${PED_NOMES_LONGOS.home.name} × ${PED_NOMES_LONGOS.away.name}`, ok.tm && ok.nomes[0] === PED_NOMES_LONGOS.home.name && ok.nomes[1] === PED_NOMES_LONGOS.away.name);
+      // cortados: 0 no mandante; no visitante só os nomes de estresse, cada um com "…"; o escudo na coluna
+      const cortadosOk = emPe => {
+        const ruins = [];
+        if (emPe[0].cortados.length) ruins.push(`mandante: ${emPe[0].cortados.join(', ')}`);
+        const fora = emPe[1].cortados.filter(n => !CAM_ESTRESSE.includes(n) || !emPe[1].elipse.includes(n));
+        if (fora.length) ruins.push(`visitante: ${fora.join(', ')}`);
+        if (!emPe[0].escudo || !emPe[1].escudo) ruins.push('sem o escudo na coluna');
+        return ruins.length ? `E7 cortados/escudo: ${ruins.join('; ')}` : null;
+      };
+      await telasEscalacao(pg, [{ w: 568, h: 320 }, { w: 640, h: 360 }, { w: 844, h: 390, entalhe: true }, { w: 1366, h: 600 }, { w: 1920, h: 1080 }], { prefixo: '?tm, nomes longos: escalação', cortadosOk });
+    }
+    meta('?tm com nomes longos: sem erro no console', `${erros.length}${erros.length ? ': ' + erros.slice(0, 2).join(' | ') : ''}`, '0', erros.length === 0);
+    await navegador.close();
+  }
+  // Esc no PC (pular tudo) e a memória (item 8)
+  if (!soTm && !soEsc) {
     const { navegador, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
     await pg.goto(`${srv.url}?prejogo=1&semente=${SEMENTE}&q=alta&hora=dia`, { waitUntil: 'load' });
     await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
@@ -409,7 +602,7 @@ try {
     await navegador.close();
   }
   // ---------------------------------------------------------------- 14) estádio real do Total Match (edição pro)
-  {
+  if (!soEsc) {
     const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
     // sem forma (o Estádio Golaço nas cores dele: concreto sem cobertura e vidro com a parcial), o Maracanã (planta própria)
     // e um da planta genérica (estadio-generico.js: os Aflitos, a família que a base tiver)
