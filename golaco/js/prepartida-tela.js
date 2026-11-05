@@ -234,7 +234,9 @@ export function criarPrepartida(opc) {
     const campos = {
       estadio: (!pc && d.classico ? `${txtClassico(d.classico)} · ` : '') + d.estadio,
       data: d.data ? (pc ? d.data.longa : d.data.curta) : null, arbitro: d.arbitro,
-      duracao: pc ? d.duracao.longa : d.duracao.curta, periodo: d.periodo, dificuldade: d.dificuldade,
+      duracao: pc ? d.duracao.longa : d.duracao.curta, periodo: d.periodo,
+      // (a dificuldade, item 33: longa no PC, curta no celular; o corte da linha troca a longa pela curta)
+      dificuldade: d.dificuldade ? (pc ? d.dificuldade.longa : d.dificuldade.curta) : null, dificuldadeCurta: d.dificuldade?.curta ?? null,
     };
     const fonte = t => medir(t, L.info.letra, 600);
     // o separador como ele é DESENHADO: a barra com a margem de 0,45 em de cada lado (.pp-s) — revisão A3

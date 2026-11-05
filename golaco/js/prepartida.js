@@ -288,8 +288,9 @@ export function layoutVisao(L, pontos) {
 export const SEP_INFO = ' | ';
 /**
  * A linha (ou as 2 linhas do PC) de informação com o corte por PRIORIDADE (sai inteiro, nunca pela metade): (1) o período, (2)
- * "Árbitro: Nome Sobrenome" vira "Árb. N. Sobrenome", (3) o árbitro, (4) a data, (5) o estádio ganha "…" até 40% da linha. A
- * duração nunca sai. campos = {estadio, data, arbitro, duracao, periodo, dificuldade}; medir(texto) → px; larguraSep = a largura
+ * a dificuldade longa ("Dificuldade: Normal", a do PC) vira a curta ("Normal"; item 33), (3) "Árbitro: Nome Sobrenome" vira
+ * "Árb. N. Sobrenome", (4) o árbitro, (5) a data, (6) o estádio ganha "…" até 40% da linha. A duração e a dificuldade nunca
+ * saem. campos = {estadio, data, arbitro, duracao, periodo, dificuldade, dificuldadeCurta}; medir(texto) → px; larguraSep = a largura
  * do separador COMO ELE É DESENHADO (a tela: a barra com 0,45 em de margem de cada lado; sem ela, medir(SEP_INFO) — a conta com
  * ' | ' dava 10 px a um separador de 13,9 no DOM e o CSS cortava o fim da linha: revisão A3).
  * Devolve {linhas: [[partes]], cortes: [os passos aplicados], estadioCortado}.
@@ -310,6 +311,8 @@ export function linhaInfo(campos, largura, medir, nLinhas = 1, larguraSep = null
   // (no PC, em 2 linhas, o período mora na 2ª: só sai se ela não couber)
   const segundaCabe = () => nLinhas < 2 || larg(montar()[1]) <= largura + 0.5;
   if (!cabe() && c.periodo && (nLinhas < 2 || !segundaCabe())) { c.periodo = null; cortes.push('periodo'); }
+  // (a dificuldade mora na 2ª linha no PC: como o período, só encurta se ela não couber)
+  if (!cabe() && c.dificuldadeCurta && c.dificuldade && c.dificuldade !== c.dificuldadeCurta && (nLinhas < 2 || !segundaCabe())) { c.dificuldade = c.dificuldadeCurta; cortes.push('dificuldadeCurta'); }
   if (!cabe() && arb) { arbTexto = `Árb. ${abreviar(c.arbitro)}`; cortes.push('arbitroCurto'); }
   if (!cabe() && arbTexto) { arbTexto = null; cortes.push('arbitro'); }
   if (!cabe() && c.data) { c.data = null; cortes.push('data'); }
@@ -408,7 +411,9 @@ export function textoTatica(t) {
 /**
  * Os dados da tela (puros: só LEEM o mundo; nada do m.rng). ctx (o que é da página: textos, cores, escudos) = {humano, humanos,
  * modo ('partida' | 'tm' | 'rae' | 'livre' | 'penaltis' | 'online'), competicao, classico, hora ('dia' | 'noite'), estadio, data
- * (Date | 'AAAA-MM-DD' | null), trava (o id do travado do Rumo ao Estrelato), times: [{escudo, camisa, camisaGol, cor, pessoa}]}.
+ * (Date | 'AAAA-MM-DD' | null), trava (o id do travado do Rumo ao Estrelato), times: [{escudo, camisa, camisaGol, cor, pessoa}],
+ * dificuldade ('facil' | 'normal' | 'dificil' | 'lenda' | null: a da IA contra a pessoa, item 33)}. A dificuldade vira
+ * {curta: 'Normal', longa: 'Dificuldade: Normal'}; null no online (duas pessoas), no Livre e nos Pênaltis.
  */
 export function dadosDaPartida(m, ctx = {}) {
   const humanos = ctx.humanos ?? [ctx.humano ?? 0];
@@ -468,10 +473,17 @@ export function dadosDaPartida(m, ctx = {}) {
     estadio: ctx.estadio ?? 'Estádio Golaço',
     data: textoData(ctx.data ?? null),
     arbitro: livre ? null : arbitroDe(m.semente ?? 1, elencosIds),
-    duracao, dificuldade: ctx.dificuldade ?? null,
+    duracao, dificuldade: textoDificuldade(ctx.dificuldade, !!disputa || !!livre || humanos.length > 1),
     times, disputa: disputa ? { comeca: disputa.primeiro ?? 0, fila } : null,
     trava: ctx.trava ?? null,
   };
+}
+
+const NOME_DIF = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', lenda: 'Lenda' };
+/** A dificuldade na linha de informação (item 33): {curta, longa} ou null (sem nível, no online, no Livre e nos Pênaltis). */
+export function textoDificuldade(n, semNivel = false) {
+  if (semNivel || !NOME_DIF[n]) return null;
+  return { curta: NOME_DIF[n], longa: `Dificuldade: ${NOME_DIF[n]}` };
 }
 
 /** A edição do Editar time (escalacao.js edicaoDe) vira a ESCALAÇÃO do time antes do jogo (criarPartida {times}). */
