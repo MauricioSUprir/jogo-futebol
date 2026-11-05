@@ -28,8 +28,9 @@
 //      E4 também as linhas recortadas pelo canto arredondado do campo (clip-path com o raio: os cantos vivos do retângulo
 //      furavam a curva; revisões A2/V3);
 //      E13 o nome do time em ≤ 3 linhas (revisão V6);
+//      E14 a faixa de cima de cada carta na cor do time (com ?tm o atalho border-color a apagava; revisão V7);
 //  15) a escalação com ?tm e nomes LONGOS (tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS: os dois nomes de time mais compridos e
-//      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E13 em 568×320, 640×360, 844×390 com entalhe,
+//      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E14 em 568×320, 640×360, 844×390 com entalhe,
 //      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…"); e o
 //      pedido MISTO (PED_NOMES_MISTOS: um nome de time curto e camisas curtas × o nome e as camisas longas) em 1280×1024 e
 //      844×390 — a mesma caixa nas duas folhas com colunas de larguras diferentes (A1) e as cartas de cada folha pelos nomes
@@ -288,6 +289,10 @@ async function conferirEmPe(pg, t) {
     const lhNt = Number.isFinite(parseFloat(stNt.lineHeight)) ? parseFloat(stNt.lineHeight) : 1.02 * parseFloat(stNt.fontSize);
     const linhasNt = Math.round(nomeTime.getBoundingClientRect().height / lhNt);
     if (!(linhasNt <= 3)) falhas.push(`E13 nome do time em ${linhasNt} linhas de ${f1(parseFloat(stNt.fontSize))} px`);
+    // E14 a faixa de cima de cada carta na cor do time (a da faixa da coluna)
+    const corTime = getComputedStyle(folha.querySelector('.pj-esc-faixa')).backgroundColor;
+    const semCor = cartas.filter(c => getComputedStyle(c.d).borderTopColor !== corTime).map(c => c.id);
+    if (semCor.length) falhas.push(`E14 faixa da carta ${getComputedStyle(cartas[0].d).borderTopColor} × a do time ${corTime} (${semCor.length} cartas)`);
     const c0 = cartas[0]?.r;
     const resumo = `campo ${f1(rc.w)}×${f1(rc.h)} (${(rc.w / rc.h).toFixed(2)}), viewBox ${vb.map(v => Math.round(v * 10) / 10).join(' ')}, carta ${c0 ? f1(c0.w) + '×' + f1(c0.h) : '—'}, letra ${f1(fonte.num)}/${f1(fonte.nome)}/${f1(fonte.pos)}, folga ${f1(folga)}`;
     return { campo: rc, falhas, resumo, cortados, elipse, escudo: !!folha.querySelector('.pj-esc-escudo') };
@@ -318,8 +323,8 @@ async function telasEscalacao(pg, telas, { prefixo = 'Escalação', cortadosOk =
     const [a, b] = [emPe[0].campo, emPe[1].campo];
     if (!(Math.abs(a.w - b.w) <= 0.5 && Math.abs(a.h - b.h) <= 0.5 && Math.abs(a.y - b.y) <= 0.5)) falhas.push(`E9 caixas ${f1(a.w)}×${f1(a.h)} (topo ${f1(a.y)}) × ${f1(b.w)}×${f1(b.h)} (topo ${f1(b.y)})`);
     const ids = [...new Set(falhas.map(x => x.match(/E\d+/)?.[0]).filter(Boolean))].sort((a, b) => +a.slice(1) - +b.slice(1));
-    meta(`${prefixo} em pé em ${nome} (E1–E13, as duas folhas)`, falhas.length ? `falham ${ids.join(' ')} — ` + falhas.slice(0, 4).join(' | ') + (falhas.length > 4 ? ` (+${falhas.length - 4})` : '') : `${emPe[0].resumo}; cortados ${emPe[0].cortados.length + emPe[1].cortados.length}`,
-      'em pé, GOL embaixo, lado, linhas, no campo, letra, nada cortado, sem rolar, a mesma caixa, Pular, TM Cond, pontas, nome do time', falhas.length === 0);
+    meta(`${prefixo} em pé em ${nome} (E1–E14, as duas folhas)`, falhas.length ? `falham ${ids.join(' ')} — ` + falhas.slice(0, 4).join(' | ') + (falhas.length > 4 ? ` (+${falhas.length - 4})` : '') : `${emPe[0].resumo}; cortados ${emPe[0].cortados.length + emPe[1].cortados.length}`,
+      'em pé, GOL embaixo, lado, linhas, no campo, letra, nada cortado, sem rolar, a mesma caixa, Pular, TM Cond, pontas, nome do time, faixa', falhas.length === 0);
   }
   await pg.evaluate(() => document.documentElement.classList.remove('entalhe-simulado'));
 }
