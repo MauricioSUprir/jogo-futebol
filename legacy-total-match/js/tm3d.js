@@ -97,7 +97,27 @@
     return { skin: PELES[si], hair: escolhe(estilos, r), hairColor: hc, height: Math.round(alt * 100) / 100,
              build: Math.max(0, Math.min(1, (imc - 20) / 6)), beard: r() < 0.3 };
   }
-  function jogador3d(p, i, vaga) {
+  // a FOTO do jogador no 3D (item 31: a cena da comemoração mostra o autor com a foto, o número e o nome; a tela antes do
+  // jogo, as fichas). Só na edição pro: as fotos REAIS de licença livre (assets/jogadores, as mesmas do TM) e a importada
+  // pela carreira própria (player.photo). O playerPhotoUrl não confere a edição (devolve o player.photo também na pública):
+  // a conta é daqui. Endereço absoluto (o 3D roda em /golaco/: sem o abs, 404). A importada (data:) só JPEG/PNG/WebP, até
+  // FOTO_MAX caracteres cada e FOTOS_DATA_TIME por time (o pedido vai para o localStorage — "Sem espaço para preparar a
+  // partida 3D" — e, no online, pelo canal ctrl); acima, a foto fica de fora (não o jogo)
+  var FOTO_MAX = 48000, FOTOS_DATA_TIME = 240000;
+  function edicaoPro() { try { return !!(TM.storage && TM.storage.edition && TM.storage.edition() === "pro"); } catch (e) { return false; } }
+  function fotoDe(p, orc) {
+    if (!orc || !orc.pro || !p) return null;
+    var u = null;
+    try { u = TM.img && TM.img.playerPhotoUrl ? TM.img.playerPhotoUrl(p) : null; } catch (e) { u = null; }
+    if (!u || typeof u !== "string") return null;
+    if (/^data:/i.test(u)) {
+      if (!/^data:image\/(jpeg|png|webp);base64,/i.test(u) || u.length > FOTO_MAX || orc.data + u.length > FOTOS_DATA_TIME) return null;
+      orc.data += u.length;
+      return u;
+    }
+    return abs(u);
+  }
+  function jogador3d(p, i, vaga, orc) {
     var r = sorteio(hash("pe" + p.id)), a = p.attrs || {};
     var pos = POS_3D[p.pos2] || POS_SETOR[p.pos] || "MC", gol = p.pos === "GK";
     var esq = /^(LE|PE|ME)$/.test(pos) ? r() < 0.75 : r() < 0.2;
@@ -109,6 +129,8 @@
       overall: nota, foot: esq ? "E" : "D", look: aparencia(p)
     };
     if (vaga) j.slot = [vaga[0], vaga[1], vaga[2]];   // vaga na prancheta do TM: o 3D põe cada um no lugar mais parecido
+    var foto = fotoDe(p, orc);
+    if (foto) j.foto = foto;                           // só na pro (o 3D lê pelo lado + tmId: golaco/js/tm-fotos.js)
     return j;
   }
   // 11 titulares (na ordem das vagas da formação) + reservas. Time sem escalação montada
@@ -231,7 +253,9 @@
     var gk1 = goleiroLonge([p1, p2, terceiro.shirt], r), gk2 = goleiroLonge([p1, p2, terceiro.shirt, gk1], r);
     var sigla = (base.short || time.short || String(time.name || "TME").replace(/[^A-Za-zÀ-ú]/g, "").slice(0, 3)).toUpperCase().slice(0, 3);
     var esc = escalacao(time, time.formation || formacao);
-    var jogs = esc.players.slice(0, 18).map(function (p, i) { return jogador3d(p, i, i < 11 ? esc.vagas[i] : null); });
+    // (o teto das fotos importadas é por TIME: no online cada aparelho monta o seu)
+    var orc = { pro: edicaoPro(), data: 0 };
+    var jogs = esc.players.slice(0, 18).map(function (p, i) { return jogador3d(p, i, i < 11 ? esc.vagas[i] : null, orc); });
     var xi = jogs.slice(0, 11), nota = xi.length ? Math.round(xi.reduce(function (s, p) { return s + p.overall; }, 0) / xi.length) : 70;
     var estadio = null; try { estadio = clube && TM.data.stadium ? TM.data.stadium(clube).name : null; } catch (e) {}
     var id = "tm_" + String(chave || hash(time.name)).replace(/[^a-zA-Z0-9_-]/g, "");
