@@ -20,6 +20,8 @@ function precisaSsl(url) {
 const sql = URL_BANCO
   ? postgres(URL_BANCO, { ssl: precisaSsl(URL_BANCO) ? 'require' : false, max: 5 })
   : null;
+/** A mesma conexão, para os outros módulos (social.js) não abrirem outra. */
+export const conexao = sql;
 
 /* ---------- modo memória ---------- */
 const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map(), pagamentos: new Map(), conexoes: new Map() };

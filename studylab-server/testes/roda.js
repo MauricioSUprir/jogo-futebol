@@ -18,6 +18,7 @@ delete process.env.DATABASE_URL;
 process.env.GOOGLE_CLIENT_ID = 'cliente-teste.apps.googleusercontent.com';
 process.env.GOOGLE_CLIENT_SECRET = 'segredo-google-teste';
 process.env.URL_SERVIDOR = `http://localhost:${process.env.PORT}`;
+process.env.DUELO_ESCALA = '0.02';      // duelos 50× mais rápidos no teste
 
 const BASE = `http://localhost:${process.env.PORT}`;
 const { montarBRCode } = await import('./brcode.js');
@@ -771,6 +772,132 @@ console.log('\n== conexões (Google e calendário por link) ==');
   conferir(r.status === 400 && /não é público/.test(r.dados.erro),
     'redirecionamento para endereço interno não é seguido', `${r.status} ${r.dados.erro}`);
   srvIcs.close();
+}
+
+console.log('\n== amizades, chat, foguinho e duelo em tempo real ==');
+{
+  const entrar = async (id, nome) => (await pedir('POST', '/entrar', { corpo: { teste: { id, email: `${id}@x.com`, nome } } })).dados.token;
+  const ta = await entrar('soc-ana', 'Ana'), tb = await entrar('soc-beto', 'Beto'), tc = await entrar('soc-caio', 'Caio');
+  /** Abre o canal de tempo real como o celular faz e junta os eventos. */
+  async function canal(token) {
+    const { dados } = await pedir('POST', '/tempo-real/ticket', { token });
+    const ctrl = new AbortController();
+    const r = await fetchReal(`${BASE}/tempo-real?ticket=${encodeURIComponent(dados.ticket)}`, { signal: ctrl.signal });
+    const eventos = [];
+    (async () => {
+      const leitor = r.body.getReader(); const dec = new TextDecoder(); let buf = '';
+      try {
+        for (;;) {
+          const { value, done } = await leitor.read(); if (done) break;
+          buf += dec.decode(value, { stream: true });
+          let k; while ((k = buf.indexOf('\n\n')) >= 0) {
+            const bloco = buf.slice(0, k); buf = buf.slice(k + 2);
+            const ev = /^event: (.+)$/m.exec(bloco)?.[1]; const dt = /^data: (.+)$/m.exec(bloco)?.[1];
+            if (ev) eventos.push({ ev, dados: JSON.parse(dt) });
+          }
+        }
+      } catch { /* fechou */ }
+    })();
+    return { eventos, fechar: () => ctrl.abort(), status: r.status, esperar: async (nome, filtro = () => true, ms = 4000) => {
+      const t0 = Date.now();
+      while (Date.now() - t0 < ms) { const e = eventos.find((x) => x.ev === nome && filtro(x.dados)); if (e) return e.dados; await new Promise((ok) => setTimeout(ok, 15)); }
+      return null;
+    } };
+  }
+
+  // perfil
+  let r = await pedir('GET', '/social/amigos', { token: ta });
+  conferir(r.status === 412, 'sem perfil, pede para criar o apelido primeiro', String(r.status));
+  r = await pedir('POST', '/social/perfil', { token: ta, corpo: { apelido: 'Ana Clara', nome: 'Ana' } });
+  conferir(r.status === 400, 'apelido com espaço é recusado');
+  r = await pedir('POST', '/social/perfil', { token: ta, corpo: { apelido: 'ana.clara', nome: 'Ana Clara', avatar: '🦊' } });
+  conferir(r.status === 200 && r.dados.perfil.apelido === 'ana.clara' && r.dados.perfil.avatar === '🦊', 'cria o perfil com apelido e avatar');
+  await pedir('POST', '/social/perfil', { token: tb, corpo: { apelido: 'beto_estuda', nome: 'Beto Silva', avatar: '🐼' } });
+  await pedir('POST', '/social/perfil', { token: tc, corpo: { apelido: 'caio', nome: 'Caio' } });
+  r = await pedir('POST', '/social/perfil', { token: tc, corpo: { apelido: 'ANA.CLARA', nome: 'x' } });
+  conferir(r.status === 409, 'apelido de outra pessoa é recusado (sem diferenciar maiúscula)');
+
+  // busca e pedido
+  r = await pedir('GET', '/social/buscar?q=bet', { token: ta });
+  conferir(r.dados.resultados?.length === 1 && r.dados.resultados[0].apelido === 'beto_estuda' && r.dados.resultados[0].relacao === 'nenhuma', 'acha pelo começo do apelido');
+  r = await pedir('GET', '/social/buscar?q=silva', { token: ta });
+  conferir(r.dados.resultados?.[0]?.apelido === 'beto_estuda', 'acha pelo nome');
+  const ca = await canal(ta), cb = await canal(tb);
+  conferir(ca.status === 200 && cb.status === 200, 'os dois celulares conectam no tempo real');
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'oi' } });
+  conferir(r.status === 403, 'antes de ser amigo, não dá para mandar mensagem');
+  r = await pedir('POST', '/social/amizade', { token: ta, corpo: { apelido: 'beto_estuda' } });
+  const pedidoChegou = await cb.esperar('amizade', (d) => d.tipo === 'pedido');
+  conferir(r.dados.status === 'enviado' && pedidoChegou?.de?.apelido === 'ana.clara', 'pedido de amizade chega na hora no outro celular');
+  r = await pedir('GET', '/social/amigos', { token: tb });
+  conferir(r.dados.recebidos?.[0]?.apelido === 'ana.clara', 'aparece em "pedidos recebidos"');
+  r = await pedir('POST', '/social/amizade/responder', { token: tb, corpo: { id: 'soc-ana', aceitar: true } });
+  const aceitou = await ca.esperar('amizade', (d) => d.tipo === 'aceita');
+  conferir(r.dados.status === 'amigos' && !!aceitou, 'aceitar avisa quem pediu');
+
+  // foguinho
+  const hoje = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10);
+  await pedir('POST', '/social/atividade', { token: ta, corpo: { sequencia: 5, ultimoDia: hoje } });
+  await pedir('POST', '/social/atividade', { token: tb, corpo: { sequencia: 2, ultimoDia: hoje } });
+  r = await pedir('GET', '/social/amigos', { token: ta });
+  const beto = r.dados.amigos?.find((x) => x.apelido === 'beto_estuda');
+  conferir(beto?.sequencia === 2 && beto.fogoJuntos === 1 && beto.online === true, 'mostra o foguinho do amigo, o foguinho juntos e se está online', JSON.stringify(beto));
+
+  // chat
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'Bora estudar pra prova? 📚🔥 me chama no 11 98765-4321 ou www.site.com' } });
+  const msg = await cb.esperar('mensagem', (d) => d.de === 'soc-ana');
+  conferir(msg && msg.texto.includes('📚🔥') && !msg.texto.includes('98765') && msg.texto.includes('[número removido]') && msg.texto.includes('[link removido]'),
+    'mensagem com emoji chega na hora, sem telefone e sem link', msg?.texto);
+  r = await pedir('GET', '/social/amigos', { token: tb });
+  conferir(r.dados.amigos?.[0]?.naoLidas === 1, 'conta a não lida');
+  await pedir('POST', '/social/lidas', { token: tb, corpo: { de: 'soc-ana' } });
+  r = await pedir('GET', '/social/mensagens/soc-ana', { token: tb });
+  conferir(r.dados.mensagens?.length === 1 && r.dados.mensagens[0].lida === true, 'histórico da conversa, marcado como lido');
+  r = await pedir('GET', '/social/mensagens/soc-ana', { token: tc });
+  conferir(r.status === 403, 'quem não é amigo não lê a conversa');
+
+  // duelo em tempo real
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-beto', tema: 'Revolução Francesa' } });
+  conferir(r.status === 402, 'duelo com tema livre (IA) é do Pro');
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-beto', materia: 'História' } });
+  const id = r.dados.duelo?.id;
+  const convite = await cb.esperar('duelo:convite', (d) => d.id === id);
+  conferir(!!id && convite?.jogadores?.['soc-ana']?.apelido === 'ana.clara', 'convite de duelo chega na hora');
+  await pedir('POST', `/duelos/${id}/aceitar`, { token: tb });
+  const [ia, ib] = [await ca.esperar('duelo:inicio'), await cb.esperar('duelo:inicio')];
+  conferir(ia && ib && ia.total === 5, 'os dois recebem o início ao mesmo tempo');
+  let fim = null;
+  for (let i = 0; i < 5; i++) {
+    const [pa, pb] = [await ca.esperar('duelo:pergunta', (d) => d.i === i), await cb.esperar('duelo:pergunta', (d) => d.i === i)];
+    if (i === 0) conferir(pa && pb && pa.enunciado === pb.enunciado && JSON.stringify(pa.opcoes) === JSON.stringify(pb.opcoes) && pa.correta === undefined,
+      'mesma pergunta nos dois celulares, sem a resposta certa', pa?.enunciado);
+    // Ana responde certo (descobre pela revelação da rodada anterior não dá: chuta 0; Beto chuta 1)
+    await pedir('POST', `/duelos/${id}/responder`, { token: ta, corpo: { i, opcao: 0 } });
+    if (i === 0) conferir(!!(await cb.esperar('duelo:respondeu', (d) => d.i === 0 && d.quem === 'soc-ana')), 'o outro vê que você respondeu (não o quê)');
+    await pedir('POST', `/duelos/${id}/responder`, { token: tb, corpo: { i, opcao: 1 } });
+    const rev = await ca.esperar('duelo:revelar', (d) => d.i === i);
+    if (i === 0) conferir(rev && typeof rev.correta === 'number' && rev.respostas['soc-ana'] && rev.respostas['soc-beto'], 'revela a certa e o que cada um marcou');
+  }
+  fim = await ca.esperar('duelo:fim', () => true, 5000);
+  const fimB = await cb.esperar('duelo:fim', () => true, 5000);
+  conferir(fim && fimB && JSON.stringify(fim.placar) === JSON.stringify(fimB.placar), 'placar final igual nos dois celulares', JSON.stringify(fim?.placar));
+  r = await pedir('GET', '/duelos/placar?amigo=soc-beto', { token: ta });
+  conferir(r.dados.eu + r.dados.ele + r.dados.empates === 1, 'o duelo fica no histórico');
+
+  // amigo offline não recebe duelo; desistir dá a vitória ao outro
+  r = await pedir('POST', '/duelos', { token: ta, corpo: { amigo: 'soc-caio' } });
+  conferir(r.status === 403, 'não dá para duelar com quem não é amigo');
+
+  // bloquear corta tudo
+  await pedir('POST', '/social/bloquear', { token: tb, corpo: { id: 'soc-ana' } });
+  r = await pedir('POST', '/social/mensagem', { token: ta, corpo: { para: 'soc-beto', texto: 'oi?' } });
+  conferir(r.status === 403, 'bloqueado: não manda mais mensagem');
+  r = await pedir('GET', '/social/buscar?q=beto', { token: ta });
+  conferir(!r.dados.resultados?.length, 'e nem acha mais a pessoa na busca');
+  r = await pedir('POST', '/social/denunciar', { token: tb, corpo: { id: 'soc-ana', motivo: 'spam' } });
+  const { _denunciasMem } = await import('../src/social-db.js');
+  conferir(r.status === 200 && _denunciasMem().length === 1, 'denúncia fica guardada');
+  ca.fechar(); cb.fechar();
 }
 
 console.log(`\n${falhas ? '❌' : '✅'} ${ok} passaram, ${falhas} falharam\n`);

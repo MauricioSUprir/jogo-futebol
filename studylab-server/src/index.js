@@ -31,6 +31,8 @@ import {
   baixarIcs, urlDeVolta,
 } from './conexoes.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
+import { criarRotasSociais } from './social.js';
+import { migrarSocial } from './social-db.js';
 import {
   perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso, escadaGemini, estadoEscada, tamanhoCache,
 } from './ia.js';
@@ -562,6 +564,45 @@ function freioSincronizar(id, limite = 30, janela = 3600000) {
   sincronizacoes.set(id, lista);
 }
 
+/* ---------- amizades, chat e duelos (social.js) ---------- */
+const SCHEMA_DUELO = {
+  type: 'object', additionalProperties: false, required: ['perguntas'],
+  properties: {
+    perguntas: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['enunciado', 'opcoes', 'correta'],
+        properties: {
+          enunciado: { type: 'string' },
+          opcoes: { type: 'array', items: { type: 'string' } },
+          correta: { type: 'integer', description: 'índice 0 a 3 da opção certa' },
+          explicacao: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+/** Duelo com tema livre (Pro): a IA cria as 5 perguntas. Não conta no limite do aluno. */
+async function gerarPerguntasIA(tema) {
+  const r = await perguntar({
+    system: 'Você cria perguntas de quiz escolar em português do Brasil para um duelo entre dois alunos. '
+      + 'Exatamente 5 perguntas de múltipla escolha, 4 opções curtas, só UMA correta, nível ensino fundamental II '
+      + 'e médio, sem pegadinha e sem nada que você não tenha certeza. explicacao: 1 frase curta.',
+    conteudo: `Tema do duelo: ${String(tema).slice(0, 80)}`,
+    schema: SCHEMA_DUELO, esforco: 'low', maxTokens: 2500, nivel: 'pro',
+  });
+  const d = JSON.parse(r.texto);
+  return (d.perguntas || [])
+    .filter((q) => q?.enunciado && Array.isArray(q.opcoes) && q.opcoes.length === 4 && q.correta >= 0 && q.correta <= 3)
+    .map((q) => ({ materia: tema, enunciado: String(q.enunciado).slice(0, 300), opcoes: q.opcoes.map((o) => String(o).slice(0, 120)), correta: q.correta, explicacao: String(q.explicacao || '').slice(0, 300) }));
+}
+const social = criarRotasSociais({
+  exigirAluno, lerCorpo, temIA: temChaveIA, gerarPerguntasIA,
+  ehPago: async (id) => !!(await assinaturaAtiva(id)),
+});
+Object.assign(rotas, social.rotas);
+rotasDinamicas.push(...social.dinamicas);
+
 async function exigirAluno(req) {
   const aluno = await alunoDaRequisicao(req);
   if (!aluno) throw Object.assign(new Error('Faça login de novo.'), { status: 401 });
@@ -586,6 +627,9 @@ const servidor = http.createServer(async (req, res) => {
   if (!permitido && req.headers.origin) return json(res, 403, { erro: 'Origem não autorizada' });
   if (muitasBatidas(ip)) return json(res, 429, { erro: 'Calma aí — muitas chamadas seguidas.' });
 
+  if (chave === 'GET /tempo-real') {
+    return social.abrirTempoReal(req, res, url).catch((e) => { console.error('tempo-real', e); if (!res.headersSent) json(res, 500, { erro: 'Erro inesperado' }); });
+  }
   const rota = rotas[chave];
   const dinamica = rota ? null : rotasDinamicas.map((d) => ({ d, m: chave.match(d.padrao) })).find((x) => x.m);
   if (!rota && !dinamica) return json(res, 404, { erro: 'Rota não encontrada' });
@@ -605,6 +649,7 @@ const servidor = http.createServer(async (req, res) => {
 });
 
 migrar()
+  .then(() => migrarSocial())
   .then(() => servidor.listen(PORTA, () => {
     console.log(`MindTrack no ar em :${PORTA}`);
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
