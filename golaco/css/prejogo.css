@@ -67,6 +67,9 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
 .pj-esc-faixa { display: block; width: clamp(34px, 5vw, 56px); height: 6px; border-radius: 3px; background: var(--cor-time, var(--verde)); }
 .pj-esc-rotulo { font-size: 11px; font-weight: 800; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto-2); }
 .pj-esc-nome { margin: 0; font-size: clamp(20px, 3.3vw, 46px); font-weight: 900; line-height: 1.02; letter-spacing: -0.01em; overflow-wrap: anywhere; }
+/* o nome longo (> 22 letras, só do TM: "Sociedade Esportiva Recreativa…") menor e em até 3 linhas — o bloco de 4–5 linhas a 46 px
+   pesava mais que o campo (revisão V6); o nome inteiro fica no aria-label da folha */
+.pj-esc-nome.longo { font-size: clamp(18px, 2.2vw, 30px); line-height: 1.08; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; line-clamp: 3; overflow: hidden; }
 .pj-esc-forma { font-size: clamp(15px, 1.9vw, 24px); font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
 .pj-esc-area { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; justify-self: center; }
 /* (overflow visível: no aperto a carta da ponta fica sobre a lateral — no máximo meia carta para fora; só as LINHAS ficam recortadas

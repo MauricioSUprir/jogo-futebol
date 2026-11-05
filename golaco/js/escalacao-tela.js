@@ -51,6 +51,8 @@ export const ESCALACAO = Object.freeze({
   // borda da carta (3 em cima + 1 embaixo) e os 2 vãos de 2 px entre as linhas: a conta da linha da posição
   bordaV: 4, vaos: 4,
   celularMaxH: 480, pequenaH: 350,
+  // o nome do time acima disto (letras) sai menor e em até 3 linhas (css .pj-esc-nome.longo)
+  nomeTimeLongo: 22,
   // a janela de PC em pé: até 3 refeitas com a altura menor quando a largura não dá
   refazMax: 3,
 });
@@ -204,7 +206,10 @@ export function criarEscalacaoTela(raiz, ident = null) {
       }
       im.src = ident.times[t].escudo.url;
     }
-    f.s.querySelector('.pj-esc-nome').textContent = el?.nome ?? '';
+    const nomeTime = f.s.querySelector('.pj-esc-nome');
+    nomeTime.textContent = el?.nome ?? '';
+    // (o nome longo do TM menor e em até 3 linhas: css/prejogo.css .pj-esc-nome.longo)
+    nomeTime.classList.toggle('longo', [...(el?.nome ?? '')].length > ESCALACAO.nomeTimeLongo);
     f.s.querySelector('.pj-esc-forma').textContent = tm.formacao;
     f.s.setAttribute('aria-label', `Escalação: ${el?.nome ?? ''}, ${tm.formacao}`);
     for (const c of f.cartas) c.remove();
