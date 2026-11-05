@@ -645,6 +645,36 @@ pelves a ≥ 0,47 m; pé plantado 0,000 m/s, pé no ar ≤ 0,90 do limite; quem 
 por tick (22 atores; a simulação custa ~0,6 ms por passo); hash do mundo igual antes e depois; a saída no mesmo tick (gol +
 150) com o mesmo hash que sem a cena.
 
+### 10.1 O cartão do autor do gol: a foto, o número e o nome (item 31, dono 17/10; `js/autor-cartao.js`, `js/tm-fotos.js`, `hud.js`, `main.js`, `css/estilo.css`, `css/tm.css`, `legacy-total-match/js/tm3d.js`)
+
+"Na cena de comemoração, a FOTO do autor com o número e o nome; a foto vem do pedido do TM." O cartão entra 0,4 s depois do
+1º corte da cena (o "GOL!" sai nele: um texto por vez), fica 3,5 s (a cena curta, 2,6 s) e sai pelo menos 0,5 s antes do
+replay, no canto de cima à direita, na linha do placar. Foto só da edição pro do TM (as fotos reais de licença livre que o TM
+já mostra, ou a importada pela carreira própria); sem foto, o número e o nome numa linha — nada desenhado no lugar.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| EA SPORTS FC Mobile 27 (captura da partida na Google Play) | Durante a comemoração, a carta do autor com a FOTO e uma barra com o escudo e o NOME (e o minuto) | Foto + escudo + nome dentro da cena. Não: o minuto (narração) nem o tamanho (52% da altura: aqui 27% no celular e 21% no PC) |
+| Premier League Productions 23/24–26/27 (MediaSpy, fórum "International sports presentation" #483; footyheadlines, os 20 flashes de 26/27) | O flash do gol ~3 s; o autor no placar, quase nunca com foto | O tempo de leitura (3,5 s); o "GOL!" só no flash e o cartão depois |
+| Copa do Mundo 2026 (footyheadlines; SVG Europe sobre os gráficos da Moov) e o guia de marca da EURO 2024 | A identificação do jogador é NÚMERO + NOME, letra grande, cor do time | Número + nome como a identificação; o chip do time na cor dele; sem minuto |
+| LIGR Systems — "Lower thirds explained"; Wasp3D — "Sports lower thirds" | Entrada em décimos de segundo, saída mais rápida que a entrada, "hold" de 4–7 s para nome + função; entender em ~2 s | Entra 0,3 s, sai 0,2 s, 3,5 s na tela (2 palavras + a foto) |
+| SVG (sportsvideo.org, 06/2026) — "Designing the modern scorebug" | O grafismo não pode brigar com o placar nem tapar a jogada | O canto livre medido (abaixo): nunca sobre o autor nem sobre o placar |
+| EA (portrait 160 px com transparência, ~11 KB; medido) | O recorte do jogador sem fundo | O TM tem bustos 220 × 220 COM o fundo: a foto inteira numa moldura, o leve aproximar 1,12× (o rosto em x 0,50 / y 0,44, 39% da largura) — nada recortado |
+| Apple HIG (Typography) e EBU R 95 | Mínimo de 11 pt; área segura de grafismo de 5% | Número ≥ 22 px e nome ≥ 14 px no celular; o cartão na linha do placar (`--m` + a área segura, como todo o HUD) |
+| caniuse (WebP) e a medida das miniaturas (PIL, 200 fotos) | WebP de 96 px q80 = 1,97 KB (p95 2,62) | Não entrou: a JPG de 220 px que o TM já publica (~13 KB, a maioria já no cache do TM) — nenhum binário novo no repositório |
+
+**Onde** (o mapa, 7 casos × 2 telas × todos os planos): o canto de baixo à esquerda (o das tarjas) cobre o autor em 51–99% dos
+quadros no celular, porque a steadicam do celular põe o autor no terço esquerdo de propósito (o "Pular" fica à direita); o canto
+de cima à direita foi o único com 0% de autor, 0% de outros e 0% de HUD em todos os planos, no PC e no celular. **Quanto tempo**:
+nos 22 gols naturais medidos a steadicam dura 1,85–3,95 s na cena normal e 1,12–2,32 s na curta — só nela o cartão ficaria
+curto demais; a cena dura fixo 6,3 s (normal) e 3,3–3,7 s (curta) depois do 1º corte, então o cartão atravessa o corte para o
+abraço/reação (o canto continua livre neles). Medido (`teste-comemoracao-tela` H): entra em 1,60 s, fica 3,50 s (curta 2,60),
+some 2,2 s antes do replay (curta 0,48 s), 0 quadros sobre o autor (PC, 844×390 com o entalhe, 568×320 e o gol natural), a foto
+no 1º quadro do cartão (a <img> já decodificada da pré-carga), 92 px no celular deitado.
+
+O que ficou sem confirmar: nenhum vídeo medido quadro a quadro (o YouTube pediu verificação de robô); Champions, LaLiga,
+Bundesliga, Globo, Premiere, CazéTV e eFootball sem captura do grafismo do autor.
+
 ## 11. Cena de substituição e faixa ENTRA/SAI (`js/substituicao.js`, `render/placa-subst.js`, `main.js`, `hud.js`; pedido do dono de 12/10)
 
 "Quando tiver substituição, quero que tenha a cena de substituição, só jogador saindo e entrando, e embaixo, no modelo, a
