@@ -1729,6 +1729,21 @@ export const DIFICULDADE = {
     contrapressao: { s: [0, 5, 7], max: [0, 3, 3] }, utilidade: { chute: 4.2, passeAntecipa: 0.7 } },
 };
 
+// O clássico (item 35; dono, 17/10: "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais
+// contato), não pelo árbitro"; contrato "Clássico pegado (item 35)" no CONTRATOS.md, pesquisa e calibração em PESQUISA-CLASSICO.md).
+// Vale com m.classico (o pedido do TM, partida.classico; ?classico=1) para TODO jogador guiado pela IA dos DOIS times — a IA × IA,
+// a IA contra a pessoa e os companheiros da pessoa —, nunca o controlado (o bote dele é o botão). Só a VONTADE e o contato perto da
+// bola; nada de volume de pressão, física, alcance nem árbitro (FALTAS e a régua do faltas.js iguais: as faltas sobem porque há
+// mais contato). Cada chave cobre UMA constante de hoje e nunca repete o nome dela (teste-classico K0):
+//   vontade: ACOES.boteIA.chancePorPasso como TAXA, 1 − (1 − p)^vontade (≤ boteTeto, nunca abaixo do p do nível), e o descanso
+//   ÷ vontade (≥ descansoMin, nunca acima do do nível) — por cima do nível da DIFICULDADE quando há (sim.js cfgBote) ·
+//   contencaoMenos: m a menos no IA_DEFESA.contencao do 1º homem (≥ 1,25; ia-tatica.js contencaoDoTime) · apertoMenos: m a menos
+//   no IA_DEFESA.aperto (≥ 0,6; apertoDoTime) · encostadaVrelMais: m/s a mais no ACOES.boteIA.encostadaVrel · segura: × a decisão
+//   do batido de segurar (FALTAS.tatica.chancePorPasso/semSPA no faltas.js faltaTatica; o apito e o cartão iguais)
+// O teto e o piso do bote são o envelope já jogado no item 33 (a rodada 7 da calibração da dificuldade: 0,26/16).
+export const CLASSICO = { vontade: 1.4, descansoMin: 16, boteTeto: 0.26, contencaoMenos: 0.5, apertoMenos: 0.4,
+  encostadaVrelMais: 0, segura: 1 };
+
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
 // Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
 // `carrinho` abaixo, carrinho.js).
