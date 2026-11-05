@@ -32,7 +32,8 @@
 //      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…"); e o
 //      pedido MISTO (PED_NOMES_MISTOS: um nome de time curto e camisas curtas × o nome e as camisas longas) em 1280×1024 e
 //      844×390 — a mesma caixa nas duas folhas com colunas de larguras diferentes (A1) e as cartas de cada folha pelos nomes
-//      dela (V2: as pontas do time de nomes curtos dentro do campo);
+//      dela (V2: as pontas do time de nomes curtos dentro do campo); e, com o arquivo da TM Cond bloqueado, 568×320 do elenco
+//      fictício sem nome cortado (a reserva do sistema encolhida por size-adjust — V5);
 //   5) pular: um clique/toque avança 1 bloco no mesmo quadro; Esc (PC) e o botão Pular (celular) vão direto ao jogo:
 //      o HUD volta, a partida continua no tick 0 com o hash de criarPartida (Node) e 600 passos dão o mesmo hash no Node
 //      e no Chromium;
@@ -593,6 +594,40 @@ try {
       meta('?tm, pedido misto em 844×390: colunas diferentes, a mesma caixa, as pontas do mandante (nomes curtos) para dentro', `colunas ${f1(m0.info)} × ${f1(m1.info)} px; caixa ${f1(m0.w)}×${f1(m0.h)} × ${f1(m1.w)}×${f1(m1.h)}; borda da ponta ${f1(m0.inset - m0.cw / 2)} × ${f1(m1.inset - m1.cw / 2)} px; carta ${m0.cw} × ${m1.cw}`,
         'colunas ≠; a mesma caixa; mandante ≥ 5 px, carta menor', Math.abs(m0.info - m1.info) > 20 && m0.w === m1.w && m0.h === m1.h && m0.inset - m0.cw / 2 >= 5 && m0.cw < m1.cw);
     }
+    // a TM Cond que não chega (V5): com o arquivo dela bloqueado, a reserva do sistema encolhida (size-adjust) não põe "…" em nome
+    // nenhum do elenco fictício na tela mais apertada (568×320); antes, a reserva larga cortava 2 nomes. (Com rota, o Playwright não
+    // usa o cache: o arquivo não vem da página anterior)
+    const nErros = erros.length;
+    await contexto.route('**/tmcond-800-*.woff2', r => r.abort());
+    await pg.setViewportSize({ width: 568, height: 320 });
+    await pg.goto(`${srv.url}?prejogo=escalacao&replay=0&comemoracao=0&semente=${SEMENTE}&q=media&hora=dia`, { waitUntil: 'load' });
+    await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
+    const semFonte = await pg.evaluate(async () => {
+      const g = window.__golaco; g.relogio.usarManual(true); g.relogio.avancar(16); g.relogio.avancar(16);
+      if (!g.prejogo) return null;
+      g.prejogo.comecar(); g.relogio.avancar(16);
+      await document.fonts.load('800 10px "TM Cond"').catch(() => null);
+      await document.fonts.ready;
+      const pj = g.prejogo, ctx = document.createElement('canvas').getContext('2d'), cortados = [];
+      let n = 0;
+      for (const t of [0, 1]) {
+        const p = pj.planos.find(q => q.id === `escalacao${t}`);
+        pj.irPara(p.t0 + 2); g.relogio.avancar(16); g.relogio.avancar(16);
+        for (const nm of document.querySelectorAll('.pj-esc')[t].querySelectorAll('.pj-nome')) {
+          const st = getComputedStyle(nm), r = nm.getBoundingClientRect();
+          ctx.font = `${st.fontStyle} ${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+          n++;
+          if (nm.scrollWidth > nm.clientWidth + 1 || ctx.measureText(nm.textContent).width > r.width + 0.05) cortados.push(nm.textContent);
+        }
+      }
+      const tmCond = [...document.fonts].filter(f => f.family.replace(/["']/g, '') === 'TM Cond').map(f => f.status);
+      return { n, cortados, tmCond: [...new Set(tmCond)].join('/') };
+    });
+    meta('Escalação em 568×320 sem a TM Cond (o arquivo bloqueado): a reserva encolhida não corta nome nenhum', semFonte ? `${semFonte.cortados.length} de ${semFonte.n} cortados${semFonte.cortados.length ? ': ' + semFonte.cortados.join(', ') : ''} (TM Cond: ${semFonte.tmCond})` : 'o pré-jogo não ligou',
+      '0 cortados; a TM Cond sem carregar', !!semFonte && semFonte.n === 22 && semFonte.cortados.length === 0 && !/loaded/.test(semFonte.tmCond));
+    await contexto.unroute('**/tmcond-800-*.woff2');
+    // (o arquivo bloqueado aparece no console como recurso que falhou: só esses saem da conta)
+    for (let i = erros.length - 1; i >= nErros; i--) if (/Failed to load resource|ERR_FAILED/.test(erros[i])) erros.splice(i, 1);
     meta('?tm com nomes longos: sem erro no console', `${erros.length}${erros.length ? ': ' + erros.slice(0, 2).join(' | ') : ''}`, '0', erros.length === 0);
     await navegador.close();
   }
