@@ -34,6 +34,14 @@
 //      criarPartida: prepartida.js edicaoParaTimes) chega ao resultado: o reserva que começou jogou (toques na súmula, entre os
 //      candidatos do melhor em campo) e o titular tirado não (nenhum toque, nunca em gols, cartões ou melhor), sem substituição.
 //
+//  P10 (item 31: a foto do autor na comemoração e nas fichas) as fotos do pedido do TM (js/tm-fotos.js, fora do fecho):
+//      P10a o pedido pro com fotos → fotosDoPedido = exatamente as aceitas (http(s) absoluto da MESMA origem e data:image JPEG/PNG/
+//      WebP ≤ 48 000), cada uma no id certo pelo TM.mapa — recusa data:text/html, SVG, data: grande, outra origem, relativo,
+//      javascript:, número e objeto; P10b o mesmo pedido público (e sem `edicao`) → nenhuma; P10c o Rumo ao Estrelato com o travado
+//      vindo do BANCO (o travadoTitular reordena: a foto pelo índice daria a do titular deslocado); P10d o mesmo time dos dois lados
+//      (os mesmos tmId; fotos diferentes por lado: só pelo tmId daria a do outro lado); P10e a foto FORA do hash: timesDoPedido com
+//      e sem fotos idênticos (JSON) e a partida com o mesmo hash a cada 300 passos. Na versão sem js/tm-fotos.js REPROVA.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -68,7 +76,7 @@ try { TT = await imp('tm-times.js'); SU = await imp('sumula.js'); } catch (e) {
 }
 
 // ------------------------------------------------------------------ pedidos (tools/lib/pedidos-tm.mjs)
-const { AZUL, VERDE, ROXO, PED_A, PED_B, PED_C } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
+const { AZUL, VERDE, ROXO, PED_A, PED_B, PED_C, comFotos, urlFoto, FOTO_DATA, FOTOS_RECUSADAS } = await import(pathToFileURL(path.join(AQUI, 'lib/pedidos-tm.mjs')).href);
 
 // ------------------------------------------------------------------ P1 sem recuo (ANTES de registrar qualquer elenco)
 function hashes(opc, n = 1500) {
@@ -502,6 +510,74 @@ if (typeof SU.melhorEmCampo === 'function') {
     reg('P9 a escalação mudada antes do jogo: o reserva que começou jogou e o titular tirado não (sem substituição)',
       `${E.fichaDe(res0)?.camisa ?? res0} no lugar de ${E.fichaDe(tit)?.camisa ?? tit} (${vagaTit}): toques ${toquesRes} × ${toquesTit}; o titular no resultado ${citaTit}; saiu [${m.times[h].saiu}]; ${tmRes ? 'no mapa' : 'fora do mapa'}`,
       'toques > 0 × 0; false; o titular nunca saiu', toquesRes > 0 && toquesTit === 0 && !citaTit && naoSub && !!tmRes);
+  }
+}
+
+// ------------------------------------------------------------------ P10 as fotos do pedido do TM (item 31)
+{
+  const TF = await imp('tm-fotos.js').catch(() => null);
+  if (!TF) reg('P10 as fotos do pedido do TM (js/tm-fotos.js)', 'js/tm-fotos.js não existe (versão de antes)', 'existe', false);
+  else {
+    const ORIGEM = 'https://golaco.exemplo';
+    // a régua independente do teste: o que o TM manda e a página pode mostrar
+    const aceitavel = u => typeof u === 'string' && ((/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/]+=*$/.test(u) && u.length <= 48000) || u.startsWith(ORIGEM + '/'));
+    const esperado = (ped, T) => {
+      const out = new Map();
+      for (const [id, e] of Object.entries(T.mapa)) {
+        const t = e.lado === 1 ? ped.away : ped.home;
+        const p = t.players.find(q => q.tmId === e.tmId);
+        if (aceitavel(p?.foto)) out.set(+id, p.foto);
+      }
+      return out;
+    };
+    const igualMapa = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
+    // P10a
+    const pa = comFotos(PED_A, ORIGEM, { recusadas: true });
+    const Ta = TT.timesDoPedido(pa);
+    const fa = TF.fotosDoPedido(pa, Ta.mapa, ORIGEM), ea = esperado(pa, Ta);
+    const recusou = FOTOS_RECUSADAS.every(u => ![...fa.values()].includes(u));
+    const datas = [...fa.values()].filter(u => u === FOTO_DATA).length;
+    reg('P10a pro: as fotos aceitas, cada uma no id certo; as recusadas de fora', `${fa.size} fotos (esperadas ${ea.size}; ${datas} data:); recusadas fora: ${recusou}; ${igualMapa(fa, ea) ? 'ids certos' : 'DIFERENTE'}`,
+      '28 (2 data:); true; ids certos', igualMapa(fa, ea) && fa.size === 36 - FOTOS_RECUSADAS.length && datas === 2 && recusou);
+    const ac = [['mesma origem', `${ORIGEM}/a.jpg`, true], ['outra porta', 'https://golaco.exemplo:8443/a.jpg', false], ['http × https', 'http://golaco.exemplo/a.jpg', false],
+      ['blob:', `blob:${ORIGEM}/x`, false], ['data:image/png', 'data:image/png;base64,iVBORw0KGgo=', true], ['data:image/webp', 'data:image/webp;base64,UklGRg==', true],
+      ['data: com espaço', 'data:image/jpeg;base64,AAA AAA', false], ['vazio', '', false], ['nulo', null, false]];
+    const erradas = ac.filter(([, u, sim]) => !!TF.fotoAceita(u, ORIGEM) !== sim).map(([n]) => n);
+    reg('P10a fotoAceita: 9 casos de borda (porta, esquema, blob:, PNG/WebP, base64 com espaço, vazio, nulo)', erradas.join(', ') || 'todos certos', 'todos certos', erradas.length === 0);
+    // P10b
+    const pub = comFotos(PED_A, ORIGEM, { edicao: 'public' }), sem = comFotos(PED_A, ORIGEM, { edicao: null });
+    const nPub = TF.fotosDoPedido(pub, TT.timesDoPedido(pub).mapa, ORIGEM).size, nSem = TF.fotosDoPedido(sem, TT.timesDoPedido(sem).mapa, ORIGEM).size;
+    reg('P10b o pedido público (e sem `edicao`): nenhuma foto', `pública ${nPub} · sem edição ${nSem}`, '0 · 0', nPub === 0 && nSem === 0);
+    // P10c o travado vindo do banco (PED_B: o centroavante reserva do visitante)
+    const pb = comFotos(PED_B, ORIGEM);
+    const Tb = TT.timesDoPedido(pb);
+    const fb = TF.fotosDoPedido(pb, Tb.mapa, ORIGEM);
+    const tmTrava = PED_B.controle.tmId;
+    const idxTrava = Tb.trava - 2001;
+    const deslocado = Object.entries(Tb.mapa).find(([id, e]) => e.lado === 1 && +id !== Tb.trava && e.tmId === PED_B.away.players[idxTrava].tmId);
+    const okC = fb.get(Tb.trava) === urlFoto(ORIGEM, 'away', tmTrava) && idxTrava < 11 && !!deslocado && fb.get(+deslocado[0]) === urlFoto(ORIGEM, 'away', deslocado[1].tmId)
+      && igualMapa(fb, esperado(pb, Tb));
+    reg('P10c Rumo ao Estrelato, o travado vindo do banco: a foto dele no id que ganhou; a do titular deslocado no id dele', `travado ${Tb.trava} (índice ${idxTrava}) → ${String(fb.get(Tb.trava)).split('/').slice(-2).join('/')}; deslocado ${deslocado?.[0]} → ${String(fb.get(+deslocado?.[0])).split('/').slice(-2).join('/')}`,
+      `away/${tmTrava}.jpg; o do deslocado`, okC);
+    // P10d o mesmo time nos dois lados
+    const pd = comFotos({ ...PED_A, away: structuredClone(AZUL) }, ORIGEM);
+    const Td = TT.timesDoPedido(pd);
+    const fd = TF.fotosDoPedido(pd, Td.mapa, ORIGEM);
+    const ruins = Object.entries(Td.mapa).filter(([id, e]) => fd.get(+id) !== urlFoto(ORIGEM, e.lado === 1 ? 'away' : 'home', e.tmId));
+    reg('P10d o mesmo time nos dois lados (tmId repetido): cada lado com a sua foto', `${fd.size} fotos; ${ruins.length} no lado errado`, '36; 0', fd.size === 36 && ruins.length === 0);
+    // P10e fora do hash
+    const semF = TT.timesDoPedido(PED_A), comF = TT.timesDoPedido(comFotos(PED_A, ORIGEM, { recusadas: true }));
+    const jsonIgual = JSON.stringify(semF) === JSON.stringify(comF);
+    const hs = T => {
+      registrar(T);
+      const m = P.criarPartida({ semente: 13, minutosPorTempo: MIN, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano, trava: T.trava });
+      const out = [];
+      for (let i = 0; i < 1500; i++) { P.passoPartida(m, P.entradaDemoPartida(m)); if (i % 300 === 299) out.push(SIM.hashMundo(m).toString(16)); }
+      return out;
+    };
+    const h1 = hs(semF), h2 = hs(comF);
+    reg('P10e a foto fora do hash: timesDoPedido igual com e sem fotos; a partida com o mesmo hash a cada 300 passos', `JSON ${jsonIgual ? 'igual' : 'DIFERENTE'} · ${h1.length} hashes ${h1.join() === h2.join() ? 'iguais' : 'DIFERENTES'}`,
+      'igual · iguais', jsonIgual && h1.length === 5 && h1.join() === h2.join());
   }
 }
 
