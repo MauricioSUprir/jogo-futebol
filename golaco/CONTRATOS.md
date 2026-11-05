@@ -977,11 +977,12 @@ mudou.
 - **`js/escalacao-tela.js`** (DOM; desde o item 29 o campinho EM PÉ — dono, 17/10: "o campinho da escalação do jogo EM PÉ
   (retrato), não deitado"): `criarEscalacaoTela(raiz, ident)` → `{montar(times), mostrar(e) (escalacaoEm + tau), esconder(),
   estado, cartas(t), folha(t), campo(t)}`. Puras e exportadas: `ESCALACAO` (L/A do campo 0,80 — a Globo 2025 — até o teto
-  0,85; o passo-alvo 0,164 × a altura, que põe as cartas das pontas ~9% para dentro das laterais; folga 10 px; a carta até
-  120 px de largura e 44–76 de altura; as letras; fora do `config.js`, que é do fecho), `tamanhoEscalacao(W, H, {larguraNome,
-  alturaTela})` → `{w, h, cw, ch, passo, inset, fora, fonteNome, fontePos, comPos, largura, teto}` (W = a largura máxima do
-  grupo do campo, H = a altura da área = a altura do campo; `larguraNome(px)` = o nome mais largo dos 22 titulares; celular =
-  `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem (revisão V1: as pontas NUNCA tangentes à lateral): as cartas das
+  0,85; o passo-alvo 0,164 × a altura (o da Globo: o CENTRO das cartas das pontas ~9% para dentro; a borda decide, abaixo);
+  folga 10 px; `margem` 6 / `margemMin` 5; a carta até 120 px de largura e 44–76 de altura; as letras; fora do `config.js`, que
+  é do fecho), `tamanhoEscalacao(W, H, {larguraNome, alturaTela, caixa})` → `{w, h, cw, ch, passo, inset, fora, fonteNome,
+  fontePos, comPos, largura, teto, naLinha}` (W = a largura máxima do grupo do campo, H = a altura da área = a altura do
+  campo; `larguraNome(px)` = o nome mais largo do conjunto — os 22 titulares para a altura, os 11 da folha para a carta
+  (`tamanhosDasFolhas`); celular = `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem (revisão V1: as pontas NUNCA tangentes à lateral): as cartas das
   pontas DENTRO, com a borda a `margem` 6 px da lateral (mínimo `margemMin` 5) — o campo alarga de 0,80 até 0,85 —, na letra da
   conta e depois na mínima da tela (§7.4/§7.5 do PESQUISA-ESTADIO: celular 11, 568×320 10, PC 13); senão as pontas SOBRE a
   linha, centradas nela (inset 0, `naLinha`; meia carta para fora, `fora`); senão o nome sai com "…" (`teto`; só os de
@@ -1027,9 +1028,14 @@ mudou.
   time, cheia, cartas(t), folha(t), pular, info(t), campo(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo,
   fora}`); `quadro()` passa `parado` = `retratoBloqueado()`; `desenhar()` desenha o pré-jogo quando ele está ativo.
 - **Testes**: `tools/teste-cortejo.mjs`, `tools/teste-prejogo-roteiro.mjs` e `tools/teste-escalacao-campo.mjs` (item 29: as
-  contas da escalação em pé, N1–N5) (Node, padrão do CI), `tools/teste-prejogo.mjs` (navegador, CI; itens 4b e 15: a escalação em
-  pé em 11 telas do PC, no celular e com `?tm` e nomes longos — `lib/pedidos-tm.mjs PED_NOMES_LONGOS`; `--so-esc` roda só a
-  escalação), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
+  contas da escalação em pé, N1–N5: em pé e no teto, a carta e a letra, o campinho do editor e da pausa byte a byte, a janela
+  em pé, a mesma caixa nas duas folhas) (Node, padrão do CI), `tools/teste-prejogo.mjs` (navegador, CI; itens 4b e 15: a
+  escalação em pé E1–E14 — em pé, o GOL embaixo, o lado, as linhas recortadas, as cartas no campo, a letra, nada cortado nem
+  pela tinta nem por fração de px, sem rolar, a mesma caixa nas duas folhas, o Pular, a TM Cond, as pontas nunca tangentes, o
+  nome do time em ≤ 3 linhas, a faixa da carta na cor do time — em 11 telas do PC e no celular; com `?tm` e nomes longos em 5
+  telas — `lib/pedidos-tm.mjs PED_NOMES_LONGOS` —, o pedido misto `PED_NOMES_MISTOS` (colunas diferentes, a mesma caixa, as
+  pontas do time de nomes curtos dentro) e 568×320 com o arquivo da TM Cond bloqueado (a reserva não corta nome); `--so-esc` roda
+  só a escalação, ~1m40s), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
@@ -2650,7 +2656,9 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   túnel, cantos, torcedores), `prejogo-tela.js` (escudos e estádio na abertura), `escalacao-tela.js` (escudo e cor).
 - **Teste**: `teste-identidade` (Node, padrão): padrão = constantes de hoje (torcida byte a byte), ΔE₀₀ nos pares de Sharma
   et al., 7 pedidos difíceis (dois vermelhos, azul × árbitro azul, preto-e-branco × branco-e-preto, 3 uniformes iguais,
-  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro).
+  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro); seção G
+  (item 29, revisão V9): a sigla do escudo de reserva cabe em ≤ `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, e as que já
+  cabiam ficam no tamanho de antes (30 com 3 letras, 38 com 2).
 
 ## Estádio de cada clube no pré-jogo (Total Match, 15/10)
 Pedido do dono: na edição pro (licenciada) o estádio REAL do mandante; na pública, o Estádio Golaço com o nome do jogo. Só

@@ -4,7 +4,7 @@
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
 > Atualizado em 05/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) ou da escalação em pé (05/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~24 h
+## 🛠️ B. Correções e regras — ~27 h
 
 | nº | o que é | horas |
 |---|---|---|
@@ -30,12 +30,14 @@
 | 72 | 🔎 O mergulho do goleiro e o pulo do cabeceio continuam no desenho durante o intervalo | 2 |
 | 78 | 🔎 Carrinho: conferir as outras listas onde o jogador deitado ainda pode contar | 2 |
 | 71 | 🔎 Um item do teste do estádio (o "GOL!" na tela) que não mede nada | 1 |
-| 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599; o tempo dos lugares do estádio genérico no CI do #600) | 3,5 |
+| 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599; o tempo dos lugares do estádio genérico no CI do #600; os passos do jogo no teste do TM com a máquina cheia, na entrega do item 29) | 4 |
 | 92 | ✅ Os tempos dos testes da mira na divisão do CI: 287 s e 130 s, do log do CI (#613) | 0,25 |
 | 93 | ✅ O tempo do teste da pausa na divisão do CI: 243 s, do log do CI (#613) | 0,25 |
 | 100 | ✅ O tempo do teste da tela antes do jogo na divisão do CI: 441 s, do log do CI (#613) | 0,25 |
 | 101 | 🔎 O que ficou fora do teste da tela antes do jogo: o tempo até ela aparecer e do Jogar ao 1º plano, o download com o TM, 4 das 5 provas de que o teste reprova sem a correção, a espera de 100 s no online e o tempo do "Simular partida" | 2 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
+| 108 | 🔎 O nome de camisa do TM com mais de 10 letras sai cortado no meio, sem marca ("Evangelista" vira "Evangelist"): cortar com "…" ou usar outra parte do nome | 1 |
+| 109 | 🔎 O tempo do teste do pré-jogo na divisão do CI (hoje a estimativa de 430 s), do log do 1º CI do #614 | 0,25 |
 
 ---
 
@@ -93,7 +95,7 @@
 | 59 | ✅ **Minimapa embaixo, no meio**, entre o analógico e os botões (92×60 no padrão; a torcida do alto livre: 5,4% → 0%), o topo só com placar e menu (#598) | 1,5 |
 | 60 | ✅ **Nome do jogador com a bola nos cantos de baixo** (o time da esquerda do placar à esquerda, o da direita à direita), sem piscar e sem pegar toque (#598) | 1,5 |
 | 32 | ✅ **Placar um pouco maior, com a cara do TM e o relógio em minutos e segundos** ("34:12"; nos acréscimos o relógio continua com o "+4"; "Intervalo"/"Fim" no lugar do relógio; 28 px no celular, 30 no PC) (#599) | 4,5 |
-| 29 | ✅ **Campinho da escalação do pré-jogo em pé**: o campo inteiro com o gol embaixo (como a Globo), o círculo redondo, as cartas das pontas para dentro das laterais, o nome na letra da carta do TM sem cortar (nem os traços de baixo do g e do y), a posição a 11 px no celular; do celular pequeno ao PC, com e sem a cara do TM (PR do item 29) | 4 |
+| 29 | ✅ **Campinho da escalação do pré-jogo em pé**: o campo inteiro com o gol embaixo (como a Globo), o círculo redondo, as cartas das pontas para dentro das laterais, o nome na letra da carta do TM sem cortar (nem os traços de baixo do g e do y), a posição a 11 px no celular; do celular pequeno ao PC, com e sem a cara do TM (#614) | 4 |
 | 30 | Cena de substituição no online | 4 |
 | 31 | Foto do autor do gol com número e nome na comemoração (e a foto nas fichas da tela antes do jogo) | 6 |
 | 33 | Escolher o tempo de jogo e a dificuldade (a dificuldade aparece também na tela antes do jogo) | 9 |
@@ -190,13 +192,13 @@
 16. 🎯 Item 65 (a mira das bolas paradas): feita com as escolhas recomendadas — a linha fina BRANCA com contorno preto (o branco é a única cor que aparece em todo gramado; o verde do TM fica no anel, no arco e nas setinhas dos botões); a mesma informação de antes (nos cruzamentos a linha até perto da metade e o anel onde a bola cai; dá para mostrar só o começo, como no EA, mas aí fica mais difícil); a curva mostrada por um arco verde junto da bola (dá para usar o ponto de contato do EA, ou nada); no celular, segurar o CHUTE ou o LANÇAMENTO e arrastar o polegar para o lado, um degrau a cada 14 px (dá para mudar o passo, arrastar antes de carregar, usar o analógico ou voltar aos 2 botões CURVA, que estouram o espaço da tela); o nome do tipo da batida (ALTA, CHUTE...) saiu da tela. Para conferir no seu celular: o arrasto da curva (à direita do CHUTE sobra pouco espaço) e o traço da linha. Da revisão: na montagem da sua falta os botões são os da defesa por ~1 s (item 90; recomendado mostrar os do ataque). Detalhes na FILA ("Depende do dono" 17).
 17. ⏸️ Item 58 (a pausa): feita com as escolhas recomendadas — as opções (qualidade, câmera, minimapa, som...) num submenu Opções, como o "Settings" do FC (custa alguns apertos a mais no teclado e no controle); o campinho é o SEU meio campo em pé, como no FIFA 23 (dá para mostrar o campo inteiro, mas no celular pequeno os nomes não cabem); "Cenas" dentro do "Modo de jogo"; a linha "Selecionar · Voltar" só no PC; atrás da pausa o jogo parado, sem desfoque (dá para pôr o close de um jogador, como o FC 24: item 95); o placar pequeno em cima à direita; tocar no campinho abre o Editar time; o Esc num submenu volta um passo; a fonte Inter do TM também fora do TM; sem animação ao abrir. **A decidir:** os botões da pausa no celular têm de 28 a 44 px de altura (o padrão da Apple é 44): (a) deixar (recomendado: é o que cabe sem tirar nada da lista), (b) 44 px só onde há lugar (item 99) ou (c) 44 px em todo celular, tirando um item da lista (por exemplo a Ajuda para dentro das Opções). Para conferir no seu celular: o entalhe e o polegar nas linhas mais baixas (testados só no navegador). Detalhes na FILA ("Depende do dono" 18).
 18. 🏟️ Item 64 (a tela antes do jogo): feita com as escolhas recomendadas — a "Visão tática" mostra o time com e sem a bola, como no FC 25 (no FC 24 ela é assistir a partida como técnico: muda o jogo, seria outra entrega); no TM, "Simular partida" simula pelo jogo 3D (dá para usar o simulador do TM, ou tirar a aba); o fundo é o estádio visto de fora (ou o jogo parado) atrás de um véu escuro; o árbitro tem nome inventado, a data é a do aparelho fora do TM e não há clima nem dificuldade até o item 33; cada jogador é uma ficha da carta do TM com um busto na cor da camisa (a foto vem no item 31); dá para ver o time adversário; nos Pênaltis e com o pré-jogo desligado há 1 toque a mais antes do jogo; Personalizar antes do jogo vale como escalação (não conta substituição); no online, sem Personalizar e sair antes do jogo é W.O.; não há opção para desligar a tela; nos treinos ela não aparece; as abas de 40 px no celular pequeno, como na pausa. **A decidir:** o fundo (a revisão achou nítido e poluído): (a) desfocar o 3D e escurecer mais as bordas (recomendado), (b) o estádio por dentro, vazio e escuro, ou (c) um fundo liso (item 102); a moldura das fichas mais fina, como no FC (gosto); a tela aparecer enquanto o jogo carrega (item 106) e o Personalizar no online (item 107). Para conferir no seu celular: o entalhe, o toque nas abas de 40 px e o som ligando pelo botão do controle. Detalhes na FILA ("Depende do dono" 19).
-19. 📋 Item 29 (a escalação do pré-jogo em pé): feita com as escolhas recomendadas — o campo inteiro em pé achatado como o da Globo (dá para usar a escala real, com as cartas das pontas em cima das laterais, ou só a metade do campo, como a Copa 2026); o nome de camisa em letra normal (em caixa alta, como na TV, alguns nomes de 10 letras do TM sairiam com "…" no celular pequeno); ao lado, a coluna do time como antes (dá para pôr os reservas e o técnico numa coluna à direita, ~2–3 h); o goleiro numa linha só dele; a posição a 11 px no celular.
+19. 📋 Item 29 (a escalação do pré-jogo em pé): feita com as escolhas recomendadas — o campo inteiro em pé achatado como o da Globo (dá para usar a escala real, com as cartas das pontas em cima das laterais, ou só a metade do campo, como a Copa 2026); o nome de camisa em letra normal (em caixa alta, como na TV, alguns nomes de 10 letras do TM sairiam com "…" no celular pequeno); ao lado, a coluna do time como antes (dá para pôr os reservas e o técnico numa coluna à direita, ~2–3 h); o goleiro numa linha só dele; a posição a 11 px no celular, na letra da carta e mais apagada que o nome (no PC ela fica pequena: vale olhar). Da revisão: quando a carta da ponta não cabe dentro do campo (no celular pequeno e com nomes longos do TM), ela fica centrada em cima da linha lateral, meia carta para fora (a alternativa, a carta quase encostando na linha, parece desalinhada); enquanto a letra da carta não chega, o nome aparece numa letra do sistema reduzida, menor, mas sem "…" (dá para esperar a letra, atrasando a escalação). Para conferir no seu celular: a letra chegando pela rede e a letra reduzida no Android. Detalhes na FILA ("Depende do dono" 20).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
-- 📋 A escalação do pré-jogo com o campinho EM PÉ: o campo inteiro com o gol embaixo, o círculo redondo, o nome de camisa na letra da carta do TM e sem cortar, do celular pequeno ao PC e com nomes longos do TM (item 29)
+- 📋 A escalação do pré-jogo com o campinho EM PÉ: o campo inteiro com o gol embaixo, o círculo redondo, o nome de camisa na letra da carta do TM e sem cortar, do celular pequeno ao PC e com nomes longos do TM (item 29, #614)
 - 🏟️ A tela antes do jogo no nível da pré-partida do EA FC 24, com a cara do TM: os dois times e a hora, estádio · data · árbitro, o campinho com as 11 fichas, Jogar partida · Visão tática · Personalizar (+ Simular partida no TM), em todo jogo antes do pré-jogo; o "Jogar" liga o som (item 64, #613)
 - ⏸️ A pausa igual à do FC 24: a lista à esquerda, as opções num submenu e o campinho do seu time no canto direito (item 58, #602)
 - 🎯 A mira das bolas paradas minimalista, com a cara do TM: a linha fina branca, o anel onde a bola cai e o arco da curva junto da bola, sem painel nem texto; no celular a curva é arrastar o polegar no CHUTE ou no LANÇAMENTO (item 65, #601)
