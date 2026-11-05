@@ -90,7 +90,8 @@ function svgBusto(c) {
 /**
  * Cria a tela (escondida). opc = {aoAcao(id, v) — as ações que são da página ('jogar', 'personalizar', 'opcoes', 'simular',
  * 'canto', 'jogadores', 'camera', 'pronto'); ocupado() — a pausa, a Ajuda ou o editor estão por cima (a tela não age);
- * comToque(); meio() — o último meio ('teclado' | 'pad' | 'toque')}.
+ * comToque(); meio() — o último meio ('teclado' | 'pad' | 'toque'); fotoDe(id) — a foto já decodificada do jogador `id` (a da edição
+ * pro do TM, item 31: main.js fotoPronta) ou null — por cima do busto, que fica como reserva}.
  */
 export function criarPrepartida(opc) {
   const raiz = document.createElement('div');
@@ -351,8 +352,10 @@ export function criarPrepartida(opc) {
   }
   function htmlFicha(f, p, T, i, ordem) {
     const cam = f.gol ? T.camisaGol : T.camisa;
+    // a foto da edição pro (item 31; o endereço já passou pelo tm-fotos.js fotoAceita) por cima do busto, sem mudar medida
+    const foto = st.L.ficha.semRosto ? null : opc.fotoDe?.(f.id) ?? null;
     return `<div class="pp-ficha r-${f.raridade}${f.voce ? ' voce' : ''}" data-vaga="${esc(f.vaga)}" data-id="${f.id}" style="left:${r1(p.x)}px;top:${r1(p.y)}px;--i:${i}">`
-      + `<div class="pp-cab">${st.L.ficha.semRosto ? '' : `<div class="pp-mold"><div class="pp-miolo">${svgBusto(cam)}</div>${ordem ? `<i class="pp-ordem">${ordem}º</i>` : ''}</div>`}`
+      + `<div class="pp-cab">${st.L.ficha.semRosto ? '' : `<div class="pp-mold"><div class="pp-miolo">${svgBusto(cam)}${foto ? `<img class="pp-foto" alt="" decoding="async" src="${esc(foto)}">` : ''}</div>${ordem ? `<i class="pp-ordem">${ordem}º</i>` : ''}</div>`}`
       + `<b class="pp-nota">${f.nota}</b></div>`
       + `<i class="pp-filete">${f.voce ? '<span>VOCÊ</span>' : ''}</i><span class="pp-nome">${esc(f.nome)}</span></div>`;
   }
@@ -711,6 +714,21 @@ export function criarPrepartida(opc) {
       else if (a === 'pausa') opc.aoAcao('opcoes');
     },
     focar,
+    /**
+     * A foto do jogador `id` chegou (item 31; main.js FOTOS.aoChegar): entra por cima do busto nas fichas dele que estão na tela
+     * (sem refazer a tela: o foco e a cascata não mexem); a que falhar sai e fica o busto.
+     */
+    fotoChegou(id, u) {
+      if (!st.aberta || !u) return;
+      for (const m of raiz.querySelectorAll(`.pp-ficha[data-id="${CSS.escape(String(id))}"] .pp-miolo`)) {
+        if (m.querySelector('.pp-foto')) continue;
+        const im = document.createElement('img');
+        im.className = 'pp-foto entra'; im.alt = ''; im.decoding = 'async';
+        im.addEventListener('error', () => im.remove());
+        im.src = u;
+        m.appendChild(im);
+      }
+    },
     /** Online: o "Pronto" vira "Aguardando {nome}…" (desabilitado). */
     aguardando(nome) { st.aguardando = nome; marcarAbas(); viva(`Aguardando ${nome}`); },
     /** Online: 60 s esperando o outro — o [<] "Sair da partida" ganha destaque (nada automático). */

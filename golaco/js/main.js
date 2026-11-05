@@ -3390,7 +3390,10 @@ function abrirPrepartida() {
     ocupado: () => hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado(),
     comToque: () => document.documentElement.classList.contains('com-toque'),
     meio: () => entrada?.ultimoMeio ?? 'teclado',
+    // a foto da edição pro do TM no lugar do busto (item 31): só a já decodificada; a que chegar depois entra pelo fotoChegou
+    fotoDe: id => fotoPronta(id),
   });
+  FOTOS.aoChegar = (id, u) => pp?.fotoChegou?.(id, u);
   // o fundo: com o pré-jogo (a partida), a abertura de hoje CALADA (o aéreo de fora, o som abafado); senão o jogo parado
   ppFundo = 'jogo';
   const mp = mundo.modo === 'partida' ? modoPrejogo() : 'desligado';

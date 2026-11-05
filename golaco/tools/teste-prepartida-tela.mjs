@@ -37,6 +37,12 @@
 //       "Pré-jogo da partida" mudado pelo ≡ vale no Jogar (desligado = o apito; curto = o curto; com o webdriver de um usuário)
 //   E20 as proporções do FC 24 no PC 16:9 (±1,5 ponto)
 //   E21 a reserva: com o módulo bloqueado, a abertura de texto de hoje (e o jogo começa como hoje)
+//   E22 (item 31) a FOTO da edição pro nas fichas (o PED_A pro com as fotos pela rota /__fotos/ — JPGs de verdade do TM —, um titular
+//       de cada lado SEM foto): E22a em 844×390 com toque e 1280×720, em ≤ 3 s depois do pronto, 10/11 fichas do time mostrado com a
+//       foto (naturalWidth > 0) no miolo (a caixa da foto = a do miolo ± 1 px), a sem foto com o busto e sem <img>; o outro time
+//       (Q/E) igual; nada encosta (E4) com as fotos; E22b a 1ª foto pedida DEPOIS do pronto; E22c o mesmo pedido PÚBLICO: 0 fotos
+//       nas fichas e 0 pedidos às fotos; E22d as fotos em 404: todas com o busto, nenhuma <img> visível, nenhum erro de página
+//       além dos 404 delas. Na base E22a/b reprovam.
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
 //   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
@@ -45,11 +51,11 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,online,carga] [--espera <s>]
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,online,fotos,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
-import { PED_A, PED_B } from './lib/pedidos-tm.mjs';
+import { PED_A, PED_B, comFotos } from './lib/pedidos-tm.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -991,6 +997,97 @@ if (faz('online')) {
           '≤ 1000 ms; ~20%; sim', sai.ms != null && sai.ms <= 1000 && andou && perda.every(x => x && x.perdidos > 0));
       } else meta('O7 a saída conjunta com 20% de perda', 'sem a tela', 'a tela nos dois lados', false);
       meta('S7 0 erros no console (online, par 3)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+}
+
+// ================================================================================================ fotos da edição pro (item 31)
+if (faz('fotos')) {
+  const fs = await import('node:fs');
+  const ORIGEM = new URL(srv.url).origin;
+  const PASTA = path.resolve(RAIZ, '../legacy-total-match/assets/jogadores');
+  const JPGS = fs.existsSync(PASTA) ? fs.readdirSync(PASTA).filter(f => /^br-.*\.jpg$/.test(f)).sort().slice(0, 80) : [];
+  const jpgDe = k => { let h = 0; for (const c of k) h = (h * 31 + c.charCodeAt(0)) >>> 0; return fs.readFileSync(path.join(PASTA, JPGS[h % JPGS.length])); };
+  // um titular de cada lado SEM foto (o 4º do mandante e o 6º do visitante)
+  const SEM = ['home:3', 'away:5'];
+  const abrirFotos = async (ped, w, h, toque, f404 = false) => {
+    const ctx = await abrir({ largura: w, altura: h, toque, dpr: toque ? 2 : 1 });
+    const fotos = { pedidos: 0, consoles404: 0 };
+    await ctx.contexto.addInitScript(([id, json]) => { try { localStorage.setItem('tm3d:pedido:' + id, json); } catch (_) { /* */ } }, [ped.id, JSON.stringify(ped)]);
+    await ctx.contexto.route('**/__fotos/**', r => { fotos.pedidos++; if (f404 || !JPGS.length) return r.fulfill({ status: 404, body: '' }); return r.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'cache-control': 'max-age=600' }, body: jpgDe(new URL(r.request().url()).pathname) }); });
+    ctx.pagina.on('console', m => { if (m.type() === 'error' && /\/__fotos\//.test(m.location()?.url ?? '')) fotos.consoles404++; });
+    await ctx.pagina.goto(`${srv.url}?${Q}&prepartida=1&tm=${ped.id}&corpo=manequim${toque ? '&toque=1&entalhe=1' : ''}`);
+    await ctx.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
+    ctx.fotos = fotos;
+    ctx.t0 = Date.now();
+    return ctx;
+  };
+  // as fichas do time mostrado: com foto carregada (e a caixa = a do miolo), com <img> sem carregar, só com o busto
+  const fichasFoto = pg => pg.evaluate(() => {
+    const out = { n: 0, comFoto: 0, imgs: 0, busto: 0, fora: [], semFotoIds: [] };
+    for (const f of document.querySelectorAll('#prepartida .pp-ficha')) {
+      const m = f.querySelector('.pp-miolo');
+      if (!m) continue;
+      out.n++;
+      const im = m.querySelector('img.pp-foto');
+      if (im) out.imgs++;
+      if (m.querySelector('.pp-busto')) out.busto++;
+      if (im && im.complete && im.naturalWidth > 0 && im.getClientRects().length) {
+        out.comFoto++;
+        // (a caixa do LAYOUT: o leve aproximar da foto é um transform, recortado pelo miolo)
+        if (im.offsetParent !== m || Math.abs(im.offsetLeft) > 1 || Math.abs(im.offsetTop) > 1 || Math.abs(im.offsetWidth - m.clientWidth) > 1 || Math.abs(im.offsetHeight - m.clientHeight) > 1) out.fora.push(f.dataset.vaga);
+      } else out.semFotoIds.push(+f.dataset.id);
+    }
+    return out;
+  });
+  for (const [w, h, toque] of [[844, 390, true], [1280, 720, false]]) {
+    const ped = comFotos({ ...PED_A, id: `f31pp${w}` }, ORIGEM, { sem: SEM });
+    const ctx = await abrirFotos(ped, w, h, toque);
+    const pg = ctx.pagina;
+    try {
+      if (!(await temTela(pg))) { meta(`E22a ${w}×${h}`, 'sem tela', 'a tela', false); continue; }
+      const ate = await pg.waitForFunction(() => { const n = document.querySelectorAll('#prepartida .pp-ficha img.pp-foto').length; return [...document.querySelectorAll('#prepartida .pp-ficha img.pp-foto')].filter(i => i.complete && i.naturalWidth > 0).length >= 10 && n >= 10; }, null, { timeout: 3000, polling: 50 })
+        .then(() => (Date.now() - ctx.t0) / 1000).catch(() => null);
+      const linhas = [];
+      let ok = ate != null;
+      for (const t of [0, 1]) {
+        if (t === 1) { await pg.evaluate(() => window.__golaco.prepartida.adversario(1)); await pg.waitForTimeout(400); }
+        const f = await fichasFoto(pg);
+        // o titular sem foto deste time: o busto e nenhuma <img>
+        const semId = t === 0 ? 1004 : 2006;
+        const semOk = await pg.evaluate(id => { const m = document.querySelector(`#prepartida .pp-ficha[data-id="${id}"] .pp-miolo`); return !!m && !!m.querySelector('.pp-busto') && !m.querySelector('img'); }, semId);
+        const med = await pg.evaluate(MEDIR);
+        const okT = f.n === 11 && f.comFoto === 10 && f.imgs === 10 && f.busto === 11 && f.fora.length === 0 && f.semFotoIds.join() === String(semId) && semOk && med && med.prob.length === 0;
+        if (!okT) ok = false;
+        linhas.push(`time ${t}: ${f.comFoto}/${f.n} com foto (${f.imgs} <img>), busto ${f.busto}, foto fora do miolo [${f.fora}], sem foto [${f.semFotoIds}] ${semOk ? 'com o busto' : 'ERRADO'}; E4 ${med ? med.prob.length ? med.prob.slice(0, 3).join(', ') : 'nada encosta' : 'sem medida'}`);
+      }
+      meta(`E22a ${w}×${h}${toque ? ' com toque' : ''}: em ≤ 3 s depois do pronto, 10/11 fichas com a foto no miolo (o sem foto com o busto), os dois times; nada encosta`, `${ate != null ? `${ate.toFixed(2)} s` : 'não chegou em 3 s'}; ${linhas.join(' · ')}`, '≤ 3 s; 10/11 nos dois; nada encosta', ok);
+      const ft = await pg.evaluate(() => { const f = window.__golaco.tm?.fotos; return f ? { primeiraEm: f.primeiraEm, prontoEm: f.prontoEm, pedidas: f.pedidas } : null; });
+      meta(`E22b ${w}×${h}: a 1ª foto pedida DEPOIS do pronto`, ft ? `pronto ${ft.prontoEm?.toFixed(0)} ms, 1ª pedida ${ft.primeiraEm?.toFixed(0)} ms (${ft.pedidas} pedidas; rota ${ctx.fotos.pedidos})` : 'sem a API das fotos', '1ª ≥ pronto', !!ft && ft.prontoEm != null && ft.primeiraEm != null && ft.primeiraEm >= ft.prontoEm && ft.pedidas >= 20);
+    } finally { await ctx.navegador.close(); }
+  }
+  // E22c o mesmo pedido PÚBLICO
+  {
+    const ped = comFotos({ ...PED_A, id: 'f31ppPub' }, ORIGEM, { sem: SEM, edicao: 'public' });
+    const ctx = await abrirFotos(ped, 844, 390, true);
+    try {
+      await ctx.pagina.waitForTimeout(3000);
+      const f = await fichasFoto(ctx.pagina);
+      meta('E22c o mesmo pedido PÚBLICO: 0 fotos nas fichas, 0 pedidos às fotos (o busto em todas)', `${f.imgs} <img>, ${f.busto}/${f.n} com o busto; pedidos às fotos ${ctx.fotos.pedidos}`, '0; 11/11; 0', f.n === 11 && f.imgs === 0 && f.busto === 11 && ctx.fotos.pedidos === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+  // E22d as fotos em 404
+  {
+    const ped = comFotos({ ...PED_A, id: 'f31pp404' }, ORIGEM, { sem: SEM });
+    const ctx = await abrirFotos(ped, 1280, 720, false, true);
+    try {
+      await ctx.pagina.waitForFunction(() => { const f = window.__golaco.tm?.fotos; return !f || (f.pedidas >= 20 && f.erros >= f.pedidas); }, null, { timeout: 15000 }).catch(() => {});
+      await ctx.pagina.waitForTimeout(300);
+      const f = await fichasFoto(ctx.pagina);
+      const errs = ctx.erros.filter(e => !/Failed to load resource/.test(e));
+      const n404 = ctx.erros.length - errs.length;
+      meta('E22d as fotos em 404: todas com o busto, nenhuma <img> visível; nenhum erro além dos 404 das fotos', `${f.comFoto} fotos visíveis, ${f.imgs} <img>, busto ${f.busto}/${f.n}; 404 no console ${n404} (das fotos ${ctx.fotos.consoles404}); outros erros ${errs.length}${errs.length ? ': ' + errs[0].slice(0, 80) : ''}`,
+        '0; 0; 11/11; 0', f.n === 11 && f.comFoto === 0 && f.imgs === 0 && f.busto === 11 && errs.length === 0 && n404 <= ctx.fotos.consoles404);
     } finally { await ctx.navegador.close(); }
   }
 }
