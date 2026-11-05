@@ -80,12 +80,16 @@ export const LINHA_AJUSTES = () => {
   g.fecharMenu(); g.abrirMenu();
   const bm = document.getElementById('btn-modos');
   if (!bm || bm.hidden || !bm.getClientRects().length) return { submenu: false, visivel: false };
+  // (o estado do item no 1º nível: na partida, a duração e a dificuldade — revisão A2; corta?)
+  const em = document.getElementById('estado-modo');
+  const emVis = !!em && !em.hidden && em.getClientRects().length > 0 && getComputedStyle(em).display !== 'none';
+  const estadoItem = emVis ? { texto: em.textContent, corta: em.scrollWidth > em.clientWidth + 0.5 } : null;
   bm.click();
   const linha = document.getElementById('linha-ajustes');
   const vis = e => !!e && !e.hidden && e.getClientRects().length > 0 && getComputedStyle(e).display !== 'none' && getComputedStyle(e).visibility !== 'hidden';
   const nivel = document.getElementById('menu-modos');
   const alturaNivel = () => { const f = [...nivel.children].filter(vis); const r = nivel.getBoundingClientRect(); return f.length ? Math.max(...f.map(x => x.getBoundingClientRect().bottom)) - r.top : 0; };
-  if (!vis(linha)) return { submenu: true, visivel: false, existe: !!linha, h: alturaNivel() };
+  if (!vis(linha)) return { submenu: true, visivel: false, existe: !!linha, h: alturaNivel(), estadoItem };
   const btns = [...linha.querySelectorAll('.btn')].map(bt => {
     const r = bt.getBoundingClientRect(), s = bt.querySelector('small'), cs = getComputedStyle(bt);
     const rg = document.createRange(); rg.selectNodeContents(bt.firstChild); const rt = rg.getBoundingClientRect();
@@ -97,7 +101,11 @@ export const LINHA_AJUSTES = () => {
   linha.style.display = 'none';
   const sem = alturaNivel();
   linha.style.display = '';
-  return { submenu: true, visivel: true, btns, h: +com.toFixed(1), hSem: +sem.toFixed(1), titulo: document.getElementById('titulo-modos')?.textContent ?? null };
+  return { submenu: true, visivel: true, btns, h: +com.toFixed(1), hSem: +sem.toFixed(1), titulo: document.getElementById('titulo-modos')?.textContent ?? null,
+    travada: linha.classList.contains('travada') && [...linha.querySelectorAll('.btn')].every(b => b.getAttribute('aria-disabled') === 'true'),
+    estadoItem, esperadoItem: matchMedia('(min-height: 481px)').matches
+      ? `${(document.getElementById('estado-duracao')?.textContent ?? '').replace(/^2 × /, '')} · ${document.getElementById('estado-dificuldade')?.textContent ?? ''}`
+      : document.getElementById('estado-dificuldade')?.textContent ?? '' };
 };
 
 /** A pausa como está na tela agora (o nível à vista). ordem/margem: só informam; o teste decide. */

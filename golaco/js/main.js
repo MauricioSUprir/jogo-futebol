@@ -163,7 +163,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -3850,9 +3850,10 @@ function comando(c, v) {
     case 'cena-menu': entrada?.soltarTudo(); hud.abrirMenu(); break;
     // a faixa final do pós-jogo: os lances do guardador (o Pular volta à faixa)
     case 'melhores-momentos': iniciarMelhores(); break;
-    // "Modo de jogo" → "Duração" (3 → 4 → 5 → 6 → 8 → 10 → 3) e "Dificuldade" (Fácil → Normal → Difícil → Lenda); item 33
-    case 'duracao-ciclo': mudarAjuste('duracao', proximaDuracao(duracaoAtual())); break;
-    case 'dificuldade-ciclo': mudarAjuste('dificuldade', proximoNivel(dificuldadeAtual())); break;
+    // "Modo de jogo" → "Duração" (3 → 4 → 5 → 6 → 8 → 10 → 3) e "Dificuldade" (Fácil → Normal → Difícil → Lenda); item 33.
+    // v 'anterior': o toque/clique no lado esquerdo do botão (‹) volta um valor
+    case 'duracao-ciclo': mudarAjuste('duracao', (v === 'anterior' ? duracaoAnterior : proximaDuracao)(duracaoAtual())); break;
+    case 'dificuldade-ciclo': mudarAjuste('dificuldade', (v === 'anterior' ? nivelAnterior : proximoNivel)(dificuldadeAtual())); break;
     case 'duracao': mudarAjuste('duracao', +v); break;
     case 'dificuldade': mudarAjuste('dificuldade', v); break;
     case 'cenas-ciclo':

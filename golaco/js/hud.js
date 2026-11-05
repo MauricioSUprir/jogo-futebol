@@ -151,7 +151,10 @@ export function criarHud(opc) {
   // o "+N" e o formato de agora — só escreve o que muda
   const relogioVisto = { visivel: null, seg: null, est: null, an: null, min: null, dec: null, texto: null, extra: null, formato: null };
   let timerFaixa = null;
-  let modoAtual = null, fimDeJogo = false, ajustesFixos = false;
+  let modoAtual = null, fimDeJogo = false, ajustesFixos = false, ajDur = null, ajDif = null;
+  // (o PC e a janela alta: o estado do "Modo de jogo" com a duração — escreverEstadoModo; muda com a janela)
+  const pcAlto = typeof matchMedia === 'function' ? matchMedia('(min-height: 481px)') : null;
+  pcAlto?.addEventListener?.('change', () => escreverEstadoModo());
   let ajudaDaPausa = false; // a Ajuda foi aberta pela pausa: fechar volta para ela
   const NOME_MODO = { partida: 'partida', ataque: 'treino de ataque', conducao: 'treino de condução', penaltis: 'pênaltis', livre: 'modo livre' };
   /** Sigla, escudo e nome (só para leitores de tela: nenhum texto novo na tela) de cada time no placar. */
@@ -197,8 +200,17 @@ export function criarHud(opc) {
 
   // botões com data-cmd (menu, ajuda e faixa); data-valor vai junto (modo de jogo). Pelo toque age no pointerup do mesmo
   // dedo (aoTocar): com outro dedo na tela (o polegar no analógico, um dedo parado na janela) o click não vem
+  // (os ciclos ‹ › — data-ciclo, a duração e a dificuldade do item 33: o toque ou o clique no terço da esquerda VOLTA um valor —
+  // valor 'anterior'; o resto do botão, o Enter e o Ⓐ andam — revisão A3)
   document.querySelectorAll('[data-cmd]').forEach(b => {
-    aoTocar(b, () => cmd(b.dataset.cmd, b.dataset.valor));
+    aoTocar(b, e => {
+      let v = b.dataset.valor;
+      if (b.dataset.ciclo != null) {
+        const x = e?.toque ? e.x : e?.detail > 0 ? e.clientX : null;
+        if (x != null) { const r = b.getBoundingClientRect(); if (x < r.left + r.width / 3) v = 'anterior'; }
+      }
+      cmd(b.dataset.cmd, v);
+    });
   });
   // grupos segmentados
   document.querySelectorAll('.segmentado').forEach(g => {
@@ -463,6 +475,16 @@ export function criarHud(opc) {
     raiz.classList.remove('dica-visivel', 'nome-sem-lugar-dica');
   });
   /** Itens do menu pelo modo (partida × treinos) e pelo fim de jogo. */
+  /**
+   * O estado à direita do "Modo de jogo" (no TM, "Partida e cenas") no 1º nível: na partida, a dificuldade e, no PC, a duração
+   * ("4 min · Normal"; no celular deitado só "Normal": a faixa de 202 px em 568×320 não comporta os dois sem cortar) — a pessoa vê
+   * o que vale sem abrir o submenu (revisão A2); nos treinos, no Livre e nos Pênaltis, o modo.
+   */
+  function escreverEstadoModo() {
+    if (!el.estadoModo) return;
+    const t = modoAtual === 'partida' && ajDif ? (pcAlto?.matches && ajDur ? `${ajDur.replace(/^2 × /, '')} · ${ajDif}` : ajDif) : NOME_MODO[modoAtual] ?? '';
+    if (el.estadoModo.textContent !== t) el.estadoModo.textContent = t;
+  }
   function aplicarModoNoMenu() {
     // a disputa de pênaltis (modo Pênaltis) é um jogo como a partida: o topo e a pausa dela (data-so "partida penaltis":
     // Replay e Reiniciar; o Editar time é só da partida)
@@ -477,13 +499,22 @@ export function criarHud(opc) {
     raiz.classList.toggle('em-livre', livre);
     const so = livre ? 'livre' : penaltis ? 'penaltis' : partida ? 'partida' : 'treino';
     document.querySelectorAll('#menu [data-so]').forEach(b => { b.hidden = !b.dataset.so.split(' ').includes(so); });
-    // a linha "Duração | Dificuldade" (item 33): some com o pedido do TM travando (ajustesFixos) e no fim do jogo do TM (lá não
-    // há "Jogar de novo"); fora do TM, no fim ela fica e muda a escolha do "Jogar de novo"
+    // a linha "Duração | Dificuldade" (item 33): some no fim do jogo do TM (lá não há "Jogar de novo"); fora do TM, no fim ela
+    // fica e muda a escolha do "Jogar de novo"; com o pedido do TM travando (ajustesFixos) fica À VISTA e desabilitada, com o
+    // cadeado (a pessoa vê o nível e que ele é fixo; revisão A6 — antes sumia)
     const linhaAj = $('linha-ajustes');
-    if (linhaAj && (ajustesFixos || (opc.tm && partida && fimDeJogo))) linhaAj.hidden = true;
+    if (linhaAj && opc.tm && partida && fimDeJogo) linhaAj.hidden = true;
+    if (linhaAj) {
+      linhaAj.classList.toggle('travada', ajustesFixos);
+      for (const b of linhaAj.querySelectorAll('.btn')) {
+        if (ajustesFixos) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled');
+        const rot = b.id === 'btn-duracao' ? 'Duração da partida' : 'Dificuldade da IA adversária';
+        b.setAttribute('aria-label', ajustesFixos ? `${rot} (fixa nesta partida)` : rot);
+      }
+    }
     // marcador de treino só no treino de condução (no de ataque a defesa já marca)
     if (el.marcador && !partida) el.marcador.closest('button').hidden = modoAtual === 'ataque';
-    if (el.estadoModo) el.estadoModo.textContent = NOME_MODO[modoAtual] ?? '';
+    escreverEstadoModo();
     el.modos?.querySelectorAll('[data-cmd="modo"]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.valor === modoAtual)));
     // fim de jogo: "Jogar de novo" no lugar de Continuar
     const fim = partida && fimDeJogo;
@@ -506,7 +537,8 @@ export function criarHud(opc) {
       if (txModos && txModos.textContent !== 'Partida e cenas') txModos.textContent = 'Partida e cenas';
       const tit = $('titulo-modos');
       if (tit && tit.textContent !== 'Partida e cenas') tit.textContent = 'Partida e cenas';
-      if (el.estadoModo) { el.estadoModo.hidden = true; el.estadoModo.style.display = 'none'; }
+      // (o estado do item: na partida, a duração e a dificuldade — escreverEstadoModo; no Livre e nos Pênaltis, nada)
+      if (el.estadoModo) { const ver = modoAtual === 'partida' && !!ajDif; el.estadoModo.hidden = !ver; el.estadoModo.style.display = ver ? '' : 'none'; }
       if (el.modos) el.modos.querySelectorAll('[data-cmd="modo"]').forEach(b => { b.hidden = true; if (b.parentElement?.classList.contains('linha-cenas')) b.parentElement.hidden = true; });
       const sim = $('btn-simular-resto'), volta = $('btn-voltar-tm');
       if (sim) {
@@ -1270,9 +1302,10 @@ export function criarHud(opc) {
         el.saidaOpa.textContent = `${Math.round(e.toqueOpacidade * 100)}%`;
       }
       // o tempo de jogo e a dificuldade (item 33): os textos da linha do "Modo de jogo" e a trava do pedido do TM
-      if (typeof e.duracao === 'string') { const d = $('estado-duracao'); if (d && d.textContent !== e.duracao) d.textContent = e.duracao; }
-      if (typeof e.dificuldade === 'string') { const d = $('estado-dificuldade'); if (d && d.textContent !== e.dificuldade) d.textContent = e.dificuldade; }
+      if (typeof e.duracao === 'string') { ajDur = e.duracao; const d = $('estado-duracao'); if (d && d.textContent !== e.duracao) d.textContent = e.duracao; }
+      if (typeof e.dificuldade === 'string') { ajDif = e.dificuldade; const d = $('estado-dificuldade'); if (d && d.textContent !== e.dificuldade) d.textContent = e.dificuldade; }
       if (typeof e.ajustesFixos === 'boolean' && e.ajustesFixos !== ajustesFixos) { ajustesFixos = e.ajustesFixos; aplicarModoNoMenu(); }
+      else if (typeof e.duracao === 'string' || typeof e.dificuldade === 'string') aplicarModoNoMenu();
     },
     mostrarQps(v) { el.qps.hidden = !v; },
     get qpsVisivel() { return !el.qps.hidden; },

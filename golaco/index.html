@@ -353,11 +353,12 @@
               <button class="btn" type="button" data-cmd="modo" data-valor="ataque" aria-pressed="false" aria-label="Treino de ataque: 6 contra 4">Ataque <small>6 contra 4</small></button>
               <button class="btn" type="button" data-cmd="modo" data-valor="conducao" aria-pressed="false" aria-label="Treino de condução: bola no pé">Condução <small>bola no pé</small></button>
             </div>
-            <!-- a duração e a dificuldade da partida (item 33): ciclos; salvos fora do TM e do online (main.js); some com o pedido
-                 do TM travando (ajustesFixos) e no fim do jogo do TM -->
+            <!-- a duração e a dificuldade da partida (item 33): ciclos ‹ › (data-ciclo: o toque/clique no lado esquerdo volta um valor;
+                 Enter/Ⓐ anda); salvos fora do TM e do online (main.js); travados pelo pedido do TM (ajustesFixos): à vista e
+                 desabilitados, com o cadeado; somem no fim do jogo do TM -->
             <div class="linha-cenas" id="linha-ajustes" data-so="partida" role="group" aria-label="Duração e dificuldade da partida">
-              <button class="btn" type="button" data-cmd="duracao-ciclo" id="btn-duracao" aria-label="Duração da partida" aria-describedby="estado-duracao">Duração <small id="estado-duracao">2 × 4 min</small></button>
-              <button class="btn" type="button" data-cmd="dificuldade-ciclo" id="btn-dificuldade" aria-label="Dificuldade da IA adversária" aria-describedby="estado-dificuldade">Dificuldade <small id="estado-dificuldade">Normal</small></button>
+              <button class="btn" type="button" data-cmd="duracao-ciclo" data-ciclo id="btn-duracao" aria-label="Duração da partida" aria-describedby="estado-duracao">Duração <small id="estado-duracao">2 × 4 min</small></button>
+              <button class="btn" type="button" data-cmd="dificuldade-ciclo" data-ciclo id="btn-dificuldade" aria-label="Dificuldade da IA adversária" aria-describedby="estado-dificuldade">Dificuldade <small id="estado-dificuldade">Normal</small></button>
             </div>
             <!-- as cenas da partida lado a lado: o pré-jogo (completo → curto → só escalação → desligado), a cena de substituição
                  (ligada ↔ só a faixa ENTRA/SAI) e as cenas das paradas (o cartão e o intervalo); salvos (main.js) -->

@@ -44,6 +44,17 @@ export function proximoNivel(n) {
   const k = NIVEIS.indexOf(n);
   return NIVEIS[(k + 1) % NIVEIS.length];
 }
+/** O ciclo para trás (o ‹ do botão): 10 → 8 → … → 3 → 10; fora da lista, a maior opção menor que ele. */
+export function duracaoAnterior(min) {
+  const k = DURACOES.indexOf(min);
+  if (k >= 0) return DURACOES[(k + DURACOES.length - 1) % DURACOES.length];
+  return [...DURACOES].reverse().find(d => d < min) ?? DURACOES[DURACOES.length - 1];
+}
+/** O ciclo para trás: Lenda → Difícil → Normal → Fácil → Lenda. */
+export function nivelAnterior(n) {
+  const k = NIVEIS.indexOf(n);
+  return NIVEIS[(Math.max(0, k) + NIVEIS.length - 1) % NIVEIS.length];
+}
 /** O mais fácil dos dois níveis (o que vai ao resultado do TM: a dificuldade mais fácil usada na partida). */
 export function maisFacil(a, b) {
   const ka = NIVEIS.indexOf(a), kb = NIVEIS.indexOf(b);
