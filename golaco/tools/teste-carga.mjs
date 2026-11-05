@@ -187,6 +187,14 @@ try {
   // 1) erros no console
   meta('Erros no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
   meta('Quadros desenhados no laço real (2,5 s)', String(quadrosReais), '≥ 2', quadrosReais >= 2);
+  // texto solto no documento: um "<!--fim-->" dentro de um comentário do index.html fechava o comentário antes da hora e o resto
+  // (") -->") virava texto no canto da tela, visível sempre que o canvas não estava pintado (revisão V10 do item 29)
+  const soltos = await pagina.evaluate(() => {
+    const r = [], w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    for (let n = w.nextNode(); n; n = w.nextNode()) if (n.textContent.trim() && /-->|<!--/.test(n.textContent)) r.push(n.textContent.trim().slice(0, 30));
+    return r;
+  });
+  meta('Nenhum pedaço de comentário virando texto na página', soltos.length ? soltos.join(' | ') : '0', '0', soltos.length === 0);
 
   // 2) canvas não vazio (sem HUD)
   await pagina.evaluate(() => { document.documentElement.classList.add('sem-hud'); document.querySelector('.vinheta')?.remove(); window.__golaco.desenhar(); });
