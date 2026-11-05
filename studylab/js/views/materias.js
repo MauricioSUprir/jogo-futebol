@@ -4,9 +4,9 @@ import {
   st, set, materia as getMateria, conteudo as getConteudo, novaMateria, novoConteudo,
   atualizar, remover, nomeMateria, emojiMateria, corMateria,
 } from '../store.js';
-import { dominioMateria, semaforo, iconeStatus, mediaMateria, calcularDominio, recalcularDominios } from '../engine.js';
-import { titulo, cartao, kpi, barra, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, confirmar, gAnel, progresso, segmento } from '../ui.js';
-import { tagMateria, formFlashcard } from './comum.js';
+import { dominioMateria, semaforo, iconeStatus, mediaMateria, calcularDominio, recalcularDominios, notasDoAno } from '../engine.js';
+import { titulo, cartao, kpi, barra, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, confirmar, gAnel, progresso, segmento, gLinha } from '../ui.js';
+import { tagMateria, formFlashcard, formNota } from './comum.js';
 
 const EMOJIS = ['📖', '📐', '🏛️', '🌎', '🌐', '🔬', '⚗️', '🧬', '🎨', '🎵', '⚽', '💻', '📊', '🧮', '🗿', '📜', '🧠', '🌱'];
 const CORES = ['#3ec9f5', '#60a5fa', '#f1d794', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#a78bfa'];
@@ -76,6 +76,8 @@ function detalhe(el, id, pintar) {
     kpi(cs.filter((c) => (c.dominio || 0) >= 80).length, 'dominados'),
     kpi(cs.filter((c) => (c.dominio || 0) < 40 && c.status !== 'novo').length, 'na faixa vermelha')));
 
+  el.append(notasAno(m, pintar));
+
   /* mapa do conhecimento */
   const raizes = cs.filter((c) => !c.paiId);
   const mapa = cartao(
@@ -93,6 +95,59 @@ function detalhe(el, id, pintar) {
     h('a', { class: 'btn btn--blk', href: `#/flashcards?materia=${m.id}` }, '🃏 Flashcards'),
     h('a', { class: 'btn btn--blk', href: `#/aprender?materia=${m.id}` }, '🧠 Aprender'),
     h('button', { class: 'btn btn--blk', onclick: () => abrirDiagnostico(m) }, '🧪 Diagnóstico')));
+}
+
+/* ---------- notas do ano: os 4 bimestres, a média de cada um e a do ano ---------- */
+const anoVisto = {};              // matéria → ano escolhido (fica enquanto o app está aberto)
+function notasAno(m, pintar) {
+  const r = notasDoAno(m.id, anoVisto[m.id]);
+  const meta = m.meta ?? 7;
+  const cor = (v) => (v === null ? '' : v >= meta ? 'ok' : v >= meta - 1 ? 'warn' : 'bad');
+  const fmt = (v) => (v === null ? '—' : String(v).replace('.', ','));
+  const nota10 = (n) => Math.round((n.valor / (n.maximo || 10)) * 100) / 10;
+  const nova = (bimestre) => formNota(null, pintar, { materiaId: m.id, bimestre, data: new Date().toISOString().slice(0, 10) });
+
+  const cab = h('div', { class: 'flexb mb' },
+    h('b', {}, `🎓 Notas de ${r.ano}`),
+    r.anos.length > 1
+      ? h('div', { class: 'chips sp' }, ...r.anos.map((a) => h('button', {
+        class: `chip${a === r.ano ? ' chip--on' : ''}`, onclick: () => { anoVisto[m.id] = a; pintar(); },
+      }, String(a))))
+      : h('span', { class: 'sp' }),
+    h('button', { class: 'btn btn--sm btn--p', onclick: () => nova(r.bimestres.findLast((b) => b.notas.length)?.bimestre || 1) }, '➕ Nota'));
+
+  if (!r.notas.length) {
+    return cartao(cab, h('p', { class: 'muted small' },
+      `Nenhuma nota de ${m.nome} em ${r.ano} ainda. Toque em "➕ Nota" ou registre a nota de uma prova.`));
+  }
+
+  const resumo = h('div', { class: 'grid g4 keep2 mb' },
+    kpi(fmt(r.media), 'média do ano', `meta ${fmt(meta)}`),
+    kpi(r.notas.length, 'avaliações'),
+    kpi(fmt(nota10(r.maior)), 'maior nota', r.maior.titulo),
+    kpi(fmt(nota10(r.menor)), 'menor nota', r.menor.titulo));
+
+  const bimestres = h('div', { class: 'notas-ano' }, ...r.bimestres.map((b) => h('div', { class: `notas-bim ${cor(b.media)}` },
+    h('div', { class: 'notas-bim__cab' },
+      h('b', {}, `${b.bimestre}º bimestre`),
+      h('span', { class: `chip ${cor(b.media)}` }, b.media === null ? 'sem nota' : `média ${fmt(b.media)}`)),
+    b.notas.length
+      ? h('div', { class: 'notas-bim__lista' }, ...b.notas.map((n) => h('button', {
+        class: 'notas-item', title: 'Editar', onclick: () => formNota(n, pintar),
+      },
+        h('span', { class: 'grow' }, n.titulo, n.provaId ? h('span', { class: 'tiny muted' }, ' · prova') : null,
+          h('span', { class: 'tiny muted notas-item__data' }, n.data ? `${n.data.slice(8, 10)}/${n.data.slice(5, 7)}` : '')),
+        (n.peso || 1) !== 1 ? h('span', { class: 'tiny muted' }, `peso ${fmt(n.peso)}`) : null,
+        h('b', { class: `notas-item__v ${cor(nota10(n))}` }, (n.maximo || 10) === 10 ? fmt(n.valor) : `${fmt(n.valor)}/${fmt(n.maximo)}`))))
+      : h('p', { class: 'tiny muted', style: { margin: '6px 0' } }, 'Nenhuma nota.'),
+    h('button', { class: 'notas-bim__add', onclick: () => nova(b.bimestre) }, '+ nota no ' + b.bimestre + 'º'))));
+
+  const grafico = r.notas.length >= 2
+    ? h('div', { class: 'mt' }, h('div', { class: 'tiny muted mb' }, 'Evolução no ano (nota de 0 a 10)'),
+      gLinha(r.notas.map((n) => ({ rot: `${n.bimestre}º`, v: nota10(n) })), { cor: m.cor || '#3ec9f5' }))
+    : null;
+
+  return cartao(cab, resumo, bimestres, grafico);
 }
 
 function arvore(nos, todos, materiaId, pintar) {

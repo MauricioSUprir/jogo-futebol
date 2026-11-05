@@ -361,3 +361,19 @@ label.f>span{font-size:12.5px;color:var(--txt)}
 .duelo__final div{background:#14161d;border-radius:20px;padding:14px 18px;min-width:130px}
 .duelo__final b{display:block;font-family:var(--ff-display);font-size:40px;color:var(--neon);line-height:1}
 .duelo__final span{font-size:12px;color:#b2ac9c}
+
+/* ---------- notas do ano (tela da matéria) ---------- */
+.notas-ano{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.notas-ano{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.notas-ano{grid-template-columns:minmax(0,1fr)}}
+.notas-bim{border:1px solid var(--line);border-radius:14px;padding:10px 10px 6px;background:var(--panel);border-top:4px solid var(--line)}
+.notas-bim.ok{border-top-color:var(--ok)}.notas-bim.warn{border-top-color:var(--warn)}.notas-bim.bad{border-top-color:var(--bad)}
+.notas-bim__cab{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px}
+.notas-bim__lista{display:flex;flex-direction:column;gap:2px}
+.notas-item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;border:0;border-bottom:1px dashed var(--line);padding:7px 2px;font:inherit;color:inherit;cursor:pointer}
+.notas-item:last-child{border-bottom:0}
+.notas-item:hover{background:rgba(62,201,245,.08)}
+.notas-item__data{display:block}
+.notas-item__v{font-size:17px;min-width:36px;text-align:right}
+.notas-item__v.ok{color:var(--ok)}.notas-item__v.warn{color:var(--warn)}.notas-item__v.bad{color:var(--bad)}
+.notas-bim__add{background:none;border:0;color:var(--dim);font:inherit;font-size:12.5px;padding:6px 2px;cursor:pointer;text-decoration:underline}
