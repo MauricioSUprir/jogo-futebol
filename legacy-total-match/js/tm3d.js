@@ -345,11 +345,29 @@
   // (jogarPenaltis) não simulam nada — só voltam à escolha dos times (fns.textos)
   var TEXTOS_PARTIDA = { quadro: "Partida em 3D", sair: "Voltar e simular", confirma: "Sair do 3D?",
     confirmaTexto: "A partida é simulada do começo, como sem o 3D.", confirmaBotao: "Simular", demora: "Simular a partida" };
+  // grava o pedido para o 3D. Sem espaço (os saves do TM moram no MESMO localStorage): de novo sem as fotos importadas (data:, as
+  // grandes — item 31) e, se ainda faltar, sem foto nenhuma — a foto sai, o jogo 3D não (antes das fotos o pedido tinha ~18 KB;
+  // com as importadas pode passar de 400 KB). true = gravado.
+  function gravaPedido(pedido) {
+    var chave = "tm3d:pedido:" + pedido.id;
+    var tenta = function (txt) { try { localStorage.setItem(chave, txt); return true; } catch (e) { return false; } };
+    if (tenta(JSON.stringify(pedido))) return true;
+    for (var passo = 0; passo < 2; passo++) {
+      var tirou = 0;
+      [pedido.home, pedido.away].forEach(function (t) {
+        (t && t.players || []).forEach(function (p) {
+          if (p && typeof p.foto === "string" && (passo === 1 || /^data:/i.test(p.foto))) { delete p.foto; tirou++; }
+        });
+      });
+      if (tirou && tenta(JSON.stringify(pedido))) return true;
+    }
+    return false;
+  }
   function abre3d(pedido, fns) {
     if (ativo) fecha3d();
     limpaSobras();
     var T = Object.assign({}, TEXTOS_PARTIDA, fns.textos || {});
-    try { localStorage.setItem("tm3d:pedido:" + pedido.id, JSON.stringify(pedido)); } catch (e) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
+    if (!gravaPedido(pedido)) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
     var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
@@ -566,5 +584,6 @@
   api.jogarOnline = jogarOnline;
   api.escolha = escolha;
   api.fechar = fecha3d;
+  api._gravaPedido = gravaPedido;   // (testes: golaco/tools/teste-ponte-tm.mjs P11)
   TM.tm3d = api;
 })(window);

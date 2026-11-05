@@ -42,7 +42,11 @@
 //      (os mesmos tmId; fotos diferentes por lado: só pelo tmId daria a do outro lado); P10e a foto FORA do hash: timesDoPedido com
 //      e sem fotos idênticos (JSON) e a partida com o mesmo hash a cada 300 passos. Na versão sem js/tm-fotos.js REPROVA.
 //
-//   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
+//  P11 (item 31, revisão R2) o Total Match sem espaço no localStorage (os saves dele moram no mesmo): o tm3d.js grava o pedido
+//      sem as fotos importadas (data:) e, se ainda faltar, sem foto nenhuma — a foto sai, o jogo 3D não (antes o setItem falhava e o
+//      TM simulava a partida que antes das fotos abria em 3D). Lê o tm3d.js da pasta do TM (--tm, ou ao lado da --js) num vm.
+//
+//   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -578,6 +582,61 @@ if (typeof SU.melhorEmCampo === 'function') {
     const h1 = hs(semF), h2 = hs(comF);
     reg('P10e a foto fora do hash: timesDoPedido igual com e sem fotos; a partida com o mesmo hash a cada 300 passos', `JSON ${jsonIgual ? 'igual' : 'DIFERENTE'} · ${h1.length} hashes ${h1.join() === h2.join() ? 'iguais' : 'DIFERENTES'}`,
       'igual · iguais', jsonIgual && h1.length === 5 && h1.join() === h2.join());
+  }
+}
+
+// ------------------------------------------------------------------ P11 o TM sem espaço no localStorage (item 31, revisão R2)
+// o tm3d.js do Total Match (a pasta ao lado: --tm, ou a da --js) num contexto do vm com um localStorage de mentira com cota em
+// caracteres (como o do navegador: chave + valor); o pedido com as fotos importadas (data:) grandes não cabe, o sem elas cabe
+{
+  const vm = await import('node:vm');
+  const fs = await import('node:fs');
+  const TMJS = path.join(path.resolve(arg('--tm', path.join(JS, '../../legacy-total-match'))), 'js/tm3d.js');
+  const armazem = cota => {
+    const m = new Map();
+    const usado = () => { let n = 0; for (const [k, v] of m) n += k.length + v.length; return n; };
+    return {
+      m, setItem(k, v) {
+        v = String(v); const a = m.get(k);
+        if (usado() - (a != null ? k.length + a.length : 0) + k.length + v.length > cota) { const e = new Error('cota'); e.name = 'QuotaExceededError'; throw e; }
+        m.set(k, v);
+      },
+      getItem(k) { return m.has(k) ? m.get(k) : null; }, removeItem(k) { m.delete(k); }, get length() { return m.size; }, key(i) { return [...m.keys()][i] ?? null; },
+    };
+  };
+  let grava = null;
+  try {
+    const ctx = { TM: { ui: { el() { return null; } } }, console };
+    ctx.window = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(TMJS, 'utf8'), ctx, { filename: TMJS });
+    grava = ctx.TM.tm3d && ctx.TM.tm3d._gravaPedido ? (cota, ped) => { ctx.localStorage = armazem(cota); const ok = ctx.TM.tm3d._gravaPedido(ped); return { ok, txt: ctx.localStorage.getItem('tm3d:pedido:' + ped.id) }; } : null;
+  } catch (e) { grava = null; }
+  if (!grava) reg('P11 o TM sem espaço: o pedido grava sem as fotos importadas', `${path.relative(process.cwd(), TMJS)}: sem TM.tm3d._gravaPedido (versão de antes: o setItem falhava e o TM simulava a partida)`, 'existe', false);
+  else {
+    const { PED_A: PA } = await import('./lib/pedidos-tm.mjs');
+    // a carreira pro com as fotos reais (endereço) em todos e 4 importadas grandes por time (~40 mil caracteres cada: o JPEG de
+    // 256 px do editor); a foto do estádio (fora dos jogadores) fica sempre
+    const monta = () => {
+      const p = structuredClone(PA); p.id = 'p11'; p.edicao = 'pro';
+      p.home.identidade = { ...(p.home.identidade ?? {}), estadio: { nome: 'Arena', foto: 'https://x.exemplo/estadio.jpg' } };
+      for (const [lado, t] of [['home', p.home], ['away', p.away]]) t.players.forEach((j, i) => { j.foto = i < 4 ? 'data:image/jpeg;base64,' + 'A'.repeat(40000) : `https://x.exemplo/assets/jogadores/${lado}-${i}.jpg`; });
+      return p;
+    };
+    const tam = p => 'tm3d:pedido:p11'.length + JSON.stringify(p).length;
+    const semData = monta(); for (const t of [semData.home, semData.away]) for (const j of t.players) if (/^data:/.test(j.foto)) delete j.foto;
+    const semNada = monta(); for (const t of [semNada.home, semNada.away]) for (const j of t.players) delete j.foto;
+    const nCom = tam(monta()), nSemData = tam(semData), nSemNada = tam(semNada);
+    const conta = txt => { const p = txt ? JSON.parse(txt) : null; const js = p ? [...p.home.players, ...p.away.players] : []; return { data: js.filter(j => /^data:/.test(j.foto ?? '')).length, url: js.filter(j => /^https:/.test(j.foto ?? '')).length, estadio: p?.home?.identidade?.estadio?.foto ?? null }; };
+    const casos = [
+      ['com espaço: o pedido inteiro, igual', nCom + 10, r => r.ok && r.txt === JSON.stringify(monta())],
+      ['sem espaço para as importadas: sem as data:, com as de endereço', nCom - 1000, r => { const c = conta(r.txt); return r.ok && c.data === 0 && c.url === 28 && !!c.estadio; }],
+      ['nem para as de endereço: sem foto nenhuma (a do estádio fica)', nSemData - 10, r => { const c = conta(r.txt); return r.ok && c.data === 0 && c.url === 0 && !!c.estadio; }],
+      ['nem sem foto: não grava (o TM simula, como antes)', nSemNada - 10, r => !r.ok && r.txt == null],
+    ];
+    const ruins = [];
+    for (const [nome, cota, ok] of casos) { const r = grava(cota, monta()); if (!ok(r)) ruins.push(`${nome} (${r.ok ? 'gravou' : 'não gravou'}; ${JSON.stringify(conta(r.txt))})`); }
+    reg('P11 o TM sem espaço no localStorage: o pedido grava sem as fotos importadas e, se faltar, sem foto nenhuma (4 cotas)', `${nCom} → ${nSemData} → ${nSemNada} caracteres; ${ruins.join('; ') || 'os 4 casos certos'}`, 'os 4 casos certos', ruins.length === 0);
   }
 }
 
