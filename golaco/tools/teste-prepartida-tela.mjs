@@ -941,15 +941,33 @@ if (faz('online')) {
         await quadros(A, 2);
         const um = await on(A), umB = await on(B);
         await espera(3500);
-        await A.click('#prepartida [data-pp="canto"]');
-        await quadros(A, 2);
-        const dois = await on(A);
+        // (a hora de cada toque no [<], pelo relógio da página: no CI sem GPU o quadro passa de 0,5 s e o A.click() com as
+        // checagens do Playwright — dois quadros estáveis — mais os quadros entre os toques passavam dos 3 s do armado: o 2º toque
+        // re-armava em vez de sair. Os toques vão com force (sem esperar quadros) e, se mesmo assim o intervalo passar do armado,
+        // o par se repete — até 3 vezes — antes de reprovar.)
+        await A.evaluate(() => {
+          window.__toquesCanto = [];
+          document.addEventListener('click', e => { if (e.target?.closest?.('#prepartida [data-pp="canto"]')) window.__toquesCanto.push(performance.now()); }, { capture: true });
+        });
+        const ARMADO_MS = 3000;
+        let dois = null, intervalo = null, tentativas = 0;
         const t0 = Date.now();
-        await A.click('#prepartida [data-pp="canto"]');
+        while (tentativas < 3) {
+          // (cada tentativa começa desarmada: a anterior, lenta demais, re-armou no 2º toque — espera o armado vencer)
+          if (tentativas > 0) await espera(ARMADO_MS + 300);
+          tentativas++;
+          await A.click('#prepartida [data-pp="canto"]', { force: true });
+          const d = await on(A);
+          if (!dois) dois = d;
+          await A.click('#prepartida [data-pp="canto"]', { force: true });
+          intervalo = await A.evaluate(() => { const t = window.__toquesCanto; return t.length >= 2 ? Math.round(t[t.length - 1] - t[t.length - 2]) : null; });
+          if (intervalo != null && intervalo < ARMADO_MS) break;
+          if ((await on(A)).encerrado) break;
+        }
         const recebeu = await B.waitForFunction(() => window.__golaco.online.encerrado, null, { timeout: 10000 }).then(() => Date.now() - t0, () => null);
         a = await on(A); b = await on(B);
         meta('O6 sem Personalizar no online (Y e o toque no campinho não abrem o editor); "Sair da partida" só no 2º toque (3 s); o outro recebe o abandono',
-          `editor ${!semEditor ? 'abriu' : 'não'}; 1º toque: A ${um.encerrado ? 'saiu' : `armado ${um.pp.armado}`}, B ${umB.encerrado ? 'recebeu' : 'nada'}; passados 3,5 s, outro toque: ${dois.encerrado ? 'saiu' : `armado ${dois.pp.armado}`}; 2º toque: A ${a.encerrado ? 'saiu' : 'não'}, B ${recebeu == null ? 'não recebeu' : `recebeu em ${recebeu} ms`}`,
+          `editor ${!semEditor ? 'abriu' : 'não'}; 1º toque: A ${um.encerrado ? 'saiu' : `armado ${um.pp.armado}`}, B ${umB.encerrado ? 'recebeu' : 'nada'}; passados 3,5 s, outro toque: ${dois.encerrado ? 'saiu' : `armado ${dois.pp.armado}`}; 2º toque (${intervalo} ms depois, ${tentativas} tentativa${tentativas > 1 ? 's' : ''}): A ${a.encerrado ? 'saiu' : 'não'}, B ${recebeu == null ? 'não recebeu' : `recebeu em ${recebeu} ms`}`,
           'não abre; armado, nada; armado de novo; saiu e o outro recebe',
           semEditor && !um.encerrado && um.pp.armado === 'canto' && !umB.encerrado && !dois.encerrado && dois.pp.armado === 'canto' && a.encerrado && recebeu != null);
       } else meta('O6 sem Personalizar no online; o Sair só no 2º toque', 'sem a tela', 'a tela nos dois lados', false);

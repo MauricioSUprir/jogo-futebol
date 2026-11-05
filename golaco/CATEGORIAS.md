@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~25 h
+## 🛠️ B. Correções e regras — ~24 h
 
 | nº | o que é | horas |
 |---|---|---|
@@ -31,9 +31,9 @@
 | 78 | 🔎 Carrinho: conferir as outras listas onde o jogador deitado ainda pode contar | 2 |
 | 71 | 🔎 Um item do teste do estádio (o "GOL!" na tela) que não mede nada | 1 |
 | 81 | 🔎 Testes de tela que oscilaram sem ligação com a mudança (a contagem de programas de shader na cena de substituição; a aba parada do online; o aviso do "Simular o resto" no teste do TM; o pico de CPU no replay de parada do CI do #599; o tempo dos lugares do estádio genérico no CI do #600) | 3,5 |
-| 92 | 🔎 Os tempos dos testes da mira na divisão do CI: acertar pelo log do 1º CI do #601 | 0,25 |
-| 93 | 🔎 O tempo do teste da pausa na divisão do CI: acertar pelo log do 1º CI do #602 | 0,25 |
-| 100 | 🔎 O tempo do teste da tela antes do jogo na divisão do CI: acertar pelo log do 1º CI do #613 | 0,25 |
+| 92 | ✅ Os tempos dos testes da mira na divisão do CI: 287 s e 130 s, do log do CI (#613) | 0,25 |
+| 93 | ✅ O tempo do teste da pausa na divisão do CI: 243 s, do log do CI (#613) | 0,25 |
+| 100 | ✅ O tempo do teste da tela antes do jogo na divisão do CI: 441 s, do log do CI (#613) | 0,25 |
 | 101 | 🔎 O que ficou fora do teste da tela antes do jogo: o tempo até ela aparecer e do Jogar ao 1º plano, o download com o TM, 4 das 5 provas de que o teste reprova sem a correção, a espera de 100 s no online e o tempo do "Simular partida" | 2 |
 | 84 | ✅ O tempo do teste do HUD na divisão do CI: 131 s, do log do CI (#599) | 0,25 |
 

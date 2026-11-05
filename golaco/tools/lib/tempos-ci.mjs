@@ -115,14 +115,16 @@ export const TEMPOS_NAVEGADOR = {
   'teste-prejogo.mjs': 298,
   // (item 64: 498 s aqui com o online — 3 pares de abas —, a máquina dividida com o hash-partida; a revisão somou o E4b/E5b em 3
   // páginas × 7 telas, o E11b, o E19b e os Pênaltis do TM: 573 s aqui com outra página junto; acertar pelo log do CI)
-  'teste-prepartida-tela.mjs': 600,
+  // (item 100: 440,6 s no log do 1º CI do #613, navegador 2 de 3)
+  'teste-prepartida-tela.mjs': 441,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
   // H1 por estado do relógio e com a cara do TM, a 640×360 e o H14 — 130,9 s no log do CI do #599)
   // (item 65: + H1c/H2c/H1d/H1e/H9c, a cobrança mirada de verdade em 4 páginas: 194 s aqui com a máquina dividida; acertar pelo
   // log do CI)
-  'teste-hud-minimo.mjs': 190,
+  // (item 92: 129,7 s no log do CI do #613)
+  'teste-hud-minimo.mjs': 130,
   // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
   'teste-replay.mjs': 225,
   // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
@@ -138,7 +140,8 @@ export const TEMPOS_NAVEGADOR = {
   // (item 58: a pausa do FC 24 — 184 s inteiro com a carga 3–8 na revisão; com as telas do PC fora do 16:9, o fim do TM no PC e
   // o online em 6 telas da revisão, 390 s aqui dividindo a máquina com outro teste de navegador (carga ~9) e 33–71 s por parte
   // sozinho; acertar pelo log do CI)
-  'teste-pausa-tela.mjs': 330,
+  // (item 93: 242,8 s no log do CI do #613)
+  'teste-pausa-tela.mjs': 243,
   'teste-online-tela.mjs': 160,
   'teste-corpo-tela.mjs': 150,
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
@@ -147,6 +150,7 @@ export const TEMPOS_NAVEGADOR = {
   'teste-camera-tela.mjs': 210,
   // (item 65: + a seção 7, a mira pelos pixels em 3 páginas na Média, e o arrasto com toque de verdade; a base com o teste novo
   // 188 s — reprova cedo —, o teste inteiro ~280 s aqui com a máquina dividida; acertar pelo log do CI)
-  'teste-bola-parada-tela.mjs': 330, // (+ o escanteio de lá e as bandeiras em pixels; + os sinalizadores de noite em 3 escanteios: revisão R2 do item 65)
+  // (item 92: 286,5 s no log do CI do #613)
+  'teste-bola-parada-tela.mjs': 287, // (+ o escanteio de lá e as bandeiras em pixels; + os sinalizadores de noite em 3 escanteios: revisão R2 do item 65)
   'teste-desempenho-celular.mjs': 35,
 };
