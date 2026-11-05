@@ -635,7 +635,7 @@ try {
       return { n, cortados, tmCond: [...new Set(tmCond)].join('/') };
     });
     meta('Escalação em 568×320 sem a TM Cond (o arquivo bloqueado): a reserva encolhida não corta nome nenhum', semFonte ? `${semFonte.cortados.length} de ${semFonte.n} cortados${semFonte.cortados.length ? ': ' + semFonte.cortados.join(', ') : ''} (TM Cond: ${semFonte.tmCond})` : 'o pré-jogo não ligou',
-      '0 cortados; a TM Cond sem carregar', !!semFonte && semFonte.n === 22 && semFonte.cortados.length === 0 && !/loaded/.test(semFonte.tmCond));
+      '0 cortados; a TM Cond sem carregar', !!semFonte && semFonte.n === 22 && semFonte.cortados.length === 0 && !semFonte.tmCond.split('/').includes('loaded'));
     await contexto.unroute('**/tmcond-800-*.woff2');
     // (o arquivo bloqueado aparece no console como recurso que falhou: só esses saem da conta)
     for (let i = erros.length - 1; i >= nErros; i--) if (/Failed to load resource|ERR_FAILED/.test(erros[i])) erros.splice(i, 1);

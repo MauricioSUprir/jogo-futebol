@@ -114,8 +114,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-editor-tela.mjs': 51,
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
-  // acertar pelo log do CI)
-  'teste-prejogo.mjs': 390,
+  // acertar pelo log do CI; a revisão somou 2 páginas no 15 — o pedido misto e a TM Cond bloqueada —, ~+40 s)
+  'teste-prejogo.mjs': 430,
   // (item 64: 498 s aqui com o online — 3 pares de abas —, a máquina dividida com o hash-partida; a revisão somou o E4b/E5b em 3
   // páginas × 7 telas, o E11b, o E19b e os Pênaltis do TM: 573 s aqui com outra página junto; acertar pelo log do CI)
   // (item 100: 440,6 s no log do 1º CI do #613, navegador 2 de 3)
