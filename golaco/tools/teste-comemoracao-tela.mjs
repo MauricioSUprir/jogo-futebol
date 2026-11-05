@@ -36,9 +36,12 @@
 //      H5 a cena curta (o gol do time 1, PC): aparece, ≥ 2,2 s, some antes do replay;
 //      H6 pular com o cartão na tela (K em t ≈ 2,2 s, PC): some em ≤ 1 quadro; 0 quadros na cortina e no replay;
 //      H7 PC 1366×600, ?tm PRO com as fotos todas em 404: o cartão sem foto; erros = 22; nenhum erro de página além dos 404 delas;
-//      H8 ?autorGol=0 (a página do A6): a cena sem cartão (estado.cartao null, 0 quadros).
+//      H8 ?autorGol=0 (a página do A6): a cena sem cartão (estado.cartao null, 0 quadros);
+//      H9 o "Replay" da pausa pedido com o cartão na tela (a página do H5): o cartão escondido com a pausa aberta e o replay
+//         inteiro (0 quadros com o cartão e o replay juntos, nunca cruzando a marca REPLAY); depois a cena continua (antes da
+//         correção R1 da revisão: o cartão congelado por cima da jogada e da marca REPLAY em todos os quadros).
 // Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
-// sem o cartão (a base do item 31) reprovam H1–H7.
+// sem o cartão (a base do item 31) reprovam H1–H7 e H9.
 //   node tools/teste-comemoracao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,D,E,F,H]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -537,8 +540,45 @@ if (faz('H')) {
       const visResto = resto.q.filter(x => x.ag).length + resto.cartaoDepois;
       meta('H6 pular com o cartão na tela (K em t ≈ 2,2 s): some em ≤ 1 quadro; 0 quadros na cortina e no replay', `antes t ${f2(ate.t)} s visível ${ate.vis}; 1 quadro depois: visível ${depois1.vis}, hidden ${depois1.hidden}, cena ${depois1.estado}; depois ${visResto} quadros (replay ${resto.replay ? 'sim' : 'não'})`,
         'visível; escondido; 0', ate.vis && !depois1.vis && depois1.hidden === true && visResto === 0 && !!resto.replay);
+      // H9 o "Replay" da pausa pedido com o cartão na tela (Esc/Start no meio da cena: o comando replay não espera a cena) — a
+      // jogada com a bola rolando: o cartão escondido o replay inteiro, nunca por cima da marca REPLAY (o mesmo canto)
+      await golRoteirizado(pg, { semente: 5, time: 0 });
+      const h9 = await pg.evaluate(() => {
+        const g = window.__golaco, out = { antes: null, botao: false, q: 0, rp: 0, comCartao: 0, cruza: 0, volta: false };
+        const cx = id => { const e = document.getElementById(id); if (!e || e.hidden || !e.offsetParent || getComputedStyle(e).visibility === 'hidden') return null; const r = e.getBoundingClientRect(); return r.width > 0 ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null; };
+        for (let i = 0; i < 400 && g.comemoracao.ativa; i++) {
+          g.relogio.avancar(1000 / 60, { desenhar: false });
+          const e = g.comemoracao.estado;
+          if (e && e.t >= 2.2 && g.comemoracao.cartaoTela?.visivel) { out.antes = { t: e.t, fase: e.cartao?.fase }; break; }
+        }
+        if (!out.antes) return out;
+        g.abrirMenu();
+        g.relogio.avancar(1000 / 60, { desenhar: false });
+        out.naPausa = !!g.comemoracao.cartaoTela?.visivel;
+        const b = document.querySelector('#menu [data-cmd="replay"]');
+        out.botao = !!b && !b.hidden;
+        b?.click();
+        let saiu = false;
+        for (let i = 0; i < 900; i++) {
+          g.relogio.avancar(1000 / 60, { desenhar: false });
+          out.q++;
+          const ativo = !!g.replay?.estado?.ativo;
+          if (ativo) {
+            out.rp++;
+            const a = cx('autor-gol'), m = cx('replay-marca');
+            if (g.comemoracao.cartaoTela?.visivel || a) out.comCartao++;
+            if (a && m && a.x0 < m.x1 && m.x0 < a.x1 && a.y0 < m.y1 && m.y0 < a.y1) out.cruza++;
+          } else if (out.rp > 0) saiu = true;
+          // depois do replay a cena continua de onde estava: o cartão volta enquanto a janela dele não acabou
+          if (saiu && g.comemoracao.cartaoTela?.visivel) { out.volta = true; break; }
+          if (saiu && !g.comemoracao.ativa) break;
+        }
+        return out;
+      });
+      meta('H9 o "Replay" da pausa com o cartão na tela: 0 quadros com o cartão e o replay juntos (nunca por cima da marca REPLAY)', h9.antes ? `cartão em t ${f2(h9.antes.t)} s; com a pausa aberta ${h9.naPausa ? 'VISÍVEL' : 'escondido'}; botão Replay ${h9.botao}; ${h9.rp} quadros de replay: com o cartão ${h9.comCartao}, cruzando a marca ${h9.cruza}; depois do replay o cartão ${h9.volta ? 'volta' : 'não volta'}` : 'o cartão não apareceu',
+        'replay ≥ 60 quadros; 0; 0', !!h9.antes && h9.botao && !h9.naPausa && h9.rp >= 60 && h9.comCartao === 0 && h9.cruza === 0);
     } finally { await P.fechar(); }
-  } catch (e) { meta('H5/H6 execução', e.message.split('\n')[0], 'sem exceção', false); }
+  } catch (e) { meta('H5/H6/H9 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H7 PC 1366×600, TM pro com as fotos todas em 404
   try {
     const ped = comFotos({ ...PED_A, id: 'f31f404' }, ORIGEM);

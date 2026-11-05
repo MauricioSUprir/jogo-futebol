@@ -1446,7 +1446,8 @@ export function criarHud(opc) {
         const x0 = base.left + e.offsetLeft + (n === e ? 0 : e.clientLeft + n.offsetLeft), y0 = base.top + e.offsetTop + (n === e ? 0 : e.clientTop + n.offsetTop);
         return { x0, y0, x1: x0 + n.offsetWidth, y1: y0 + n.offsetHeight };
       };
-      const vis = !e.hidden && !!e.offsetParent;
+      // (visível de verdade: a pausa aberta e o replay o escondem por visibility — css/estilo.css)
+      const vis = !e.hidden && !!e.offsetParent && getComputedStyle(e).visibility !== 'hidden';
       const nomeEl = [ag.completo, ag.curto].find(n => n.getClientRects().length > 0) ?? null;
       const fotoVis = vis && !ag.foto.hidden && ag.foto.getClientRects().length > 0;
       return {
