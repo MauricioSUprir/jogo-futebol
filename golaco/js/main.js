@@ -1078,6 +1078,8 @@ function tratarEvento(ev) {
     // Total Match: o resultado fica gravado já no apito (o TM lê de lá se a mensagem se perder); o botão da faixa volta ao TM
     if (TM) gravarResultadoTM(resultadoAtualTM());
     hud.definirEstado({ fim: true });
+    // (no fim os rótulos da duração e da dificuldade passam à escolha da página — a do "Jogar de novo": partidaViva)
+    marcarAjustes();
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
     // a cena do pós-jogo (js/cena-fim.js 'fimDeJogo'): decidida no fim do passo (decidirFimJogo), depois do cartão do mesmo
@@ -3276,14 +3278,21 @@ function marcarPrejogo() {
   const e = document.getElementById('estado-prejogo');
   if (e) e.textContent = NOME_PREJOGO[v];
 }
-/** A duração que vale agora: a do mundo na partida (o ?min dos testes também), senão a escolhida na página. */
+/**
+ * A partida em andamento (a do tick 0 também): só nela a duração e a dificuldade do MUNDO valem. No fim do jogo o mudarAjuste
+ * muda só a escolha da página (o "Jogar de novo"): lá os rótulos e o próximo valor do ciclo saem dos `ajustes` (lendo o mundo
+ * que já acabou, o ciclo travava num valor só e o rótulo mostrava o da partida jogada).
+ */
+function partidaViva() { return mundo?.modo === 'partida' && !!mundo.partida && mundo.partida.estado !== 'fim'; }
+/** A duração que vale agora: a do mundo na partida em andamento (o ?min dos testes também), senão a escolhida na página. */
 function duracaoAtual() {
-  return mundo?.modo === 'partida' && mundo.partida ? mundo.partida.ticksPorTempo * PASSO / 60 : ajustes.minutosPorTempo;
+  return partidaViva() ? mundo.partida.ticksPorTempo * PASSO / 60 : ajustes.minutosPorTempo;
 }
+/** O nível que vale agora: o do mundo na partida em andamento (o Normal sem o campo), senão o escolhido na página. */
+function dificuldadeAtual() { return partidaViva() ? (mundo.dificuldade ?? 'normal') : ajustes.dificuldade; }
 /** Os rótulos da linha "Duração | Dificuldade" do "Modo de jogo" (item 33) e se ela aparece (ajustesFixos: some). */
 function marcarAjustes() {
-  const dif = mundo?.modo === 'partida' && mundo.partida ? (mundo.dificuldade ?? 'normal') : ajustes.dificuldade;
-  hud?.definirEstado({ duracao: textoDuracao(duracaoAtual()), dificuldade: textoNivel(dif), ajustesFixos: ajustes.fixos || ONLINE });
+  hud?.definirEstado({ duracao: textoDuracao(duracaoAtual()), dificuldade: textoNivel(dificuldadeAtual()), ajustesFixos: ajustes.fixos || ONLINE });
 }
 /**
  * Muda a duração (v: minutos por tempo) ou a dificuldade (v: nível) da partida pela pausa ou pela API (item 33): vale na página
@@ -3293,7 +3302,7 @@ function marcarAjustes() {
  */
 function mudarAjuste(qual, v) {
   if (ajustes.fixos || ONLINE) return false;
-  const jogo = mundo?.modo === 'partida' && mundo.partida && mundo.partida.estado !== 'fim';
+  const jogo = partidaViva();
   // (a partida ainda não começou: o mundo do tick 0, a tela antes do jogo)
   const antes = jogo && mundo.tick === 0;
   if (qual === 'duracao') {
@@ -3843,7 +3852,7 @@ function comando(c, v) {
     case 'melhores-momentos': iniciarMelhores(); break;
     // "Modo de jogo" → "Duração" (3 → 4 → 5 → 6 → 8 → 10 → 3) e "Dificuldade" (Fácil → Normal → Difícil → Lenda); item 33
     case 'duracao-ciclo': mudarAjuste('duracao', proximaDuracao(duracaoAtual())); break;
-    case 'dificuldade-ciclo': mudarAjuste('dificuldade', proximoNivel(mundo?.modo === 'partida' && mundo.partida ? (mundo.dificuldade ?? 'normal') : ajustes.dificuldade)); break;
+    case 'dificuldade-ciclo': mudarAjuste('dificuldade', proximoNivel(dificuldadeAtual())); break;
     case 'duracao': mudarAjuste('duracao', +v); break;
     case 'dificuldade': mudarAjuste('dificuldade', v); break;
     case 'cenas-ciclo':

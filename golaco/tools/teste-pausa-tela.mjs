@@ -30,7 +30,9 @@
 //       ajustesFixos, com o submenu "Partida e cenas"); escondida nos treinos, no Livre, nos Pênaltis, no online, com o pedido
 //       travando (ajustesFixos) e no fim do TM; os rótulos inteiros dentro do botão em todas as telas (em 568×320 com o padding de
 //       16 px o "Dificuldade" — 78 px — não cabia nos 73,5 de dentro); no celular deitado a altura do nível igual com e sem ela
-//       (a célula vazia da grade); os 2 ciclos pelos 3 meios entram no P10
+//       (a célula vazia da grade); os 2 ciclos pelos 3 meios entram no P10; no fim do jogo (celular, pelo toque, sem os SECOS)
+//       cada toque nos ciclos anda um valor a partir da escolha da página e o rótulo mostra a escolha; o "Jogar de novo"
+//       começa com ela (revisão do item 33, A1: lendo a partida que acabou o ciclo travava)
 //   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
 //   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online]
@@ -347,9 +349,66 @@ async function sessaoCelular() {
       await pg.evaluate(() => window.__golaco.secarComandos?.(null));
       await pg.evaluate(() => window.__golaco.fecharMenu());
       if (modo === 'partida') await partidaCelular(s, pg);
+      if (modo === 'fim') await ciclosNoFim(pg);
     }
   } catch (e) { erros.push(`celular: ${e.stack ?? e}`); }
   finally { erros.push(...s.erros.map(x => `celular: ${x}`)); await s.navegador.close(); }
+}
+
+/**
+ * P11 (revisão do item 33, A1): no fim do jogo (fora do TM) os ciclos ANDAM de verdade (sem os SECOS), pelo toque como a pessoa:
+ * cada toque em "Duração" e em "Dificuldade" muda o rótulo e a escolha da página (__golaco.ajustes.estado) para o valor seguinte
+ * do ciclo, a partir da escolha da página (e não da partida que acabou: o mundo do 'fim' tem 0,05 min); o "Jogar de novo" começa
+ * com o que o rótulo mostrou. Lendo o mundo que já acabou, o ciclo travava (sempre o mesmo valor) e o rótulo não mudava.
+ */
+async function ciclosNoFim(pg) {
+  const est = () => pg.evaluate(() => {
+    const e = window.__golaco.ajustes.estado;
+    return { min: e.minutosPorTempo, dif: e.dificuldade, rd: document.getElementById('estado-duracao')?.textContent ?? null,
+      rf: document.getElementById('estado-dificuldade')?.textContent ?? null };
+  });
+  const DUR = [3, 4, 5, 6, 8, 10], NIV = ['facil', 'normal', 'dificil', 'lenda'], NOME = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', lenda: 'Lenda' };
+  const txDur = v => `2 × ${String(v).replace('.', ',')} min`;
+  await abrirPausa(pg);
+  const bm = await centro(pg, '#btn-modos');
+  if (!bm) { P.p11.push('fim: sem o "Modo de jogo"'); return; }
+  await pg.touchscreen.tap(bm.x, bm.y);
+  await quadros(pg, 2);
+  let e = await est();
+  const seq = [];
+  for (const [sel, chave, rot, prox, texto] of [['#btn-duracao', 'min', 'rd', v => DUR[(DUR.indexOf(v) + 1) % DUR.length], txDur],
+    ['#btn-dificuldade', 'dif', 'rf', v => NIV[(NIV.indexOf(v) + 1) % NIV.length], v => NOME[v]]]) {
+    for (let k = 0; k < 3; k++) {
+      P.p11n++;
+      const esperado = prox(e[chave]);
+      const c = await centro(pg, sel);
+      if (!c) { P.p11.push(`fim: ${sel} fora da tela`); break; }
+      await pg.touchscreen.tap(c.x, c.y);
+      await quadros(pg, 2);
+      e = await est();
+      seq.push(`${e[chave]}/${e[rot]}`);
+      if (e[chave] !== esperado) P.p11.push(`fim: o ${k + 1}º toque em ${sel} deu ${e[chave]} (esperado ${esperado}: o ciclo travou)`);
+      if (e[rot] !== texto(e[chave])) P.p11.push(`fim: o rótulo de ${sel} "${e[rot]}" ≠ a escolha ${e[chave]}`);
+    }
+  }
+  // o "Jogar de novo" (o 1º nível da pausa no fim) começa com o que a tela mostrou — pelo toque, como a pessoa (o click
+  // programático logo depois dos toques seria engolido pela janela do toque-botao.js)
+  await abrirPausa(pg);
+  const jn = await centro(pg, '#btn-reiniciar-partida');
+  if (jn) await pg.touchscreen.tap(jn.x, jn.y);
+  await quadros(pg, 3);
+  const r = await pg.evaluate(() => {
+    const a = window.__golaco.ajustes.estado;
+    return { min: a.duracaoMundo, dif: a.dificuldadeMundo };
+  });
+  r.clicou = !!jn;
+  P.p11n++;
+  if (!r.clicou) P.p11.push('fim: sem o "Jogar de novo" à vista');
+  else if (r.min !== e.min || r.dif !== e.dif) P.p11.push(`fim: o "Jogar de novo" começou com ${r.min} min / ${r.dif} (a tela mostrava ${e.rd} / ${e.rf})`);
+  console.log(`          (P11 no fim: ${seq.join(' → ')}; Jogar de novo ${r.min} min / ${r.dif})`);
+  // de volta ao padrão (os modos seguintes não dependem dele, mas a escolha fica salva no aparelho)
+  await pg.evaluate(() => { const g = window.__golaco; g.ajustes.duracao(4); g.ajustes.dificuldade('normal'); g.fecharMenu(); });
+  await quadros(pg, 2);
 }
 
 /** Na partida do celular (844×390): o campinho (P4), o toque (P9), o leitor de tela (P7) e a cara do TM (P8). */
