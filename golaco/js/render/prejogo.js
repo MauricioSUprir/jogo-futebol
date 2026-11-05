@@ -309,6 +309,8 @@ export function criarPrejogo(ctx) {
     if (opc.abertura) {
       st.fase = 'abertura';
       tela.abertura(m.times);
+      // (a tela antes do jogo por cima: a abertura calada — item 64)
+      tela.mudo(!!opc.muda);
       if (st.fora) st.fora.modoFora(true);
       cena.fog.near = NEVOA[ctx.hora() === 'noite' ? 'noite' : 'dia'][0]; cena.fog.far = NEVOA[ctx.hora() === 'noite' ? 'noite' : 'dia'][1];
       cam.near = 2; cam.far = 3400; cam.updateProjectionMatrix();
@@ -322,6 +324,7 @@ export function criarPrejogo(ctx) {
   function comecar() {
     if (st.fase !== 'abertura') return;
     st.fase = 'rodando';
+    tela.mudo(false);
     tela.abertura(null);
     st.t = 0; st.i = -1;
     try {
@@ -354,6 +357,7 @@ export function criarPrejogo(ctx) {
   function encerrar(avisar) {
     if (!st.ativo) return;
     st.ativo = false; st.fase = 'parado';
+    tela.mudo(false);
     tela.mostrar(false);
     const cena = ctx.cena3d.cena, cam = camera();
     if (st.nevoa) { cena.fog.near = st.nevoa.near; cena.fog.far = st.nevoa.far; }
@@ -428,6 +432,25 @@ export function criarPrejogo(ctx) {
     return true;
   }
 
+  /**
+   * O time mudou antes do jogo (o Personalizar da tela antes do jogo, item 64; o Livre): refaz o cortejo, as escalações e os
+   * treinadores com os times NOVOS do mundo — só desenho; o lado de fora (montado no iniciar) e o roteiro ficam.
+   */
+  function refazerTimes() {
+    if (!st.ativo) return false;
+    const m = ctx.mundo();
+    if (!m || !m.times) return false;
+    st.c = criarCortejo(m.times);
+    st.tec = criarTecnicos(m.times, m.semente ?? 1); st.tecAcum = 0; st.tecAplaudiu = false;
+    st.fotos = new Map([[0, fotoCortejo(st.c)]]);
+    st.previa = st.tcsPrevia.length ? criarCortejo(m.times) : null;
+    st.filaPronta = false;
+    posesAtuais(true);
+    tela.escalacao.montar(m.times);
+    if (st.fase === 'abertura') { const mu = tela.muda; tela.abertura(m.times); tela.mudo(mu); }
+    return true;
+  }
+
   /** Ações da entrada (main.js tratarAcao) durante o pré-jogo: a pausa (Esc, P, Start) pula tudo. */
   function acao(a) {
     if (!st.ativo) return false;
@@ -498,7 +521,9 @@ export function criarPrejogo(ctx) {
   };
 
   return {
-    iniciar, quadro, acao, proximo, pularTudo, irPara, comecar,
+    iniciar, quadro, acao, proximo, pularTudo, irPara, comecar, refazerTimes,
+    /** A abertura calada (a tela antes do jogo por cima) ou de volta. */
+    mudo: v => tela.mudo(v),
     /** Sai sem avisar o main.js (mundo novo pela API ou troca de modo no meio do pré-jogo). */
     cancelar: () => encerrar(false),
     get ativo() { return st.ativo; },

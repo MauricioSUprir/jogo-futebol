@@ -240,6 +240,11 @@ const TRAVA_TM = TM && !PENALTIS_TM && !LIVRE_TM && !ONLINE_TM ? TM.trava : null
 // online: a sessão (online.js, pura) e a página (online-pagina.js: transporte, avisos, pausa combinada) só por import dinâmico
 const [MOD_ON, MOD_PAG_ON] = ONLINE ? await Promise.all([import('./online.js'), import('./online-pagina.js')]) : [null, null];
 let PAG_ONLINE = null;
+// a tela antes do jogo (item 64; o bloco "a tela antes do jogo" mais abaixo): o módulo DOM, as contas, a tela criada, o fundo, a
+// escalação do Personalizar (vale nos mundos novos desta página), a pausa/o editor por cima no quadro anterior e os 30 qps
+let MOD_PP = null, PP_PURO = null, ppCarga = null, pp = null, ppFundo = null, timesAntes = null, ppOcupado = false, ppPersonalizar = false;
+let ppOnline = { pronto: false, desde: 0 }, ppFechadaEm = null; // (online: o meu Pronto e quando; a hora em que a tela fechou)
+let ppDesenho = -1e9, ppDt = 0, ppVolta = null, ppDesenhos = 0;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
@@ -360,8 +365,9 @@ function criarMundoTreino(opc = {}) {
     });
   }
   if (o.modo === 'partida') {
+    // (a escalação escolhida no Personalizar da tela antes do jogo — item 64 — vale nesta página: timesAntes)
     const m = criarPartida({
-      semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? TM?.times,
+      semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
       humanos: ONLINE ? [0, 1] : undefined,
     });
@@ -1227,7 +1233,7 @@ function marcarCondutor(agoraMs) {
   if (nomeForcado) { hud.nomeCanto(nomeForcado === 'nenhum' ? null : nomeForcado); return; }
   const est = mundo.partida?.estado;
   const pode = !!mundo.times && !mundo.disputa && !PRINTS && !cenaGol && !cenaSub && !cenaCartao && !cenaFim
-    && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && est !== 'intervalo' && est !== 'fim';
+    && !(diretor && diretor.ativo) && !(prejogo && prejogo.ativo) && !pp?.aberta && est !== 'intervalo' && est !== 'fim';
   const j = pode && mundo.posse != null ? jogadorPorId(mundo, mundo.posse) : null;
   let mostra = null;
   if (j) {
@@ -1259,7 +1265,8 @@ function retratoBloqueado() { return mqRetrato.matches && document.documentEleme
 
 function pausado() {
   if (mundo.online) return retratoBloqueado() || !!PAG_ONLINE?.pausado;
-  return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado();
+  // (a tela antes do jogo também: o mundo fica no tick 0 — item 64)
+  return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado() || !!pp?.aberta;
 }
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
@@ -2728,11 +2735,14 @@ let pausaAntes = false; // pausado() no quadro anterior (a volta da pausa solta 
 function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
+  // a tela antes do jogo (item 64): o laço fica no tick 0 e o 3D atrás dela (a abertura calada ou o jogo parado) a 30 qps
+  if (pp && pp.aberta) { quadroPrepartida(dtReal, agoraMs, desenhar); return; }
   // pré-jogo: o laço da partida fica parado (tick 0) e o diretor desenha; em pé no celular ou escondida, para
   if (prejogo && prejogo.ativo) {
     entrada.ler(yawEntrada());
     laco.ultimo = agoraMs;
-    if (mundo.online && PAG_ONLINE) PAG_ONLINE.enviarPacote(agoraMs, 0);
+    // (a fase no pacote: o outro, ainda na tela antes do jogo, sai com ela; e o aviso dele diz "ainda está no pré-jogo")
+    if (mundo.online && PAG_ONLINE) PAG_ONLINE.enviarPacote(agoraMs, MOD_PAG_ON.E_PREJOGO);
     const emPe = retratoBloqueado();
     if (prejogo.quadro(emPe || document.hidden ? 0 : dtReal, agoraMs, desenhar && !emPe, emPe)) return;
   }
@@ -2960,12 +2970,25 @@ function redimensionar() {
   // celular (menor lado < 520 px CSS): a câmera fecha mais o plano (jogadores maiores)
   cam.redimensionar(w / h, Math.min(w, h) < 520);
   if (diretor) diretor.redimensionar(w / h, Math.min(w, h) < 520);
+  // a tela antes do jogo refaz o layout (a barra do navegador que some no Android, girar o PC)
+  if (pp?.aberta) pp.layout();
 }
 
 // ------------------------------------------------------------------ ações e menu
 function tratarAcao(a) {
   // "Simular o resto" (Total Match) rodando: nada chega ao jogo nem abre a pausa
   if (simulandoTM) return;
+  // a tela antes do jogo (item 64): tudo vai a ela — menos o que é da pausa, da Ajuda e do editor abertos por cima dela (o Esc
+  // ali volta à tela; nunca pula o pré-jogo nem começa o jogo)
+  if (pp && pp.aberta) {
+    if (a.startsWith('menu-')) { if (hud.menuAberto || hud.ajudaAberta) hud.navegarPad(a.slice(5)); else if (!editor?.aberto) pp.acao(a); return; }
+    if (editor?.aberto) { if (a === 'pausa') editor.voltar(); return; }
+    if (hud.ajudaAberta) { if (a === 'pausa' || a === 'ajuda') { hud.fecharAjuda(); voltarParaTela(); } return; }
+    if (hud.menuAberto) { if (a === 'pausa') { hud.fecharMenu(); voltarParaTela(); } return; }
+    if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
+    pp.acao(a);
+    return;
+  }
   // o controle na pausa e na Ajuda (entrada.js lerMenuPad): navega nos botões dela; fora delas não faz nada
   if (a.startsWith('menu-')) { if (hud.menuAberto || hud.ajudaAberta) hud.navegarPad(a.slice(5)); return; }
   // pré-jogo: a pausa (Esc, P, Start) pula direto para o jogo
@@ -3020,17 +3043,32 @@ function abrirEditor() {
   hud.fecharMenu(); hud.fecharAjuda();
   entrada?.soltarTudo();
   entrada?.bloquear?.(true);
-  editor.abrir({ time: structuredClone(mundo.times[TIME_HUMANO]), fila: edicaoNaFila, timeId: TIME_HUMANO });
+  editor.abrir({ time: structuredClone(mundo.times[TIME_HUMANO]), fila: edicaoNaFila, timeId: TIME_HUMANO, antesDoJogo: !!pp?.aberta });
   return true;
 }
-/** PRONTO no editor: a edição (ou nada) vai para a fila e a pausa volta, com o foco no Editar time. */
+/**
+ * PRONTO no editor: a edição (ou nada) vai para a fila e a pausa volta, com o foco no Editar time. Aberto pelo Personalizar da
+ * tela antes do jogo (item 64): a edição vira a ESCALAÇÃO — o mundo do tick 0 é recriado com ela (criarPartida {times}: nada de
+ * substituição pendente nem contada) — e a tela volta com o foco no Personalizar.
+ */
 function aoPronto(ed) {
+  if (ppPersonalizar && pp?.aberta) {
+    ppPersonalizar = false;
+    if (ed) {
+      timesAntes = { ...(timesAntes ?? TM?.times ?? {}), [TIME_HUMANO]: PP_PURO.edicaoParaTimes(ed) };
+      trocarMundo(novoMundo(), { antesDoJogo: true });
+    }
+    ppVolta = 'personalizar';
+    voltarParaTela();
+    return;
+  }
   edicaoNaFila = ed ?? null;
   hud.abrirMenu(true, '[data-cmd="editar-time"]');
 }
 function aoFecharEditor() {
   entrada?.soltarTudo();
-  entrada?.bloquear?.(false);
+  // (com a tela antes do jogo ou o pré-jogo, a entrada continua bloqueada: só a tela e o diretor recebem)
+  if (!pp?.aberta && !(prejogo && prejogo.ativo)) entrada?.bloquear?.(false);
 }
 
 // ------------------------------------------------------------------ a pausa do item 58 (o cartão do meu time e as Estatísticas)
@@ -3134,8 +3172,8 @@ function trocarModo(v) {
     if (v === 'partida') u.searchParams.delete('modo'); else u.searchParams.set('modo', v);
     history.replaceState(null, '', u);
   } catch (_) { /* sem history (arquivo local): segue */ }
-  trocarMundo(novoMundo(), { prejogo: v === 'partida' ? 'preferencia' : null });
-  if (v === 'livre' && !PRINTS && !DEMO_ON) paginaLivre().abrirJogadores();
+  trocarMundo(novoMundo(), { prejogo: v === 'partida' ? 'preferencia' : null, prepartida: true });
+  if (v === 'livre' && !PRINTS && !DEMO_ON && !pp?.aberta) paginaLivre().abrirJogadores();
 }
 
 /**
@@ -3168,9 +3206,9 @@ function marcarSubst() {
   const e = document.getElementById('estado-subst');
   if (e) e.textContent = substLigada ? 'ligada' : 'só a faixa';
 }
-/** Começa o pré-jogo (true) ou não (o apito toca já). */
-function comecarPrejogo(modo, abertura) {
-  if (!prejogo || modo === 'desligado' || mundo.modo !== 'partida' || !prejogo.iniciar(modo, { abertura })) return false;
+/** Começa o pré-jogo (true) ou não (o apito toca já). muda: a abertura calada, com a tela antes do jogo por cima (item 64). */
+function comecarPrejogo(modo, abertura, muda = false) {
+  if (!prejogo || modo === 'desligado' || mundo.modo !== 'partida' || !prejogo.iniciar(modo, { abertura, muda })) return false;
   entrada?.soltarTudo();
   entrada?.bloquear?.(true);
   return true;
@@ -3184,6 +3222,320 @@ function fimDoPrejogo() {
   hud.ajustarTopo();
   eventosIniciais();
 }
+
+// ------------------------------------------------------------------ a tela antes do jogo (item 64)
+// Dono, 23/10, com o print da pré-partida do EA FC: "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e etc"
+// (contrato "Tela antes do jogo (item 64)" no CONTRATOS.md). Em todo JOGO (partida, TM — também o Rumo ao Estrelato —, Livre,
+// Pênaltis, online) ANTES do pré-jogo; os treinos não têm. O código (js/prepartida.js puro + js/prepartida-tela.js +
+// css/prepartida.css + a TM Cond) chega por import() no topo do iniciar(), só com a tela ligada (fora do download com webdriver).
+// O fundo: a abertura do pré-jogo calada (a partida com o pré-jogo) ou o jogo parado no tick 0 (o resto), atrás do véu, a 30 qps.
+// A SIMULAÇÃO NÃO MUDA: nada da tela vai ao passo; o "Jogar partida" é o gesto que liga o som (som.js) e começa o pré-jogo de
+// hoje (ou o apito). O Personalizar antes do jogo recria o mundo pela escalação (criarPartida {times}): nada vira substituição.
+// ?prepartida=1 força (os testes dela), ?prepartida=0 desliga; desligada com navigator.webdriver, ?prints=1 e ?demo=1.
+const PP_PARAM = params.get('prepartida');
+function prepartidaLigada(m = mundo) {
+  if (!m || !ehJogo(m)) return false;
+  if (PP_PARAM === '1') return true;
+  if (PP_PARAM === '0') return false;
+  return !(navigator.webdriver || PRINTS || DEMO_ON);
+}
+// MOD_PP: a tela (DOM); PP_PURO: as contas (prepartida.js); pp: a tela criada; ppFundo: 'abertura' | 'jogo'; timesAntes: a
+// escalação do Personalizar (vale para os mundos novos desta página); ppOcupado: a pausa, a Ajuda ou o editor por cima no quadro
+// anterior (a volta devolve o foco e refaz os dados); ppDesenho: o último desenho do 3D atrás da tela (30 qps)
+// (as variáveis moram no topo do arquivo: o 1º mundo já lê a timesAntes)
+const ppAberta = () => !!pp?.aberta;
+/** Baixa a tela (uma vez): o módulo DOM, as contas, o CSS (antes do prejogo.css) e a fonte (sem esperar por ela). */
+function carregarPrepartida() {
+  return ppCarga ??= Promise.all([import('./prepartida-tela.js'), import('./prepartida.js'), cssSobDemanda('css/prepartida.css', 'css/prejogo.css')])
+    .then(([md, puro]) => {
+      MOD_PP = md; PP_PURO = puro;
+      // a Inter TM (a da pausa) e a TM Cond: pedidas já; o layout não depende delas (a info refaz a conta quando chegam)
+      if (document.fonts?.load) {
+        Promise.all(['600 15px "Inter TM"', '800 15px "Inter TM"', '800 15px "TM Cond"'].map(f => document.fonts.load(f).catch(() => null)))
+          .then(() => { if (pp?.aberta) pp.layout(); }, () => {});
+      }
+      return md;
+    }, e => { ppCarga = null; throw e; });
+}
+/** Espera a tela até `ms` (a reserva: sem ela a tempo, a abertura de texto de hoje). */
+function esperarPrepartida(ms) {
+  if (MOD_PP) return Promise.resolve(true);
+  if (!ppCarga) return Promise.resolve(false);
+  return Promise.race([ppCarga.then(() => true, () => false), new Promise(ok => setTimeout(() => ok(false), ms))]);
+}
+/** O modo da tela: as abas, o canto e os textos. */
+function modoTela() {
+  if (mundo.online) return 'online';
+  if (mundo.disputa) return 'penaltis';
+  if (mundo.livre) return 'livre';
+  if (TRAVA_TM != null) return 'rae';
+  return TM ? 'tm' : 'partida';
+}
+function abasDoModo(modo) {
+  const J = { id: 'jogar', texto: 'Jogar partida', icone: 'jogar', primaria: true };
+  const V = { id: 'visao', texto: 'Visão tática', icone: 'tatica' };
+  const P = { id: 'personalizar', texto: 'Personalizar', icone: 'editar' };
+  // (armada: o 1º rótulo que cabe na aba — com 4 abas o "Toque de novo: simular" saía "Toque de novo:…", sem o verbo: revisão V2)
+  const S = { id: 'simular', texto: 'Simular partida', icone: 'simular', armar: 'Toque de novo: simular', armarCurto: ['De novo: simular', 'Simular?'] };
+  switch (modo) {
+    case 'tm': return [J, V, P, S];
+    case 'rae': return [J, V, S];
+    case 'livre': return [{ ...J, texto: 'Jogar' }, { id: 'jogadores', texto: 'Jogadores', icone: 'jogadores' }, { id: 'camera', texto: 'Câmera', icone: 'camera' }];
+    case 'penaltis': return [{ ...J, texto: 'Bater pênaltis' }, { id: 'adversario', texto: 'Cobradores do adversário', icone: 'lista' }];
+    case 'online': return [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true }, V];
+    default: return [J, V, P];
+  }
+}
+function cantoDoModo(modo) {
+  if (modo === 'online') return { texto: 'Sair da partida', armar: 'Toque de novo: sair' };
+  if (TM && (modo === 'livre' || modo === 'penaltis')) return { texto: 'Voltar ao Total Match', armar: 'Toque de novo: voltar' };
+  return null;
+}
+const corTexto = hex => {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''));
+  if (!m) return '#050807';
+  const v = parseInt(m[1], 16), r = (v >> 16) / 255, g = ((v >> 8) & 255) / 255, b = (v & 255) / 255;
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.45 ? '#050807' : '#ffffff';
+};
+/** Os dados da tela (prepartida.js dadosDaPartida: só lê o mundo) com o que é da página: escudos, cores, textos. */
+function dadosPrepartida() {
+  const m = mundo;
+  const nomesOn = ONLINE_TM ? PEDIDO_TM.online.nomes : ['Lado 0', 'Lado 1'];
+  const times = [0, 1].map(t => {
+    const el = ELENCOS[m.times?.[t]?.elenco];
+    const kL = el?.uniforme?.linha ?? `linha${t}`, kG = el?.uniforme?.goleiro ?? `goleiro${t}`;
+    const cL = IDENT?.kits?.[kL] ?? KITS[kL] ?? KITS[`linha${t}`], cG = IDENT?.kits?.[kG] ?? KITS[kG] ?? KITS[`goleiro${t}`];
+    const e = IDENT?.times?.[t]?.escudo;
+    const simbolo = el && document.getElementById(`escudo-${el.id}`) ? `escudo-${el.id}` : e?.simbolo ?? null;
+    return {
+      escudo: e?.url ? { url: e.url } : simbolo ? { simbolo } : null,
+      camisa: { corpo: cL?.camisa, acento: cL?.acento, texto: corTexto(cL?.camisa) },
+      camisaGol: { corpo: cG?.camisa, acento: cG?.acento, texto: corTexto(cG?.camisa) },
+      pessoa: m.online ? String(nomesOn?.[t] ?? '') : null,
+    };
+  });
+  const pt = PEDIDO_TM?.partida ?? null;
+  return PP_PURO.dadosDaPartida(m, {
+    humano: TIME_HUMANO, humanos: m.online ? [0, 1] : [TIME_HUMANO], modo: modoTela(), competicao: textoCompeticao(),
+    // (o clássico do TM: partida.classico + o nome dele, se vier)
+    classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : null,
+    hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
+  });
+}
+/** O HUD, os botões de toque, as cenas, o canvas e o pré-jogo ficam inert atrás da tela (o online-aviso não: ele mora no body). */
+function marcarInertTela(v) {
+  for (const id of ['hud', 'toque', 'cena', 'tela', 'prejogo']) { const e = document.getElementById(id); if (e && e.inert !== v) e.inert = v; }
+}
+/** Abre a tela (o mundo do tick 0 já existe): o fundo, a entrada bloqueada, a pausa no modo "antes do jogo" e o foco no Jogar. */
+function abrirPrepartida() {
+  if (!MOD_PP || !prepartidaLigada()) return false;
+  pp ??= MOD_PP.criarPrepartida({
+    aoAcao: acaoPrepartida,
+    ocupado: () => hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado(),
+    comToque: () => document.documentElement.classList.contains('com-toque'),
+    meio: () => entrada?.ultimoMeio ?? 'teclado',
+  });
+  // o fundo: com o pré-jogo (a partida), a abertura de hoje CALADA (o aéreo de fora, o som abafado); senão o jogo parado
+  ppFundo = 'jogo';
+  const mp = mundo.modo === 'partida' ? modoPrejogo() : 'desligado';
+  if (mp !== 'desligado' && comecarPrejogo(mp, true, true)) ppFundo = 'abertura';
+  entrada?.soltarTudo();
+  entrada?.bloquear?.(true);
+  hud.definirAntes(true);
+  marcarInertTela(true);
+  ppDesenho = -1e9; ppDt = 0; ppOcupado = false; ppOnline = { pronto: false, desde: 0 };
+  const modo = modoTela();
+  pp.abrir({ modo, fundo: ppFundo, dados: dadosPrepartida(), abas: abasDoModo(modo), canto: cantoDoModo(modo), meu: TIME_HUMANO });
+  return true;
+}
+/** Fecha a tela (sem começar nada; quem chama decide). A entrada volta, salvo com o pré-jogo rodando. */
+function fecharPrepartida(imediato = false) {
+  if (!pp?.aberta) return;
+  if (hud.menuAberto) hud.fecharMenu();
+  if (hud.ajudaAberta) hud.fecharAjuda();
+  pp.fechar(imediato);
+  ppFechadaEm = Date.now();
+  hud.definirAntes(false);
+  marcarInertTela(false);
+  ppPersonalizar = false;
+  if (!(prejogo && prejogo.ativo)) entrada?.bloquear?.(false);
+}
+/** A tela cheia deitada do Android (no handler do gesto: o mesmo do prejogo.comecar()). */
+function pedirTelaCheia() {
+  try {
+    const d = document.documentElement;
+    if (d.classList.contains('com-toque') && document.fullscreenEnabled && !document.fullscreenElement && screen.orientation && typeof screen.orientation.lock === 'function') {
+      d.requestFullscreen({ navigationUI: 'hide' }).then(() => screen.orientation.lock('landscape')).catch(() => {});
+    }
+  } catch (_) { /* sem tela cheia */ }
+}
+/** O Livre mudado na tela (o N contra M na fila do livre-pagina): vale já, no mundo do tick 0 (recriado com a escolha nova). */
+function aplicarLivreAntes() {
+  if (!mundo.livre || !PAG_LIVRE?.api?.naFila) return false;
+  trocarMundo(novoMundo(), { antesDoJogo: true });
+  return true;
+}
+/** "Jogar partida" (o gesto do som): a tela some e começa o pré-jogo escolhido (ou o apito; nos Pênaltis e no Livre, o jogo). */
+function jogarPrepartida() {
+  if (!pp?.aberta) return;
+  aplicarLivreAntes();
+  const fundo = ppFundo;
+  fecharPrepartida(false);
+  const mp = mundo.modo === 'partida' ? modoPrejogo() : 'desligado';
+  if (fundo === 'abertura' && prejogo && prejogo.ativo) {
+    // o "Pré-jogo da partida" mudou com a tela aberta (≡ → Modo de jogo): o escolhido agora
+    if (mp === 'desligado') { prejogo.cancelar(); fimDoPrejogo(); pedirTelaCheia(); }
+    else if (mp !== prejogo.api.modo) { prejogo.cancelar(); comecarPrejogo(mp, false); pedirTelaCheia(); }
+    else prejogo.comecar();
+  } else if (mp !== 'desligado' && comecarPrejogo(mp, false)) pedirTelaCheia();
+  else {
+    entrada?.bloquear?.(false);
+    laco.ultimo = null; ultimoQuadro = null; corteCamera = true;
+    adapt.inicio = performance.now(); adapt.n = 0; adapt.soma = 0;
+    pedirTelaCheia();
+    eventosIniciais();
+  }
+  // o controle pode não contar como gesto (o som fica sem contexto): o aviso discreto
+  if (entrada?.ultimoMeio === 'pad' && som && som.estado !== 'rodando') setTimeout(() => { if (som && som.estado !== 'rodando') hud.evento('somGesto'); }, 300);
+}
+/** As ações da tela (o que é da página). */
+function acaoPrepartida(id) {
+  switch (id) {
+    case 'jogar': jogarPrepartida(); break;
+    case 'personalizar':
+      ppPersonalizar = true;
+      if (!abrirEditor()) ppPersonalizar = false;
+      // (o editor por cima: a tela some atrás dele, só o véu — revisão V5; o editor que ainda baixa cobre no quadro em que abrir)
+      pp?.cobrir(!!editor?.aberto);
+      break;
+    // (o "Voltar" da pausa devolve o foco ao ≡)
+    case 'opcoes': ppVolta = 'menu'; abrirMenuDaTela(() => hud.abrirMenu(true)); break;
+    // TM: "Simular partida" (2º toque) = o "Voltar ao Total Match" da pausa: o motor 3D simula do tick 0 (simularResto) e manda
+    // o resultado
+    case 'simular': fecharPrepartida(true); voltarAoTM(); break;
+    case 'canto':
+      if (mundo.online) { acaoPrepartidaOnline('sair'); break; }
+      // os Pênaltis 3D do TM antes do Bater: volta SEM resultado ('tm3d:sair' → a escolha dos times; o X do TM nos Pênaltis diz
+      // "nada é simulado") — o voltarAoTM() simulava a disputa inteira e o TM mostrava o vencedor dela (revisão A2)
+      if (mundo.disputa) { fecharPrepartida(true); sairTM(); break; }
+      fecharPrepartida(true); voltarAoTM();
+      break;
+    case 'jogadores': abrirMenuDaTela(() => paginaLivre().abrirJogadores()); break;
+    case 'camera': abrirMenuDaTela(() => comando('livre-camera')); break;
+    case 'pronto': acaoPrepartidaOnline('pronto'); break;
+    default: break;
+  }
+}
+/**
+ * A pausa por cima da tela (o ≡, os submenus do Livre): a entrada volta a valer enquanto ela está aberta (as setas e o Esc da
+ * pausa vêm da entrada.js: MENU_TECLA) — nada chega ao jogo (o laço segue no tick 0); a volta à tela bloqueia de novo.
+ */
+function abrirMenuDaTela(abrir) {
+  entrada?.soltarTudo();
+  entrada?.bloquear?.(false);
+  ppOcupado = true;
+  // (a pausa sozinha sobre o 3D e o véu, como sobre o jogo: a tela some atrás dela — revisão V6)
+  pp?.cobrir(true);
+  abrir();
+}
+/**
+ * Online (§4.5 do contrato): "Pronto" é final — o botão vira "Aguardando {nome}…" e os dois saem juntos para o pré-jogo quando
+ * o outro também está pronto (ou já passou da tela: a reserva sem a tela, um aparelho que entrou depois). "Sair da partida"
+ * (o [<] armado) = o Sair da pausa de hoje: conta como derrota, o outro recebe o W.O.
+ */
+// (ppOnline mora no topo do arquivo, com as outras da tela)
+const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0);
+function acaoPrepartidaOnline(id) {
+  if (!PAG_ONLINE || !pp?.aberta) return;
+  if (id === 'pronto') {
+    if (ppOnline.pronto || PAG_ONLINE.encerrado) return;
+    ppOnline = { pronto: true, desde: performance.now() };
+    pp.aguardando(PAG_ONLINE.nomeOutro);
+    // (o toque no Pronto é o gesto: a tela cheia deitada do Android já aqui — a saída depois não é um gesto)
+    pedirTelaCheia();
+    // o outro sabe já (não espera o próximo quadro) e, se ele já está pronto, os dois saem agora
+    PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+    saidaOnlineTela();
+  } else if (id === 'sair') {
+    if (PAG_ONLINE.encerrado) return;
+    PAG_ONLINE.sair();
+    pp.aviso('Você saiu da partida.', 4000);
+    setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400);
+  }
+}
+/** A pausa, a Ajuda ou o editor fecharam por cima da tela: o Livre mudado vale, os dados se refazem e o foco volta. */
+function voltarParaTela() {
+  if (!pp?.aberta || hud.menuAberto || hud.ajudaAberta || editor?.aberto) return;
+  ppOcupado = false;
+  // (a tela de volta ANTES do foco: o ≡ escondido não recebe foco)
+  pp.cobrir(false);
+  // (a entrada bloqueada de novo e o fundo inert de novo: a pausa, ao fechar, tira o inert dos botões de toque e das cenas)
+  entrada?.soltarTudo();
+  entrada?.bloquear?.(true);
+  marcarInertTela(true);
+  const livre = aplicarLivreAntes();
+  if (!livre) pp.dados(dadosPrepartida());
+  pp.focar(ppVolta ?? null);
+  ppVolta = null;
+}
+/**
+ * Um quadro com a tela aberta: o laço fica no tick 0 (nenhum passo, como no pré-jogo), a entrada só navega (o controle pelas
+ * ações menu-*), o 3D atrás dela a 30 qps (o fundo da abertura pelo diretor do pré-jogo, ou o jogo parado), em pé ou com a aba
+ * escondida nada se desenha.
+ */
+function quadroPrepartida(dtReal, agoraMs, desenhar) {
+  entrada.ler(yawEntrada(), agoraMs);
+  entrada.definirMenu?.(true);
+  for (const a of entrada.consumirAcoes()) tratarAcao(a);
+  laco.ultimo = agoraMs;
+  if (hud.menuAberto) { if (entrada) hud.definirEntrada(entrada.ultimoMeio); atualizarPausa(false); }
+  const ocup = hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
+  if (ppOcupado && !ocup) voltarParaTela();
+  ppOcupado = ocup;
+  if (!pp?.aberta) return;
+  // (a tela atrás da pausa, da Ajuda ou do editor: só o véu — revisões V5/V6; a cada quadro também cobre o editor que chegou depois)
+  pp.cobrir(ocup);
+  if (mundo.online && PAG_ONLINE) { quadroOnlineTela(agoraMs); if (!pp.aberta) return; }
+  pp.atualizar(agoraMs);
+  const emPe = retratoBloqueado();
+  ppDt += Math.min(0.1, dtReal);
+  if (emPe || document.hidden) {
+    if (prejogo && prejogo.ativo) prejogo.quadro(0, agoraMs, false, true);
+    return;
+  }
+  if (agoraMs - ppDesenho < 1000 / PP_QPS - 4) return;
+  ppDesenho = agoraMs;
+  ppDesenhos++;
+  const dt = Math.min(0.1, ppDt);
+  ppDt = 0;
+  if (prejogo && prejogo.ativo) prejogo.quadro(dt, agoraMs, desenhar, false);
+  else desenharQuadro(dt, agoraMs, desenhar);
+  medirQps(dtReal, agoraMs);
+}
+const PP_QPS = 30;
+/**
+ * Online com a tela aberta (sem passos): os avisos de verdade (o outro saiu, a ligação caiu — nada de "Aguardando" enquanto os
+ * pacotes chegam), o pacote com a MINHA fase e a saída conjunta: eu pronto e o outro pronto (ou além da tela).
+ */
+function quadroOnlineTela(agoraMs) {
+  PAG_ONLINE.quadro(agoraMs, { antes: true });
+  PAG_ONLINE.enviarPacote(agoraMs, bitsTelaOnline());
+  if (!saidaOnlineTela() && ppOnline.pronto && !PAG_ONLINE.encerrado && agoraMs - ppOnline.desde >= 60000) pp.destacarCanto(true);
+}
+/**
+ * A saída conjunta: eu pronto e o outro pronto (ou além da tela) → o "Jogar". Chamada no clique do Pronto, na mensagem que traz
+ * a fase nova do outro (`ao.fase`) e a cada quadro (a rede de segurança): com o 3D atrás da tela e duas abas, o quadro leva ~1 s no
+ * Chromium sem GPU, e esperar por ele dava 0,9 s de um lado ao outro (no evento, 12–19 ms).
+ */
+function saidaOnlineTela() {
+  if (!pp?.aberta || !ppOnline.pronto || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
+  // (o pacote com o meu Pronto sai antes: o outro sai pela mesma regra)
+  PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+  jogarPrepartida();
+  return true;
+}
+/** A minha fase no online (0 tela, 1 pronto, 2 pré-jogo, 3 jogo) — a API dos testes. */
+const faseOnlineLocal = () => pp?.aberta ? (ppOnline.pronto ? 1 : 0) : prejogo?.ativo ? 2 : 3;
 
 // ------------------------------------------------------------------ Total Match (?tm)
 /** O resultado do contrato (§2) pela súmula da partida de agora (sumula.js). */
@@ -3313,10 +3665,17 @@ function comando(c, v) {
   comandosVistos.push([c, v ?? null]);
   if (comandosVistos.length > 400) comandosVistos.splice(0, 200);
   if (comandosSecos?.has(c)) return;
-  // Modo Livre: o submenu Jogadores e os recomeços (livre-pagina.js)
+  // Modo Livre: o submenu Jogadores e os recomeços (livre-pagina.js); com a tela antes do jogo, o Voltar dos submenus volta à
+  // tela e o Jogar de dentro do submenu Jogadores começa (item 64)
+  if (pp?.aberta && (c === 'livre-voltar' || c === 'livre-jogar')) {
+    hud.fecharMenu();
+    ppOcupado = false;
+    if (c === 'livre-jogar') jogarPrepartida(); else { ppVolta = null; voltarParaTela(); }
+    return;
+  }
   if (c.startsWith('livre-')) { PAG_LIVRE?.comando(c, v); return; }
   switch (c) {
-    case 'continuar': hud.fecharMenu(); break;
+    case 'continuar': hud.fecharMenu(); if (pp?.aberta) voltarParaTela(); break;
     case 'simular-resto': hud.fecharMenu(); simularResto(); break;
     case 'voltar-tm': hud.fecharMenu(); voltarAoTM(); break;
     case 'recomecar': case 'maquina': case 'marcador':
@@ -3380,14 +3739,17 @@ function comando(c, v) {
       // disputa de pênaltis: outra moeda a cada "Jogar de novo" (com ?semente, a seguinte; no meio, a mesma disputa do
       // começo); sem ?semente, outra semente sorteada (sementeDisputa)
       if (mundo.disputa) {
-        if (mundo.disputa.estado === 'fim') rodadaDisputa++;
-        trocarMundo(novoMundo());
-        hud.evento('reinicioDisputa');
+        const fimD = mundo.disputa.estado === 'fim';
+        if (fimD) rodadaDisputa++;
+        // ("Jogar de novo": a tela antes do jogo de novo, como o FC; "Reiniciar disputa" no meio, não)
+        trocarMundo(novoMundo(), { prepartida: fimD });
+        if (!pp?.aberta) hud.evento('reinicioDisputa');
         break;
       }
-      // "Jogar de novo" (fim de jogo): o pré-jogo da preferência; "Reiniciar partida" no meio: só a escalação
-      trocarMundo(novoMundo(), { prejogo: mundo.partida?.estado === 'fim' ? 'preferencia' : 'escalacao' });
-      if (!prejogo?.ativo) hud.evento('reinicio');
+      // "Jogar de novo" (fim de jogo): a tela antes do jogo e o pré-jogo da preferência; "Reiniciar partida" no meio: só a escalação
+      { const fimP = mundo.partida?.estado === 'fim';
+        trocarMundo(novoMundo(), { prejogo: fimP ? 'preferencia' : 'escalacao', prepartida: fimP }); }
+      if (!prejogo?.ativo && !pp?.aberta) hud.evento('reinicio');
       break;
     // os submenus da pausa (item 58): Modo de jogo (no TM, Cenas da partida), Opções e Estatísticas; o Voltar de cada um volta
     // ao 1º nível com o foco no item que o abriu
@@ -3521,6 +3883,8 @@ async function iniciar() {
     if (ID_TM) sairTM();
     return;
   }
+  // a tela antes do jogo (item 64): o código, o CSS e a fonte pedidos já, em paralelo com o 3D (só com a tela ligada)
+  if (prepartidaLigada()) carregarPrepartida().catch(() => {});
   // online: a sessão e o transporte ANTES do 'tm3d:pronto' (o TM entrega a porta em resposta a ele)
   if (ONLINE && !PAG_ONLINE) {
     const on = ONLINE_TM ? PEDIDO_TM.online : null;
@@ -3533,6 +3897,8 @@ async function iniciar() {
         menuSair: () => { hud.fecharMenu(); PAG_ONLINE.sair(); setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400); },
         wo: (vencedor, motivo) => { if (TM) fimTM(resultadoAtualTM(), { online: { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 } }); },
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
+        // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
+        fase: () => saidaOnlineTela(),
       },
     });
   }
@@ -3635,7 +4001,10 @@ async function iniciar() {
   vaoCenas = criarVaoPlacas({ campo, cena3d });
   if (MOD_CEN && !cartao3d) cartao3d = MOD_CEN.c3.criarCartao3D(cena3d.cena);
   marcarCenas();
-  if (!comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
+  // a tela antes do jogo (item 64) ANTES do pré-jogo: ela segura o tick 0 e o "Jogar partida" começa o pré-jogo (ou o apito). A
+  // reserva: sem o módulo até PREPARTIDA.reservaMs (1,5 s), a abertura de texto de hoje
+  const comTela = prepartidaLigada() && await esperarPrepartida(1500) && abrirPrepartida();
+  if (!comTela && !comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
   hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
@@ -3650,7 +4019,8 @@ async function iniciar() {
   if (TM) avisarTM('tm3d:pronto');
   // Modo Livre: a pausa aberta no submenu Jogadores (o "Jogar" começa)
   rotuloModoLivre();
-  if (mundo.livre && !PRINTS && !DEMO_ON) paginaLivre().abrirJogadores();
+  // (com a tela antes do jogo, as abas Jogadores e Câmera fazem o papel da pausa aberta)
+  if (mundo.livre && !PRINTS && !DEMO_ON && !pp?.aberta) paginaLivre().abrirJogadores();
   const aoQuadro = t => {
     requestAnimationFrame(aoQuadro);
     if (!relogioManual) quadro(t);
@@ -3667,8 +4037,13 @@ function timesDoMundo(m) {
 }
 
 function trocarMundo(m, opc = {}) {
+  // opc.antesDoJogo (item 64: o Personalizar e o Livre da tela antes do jogo): o mundo do tick 0 recriado com a escalação nova —
+  // a tela e o diretor do pré-jogo FICAM (só refazem os times: o cortejo, as escalações e os treinadores; o lado de fora não)
+  const antes = !!opc.antesDoJogo && !!pp?.aberta;
+  // a tela antes do jogo de outro mundo (troca de modo, Jogar de novo, a API) sai sem começar nada
+  if (pp?.aberta && !antes) fecharPrepartida(true);
   // um pré-jogo tocando (mundo novo pela API, troca de modo): sai sem apitar
-  if (prejogo && prejogo.ativo) { prejogo.cancelar(); entrada?.bloquear?.(false); }
+  if (prejogo && prejogo.ativo && !antes) { prejogo.cancelar(); entrada?.bloquear?.(false); }
   mundo = m;
   contPassos = 0; alfa = 0;
   laco.acum = 0; laco.ultimo = null;
@@ -3717,6 +4092,13 @@ function trocarMundo(m, opc = {}) {
   hud.faixa(null);
   PAG_LIVRE?.ligarCamera(!!mundo.livre);
   if (mundo.livre) PAG_LIVRE?.marcar();
+  if (antes) {
+    if (prejogo && prejogo.ativo) prejogo.refazerTimes();
+    pp.dados(dadosPrepartida());
+    return hashMundo(mundo);
+  }
+  // a tela antes do jogo (Jogar de novo, a troca de modo; opc.prepartida): ela abre e o pré-jogo e o apito ficam para o Jogar
+  if (opc.prepartida && MOD_PP && prepartidaLigada(mundo) && abrirPrepartida()) return hashMundo(mundo);
   // pré-jogo (Jogar de novo, Reiniciar partida, troca para a partida) ou o apito do início já: o 'saida' que criarPartida deixou
   let mp = 'desligado';
   if (opc.prejogo && mundo.modo === 'partida') { mp = modoPrejogo(); if (mp !== 'desligado' && opc.prejogo === 'escalacao') mp = 'escalacao'; }
@@ -3819,6 +4201,9 @@ const api = {
     return { lado: s.lado, n: s.n, D: s.D, rtt: s.rtt, paradas: s.paradas, dessinc: s.dessinc, hashes: [...s.hashesLoc.entries()],
       placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0], estado: mundo.partida?.estado ?? null, tick: mundo.tick,
       conexao: MOD_ON.estadoConexao(s, performance.now()).estado, pausado: PAG_ONLINE.pausado, pausasRestam: PAG_ONLINE.pausasRestam,
+      // (item 64: as fases — 0 tela, 1 pronto, 2 pré-jogo, 3 jogo; -1 = nenhum pacote do outro — e o abandono)
+      fase: faseOnlineLocal(), faseRemota: PAG_ONLINE.faseRemota, encerrado: PAG_ONLINE.encerrado,
+      aviso: (() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; })(),
       pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
   },
   /** Carrega o Livre (livre.js + livre-pagina.js) antes de um reiniciar({modo: 'livre'}) — o trocarModo já carrega. */
@@ -3832,7 +4217,7 @@ const api = {
   sobDemanda: {
     ja() { if (!SOB.replay.ok || !SOB.editor.ok || !SOB.cenas.ok || !SOB.cadeiras.ok || !SOB.pausa.ok) carregarSobDemanda().catch(() => {}); return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok && SOB.pausa.ok; },
     get carregado() { return SOB.replay.ok && SOB.editor.ok && SOB.cenas.ok && SOB.cadeiras.ok && SOB.pausa.ok; },
-    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok, cadeiras: SOB.cadeiras.ok, pausa: SOB.pausa.ok }; },
+    get estado() { return { replay: SOB.replay.ok, editor: SOB.editor.ok, cenas: SOB.cenas.ok, cadeiras: SOB.cadeiras.ok, pausa: SOB.pausa.ok, prepartida: !!MOD_PP }; },
   },
   /** A tela "Editar time" (aberto, abrir, voltar = PRONTO, esc, aba, rascunho). */
   editor: {
@@ -4109,6 +4494,34 @@ const api = {
     const a = prejogo.api;
     if (!a.iniciar) a.iniciar = (modo, opc = {}) => comecarPrejogo(modo, !!opc.abertura);
     return a;
+  },
+  /**
+   * A tela antes do jogo (item 64; testes): ligada (pelas regras da página), carregada, aberta, estado (o modo, o fundo, o regime,
+   * as abas, o foco, o time mostrado, a vista, o armado), dados() (os da tela agora), layout() (as contas da tela aberta),
+   * visao() (a Visão tática à vista) e as ações: jogar(), personalizar(), adversario(t), vista(), simular(), abrir(), carregar().
+   */
+  prepartida: {
+    get ligada() { return prepartidaLigada(); },
+    get carregada() { return !!MOD_PP; },
+    get aberta() { return !!pp?.aberta; },
+    get estado() { return pp ? { ...pp.estado, fundo: ppFundo } : null; },
+    dados: () => (PP_PURO ? dadosPrepartida() : null),
+    layout: () => pp?.layoutAtual ?? null,
+    visao: () => pp?.visaoAtual ?? null,
+    jogar() { if (pp?.aberta) jogarPrepartida(); },
+    personalizar() { if (pp?.aberta) acaoPrepartida('personalizar'); },
+    adversario: t => pp?.trocarTime(t),
+    vista: () => pp?.proximaVista(),
+    simular() { if (pp?.aberta) acaoPrepartida('simular'); },
+    abrir: () => abrirPrepartida(),
+    carregar: () => carregarPrepartida().then(() => true),
+    get timesAntes() { return timesAntes ? structuredClone(timesAntes) : null; },
+    /** Quantos desenhos do 3D atrás da tela até agora (a régua dos 30 qps). */
+    get desenhos() { return ppDesenhos; },
+    /** Date.now() de quando a tela fechou pela última vez (a saída conjunta do online: duas abas, o mesmo relógio). */
+    get fechadaEm() { return ppFechadaEm; },
+    /** O PRONTO do editor aberto pelo Personalizar, com a edição `ed` (escalacao.js edicaoDe) — o mesmo caminho do aoPronto. */
+    escalar(ed) { if (!pp?.aberta) return false; ppPersonalizar = true; aoPronto(ed ?? null); return true; },
   },
   /** Câmera livre para prints de conferência ({de:[x,y,z], para:[x,y,z], fov?}) ou null. */
   cameraLivre(l) { cam.definirLivre(l); },

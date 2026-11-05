@@ -117,10 +117,17 @@ primeiro**. Cada etapa só termina com as metas medidas por teste automático.
   Troca no intervalo: sem cena, a faixa na saída do 2º tempo. Pausa → "Modo de jogo" → "Substituição: ligada / só a
   faixa" (salvo); `?substituicao=0|1` força.
 
-## Pré-jogo (pedido de 11/10)
+## Tela antes do jogo (item 64) e pré-jogo (pedido de 11/10)
 
-Antes da saída de bola (a partida fica parada no tick 0): a abertura "Toque para começar" (libera o som), o estádio de
-fora (drone sobre o bairro, a fachada com a torcida chegando), o estádio cheio por dentro, o túnel, a entrada dos times
+Antes de tudo, em todo jogo (partida, TM, Livre, Pênaltis, online; nos treinos não), a TELA ANTES DO JOGO no nível da
+pré-partida do EA FC 24 com a cara do TM: os dois times e a hora, estádio · data · árbitro · duração, o campinho com as 11
+fichas, o selo da tática e as abas Jogar partida · Visão tática · Personalizar (+ Simular partida no TM). O "Jogar partida"
+libera o som e começa o pré-jogo. `?prepartida=1|0` força; desligada com webdriver, `?prints=1` e `?demo=1`. Contrato
+"Tela antes do jogo (item 64)"; pesquisa em `PESQUISA-ESTADIO.md` §7.5.
+
+Antes da saída de bola (a partida fica parada no tick 0): a abertura "Toque para começar" (libera o som; com a tela antes
+do jogo, ela fica calada atrás dela e o gesto é o "Jogar partida"), o estádio de fora (drone sobre o bairro, a fachada
+com a torcida chegando), o estádio cheio por dentro, o túnel, a entrada dos times
 com os árbitros, a fila se formando no meio-campo, a câmera passando pela fila de cada time, cortes da organizada, da
 arquibancada de lá, do setor visitante e do estádio, e as escalações: cada time grande no campinho (número, nome e posição
 dos 11 e a formação) por ~10 s, o primeiro sai e o outro entra, com o mesmo fundo. Toque/clique, Enter ou A: próxima

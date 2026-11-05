@@ -30,6 +30,10 @@
 //      da mesma conta do `jogador` (o travado melhor em campo: as duas iguais); o resto do resultado igual campo a campo ao
 //      da versão de antes (--base <pasta js da base>: a súmula da base lida nos mesmos passos; sem ele, ao montado de novo).
 //
+//  P9  (item 64: o Personalizar da tela antes do jogo) a escalação mudada ANTES do jogo (a edição da tela vira a escalação de
+//      criarPartida: prepartida.js edicaoParaTimes) chega ao resultado: o reserva que começou jogou (toques na súmula, entre os
+//      candidatos do melhor em campo) e o titular tirado não (nenhum toque, nunca em gols, cartões ou melhor), sem substituição.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -467,5 +471,38 @@ if (typeof SU.melhorEmCampo === 'function') {
       !!r.melhor && !!r.jogador && r.melhor.tmId === r.jogador.tmId && r.melhor.nota === r.jogador.nota);
   }
 } else reg('P8 o melhor em campo no resultado (o pós-jogo)', 'sumula.js sem melhorEmCampo (versão de antes)', 'existe', false);
+
+// ------------------------------------------------------------------ P9 a escalação mudada antes do jogo (item 64)
+{
+  const PP = await imp('prepartida.js').catch(() => null);
+  const ESC = await imp('escalacao.js');
+  if (!PP) reg('P9 a escalação da tela antes do jogo no resultado do TM', 'js/prepartida.js não existe (versão de antes)', 'existe', false);
+  else {
+    registrar(TA);
+    const m0 = partidaDo(TA, { semente: 41 });
+    const h = m0.timeHumano ?? 0, t0 = m0.times[h];
+    // o titular tirado: o centroavante (ou o último de linha); o reserva: o 1º do banco que não é goleiro
+    const vagaTit = Object.keys(t0.vagas).find(v => v === 'ATA' || v === 'ATE') ?? Object.keys(t0.vagas).at(-1);
+    const tit = t0.vagas[vagaTit];
+    const banco = E.ELENCOS[t0.elenco].jogadores.map(j => j.id).filter(id => !Object.values(t0.vagas).includes(id) && E.fichaDe(id)?.pos !== 'GOL');
+    const res0 = banco[0];
+    let r = ESC.rascunhoDe(structuredClone(t0), null, h);
+    r = ESC.tocar(r, tit).rasc; r = ESC.tocar(r, res0).rasc;
+    const ed = ESC.edicaoDe(r);
+    const times = { ...TA.times, [h]: PP.edicaoParaTimes(ed) };
+    const m = P.criarPartida({ semente: 41, minutosPorTempo: Math.max(1, MIN), elencos: TT.ELENCOS_TM, times, humano: TA.humano, trava: TA.trava });
+    const s = SU.criarSumula();
+    let n = 0;
+    while (m.partida.estado !== 'fim' && n < 200000) { const ev = P.passoPartida(m, P.entradaDemoPartida(m)); SU.sumulaPasso(s, m, ev); n++; }
+    const rr = SU.resultadoTM(s, m, TA.mapa);
+    const tmTit = TA.mapa[tit]?.tmId, tmRes = TA.mapa[res0]?.tmId;
+    const citaTit = [...rr.gols.flatMap(g => [g.tmId, g.assist?.tmId]), ...rr.cartoes.map(c => c.tmId), rr.melhor?.tmId].includes(tmTit);
+    const toquesRes = s.jog[res0]?.toques ?? 0, toquesTit = s.jog[tit]?.toques ?? 0;
+    const naoSub = m.times[h].subs.feitas === 0 || !m.times[h].saiu.includes(tit);
+    reg('P9 a escalação mudada antes do jogo: o reserva que começou jogou e o titular tirado não (sem substituição)',
+      `${E.fichaDe(res0)?.camisa ?? res0} no lugar de ${E.fichaDe(tit)?.camisa ?? tit} (${vagaTit}): toques ${toquesRes} × ${toquesTit}; o titular no resultado ${citaTit}; saiu [${m.times[h].saiu}]; ${tmRes ? 'no mapa' : 'fora do mapa'}`,
+      'toques > 0 × 0; false; o titular nunca saiu', toquesRes > 0 && toquesTit === 0 && !citaTit && naoSub && !!tmRes);
+  }
+}
 
 fim();

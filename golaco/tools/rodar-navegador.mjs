@@ -20,6 +20,8 @@ const LISTA = [
   ['Editar time (mouse, teclado e toque; Node = Chromium; nada encosta em 6 telas)', 'teste-editor-tela.mjs', { deploy: true }],
   ['estádio (torcida, rede que balança num gol de verdade, efeito de gol e som)', 'teste-estadio.mjs'],
   ['pré-jogo (cenas, cortejo, escalações no campinho, pular, som, hash igual depois)', 'teste-prejogo.mjs'],
+  // Item 64 (dono, 23/10: "quero que fique NESSE NÍVEL" — a pré-partida do EA FC com a cara do TM)
+  ['tela antes do jogo (item 64: liga/desliga, simulação parada e hash, sem rolar e nada encosta em 10 telas, letras, alvos, teclado, controle, toque, som, Personalizar pela escalação, Livre, Pênaltis, TM e o Rumo ao Estrelato, voltas, contraste, download, reserva)', 'teste-prepartida-tela.mjs', { deploy: true }],
   ['som da torcida durante o jogo (leito, apito, cantos, iPhone, interrupção, limitador, hash)', 'teste-som-jogo.mjs'],
   ['rede véu de noiva na tela (forma, branca de dia e de noite, mexe na batida; PC e celular)', 'teste-rede-tela.mjs'],
   ['tela limpa (HUD mínimo no celular e no PC, linha de impedimento só no apito)', 'teste-hud-minimo.mjs', { deploy: true }],
