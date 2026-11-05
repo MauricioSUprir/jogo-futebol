@@ -499,8 +499,12 @@ if (faz('H')) {
       const tm = await pg.evaluate(id => window.__golaco.tm?.mapa?.[id]?.tmId ?? null, gol.autor);
       const esperado = tm ? urlFoto(ORIGEM, 'home', tm) : null;
       const lado = a?.fotoCaixa ? Math.round(a.fotoCaixa.x1 - a.fotoCaixa.x0) : 0;
-      meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 88–96 px; número ≥ 22 px, nome ≥ 14 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
-        'a do autor; 88–96; ≥ 22; ≥ 14', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 88 && lado <= 96 && a.letraNum >= 22 && a.letraNome >= 14);
+      meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 88–96 px; nome ≥ 18 px, número ≥ 14 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
+        'a do autor; 88–96; ≥ 18; ≥ 14', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 88 && lado <= 96 && a.letraNome >= 18 && a.letraNum >= 14);
+      // (revisão V3) o nome é a linha principal (o número vai na pílula, junto da sigla) e a coluna fica no meio da altura da foto
+      const meioT = a?.textoCaixa ? (a.textoCaixa.y0 + a.textoCaixa.y1) / 2 : NaN, meioF = a?.fotoCaixa ? (a.fotoCaixa.y0 + a.fotoCaixa.y1) / 2 : NaN;
+      meta('H11 celular 844×390 (com foto): o nome é a linha principal (letra maior que a do número); a coluna centrada na altura da foto (± 3 px)', a?.visivel ? `nome ${a.letraNome} px × número ${a.letraNum} px; meio da coluna − meio da foto ${f2(meioT - meioF)} px` : 'nenhum cartão',
+        'nome > número; ± 3', !!a?.visivel && a.letraNome > a.letraNum && Math.abs(meioT - meioF) <= 3);
       const e = encostos(r, c);
       meta('H2 celular 844×390 com o entalhe (?tm pro): sem encostar no placar nem no "Pular", na área segura; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
       const fi = await fichaNaPagina(pg, gol.autor);
@@ -526,8 +530,8 @@ if (faz('H')) {
       const r = await acompanhar(pg, gol);
       const c = avaliarCartao(r);
       const a = c.a;
-      meta('H4 celular 568×320, ?tm PÚBLICO (com fotos no pedido): sem foto, 0 pedidos às fotos, número ≥ 22 px, nome ≥ 14 px', a ? `foto ${a.foto} (caixa ${!!a.fotoCaixa}); pedidos às fotos ${P.fotos.pedidos}; número ${a.letraNum} px, nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão; pedidos às fotos ${P.fotos.pedidos}`,
-        'sem; 0; ≥ 22; ≥ 14', !!a && !a.foto && !a.fotoCaixa && P.fotos.pedidos === 0 && a.letraNum >= 22 && a.letraNome >= 14);
+      meta('H4 celular 568×320, ?tm PÚBLICO (com fotos no pedido): sem foto, 0 pedidos às fotos, nome ≥ 15 px (> o número), número ≥ 14 px', a ? `foto ${a.foto} (caixa ${!!a.fotoCaixa}); pedidos às fotos ${P.fotos.pedidos}; nome ${a.letraNome} px "${a.nome}", número ${a.letraNum} px` : `nenhum cartão; pedidos às fotos ${P.fotos.pedidos}`,
+        'sem; 0; ≥ 15 e > número; ≥ 14', !!a && !a.foto && !a.fotoCaixa && P.fotos.pedidos === 0 && a.letraNome >= 15 && a.letraNome > a.letraNum && a.letraNum >= 14);
       const e = encostos(r, c);
       meta('H2 celular 568×320: sem encostar no placar nem no "Pular"; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
       const fi = await fichaNaPagina(pg, gol.autor);
@@ -546,6 +550,7 @@ if (faz('H')) {
       const q1 = r1.q.filter(x => !x.semCena), curta = q1.length > 0 && q1.every(x => x.cu);
       meta('H5 a cena curta (o gol da IA contra a pessoa): aparece, ≥ 2,2 s, some antes do replay', c1.n ? `entra ${f2(c1.entra)} s, fica ${f2(c1.fica)} s; folga até o replay ${f2(c1.folga)} s; no replay ${c1.noReplay}` : 'nenhum cartão',
         '≥ 2,2 s; folga > 0; 0', curta && c1.n > 0 && c1.fica >= 2.2 && c1.folga != null && c1.folga > 0 && c1.noReplay === 0 && c1.depois === 0);
+      meta('H11 PC 1280×720 (sem foto): o nome é a linha principal (letra maior que a do número)', c1.a ? `nome ${c1.a.letraNome} px × número ${c1.a.letraNum} px` : 'nenhum cartão', 'nome > número', !!c1.a && c1.a.letraNome > c1.a.letraNum);
       const g0 = await golRoteirizado(pg, { semente: 5, time: 0 });
       const ate = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !(g.comemoracao.estado.t >= 2.2 && g.comemoracao.cartaoTela?.visivel)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { t: g.comemoracao.estado?.t ?? null, vis: !!g.comemoracao.cartaoTela?.visivel }; });
       await pg.keyboard.down('KeyK');

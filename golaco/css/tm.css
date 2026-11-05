@@ -278,7 +278,8 @@ html.tm .autor-gol {
 html.tm .ag-foto { border-radius: 8px; }
 html.tm .ag-time { border-radius: 7px; }
 html.tm .ag-sigla { font-weight: 800; letter-spacing: 0.04em; }
-html.tm .ag-num { color: var(--tm-texto); font-weight: 800; }
+html.tm .ag-num { font-weight: 800; }
+html.tm .ag-nome { color: var(--tm-texto); }
 html.tm .fs-sigla { border-radius: 7px; }
 
 /* ------------------------------------------------------------------ celular em pé: "Gire o celular" com a logo do TM */

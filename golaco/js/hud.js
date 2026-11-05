@@ -119,7 +119,7 @@ export function criarHud(opc) {
   const ag = el.autorGol ? {
     sr: el.autorGol.querySelector('.ag-sr'), foto: el.autorGol.querySelector('.ag-foto'), img: el.autorGol.querySelector('.ag-foto img'),
     use: el.autorGol.querySelector('.ag-escudo use'), sigla: el.autorGol.querySelector('.ag-sigla'), num: el.autorGol.querySelector('.ag-num'),
-    nome: el.autorGol.querySelector('.ag-nome'),
+    nome: el.autorGol.querySelector('.ag-nome'), texto: el.autorGol.querySelector('.ag-texto'),
   } : null;
   // a largura que sobra à direita do placar (refeita no resize enquanto o cartão está na tela)
   const medirAutorGol = () => {
@@ -1434,7 +1434,7 @@ export function criarHud(opc) {
     },
     /** O cartão do autor começa a sair (a animação de 0,2 s; quem o tira é autorGol(null), pelo relógio da cena). */
     autorGolSai() { if (el.autorGol && !el.autorGol.hidden) el.autorGol.classList.add('saindo'); },
-    /** O cartão do autor na tela (testes): {visivel, saindo, foto, fotoSrc, num, nome (o visível), caixa, fotoCaixa, letras}. */
+    /** O cartão do autor na tela (testes): {visivel, saindo, foto, fotoSrc, num, nome, cortado, caixa, fotoCaixa, textoCaixa, letras}. */
     get autorGolEstado() {
       const e = el.autorGol;
       if (!e || !ag) return null;
@@ -1452,7 +1452,7 @@ export function criarHud(opc) {
       return {
         visivel: vis, saindo: e.classList.contains('saindo'), foto: fotoVis && ag.img.complete && ag.img.naturalWidth > 0,
         fotoSrc: ag.img.getAttribute('src'), num: ag.num.textContent, nome: nomeEl?.textContent ?? '', cortado: !!nomeEl && nomeEl.scrollWidth > nomeEl.clientWidth + 0.5,
-        caixa: vis ? cx(e) : null, fotoCaixa: fotoVis ? cx(ag.foto) : null,
+        caixa: vis ? cx(e) : null, fotoCaixa: fotoVis ? cx(ag.foto) : null, textoCaixa: vis ? cx(ag.texto) : null,
         letraNum: parseFloat(getComputedStyle(ag.num).fontSize), letraNome: nomeEl ? parseFloat(getComputedStyle(nomeEl).fontSize) : 0,
         sr: ag.sr.textContent,
       };
