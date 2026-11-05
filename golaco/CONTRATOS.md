@@ -4888,7 +4888,7 @@ cada lance do anel, comprimido, para vagas fixas — só lê o anel: o hash não
   treinadores, as tarjas, o toque = o próximo bloco, a festa do fim; E pureza; G custo), `teste-ponte-tm` P7/P8 (o `melhor`
   e o resto igual ao da base) e `teste-cenas-tela` seção F (navegador).
 
-## Tempo de jogo e dificuldade (item 33, #616; 05/11; contrato)
+## Tempo de jogo e dificuldade (item 33, #618; 05/11; contrato)
 
 Pedido do dono (17/10): "editar o TEMPO de jogo e a DIFICULDADE (na pausa/antes do jogo e vindo do TM pelo pedido)". Pesquisa em
 `PESQUISA-DIFICULDADE.md` (EA FC 24–27, eFootball, FC Mobile e a literatura de ajuste de dificuldade). **Com a duração e a

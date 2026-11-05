@@ -925,6 +925,21 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   quando a janela do homem fecha); as informativas contra o real no subconjunto COMPARÁVEL e pela MESMA medida da fonte (a
   foto aos 2 s contava o passe no ar como "sem dono": 8,7% no alcançável; a próxima posse em 4 s, como a Wyscout, dá 19,2%
   contra 22,8%); o processo filho do teste com a serialização 'advanced' (o JSON troca Infinity por null).
+- **Tempo de jogo e dificuldade (item 33)** (dono, 17/10: "editar o TEMPO de jogo e a DIFICULDADE"; contrato "Tempo de jogo e
+  dificuldade", `PESQUISA-DIFICULDADE.md` §11, PR #618): 3, 4, 5, 6, 8 ou 10 min por tempo (padrão 4; `partida.js mudarDuracao`,
+  puro, mantém o minuto e o segundo do relógio; recusa online, Livre, Pênaltis e fim) e Fácil/Normal/Difícil/Lenda SÓ contra a
+  pessoa (`tatica.js nivelContra`; `config.js DIFICULDADE`: vontade do bote, engajamento, encurtar, contenção, contrapressão,
+  leitura do passe e vontade de chutar; no Fácil o erro do chute ×1,5; nada de atributo, física ou alcance). O Normal é
+  `m.dificuldade` AUSENTE, fora do hash: o jogo de hoje bit a bit. Pausa → "Modo de jogo" (no TM "Partida e cenas") com a linha
+  ‹ Duração › ‹ Dificuldade › (no fim do jogo muda a escolha da página: `main.js partidaViva`); tela antes do jogo "2 × 4 min |
+  Normal"; TM v377 com a Config "Duração em 3D", as Batalhas travadas (`ajustesFixos`, cadeado) e o online só com a duração do
+  anfitrião; a escolha mora na página (`js/ajustes-partida.js`, `golaco.prefs.v1`); o resultado ao TM leva a dificuldade mais
+  fácil em que a pessoa JOGOU um passo (`nivelDoPasso`). Testes: `teste-dificuldade` (CI; o `--completo` é a medida do dono, fora
+  do CI), `teste-partida` T, `teste-ponte-tm` P12, `teste-pausa-tela` P11, `teste-prepartida(-tela)`. Gols da IA contra os
+  roteiros 0,65 / 0,89 / 1,07 / 1,20 por partida; o Difícil e o Lenda quase empatam no placar (item 116, "Depende do dono" 22).
+  Lições: dificuldade se calibra pelo RESULTADO (gols, xG, saldo), não pelos substitutos — subir a vontade de chutar de longe
+  dava mais chutes e menos gols; meta de ponto calibrada nas sementes do CI reprova em outras sementes: a meta só reprova quando
+  a amostra PROVA (p5/p95).
 - **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
   pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
   `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas
