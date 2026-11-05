@@ -201,7 +201,7 @@ if (fr) {
   confere("Estrelato: controle travado no meu jogador", tr.trava != null && tr.controlado === tr.trava && tr.tmId === "rae-me", tr);
   if (!PUBLICA) await esperaFotos(fr);
   const fr2 = await fotosDoPedido(fr);
-  const fotoTrava = !PUBLICA ? await fr.evaluate(() => { const T = window.__golaco.tm; return T.fotos.de(T.trava); }) : null;
+  const fotoTrava = !PUBLICA ? await fr.evaluate(() => { const T = window.__golaco.tm; return T.fotos ? T.fotos.de(T.trava) : null; }) : null;
   confere("Estrelato: o meu jogador (rae-me) sem foto; " + (PUBLICA ? "nenhuma foto na pública" : "os outros com foto na pro, carregadas pelo 3D") + " (item 31)",
     fr2.raeFoto === false && (PUBLICA ? fr2.lados.every(l => l.total === 0) : fr2.lados[0].total + fr2.lados[1].total >= 9 && fr2.lados.every(l => l.ruins.length === 0) && !!fr2.fotos && fr2.fotos.prontas >= 9 && fr2.fotos.erros === 0 && fotoTrava && fotoTrava.url === null), { ...fr2, fotoTrava });
   const ecR = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
