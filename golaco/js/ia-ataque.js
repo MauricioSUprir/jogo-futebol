@@ -63,14 +63,10 @@ const _r = { x: 0, z: 0 }, _ref = { u: 0, w: 0 }, _c = { x: 0, z: 0, mag: 1, mod
 const UTIL_P = { ...IA_ATAQUE.utilidade, ...IA_PESSOA.utilidade };
 const CORR_P = { ...IA_ATAQUE.corridas, ...IA_PESSOA.corridas };
 // a dificuldade (item 33; config.js DIFICULDADE), só no time da IA contra a pessoa (tatica.js nivelContra): a utilidade do UTIL_P
-// com a do nível por cima (a vontade de chutar, a leitura da defesa no passe) e quantas vezes por segundo o condutor pensa
-// (IA_ATAQUE.condutor.avaliaTicks), juntadas uma vez na carga — o Normal não está em nenhuma (usa as de sempre)
-const UTIL_D = {}, AVALIA_D = {};
-for (const n of DIFICULDADE.niveis) {
-  const D = DIFICULDADE[n];
-  if (D.utilidade) UTIL_D[n] = { ...UTIL_P, ...D.utilidade };
-  if (D.avaliaTicks != null) AVALIA_D[n] = D.avaliaTicks;
-}
+// com a do nível por cima (a vontade de chutar, a leitura da defesa no passe), juntada uma vez na carga — o Normal não está nela
+// (usa a de sempre)
+const UTIL_D = {};
+for (const n of DIFICULDADE.niveis) if (DIFICULDADE[n].utilidade) UTIL_D[n] = { ...UTIL_P, ...DIFICULDADE[n].utilidade };
 /** A utilidade do condutor do time t: a da partida, a de contra a pessoa (UTIL_P) e, com a dificuldade, a do nível. */
 function utilDe(m, t) {
   if (!contraPessoa(m, t)) return IA_ATAQUE.utilidade;
@@ -789,9 +785,7 @@ export function condutorTatico(m, j) {
     if (!ocupado && m.tick - p.desde >= seg(PARTIDA.cobrancaIA[0] + 0.4)) decidir(m, j, A, ia, true);
     return { x: 0, z: 0, botoes: extra };
   }
-  // (a dificuldade, item 33: a cadência do condutor da IA contra a pessoa — DIFICULDADE.avaliaTicks)
-  const nvA = nivelContra(m, j.time), cad = nvA && AVALIA_D[nvA] ? AVALIA_D[nvA] : IA_ATAQUE.condutor.avaliaTicks;
-  if (!ocupado && (nova || ia.op === '' || (m.tick + (j.vagaIdx ?? 0)) % cad === 0)) decidir(m, j, A, ia, false);
+  if (!ocupado && (nova || ia.op === '' || (m.tick + (j.vagaIdx ?? 0)) % IA_ATAQUE.condutor.avaliaTicks === 0)) decidir(m, j, A, ia, false);
   if (ia.op === 'protege') return { x: 0, z: 0, botoes: extra | BOTAO.MOD };
   let mag = utilDe(m, j.time).magConduz, botoes = extra;
   if (ia.correr) botoes |= BOTAO.CORRER;

@@ -15,23 +15,30 @@
 //  D3 a opção muda só contra a pessoa: cada nível fora do Normal dá na demo o MESMO hash do Normal a cada 300 passos (2
 //     sementes × 2 tempos de 1 min) e, contra o roteiro, um hash DIFERENTE (4 roteiros × 1 semente); definirDificuldade(m,
 //     'lenda') no passo 1800: o hash igual até ali e diferente depois.
-//  D4 a ordem nos BOTES da IA por minuto de POSSE DA PESSOA (bola rolando com o time da pessoa): no ponto, Fácil ≤ 0,70× o
-//     Normal, Difícil ≥ 1,15×, Lenda ≥ 1,30×; Fácil < Normal e Normal < Lenda PROVADOS; os degraus vizinhos na ordem e sem
-//     provar o lado errado.
-//  D5 a ordem nos CHUTES da IA por partida: Fácil ≤ 0,75×, Difícil ≥ 1,10× (≥ 1,15× no --completo), Lenda ≥ 1,25×; Fácil <
-//     Normal e Normal < Lenda PROVADOS; os vizinhos na ordem e sem provar o lado errado.
-//  D6 o inverso na pessoa: os chutes do time da pessoa, Fácil > Lenda PROVADO; os vizinhos sem provar o lado errado.
-//  D7 (só --completo: 16 sementes × 4 roteiros = 64 partidas por nível; antes do merge) TODOS os degraus vizinhos PROVADOS nos
-//     botes (D4) e nos chutes da IA (D5).
-//  D8 guardas: as faltas da IA no Lenda ≤ 1,8× as do Normal (reprova quando PROVA acima); informativos por nível: pênaltis da
-//     IA, gols IA × pessoa, posse da IA e o vai e volta do condutor da IA (a definição do lib/corrida-medidas.mjs: a direção
+//  D4 a ordem nos BOTES da IA por minuto de POSSE DA PESSOA (bola rolando com o time da pessoa): Fácil < Normal e Normal < Lenda
+//     PROVADOS; os pontos (Fácil ≤ 0,70× o Normal, Difícil ≥ 1,15×, Lenda ≥ 1,30×) reprovam só quando a amostra PROVA o contrário
+//     (o p5 acima do máximo, o p95 abaixo do mínimo; no --completo, o ponto exato); os vizinhos sem o lado errado provado.
+//  D5 as CHANCES da IA: o xG por partida (a soma do ia-ataque.js chanceDeGol no ponto de cada chute da IA — volume e qualidade):
+//     Fácil < Lenda PROVADO (os degraus de um nível — Fácil/Normal ~0,6–0,8, Normal/Lenda ~1,1–1,5 — mudam de amostra para amostra
+//     de 32 partidas: ficam com os pontos e no D7); os pontos (PONTO_XG) e os vizinhos como no D4. Os chutes ficam informativos
+//     (chutar mais de longe subia os chutes e baixava os gols: a revisão B2 do item 33).
+//  D6 o inverso na pessoa: os chutes do time da pessoa, Fácil > Lenda PROVADO; no --completo, os vizinhos sem provar o lado
+//     errado (Difícil e Lenda deixam a pessoa chutar o mesmo; com 32 partidas o lado errado sai "provado" por sorteio).
+//  D7 (só --completo, a medida do dono, FORA do CI e não é passo antes do merge: 16 sementes × 4 roteiros = 64 partidas por nível)
+//     TODOS os degraus vizinhos PROVADOS nos botes (D4) e no xG da IA (D5).
+//  D8 guardas: as faltas da IA no Lenda ≤ 1,8× as do Normal (reprova quando PROVA acima); informativos por nível (a tabela):
+//     chutes e chutes de até 20 m da IA, xG da pessoa, V/E/D, pênaltis da IA, posse, o 1º defensor 0,5 s e 1 s depois do domínio
+//     da pessoa e quem contém (ramo 'contem') e o vai e volta do condutor da IA (a definição do lib/corrida-medidas.mjs: a direção
 //     inverte > 135° em 0,25–1 s com ≥ 1,5 m/s nos dois instantes; 1 por jogador por segundo).
+//  D9 o RESULTADO: os gols da IA (razão) e o saldo da pessoa (diferença por partida) — nenhum lado ERRADO provado em nenhum par da
+//     ordem (gol é raro: com 32 partidas o ± é do tamanho do degrau); no --completo, gols da IA Fácil < Lenda e saldo da pessoa
+//     Fácil > Lenda PROVADOS.
 // "PROVADO": o bootstrap PAREADO e estratificado por roteiro (as mesmas sementes nos dois níveis comparados, reamostradas
 // juntas, 2000×; unilateral 95%) — a razão A/B com o percentil 95 abaixo de 1 (A < B) ou o 5 acima de 1 (A > B). As partidas
 // são de 2 × --min minutos (padrão 4), o time 0 = a pessoa roteirizada (tools/lib/humano-roteiro.mjs), o time 1 = a IA.
 //
 //   node tools/teste-dificuldade.mjs                       (CI: 4 níveis × 4 roteiros × 8 sementes = 128 partidas)
-//   node tools/teste-dificuldade.mjs --completo            (16 sementes: 256 partidas; antes do merge)
+//   node tools/teste-dificuldade.mjs --completo            (16 sementes: 256 partidas; a medida do dono, fora do CI)
 //   node tools/teste-dificuldade.mjs --niveis normal,lenda --sementes 4 --sem0 1001 --par 2
 //   node tools/teste-dificuldade.mjs --so portao           (só D0–D3, rápido; --so medida: só D0 e D4–D8, a triagem)
 //   node tools/teste-dificuldade.mjs --set DIFICULDADE.lenda.boteIA.chancePorPasso=0.2   (triagem; antes de carregar a lógica)
@@ -67,6 +74,9 @@ const SO = arg('--so', null);
 const BOOT = 2000;
 const CADA = 300;
 const ORDEM = ['facil', 'normal', 'dificil', 'lenda'];
+// D5: o xG da IA por partida, razão ao Normal (calibrado na revisão do item 33; PESQUISA-DIFICULDADE.md §11)
+const PONTO_XG = { facil: { max: 0.85 }, dificil: { min: 1.05 }, lenda: { min: 1.15 } };
+const TXT_XG = 'Fácil ≤ 0,85 · Difícil ≥ 1,05 · Lenda ≥ 1,15';
 const NOME = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', lenda: 'Lenda' };
 
 /** Aplica os --set no config.js (antes de importar o resto da lógica: os módulos juntam as tabelas na carga). */
@@ -81,10 +91,10 @@ async function carregar(js) {
     if (!o || (!(ult in o) && partes[0] !== 'DIFICULDADE')) throw new Error(`--set: ${chave} não existe`);
     o[ult] = JSON.parse(s.slice(s.indexOf('=') + 1));
   }
-  const P = await imp('partida.js'), S = await imp('sim.js'), T = await imp('tatica.js');
+  const P = await imp('partida.js'), S = await imp('sim.js'), T = await imp('tatica.js'), IAA = await imp('ia-ataque.js');
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
   const H = await import(pathToFileURL(path.join(AQUI, 'lib/humano-roteiro.mjs')).href);
-  return { C, P, S, T, M, H };
+  return { C, P, S, T, M, H, IAA };
 }
 
 // --------------------------------------------------------------------------------------- tarefas (processo filho)
@@ -92,11 +102,16 @@ const estadoRot = sem => ({ s: (sem * 2654435761) >>> 0 || 1, carga: null, id: -
 
 /** Uma partida de 2 × MIN min contra o roteiro `rot`, com o nível `nivel` (o Normal: sem a opção). */
 function jogo(L, sem, rot, nivel, min) {
-  const { C, P, M, H } = L;
+  const { C, P, M, H, IAA } = L;
   const m = P.criarPartida({ semente: sem, minutosPorTempo: min, ...(nivel !== 'normal' ? { dificuldade: nivel } : {}) });
   const st = estadoRot(sem);
+  // (xgIA/xgP: a soma da chance de gol — ia-ataque.js chanceDeGol, pelo ângulo da boca do gol — no ponto de cada chute: a
+  // QUALIDADE das chances, bem menos ruidosa que os gols; pertoIA/pertoP: os chutes de até 20 m do meio do gol)
   const R = { sem, rot, nivel, botes: 0, roubadas: 0, posseP: 0, posseIA: 0, rol: 0, chutesIA: 0, chutesP: 0, faltasIA: 0, penIA: 0,
-    gols: [0, 0], vv: 0, condIA: 0, estado: '' };
+    xgIA: 0, xgP: 0, pertoIA: 0, pertoP: 0, gols: [0, 0], vv: 0, condIA: 0, d05: 0, n05: 0, d1: 0, n1: 0, dCont: 0, nCont: 0, estado: '' };
+  // (d05/d1: a distância do 1º defensor da IA ao condutor da pessoa 0,5 s e 1 s depois do domínio dele — a mesma posse, a bola
+  // no pé —: a pressão que a pessoa VÊ, sem a seleção das posses que acabam no bote)
+  let domId = -1, domTick = 0;
   const N = Math.round(2 * min * 3600) + 9000;
   const porId = new Map(m.jogadores.map(j => [j.id, j]));
   // vai e volta do condutor da IA (a definição do corrida-medidas): o rumo da velocidade a cada 5 ticks, por condutor
@@ -110,14 +125,33 @@ function jogo(L, sem, rot, nivel, min) {
       else if (e.tipo === 'boteErrado' && q && q.time === 1) R.botes++;
       else if (e.tipo === 'falta') { const d = m.jogadores.find(o => o.id === e.def); if (d ? d.time === 1 : e.time === 0) R.faltasIA++; }
       else if (e.tipo === 'penalti' && e.time === 0) R.penIA++;
-      if (q && M.ehChute(m, e)) { if (q.time === 1) R.chutesIA++; else R.chutesP++; }
+      if (q && M.ehChute(m, e)) {
+        const u = M.uDe(m, q.time, m.bola.p.x), w = M.wDe(m, q.time, m.bola.p.z);
+        const xg = IAA.chanceDeGol ? IAA.chanceDeGol(u, w) : 0, perto = Math.hypot(M.MEIO_X - u, w) <= 20 ? 1 : 0;
+        if (q.time === 1) { R.chutesIA++; R.xgIA += xg; R.pertoIA += perto; } else { R.chutesP++; R.xgP += xg; R.pertoP += perto; }
+      }
     }
     if (m.partida.estado === 'fim') break;
     const rolando = m.partida.estado === 'jogo' && !(m.parada && !m.parada.rolou) && m.foraDesde == null && m.golTick == null;
-    if (!rolando) { idH = -1; continue; }
+    if (!rolando) { idH = -1; domId = -1; continue; }
     R.rol++;
     const tb = M.timeComBola(m);
     if (tb === 0) R.posseP++; else if (tb === 1) R.posseIA++;
+    {
+      const cp = m.posse != null && m.naMao == null ? porId.get(m.posse) : null;
+      if (!cp || cp.time !== 0) domId = -1;
+      else {
+        if (cp.id !== domId) { domId = cp.id; domTick = m.tick; }
+        const dt = m.tick - domTick;
+        // (dCont: a distância de quem da IA está no ramo 'contem' — o 1º homem contendo, a alavanca `contencao` — ao condutor)
+        for (const o of m.jogadores) if (o.time === 1 && o.ia?.ramo === 'contem' && m.tick - o.ia.tick <= 1) { R.dCont += Math.hypot(o.x - cp.x, o.z - cp.z); R.nCont++; }
+        if (dt === 30 || dt === 60) {
+          let d = Infinity;
+          for (const o of m.jogadores) if (o.time === 1 && o.posicao !== 'GOL') d = Math.min(d, Math.hypot(o.x - cp.x, o.z - cp.z));
+          if (Number.isFinite(d)) { if (dt === 30) { R.d05 += d; R.n05++; } else { R.d1 += d; R.n1++; } }
+        }
+      }
+    }
     const c = m.posse != null ? m.jogadores.find(o => o.id === m.posse) : null;
     if (c && c.time === 1 && m.naMao == null) {
       R.condIA++;
@@ -220,8 +254,8 @@ async function principal() {
       'boteIA.chancePorPasso': () => C.ACOES.boteIA.chancePorPasso, 'boteIA.descanso': () => C.ACOES.boteIA.descanso,
       engaja: () => C.IA_PESSOA.engaja, encurta: () => C.IA_PESSOA.encurta?.[2], 'utilidade.chute': () => C.IA_ATAQUE.utilidade.chute,
       'utilidade.passeAntecipa': () => C.IA_PESSOA.utilidade?.passeAntecipa,
-      'utilidade.chuteLonge': () => C.IA_ATAQUE.utilidade.chuteLonge, 'utilidade.chutePosse': () => C.IA_ATAQUE.utilidade.chutePosse, avaliaTicks: () => C.IA_ATAQUE.condutor.avaliaTicks,
-      le: () => C.IA_DEFESA.livre.le, erro: () => 1, reacaoGoleiro: () => C.GOLEIRO.reacao,
+      'utilidade.chuteLonge': () => C.IA_ATAQUE.utilidade.chuteLonge,
+      le: () => C.IA_DEFESA.livre.le, erroChute: () => 1, contencao: () => C.IA_DEFESA.contencao,
       'contrapressao.s': () => C.IA_DEFESA.contrapressao?.s, 'contrapressao.max': () => C.IA_DEFESA.contrapressao?.max,
     };
     const prob = [];
@@ -242,11 +276,20 @@ async function principal() {
           const base = BRANCA[k]();
           if (base === undefined) prob.push(`${n}.${k}: a constante coberta não existe`);
           if (k === 'le' && !(v >= C.IA_DEFESA.livre.le)) prob.push(`${n}.le ${v} < ${C.IA_DEFESA.livre.le} (só mais lento)`);
-          if (k === 'erro' && !(v >= 1)) prob.push(`${n}.erro ${v} < 1`);
-          if (k === 'reacaoGoleiro' && !(Array.isArray(v) && v.length === 2 && v[0] >= C.GOLEIRO.reacao[0] && v[1] >= C.GOLEIRO.reacao[1])) prob.push(`${n}.reacaoGoleiro ${JSON.stringify(v)} mais rápido que ${JSON.stringify(C.GOLEIRO.reacao)}`);
+          // (o erro do chute: só ≥ 1 e só no Fácil — a IA nunca mais precisa que a de hoje)
+          if (k === 'erroChute' && !(v >= 1 && n === 'facil')) prob.push(`${n}.erroChute ${v}: só ≥ 1 e só no Fácil`);
           if (k === 'engaja' && !(Number.isInteger(v) && v >= -10 && v <= 6)) prob.push(`${n}.engaja ${v} fora de [−10, +6]`);
-          if (['boteIA.chancePorPasso', 'encurta', 'utilidade.chute', 'utilidade.passeAntecipa', 'utilidade.chuteLonge', 'utilidade.chutePosse'].includes(k) && !(typeof v === 'number' && v >= 0)) prob.push(`${n}.${k} ${v} inválido`);
-          if (['boteIA.descanso', 'avaliaTicks'].includes(k) && !(Number.isInteger(v) && v >= 1)) prob.push(`${n}.${k} ${v} inválido`);
+          if (k === 'contencao' && !(typeof v === 'number' && v >= -1 && v <= 1.5)) prob.push(`${n}.contencao ${v} fora de [−1, +1,5] m`);
+          // (a vontade de chutar até 4,2 — a reserva A1 da especificação; revisão A4/B2: nos níveis de cima o peso RELATIVO do chute
+          // de fora, chuteLonge, nunca passa o do Normal — subir trocava a chance boa pelo chute de longe —; no Fácil ele pode subir:
+          // chutar de longe à toa é decidir PIOR — a revisão B3: o Fácil que só chutava de perto convertia mais)
+          if (k === 'utilidade.chute' && !(v <= 4.2)) prob.push(`${n}.utilidade.chute ${v} > 4,2`);
+          const UB = C.IA_ATAQUE.utilidade;
+          if (k === 'utilidade.chuteLonge' && n !== 'facil' && !(v <= UB.chuteLonge)) prob.push(`${n}.utilidade.chuteLonge ${v} > ${UB.chuteLonge} (o do Normal)`);
+          if (k === 'utilidade.chuteLonge' && !(v <= 1)) prob.push(`${n}.utilidade.chuteLonge ${v} > 1`);
+          if ((k === 'contrapressao.s' || k === 'contrapressao.max') && !(Array.isArray(v) && v.length === 3 && v.every(x => Number.isInteger(x) && x >= 0))) prob.push(`${n}.${k} ${JSON.stringify(v)} inválido`);
+          if (['boteIA.chancePorPasso', 'encurta', 'utilidade.chute', 'utilidade.passeAntecipa', 'utilidade.chuteLonge'].includes(k) && !(typeof v === 'number' && v >= 0)) prob.push(`${n}.${k} ${v} inválido`);
+          if (k === 'boteIA.descanso' && !(Number.isInteger(v) && v >= 1)) prob.push(`${n}.${k} ${v} inválido`);
         }
       }
     }
@@ -390,57 +433,81 @@ async function principal() {
   const porNivel = n => jogos.filter(r => r.nivel === n);
   const semPar = jogos.filter(r => r.estado !== 'fim').length;
   // medidas (razão das somas): por nível
+  const golsIA = r => r.gols[1], golsP = r => r.gols[0];
+  const pontosP = r => (r.gols[0] > r.gols[1] ? 3 : r.gols[0] === r.gols[1] ? 1 : 0);
   const MED = {
     botes: L2 => soma(L2, 'botes') / Math.max(1e-9, soma(L2, 'posseP') / 3600),
     chutesIA: L2 => soma(L2, 'chutesIA') / L2.length,
     chutesP: L2 => soma(L2, 'chutesP') / L2.length,
+    pertoIA: L2 => soma(L2, 'pertoIA') / L2.length,
+    xgIA: L2 => soma(L2, 'xgIA') / L2.length,
+    xgP: L2 => soma(L2, 'xgP') / L2.length,
+    golsIA: L2 => L2.reduce((s, r) => s + golsIA(r), 0) / L2.length,
+    golsP: L2 => L2.reduce((s, r) => s + golsP(r), 0) / L2.length,
     faltasIA: L2 => soma(L2, 'faltasIA') / L2.length,
   };
-  function soma(L2, k) { let s = 0; for (const r of L2) s += r[k]; return s; }
-  /** Bootstrap pareado e estratificado por roteiro da razão MED(A)/MED(B): {r, p5, p95}. */
-  function razao(med, A, B) {
+  // (por partida, para as DIFERENÇAS: o saldo e os pontos da pessoa podem ser 0 ou negativos — razão não serve)
+  const POR = { saldoP: r => golsP(r) - golsIA(r), pontosP };
+  function soma(L2, k) { let s = 0; for (const r of L2) s += r[k] ?? 0; return s; }
+  /** As partidas de A e de B com a mesma (roteiro, semente), por roteiro (os estratos do bootstrap). */
+  function pares(A, B) {
     const chave = r => `${r.rot}|${r.sem}`;
     const mA = new Map(porNivel(A).map(r => [chave(r), r])), mB = new Map(porNivel(B).map(r => [chave(r), r]));
     const estratos = ROTS.map(rot => [...mA.keys()].filter(k => k.startsWith(rot + '|') && mB.has(k))).filter(e => e.length);
+    return { mA, mB, estratos };
+  }
+  /** Bootstrap pareado e estratificado por roteiro de f(lista A, lista B): {r, p5, p95, n}. */
+  function boot(A, B, f) {
+    const { mA, mB, estratos } = pares(A, B);
     const lA = estratos.flat().map(k => mA.get(k)), lB = estratos.flat().map(k => mB.get(k));
     if (!lA.length) return null;
-    const r = MED[med](lA) / MED[med](lB);
+    const r = f(lA, lB);
     let st = 0x9e3779b9;
     const rnd = () => { st ^= st << 13; st >>>= 0; st ^= st >>> 17; st ^= st << 5; st >>>= 0; return st / 4294967296; };
     const rs = [];
     for (let b = 0; b < BOOT; b++) {
       const ks = estratos.flatMap(E => E.map(() => E[Math.floor(rnd() * E.length)]));
-      const a = ks.map(k => mA.get(k)), bb = ks.map(k => mB.get(k));
-      rs.push(MED[med](a) / MED[med](bb));
+      rs.push(f(ks.map(k => mA.get(k)), ks.map(k => mB.get(k))));
     }
     rs.sort((x, y) => x - y);
     return { r, p5: rs[Math.floor(0.05 * BOOT)], p95: rs[Math.floor(0.95 * BOOT) - 1], n: lA.length };
   }
+  /** A razão MED(A)/MED(B), pareada. */
+  const razao = (med, A, B) => boot(A, B, (a, b) => MED[med](a) / MED[med](b));
+  /** A diferença média por partida POR(A) − POR(B), pareada. */
+  const diferenca = (q, A, B) => boot(A, B, (a, b) => { let s = 0; for (let i = 0; i < a.length; i++) s += POR[q](a[i]) - POR[q](b[i]); return s / a.length; });
   const tem = n => NIVEIS.includes(n) && porNivel(n).length > 0;
   const fr = x => x ? `${f2(x.r)} [${f2(x.p5)}–${f2(x.p95)}]` : '—';
   // a tabela por nível (informativa)
-  const tab = [['nível', 'partidas', 'botes IA /min posse pessoa', 'roubadas IA /min', 'chutes IA /p', 'chutes pessoa /p', 'faltas IA /p', 'pênaltis IA /p', 'gols IA × pessoa /p', 'posse IA', 'vai e volta cond. IA /min']];
+  const tab = [['nível', 'partidas', 'botes IA /min posse pessoa', 'roubadas IA /min', 'chutes IA /p', 'de ≤ 20 m /p', 'xG IA /p', 'chutes pessoa /p', 'xG pessoa /p',
+    'gols IA × pessoa /p', 'V/E/D pessoa', 'faltas IA /p', 'pênaltis IA /p', 'posse IA', '1º defensor 0,5 s · 1 s · contendo (m)', 'vai e volta cond. IA /min']];
   for (const n of ORDEM) {
     if (!tem(n)) continue;
     const L2 = porNivel(n), k = L2.length;
-    tab.push([NOME[n], k, f2(MED.botes(L2)), f2(soma(L2, 'roubadas') / Math.max(1e-9, soma(L2, 'posseP') / 3600)), f2(MED.chutesIA(L2)), f2(MED.chutesP(L2)),
-      f2(MED.faltasIA(L2)), f2(soma(L2, 'penIA') / k), `${f2(L2.reduce((s, r) => s + r.gols[1], 0) / k)} × ${f2(L2.reduce((s, r) => s + r.gols[0], 0) / k)}`,
+    const ved = [L2.filter(r => pontosP(r) === 3).length, L2.filter(r => pontosP(r) === 1).length, L2.filter(r => pontosP(r) === 0).length].join('/');
+    tab.push([NOME[n], k, f2(MED.botes(L2)), f2(soma(L2, 'roubadas') / Math.max(1e-9, soma(L2, 'posseP') / 3600)), f2(MED.chutesIA(L2)), f2(MED.pertoIA(L2)),
+      f2(MED.xgIA(L2)), f2(MED.chutesP(L2)), f2(MED.xgP(L2)), `${f2(MED.golsIA(L2))} × ${f2(MED.golsP(L2))}`, ved,
+      f2(MED.faltasIA(L2)), f2(soma(L2, 'penIA') / k),
       `${(100 * soma(L2, 'posseIA') / Math.max(1, soma(L2, 'posseIA') + soma(L2, 'posseP'))).toFixed(1).replace('.', ',')}%`,
+      `${f2(soma(L2, 'd05') / Math.max(1, soma(L2, 'n05')))} · ${f2(soma(L2, 'd1') / Math.max(1, soma(L2, 'n1')))} · contendo ${f2(soma(L2, 'dCont') / Math.max(1, soma(L2, 'nCont')))}`,
       f2(soma(L2, 'vv') / Math.max(1e-9, soma(L2, 'condIA') / 3600))]);
   }
   // por roteiro (informativo): botes e chutes da IA
-  const tabR = [['roteiro', ...ORDEM.filter(tem).map(n => `${NOME[n]}: botes /min · chutes IA · chutes pessoa`)]];
-  for (const rot of ROTS) tabR.push([rot, ...ORDEM.filter(tem).map(n => { const L2 = porNivel(n).filter(r => r.rot === rot); return `${f2(MED.botes(L2))} · ${f2(MED.chutesIA(L2))} · ${f2(MED.chutesP(L2))}`; })]);
+  const tabR = [['roteiro', ...ORDEM.filter(tem).map(n => `${NOME[n]}: botes /min · xG IA · gols IA × pessoa`)]];
+  for (const rot of ROTS) tabR.push([rot, ...ORDEM.filter(tem).map(n => { const L2 = porNivel(n).filter(r => r.rot === rot); return `${f2(MED.botes(L2))} · ${f2(MED.xgIA(L2))} · ${f2(MED.golsIA(L2))} × ${f2(MED.golsP(L2))}`; })]);
 
   const ordem = (med, alvoPonto, provar, vizinhosProvar, sentido) => {
     // sentido +1: o nível mais difícil tem MAIS (botes, chutes da IA); −1: MENOS (chutes da pessoa)
     const partes = [], fal = [];
+    // (o PONTO reprova só quando a amostra PROVA o lado errado — o p5 acima do máximo, o p95 abaixo do mínimo: calibrado no limite
+    // das sementes do CI, o ponto reprovava por sorteio com outras sementes — revisão A2/B1; o ponto exato fica no --completo)
     for (const [n, alvo] of Object.entries(alvoPonto)) {
       if (!tem(n) || !tem('normal')) continue;
       const x = razao(med, n, 'normal');
       partes.push(`${NOME[n]}/Normal ${fr(x)}`);
-      if (alvo.max != null && !(x.r <= alvo.max)) fal.push(`${NOME[n]} ${f2(x.r)} > ${f2(alvo.max)}`);
-      if (alvo.min != null && !(x.r >= alvo.min)) fal.push(`${NOME[n]} ${f2(x.r)} < ${f2(alvo.min)}`);
+      const exato = COMPLETO;
+      if (alvo.max != null && !(exato ? x.r <= alvo.max : x.p5 <= alvo.max)) fal.push(`${NOME[n]} ${exato ? f2(x.r) : `p5 ${f2(x.p5)}`} > ${f2(alvo.max)}`);
+      if (alvo.min != null && !(exato ? x.r >= alvo.min : x.p95 >= alvo.min)) fal.push(`${NOME[n]} ${exato ? f2(x.r) : `p95 ${f2(x.p95)}`} < ${f2(alvo.min)}`);
     }
     for (const [a, b] of provar) {
       if (!tem(a) || !tem(b)) continue;
@@ -449,47 +516,76 @@ async function principal() {
       const ok = sentido > 0 ? x.p95 < 1 : x.p5 > 1;
       if (!ok) fal.push(`${NOME[a]} ${sentido > 0 ? '<' : '>'} ${NOME[b]} não provado (${fr(x)})`);
     }
-    for (let k = 0; k + 1 < ORDEM.length; k++) {
+    for (let k = 0; k + 1 < ORDEM.length && vizinhosProvar !== 'sem'; k++) {
       const a = ORDEM[k], b = ORDEM[k + 1];
       if (!tem(a) || !tem(b)) continue;
       const x = razao(med, a, b);
       if (sentido > 0 && x.p5 > 1) fal.push(`${NOME[a]} > ${NOME[b]} PROVADO (lado errado; ${fr(x)})`);
       if (sentido < 0 && x.p95 < 1) fal.push(`${NOME[a]} < ${NOME[b]} PROVADO (lado errado; ${fr(x)})`);
-      if (vizinhosProvar && (sentido > 0 ? !(x.r < 1) : !(x.r > 1))) fal.push(`${NOME[a]}/${NOME[b]} fora da ordem (${f2(x.r)})`);
       if (vizinhosProvar === 'provar' && (sentido > 0 ? !(x.p95 < 1) : !(x.p5 > 1))) fal.push(`${NOME[a]} ${sentido > 0 ? '<' : '>'} ${NOME[b]} não provado (${fr(x)})`);
     }
     return { partes, fal };
   };
   const quais = ORDEM.filter(tem).length;
+  const txt = o => `${o.partes.join(' · ')}${o.fal.length ? ` — ${o.fal.join('; ')}` : ''}`;
+  const ponto = COMPLETO ? 'no ponto' : 'reprova só se PROVAR o contrário';
   {
     const o = ordem('botes', { facil: { max: 0.70 }, dificil: { min: 1.15 }, lenda: { min: 1.30 } }, [['facil', 'normal'], ['normal', 'lenda']], true, +1);
-    reg('D4. botes da IA por minuto de posse da pessoa (pareado; razão [p5–p95])', `${o.partes.join(' · ')}${o.fal.length ? ` — ${o.fal.join('; ')}` : ''}`,
-      'Fácil ≤ 0,70 · Difícil ≥ 1,15 · Lenda ≥ 1,30; Fácil < Normal < Lenda provados; vizinhos na ordem', temOpcao && quais >= 2 && !o.fal.length);
+    reg('D4. botes da IA por minuto de posse da pessoa (pareado; razão [p5–p95])', txt(o),
+      `Fácil ≤ 0,70 · Difícil ≥ 1,15 · Lenda ≥ 1,30 (${ponto}); Fácil < Normal < Lenda provados; vizinhos sem o lado errado provado`, temOpcao && quais >= 2 && !o.fal.length);
   }
   {
-    const o = ordem('chutesIA', { facil: { max: 0.75 }, dificil: { min: COMPLETO ? 1.15 : 1.10 }, lenda: { min: 1.25 } }, [['facil', 'normal'], ['normal', 'lenda']], true, +1);
-    reg('D5. chutes da IA por partida (pareado)', `${o.partes.join(' · ')}${o.fal.length ? ` — ${o.fal.join('; ')}` : ''}`,
-      `Fácil ≤ 0,75 · Difícil ≥ ${COMPLETO ? '1,15' : '1,10'} · Lenda ≥ 1,25; Fácil < Normal < Lenda provados; vizinhos na ordem`, temOpcao && quais >= 2 && !o.fal.length);
+    // (as CHANCES da IA, não os chutes: o xG — a soma da chance de gol no ponto de cada chute — mede volume E qualidade; chutar mais
+    // de longe subia os chutes e baixava os gols — revisão B2. Os chutes ficam na tabela)
+    // (só o degrau das PONTAS se prova em toda amostra de 32 partidas — Fácil/Lenda 0,55–0,6 —; Fácil/Normal ~0,6–0,8 e Normal/Lenda
+    // 1,1–1,5 mudam de amostra para amostra: ficam com os pontos, que reprovam quando PROVAM o contrário, e no --completo)
+    const o = ordem('xgIA', PONTO_XG, [['facil', 'lenda']], true, +1);
+    const ch = ORDEM.filter(n => n !== 'normal' && tem(n) && tem('normal')).map(n => `${NOME[n]} ${f2(razao('chutesIA', n, 'normal').r)}`);
+    reg('D5. as chances da IA: xG por partida (pareado)', `${txt(o)} (chutes, informativo: ${ch.join(' · ')})`,
+      `${TXT_XG} (${ponto}); Fácil < Lenda provado; vizinhos sem o lado errado provado`, temOpcao && quais >= 2 && !o.fal.length);
   }
   {
-    const o = ordem('chutesP', {}, [['facil', 'lenda']], false, -1);
+    // (os vizinhos — o lado errado provado — só no --completo: Difícil e Lenda deixam a pessoa chutar o mesmo — 0,82 e 0,79 do
+    // Normal em 128 partidas —, e numa amostra de 32 o lado errado sai "provado" por sorteio: sementes 25–32, 0,74 [0,61–0,90])
+    const o = ordem('chutesP', {}, [['facil', 'lenda']], COMPLETO ? false : 'sem', -1);
     const partes = ORDEM.filter(n => n !== 'normal' && tem(n) && tem('normal')).map(n => `${NOME[n]}/Normal ${fr(razao('chutesP', n, 'normal'))}`);
-    reg('D6. o inverso: chutes do time da pessoa (Fácil > Lenda provado; vizinhos sem o lado errado provado)', `${partes.join(' · ')}${o.fal.length ? ` — ${o.fal.join('; ')}` : ''}`,
+    reg(`D6. o inverso: chutes do time da pessoa (Fácil > Lenda provado${COMPLETO ? '; vizinhos sem o lado errado provado' : ''})`, `${partes.join(' · ')}${o.fal.length ? ` — ${o.fal.join('; ')}` : ''}`,
       'Fácil > Lenda provado', temOpcao && quais >= 2 && !o.fal.length);
   }
   if (COMPLETO) {
-    const a = ordem('botes', {}, [], 'provar', +1), b = ordem('chutesIA', {}, [], 'provar', +1);
-    const fal = [...a.fal.map(x => `botes: ${x}`), ...b.fal.map(x => `chutes: ${x}`)];
-    reg('D7. --completo: todos os degraus vizinhos provados (botes e chutes da IA)', fal.length ? fal.join('; ') : 'todos provados', 'todos provados', temOpcao && !fal.length);
+    const a = ordem('botes', {}, [], 'provar', +1), b = ordem('xgIA', {}, [], 'provar', +1);
+    const fal = [...a.fal.map(x => `botes: ${x}`), ...b.fal.map(x => `xG: ${x}`)];
+    reg('D7. --completo (a medida do dono, fora do CI): todos os degraus vizinhos provados (botes e xG da IA)', fal.length ? fal.join('; ') : 'todos provados', 'todos provados', temOpcao && !fal.length);
   }
   {
-    let txt = '—', ok = true;
+    let txt8 = '—', ok = true;
     if (tem('lenda') && tem('normal')) {
       const x = razao('faltasIA', 'lenda', 'normal');
       ok = !(x.p5 > 1.8);
-      txt = `Lenda/Normal ${fr(x)}`;
+      txt8 = `Lenda/Normal ${fr(x)}`;
     }
-    reg('D8. faltas da IA no Lenda ≤ 1,8× o Normal (reprova quando prova acima)', txt, '≤ 1,8 (p5)', ok);
+    reg('D8. faltas da IA no Lenda ≤ 1,8× o Normal (reprova quando prova acima)', txt8, '≤ 1,8 (p5)', ok);
+  }
+  {
+    // D9 o RESULTADO (revisão B1): os gols da IA e o saldo da pessoa por nível. Gol é raro (~0,9 por partida): com 32 partidas o ±
+    // é do tamanho do degrau, então o CI reprova só com o lado ERRADO provado em qualquer par da ordem; o --completo (64) exige
+    // os degraus das pontas provados (gols da IA Fácil < Lenda e o saldo da pessoa Fácil > Lenda)
+    const fal = [], partes = [];
+    for (let a = 0; a < ORDEM.length; a++) for (let b = a + 1; b < ORDEM.length; b++) {
+      const A = ORDEM[a], B = ORDEM[b];
+      if (!tem(A) || !tem(B)) continue;
+      const g = razao('golsIA', A, B), d = diferenca('saldoP', A, B);
+      if (g.p5 > 1) fal.push(`gols da IA ${NOME[A]} > ${NOME[B]} PROVADO (${fr(g)})`);
+      if (d.p95 < 0) fal.push(`saldo da pessoa ${NOME[A]} < ${NOME[B]} PROVADO (${fr(d)})`);
+      if (b === a + 1 || (A === 'facil' && B === 'lenda')) partes.push(`${NOME[A]}/${NOME[B]}: gols IA ${fr(g)}, saldo ${fr(d)}`);
+    }
+    if (COMPLETO && tem('facil') && tem('lenda')) {
+      const g = razao('golsIA', 'facil', 'lenda'), d = diferenca('saldoP', 'facil', 'lenda');
+      if (!(g.p95 < 1)) fal.push(`gols da IA Fácil < Lenda não provado (${fr(g)})`);
+      if (!(d.p5 > 0)) fal.push(`saldo da pessoa Fácil > Lenda não provado (${fr(d)})`);
+    }
+    reg('D9. o resultado: gols da IA (razão) e saldo da pessoa (diferença por partida), pareados', `${partes.join(' · ')}${fal.length ? ` — ${fal.join('; ')}` : ''}`,
+      COMPLETO ? 'Fácil < Lenda provado (gols da IA) e Fácil > Lenda (saldo); nenhum lado errado provado' : 'nenhum lado errado provado (Fácil ≤ Normal ≤ Difícil ≤ Lenda nos gols da IA; o saldo ao contrário)', temOpcao && quais >= 2 && !fal.length);
   }
   if (semPar) reg('as partidas chegam ao fim', `${semPar} não chegaram`, 'todas', false);
   console.log(tab.map(l => l.join(' | ')).join('\n'));

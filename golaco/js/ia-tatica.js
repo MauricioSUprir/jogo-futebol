@@ -58,13 +58,16 @@ const RECOMP_P = { ...TATICA.recomp, ...IA_PESSOA.recomp };
 const CORRIDA_P = { ...IA_DEFESA.corrida, ...IA_PESSOA.corrida };
 // a dificuldade (item 33; config.js DIFICULDADE), só no time da IA contra a pessoa (tatica.js nivelContra), juntada uma vez na
 // carga por nível — o Normal não está em nenhuma (usa as de sempre): a linha de engajamento (IA_PESSOA.engaja + m, teto 105),
-// a fração do encurtar (IA_PESSOA.encurta[2]) e a leitura do passe (IA_DEFESA.livre.le, só mais lenta)
-const ENGAJA_D = {}, ENCURTA_D = {}, LE_D = {};
+// a fração do encurtar (IA_PESSOA.encurta[2]), a leitura do passe (IA_DEFESA.livre.le, só mais lenta), a distância da contenção
+// do 1º homem (IA_DEFESA.contencao + m, nunca abaixo de 1,25) e a contrapressão (IA_DEFESA.contrapressao com s/max do nível)
+const ENGAJA_D = {}, ENCURTA_D = {}, LE_D = {}, CONTEM_D = {}, CONTRA_D = {};
 for (const n of DIFICULDADE.niveis) {
   const D = DIFICULDADE[n];
   if (D.engaja != null) ENGAJA_D[n] = IA_PESSOA.engaja.map(v => Math.min(105, v + D.engaja));
   if (D.encurta != null) ENCURTA_D[n] = D.encurta;
   if (D.le != null) LE_D[n] = D.le;
+  if (D.contencao != null) CONTEM_D[n] = IA_DEFESA.contencao.map(v => Math.max(1.25, v + D.contencao));
+  if (D.contrapressao) CONTRA_D[n] = { ...IA_DEFESA.contrapressao, ...D.contrapressao };
 }
 
 /**
@@ -504,9 +507,11 @@ export function blocoDoTime(m, t) {
   // troca de fase: perdeu a bola → contrapressão dos que estavam perto (pesquisa §4.3: só com a perda
   // no campo adversário ou perto da lateral, e com gente perto — tantos ou mais que eles a ≤ raio m;
   // os outros recompõem). Não numa bola parada.
-  if (B.faseAnt === 'com' && f.fase === 'sem' && !naParada && IA_DEFESA.contrapressao.s[p] > 0) {
+  // (a dificuldade, item 33: contra a pessoa, quantos e por quanto tempo — DIFICULDADE.contrapressao, CONTRA_D)
+  const nvP = nivelContra(m, t), CP = (nvP && CONTRA_D[nvP]) || IA_DEFESA.contrapressao;
+  if (B.faseAnt === 'com' && f.fase === 'sem' && !naParada && CP.s[p] > 0) {
     B.contra.length = 0;
-    const R = IA_DEFESA.contrapressao.raio, max = IA_DEFESA.contrapressao.max[p];
+    const R = IA_DEFESA.contrapressao.raio, max = CP.max[p];
     let meus = 0, deles = 0;
     for (const o of js) {
       if (!ehLinha(o) || o.carrinho || MD.hypot(o.x - b.x, o.z - b.z) > R) continue;
@@ -524,7 +529,7 @@ export function blocoDoTime(m, t) {
         if (!mel) break;
         B.contra.push(mel.id);
       }
-      B.contraAte = m.tick + seg(IA_DEFESA.contrapressao.s[p]);
+      B.contraAte = m.tick + seg(CP.s[p]);
     }
     // e o 1º homem aperta logo depois da perda (FIFA 23: "pressão após perda"), se estiver perto
     if (p >= 1) gatilho(m, B, 'perda');
@@ -994,7 +999,9 @@ function semBola(m, j, f) {
   if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento || B.rapido)) {
     if (B.rapido) { const e = acompanhar(m, j, s, B, meuGol, extra, B.aperta1 ? 'aperta' : 'contem'); if (e) return e; }
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
-    return conter(m, j, s, B, meuGol, IA_DEFESA.contencao[p], extra);
+    // (a dificuldade, item 33: a que distância ele contém o condutor da pessoa — DIFICULDADE.contencao, CONTEM_D)
+    const nvC = nivelContra(m, j.time);
+    return conter(m, j, s, B, meuGol, ((nvC && CONTEM_D[nvC]) || IA_DEFESA.contencao)[p], extra);
   }
   // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento; com o
   // condutor rápido, também — cobrindo pela velocidade)

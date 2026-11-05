@@ -1705,37 +1705,28 @@ export const IA_PESSOA = {
   companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
 
-// Dificuldade (item 33; dono, 17/10: "editar ... a DIFICULDADE"; contrato "Tempo de jogo e dificuldade" no CONTRATOS.md,
-// pesquisa em PESQUISA-DIFICULDADE.md): os 4 níveis do Total Match. Fácil ≈ Amador/Semi-Pro do EA FC, Normal = o jogo de hoje
-// BIT A BIT (≈ Profissional/Classe Mundial; objeto vazio: nada é lido), Difícil ≈ Lendário, Lenda ≈ Ultimate. Vale SÓ no time
-// da IA contra a pessoa (tatica.js nivelContra — a IA × IA, o online, o Simular o resto e os companheiros da pessoa nunca o
-// leem). Cada chave de um nível cobre UMA constante de hoje com o MESMO significado (teste-dificuldade D0 confere): a VONTADE,
-// a DECISÃO e a REAÇÃO da IA — nada de atributo, física, alcance, chance de ganhar a dividida nem árbitro.
-//   boteIA {chancePorPasso, descanso}: ACOES.boteIA (a vontade de tentar o bote com a bola ao alcance e a espera depois; sim.js)
-//   engaja: m somados à linha de engajamento IA_PESSOA.engaja (teto 105; ia-tatica.js)
-//   encurta: a fração do caminho de IA_PESSOA.encurta[2] (quem guarda a zona encurta no gatilho; ia-tatica.js)
-//   utilidade {chute, chuteLonge, chutePosse, passeAntecipa}: por cima do UTIL_P (IA_ATAQUE.utilidade + IA_PESSOA.utilidade): a
-//     vontade de chutar (de dentro e de fora da área, e o quanto custa perder a posse no chute) e a leitura da defesa da pessoa no
-//     passe (ia-ataque.js; a execução do chute não muda)
-//   avaliaTicks: IA_ATAQUE.condutor.avaliaTicks (de quantos em quantos ticks o condutor da IA pensa; ia-ataque.js)
-//   le: IA_DEFESA.livre.le (o tempo para ler o passe da pessoa antes de ir cortar; só MAIS LENTO; ia-tatica.js cortaPasse)
-//   erro: multiplica o erro do passe e do chute da IA (só ≥ 1, só no Fácil; acoes.js executarAcao)
-//   reacaoGoleiro: GOLEIRO.reacao do goleiro da IA (só mais lento; goleiro.js lerChute)
-// Calibrados contra os 4 roteiros da pessoa (tools/teste-dificuldade.mjs, 32 partidas pareadas por nível; PESQUISA-DIFICULDADE.md
-// §10): botes da IA por minuto de posse da pessoa 0,61 / 1 / 1,25 / 1,54 × o Normal; chutes da IA 0,67 / 1 / 1,18 / 1,31.
-// A vontade de chutar SATURA (com chute ≥ ~5 e chuteLonge 1 a decisão não muda mais: as mesmas partidas bit a bit): o que põe a
-// IA mais vezes em posição de chute é a bola de volta mais cedo (bote, engajamento, encurtar) e pensar mais rápido (avaliaTicks 5
-// no Difícil e no Lenda, 0,083 s; com 4 no Lenda os chutes caíram a 1,18 na mesma amostra). Fácil: menos bote e pressão, mais
-// lento para ler e decidir, chuta menos (de fora quase nunca) e erra um pouco mais.
+// Dificuldade (item 33; dono, 17/10: "editar ... a DIFICULDADE"; contrato "Tempo de jogo e dificuldade" no CONTRATOS.md, pesquisa e
+// calibração em PESQUISA-DIFICULDADE.md): os 4 níveis do Total Match (Fácil ≈ Amador/Semi-Pro do EA FC, Normal = o jogo de hoje BIT
+// A BIT — objeto vazio —, Difícil ≈ Lendário, Lenda ≈ Ultimate). Vale SÓ no time da IA contra a pessoa (tatica.js nivelContra). Cada
+// chave cobre UMA constante de hoje com o mesmo significado (teste-dificuldade D0): a vontade, a decisão e a reação da IA — nada de
+// atributo, física, alcance, chance da dividida nem árbitro.
+//   boteIA: ACOES.boteIA (sim.js) · engaja: m somados a IA_PESSOA.engaja (teto 105) · encurta: IA_PESSOA.encurta[2] ·
+//   contencao: m somados a IA_DEFESA.contencao (o 1º homem; ≥ 1,25) · contrapressao {s, max}: IA_DEFESA.contrapressao (ia-tatica.js)
+//   utilidade {chute, chuteLonge, passeAntecipa}: por cima do UTIL_P (ia-ataque.js; a execução do chute não muda)
+//   le: IA_DEFESA.livre.le (só mais lento) · erroChute: multiplica o erro do chute (só ≥ 1, só no Fácil; acoes.js)
+// Calibrada pelo RESULTADO (revisão do item 33; os gols da IA 0,64 / 0,89 / 1,08 / 1,22 por partida contra os 4 roteiros): a
+// vontade de chutar não passa de 4,2 e nos níveis de cima o peso relativo do chute de fora (chuteLonge) nunca passa o do Normal
+// (subir os dois trocava a chance boa pelo chute de longe: mais chutes, menos gols); no Fácil a IA perde a vontade de chutar de
+// DENTRO, chuta mais de longe, erra mais o chute e quase não faz contrapressão.
 export const DIFICULDADE = {
   niveis: ['facil', 'normal', 'dificil', 'lenda'],
-  facil: { boteIA: { chancePorPasso: 0.025, descanso: 110 }, engaja: -8, encurta: 0.10,
-    utilidade: { chute: 1.2, chuteLonge: 0.05, chutePosse: 0.7, passeAntecipa: 0.2 }, avaliaTicks: 9, le: 0.35, erro: 1.2, reacaoGoleiro: [0.30, 0.24] },
+  facil: { boteIA: { chancePorPasso: 0.025, descanso: 110 }, engaja: -8, encurta: 0.10, contencao: 1.0,
+    contrapressao: { s: [0, 1, 3], max: [0, 1, 2] }, utilidade: { chute: 2.0, chuteLonge: 0.6, passeAntecipa: 0.2 }, le: 0.35, erroChute: 1.5 },
   normal: {},
-  dificil: { boteIA: { chancePorPasso: 0.12, descanso: 34 }, engaja: 3, encurta: 0.38,
-    utilidade: { chute: 4.6, chuteLonge: 0.65, chutePosse: 0.3, passeAntecipa: 0.6 }, avaliaTicks: 5 },
-  lenda: { boteIA: { chancePorPasso: 0.22, descanso: 20 }, engaja: 6, encurta: 0.50,
-    utilidade: { chute: 5.6, chuteLonge: 1.0, chutePosse: 0.2, passeAntecipa: 0.7 }, avaliaTicks: 5 },
+  dificil: { boteIA: { chancePorPasso: 0.12, descanso: 34 }, engaja: 3, encurta: 0.38, contencao: -0.4,
+    contrapressao: { s: [0, 4, 6], max: [0, 2, 3] }, utilidade: { chute: 3.6, passeAntecipa: 0.6 } },
+  lenda: { boteIA: { chancePorPasso: 0.22, descanso: 20 }, engaja: 6, encurta: 0.50, contencao: -0.6,
+    contrapressao: { s: [0, 5, 7], max: [0, 3, 3] }, utilidade: { chute: 4.2, passeAntecipa: 0.7 } },
 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca

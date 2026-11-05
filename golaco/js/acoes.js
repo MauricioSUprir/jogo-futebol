@@ -529,16 +529,13 @@ export function executarAcao(m, j, pe, primeira = false) {
       * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
       * (p.erroEstilo && !p.cavadinha ? p.erroEstilo : 1) // o estilo do pênalti (item 70, P2: corrida.js estiloNoPedido, a leitura)
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
-    // a dificuldade (item 33): o erro da IA contra a pessoa, um pouco maior (só no Fácil; config.js DIFICULDADE.erro)
-    const nv = nivelContra(m, j.time), en = nv && DIFICULDADE[nv].erro;
+    // a dificuldade (item 33): o erro do CHUTE da IA contra a pessoa, maior (só no Fácil; config.js DIFICULDADE.erroChute)
+    const nv = nivelContra(m, j.time), en = nv && DIFICULDADE[nv].erroChute;
     if (en) em *= en;
     if (p.mirada && !p.cavadinha && m.parada?.mira) return cobrancaMirada(m, j, pe, p, em);
     return chute(m, j, pe, p, em);
   }
-  let erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
-  // a dificuldade (item 33): o erro do passe da IA contra a pessoa (o mesmo do chute; só no Fácil)
-  const nv = nivelContra(m, j.time), en = nv && DIFICULDADE[nv].erro;
-  if (en) erroMult *= en;
+  const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
   if (p.mirada && m.parada?.mira) return cobrancaMirada(m, j, pe, p, erroMult);
   switch (p.tipo) {
     case 'passe': return passeRasteiro(m, j, pe, p, erroMult);
