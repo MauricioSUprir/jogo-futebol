@@ -256,7 +256,12 @@ export function notaDaProva(p, valor) {
     if (valor === null || valor === undefined || valor === '') { if (n) s.notas = s.notas.filter((x) => x !== n); return; }
     const d = { materiaId: p.materiaId || null, titulo: p.titulo || 'Prova', valor: Number(valor), data: p.data || iso() };
     if (n) Object.assign(n, d);
-    else s.notas.push({ id: uid('nt'), maximo: 10, peso: 1, bimestre: bimestreDaData(d.data), provaId: p.id, ...d });
+    else {
+      const m = s.materias.find((x) => x.id === d.materiaId);
+      const item = m?.criterio?.itens?.find((i) => /prova/i.test(i.nome)) || null;
+      const per = m?.criterio ? Math.min(bimestreDaData(d.data), Number(m.criterio.periodos) || 4) : bimestreDaData(d.data);
+      s.notas.push({ id: uid('nt'), maximo: 10, peso: 1, bimestre: per, provaId: p.id, ...(item ? { itemId: item.id } : {}), ...d });
+    }
   });
 }
 export function novaNota(d = {}) {

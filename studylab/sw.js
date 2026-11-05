@@ -1,9 +1,9 @@
 /* ===== sw.js — cache offline do MindTrack ===== */
-const CACHE = 'mindtrack-v21';
+const CACHE = 'mindtrack-v22';
 const ARQUIVOS = [
   './', './index.html', './manifest.webmanifest',
   './css/app.css', './css/visual.css', './assets/logo.svg', './assets/marca-dagua.svg',
-  './assets/fontes/anton-latin.woff2', './assets/fontes/inter-latin.woff2', './js/icones.js', './js/apresentacoes-desenho.js', './js/relatorio-pais.js', './js/social.js', './js/duelo-tela.js', './js/views/amigos.js', './js/views/apresentacoes.js', './assets/icon.svg', './assets/icon-maskable.svg',
+  './assets/fontes/anton-latin.woff2', './assets/fontes/inter-latin.woff2', './js/icones.js', './js/apresentacoes-desenho.js', './js/relatorio-pais.js', './js/social.js', './js/duelo-tela.js', './js/views/amigos.js', './js/views/aprovacao.js', './js/views/apresentacoes.js', './assets/icon.svg', './assets/icon-maskable.svg',
   './js/app.js', './js/store.js', './js/seed.js', './js/engine.js', './js/ai.js', './js/ui.js', './js/util.js',
   './js/produto.js', './js/auth.js', './js/api.js', './js/fotos.js', './js/relogio.js', './js/respostas-locais.js', './js/conexoes-importar.js',
   './js/views/comum.js', './js/views/inicio.js', './js/views/agenda.js', './js/views/tarefas.js',

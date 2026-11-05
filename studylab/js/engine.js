@@ -516,8 +516,68 @@ export function desempenhoPorMateria() {
   });
 }
 
+/* ---------- critério de aprovação (como é a nota de cada matéria) ----------
+   criterio = { tipo: 'media' | 'pontos', minimo, periodos: 4|3|2, pesos: [..], itens: [{ id, nome, vale }] }
+   Cada período (bimestre/trimestre/semestre) tem as mesmas avaliações; a nota do período é a soma delas.
+   'media': precisa de média ponderada dos períodos ≥ mínimo.  'pontos': precisa da soma no ano ≥ mínimo.
+   Nos dois casos a conta é linear: ano = Σ w(p) · pontos do período, com w = peso/Σpesos (média) ou peso (pontos). */
+export const NOME_PERIODO = { 4: 'bimestre', 3: 'trimestre', 2: 'semestre' };
+const cima = (x) => Math.ceil(x * 10 - 1e-9) / 10;          // "precisa tirar" sempre arredonda para cima
+export function situacaoAprovacao(materiaId, ano = new Date().getFullYear()) {
+  const m = materia(materiaId);
+  const c = m?.criterio;
+  if (!c || !c.itens?.length) return null;
+  const P = [2, 3, 4].includes(Number(c.periodos)) ? Number(c.periodos) : 4;
+  const pesos = Array.from({ length: P }, (_, i) => Number(c.pesos?.[i]) > 0 ? Number(c.pesos[i]) : 1);
+  const somaPesos = sum(pesos);
+  const w = (p) => (c.tipo === 'pontos' ? pesos[p - 1] : pesos[p - 1] / somaPesos);
+  const totalPeriodo = sum(c.itens.map((i) => Number(i.vale) || 0));
+  const anoDe = (n) => Number(String(n.data || '').slice(0, 4)) || ano;
+  const notas = st().notas.filter((n) => n.materiaId === materiaId && n.itemId && anoDe(n) === ano);
+  let atual = 0, faltaMax = 0, feitoMax = 0;
+  const periodos = [];
+  for (let p = 1; p <= P; p++) {
+    const celulas = c.itens.map((item) => {
+      const ns = notas.filter((n) => Number(n.bimestre) === p && n.itemId === item.id);
+      const nota = ns.sort((a, b) => String(a.data || '').localeCompare(String(b.data || ''))).at(-1) || null;
+      const vale = Number(item.vale) || 0;
+      const pts = nota ? clamp((nota.valor / (nota.maximo || vale || 10)) * vale, 0, vale) : null;
+      if (nota) { atual += w(p) * pts; feitoMax += w(p) * vale; } else faltaMax += w(p) * vale;
+      return { item, nota, vale, pts: pts === null ? null : round(pts, 2) };
+    });
+    const feitas = celulas.filter((x) => x.nota);
+    periodos.push({
+      periodo: p, peso: pesos[p - 1], celulas, completo: feitas.length === celulas.length,
+      pontos: feitas.length ? round(sum(feitas.map((x) => x.pts)), 2) : null,
+    });
+  }
+  const minimo = Number(c.minimo) || 0;
+  const maximoAno = round(c.tipo === 'pontos' ? somaPesos * totalPeriodo : totalPeriodo, 2);
+  const falta = round(minimo - atual, 2);
+  const fracao = faltaMax > 0 ? Math.max(0, falta) / faltaMax : null;     // quanto do que falta precisa acertar
+  let status;
+  if (falta <= 1e-9) status = 'passou';
+  else if (faltaMax <= 0 || falta > faltaMax + 1e-9) status = 'impossivel';
+  else status = 'precisa';
+  // o que precisa tirar em cada avaliação que falta (a mesma proporção em todas)
+  for (const per of periodos) for (const cel of per.celulas) {
+    cel.precisa = !cel.nota && status === 'precisa' ? cima(fracao * cel.vale) : null;
+  }
+  const aproveitamento = feitoMax > 0 ? atual / feitoMax : null;          // 0..1 do que já foi feito
+  return {
+    materia: m, criterio: c, nomePeriodo: NOME_PERIODO[P], P, periodos, totalPeriodo, maximoAno, minimo,
+    atual: round(atual, 2), falta: Math.max(0, falta), faltaMax: round(faltaMax, 2), status,
+    precisaPorcento: fracao === null ? null : Math.round(fracao * 100),
+    aproveitamento, media10: aproveitamento === null ? null : round(aproveitamento * 10, 2),
+    previsao: aproveitamento === null ? null : round(atual + aproveitamento * faltaMax, 2),
+    lancadas: notas.length,
+  };
+}
+
 /* ---------- notas ---------- */
 export function mediaMateria(mid) {
+  const ap = situacaoAprovacao(mid);
+  if (ap && ap.media10 !== null) return ap.media10;              // com o critério: o aproveitamento de 0 a 10
   const ns = st().notas.filter((n) => n.materiaId === mid);
   if (!ns.length) return null;
   const pesoTotal = sum(ns.map((n) => n.peso || 1));
@@ -545,7 +605,7 @@ export function notasDoAno(materiaId, ano = null) {
   const comNota = bimestres.filter((b) => b.media !== null);
   return {
     ano: a, anos, notas: doAno, bimestres,
-    media: mediaPonderada(doAno),                                   // a mesma conta da "média atual"
+    media: (a === atual ? situacaoAprovacao(materiaId)?.media10 : null) ?? mediaPonderada(doAno),   // a mesma conta da "média atual"
     mediaBimestres: comNota.length ? round(avg(comNota.map((b) => b.media)), 2) : null,
     maior: doAno.length ? doAno.reduce((m, n) => (nota10(n) > nota10(m) ? n : m)) : null,
     menor: doAno.length ? doAno.reduce((m, n) => (nota10(n) < nota10(m) ? n : m)) : null,

@@ -4,9 +4,10 @@ import {
   st, set, materia as getMateria, conteudo as getConteudo, novaMateria, novoConteudo,
   atualizar, remover, nomeMateria, emojiMateria, corMateria,
 } from '../store.js';
-import { dominioMateria, semaforo, iconeStatus, mediaMateria, calcularDominio, recalcularDominios, notasDoAno } from '../engine.js';
+import { dominioMateria, semaforo, iconeStatus, mediaMateria, calcularDominio, recalcularDominios, notasDoAno, situacaoAprovacao } from '../engine.js';
 import { titulo, cartao, kpi, barra, vazio, modal, fecharModal, toast, campo, inp, sel, txtarea, confirmar, gAnel, progresso, segmento, gLinha } from '../ui.js';
 import { tagMateria, formFlashcard, formNota } from './comum.js';
+import { cartaoAprovacao } from './aprovacao.js';
 
 const EMOJIS = ['📖', '📐', '🏛️', '🌎', '🌐', '🔬', '⚗️', '🧬', '🎨', '🎵', '⚽', '💻', '📊', '🧮', '🗿', '📜', '🧠', '🌱'];
 const CORES = ['#3ec9f5', '#60a5fa', '#f1d794', '#34d399', '#fbbf24', '#fb923c', '#f87171', '#f472b6', '#a78bfa'];
@@ -53,7 +54,17 @@ function cardMateria(m) {
       h('div', {}, h('div', { class: 'tiny muted' }, 'média'), h('b', { style: { fontSize: '20px' } }, media ?? '—')),
       h('div', { class: 'sp right' }, h('div', { class: 'tiny muted' }, 'meta'), h('b', {}, m.meta ?? '—'))),
     progresso('Domínio da matéria', dom, { cls: sm.cls }),
+    situacaoCurta(m.id),
     h('div', { class: 'tiny muted mt' }, `${cs.length} conteúdo(s) · ${cs.filter((c) => (c.dominio || 0) >= 80).length} dominado(s)`)));
+}
+
+function situacaoCurta(mid) {
+  const r = situacaoAprovacao(mid);
+  if (!r) return null;
+  const t = r.status === 'passou' ? ['ok', '✅ já passou']
+    : r.status === 'impossivel' ? ['bad', '⚠️ recuperação']
+      : [r.precisaPorcento >= 85 ? 'bad' : r.precisaPorcento >= 65 ? 'warn' : 'ok', `🎯 faltam ${String(r.falta).replace('.', ',')} · precisa ${r.precisaPorcento}% do resto`];
+  return h('div', { class: 'mt' }, h('span', { class: `chip ${t[0]}` }, t[1]));
 }
 
 /* ---------- detalhe ---------- */
@@ -76,7 +87,8 @@ function detalhe(el, id, pintar) {
     kpi(cs.filter((c) => (c.dominio || 0) >= 80).length, 'dominados'),
     kpi(cs.filter((c) => (c.dominio || 0) < 40 && c.status !== 'novo').length, 'na faixa vermelha')));
 
-  el.append(notasAno(m, pintar));
+  el.append(cartaoAprovacao(m, pintar));
+  el.append(h('div', { class: 'mt2' }, notasAno(m, pintar)));
 
   /* mapa do conhecimento */
   const raizes = cs.filter((c) => !c.paiId);
