@@ -25,6 +25,8 @@
 //      folhas (± 0,5 px); E10 o Pular sem encostar em carta nem no nome do time; E11 o nome em TM Cond (carregada);
 //      E12 as pontas nunca tangentes à lateral (a borda da carta ≥ 5 px para dentro, ou a carta centrada na lateral ± 1 px;
 //      revisão V1 do item 29);
+//      E4 também as linhas recortadas pelo canto arredondado do campo (clip-path com o raio: os cantos vivos do retângulo
+//      furavam a curva; revisões A2/V3);
 //  15) a escalação com ?tm e nomes LONGOS (tools/lib/pedidos-tm.mjs PED_NOMES_LONGOS: os dois nomes de time mais compridos e
 //      camisas de 10 letras com M e W; o visitante com 3 nomes de estresse): E1–E12 em 568×320, 640×360, 844×390 com entalhe,
 //      1366×600 e 1920×1080, com o escudo na coluna; cortados: 0 no mandante, no visitante só os de estresse (com "…"); e o
@@ -206,9 +208,13 @@ async function conferirEmPe(pg, t) {
     const grandes = rs.slice(1).sort((a, b) => b.w * b.h - a.w * a.h).slice(0, 2).sort((a, b) => (b.y + b.h) - (a.y + a.h));
     const ga = grandes[0];
     const circ = re ? re.w / re.h : NaN, gaLA = ga ? ga.w / ga.h : NaN, gaFundo = ga ? rc.y + rc.h - (ga.y + ga.h) : NaN;
+    // (as linhas recortadas pelo canto arredondado do campo: o raio de dentro da borda — os cantos vivos furavam a curva)
+    const raioCampo = parseFloat(getComputedStyle(campoEl).borderTopLeftRadius) || 0, clip = getComputedStyle(svg).clipPath || 'none';
+    const mClip = clip.match(/^inset\(0(?:px)?(?: 0(?:px)?)* round ([\d.]+)px/);
+    const recorte = !!mClip && Math.abs(+mClip[1] - (raioCampo - 1)) <= 0.5;
     const e4 = vb.length === 4 && vb[0] === 0 && vb[1] === 0 && vb[3] === 105 && vb[2] >= 68 && vb[2] <= 89.3 && Math.abs(circ - 1) <= 0.03
-      && Math.abs(gaLA / (40.32 / 16.5) - 1) <= 0.03 && gaFundo >= -1 && gaFundo <= 0.01 * rc.h + 2;
-    if (!e4) falhas.push(`E4 viewBox "${viewBox}", círculo ${circ.toFixed(2)}, grande área ${gaLA.toFixed(2)} a ${f1(gaFundo)} px do fundo`);
+      && Math.abs(gaLA / (40.32 / 16.5) - 1) <= 0.03 && gaFundo >= -1 && gaFundo <= 0.01 * rc.h + 2 && recorte;
+    if (!e4) falhas.push(`E4 viewBox "${viewBox}", círculo ${circ.toFixed(2)}, grande área ${gaLA.toFixed(2)} a ${f1(gaFundo)} px do fundo, recorte das linhas "${clip}" (raio ${raioCampo})`);
     // E5 no campo, na área segura, folga
     let folga = Infinity, par = '', foraCampo = [], foraSeg = 0;
     cartas.forEach((c, i) => {

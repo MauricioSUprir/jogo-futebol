@@ -63,12 +63,13 @@ html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinhet
 .pj-esc-nome { margin: 0; font-size: clamp(20px, 3.3vw, 46px); font-weight: 900; line-height: 1.02; letter-spacing: -0.01em; overflow-wrap: anywhere; }
 .pj-esc-forma { font-size: clamp(15px, 1.9vw, 24px); font-weight: 800; color: var(--verde); font-variant-numeric: tabular-nums; }
 .pj-esc-area { position: relative; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; justify-self: center; }
-/* (overflow visível: no aperto a carta da ponta passa da lateral — no máximo meia carta) */
+/* (overflow visível: no aperto a carta da ponta fica sobre a lateral — no máximo meia carta para fora; só as LINHAS ficam recortadas
+   pelo canto arredondado: os cantos vivos do retângulo de 0,5 m furavam a curva da borda — revisões A2/V3) */
 .pj-esc-campo {
   position: relative; flex: none; border-radius: 12px; overflow: visible;
   background: rgba(11, 36, 22, 0.8); border: 1px solid rgba(25, 224, 122, 0.34); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45);
 }
-.pj-esc-linhas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.pj-esc-linhas { position: absolute; inset: 0; width: 100%; height: 100%; clip-path: inset(0 round 11px); }
 .pj-esc-linhas * { fill: none; stroke: rgba(25, 224, 122, 0.4); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .pj-carta {
   position: absolute; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
