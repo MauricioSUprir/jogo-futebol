@@ -20,6 +20,8 @@ function precisaSsl(url) {
 const sql = URL_BANCO
   ? postgres(URL_BANCO, { ssl: precisaSsl(URL_BANCO) ? 'require' : false, max: 5 })
   : null;
+/** A mesma conexão, para os outros módulos (social.js) não abrirem outra. */
+export const conexao = sql;
 
 /* ---------- modo memória ---------- */
 const mem = { usuarios: new Map(), assinaturas: new Map(), uso: new Map(), codigos: new Map(), pagamentos: new Map(), conexoes: new Map() };
@@ -98,6 +100,11 @@ export async function migrar() {
   await sql`ALTER TABLE codigos ADD COLUMN IF NOT EXISTS nivel text NOT NULL DEFAULT 'pro'`;
   // conta Google ligada a uma conta de aparelho (o id da conta não muda)
   await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS google_sub text`;
+  // conta com e-mail e senha (criada no app): e-mail de login, telefone (WhatsApp) e foto
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_login text`;
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone text NOT NULL DEFAULT ''`;
+  await sql`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_verificado boolean NOT NULL DEFAULT false`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_email_login ON usuarios (lower(email_login)) WHERE email_login IS NOT NULL`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_google ON usuarios (google_sub) WHERE google_sub IS NOT NULL`;
   // Conexões: o que o aluno ligou (Google Agenda, Classroom, Drive, calendário por link).
   // O segredo (refresh token do Google ou o link privado do calendário) fica CIFRADO.
@@ -139,6 +146,72 @@ export async function salvarUsuario({ id, email, nome, foto, provedor = 'google'
       foto = excluded.foto, visto_em = now()
     RETURNING *`;
   return u;
+}
+
+/* ---------- conta com e-mail e senha ----------
+   A senha nunca é guardada: só o hash scrypt com sal ("scrypt$sal$hash"). */
+export function hashSenha(senha) {
+  const sal = crypto.randomBytes(16).toString('base64url');
+  const h = crypto.scryptSync(String(senha), sal, 32).toString('base64url');
+  return `scrypt$${sal}$${h}`;
+}
+export function senhaConfere(senha, guardado) {
+  const [tipo, sal, h] = String(guardado || '').split('$');
+  if (tipo !== 'scrypt' || !sal || !h) return false;
+  const tentativa = crypto.scryptSync(String(senha), sal, 32);
+  const certo = Buffer.from(h, 'base64url');
+  return certo.length === tentativa.length && crypto.timingSafeEqual(certo, tentativa);
+}
+
+export async function contaPorEmail(email) {
+  const e = String(email || '').trim().toLowerCase();
+  if (!e) return null;
+  if (emMemoria) return [...mem.usuarios.values()].find((u) => (u.email_login || '').toLowerCase() === e) || null;
+  const [u] = await sql`SELECT * FROM usuarios WHERE lower(email_login) = ${e}`;
+  return u || null;
+}
+
+/**
+ * Cria a conta com e-mail e senha. Se o aluno já usava o app (conta de aparelho),
+ * a MESMA conta vira conta de verdade: o plano e o histórico continuam.
+ * Devolve null se o e-mail já tem conta.
+ */
+export async function criarContaEmail({ nome, email, telefone, senha, foto = '', verificado = false }, contaAtualId = null) {
+  if (await contaPorEmail(email)) return null;
+  const campos = {
+    email: String(email).trim(), email_login: String(email).trim().toLowerCase(), nome, telefone, foto,
+    provedor: 'email', senha_hash: hashSenha(senha), email_verificado: !!verificado,
+  };
+  if (emMemoria) {
+    const atual = contaAtualId && mem.usuarios.get(contaAtualId);
+    if (atual && atual.provedor === 'dispositivo') { Object.assign(atual, campos); return atual; }
+    const id = `u_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+    mem.usuarios.set(id, { id, ...campos });
+    return mem.usuarios.get(id);
+  }
+  if (contaAtualId) {
+    const [u] = await sql`UPDATE usuarios SET ${sql(campos)}, visto_em = now()
+      WHERE id = ${contaAtualId} AND provedor = 'dispositivo' RETURNING *`;
+    if (u) return u;
+  }
+  const id = `u_${crypto.randomUUID().replace(/-/g, '').slice(0, 20)}`;
+  const [u] = await sql`INSERT INTO usuarios ${sql({ id, ...campos })} RETURNING *`;
+  return u;
+}
+
+/** Senha nova pelo código do e-mail (o e-mail fica confirmado). Devolve a conta ou null. */
+export async function trocarSenha(email, senha) {
+  const u = await contaPorEmail(email);
+  if (!u) return null;
+  const senha_hash = hashSenha(senha);
+  if (emMemoria) { Object.assign(u, { senha_hash, email_verificado: true }); return u; }
+  const [n] = await sql`UPDATE usuarios SET senha_hash = ${senha_hash}, email_verificado = true WHERE id = ${u.id} RETURNING *`;
+  return n || null;
+}
+
+export async function atualizarFoto(usuarioId, foto) {
+  if (emMemoria) { const u = mem.usuarios.get(usuarioId); if (u) u.foto = foto; return; }
+  await sql`UPDATE usuarios SET foto = ${foto} WHERE id = ${usuarioId}`;
 }
 
 export async function usuarioPorId(id) {

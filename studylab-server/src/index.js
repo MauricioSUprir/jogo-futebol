@@ -23,7 +23,7 @@ import {
   migrar, salvarUsuario, entrarPorDispositivo, assinaturaAtiva, criarAssinatura, cancelarAssinatura,
   usarCodigo, criarCodigo, usoDoDia, usoDoMes, registrarUso, numeros, emMemoria,
   registrarPagamento, jaProcessado, marcarPago, pagamentosDoUsuario,
-  usuarioPorId, entrarComGoogle, salvarConexao, conexoesDo, conexaoDe, apagarConexao, marcarSincronizado,
+  usuarioPorId, entrarComGoogle, salvarConexao, criarContaEmail, contaPorEmail, senhaConfere, atualizarFoto, trocarSenha, conexoesDo, conexaoDe, apagarConexao, marcarSincronizado,
 } from './db.js';
 import {
   SERVICOS_GOOGLE, googleLigado, configPublica, urlAutorizacao, lerEstado, trocarCodigo, quemEntrou,
@@ -31,6 +31,10 @@ import {
   baixarIcs, urlDeVolta,
 } from './conexoes.js';
 import { verificarGoogle, criarSessao, alunoDaRequisicao } from './auth.js';
+import { criarRotasSociais } from './social.js';
+import { whatsappLigado, normalizarTelefone, enviarBoasVindas } from './whatsapp.js';
+import { emailLigado, gerarCodigo, conferirCodigo, enviarCodigo } from './email.js';
+import { migrarSocial } from './social-db.js';
 import {
   perguntar, modeloPadrao, modeloPara, contarFotos, provedor, temChaveIA, modeloEmUso, escadaGemini, estadoEscada, tamanhoCache,
 } from './ia.js';
@@ -132,6 +136,8 @@ const rotas = {
       chaveConfigurada: temChaveIA(),
       googleConfigurado: !!process.env.GOOGLE_CLIENT_ID,     // opcional: dá para usar conta de aparelho
       conexoesProntas: googleLigado(),                       // conta Google + Agenda/Classroom/Drive
+      whatsappConfigurado: whatsappLigado(),                 // boas-vindas no WhatsApp ao criar conta
+      emailConfigurado: emailLigado(),                       // código de verificação por e-mail
       enderecoDeVoltaGoogle: urlDeVolta(),                   // é este que vai no Google Cloud
       pagamentoConfigurado: pagamentoLigado(),
       studyAiPronto: temChaveIA() && !!process.env.SEGREDO,
@@ -347,7 +353,7 @@ const rotas = {
   },
 
   /* ---------- conexões ---------- */
-  'GET /conexoes/config': async () => ({ ...configPublica(), servicos: ['agenda', 'classroom', 'drive', 'ics'] }),
+  'GET /conexoes/config': async () => ({ ...configPublica(), email: emailLigado(), servicos: ['agenda', 'classroom', 'drive', 'ics'] }),
 
   'POST /conexoes/google/iniciar': async (req) => {
     if (!googleLigado()) throw Object.assign(new Error('O login do Google ainda não foi configurado no servidor.'), { status: 503 });
@@ -394,6 +400,87 @@ const rotas = {
     }
   },
 
+  /* ---------- código por e-mail: criar conta e trocar a senha ---------- */
+  'POST /conta/codigo': async (req) => {
+    const c = await lerCorpo(req);
+    const email = String(c.email || '').trim().toLowerCase();
+    const motivo = c.motivo === 'senha' ? 'senha' : 'criar';
+    if (!emailValido(email)) throw Object.assign(new Error('Esse e-mail não parece certo.'), { status: 400 });
+    if (!emailLigado()) throw Object.assign(new Error('A verificação por e-mail ainda não está ligada.'), { status: 503 });
+    if (muitasBatidas(`codigo:${email}`, 3, 600000) || muitasBatidas(`codigo-ip:${ipDe(req)}`, 10, 3600000)) {
+      throw Object.assign(new Error('Muitos códigos pedidos. Espere uns minutos.'), { status: 429 });
+    }
+    const conta = await contaPorEmail(email);
+    if (motivo === 'criar' && conta) throw Object.assign(new Error('Esse e-mail já tem conta. Toque em "Já tenho conta" para entrar.'), { status: 409 });
+    // trocar a senha de um e-mail sem conta: responde igual (não conta quem tem conta aqui)
+    if (motivo === 'senha' && !conta) return { ok: true };
+    const codigo = gerarCodigo(email, motivo);
+    const nome = String(c.nome || conta?.nome || '').slice(0, 60);
+    const r = await enviarCodigo({ email, nome, codigo, motivo });
+    if (r !== 'enviado') throw Object.assign(new Error('Não conseguimos mandar o e-mail agora. Tente de novo.'), { status: 502 });
+    return { ok: true };
+  },
+
+  'POST /conta/nova-senha': async (req) => {
+    const c = await lerCorpo(req);
+    const email = String(c.email || '').trim().toLowerCase();
+    const senha = String(c.senha || '');
+    if (senha.length < 8 || senha.length > 100) throw Object.assign(new Error('A senha precisa ter pelo menos 8 caracteres.'), { status: 400 });
+    if (muitasBatidas(`nova-senha:${ipDe(req)}`, 10, 600000)) throw Object.assign(new Error('Muitas tentativas. Espere 10 minutos.'), { status: 429 });
+    conferirCodigo(email, 'senha', c.codigo);
+    const u = await trocarSenha(email, senha);
+    if (!u) throw Object.assign(new Error('Não achamos conta com esse e-mail.'), { status: 404 });
+    return respostaDeEntrada(u);
+  },
+
+  /* ---------- conta com e-mail e senha (o app pede antes do questionário) ---------- */
+  'POST /conta/criar': async (req) => {
+    const c = await lerCorpo(req, 400000);
+    const nome = String(c.nome || '').replace(/\s+/g, ' ').trim().slice(0, 60);
+    const email = String(c.email || '').trim().toLowerCase();
+    const telefone = normalizarTelefone(c.telefone);
+    const senha = String(c.senha || '');
+    const foto = String(c.foto || '');
+    if (nome.length < 2) throw Object.assign(new Error('Escreva seu nome.'), { status: 400 });
+    if (!emailValido(email)) throw Object.assign(new Error('Esse e-mail não parece certo.'), { status: 400 });
+    if (!telefone) throw Object.assign(new Error('Número com DDD, só números (ex.: 11 98765-4321).'), { status: 400 });
+    if (senha.length < 8 || senha.length > 100) throw Object.assign(new Error('A senha precisa ter pelo menos 8 caracteres.'), { status: 400 });
+    if (foto && (!/^data:image\/(jpeg|png|webp);base64,[\w+/=]+$/.test(foto) || foto.length > 200000)) {
+      throw Object.assign(new Error('Foto em formato inesperado (use JPG ou PNG).'), { status: 400 });
+    }
+    // com o e-mail ligado, a conta só nasce com o código que chegou no e-mail
+    const verificado = emailLigado();
+    if (verificado) {
+      if (await contaPorEmail(email)) throw Object.assign(new Error('Esse e-mail já tem conta. Toque em "Já tenho conta" para entrar.'), { status: 409 });
+      conferirCodigo(email, 'criar', c.codigo);
+    }
+    if (muitasBatidas(`conta:${ipDe(req)}`, 5, 3600000)) throw Object.assign(new Error('Muitas contas criadas daqui. Tente mais tarde.'), { status: 429 });
+    const atual = await alunoDaRequisicao(req);                 // conta do aparelho: vira a conta de verdade
+    const u = await criarContaEmail({ nome, email, telefone, senha, foto, verificado }, atual?.id || null);
+    if (!u) throw Object.assign(new Error('Esse e-mail já tem conta. Toque em "Já tenho conta" para entrar.'), { status: 409 });
+    const whatsapp = await enviarBoasVindas({ telefone, nome });
+    return { ...(await respostaDeEntrada(u)), whatsapp };
+  },
+
+  'POST /conta/entrar': async (req) => {
+    const { email, senha } = await lerCorpo(req);
+    const e = String(email || '').trim().toLowerCase();
+    if (muitasBatidas(`login:${ipDe(req)}:${e}`, 8, 600000)) throw Object.assign(new Error('Muitas tentativas. Espere 10 minutos.'), { status: 429 });
+    const u = await contaPorEmail(e);
+    if (!u || !senhaConfere(senha, u.senha_hash)) throw Object.assign(new Error('E-mail ou senha errados.'), { status: 401 });
+    return respostaDeEntrada(u);
+  },
+
+  'POST /conta/foto': async (req) => {
+    const aluno = await exigirAluno(req);
+    const { foto } = await lerCorpo(req, 400000);
+    if (!/^data:image\/(jpeg|png|webp);base64,[\w+/=]+$/.test(String(foto || '')) || foto.length > 200000) {
+      throw Object.assign(new Error('Foto em formato inesperado (use JPG ou PNG).'), { status: 400 });
+    }
+    await atualizarFoto(aluno.id, foto);
+    return { ok: true };
+  },
+
   'POST /conta/troca': async (req) => {
     const { ticket } = await lerCorpo(req);
     const id = await usarTicket(ticket);
@@ -403,7 +490,7 @@ const rotas = {
   },
 
   'GET /conexoes': async (req) => {
-    const u = await exigirContaGoogle(req);
+    const u = await exigirContaGoogle(req, { pro: false });
     const lista = await conexoesDo(u.id);
     return {
       conexoes: lista.map((c) => ({
@@ -518,6 +605,9 @@ const rotasDinamicas = [
   },
 ];
 
+const emailValido = (e) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e) && e.length <= 120;
+const ipDe = (req) => (req.headers['x-forwarded-for'] || '').split(',')[0].trim() || req.socket.remoteAddress || '?';
+
 /* ---------- conexões: utilidades ---------- */
 const REDIRECIONA = Symbol('redireciona');
 const URL_APP = (process.env.URL_APP || 'https://guidrodrigues21-a11y.github.io/mindtrack-ai/').replace(/#.*$/, '');
@@ -533,13 +623,16 @@ function conferirVolta(volta) {
   return `${u.origin}${u.pathname}${u.search}`;
 }
 
-/** As Conexões só funcionam com conta de verdade (entrou com o Google). */
-async function exigirContaGoogle(req) {
+/** As Conexões precisam de conta de verdade (Google ou e-mail e senha) e são do Pro. */
+async function exigirContaGoogle(req, { pro = true } = {}) {
   const aluno = await exigirAluno(req);
   const u = await usuarioPorId(aluno.id);
   if (!u) throw Object.assign(new Error('Faça login de novo.'), { status: 401 });
-  if (u.provedor !== 'google') {
-    throw Object.assign(new Error('As Conexões precisam de uma conta: entre com o Google primeiro.'), { status: 403, precisaConta: true });
+  if (!['google', 'email'].includes(u.provedor)) {
+    throw Object.assign(new Error('As Conexões precisam de uma conta: crie sua conta ou entre com o Google.'), { status: 403, precisaConta: true });
+  }
+  if (pro && !(await assinaturaAtiva(u.id))) {
+    throw Object.assign(new Error('As Conexões são do MindTrack Pro.'), { status: 402, precisaPro: true });
   }
   return u;
 }
@@ -548,7 +641,7 @@ async function respostaDeEntrada(u) {
   const token = await criarSessao({ id: u.id, email: u.email || '', nome: u.nome || '' });
   const assinatura = await assinaturaAtiva(u.id);
   return {
-    token, usuario: { id: u.id, nome: u.nome, email: u.email || '', foto: u.foto || '', provedor: u.provedor || 'google' },
+    token, usuario: { id: u.id, nome: u.nome, email: u.email || '', foto: u.foto || '', telefone: u.telefone || '', provedor: u.provedor || 'google' },
     ...resumoAssinatura(assinatura),
   };
 }
@@ -561,6 +654,45 @@ function freioSincronizar(id, limite = 30, janela = 3600000) {
   lista.push(agora);
   sincronizacoes.set(id, lista);
 }
+
+/* ---------- amizades, chat e duelos (social.js) ---------- */
+const SCHEMA_DUELO = {
+  type: 'object', additionalProperties: false, required: ['perguntas'],
+  properties: {
+    perguntas: {
+      type: 'array',
+      items: {
+        type: 'object', additionalProperties: false, required: ['enunciado', 'opcoes', 'correta'],
+        properties: {
+          enunciado: { type: 'string' },
+          opcoes: { type: 'array', items: { type: 'string' } },
+          correta: { type: 'integer', description: 'índice 0 a 3 da opção certa' },
+          explicacao: { type: 'string' },
+        },
+      },
+    },
+  },
+};
+/** Duelo com tema livre (Pro): a IA cria as 5 perguntas. Não conta no limite do aluno. */
+async function gerarPerguntasIA(tema) {
+  const r = await perguntar({
+    system: 'Você cria perguntas de quiz escolar em português do Brasil para um duelo entre dois alunos. '
+      + 'Exatamente 5 perguntas de múltipla escolha, 4 opções curtas, só UMA correta, nível ensino fundamental II '
+      + 'e médio, sem pegadinha e sem nada que você não tenha certeza. explicacao: 1 frase curta.',
+    conteudo: `Tema do duelo: ${String(tema).slice(0, 80)}`,
+    schema: SCHEMA_DUELO, esforco: 'low', maxTokens: 2500, nivel: 'pro',
+  });
+  const d = JSON.parse(r.texto);
+  return (d.perguntas || [])
+    .filter((q) => q?.enunciado && Array.isArray(q.opcoes) && q.opcoes.length === 4 && q.correta >= 0 && q.correta <= 3)
+    .map((q) => ({ materia: tema, enunciado: String(q.enunciado).slice(0, 300), opcoes: q.opcoes.map((o) => String(o).slice(0, 120)), correta: q.correta, explicacao: String(q.explicacao || '').slice(0, 300) }));
+}
+const social = criarRotasSociais({
+  exigirAluno, lerCorpo, temIA: temChaveIA, gerarPerguntasIA,
+  ehPago: async (id) => !!(await assinaturaAtiva(id)),
+});
+Object.assign(rotas, social.rotas);
+rotasDinamicas.push(...social.dinamicas);
 
 async function exigirAluno(req) {
   const aluno = await alunoDaRequisicao(req);
@@ -586,6 +718,9 @@ const servidor = http.createServer(async (req, res) => {
   if (!permitido && req.headers.origin) return json(res, 403, { erro: 'Origem não autorizada' });
   if (muitasBatidas(ip)) return json(res, 429, { erro: 'Calma aí — muitas chamadas seguidas.' });
 
+  if (chave === 'GET /tempo-real') {
+    return social.abrirTempoReal(req, res, url).catch((e) => { console.error('tempo-real', e); if (!res.headersSent) json(res, 500, { erro: 'Erro inesperado' }); });
+  }
   const rota = rotas[chave];
   const dinamica = rota ? null : rotasDinamicas.map((d) => ({ d, m: chave.match(d.padrao) })).find((x) => x.m);
   if (!rota && !dinamica) return json(res, 404, { erro: 'Rota não encontrada' });
@@ -605,6 +740,7 @@ const servidor = http.createServer(async (req, res) => {
 });
 
 migrar()
+  .then(() => migrarSocial())
   .then(() => servidor.listen(PORTA, () => {
     console.log(`MindTrack no ar em :${PORTA}`);
     console.log(`  banco: ${emMemoria ? 'MEMÓRIA (só para testes)' : 'postgres'}`);
