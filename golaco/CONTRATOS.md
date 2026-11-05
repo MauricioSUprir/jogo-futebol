@@ -5130,10 +5130,14 @@ cena de cartão a mais a cada 6 partidas e mais replays de falta perto da área 
   `vParado` → K0; o portão só contra a pessoa → K2 (a demo igual); o clássico no `semAtropelar` → K4; a tabela neutra → C1 e C2.
 - `teste-ponte-tm` P13 (o `classicoDoPedido`), `teste-prepartida-tela` E25 (o selo com `?classico=1`), `teste-faltas-sentido
   --classico` (B1–B4 com o clássico: 0,00 · 0,25 · 5,75/0,13/0,50 · 0,00 — passa), `painel-equilibrio --classico` (a versão medida
-  com o clássico, a base sem).
+  com o clássico, a base sem: 48 partidas IA × IA, sementes 1001–1048 — faltas 2,2 → 3,1, amarelos 0,60 → 0,56, vermelhos 0,02 →
+  0,10, gols 1,77 → 1,90, chutes 9,0 → 8,8, roubadas no bote 4,06 → 5,81, passe certo 86,4 → 86,9%; o goleiro de 6 a 16,5 m 61,7 →
+  50,4% em 128/119 chutes, informativo: o painel e as metas dele são do jogo sem o clássico).
 - **Sem recuo:** `hash-igual --ref 29d67bad --rapido` e `hash-partida --ref 29d67bad --sementes 2 --min 1 --par 2` IGUAIS;
   `fecho-hash --diff 29d67bad`: `config.js`, `faltas.js`, `partida.js`, `sim.js` (o `ia-tatica.js` voltou à base); download
-  inicial sem `?tm` +5,3 KB (folga 642,2 KB).
+  inicial sem `?tm` +5,3 KB (folga 642,2 KB). Passam também: `teste-faltas`, `teste-faltas-sentido`, `teste-cenas`,
+  `teste-math-proibido`, `teste-dificuldade --so portao`, `teste-online`, `teste-carga`, `teste-tm-tela` e o `testar-3d` do TM (pro
+  e `--publica`); o caso do Viverde (senha) não rodou.
 
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 

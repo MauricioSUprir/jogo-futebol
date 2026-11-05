@@ -563,4 +563,7 @@ do item 33) — o Lenda continua acima pelo resto da dificuldade (engaja, encurt
   Os companheiros da pessoa: tentativas 0,93 → 1,52 e faltas 0,18 → 0,47 por partida.
 - `teste-faltas-sentido --classico`: B1 0,00, B2 0,25, B3 5,75 · 0,13 · 0,50, B4 0,00 — PASSA (sem: 0,00 · 0,31 · 3,75 · 0,00 ·
   0,38 · 0,00): mais contato, nenhuma falta "forçada" a mais.
+- `painel-equilibrio --classico --base <29d67bad> --n 48` (IA × IA, sementes 1001–1048): faltas 2,2 → 3,1, amarelos 0,60 → 0,56,
+  vermelhos 0,02 → 0,10 (5 em 48), gols 1,77 → 1,90, chutes 9,0 → 8,8, roubadas no bote 4,06 → 5,81, passe 86,4 → 86,9%, goleiro de
+  6 a 16,5 m 61,7 → 50,4% (128/119 chutes; amostra pequena, informativo).
 - **Não rodou:** o `--completo` (96 por braço; FILA item 122) e o celular de verdade.
