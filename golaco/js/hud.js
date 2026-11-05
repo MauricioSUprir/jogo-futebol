@@ -106,7 +106,7 @@ export function criarHud(opc) {
     acoes: $('menu-acoes'), modos: $('menu-modos'), estadoModo: $('estado-modo'), continuar: $('btn-continuar'),
     reiniciarPartida: $('btn-reiniciar-partida'), dica: $('dica'), replay: $('replay'), replayFaixa: $('replay-faixa'),
     comemoracao: $('comemoracao'), substituicao: $('substituicao'), faixaSub: $('faixa-subst'), cena: $('cena'),
-    terco: $('terco'), nome: $('nome-condutor'), chipMapa: $('chip-minimapa'),
+    terco: $('terco'), nome: $('nome-condutor'), chipMapa: $('chip-minimapa'), autorGol: $('autor-gol'),
     // a pausa do item 58: os submenus novos, a faixa, o topo (a competição), a pílula do placar e o cartão do meu time
     opcoes: $('menu-opcoes'), estat: $('menu-estatisticas'), competicao: $('pausa-competicao'), pausaPlacar: $('pausa-placar'),
     pausaTime: $('pausa-time'),
@@ -115,6 +115,29 @@ export function criarHud(opc) {
   el.faixaPausa = el.menu?.querySelector('.pausa-faixa') ?? null;
   const nomeEl = el.nome ? { cor: el.nome.querySelector('.nc-cor'), num: el.nome.querySelector('.nc-num'), nome: el.nome.querySelector('.nc-nome') } : null;
   let nomeChave = null; // time|num|nome|apagado escrito no DOM (null = escondido): só escreve quando muda
+  // o cartão do autor do gol (item 31; main.js decide quando por js/autor-cartao.js): as peças e o que está escrito
+  const ag = el.autorGol ? {
+    sr: el.autorGol.querySelector('.ag-sr'), foto: el.autorGol.querySelector('.ag-foto'), img: el.autorGol.querySelector('.ag-foto img'),
+    use: el.autorGol.querySelector('.ag-escudo use'), sigla: el.autorGol.querySelector('.ag-sigla'), num: el.autorGol.querySelector('.ag-num'),
+    completo: el.autorGol.querySelector('.ag-nome-completo'), curto: el.autorGol.querySelector('.ag-nome-curto'),
+  } : null;
+  // a largura que sobra à direita do placar (refeita no resize enquanto o cartão está na tela)
+  const medirAutorGol = () => {
+    const e = el.autorGol;
+    if (!e || e.hidden) return;
+    const r = document.querySelector('#hud .placar')?.getBoundingClientRect();
+    if (r && r.width > 0) e.style.setProperty('--ag-esq', `${Math.ceil(r.right + 12)}px`);
+    else e.style.removeProperty('--ag-esq');
+  };
+  // a foto que falhou depois de entrar (cache limpo, rede): o cartão fica só com o texto, na hora
+  const fotoFalhou = ev => {
+    if (!ag || ev.target !== ag.img || !ag.img.getAttribute('src')) return;
+    ag.foto.hidden = true; el.autorGol.classList.remove('com-foto'); el.autorGol.classList.add('sem-foto');
+  };
+  if (ag) {
+    ag.img.addEventListener('error', fotoFalhou);
+    window.addEventListener('resize', medirAutorGol);
+  }
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
@@ -1366,6 +1389,74 @@ export function criarHud(opc) {
     },
     /** O tipo do terço de baixo na tela (testes): null, 'impedimento' ou 'legal'. */
     get tercoTipo() { return tercoTipo; },
+    /**
+     * O CARTÃO DO AUTOR do gol na comemoração (item 31; o canto de cima à direita, na linha do placar, dentro da camada
+     * #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, curto, foto}
+     * — a foto (só a da edição pro do TM, já decodificada: main.js fotoPronta) ou null = só o texto, numa linha. Exceção
+     * escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI e as tarjas das cenas): só dentro da
+     * cena, nunca com a bola rolando; sem minuto nem "GOL". Não pega toque (o toque na camada pula a cena). spec.fotoEl: a
+     * MESMA <img> já decodificada da pré-carga (main.js FOTOS) — entra no cartão no lugar da de antes e pinta no 1º quadro;
+     * sem ela, o endereço (spec.foto) numa <img> do cartão.
+     */
+    autorGol(spec) {
+      const e = el.autorGol;
+      if (!e || !ag) return;
+      if (!spec) {
+        e.hidden = true; e.classList.remove('visivel', 'saindo');
+        if (ag.img.dataset.cartao === '1' && ag.img.getAttribute('src')) ag.img.removeAttribute('src');
+        return;
+      }
+      ag.sigla.textContent = spec.sigla ?? '';
+      if (spec.escudo) ag.use.setAttribute('href', spec.escudo); else ag.use.removeAttribute('href');
+      ag.num.textContent = String(spec.num ?? '');
+      ag.completo.textContent = spec.nome ?? '';
+      ag.curto.textContent = spec.curto ?? spec.nome ?? '';
+      e.style.setProperty('--cor-time', spec.cor1 || '');
+      e.style.setProperty('--cor-time-texto', spec.cor2 || '');
+      ag.sr.textContent = `Autor do gol: ${spec.nome ?? ''}${spec.num !== '' && spec.num != null ? `, camisa ${spec.num}` : ''}${spec.nomeTime ? `, ${spec.nomeTime}` : ''}`;
+      const foto = typeof spec.foto === 'string' && spec.foto ? spec.foto : null;
+      const pronta = foto && spec.fotoEl && spec.fotoEl.tagName === 'IMG' && spec.fotoEl.complete && spec.fotoEl.naturalWidth > 0 ? spec.fotoEl : null;
+      if (pronta && pronta !== ag.img) {
+        pronta.alt = ''; pronta.removeEventListener('error', fotoFalhou); pronta.addEventListener('error', fotoFalhou);
+        ag.foto.replaceChildren(pronta); ag.img = pronta;
+      } else if (!pronta && foto) {
+        // (sem a decodificada: uma <img> do cartão — nunca a da pré-carga, que pode estar em outra cena)
+        if (ag.img.dataset.cartao !== '1') { const n = document.createElement('img'); n.alt = ''; n.decoding = 'async'; n.dataset.cartao = '1'; n.addEventListener('error', fotoFalhou); ag.foto.replaceChildren(n); ag.img = n; }
+        if (ag.img.getAttribute('src') !== foto) ag.img.src = foto;
+      } else if (!foto && ag.img.getAttribute('src') && ag.img.dataset.cartao === '1') ag.img.removeAttribute('src');
+      ag.foto.hidden = !foto;
+      e.classList.toggle('com-foto', !!foto);
+      e.classList.toggle('sem-foto', !foto);
+      e.classList.remove('visivel', 'saindo');
+      e.hidden = false;
+      medirAutorGol();
+      void e.offsetWidth;
+      e.classList.add('visivel');
+    },
+    /** O cartão do autor começa a sair (a animação de 0,2 s; quem o tira é autorGol(null), pelo relógio da cena). */
+    autorGolSai() { if (el.autorGol && !el.autorGol.hidden) el.autorGol.classList.add('saindo'); },
+    /** O cartão do autor na tela (testes): {visivel, saindo, foto, fotoSrc, num, nome (o visível), caixa, fotoCaixa, letras}. */
+    get autorGolEstado() {
+      const e = el.autorGol;
+      if (!e || !ag) return null;
+      // as caixas do LAYOUT (sem o translateX da animação de entrada/saída: a camada #comemoracao é fixa em 0,0)
+      const base = e.offsetParent?.getBoundingClientRect() ?? { left: 0, top: 0 };
+      const cx = n => {
+        if (!n || !n.offsetWidth) return null;
+        const x0 = base.left + e.offsetLeft + (n === e ? 0 : e.clientLeft + n.offsetLeft), y0 = base.top + e.offsetTop + (n === e ? 0 : e.clientTop + n.offsetTop);
+        return { x0, y0, x1: x0 + n.offsetWidth, y1: y0 + n.offsetHeight };
+      };
+      const vis = !e.hidden && !!e.offsetParent;
+      const nomeEl = [ag.completo, ag.curto].find(n => n.getClientRects().length > 0) ?? null;
+      const fotoVis = vis && !ag.foto.hidden && ag.foto.getClientRects().length > 0;
+      return {
+        visivel: vis, saindo: e.classList.contains('saindo'), foto: fotoVis && ag.img.complete && ag.img.naturalWidth > 0,
+        fotoSrc: ag.img.getAttribute('src'), num: ag.num.textContent, nome: nomeEl?.textContent ?? '', cortado: !!nomeEl && nomeEl.scrollWidth > nomeEl.clientWidth + 0.5,
+        caixa: vis ? cx(e) : null, fotoCaixa: fotoVis ? cx(ag.foto) : null,
+        letraNum: parseFloat(getComputedStyle(ag.num).fontSize), letraNome: nomeEl ? parseFloat(getComputedStyle(nomeEl).fontSize) : 0,
+        sr: ag.sr.textContent,
+      };
+    },
     /** Tira o "GOL!" já (saída de bola, recomeço do treino, mundo novo). */
     esconderGol() {
       clearTimeout(timerGol);

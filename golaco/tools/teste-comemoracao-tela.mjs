@@ -8,9 +8,9 @@
 //         depois que ela para ali;
 //      A4 a ordem gol → comemoração → replay → saída: o replay do gol começa quando a cena acaba e a saída sai no MESMO
 //         tick de sempre (gol + 150) com o mesmo hash que sem a comemoração (?comemoracao=0) no tick gol + 600;
-//      A5 só o placar (e o "GOL!" até o 1º corte) na tela: minimapa, menu, avisos e painel escondidos; o "GOL!" sai no
-//         1º corte;
-//      A6 no contraplano do abraço a torcida enche ≥ 30% do quadro (o mesmo quadro com e sem a torcida);
+//      A5 só o placar, o "GOL!" até o 1º corte e o cartão do autor depois dele (item 31) na tela: minimapa, menu, avisos e
+//         painel escondidos; o "GOL!" sai no 1º corte;
+//      A6 no contraplano do abraço a torcida enche ≥ 30% do quadro (o mesmo quadro com e sem a torcida; com ?autorGol=0);
 //   B) pular (PC, teclado): K antes de 0,5 s não pula; K depois de 0,5 s acaba a cena em ≤ 2 quadros; a saída sai no
 //      mesmo tick (os passos que faltavam rodam na cortina) com o mesmo hash; o K ainda segurado NÃO pula o replay, um
 //      2º aperto pula (dois apertos: comemoração e replay);
@@ -22,28 +22,71 @@
 //   E) treino (condução): gol sem cena (o efeito do treino de sempre) e o mesmo hash com e sem ?comemoracao;
 //   F) CPU do quadro durante a cena (sem o desenho) ≤ p95 do quadro do jogo + 1 ms;
 //   G) console sem erros.
-// Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena.
-//   node tools/teste-comemoracao-tela.mjs [--raiz <pasta do jogo>]
+//   H) (item 31) o CARTÃO DO AUTOR (#autor-gol; a fase pelo DOM — hidden/saindo —, nunca pela animação):
+//      H1 (o gol do A, PC 1280×720 sem ?tm) aparece com t ∈ [1,55; 1,75] s, fica ≥ 3,0 s, com o número e o nome da ficha do
+//         autor e SEM foto; 0 quadros com o "GOL!" junto, 0 no plano da rede; some ≥ 0,4 s antes do replay; 0 quadros no replay
+//         nem depois da cena até o gol + 600;
+//      H2 nada encosta: a ≥ 8 px do placar e do "Pular" (com toque), dentro da janela e da área segura; e não cobre o autor (a
+//         pose desenhada: comemoracao.naTela) em nenhum quadro — no A, no H3, no H4 e no D;
+//      H3 celular 844×390 com toque e entalhe, ?tm PRO com as fotos (a rota /__fotos/ servindo JPGs de verdade do TM): a foto do
+//         tmId do autor no pedido (naturalWidth > 0 no 1º quadro do cartão: a <img> já decodificada), 88–96 px, número ≥ 22 px e
+//         nome (o da camisa) ≥ 14 px; um gol CONTRA no mesmo mundo: nenhum cartão (estado.cartao null, 0 quadros);
+//      H4 celular 568×320 com toque, ?tm PÚBLICO com as mesmas fotos no pedido: sem foto, 0 pedidos às fotos, letras ≥ 22 / ≥ 14,
+//         nada encosta;
+//      H5 a cena curta (o gol do time 1, PC): aparece, ≥ 2,2 s, some antes do replay;
+//      H6 pular com o cartão na tela (K em t ≈ 2,2 s, PC): some em ≤ 1 quadro; 0 quadros na cortina e no replay;
+//      H7 PC 1366×600, ?tm PRO com as fotos todas em 404: o cartão sem foto; erros = 22; nenhum erro de página além dos 404 delas;
+//      H8 ?autorGol=0 (a página do A6): a cena sem cartão (estado.cartao null, 0 quadros).
+// Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
+// sem o cartão (a base do item 31) reprovam H1–H7.
+//   node tools/teste-comemoracao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,D,E,F,H]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import fs from 'node:fs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 import { acharGol } from './lib/acha-gol.mjs';
+import { PED_A, comFotos, urlFoto } from './lib/pedidos-tm.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
+const SO = args.includes('--so') ? args[args.indexOf('--so') + 1].split(',') : null;
+const faz = x => !SO || SO.includes(x);
 const res = [];
 const meta = (nome, medido, alvo, ok, info = false) => { res.push({ nome, medido, alvo, ok: !!ok, info }); };
 const f2 = v => (Number.isFinite(v) ? v.toFixed(2) : String(v));
 const errosTodos = [];
 const srv = await servidor(0, raiz);
 
+// (item 31) as fotos do TM pela rota /__fotos/<lado>/<tmId>.jpg: JPGs de verdade do TM (legacy-total-match/assets/jogadores),
+// um por tmId; com f404, todas em 404 (o "Failed to load resource" delas sai dos erros do G — só o delas)
+const PASTA_FOTOS = path.resolve(raiz, '../legacy-total-match/assets/jogadores');
+const JPGS = fs.existsSync(PASTA_FOTOS) ? fs.readdirSync(PASTA_FOTOS).filter(f => /^br-.*\.jpg$/.test(f)).sort().slice(0, 80) : [];
+const jpgDe = k => { let h = 0; for (const c of k) h = (h * 31 + c.charCodeAt(0)) >>> 0; return fs.readFileSync(path.join(PASTA_FOTOS, JPGS[h % JPGS.length])); };
 async function pagina(url, opc = {}) {
   const nav = await abrir({ largura: opc.largura ?? 1280, altura: opc.altura ?? 720, dpr: opc.dpr ?? 1, toque: opc.toque });
+  const fotos = { pedidos: 0, n404: 0, consoles404: 0 };
+  if (opc.pedido) await nav.contexto.addInitScript(([id, json]) => { try { localStorage.setItem('tm3d:pedido:' + id, json); } catch (_) { /* */ } }, [opc.pedido.id, JSON.stringify(opc.pedido)]);
+  await nav.contexto.route('**/__fotos/**', r => {
+    fotos.pedidos++;
+    if (opc.f404 || !JPGS.length) { fotos.n404++; return r.fulfill({ status: 404, body: '' }); }
+    return r.fulfill({ status: 200, contentType: 'image/jpeg', headers: { 'cache-control': 'max-age=600' }, body: jpgDe(new URL(r.request().url()).pathname) });
+  });
+  nav.pagina.on('console', m => { if (m.type() === 'error' && /\/__fotos\//.test(m.location()?.url ?? '')) fotos.consoles404++; });
   await nav.pagina.goto(srv.url + url, { waitUntil: 'load' });
   await nav.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await nav.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
-  return { ...nav, fechar: async () => { errosTodos.push(...nav.erros); await nav.navegador.close(); } };
+  return {
+    ...nav, fotos,
+    fechar: async () => {
+      // os 404 das fotos de propósito (H7): o texto do Chromium não tem o endereço — sai um por 404 visto na rota
+      let tirar = fotos.consoles404;
+      const errs = nav.erros.filter(e => !(tirar > 0 && /Failed to load resource/.test(e) && tirar--));
+      errosTodos.push(...errs);
+      await nav.navegador.close();
+    },
+  };
 }
+
 
 /**
  * Anda a página quadro a quadro (1/60 s, sem desenhar) do gol até o tick gol + 600 (ou maxQ quadros), amostrando a
@@ -66,6 +109,10 @@ async function acompanhar(pg, gol, opc = {}) {
     };
     let tick0 = null, minuto0 = null;
     const alvo = gol.golTick + 600;
+    // (item 31) o cartão do autor: por quadro na cena (caixa, foto, letras, a do autor) e depois dela (só se aparece)
+    const cartao = g => { const a = g.comemoracao && g.comemoracao.cartaoTela; return a && a.visivel ? a : null; };
+    const caixaDe = s => { const e = document.querySelector(s); const r = e?.getBoundingClientRect(); return r && r.width > 0 && getComputedStyle(e).display !== 'none' ? { x0: r.left, y0: r.top, x1: r.right, y1: r.bottom } : null; };
+    out.cartaoDepois = 0; out.cartaoReplay = 0; out.geo = null;
     while (out.n < (opc.maxQ ?? 3000)) {
       g.relogio.avancar(1000 / 60, { desenhar: false }); out.n++;
       const e = temC ? g.comemoracao.estado : null, rp = g.replay?.estado;
@@ -73,8 +120,18 @@ async function acompanhar(pg, gol, opc = {}) {
         const tela = g.comemoracao.naTela();
         const parada = m.partida.estado === 'gol' && m.tick + 1 - desde >= 150;
         if (parada && tick0 == null) { tick0 = m.tick; minuto0 = g.estado().relogio.minuto; }
+        const ag = cartao(g);
+        if (ag && !out.geo) {
+          const s = document.createElement('i');
+          s.style.cssText = 'position:fixed;padding:var(--sa-t,0px) var(--sa-r,0px) var(--sa-b,0px) var(--sa-l,0px)';
+          document.body.appendChild(s); const cs = getComputedStyle(s);
+          out.geo = { W: innerWidth, H: innerHeight, sa: { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 }, placar: caixaDe('#hud .placar'), pular: caixaDe('#comemoracao-pular') };
+          s.remove();
+        }
         out.q.push({ t: e.t, fase: e.fase, plano: e.plano, estado: e.estado, tick: m.tick, alt: tela ? tela.altura : 0, dentro: !!(tela && tela.dentro), minuto: g.estado().relogio.minuto, parada,
-          gol: document.getElementById('gol-tela').classList.contains('visivel'), mapa: vis('minimapa'), menu: vis('btn-menu'), painel: vis('#hud .painel-jogo'), placar: vis('#hud .placar') });
+          gol: document.getElementById('gol-tela').classList.contains('visivel'), mapa: vis('minimapa'), menu: vis('btn-menu'), painel: vis('#hud .painel-jogo'), placar: vis('#hud .placar'),
+          n: out.n, rp: !!rp?.ativo, ca: e.cartao ?? null, co: !!e.contra, cu: !!e.curta, ag: ag ? { saindo: ag.saindo, foto: ag.foto, fotoSrc: ag.fotoSrc, num: ag.num, nome: ag.nome, caixa: ag.caixa, fotoCaixa: ag.fotoCaixa, letraNum: ag.letraNum, letraNome: ag.letraNome } : null,
+          ab: tela && !tela.atras ? { x0: tela.x0, y0: tela.y0, x1: tela.x1, y1: tela.y1 } : null });
         if (opc.pular && e.estado === 'rodando' && e.t >= opc.pular.em && !out.apertou) { out.apertou = { t: e.t, n: out.n }; window.__aperta = true; break; }
       } else if (m.partida.estado === 'gol' && !out.q.length) {
         // sem cena (versão antiga): o pós-gol na câmera do jogo
@@ -85,6 +142,7 @@ async function acompanhar(pg, gol, opc = {}) {
         out.q.push({ t: (m.tick - gol.golTick) / 60, fase: 'sem cena', plano: g.estadio.planoCamera, tick: m.tick, alt: a ? a.altura : 0, dentro: !!(a && a.dentro), semCena: true });
       }
       if (out.fimCena == null && out.q.length && !e && !out.q[out.q.length - 1].semCena) out.fimCena = { n: out.n, tick: m.tick };
+      if (!e && cartao(g)) { out.cartaoDepois++; if (rp?.ativo) out.cartaoReplay++; }
       if (rp?.ativo && !out.replay) out.replay = { tipo: rp.tipo, tick: m.tick, n: out.n };
       if (out.replay && !rp?.ativo && !out.replayDepois) out.replayDepois = { n: out.n, tick: m.tick };
       if (out.saidaTick == null && m.partida.estado !== 'gol' && m.tick > gol.golTick + 10) out.saidaTick = m.tick;
@@ -95,9 +153,40 @@ async function acompanhar(pg, gol, opc = {}) {
   }, { gol, opc });
 }
 
+/**
+ * (item 31) O cartão do autor num acompanhar: entra (t do 1º quadro visível), fica (s até o 1º quadro saindo ou escondido),
+ * quadros com o "GOL!" junto, no plano da rede, no replay e depois da cena, a folga até o replay (s), cobre o autor (quadros com
+ * a caixa dele cruzando a do cartão) e a 1ª amostra visível (foto, letras, caixa).
+ */
+function avaliarCartao(r) {
+  const q = r.q.filter(x => !x.semCena);
+  const vis = q.filter(x => x.ag);
+  const i0 = q.findIndex(x => x.ag);
+  let fica = 0;
+  if (i0 >= 0) { let k = i0; while (k < q.length && q[k].ag && !q[k].ag.saindo) k++; fica = (k - i0) / 60; }
+  const ultimo = vis.length ? vis[vis.length - 1].n : null;
+  const cruza = (a, b) => !!a && !!b && a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  return {
+    n: vis.length, entra: i0 >= 0 ? q[i0].t : null, fica, comGol: vis.filter(x => x.gol).length, naRede: vis.filter(x => x.plano === 'rede' || x.fase === 'rede').length,
+    noReplay: vis.filter(x => x.rp).length + (r.cartaoReplay ?? 0), depois: r.cartaoDepois ?? 0,
+    folga: ultimo != null && r.replay ? (r.replay.n - ultimo) / 60 : null, cobre: vis.filter(x => cruza(x.ag.caixa, x.ab)).length,
+    a: i0 >= 0 ? q[i0].ag : null, ca: q.find(x => x.ca)?.ca ?? null, semEstado: q.every(x => x.ca == null),
+  };
+}
+/** (item 31) H2: o cartão a ≥ 8 px do placar e do "Pular", dentro da janela e da área segura (a 1ª amostra visível e a geometria). */
+function encostos(r, c) {
+  const g = r.geo, cx = c.a?.caixa;
+  if (!g || !cx) return { ok: false, texto: 'sem cartão' };
+  const longe = (a, b, d) => !a || !b || a.x0 >= b.x1 + d || b.x0 >= a.x1 + d || a.y0 >= b.y1 + d || b.y0 >= a.y1 + d;
+  const dentro = cx.x0 >= g.sa.l - 0.5 && cx.y0 >= g.sa.t - 0.5 && cx.x1 <= g.W - g.sa.r + 0.5 && cx.y1 <= g.H - g.sa.b + 0.5;
+  const ok = dentro && longe(cx, g.placar, 8) && longe(cx, g.pular, 8);
+  const r0 = v => Math.round(v);
+  return { ok, texto: `caixa ${r0(cx.x0)}–${r0(cx.x1)} × ${r0(cx.y0)}–${r0(cx.y1)} em ${g.W}×${g.H}; placar até x ${g.placar ? r0(g.placar.x1) : '-'}; pular ${g.pular ? `${r0(g.pular.x0)},${r0(g.pular.y0)}` : '-'}; dentro ${dentro}` };
+}
+
 // ------------------------------------------------------------------------------------------------ A (PC, roteirizado)
 let hashSem = null, saidaSem = null;
-{
+if (faz('A') || faz('B')) {
   const P = await pagina('?q=baixa&hora=dia&semente=5&comemoracao=0');
   try {
     const gol = await golRoteirizado(P.pagina, { semente: 5, time: 0 });
@@ -106,7 +195,7 @@ let hashSem = null, saidaSem = null;
   } finally { await P.fechar(); }
 }
 let A = null;
-{
+if (faz('A')) {
   const P = await pagina('?q=alta&hora=dia&semente=5');
   try {
     const pg = P.pagina;
@@ -134,20 +223,32 @@ let A = null;
     const corte = q.findIndex(x => x.fase !== 'rede');
     const golNaRede = q.slice(0, Math.max(1, corte)).some(x => x.gol), golDepois = q.slice(corte + 2).some(x => x.gol);
     const hudMau = q.filter(x => x.mapa || x.menu || x.painel || !x.placar).length;
-    meta('A5 tela da cena: só o placar (e o "GOL!" até o 1º corte)', temC ? `"GOL!" na rede ${golNaRede}, depois do corte ${golDepois}; quadros com minimapa/menu/painel ou sem placar: ${hudMau}` : 'sem cena',
+    meta('A5 tela da cena: só o placar, o "GOL!" até o 1º corte e o cartão do autor depois dele', temC ? `"GOL!" na rede ${golNaRede}, depois do corte ${golDepois}; quadros com minimapa/menu/painel ou sem placar: ${hudMau}` : 'sem cena',
       '"GOL!" só na rede; 0', temC && golNaRede && !golDepois && hudMau === 0);
+    // H1/H2 (item 31): o cartão do autor neste mesmo gol
+    const c = avaliarCartao(r);
+    const ficha = await pg.evaluate(async id => { const { fichaDe } = await import('./js/elenco.js'); const f = fichaDe(id); return f ? { num: String(f.num), nome: f.nome } : null; }, gol.autor);
+    meta('H1 o cartão do autor (PC, sem ?tm): entra 1,55–1,75 s, fica ≥ 3,0 s, o número e o nome da ficha, sem foto', c.a ? `entra ${f2(c.entra)} s, fica ${f2(c.fica)} s; ${c.a.num} ${c.a.nome} (ficha ${ficha?.num} ${ficha?.nome}); foto ${c.a.foto}, caixa da foto ${!!c.a.fotoCaixa}` : 'nenhum cartão',
+      '1,55–1,75; ≥ 3,0; iguais; sem foto', !!c.a && c.entra >= 1.55 && c.entra <= 1.75 && c.fica >= 3.0 && c.a.num === ficha?.num && c.a.nome === ficha?.nome && !c.a.foto && !c.a.fotoCaixa);
+    meta('H1 nunca com o "GOL!" nem no plano da rede; some ≥ 0,4 s antes do replay; 0 quadros no replay e depois da cena (até o gol + 600)', c.n ? `com o GOL! ${c.comGol}; na rede ${c.naRede}; folga até o replay ${f2(c.folga)} s; no replay ${c.noReplay}; depois da cena ${c.depois}` : 'nenhum cartão',
+      '0; 0; ≥ 0,4 s; 0; 0', c.n > 0 && c.comGol === 0 && c.naRede === 0 && c.folga != null && c.folga >= 0.4 && c.noReplay === 0 && c.depois === 0);
+    const e = encostos(r, c);
+    meta('H2 PC 1280×720: o cartão a ≥ 8 px do placar, na tela; não cobre o autor (a pose desenhada) em nenhum quadro', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
   } finally { await P.fechar(); }
 }
-// A6: o contraplano do abraço com e sem a torcida (pixels)
-try {
-  const P = await pagina('?q=media&hora=dia&semente=5');
+// A6: o contraplano do abraço com e sem a torcida (pixels); com ?autorGol=0 (H8: a cena sem o cartão do autor)
+if (faz('A')) try {
+  const P = await pagina('?q=media&hora=dia&semente=5&autorGol=0');
   try {
     const pg = P.pagina;
     const temC = await pg.evaluate(() => !!window.__golaco.comemoracao);
     if (!temC) meta('A6 contraplano: a torcida enche o quadro', 'sem cena', '≥ 30%', false);
     else {
       await golRoteirizado(pg, { semente: 5, time: 0 });
-      const ok = await pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 900; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const e = g.comemoracao.estado; if (e && e.fase === 'abraco' && e.plano === 'contraplano' && e.t > e.kFimFinal / 60 + 0.4) return true; } return false; });
+      const h8 = { q: 0, vis: 0, cartao: 0 };
+      const ok = await pg.evaluate(h8 => { const g = window.__golaco; for (let i = 0; i < 900; i++) { g.relogio.avancar(1000 / 60, { desenhar: false }); const e = g.comemoracao.estado; if (e) { h8.q++; if (e.cartao) h8.cartao++; const a = g.comemoracao.cartaoTela; if (a && a.visivel) h8.vis++; } if (e && e.fase === 'abraco' && e.plano === 'contraplano' && e.t > e.kFimFinal / 60 + 0.4) return { ok: true, h8 }; } return { ok: false, h8 }; }, h8)
+        .then(x => { Object.assign(h8, x.h8); return x.ok; });
+      meta('H8 ?autorGol=0: a cena sem o cartão do autor', `${h8.q} quadros da cena: estado.cartao em ${h8.cartao}, visível em ${h8.vis}`, '0; 0', h8.q > 60 && h8.cartao === 0 && h8.vis === 0);
       await pg.evaluate(() => { const g = window.__golaco; g.desenhar(); document.documentElement.classList.add('sem-hud'); g.desenhar(); });
       const com = await pg.screenshot({ type: 'png' });
       await pg.evaluate(() => { const g = window.__golaco; g.estadio.mostrarTorcida(false); g.estadio.mostrarFesta(false); g.desenhar(); });
@@ -173,7 +274,7 @@ try {
 } catch (e) { meta('A6 execução', e.message.split('\n')[0], 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ B (pular no PC)
-try {
+if (faz('B')) try {
   const P = await pagina('?q=baixa&hora=dia&semente=5');
   try {
     const pg = P.pagina;
@@ -208,7 +309,7 @@ try {
 } catch (e) { meta('B execução', e.message.split('\n')[0], 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ C (celular)
-try {
+if (faz('C')) try {
   const P = await pagina('?q=media&hora=noite&semente=5&toque=1&entalhe=1', { largura: 844, altura: 390, dpr: 1, toque: true });
   try {
     const pg = P.pagina;
@@ -243,7 +344,7 @@ try {
 // C3/C4 (contraprova): os botões de toque ficam escondidos na cena; o analógico de descanso calculado com eles escondidos
 // (o "Pular" solta tudo; a janela muda de tamanho — a barra do navegador do celular) ia para o alto da tela, embaixo do
 // placar. Depois da cena (e do replay inteiro, sem pular), ele tem de estar onde um layout novo o põe (o resize de verdade).
-for (const caso of ['C3 pular a cena pelo toque e o replay inteiro', 'C4 a janela muda de tamanho no meio da cena']) {
+for (const caso of faz('C') ? ['C3 pular a cena pelo toque e o replay inteiro', 'C4 a janela muda de tamanho no meio da cena'] : []) {
   try {
     const P = await pagina('?q=media&hora=dia&semente=5&toque=1&entalhe=1', { largura: 844, altura: 390, dpr: 1, toque: true });
     try {
@@ -268,7 +369,7 @@ for (const caso of ['C3 pular a cena pelo toque e o replay inteiro', 'C4 a janel
 }
 
 // ------------------------------------------------------------------------------------------------ D (gol natural)
-try {
+if (faz('D')) try {
   const GOL = await acharGol({ pastaJs: path.join(raiz, 'js'), maxTicks: 6000, comoPagina: true });
   if (!GOL) meta('D gol natural (IA × IA) nas sementes 1–40', 'nenhum', '≥ 1', false);
   else {
@@ -285,7 +386,10 @@ try {
           g.relogio.avancar(1000 / 60, { desenhar: false });
           const e = g.comemoracao.estado; if (!e) break;
           const tela = g.comemoracao.naTela();
-          q.push({ fase: e.fase, dentro: !!(tela && tela.dentro), alt: tela ? tela.altura : 0, estado: e.estado });
+          // (item 31, H2) o cartão do autor e a caixa do autor no mesmo quadro
+          const a = g.comemoracao.cartaoTela, cx = a && a.visivel ? a.caixa : null;
+          const cobre = !!cx && !!tela && !tela.atras && cx.x0 < tela.x1 && tela.x0 < cx.x1 && cx.y0 < tela.y1 && tela.y0 < cx.y1;
+          q.push({ fase: e.fase, dentro: !!(tela && tela.dentro), alt: tela ? tela.altura : 0, estado: e.estado, cartao: !!cx, cobre });
         }
         return { e0, q, n };
       });
@@ -296,6 +400,9 @@ try {
         const cf = rod.filter(x => x.fase === 'corrida' || x.fase === 'final');
         const bons = cf.filter(x => x.dentro && x.alt >= 100).length;
         const curta = r.e0.curta;
+        const comCartao = r.q.filter(x => x.cartao).length, cobre = r.q.filter(x => x.cobre).length;
+        meta('H2 gol natural (D): o cartão do autor não cobre o autor', `cartão em ${comCartao} quadros (${r.e0.contra ? 'gol contra: nenhum' : r.e0.curta ? 'cena curta' : 'cena normal'}); cobre em ${cobre}`,
+          r.e0.contra ? '0 quadros (gol contra)' : '> 0; 0', r.e0.contra ? comCartao === 0 : comCartao > 0 && cobre === 0);
         meta('D gol natural (semente ' + GOL.semente + '): fases, duração e o autor no quadro', `time ${r.e0.time}${curta ? ' (curta)' : ''}, ${r.e0.variante}, ${r.e0.colegas.length} colegas; ${fases.join(' → ')}; ${f2(rod.length / 60)} s; autor no quadro ${bons}/${cf.length}`,
           `fases na ordem; ${curta ? '3,5–5,5' : '6–8,5'} s; ≥ 85%`, fases[0] === 'rede' && fases.includes('reacao') && (curta ? rod.length / 60 >= 3.5 && rod.length / 60 <= 5.5 : rod.length / 60 >= 6 && rod.length / 60 <= 8.5) && cf.length > 0 && bons / cf.length >= 0.85);
       }
@@ -304,7 +411,7 @@ try {
 } catch (e) { meta('D execução', e.message.split('\n')[0], 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ E (treino)
-try {
+if (faz('E')) try {
   const hs = [];
   for (const q of ['', '&comemoracao=0']) {
     const P = await pagina(`?q=baixa&modo=conducao&semente=5${q}`);
@@ -326,7 +433,7 @@ try {
 } catch (e) { meta('E execução', e.message.split('\n')[0], 'sem exceção', false); }
 
 // ------------------------------------------------------------------------------------------------ F (CPU)
-try {
+if (faz('F')) try {
   const P = await pagina('?q=baixa&hora=dia&semente=5');
   try {
     const pg = P.pagina;
@@ -354,6 +461,100 @@ try {
     }
   } finally { await P.fechar(); }
 } catch (e) { meta('F execução', e.message.split('\n')[0], 'sem exceção', false); }
+
+// ------------------------------------------------------------------------------------------------ H (o cartão do autor, item 31)
+// H3/H4/H7: o pedido do TM (PED_A) com as fotos pela rota /__fotos/ desta origem
+const ORIGEM = new URL(srv.url).origin;
+/** Espera as fotos da edição pro assentarem (todas as pedidas prontas ou com erro); null sem a API (a base). */
+const esperarFotos = (pg, ms = 45000) => pg.waitForFunction(() => { const f = window.__golaco.tm?.fotos; return !f || (f.pedidas >= 22 && f.prontas + f.erros >= f.pedidas); }, null, { timeout: ms, polling: 250 })
+  .then(() => pg.evaluate(() => { const f = window.__golaco.tm?.fotos; return f ? { n: f.n, pedidas: f.pedidas, prontas: f.prontas, erros: f.erros } : null; })).catch(() => null);
+if (faz('H')) {
+  // H3 celular 844×390, TM pro com as fotos
+  try {
+    const ped = comFotos({ ...PED_A, id: 'f31cel' }, ORIGEM);
+    const P = await pagina(`?q=baixa&hora=noite&tm=${ped.id}&corpo=manequim&toque=1&entalhe=1`, { largura: 844, altura: 390, dpr: 1, toque: true, pedido: ped });
+    try {
+      const pg = P.pagina;
+      const fo = await esperarFotos(pg);
+      const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+      // até o cartão entrar (o relógio manual: tudo na mesma tarefa) — a foto é a <img> já decodificada da pré-carga: completa
+      // no MESMO quadro em que o cartão entra
+      const ap = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !g.comemoracao.cartaoTela?.visivel) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { n, t: g.comemoracao.estado?.t ?? null }; });
+      const a = await pg.evaluate(() => window.__golaco.comemoracao.cartaoTela);
+      const pronta = a?.foto ? 0 : null;
+      const r = await acompanhar(pg, gol);
+      const c = avaliarCartao(r);
+      const tm = await pg.evaluate(id => window.__golaco.tm?.mapa?.[id]?.tmId ?? null, gol.autor);
+      const esperado = tm ? urlFoto(ORIGEM, 'home', tm) : null;
+      const lado = a?.fotoCaixa ? Math.round(a.fotoCaixa.x1 - a.fotoCaixa.x0) : 0;
+      meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 88–96 px; número ≥ 22 px, nome ≥ 14 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
+        'a do autor; 88–96; ≥ 22; ≥ 14', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 88 && lado <= 96 && a.letraNum >= 22 && a.letraNome >= 14);
+      const e = encostos(r, c);
+      meta('H2 celular 844×390 com o entalhe (?tm pro): sem encostar no placar nem no "Pular", na área segura; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+      // o gol contra no mesmo mundo
+      const gc = await golRoteirizado(pg, { semente: 5, time: 0, contra: true });
+      const rc = await acompanhar(pg, gc);
+      const cc = avaliarCartao(rc);
+      const qc = rc.q.filter(x => !x.semCena), contra = qc.length > 0 && qc.every(x => x.co);
+      meta('H3 o gol CONTRA: nenhum cartão (estado.cartao null, 0 quadros)', `gol ${gc.ok ? 'contra' : 'NÃO SAIU'} (autor ${gc.autor}, chutou ${gc.chutou}); cena contra ${rc.q.some(x => !x.semCena)}; estado.cartao ${cc.semEstado ? 'null' : JSON.stringify(cc.ca)}; ${cc.n} quadros`,
+        'null; 0', gc.ok && gc.contra && contra && cc.semEstado && cc.n === 0 && rc.q.some(x => !x.semCena));
+    } finally { await P.fechar(); }
+  } catch (e) { meta('H3 execução', e.message.split('\n')[0], 'sem exceção', false); }
+  // H4 celular 568×320, TM público com as mesmas fotos no pedido
+  try {
+    const ped = comFotos({ ...PED_A, id: 'f31pub' }, ORIGEM, { edicao: 'public' });
+    const P = await pagina(`?q=baixa&hora=dia&tm=${ped.id}&corpo=manequim&toque=1`, { largura: 568, altura: 320, dpr: 1, toque: true, pedido: ped });
+    try {
+      const pg = P.pagina;
+      await pg.waitForTimeout(2500);
+      const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+      const r = await acompanhar(pg, gol);
+      const c = avaliarCartao(r);
+      const a = c.a;
+      meta('H4 celular 568×320, ?tm PÚBLICO (com fotos no pedido): sem foto, 0 pedidos às fotos, número ≥ 22 px, nome ≥ 14 px', a ? `foto ${a.foto} (caixa ${!!a.fotoCaixa}); pedidos às fotos ${P.fotos.pedidos}; número ${a.letraNum} px, nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão; pedidos às fotos ${P.fotos.pedidos}`,
+        'sem; 0; ≥ 22; ≥ 14', !!a && !a.foto && !a.fotoCaixa && P.fotos.pedidos === 0 && a.letraNum >= 22 && a.letraNome >= 14);
+      const e = encostos(r, c);
+      meta('H2 celular 568×320: sem encostar no placar nem no "Pular"; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+    } finally { await P.fechar(); }
+  } catch (e) { meta('H4 execução', e.message.split('\n')[0], 'sem exceção', false); }
+  // H5 a cena curta e H6 pular com o cartão na tela (PC, sem ?tm)
+  try {
+    const P = await pagina('?q=baixa&hora=dia&semente=5');
+    try {
+      const pg = P.pagina;
+      const g1 = await golRoteirizado(pg, { semente: 5, time: 1 });
+      const r1 = await acompanhar(pg, g1);
+      const c1 = avaliarCartao(r1);
+      const q1 = r1.q.filter(x => !x.semCena), curta = q1.length > 0 && q1.every(x => x.cu);
+      meta('H5 a cena curta (o gol da IA contra a pessoa): aparece, ≥ 2,2 s, some antes do replay', c1.n ? `entra ${f2(c1.entra)} s, fica ${f2(c1.fica)} s; folga até o replay ${f2(c1.folga)} s; no replay ${c1.noReplay}` : 'nenhum cartão',
+        '≥ 2,2 s; folga > 0; 0', curta && c1.n > 0 && c1.fica >= 2.2 && c1.folga != null && c1.folga > 0 && c1.noReplay === 0 && c1.depois === 0);
+      const g0 = await golRoteirizado(pg, { semente: 5, time: 0 });
+      const ate = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !(g.comemoracao.estado.t >= 2.2 && g.comemoracao.cartaoTela?.visivel)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { t: g.comemoracao.estado?.t ?? null, vis: !!g.comemoracao.cartaoTela?.visivel }; });
+      await pg.keyboard.down('KeyK');
+      const depois1 = await pg.evaluate(() => { const g = window.__golaco; g.relogio.avancar(1000 / 60, { desenhar: false }); return { vis: !!g.comemoracao.cartaoTela?.visivel, hidden: document.getElementById('autor-gol')?.hidden ?? null, estado: g.comemoracao.estado?.estado ?? 'saiu' }; });
+      await pg.keyboard.up('KeyK');
+      const resto = await acompanhar(pg, g0);
+      const visResto = resto.q.filter(x => x.ag).length + resto.cartaoDepois;
+      meta('H6 pular com o cartão na tela (K em t ≈ 2,2 s): some em ≤ 1 quadro; 0 quadros na cortina e no replay', `antes t ${f2(ate.t)} s visível ${ate.vis}; 1 quadro depois: visível ${depois1.vis}, hidden ${depois1.hidden}, cena ${depois1.estado}; depois ${visResto} quadros (replay ${resto.replay ? 'sim' : 'não'})`,
+        'visível; escondido; 0', ate.vis && !depois1.vis && depois1.hidden === true && visResto === 0 && !!resto.replay);
+    } finally { await P.fechar(); }
+  } catch (e) { meta('H5/H6 execução', e.message.split('\n')[0], 'sem exceção', false); }
+  // H7 PC 1366×600, TM pro com as fotos todas em 404
+  try {
+    const ped = comFotos({ ...PED_A, id: 'f31f404' }, ORIGEM);
+    const P = await pagina(`?q=baixa&hora=dia&tm=${ped.id}&corpo=manequim`, { largura: 1366, altura: 600, pedido: ped, f404: true });
+    try {
+      const pg = P.pagina;
+      const fo = await esperarFotos(pg);
+      const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+      const r = await acompanhar(pg, gol);
+      const c = avaliarCartao(r);
+      const erros = P.erros.filter(e => !/Failed to load resource/.test(e));
+      meta('H7 PC 1366×600, ?tm pro com as fotos em 404: o cartão sem foto; erros = 22; nenhum erro de página além dos 404 delas', `${c.a ? `foto ${c.a.foto} (caixa ${!!c.a.fotoCaixa})` : 'nenhum cartão'}; fotos ${JSON.stringify(fo)}; 404 ${P.fotos.n404}; outros erros ${erros.length}${erros.length ? ': ' + erros[0].slice(0, 80) : ''}`,
+        'sem foto; 22; 0', !!c.a && !c.a.foto && !c.a.fotoCaixa && fo?.erros === 22 && erros.length === 0);
+    } finally { await P.fechar(); }
+  } catch (e) { meta('H7 execução', e.message.split('\n')[0], 'sem exceção', false); }
+}
 
 await srv.fechar();
 meta('G console sem erros', errosTodos.length ? errosTodos.slice(0, 3).join(' | ') : 'nenhum', 'nenhum', errosTodos.length === 0);
