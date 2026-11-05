@@ -523,6 +523,34 @@ export function mediaMateria(mid) {
   const pesoTotal = sum(ns.map((n) => n.peso || 1));
   return round(sum(ns.map((n) => (n.valor / (n.maximo || 10)) * 10 * (n.peso || 1))) / pesoTotal, 2);
 }
+const nota10 = (n) => (n.valor / (n.maximo || 10)) * 10;
+const mediaPonderada = (ns) => {
+  if (!ns.length) return null;
+  const peso = sum(ns.map((n) => n.peso || 1));
+  return round(sum(ns.map((n) => nota10(n) * (n.peso || 1))) / peso, 2);
+};
+/** Notas de uma matéria num ano letivo, por bimestre. Sem data, a nota conta no ano atual. */
+export function notasDoAno(materiaId, ano = null) {
+  const atual = new Date().getFullYear();
+  const anoDe = (n) => Number(String(n.data || '').slice(0, 4)) || atual;
+  const todas = st().notas.filter((n) => n.materiaId === materiaId);
+  const anos = [...new Set([atual, ...todas.map(anoDe)])].sort((a, b) => b - a);
+  const a = ano || atual;
+  const doAno = todas.filter((n) => anoDe(n) === a)
+    .sort((x, y) => String(x.data || '').localeCompare(String(y.data || '')));
+  const bimestres = [1, 2, 3, 4].map((b) => {
+    const ns = doAno.filter((n) => (Number(n.bimestre) || 1) === b);
+    return { bimestre: b, notas: ns, media: mediaPonderada(ns) };
+  });
+  const comNota = bimestres.filter((b) => b.media !== null);
+  return {
+    ano: a, anos, notas: doAno, bimestres,
+    media: mediaPonderada(doAno),                                   // a mesma conta da "média atual"
+    mediaBimestres: comNota.length ? round(avg(comNota.map((b) => b.media)), 2) : null,
+    maior: doAno.length ? doAno.reduce((m, n) => (nota10(n) > nota10(m) ? n : m)) : null,
+    menor: doAno.length ? doAno.reduce((m, n) => (nota10(n) < nota10(m) ? n : m)) : null,
+  };
+}
 export function mediaGeral() {
   const ms = st().materias.map((m) => mediaMateria(m.id)).filter((x) => x !== null);
   return ms.length ? round(avg(ms), 2) : null;

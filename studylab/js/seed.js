@@ -197,6 +197,12 @@ export function seedInicial(s) {
     nt(M.ing, 'Prova 1', 9.2, 3),
     nt(M.cie, 'Prova 1', 8.4, 3),
   ];
+  const ntAntes = (mat, titulo, valor, bim, dias) => ({ ...nt(mat, titulo, valor, bim), data: D(-dias) });
+  s.notas.push(
+    ntAntes(M.port, 'Prova 1', 7.0, 1, 200), ntAntes(M.port, 'Redação', 8.5, 1, 185), ntAntes(M.port, 'Prova 2', 7.8, 2, 110),
+    ntAntes(M.mat, 'Prova 1', 6.0, 1, 200), ntAntes(M.mat, 'Trabalho', 7.5, 1, 190), ntAntes(M.mat, 'Prova 2', 6.8, 2, 115),
+    ntAntes(M.hist, 'Prova 1', 8.5, 1, 198), ntAntes(M.hist, 'Prova 2', 9.2, 2, 112),
+    ntAntes(M.geo, 'Prova 1', 8.0, 1, 196), ntAntes(M.ing, 'Prova 1', 8.8, 2, 108), ntAntes(M.cie, 'Prova 1', 7.6, 1, 194));
 
   /* ---------- metas ---------- */
   s.metas = [

@@ -1,6 +1,6 @@
 /* ===== views/provas.js — central de provas, plano automático e modo recuperação ===== */
 import { h, iso, today, addDays, fmtMin, fmtData, daysBetween, parseISO, DIAS } from '../util.js';
-import { st, prova as getProva, conteudo, nomeMateria, emojiMateria, atualizar, remover } from '../store.js';
+import { st, prova as getProva, conteudo, nomeMateria, emojiMateria, atualizar, remover, notaDaProva } from '../store.js';
 import { preparoProva, gerarPlanoProva, planoEmergencia, semaforo, iconeStatus, ganharXP } from '../engine.js';
 import { titulo, cartao, kpi, barra, vazio, modal, fecharModal, toast, campo, inp, confirmar, gAnel, progresso } from '../ui.js';
 import { formProva, tagMateria } from './comum.js';
@@ -148,7 +148,8 @@ function detalhe(el, id, pintar) {
           const v = Number(notaInp.value);
           if (Number.isNaN(v)) return toast('Digite um número', 'bad');
           atualizar('provas', p.id, { nota: v });
-          toast('Nota registrada', 'good'); pintar();
+          notaDaProva({ ...p, nota: v }, v);
+          toast('Nota registrada (já aparece nas notas da matéria)', 'good'); pintar();
         },
       }, 'Salvar nota')))));
 }

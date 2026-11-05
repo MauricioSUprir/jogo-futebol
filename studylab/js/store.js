@@ -3,7 +3,7 @@ import { uid, iso, today, addDays } from './util.js';
 import { seedInicial } from './seed.js';
 
 const KEY = 'studylab.v1';
-const SCHEMA = 6;
+const SCHEMA = 7;
 
 /* ---------- estado padrão ---------- */
 export function estadoVazio() {
@@ -75,6 +75,15 @@ function migrar(d) {
   }
   // visual novo (branco): o escuro era só o padrão antigo, então todo mundo passa para o claro uma vez
   if (d.schema < 6 && d.perfil) d.perfil.tema = 'claro';
+  // notas lançadas nas provas passam a contar nas notas da matéria (antes ficavam só na prova)
+  if (d.schema < 7) {
+    d.notas = d.notas || [];
+    for (const p of d.provas || []) {
+      if (p.nota === null || p.nota === undefined || d.notas.some((n) => n.provaId === p.id)) continue;
+      d.notas.push({ id: uid('nt'), materiaId: p.materiaId || null, titulo: p.titulo || 'Prova', valor: Number(p.nota),
+        maximo: 10, peso: 1, bimestre: bimestreDaData(p.data), data: p.data || iso(), provaId: p.id });
+    }
+  }
   d.schema = SCHEMA;
   // garante que campos novos existam mesmo em dados antigos
   const base = estadoVazio();
@@ -234,6 +243,21 @@ export function registrarSessao(d) {
   const s0 = { id: uid('ses'), tipo: 'foco', minutos: 25, materiaId: null, tarefaId: null,
     conteudoId: null, em: new Date().toISOString(), ...d };
   set((s) => s.sessoes.push(s0)); return s0;
+}
+/** Bimestre provável pela data (calendário escolar brasileiro: fev–abr, mai–jul, ago–set, out–dez). */
+export function bimestreDaData(dataISO) {
+  const mes = Number(String(dataISO || '').slice(5, 7)) || (new Date().getMonth() + 1);
+  return mes <= 4 ? 1 : mes <= 7 ? 2 : mes <= 9 ? 3 : 4;
+}
+/** A nota registrada numa prova entra nas notas da matéria (uma nota por prova, atualizada se mudar). */
+export function notaDaProva(p, valor) {
+  set((s) => {
+    const n = s.notas.find((x) => x.provaId === p.id);
+    if (valor === null || valor === undefined || valor === '') { if (n) s.notas = s.notas.filter((x) => x !== n); return; }
+    const d = { materiaId: p.materiaId || null, titulo: p.titulo || 'Prova', valor: Number(valor), data: p.data || iso() };
+    if (n) Object.assign(n, d);
+    else s.notas.push({ id: uid('nt'), maximo: 10, peso: 1, bimestre: bimestreDaData(d.data), provaId: p.id, ...d });
+  });
 }
 export function novaNota(d = {}) {
   const n = { id: uid('nt'), materiaId: null, titulo: 'Avaliação', valor: 0, maximo: 10, peso: 1,
