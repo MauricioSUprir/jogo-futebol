@@ -1,8 +1,8 @@
-# MindTrack AI — mudou de endereço
+# MindTrack AI — o endereço antigo
 
-O app agora mora no repositório próprio: **https://github.com/guidrodrigues21-a11y/mindtrack-ai**
-(no ar em https://guidrodrigues21-a11y.github.io/mindtrack-ai/).
+O app MindTrack AI está no ar em **https://mindtrack-ai-ws6c.onrender.com/** (site estático no Render, que
+baixa a pasta `studylab/` deste repositório no commit escolhido em `APP_COMMIT`).
 
-Aqui ficou só o redirecionamento do link antigo (`index.html` leva os dados de estudo junto pelo `#migrar=`,
-`sw.js` desliga o app antigo nos celulares). O **servidor** continua em `studylab-server/` neste repositório,
-publicado no Render.
+Esta pasta é o que o GitHub Pages publica em `/studylab/` (ver `.github/scripts/montar-site.sh`): só o
+redirecionamento do link antigo — `index.html` leva os dados de estudo junto pelo `#migrar=` e `sw.js` desliga o
+app antigo nos celulares. O **servidor** fica em `studylab-server/`, também publicado no Render.

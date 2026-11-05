@@ -1,4 +1,4 @@
-/* O MindTrack AI mudou para https://guidrodrigues21-a11y.github.io/mindtrack-ai/
+/* O MindTrack AI mudou para https://mindtrack-ai-ws6c.onrender.com/
    Este service worker só existe para DESLIGAR o app antigo nos celulares que já
    tinham ele instalado: apaga o cache, se desinstala e recarrega a página, que
    agora é o redirecionamento (que leva os dados junto). */
