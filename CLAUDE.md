@@ -712,6 +712,13 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+  **Escalação em pé** (item 29, dono 17/10; PR #614; `PESQUISA-PREJOGO.md` §9): o campo inteiro com o GOL embaixo (L/A
+  0,80–0,85, as marcas no tamanho real: `campinho.js svgCampinho(true, largura)`), a carta da ponta 6 px para dentro ou centrada
+  sobre a linha, a mesma caixa nas duas folhas e as cartas de cada uma pelos nomes dela (`escalacao-tela.js tamanhosDasFolhas`),
+  nome e posição na TM Cond medidos pela tabela (`letra-cond.js`: a maior entre a exata e a dos avanços arredondados ao px — o
+  Chromium do CI arredonda), com a reserva por `size-adjust`. Testes: `teste-escalacao-campo` (Node) e `teste-prejogo` 4b/15
+  (`--so-esc`). Lição: copiar da referência a régua da BORDA da peça, não a do centro (o "9% para dentro" da Globo, com a nossa
+  carta 2,4× maior, deixava as pontas tangentes).
 - **Regras e controles** (pedidos do dono de 11/10: "se eu deixo o meu jogador parado, ninguém pega a bola", "o botão de
   pressão não funciona", "não consigo mexer com o goleiro", "só pega com a mão dentro da área", "não pode recuo"; tudo só
   na partida — o treino segue bit a bit igual): condutor parado/lento (< 2 m/s) → o bote da IA alcança a bola parada no
