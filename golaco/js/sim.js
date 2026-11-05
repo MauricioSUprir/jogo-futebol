@@ -498,7 +498,8 @@ function boteIA(m, j) {
   // contra-ataque com falta é decisão da pessoa, pela DIVIDIDA)
   const chamado = m.partida && chamadoRecente(m, j);
   if (m.partida && !m.faltaPendente && !chamado) {
-    const ft = faltaTatica(m, j, dono);
+    // (o clássico, item 35: o batido segura mais — a decisão dele; o apito e o cartão iguais)
+    const ft = faltaTatica(m, j, dono, m.classico ? CLASSICO.segura : 1);
     if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
   }
   if (b.p.y > 0.5) return;

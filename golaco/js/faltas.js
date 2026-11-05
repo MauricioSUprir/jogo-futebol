@@ -243,14 +243,16 @@ export function faltaNoCarrinho(m, d, c, ctx) {
  * Falta tática (sim.js boteIA, antes do alcance da bola): o defensor da IA batido — atrás do condutor, colado (≤
  * FALTAS.tatica.dist) — num ataque promissor (não na chance clara: seria vermelho) puxa a camisa (SPA: amarelo); fora dele
  * segura quem escapa (FALTAS.tatica.semSPA, sem cartão: 'segurar'; nunca na própria área). Chance por passo; só na partida.
+ * `segura` (item 35, o clássico: CLASSICO.segura pelo sim.js boteIA) multiplica a DECISÃO de segurar do jogador; o apito (sempre
+ * falta) e o cartão (SPA → amarelo; segurar → sem) não mudam. Sem ele, × 1 = o mesmo número.
  */
-export function faltaTatica(m, d, c) {
+export function faltaTatica(m, d, c, segura = 1) {
   if (!m.partida || m.livre || m.posse !== c.id) return null;
   if (MD.hypot(d.x - c.x, d.z - c.z) > FALTAS.tatica.dist) return null;
   if (chegada(d, c) !== 'tras') return null;
   if (chanceClara(m, c, d)) return null;
   const spa = ataquePromissor(m, c);
-  const p = spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) || !escapando(d, c) ? 0 : FALTAS.tatica.semSPA;
+  const p = (spa ? FALTAS.tatica.chancePorPasso : naAreaDe(m, d.time, c.x, c.z) || !escapando(d, c) ? 0 : FALTAS.tatica.semSPA) * segura;
   if (!(p > 0) || uniforme(m.rng) >= p) return null;
   return montarFalta(m, d, c, spa ? 'tatica' : 'segurar', false);
 }
