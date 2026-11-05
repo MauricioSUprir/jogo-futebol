@@ -14,9 +14,15 @@
    estádio (nome, capacidade, foto). A partida leva mando neutro, público e clássico (simOpts).
    Cada jogador leva o tmId: o resultado volta com quem marcou de verdade.
    O 3D cuida só dos 90 minutos; prorrogação e pênaltis continuam com o Total Match.
+   O tempo de jogo e a dificuldade (item 33; dono, 17/10): partida.minutosPorTempo (3 | 4 | 5 | 6 | 8 | 10: os minutos reais de
+   cada tempo, da Config "Duração em 3D"), partida.dificuldade ("facil" | "normal" | "dificil" | "lenda": a IA adversária no 3D;
+   a do simOpts.dificuldade3d — as Batalhas do Ultimate — senão a Config "Dificuldade") e partida.ajustesFixos (true: a pausa do
+   3D não muda nenhum dos dois — as Batalhas). O 3D ignora os dois nos Pênaltis e no Livre (sem relógio) e a dificuldade no online.
    resultado = { homeGoals, awayGoals, gols: [{ lado: 0|1, tmId, nome, minuto, penalti, contra, assist }],
                  cartoes: [{ lado, tmId, nome, minuto, cor }], stats: { possession, shots, onTarget },
-                 jogador?: { tmId, nota, gols, assist } }   (o lado do 3D está em golaco/js/ponte-tm.js)
+                 jogador?: { tmId, nota, gols, assist },
+                 dificuldade?: a MAIS FÁCIL usada na partida (a pausa do 3D pode mudar no meio), minutosPorTempo?: a duração no apito }
+   (o lado do 3D está em golaco/js/ponte-tm.js e golaco/js/ajustes-partida.js)
    Se o 3D não abrir (sem WebGL 2, sem internet para o three.js), a partida é simulada.
    Pênaltis 3D (dono, 15/10: "modo de pênaltis 3d igual ao golaço, só que versão de pênaltis"; js/penaltis3d.js): o mesmo
    pedido com modo: "penaltis" abre só a DISPUTA de pênaltis (Regra 10 da IFAB) com os dois times; o usuário bate com os
@@ -237,6 +243,14 @@
              competicao: o.title || "", estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
     var ec = empateContinuaDe(o.empateContinua);
     if (ec !== undefined) r.empateContinua = ec;
+    // o tempo de jogo e a dificuldade (item 33): a Config (Duração em 3D, Dificuldade) ou o que o modo manda (as Batalhas)
+    var cfg = (TM.storage && TM.storage.settings) ? TM.storage.settings() : {};
+    var DUR = [3, 4, 5, 6, 8, 10], NIV = ["facil", "normal", "dificil", "lenda"];
+    var min = +cfg.tempo3d;
+    r.minutosPorTempo = DUR.indexOf(min) >= 0 ? min : 4;
+    var dif = so.dificuldade3d || so.difficulty || cfg.difficulty;
+    r.dificuldade = NIV.indexOf(dif) >= 0 ? dif : "normal";
+    if (so.ajustesFixos3d) r.ajustesFixos = true;
     return r;
   }
   /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, colors?, kitVariant? }) */

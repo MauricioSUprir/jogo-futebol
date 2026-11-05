@@ -12,6 +12,10 @@
    em data:image) — a carreira com ≥ 9/11 titulares do meu clube com foto (o adversário depende do calendário: no Brasileirão,
    6–11), todas carregadas pelo 3D em ≤ 10 s (prontas = pedidas ≥ 12, 0 erros), o Ultimate com fotos, o "rae-me" sem foto e os
    outros com; na pública nenhum campo `foto` em pedido nenhum.
+   Item 33 (o tempo de jogo e a dificuldade): o pedido leva partida.minutosPorTempo (a Config "Duração em 3D") e partida.dificuldade
+   (a Config "Dificuldade"; nas Batalhas, a delas com ajustesFixos) e o 3D joga com eles (ticksPorTempo, mundo.dificuldade); o
+   resultado volta com os dois; a pausa do 3D diz "Partida e cenas". O Ultimate com o padrão (4 min, Normal) e a carreira e o
+   Rumo ao Estrelato com 6 min e Difícil.
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -139,8 +143,11 @@ if (fr) {
     PUBLICA ? fu.lados.every(l => l.total === 0) : fu.lados[0].total + fu.lados[1].total >= 1 && fu.lados.every(l => l.ruins.length === 0)
       && (fu.lados[0].tit + fu.lados[1].tit === 0 || (!!fu.fotos && fu.fotos.pedidas >= 1 && fu.fotos.prontas === fu.fotos.pedidas && fu.fotos.erros === 0)), fu);
   await print("02-ultimate-3d");
+  // item 33: a duração e a dificuldade da Config (o padrão: 4 min, Normal) no pedido e no mundo
+  const aj = await fr.evaluate(() => { const g = window.__golaco, pt = g.tm.pedido.partida || {}; return { min: pt.minutosPorTempo, dif: pt.dificuldade, fixos: !!pt.ajustesFixos, ticks: g.mundo.partida.ticksPorTempo, mundo: g.ajustes ? g.ajustes.estado.dificuldadeMundo : null }; });
+  confere("Ultimate: o pedido com a Config (4 min, Normal) e o 3D com eles (item 33)", aj.min === 4 && aj.dif === "normal" && !aj.fixos && aj.ticks === 14400 && aj.mundo === "normal", aj);
   const pausa = await pausaDo3d(fr);
-  confere("Ultimate: pausa com Simular o resto (sem Reiniciar nem Modo de jogo)", pausa.some(x => /^Simular o resto/.test(x)) && !pausa.some(x => /Reiniciar|Modo de jogo/.test(x)), pausa);
+  confere("Ultimate: pausa com Simular o resto e \"Partida e cenas\" (sem Reiniciar nem Modo de jogo)", pausa.some(x => /^Simular o resto/.test(x)) && pausa.some(x => /^Partida e cenas/.test(x)) && !pausa.some(x => /Reiniciar|Modo de jogo/.test(x)), pausa);
   const r = await simulaEVolta(fr);
   confere("Ultimate: resultado do 3D = placar do jogo e botão Voltar ao Total Match", r.res && r.res.homeGoals === r.placar[0] && r.res.awayGoals === r.placar[1] && r.botao === "Voltar ao Total Match", { res: r.res && [r.res.homeGoals, r.res.awayGoals], placar: r.placar, botao: r.botao });
   confere("Ultimate: o resultado aparece no TM", await ate(() => !!document.querySelector(".utm-res") && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)"));
@@ -148,6 +155,8 @@ if (fr) {
 }
 
 // 2) Carreira de técnico: o clube com o escudo e o estádio do TM, adversário escalado direito e resultado registrado
+// (item 33: a Config com 6 min e Difícil daqui em diante)
+await p.evaluate(() => TM.storage.saveSettings(Object.assign(TM.storage.settings(), { tempo3d: 6, difficulty: "dificil" })));
 await p.evaluate(() => {
   const w = TM.data.world(), clubId = w.leagues[0].clubIds[0];
   const c = TM.comp.newClubCareer(clubId, { clubId, currency: "eur", injection: 0, coachName: "Teste", coachMode: "create", board: "intermediaria", role: "treinador", allowRestart: false, noSack: false, sackMode: "propostas" });
@@ -175,8 +184,11 @@ if (fr) {
     confere("Carreira: ≥ 9/11 titulares do meu clube com foto no pedido; todas as fotos válidas (item 31)", fc.edicao === "pro" && meu.tit >= 9 && fc.lados.every(l => l.ruins.length === 0), fc);
     confere("Carreira: as fotos dos que estão em campo carregadas pelo 3D em ≤ 10 s (prontas = pedidas ≥ 12, 0 erros)", !!fc.fotos && fc.fotos.pedidas >= 12 && fc.fotos.prontas === fc.fotos.pedidas && fc.fotos.erros === 0, fc.fotos);
   }
+  const ajC = await fr.evaluate(() => { const g = window.__golaco, pt = g.tm.pedido.partida || {}; return { min: pt.minutosPorTempo, dif: pt.dificuldade, ticks: g.mundo.partida.ticksPorTempo, mundo: g.mundo.dificuldade || "normal" }; });
+  confere("Carreira: o pedido com a Config (6 min, Difícil) e o 3D com eles (item 33)", ajC.min === 6 && ajC.dif === "dificil" && ajC.ticks === 21600 && ajC.mundo === "dificil", ajC);
   await print("04-carreira-3d");
   const r = await simulaEVolta(fr);
+  confere("Carreira: o resultado volta com a duração e a dificuldade (item 33)", !!r.res && r.res.minutosPorTempo === 6 && r.res.dificuldade === "dificil", r.res && { min: r.res.minutosPorTempo, dif: r.res.dificuldade });
   const fim = await ate(() => TM.ui.current() === "coach-match", "^(Ver resultado|Pular|Avançar)");
   const reg = await p.evaluate(() => { const c = TM.storage.coachCareer() || {}; return { jogos: c.matchNo }; });
   confere("Carreira: partida registrada (tela de resultado e rodada nova)", fim && reg.jogos === 1, { fim, reg, placar3d: r.placar });
@@ -203,6 +215,8 @@ if (fr) {
     return { trava: id, controlado: T.controlado, tmId: id != null && T.mapa[id] ? T.mapa[id].tmId : null, humano: T.humano };
   });
   confere("Estrelato: controle travado no meu jogador", tr.trava != null && tr.controlado === tr.trava && tr.tmId === "rae-me", tr);
+  const ajR = await fr.evaluate(() => { const g = window.__golaco, pt = g.tm.pedido.partida || {}; return { min: pt.minutosPorTempo, dif: pt.dificuldade, ticks: g.mundo.partida.ticksPorTempo, mundo: g.mundo.dificuldade || "normal" }; });
+  confere("Estrelato: a duração e a dificuldade da Config também (6 min, Difícil; item 33)", ajR.min === 6 && ajR.dif === "dificil" && ajR.ticks === 21600 && ajR.mundo === "dificil", ajR);
   if (!PUBLICA) await esperaFotos(fr);
   const fr2 = await fotosDoPedido(fr);
   const fotoTrava = !PUBLICA ? await fr.evaluate(() => { const T = window.__golaco.tm; return T.fotos ? T.fotos.de(T.trava) : null; }) : null;
@@ -245,6 +259,24 @@ if (fr) {
   const k = ec.conta;
   confere("empateContinua: true/false, a função constante e a que depende do placar (sem o campo)", k.t === true && k.f === false && k.u === undefined && k.fnT === true && k.fnF === false && k.fnV === undefined && k.err === undefined, k);
   confere("empateContinua: o mata-mata da carreira = true, a liga = false (no pedido gravado)", ec.mata === true && ec.liga === false, { mata: ec.mata, liga: ec.liga });
+}
+
+// 5) item 33: a Batalha de Elenco manda a dificuldade DELA, travada (o "Craque Mundial" = Difícil), e a duração da Config — o
+// pedido montado como o do 3D (TM.tm3d.novoPedido com o cfg que a tela de jogo do Ultimate passa), sem abrir o quadro
+{
+  await p.evaluate(() => {
+    window.__pedBatalha = null;
+    window.__playOrig = TM.matchview.play;
+    TM.matchview.play = (screen, cfg) => {
+      window.__pedBatalha = TM.tm3d.novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
+        userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
+    };
+    const adv = TM.utModos.elencoCPU(12345, 80, { reforco: 2 });
+    TM.utModos.jogar({ modo: "batalha", titulo: "Batalhas · teste", adv, voltar: "ut-batalhas", dif: "mundial", onFim: () => ({}) });
+  });
+  await p.waitForFunction(() => !!window.__pedBatalha, null, { timeout: 15000 }).catch(() => {});
+  const bt = await p.evaluate(() => { TM.matchview.play = window.__playOrig; const pd = window.__pedBatalha; return pd ? JSON.parse(JSON.stringify(pd.partida)) : null; });
+  confere("Batalha (Craque Mundial): o pedido com a dificuldade dela (Difícil) travada e a duração da Config (item 33)", !!bt && bt.dificuldade === "dificil" && bt.ajustesFixos === true && bt.minutosPorTempo === 6, bt);
 }
 
 confere("nenhum erro de página (TM e 3D)", erros.length === 0, erros);

@@ -1,5 +1,5 @@
 /* Total Match — service worker (app instalável + offline) */
-var CACHE = "total-match-v376";
+var CACHE = "total-match-v377";
 /* Concha do app: caminhos base (sem ?v=) — combinados por ignoreSearch. */
 var SHELL = [
   "./", "./index.html", "./manifest.webmanifest",

@@ -43,7 +43,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI, DEFESA_HUMANO } from './config.js';
+import { PARTIDA, DIFICULDADE, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI, DEFESA_HUMANO } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -110,8 +110,10 @@ export function vagaDoJogador(timeEstado, id) {
  * o Total Match manda o lado do usuário), humanos = [humano] (os times controlados por pessoas: [0, 1] = o online 1×1,
  * cada pessoa no seu aparelho; com 2, `humano` é só o MEU lado, m.timeHumano — o caminho de 2 humanos nunca o lê),
  * trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao Estrelato do Total Match; acoes.js
- * assumirControle; só com 1 humano), log}. O controlado de cada time humano começa no cobrador da saída dele (com a
- * trava, no travado). m.timeHumano e m.trava ficam fora do hash (o controlado entra nele, como antes).
+ * assumirControle; só com 1 humano), dificuldade = 'normal' (item 33: 'facil' | 'normal' | 'dificil' | 'lenda' — a IA contra
+ * a pessoa, config.js DIFICULDADE; só com 1 humano; o Normal não escreve nada no mundo), log}. O controlado de cada time
+ * humano começa no cobrador da saída dele (com a trava, no travado). m.timeHumano, m.trava e m.dificuldade ficam fora do
+ * hash (o controlado entra nele, como antes).
  * iaClassica: true só para os testes medirem o "antes" (a IA do treino no 11×11).
  */
 export function criarPartida(opc = {}) {
@@ -140,11 +142,13 @@ export function criarPartida(opc = {}) {
   m.modo = 'partida';
   m.timeHumano = humanos.includes(h) ? h : humanos[0];
   if (trava != null) m.trava = { [h]: trava };
+  // a dificuldade (item 33): só fora do Normal e com 1 humano (no online são duas pessoas); no Normal o campo NÃO existe
+  if (humanos.length === 1 && nivelValido(opc.dificuldade) && opc.dificuldade !== 'normal') m.dificuldade = opc.dificuldade;
   m.times = times;
   for (const j of m.jogadores) { vestirVaga(m, j, vagaDoJogador(times[j.time], j.id)); j.iaT = null; }
   const min = opc.minutosPorTempo ?? PARTIDA.minutosPorTempo;
   m.partida = {
-    estado: 'parada', tempo: 1, tick0Tempo: 0, ticksPorTempo: Math.max(1, Math.round(min * 60 / PASSO)),
+    estado: 'parada', tempo: 1, tick0Tempo: 0, ticksPorTempo: ticksDoTempo(min),
     saidaInicial: saida, iaClassica: !!opc.iaClassica, desde: 0, ultimoTime: saida, ultimoId: null, ultimoTick: -1, golTime: null,
     // Etapa 4: impedimento (impedimento.js; a foto da última jogada e o último apito, para o desenho da linha) e
     // acréscimos (minutos anunciados no fim do tempo regulamentar; o que parou no tempo conta)
@@ -1362,6 +1366,68 @@ export function minutoDeJogo(m) {
   if (p.estado === 'intervalo') return 45;
   const f = Math.min(1, (m.tick - p.tick0Tempo) / p.ticksPorTempo);
   return (p.tempo - 1) * 45 + Math.floor(f * 45);
+}
+
+function nivelValido(n) { return typeof n === 'string' && DIFICULDADE.niveis.includes(n); }
+
+/**
+ * Troca a dificuldade da partida (item 33; também no meio dela, pela pausa): 'normal' tira o campo (o jogo de hoje, bit a
+ * bit), os outros níveis o escrevem. Recusa (false, sem tocar em nada): treinos, Livre, Pênaltis, online/dois humanos e nível
+ * inválido. Fora do hash: a partir da chamada só o comportamento da IA contra a pessoa muda (tatica.js nivelContra).
+ */
+export function definirDificuldade(m, nivel) {
+  if (!m.partida || m.modo !== 'partida' || m.livre || m.disputa || m.online || m.humanos.length !== 1 || !nivelValido(nivel)) return false;
+  if (nivel === 'normal') delete m.dificuldade;
+  else m.dificuldade = nivel;
+  return true;
+}
+
+/** Ticks de um tempo de `min` minutos REAIS (a conta do criarPartida; 4 min = 14 400). */
+export function ticksDoTempo(min) {
+  return Math.max(1, Math.round(min * 60 / PASSO));
+}
+
+/**
+ * O segundo de jogo mostrado no placar dentro do tempo (sem a base do 2º tempo): d ticks desde o começo do tempo com T ticks
+ * por tempo. É a MESMA expressão float do relogio-placar.js segundoDeJogo (na mesma ordem) — o partida.js não pode importar
+ * aquele módulo (ele fica fora do fecho do hash: teste-relogio-placar R5); o teste-partida T2 compara as duas em todos os casos
+ * (exportada só para ele: a página lê o segundo pelo relogio-placar.js).
+ */
+export function segundoNoTempo(d, T) {
+  if (d < T) {
+    const x = Math.min(1, d / T) * 45, mm = Math.floor(x);
+    return mm * 60 + Math.min(59, Math.floor((x - mm) * 60));
+  }
+  return 2700 + Math.floor((d - T) * 2700 / T);
+}
+
+/**
+ * Troca a duração da partida no meio dela (item 33; dono, 17/10: "editar o TEMPO de jogo ... na pausa"): `min` minutos REAIS
+ * por tempo. PURA (só o mundo). Mantém a FRAÇÃO do tempo jogado: o minuto mostrado fica IGUAL e, com o tempo novo de ≥ 2700
+ * ticks (as 6 opções de PARTIDA.duracoes), o segundo também; os acréscimos (minutos de jogo) ficam e viram ticks pela duração
+ * nova (ticksAcrescimo); o "regular" (d ≥ T) fica. No intervalo só troca o T (o 2º tempo nasce com ele); no tick 0 do tempo o
+ * mundo fica IDÊNTICO ao de criarPartida({minutosPorTempo: min}) (o hash também). Recusa (false, sem tocar em nada): treinos,
+ * Livre, Pênaltis, online (dois humanos: uma pausa de um lado só nunca muda o relógio dos dois), fim de jogo e min ≤ 0.
+ * Hash: muda só quando a duração muda (ticksPorTempo e tick0Tempo estão no misturarPartida).
+ */
+export function mudarDuracao(m, min) {
+  const p = m.partida;
+  if (!p || m.modo !== 'partida' || m.livre || m.disputa || m.online || m.humanos.length !== 1) return false;
+  if (p.estado === 'fim' || !(min > 0)) return false;
+  const T = p.ticksPorTempo, T2 = ticksDoTempo(min);
+  if (T2 === T) return true;
+  if (p.estado === 'intervalo') { p.ticksPorTempo = T2; return true; }
+  const d = Math.max(0, m.tick - p.tick0Tempo);
+  // d' = o MENOR inteiro ≥ 0 com o segundo mostrado ≥ o de agora, sem passar do minuto de agora (com o tick de mais de 1 s de
+  // jogo — durações de teste abaixo de 0,75 min —, o menor que alcança o segundo pode cair no minuto seguinte: fica o anterior)
+  const s0 = segundoNoTempo(d, T), mm0 = Math.floor(s0 / 60);
+  let d2 = Math.max(0, Math.ceil(d * T2 / T));
+  while (d2 > 0 && segundoNoTempo(d2 - 1, T2) >= s0) d2--;
+  while (segundoNoTempo(d2, T2) < s0) d2++;
+  if (d2 > 0 && Math.floor(segundoNoTempo(d2, T2) / 60) > mm0) d2--;
+  p.tick0Tempo = m.tick - d2;
+  p.ticksPorTempo = T2;
+  return true;
 }
 
 /** Ticks de acréscimo do tempo atual (0 antes do anúncio). */

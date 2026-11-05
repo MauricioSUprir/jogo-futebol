@@ -30,7 +30,7 @@
 // Com a bola (Parte 3: ia-ataque.js): o condutor e os apoios; null = condutor da IA clássica e,
 // para os apoios, a referência tática com a bola (posicaoTatica 'com').
 
-import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, IA_PESSOA, TATICA, ACOES, ENTRADA, GOLEIRO } from './config.js';
+import { BOTAO, CAMPO, PASSO, IA, IA_DEFESA, IA_ATAQUE, IA_PESSOA, TATICA, ACOES, ENTRADA, GOLEIRO, DIFICULDADE } from './config.js';
 import { MD } from './matdet.js';
 import { difAng, clamp, lerp } from './mat.js';
 import { entradaIA, para, pontoInterceptacao, acaoIA } from './ia.js';
@@ -38,7 +38,7 @@ import { preverBola } from './conducao.js';
 import { riscoLinha } from './acoes.js';
 import { goleiroNoPe } from './regras-goleiro.js';
 import { apoioTatico, condutorTatico, primeiraIA } from './ia-ataque.js';
-import { faseDoTime, posicaoTatica, contraPessoa } from './tatica.js';
+import { faseDoTime, posicaoTatica, contraPessoa, nivelContra } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { restricaoParada, ganchosLivre } from './partida.js';
 import { alvoBolaParada } from './bolas-paradas.js';
@@ -56,6 +56,19 @@ const SUAVE_MARCA_P = { ...TATICA.suave, ...IA_PESSOA.marcaPerto.suave };
 const SUAVE_LINHA_MARCA_P = { ...TATICA.suaveLinha, ...IA_PESSOA.marcaPerto.suave };
 const RECOMP_P = { ...TATICA.recomp, ...IA_PESSOA.recomp };
 const CORRIDA_P = { ...IA_DEFESA.corrida, ...IA_PESSOA.corrida };
+// a dificuldade (item 33; config.js DIFICULDADE), só no time da IA contra a pessoa (tatica.js nivelContra), juntada uma vez na
+// carga por nível — o Normal não está em nenhuma (usa as de sempre): a linha de engajamento (IA_PESSOA.engaja + m, teto 105),
+// a fração do encurtar (IA_PESSOA.encurta[2]), a leitura do passe (IA_DEFESA.livre.le, só mais lenta), a distância da contenção
+// do 1º homem (IA_DEFESA.contencao + m, nunca abaixo de 1,25) e a contrapressão (IA_DEFESA.contrapressao com s/max do nível)
+const ENGAJA_D = {}, ENCURTA_D = {}, LE_D = {}, CONTEM_D = {}, CONTRA_D = {};
+for (const n of DIFICULDADE.niveis) {
+  const D = DIFICULDADE[n];
+  if (D.engaja != null) ENGAJA_D[n] = IA_PESSOA.engaja.map(v => Math.min(105, v + D.engaja));
+  if (D.encurta != null) ENCURTA_D[n] = D.encurta;
+  if (D.le != null) LE_D[n] = D.le;
+  if (D.contencao != null) CONTEM_D[n] = IA_DEFESA.contencao.map(v => Math.max(1.25, v + D.contencao));
+  if (D.contrapressao) CONTRA_D[n] = { ...IA_DEFESA.contrapressao, ...D.contrapressao };
+}
 
 /**
  * Estado do para() (j.ia) pronto para este tick — a mesma inicialização do entradaIA (use antes de
@@ -217,6 +230,8 @@ function pontoDeCorte(m, o, le) {
  */
 function cortaPasse(m, j, v, Lv, atual) {
   const L = IA_DEFESA.livre;
+  // (a dificuldade, item 33: no Fácil a IA lê o passe da pessoa mais devagar — DIFICULDADE.le)
+  const nv = nivelContra(m, j.time), le = nv && LE_D[nv] != null ? LE_D[nv] : L.le;
   const it = estadoT(j);
   // compromisso: o corte já decidido para este passe segue até o tick do ponto (+ folga)
   if (it.corte && it.corte.chave === v.tickChave && m.tick <= it.corte.ate) { Lv[j.time] = { id: j.id, tick: m.tick }; return true; }
@@ -229,13 +244,13 @@ function cortaPasse(m, j, v, Lv, atual) {
   for (const o of m.jogadores) if (o.id === v.para) { r = o; break; }
   const pr = r ? pontoDeCorte(m, r, 0) : null;
   const tr = pr ? pr.i * PASSO : Infinity;
-  const pj = pontoDeCorte(m, j, L.le);
+  const pj = pontoDeCorte(m, j, le);
   if (!pj || !(pj.i * PASSO + L.antes <= tr)) return false;
   const tj = pj.i - (j.id === atual ? 6 : 0), cj = { i: pj.i, x: pj.x, z: pj.z };
   for (const o of m.jogadores) {
     if (o === j || o.time !== j.time || o.posicao === 'GOL' || o.papel === 'parado' || o.papel === 'marcador' || o.carrinho) continue;
     if (o.iaT?.corte && o.iaT.corte.chave === v.tickChave && m.tick <= o.iaT.corte.ate) return false; // um companheiro já vai
-    const po = pontoDeCorte(m, o, L.le);
+    const po = pontoDeCorte(m, o, le);
     if (po && (po.i < tj || (po.i === tj && o.id < j.id))) return false;
   }
   it.corte = { chave: v.tickChave, x: cj.x, z: cj.z, ate: m.tick + cj.i + L.segue };
@@ -492,9 +507,11 @@ export function blocoDoTime(m, t) {
   // troca de fase: perdeu a bola → contrapressão dos que estavam perto (pesquisa §4.3: só com a perda
   // no campo adversário ou perto da lateral, e com gente perto — tantos ou mais que eles a ≤ raio m;
   // os outros recompõem). Não numa bola parada.
-  if (B.faseAnt === 'com' && f.fase === 'sem' && !naParada && IA_DEFESA.contrapressao.s[p] > 0) {
+  // (a dificuldade, item 33: contra a pessoa, quantos e por quanto tempo — DIFICULDADE.contrapressao, CONTRA_D)
+  const nvP = nivelContra(m, t), CP = (nvP && CONTRA_D[nvP]) || IA_DEFESA.contrapressao;
+  if (B.faseAnt === 'com' && f.fase === 'sem' && !naParada && CP.s[p] > 0) {
     B.contra.length = 0;
-    const R = IA_DEFESA.contrapressao.raio, max = IA_DEFESA.contrapressao.max[p];
+    const R = IA_DEFESA.contrapressao.raio, max = CP.max[p];
     let meus = 0, deles = 0;
     for (const o of js) {
       if (!ehLinha(o) || o.carrinho || MD.hypot(o.x - b.x, o.z - b.z) > R) continue;
@@ -512,7 +529,7 @@ export function blocoDoTime(m, t) {
         if (!mel) break;
         B.contra.push(mel.id);
       }
-      B.contraAte = m.tick + seg(IA_DEFESA.contrapressao.s[p]);
+      B.contraAte = m.tick + seg(CP.s[p]);
     }
     // e o 1º homem aperta logo depois da perda (FIFA 23: "pressão após perda"), se estiver perto
     if (p >= 1) gatilho(m, B, 'perda');
@@ -558,7 +575,9 @@ export function blocoDoTime(m, t) {
   const dGol = MD.hypot(B.foco.x - meuGol, B.foco.z);
   // (contra a pessoa, a linha de engajamento do D3: IA_PESSOA.engaja — item 20, a Média sai do bloco mais alto)
   // (D4: e os companheiros da pessoa contra a IA, a mesma linha — B.compPessoa)
-  const engajado = dGol <= (contraPessoa(m, t) ? IA_PESSOA.engaja : B.compPessoa ? IA_PESSOA.companheiros.engaja : IA_DEFESA.engaja)[p];
+  // (item 33: e a dificuldade soma metros a ela — DIFICULDADE.engaja, ENGAJA_D)
+  const nvE = nivelContra(m, t);
+  const engajado = dGol <= (contraPessoa(m, t) ? (nvE && ENGAJA_D[nvE]) || IA_PESSOA.engaja : B.compPessoa ? IA_PESSOA.companheiros.engaja : IA_DEFESA.engaja)[p];
   B.engajado = engajado;
   // gatilho de ESTADO "condutor lento" (pedido do dono, 11/10): o condutor de linha com a velocidade filtrada abaixo de
   // lento.v m/s por lento.s[pressão] s (+ lento.longe s fora da linha de engajamento) → o 1º homem sai do bloco e aperta
@@ -980,7 +999,9 @@ function semBola(m, j, f) {
   if (j.id === B.p1 && !naMaoAdv && (B.engajado || B.pedido >= 0 || B.lento || B.rapido)) {
     if (B.rapido) { const e = acompanhar(m, j, s, B, meuGol, extra, B.aperta1 ? 'aperta' : 'contem'); if (e) return e; }
     if (B.aperta1) return apertar(m, j, s, B, meuGol, extra, 'aperta');
-    return conter(m, j, s, B, meuGol, IA_DEFESA.contencao[p], extra);
+    // (a dificuldade, item 33: a que distância ele contém o condutor da pessoa — DIFICULDADE.contencao, CONTEM_D)
+    const nvC = nivelContra(m, j.time);
+    return conter(m, j, s, B, meuGol, ((nvC && CONTEM_D[nvC]) || IA_DEFESA.contencao)[p], extra);
   }
   // 4) 2º homem (Média e Alta; com o condutor lento, em todos os níveis e também além da linha de engajamento; com o
   // condutor rápido, também — cobrindo pela velocidade)
@@ -1050,7 +1071,9 @@ function semBola(m, j, f) {
     if (c && MD.hypot(c.vx, c.vz) < EN[3] && MD.hypot(c.x - j.x, c.z - j.z) <= EN[0]) {
       const gx = meuGol - c.x, gz = -c.z, g = MD.hypot(gx, gz) || 1;
       const ex = c.x + (gx / g) * EN[1], ez = c.z + (gz / g) * EN[1];
-      tx += (ex - tx) * EN[2]; tz += (ez - tz) * EN[2];
+      // (a dificuldade, item 33: quanto do caminho ele encurta — DIFICULDADE.encurta)
+      const nvC = nivelContra(m, j.time), fr = nvC && ENCURTA_D[nvC] != null ? ENCURTA_D[nvC] : EN[2];
+      tx += (ex - tx) * fr; tz += (ez - tz) * fr;
     }
   }
   // (a linha da frente não recua a todo vapor — ela fica para a saída — e sobe junto com a bola que

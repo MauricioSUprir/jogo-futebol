@@ -125,6 +125,11 @@ const LISTA = [
   // (D3, item 20: a pressão da IA contra a pessoa — a pessoa "espelho", que joga com a decisão da IA sem a marca `ia`: PPDA
   // 8–10,5, agressão ≤ 78%, retomada 34–54%; 3 processos)
   ['pressão da IA contra a pessoa (D3): PPDA, agressão e retomada contra o espelho', 'teste-pressao.mjs', ['--humano'], 'padrao', 3],
+  // (item 33: a dificuldade só contra a pessoa — o portão, o Normal = hoje bit a bit, a opção que muda só contra a pessoa e a
+  // ordem dos 4 níveis nos botes e nas chances (xG) da IA e no resultado, pareada e provada por bootstrap; os pontos reprovam só
+  // quando a amostra PROVA o contrário; 128 partidas de 2 × 4 min em 3 processos. O --completo — 16 sementes, os degraus vizinhos
+  // provados — é a medida do dono, FORA do CI e não é passo antes do merge: PESQUISA-DIFICULDADE.md §11)
+  ['dificuldade só contra a pessoa: portão, Normal = hoje, a ordem dos 4 níveis em botes, chances e resultado', 'teste-dificuldade.mjs', [], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   // C5 (item 16 da FILA): a reposição com a bola nas mãos — canhão de estados do meio da partida (IA × IA) e o gesto
   ['reposição do goleiro com a mão: a IA rola/arremessa ou dá o chutão pela pressão, a bola na mão desenhada, o bate-pronto quica antes do pé', 'teste-reposicao.mjs'],

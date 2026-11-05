@@ -127,7 +127,8 @@
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
 // ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
-// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1 ?cenas=0|1 ?troca=0 (sem a troca de camisa do pós-jogo).
+// ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1 ?cenas=0|1 ?troca=0 (sem a troca de camisa do pós-jogo)
+// ?dif=facil|normal|dificil|lenda (a dificuldade da IA contra a pessoa, item 33; como o ?min, o valor do começo da página).
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
 // saída só toca no fim dele. Desligado por padrão nos testes (navigator.webdriver), nos prints e na demonstração.
 // Testes: window.__golaco (ver o fim do arquivo).
@@ -160,7 +161,9 @@ import { criarEmocao, zerarEmocao, emocaoEvento, emocaoPasso, consumirDisparos, 
 import { forcarFesta } from './render/festa.js';
 import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.js';
 import { criarSom } from './render/som.js';
-import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar } from './partida.js';
+import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
+// o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
+import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -296,6 +299,22 @@ function salvarPrefs(p) {
   try { localStorage.setItem(CHAVE_PREFS, JSON.stringify(p)); } catch (_) { /* sem armazenamento */ }
 }
 const prefs = lerPrefs();
+// O tempo de jogo e a dificuldade da partida (item 33; contrato "Tempo de jogo e dificuldade"): a escolha mora AQUI, na página
+// (sobrevive ao Personalizar, ao Jogar de novo, ao Reiniciar e à troca de modo — todos recriam o mundo pelo criarMundoTreino).
+// De onde vem: ?min / ?dif (testes) > o pedido do TM (no online, só a duração, a do anfitrião: o mesmo pedido nos dois
+// aparelhos; o ticksPorTempo está no hash do lockstep) > golaco.prefs.v1 (fora do TM e do online) > o padrão (4 min, Normal).
+// maisFacil: a dificuldade mais fácil em que a pessoa JOGOU pelo menos um passo na partida em andamento (vai ao resultado do TM;
+// rodarPasso, nivelDoPasso: um nível só atravessado no ciclo da pausa não conta); fixos: o pedido trava os dois (as Batalhas do
+// Ultimate: a linha fica travada na pausa, com o cadeado).
+const AJ_PEDIDO = TM ? ajustesDoPedido(PEDIDO_TM) : { minutosPorTempo: null, dificuldade: null, fixos: false };
+const DIF_PARAM = nivelValido(params.get('dif'));
+const ajustes = {
+  minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
+    : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
+  dificuldade: ONLINE ? 'normal' : DIF_PARAM ?? (TM ? AJ_PEDIDO.dificuldade ?? 'normal' : nivelValido(prefs.dificuldade) ?? 'normal'),
+  maisFacil: null,
+  fixos: !ONLINE && AJ_PEDIDO.fixos,
+};
 // Tela limpa (dono, 11/10): o minimapa e os nomes nos botões de toque são opções da pausa. Minimapa sem escolha
 // salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque). Nomes: LIGADOS sem escolha salva
 // (dono, 12/10: "coloca o nome da função do botão de novo"); desligados na pausa = só o ícone.
@@ -368,11 +387,14 @@ function criarMundoTreino(opc = {}) {
   }
   if (o.modo === 'partida') {
     // (a escalação escolhida no Personalizar da tela antes do jogo — item 64 — vale nesta página: timesAntes)
+    // (o tempo e a dificuldade: os da página — ajustes, item 33; a partida nova começa sem nenhum nível jogado: rodarPasso)
+    const dif = ONLINE ? undefined : o.dificuldade ?? ajustes.dificuldade;
     const m = criarPartida({
-      semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? MIN_PARAM, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
+      semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? ajustes.minutosPorTempo, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
-      humanos: ONLINE ? [0, 1] : undefined,
+      humanos: ONLINE ? [0, 1] : undefined, ...(dif && dif !== 'normal' ? { dificuldade: dif } : {}),
     });
+    ajustes.maisFacil = null;
     if (ONLINE) m.online = true; // (fora do hash: o passo é o passoOnline com as duas entradas)
     return m;
   }
@@ -767,6 +789,8 @@ function rodarPasso(entrada, acoes) {
   const eventos = passoDoMundo(mundo, mundo.online ? entrada : entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
   // a súmula (só lê o mundo e os eventos do passo; na partida, fora do Livre e da disputa)
   if (sumula && mundo.modo === 'partida') sumulaPasso(sumula, mundo, eventos);
+  // o nível em que a pessoa jogou este passo (item 33: a dificuldade mais fácil USADA vai ao resultado do TM; só lê o mundo)
+  { const nv = nivelDoPasso(mundo); if (nv) ajustes.maisFacil = maisFacil(ajustes.maisFacil, nv); }
   const t1 = agoraMs();
   contPassos++;
   passosTotais++;
@@ -1056,6 +1080,8 @@ function tratarEvento(ev) {
     // Total Match: o resultado fica gravado já no apito (o TM lê de lá se a mensagem se perder); o botão da faixa volta ao TM
     if (TM) gravarResultadoTM(resultadoAtualTM());
     hud.definirEstado({ fim: true });
+    // (no fim os rótulos da duração e da dificuldade passam à escolha da página — a do "Jogar de novo": partidaViva)
+    marcarAjustes();
     encerrarEfeitosGol();
     if (cam) cam.planoGeral(true);
     // a cena do pós-jogo (js/cena-fim.js 'fimDeJogo'): decidida no fim do passo (decidirFimJogo), depois do cartão do mesmo
@@ -3254,6 +3280,46 @@ function marcarPrejogo() {
   const e = document.getElementById('estado-prejogo');
   if (e) e.textContent = NOME_PREJOGO[v];
 }
+/**
+ * A partida em andamento (a do tick 0 também): só nela a duração e a dificuldade do MUNDO valem. No fim do jogo o mudarAjuste
+ * muda só a escolha da página (o "Jogar de novo"): lá os rótulos e o próximo valor do ciclo saem dos `ajustes` (lendo o mundo
+ * que já acabou, o ciclo travava num valor só e o rótulo mostrava o da partida jogada).
+ */
+function partidaViva() { return mundo?.modo === 'partida' && !!mundo.partida && mundo.partida.estado !== 'fim'; }
+/** A duração que vale agora: a do mundo na partida em andamento (o ?min dos testes também), senão a escolhida na página. */
+function duracaoAtual() {
+  return partidaViva() ? mundo.partida.ticksPorTempo * PASSO / 60 : ajustes.minutosPorTempo;
+}
+/** O nível que vale agora: o do mundo na partida em andamento (o Normal sem o campo), senão o escolhido na página. */
+function dificuldadeAtual() { return partidaViva() ? (mundo.dificuldade ?? 'normal') : ajustes.dificuldade; }
+/** Os rótulos da linha "Duração | Dificuldade" do "Modo de jogo" (item 33) e se ela está travada (ajustesFixos). */
+function marcarAjustes() {
+  hud?.definirEstado({ duracao: textoDuracao(duracaoAtual()), dificuldade: textoNivel(dificuldadeAtual()), ajustesFixos: ajustes.fixos || ONLINE });
+}
+/**
+ * Muda a duração (v: minutos por tempo) ou a dificuldade (v: nível) da partida pela pausa ou pela API (item 33): vale na página
+ * (o Jogar de novo, o Personalizar...), fora do TM e do online fica salva, e na partida em andamento entra na hora (o
+ * mudarDuracao mantém o minuto e o segundo do relógio; a dificuldade age a partir do próximo passo). No fim do jogo muda só a
+ * escolha (para o Jogar de novo). Com o pedido travando (ajustesFixos) ou no online, nada.
+ */
+function mudarAjuste(qual, v) {
+  if (ajustes.fixos || ONLINE) return false;
+  const jogo = partidaViva();
+  if (qual === 'duracao') {
+    if (!(+v > 0)) return false;
+    ajustes.minutosPorTempo = +v;
+    if (!TM && minutosValidos(+v)) { prefs.minutosPorTempo = +v; salvarPrefs(prefs); }
+    if (jogo) mudarDuracao(mundo, +v);
+  } else {
+    const n = nivelValido(v);
+    if (!n) return false;
+    ajustes.dificuldade = n;
+    if (!TM) { prefs.dificuldade = n; salvarPrefs(prefs); }
+    if (jogo) definirDificuldade(mundo, n);
+  }
+  marcarAjustes();
+  return true;
+}
 /** O rótulo da opção "Cenas" (ligadas | desligadas); no online, desligadas (só o ícone de hoje). */
 function marcarCenas() {
   const e = document.getElementById('estado-cenas');
@@ -3378,7 +3444,14 @@ function dadosPrepartida() {
     // (o clássico do TM: partida.classico + o nome dele, se vier)
     classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : null,
     hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
+    // (a dificuldade da IA contra a pessoa, item 33: o "Beginner, 6 minutes" do FC; sem ela no online, no Livre e nos Pênaltis)
+    dificuldade: dificuldadeNaTela(),
   });
+}
+/** O nível que a tela antes do jogo mostra: o do mundo (o Normal sem o campo); null no online e fora da partida. */
+function dificuldadeNaTela() {
+  if (ONLINE || mundo?.modo !== 'partida') return null;
+  return mundo.dificuldade ?? 'normal';
 }
 /** O HUD, os botões de toque, as cenas, o canvas e o pré-jogo ficam inert atrás da tela (o online-aviso não: ele mora no body). */
 function marcarInertTela(v) {
@@ -3603,7 +3676,8 @@ const faseOnlineLocal = () => pp?.aberta ? (ppOnline.pronto ? 1 : 0) : prejogo?.
 function resultadoAtualTM() {
   if (TM && mundo.disputa) return MOD_DISP.resultadoPenaltisTM(mundo, TM.mapa);
   if (TM && mundo.livre) return { livre: { placar: [mundo.placar?.[0] ?? 0, mundo.placar?.[1] ?? 0] } };
-  return TM && sumula ? resultadoTM(sumula, mundo, TM.mapa) : null;
+  // (com o tempo e a dificuldade da partida — item 33: a duração no apito e a dificuldade mais fácil usada; campos opcionais)
+  return TM && sumula ? resultadoComAjustes(resultadoTM(sumula, mundo, TM.mapa), ajustes, mundo) : null;
 }
 /** Quantos ms de simulação por quadro no "Simular o resto" (o resto do quadro fica para a página respirar). */
 const FATIA_SIMULACAO = 30;
@@ -3776,6 +3850,12 @@ function comando(c, v) {
     case 'cena-menu': entrada?.soltarTudo(); hud.abrirMenu(); break;
     // a faixa final do pós-jogo: os lances do guardador (o Pular volta à faixa)
     case 'melhores-momentos': iniciarMelhores(); break;
+    // "Modo de jogo" → "Duração" (3 → 4 → 5 → 6 → 8 → 10 → 3) e "Dificuldade" (Fácil → Normal → Difícil → Lenda); item 33.
+    // v 'anterior': o toque/clique no lado esquerdo do botão (‹) volta um valor
+    case 'duracao-ciclo': mudarAjuste('duracao', (v === 'anterior' ? duracaoAnterior : proximaDuracao)(duracaoAtual())); break;
+    case 'dificuldade-ciclo': mudarAjuste('dificuldade', (v === 'anterior' ? nivelAnterior : proximoNivel)(dificuldadeAtual())); break;
+    case 'duracao': mudarAjuste('duracao', +v); break;
+    case 'dificuldade': mudarAjuste('dificuldade', v); break;
     case 'cenas-ciclo':
       // "Modo de jogo" → "Cenas": ligadas ↔ desligadas (desligadas = o ícone do cartão de hoje); salvo
       cenasPref = !cenasLigadas();
@@ -4097,6 +4177,7 @@ async function iniciar() {
   vaoCenas = criarVaoPlacas({ campo, cena3d });
   if (MOD_CEN && !cartao3d) cartao3d = MOD_CEN.c3.criarCartao3D(cena3d.cena);
   marcarCenas();
+  marcarAjustes();
   // a tela antes do jogo (item 64) ANTES do pré-jogo: ela segura o tick 0 e o "Jogar partida" começa o pré-jogo (ou o apito). A
   // reserva: sem o módulo até PREPARTIDA.reservaMs (1,5 s), a abertura de texto de hoje
   const comTela = prepartidaLigada() && await esperarPrepartida(1500) && abrirPrepartida();
@@ -4184,6 +4265,7 @@ function trocarMundo(m, opc = {}) {
   corteCamera = true;
   if (entrada) entrada.definirFase(fase.atual, fase.agora, fase.posseRival, lancaNaDefesa(mundo));
   hud.definirEstado({ marcador: marcadorLigado(mundo), modoTreino: mundo.modo, fim: false });
+  marcarAjustes();
   hud.definirTimes(timesDoMundo(mundo));
   hud.definirCompeticao(textoCompeticao());
   pausaChave = null;
@@ -4257,6 +4339,19 @@ const api = {
    */
   reiniciar(opc = {}) {
     return trocarMundo(criarMundoTreino(opc));
+  },
+  /**
+   * O tempo de jogo e a dificuldade (item 33): o estado da página e do mundo, e as mudanças pelo mesmo caminho da pausa
+   * (duracao(min), dificuldade(nivel): true se valeu; recusa com o pedido travando e no online).
+   */
+  ajustes: {
+    get estado() {
+      return { ...ajustes, duracaoMundo: mundo?.partida && mundo.modo === 'partida' ? mundo.partida.ticksPorTempo * PASSO / 60 : null,
+        ticksPorTempo: mundo?.partida?.ticksPorTempo ?? null, dificuldadeMundo: mundo?.modo === 'partida' ? (mundo.dificuldade ?? 'normal') : null,
+        temCampo: !!mundo && 'dificuldade' in mundo, prefs: { minutosPorTempo: lerPrefs().minutosPorTempo ?? null, dificuldade: lerPrefs().dificuldade ?? null } };
+    },
+    duracao(min) { return mudarAjuste('duracao', min); },
+    dificuldade(n) { return mudarAjuste('dificuldade', n); },
   },
   /** Põe uma edição do time na fila (entra no próximo passo, como a do "Editar time"). */
   editarTime(ed) { edicaoNaFila = ed ?? null; },

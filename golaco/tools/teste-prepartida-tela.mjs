@@ -43,6 +43,12 @@
 //       (Q/E) igual; nada encosta (E4) com as fotos; E22b a 1ª foto pedida DEPOIS do pronto; E22c o mesmo pedido PÚBLICO: 0 fotos
 //       nas fichas e 0 pedidos às fotos; E22d as fotos em 404: todas com o busto, nenhuma <img> visível, nenhum erro de página
 //       além dos 404 delas. Na base E22a/b reprovam.
+//   E23 (item 33) a dificuldade na linha de informação: ?dif=dificil → "Difícil" no celular (844×390 e 568×320, com toque) e
+//       "Dificuldade: Difícil" no PC (1280×720), com a duração, sem a linha passar (o CSS não corta); o Livre e os Pênaltis sem nível
+//       (o online: no E1 online)
+//   E24 (item 33) ≡ → "Modo de jogo" → Duração até 6 e Dificuldade até Lenda → volta: a linha diz "2 × 6 min | … | Lenda"; o Jogar
+//       começa com ticksPorTempo 21 600 e m.dificuldade "lenda"; E24b o mesmo depois de um Personalizar (o mundo recriado leva os
+//       ajustes). Na base reprovam (sem o ciclo nem o nível)
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
 //   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
@@ -51,7 +57,7 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,online,fotos,carga] [--espera <s>]
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -769,6 +775,92 @@ document.body.appendChild(f);
 }
 
 // ================================================================================================ online: duas abas pelo BroadcastChannel
+// ================================================================================================ o tempo e a dificuldade (item 33)
+if (faz('ajustes')) {
+  /** As linhas da info (o texto de cada .pp-info-l) e se alguma passa do lugar dela (o CSS cortaria). */
+  const info = pg => pg.evaluate(() => {
+    const ls = [...document.querySelectorAll('#prepartida .pp-info-l')].filter(l => l.getClientRects().length);
+    return { linhas: ls.map(l => l.textContent.replace(/\s+/g, ' ').trim()), passa: ls.some(l => l.scrollWidth > l.clientWidth + 1) };
+  });
+  // E23: celular (curta) e PC (longa); o Livre e os Pênaltis sem nível
+  {
+    const out = [];
+    let ok = true;
+    for (const [w, h, toque, quer] of [[844, 390, true, 'Difícil'], [568, 320, true, 'Difícil'], [1280, 720, false, 'Dificuldade: Difícil']]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w, h, toque, q: `${Q}&prepartida=1&semente=3&dif=dificil` });
+      try {
+        await quadros(pg, 3);
+        const r = await info(pg);
+        const tudo = r.linhas.join(' / ');
+        const partes = tudo.split(/\s*[|/]\s*/);
+        const tem = partes.includes(quer) && (quer !== 'Difícil' || !tudo.includes('Dificuldade'));
+        const dur = toque ? tudo.includes('2 × 4 min') : tudo.includes('2 tempos de 4 min');
+        const mundo = await pg.evaluate(() => window.__golaco.mundo.dificuldade ?? null);
+        out.push(`${w}×${h}: "${tudo}"${r.passa ? ' (PASSA)' : ''}; mundo ${mundo}`);
+        if (!tem || !dur || r.passa || mundo !== 'dificil') ok = false;
+      } finally { await navegador.close(); }
+    }
+    for (const [nome, q] of [['Livre', `${Q}&prepartida=1&modo=livre&dif=dificil`], ['Pênaltis', `${Q}&prepartida=1&modo=penaltis&dif=dificil&semente=3`]]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w: 844, h: 390, toque: true, q });
+      try {
+        await quadros(pg, 3);
+        const r = await info(pg);
+        const tudo = r.linhas.join(' / ');
+        out.push(`${nome}: "${tudo}"`);
+        if (/Difícil|Normal|Fácil|Lenda|Dificuldade/.test(tudo)) ok = false;
+      } finally { await navegador.close(); }
+    }
+    meta('E23 a dificuldade na linha de informação (item 33): "Difícil" no celular, "Dificuldade: Difícil" no PC, com a duração e sem passar da linha; o Livre e os Pênaltis sem nível',
+      out.join(' · '), 'o nível certo em cada tela; nenhum nível no Livre e nos Pênaltis', ok);
+  }
+  // E24 e E24b: pelo ≡ (a pausa "antes do jogo") → Modo de jogo → Duração 6 e Dificuldade Lenda
+  for (const personalizar of [false, true]) {
+    const { navegador, pagina: pg, erros } = await abrirPagina({ w: 844, h: 390, toque: true, q: `${Q}&prepartida=1&semente=3` });
+    let txt = '', ok = false;
+    try {
+      await quadros(pg, 3);
+      await tecla(pg, 'KeyP');
+      const ciclo = await pg.evaluate(async () => {
+        document.querySelector('#btn-modos')?.click();
+        await new Promise(r => setTimeout(r, 100));
+        const bd = document.getElementById('btn-duracao'), bf = document.getElementById('btn-dificuldade');
+        const d = () => document.getElementById('estado-duracao')?.textContent, f = () => document.getElementById('estado-dificuldade')?.textContent;
+        if (!bd || !bf) return { falta: true };
+        const out = [d() + '/' + f()];
+        for (let i = 0; i < 7 && d() !== '2 × 6 min'; i++) bd.click();
+        for (let i = 0; i < 5 && f() !== 'Lenda'; i++) bf.click();
+        out.push(d() + '/' + f());
+        return { out };
+      });
+      await tecla(pg, 'Escape'); await tecla(pg, 'Escape');
+      await quadros(pg, 3);
+      const r = await info(pg);
+      const tudo = r.linhas.join(' / ');
+      let antes = await pg.evaluate(() => ({ ticks: window.__golaco.mundo.partida.ticksPorTempo, dif: window.__golaco.mundo.dificuldade ?? null, tick: window.__golaco.mundo.tick, aberta: !!window.__golaco.prepartida.aberta }));
+      if (personalizar) {
+        // o Personalizar recria o mundo do tick 0 (a escalação mudada): a duração e a dificuldade da página vão junto
+        const ESC = await imp('escalacao.js');
+        const mx = criarPartida({ semente: 3 });
+        let ra = ESC.rascunhoDe(structuredClone(mx.times[0]), null, 0);
+        for (const id of [9, 22]) ra = ESC.tocar(ra, id).rasc;
+        const ed = ESC.edicaoDe(ra);
+        antes = { ...antes, ...(await pg.evaluate(ed => { const g = window.__golaco; const ok2 = g.prepartida.escalar(ed); return { escalou: ok2, ticks: g.mundo.partida.ticksPorTempo, dif: g.mundo.dificuldade ?? null, em22: g.mundo.jogadores.some(j => j.id === 22) }; }, ed)) };
+        await quadros(pg, 3);
+      }
+      await pg.evaluate(() => document.querySelector('#prepartida [data-aba="jogar"]').focus());
+      await tecla(pg, 'Enter');
+      await pg.waitForTimeout(800);
+      const dep = await pg.evaluate(() => { const g = window.__golaco; g.rodarPassos(60, 'demo'); return { aberta: !!g.prepartida.aberta, ticks: g.mundo.partida.ticksPorTempo, dif: g.mundo.dificuldade ?? null, tick: g.mundo.tick }; });
+      txt = `${ciclo.falta ? 'sem a linha' : ciclo.out.join(' → ')}; a info "${tudo}"; antes do Jogar ${JSON.stringify(antes)}; depois ${JSON.stringify(dep)}${erros.length ? `; erros ${erros.slice(0, 2).join(' | ')}` : ''}`;
+      ok = !ciclo.falta && ciclo.out[1] === '2 × 6 min/Lenda' && tudo.split(/\s*[|/]\s*/).includes('2 × 6 min') && tudo.split(/\s*[|/]\s*/).includes('Lenda') && !r.passa
+        && antes.ticks === 21600 && antes.dif === 'lenda' && antes.tick === 0 && antes.aberta && (!personalizar || (antes.escalou && antes.em22))
+        && !dep.aberta && dep.ticks === 21600 && dep.dif === 'lenda' && dep.tick > 0 && !erros.length;
+    } finally { await navegador.close(); }
+    meta(personalizar ? 'E24b depois de um Personalizar (o mundo recriado) a duração e a dificuldade escolhidas pelo ≡ continuam' : 'E24 ≡ → Modo de jogo → Duração 6 e Dificuldade Lenda: a linha diz "2 × 6 min | Lenda" e o Jogar começa com 21 600 ticks e o Lenda',
+      txt, '2 × 6 min/Lenda; a info com os dois; 21600 e lenda antes e depois do Jogar', ok);
+  }
+}
+
 if (faz('online')) {
   const ESPERA = Math.max(10, +arg('--espera', 10));
   const t0on = Date.now();
@@ -845,6 +937,9 @@ if (faz('online')) {
       const telas = !!(a?.aberta && b?.aberta);
       meta('E1 online: a tela nos dois lados (Pronto e Visão tática; sem o Personalizar)', `A ${a?.aberta} ${JSON.stringify(a?.pp?.abas ?? null)} · B ${b?.aberta} ${JSON.stringify(b?.pp?.abas ?? null)}`, 'as duas abertas, [pronto, visao]',
         telas && a.pp.abas.join() === 'pronto,visao' && b.pp.abas.join() === 'pronto,visao' && a.pp.modo === 'online');
+      // E23 (item 33) no online: a linha de informação sem o nível (duas pessoas: não há dificuldade)
+      const infoOn = await A.evaluate(() => [...document.querySelectorAll('#prepartida .pp-info-l')].map(l => l.textContent.replace(/\s+/g, ' ').trim()).join(' / ')).catch(() => '');
+      meta('E23 online: a linha de informação sem a dificuldade (item 33)', `"${infoOn}"`, 'sem Fácil/Normal/Difícil/Lenda', !!infoOn && !/Difícil|Normal|Fácil|Lenda|Dificuldade/.test(infoOn));
       if (telas) {
         const avisos = new Set();
         const olhar = async () => { for (const [p, k] of [[A, 'A'], [B, 'B']]) { const t = await textoAviso(p); if (t) avisos.add(`${k}: ${t}`); } };

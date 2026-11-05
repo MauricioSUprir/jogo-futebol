@@ -26,6 +26,16 @@
 //   P9  o X no centro do ≡ (±4 px) fecha e não reabre; tocar no jogo fecha; tocar na faixa vazia não fecha
 //   P10 todo comando pelos 3 meios (toque, teclado só com setas + Enter, controle pelas ações menu-*) chega ao comando() com o
 //       mesmo (c, v); Voltar ao jogo ≤ 2 nos três, Editar time ≤ 2 toques e ≤ 3 teclas/apertos (o resto: tabela informativa)
+//   P11 (item 33) a linha "Duração | Dificuldade" do "Modo de jogo": à vista na partida (fora do TM, no fim fora do TM e no TM,
+//       com o submenu "Partida e cenas"; com o pedido travando — ajustesFixos — à vista e TRAVADA: aria-disabled, revisão A6);
+//       escondida nos treinos, no Livre, nos Pênaltis, no online e no fim do TM; o item do 1º nível com o que vale, inteiro (no PC
+//       "4 min · Normal", no celular deitado "Normal"; revisão A2); os rótulos inteiros dentro do botão em todas as telas (em
+//       568×320 com o padding de
+//       16 px o "Dificuldade" — 78 px — não cabia nos 73,5 de dentro); no celular deitado a altura do nível igual com e sem ela
+//       (a célula vazia da grade); os 2 ciclos pelos 3 meios entram no P10; no fim do jogo (celular, pelo toque, sem os SECOS)
+//       cada toque nos ciclos anda um valor a partir da escolha da página e o rótulo mostra a escolha; o toque no terço da
+//       esquerda (‹) volta um valor (revisão A3); o "Jogar de novo" começa com a escolha (revisão do item 33, A1: lendo a partida
+//       que acabou o ciclo travava)
 //   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
 //   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online]
@@ -33,7 +43,7 @@
 import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
 import { PED_A, PED_B } from './lib/pedidos-tm.mjs';
-import { ORDEM, COMANDOS, SECOS, MEDIR, FOCO, FOCO_LARGURA, margemCelular } from './lib/pausa-medidas.mjs';
+import { ORDEM, COMANDOS, SECOS, MEDIR, FOCO, FOCO_LARGURA, margemCelular, LINHA_AJUSTES } from './lib/pausa-medidas.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -50,7 +60,24 @@ const res = [];
 const meta = (nome, medido, alvo, ok) => { res.push({ nome, medido, alvo, ok: !!ok }); console.log(`${ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}\n          ${medido}  (alvo: ${alvo})`); };
 const erros = [];
 // as coletas das metas (cada sessão soma aqui; as metas saem no fim)
-const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [] };
+const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0 };
+/** P11: confere a medida da linha "Duração | Dificuldade" (LINHA_AJUSTES) contra o esperado (vis: à vista?; cel: celular deitado). */
+function conferirAjustes(rot, a, vis, { cel = false, titulo = null, travada = false, item = true } = {}) {
+  P.p11n++;
+  if (!a) { P.p11.push(`${rot}: sem medida`); return; }
+  if (vis !== a.visivel) { P.p11.push(`${rot}: ${a.visivel ? 'à vista' : 'escondida'} (esperada ${vis ? 'à vista' : 'escondida'})`); return; }
+  if (!vis) return;
+  // (revisão A6: com o pedido travando, à vista e desabilitada; A2: o item do 1º nível mostra o que vale, inteiro)
+  if (travada !== !!a.travada) P.p11.push(`${rot}: a linha ${a.travada ? 'travada' : 'livre'} (esperada ${travada ? 'travada' : 'livre'})`);
+  if (item && (!a.estadoItem || a.estadoItem.texto !== a.esperadoItem)) P.p11.push(`${rot}: o item do 1º nível diz "${a.estadoItem?.texto ?? '—'}" (esperado "${a.esperadoItem}")`);
+  if (item && a.estadoItem?.corta) P.p11.push(`${rot}: o estado do item "${a.estadoItem.texto}" cortado`);
+  for (const b of a.btns) {
+    if (!b.cabe) P.p11.push(`${rot}: "${b.rotulo}" (${b.rotuloW} px) não cabe no botão de ${b.w} px`);
+    if (b.smallCorta) P.p11.push(`${rot}: "${b.small}" cortado`);
+  }
+  if (cel && Math.abs(a.h - a.hSem) > 0.5) P.p11.push(`${rot}: a linha muda a altura do nível ${a.hSem} → ${a.h} px`);
+  if (titulo && a.titulo !== titulo) P.p11.push(`${rot}: o submenu se chama "${a.titulo}" (esperado "${titulo}")`);
+}
 const nada = () => {};
 
 // ------------------------------------------------------------------ ajudantes
@@ -292,6 +319,12 @@ async function sessaoCelular() {
         if (p1.length) P.p1.push(`celular ${modo} ${W}×${H}: ${p1.join('; ')}`);
         conferirNivel(`celular ${modo} ${W}×${H} 1º`, r.primeiro, false);
         for (const [n, m] of Object.entries(r.subs)) conferirNivel(`celular ${modo} ${W}×${H} ${n}`, m, false);
+        // P11 (item 33): na partida e no fim (fora do TM) à vista; nos treinos, no Livre e nos Pênaltis escondida
+        if (modo === 'partida' || modo === 'fim' || W === 844) {
+          const a = await pg.evaluate(LINHA_AJUSTES).catch(() => null);
+          conferirAjustes(`celular ${modo} ${W}×${H}`, a, modo === 'partida' || modo === 'fim', { cel: true, titulo: 'Modo de jogo' });
+          await pg.evaluate(() => window.__golaco.fecharMenu());
+        }
         if (modo === 'partida') {
           await abrirPausa(pg);
           const f = await jogoAVista(pg, pg).catch(() => 0);
@@ -323,9 +356,78 @@ async function sessaoCelular() {
       await pg.evaluate(() => window.__golaco.secarComandos?.(null));
       await pg.evaluate(() => window.__golaco.fecharMenu());
       if (modo === 'partida') await partidaCelular(s, pg);
+      if (modo === 'fim') await ciclosNoFim(pg);
     }
   } catch (e) { erros.push(`celular: ${e.stack ?? e}`); }
   finally { erros.push(...s.erros.map(x => `celular: ${x}`)); await s.navegador.close(); }
+}
+
+/**
+ * P11 (revisão do item 33, A1): no fim do jogo (fora do TM) os ciclos ANDAM de verdade (sem os SECOS), pelo toque como a pessoa:
+ * cada toque em "Duração" e em "Dificuldade" muda o rótulo e a escolha da página (__golaco.ajustes.estado) para o valor seguinte
+ * do ciclo, a partir da escolha da página (e não da partida que acabou: o mundo do 'fim' tem 0,05 min); o "Jogar de novo" começa
+ * com o que o rótulo mostrou. Lendo o mundo que já acabou, o ciclo travava (sempre o mesmo valor) e o rótulo não mudava.
+ */
+async function ciclosNoFim(pg) {
+  const est = () => pg.evaluate(() => {
+    const e = window.__golaco.ajustes.estado;
+    return { min: e.minutosPorTempo, dif: e.dificuldade, rd: document.getElementById('estado-duracao')?.textContent ?? null,
+      rf: document.getElementById('estado-dificuldade')?.textContent ?? null };
+  });
+  const DUR = [3, 4, 5, 6, 8, 10], NIV = ['facil', 'normal', 'dificil', 'lenda'], NOME = { facil: 'Fácil', normal: 'Normal', dificil: 'Difícil', lenda: 'Lenda' };
+  const ant = (L, v) => L[(L.indexOf(v) + L.length - 1) % L.length];
+  const txDur = v => `2 × ${String(v).replace('.', ',')} min`;
+  await abrirPausa(pg);
+  const bm = await centro(pg, '#btn-modos');
+  if (!bm) { P.p11.push('fim: sem o "Modo de jogo"'); return; }
+  await pg.touchscreen.tap(bm.x, bm.y);
+  await quadros(pg, 2);
+  let e = await est();
+  const seq = [];
+  for (const [sel, chave, rot, prox, texto] of [['#btn-duracao', 'min', 'rd', v => DUR[(DUR.indexOf(v) + 1) % DUR.length], txDur],
+    ['#btn-dificuldade', 'dif', 'rf', v => NIV[(NIV.indexOf(v) + 1) % NIV.length], v => NOME[v]]]) {
+    for (let k = 0; k < 3; k++) {
+      P.p11n++;
+      const esperado = prox(e[chave]);
+      const c = await centro(pg, sel);
+      if (!c) { P.p11.push(`fim: ${sel} fora da tela`); break; }
+      await pg.touchscreen.tap(c.x, c.y);
+      await quadros(pg, 2);
+      e = await est();
+      seq.push(`${e[chave]}/${e[rot]}`);
+      if (e[chave] !== esperado) P.p11.push(`fim: o ${k + 1}º toque em ${sel} deu ${e[chave]} (esperado ${esperado}: o ciclo travou)`);
+      if (e[rot] !== texto(e[chave])) P.p11.push(`fim: o rótulo de ${sel} "${e[rot]}" ≠ a escolha ${e[chave]}`);
+    }
+    // (revisão A3: o toque no terço da esquerda — o ‹ — VOLTA um valor)
+    P.p11n++;
+    const esperadoAnt = ant(chave === 'min' ? DUR : NIV, e[chave]);
+    const c = await centro(pg, sel);
+    if (c) {
+      await pg.touchscreen.tap(c.l + c.w * 0.12, c.y);
+      await quadros(pg, 2);
+      e = await est();
+      seq.push(`‹ ${e[chave]}/${e[rot]}`);
+      if (e[chave] !== esperadoAnt || e[rot] !== texto(e[chave])) P.p11.push(`fim: o ‹ de ${sel} deu ${e[chave]} / "${e[rot]}" (esperado ${esperadoAnt})`);
+    }
+  }
+  // o "Jogar de novo" (o 1º nível da pausa no fim) começa com o que a tela mostrou — pelo toque, como a pessoa (o click
+  // programático logo depois dos toques seria engolido pela janela do toque-botao.js)
+  await abrirPausa(pg);
+  const jn = await centro(pg, '#btn-reiniciar-partida');
+  if (jn) await pg.touchscreen.tap(jn.x, jn.y);
+  await quadros(pg, 3);
+  const r = await pg.evaluate(() => {
+    const a = window.__golaco.ajustes.estado;
+    return { min: a.duracaoMundo, dif: a.dificuldadeMundo };
+  });
+  r.clicou = !!jn;
+  P.p11n++;
+  if (!r.clicou) P.p11.push('fim: sem o "Jogar de novo" à vista');
+  else if (r.min !== e.min || r.dif !== e.dif) P.p11.push(`fim: o "Jogar de novo" começou com ${r.min} min / ${r.dif} (a tela mostrava ${e.rd} / ${e.rf})`);
+  console.log(`          (P11 no fim: ${seq.join(' → ')}; Jogar de novo ${r.min} min / ${r.dif})`);
+  // de volta ao padrão (os modos seguintes não dependem dele, mas a escolha fica salva no aparelho)
+  await pg.evaluate(() => { const g = window.__golaco; g.ajustes.duracao(4); g.ajustes.dificuldade('normal'); g.fecharMenu(); });
+  await quadros(pg, 2);
 }
 
 /** Na partida do celular (844×390): o campinho (P4), o toque (P9), o leitor de tela (P7) e a cara do TM (P8). */
@@ -545,6 +647,11 @@ async function sessaoPC() {
       if (p1.length) P.p1.push(`PC ${modo}: ${p1.join('; ')}`);
       conferirNivel(`PC ${modo} 1º`, r.primeiro, true);
       for (const [n, m] of Object.entries(r.subs)) conferirNivel(`PC ${modo} ${n}`, m, true);
+      {
+        const a = await pg.evaluate(LINHA_AJUSTES).catch(() => null);
+        conferirAjustes(`PC ${modo}`, a, modo === 'partida');
+        await pg.evaluate(() => window.__golaco.fecharMenu());
+      }
       if (modo === 'partida') {
         await abrirPausa(pg);
         const f = await jogoAVista(pg, pg).catch(() => 0);
@@ -578,6 +685,11 @@ async function sessaoPC() {
         if (p1.length) P.p1.push(`PC ${modo} ${W}×${H}: ${p1.join('; ')}`);
         conferirNivel(`PC ${modo} ${W}×${H} 1º`, r.primeiro, true);
         for (const [n, m] of Object.entries(r.subs)) conferirNivel(`PC ${modo} ${W}×${H} ${n}`, m, true);
+        if (modo === 'partida' || modo === 'fim') {
+          const a = await pg.evaluate(LINHA_AJUSTES).catch(() => null);
+          conferirAjustes(`PC ${modo} ${W}×${H}`, a, true);
+          await pg.evaluate(() => window.__golaco.fecharMenu());
+        }
       }
     }
     await pg.setViewportSize({ width: PC[0], height: PC[1] });
@@ -684,6 +796,14 @@ document.body.appendChild(f);
       if (p1.length) P.p1.push(`${rot} ${W}×${H}: ${p1.join('; ')}`);
       conferirNivel(`${rot} ${W}×${H} 1º`, r.primeiro, !!opc.pc);
       for (const [n, m] of Object.entries(r.subs)) conferirNivel(`${rot} ${W}×${H} ${n}`, m, !!opc.pc);
+      // P11 (item 33): no TM o submenu é "Partida e cenas"; a linha à vista na partida sem ajustesFixos e fora do fim
+      const a = await pg.evaluate(LINHA_AJUSTES).catch(() => null);
+      // (revisão A6: com ajustesFixos a linha fica à vista, travada)
+      const vis = modo === 'partida' && !opc.fim;
+      // (no TM as linhas dos modos somem: a linha nova ocupa uma linha da grade — a altura cresce, sem rolar: o P2 confere)
+      if (a?.submenu) conferirAjustes(`${rot} ${W}×${H}`, a, vis, { titulo: 'Partida e cenas', travada: !!ped.partida?.ajustesFixos });
+      else if (modo === 'partida') P.p11.push(`${rot} ${W}×${H}: sem o submenu "Partida e cenas"`);
+      await pg.evaluate(() => window.__golaco.fecharMenu());
     }
     if (opc.trava) {
       await abrirPausa(pg);
@@ -759,6 +879,10 @@ async function sessaoOnline() {
       else if (selo.vis && selo.enc.length) p1.push(`o selo "Conexão instável" por cima de ${selo.enc.join(', ')}`);
       if (p1.length) P.p1.push(`online ${W}×${H}: ${p1.join('; ')}`);
       conferirNivel(`online ${W}×${H} 1º`, m, pc);
+      // P11 (item 33): no online não há o "Modo de jogo" (nem a duração nem a dificuldade)
+      const aOn = await B.evaluate(() => { const b = document.getElementById('btn-modos'), l = document.getElementById('linha-ajustes'); const v = e => !!e && !e.hidden && e.getClientRects().length > 0; return { modos: v(b), linha: v(l) }; });
+      P.p11n++;
+      if (aOn.modos || aOn.linha) P.p11.push(`online ${W}×${H}: ${aOn.modos ? 'o Modo de jogo à vista' : 'a linha à vista'}`);
       await B.waitForTimeout(3300);
       await B.evaluate(() => window.__golaco.fecharMenu());
     }
@@ -790,7 +914,8 @@ if (!SO || SO === 'tm') {
   const PC_TM = [PC, [1024, 768], [1280, 1024], [1440, 900], [1280, 800], [800, 600]];
   await sessaoTM(PED_A, 'partida', ORDEM.tmPartida, PC_TM, { rot: 'partida PC', pc: true });
   await sessaoTM(PED_A, 'partida', ORDEM.tmFim, PC_TM, { rot: 'fim PC', pc: true, fim: true });
-  await sessaoTM(PED_B, 'partida', ORDEM.tmTrava, [[844, 390], [568, 320]], { rot: 'trava', trava: true });
+  // (a trava com o pedido travando a duração e a dificuldade: ajustesFixos — a linha à vista e travada; P11)
+  await sessaoTM({ ...PED_B, partida: { ...PED_B.partida, ajustesFixos: true } }, 'partida', ORDEM.tmTrava, [[844, 390], [568, 320]], { rot: 'trava', trava: true });
   await sessaoTM(PED_L, 'livre', ORDEM.tmLivre, [[844, 390], [568, 320]], { rot: 'Livre' });
   await sessaoTM(PED_P, 'penaltis', ORDEM.tmPenaltis, [[844, 390], [568, 320]], { rot: 'Pênaltis' });
 }
@@ -821,6 +946,8 @@ if (P.p10custo.length || P.p10.length) {
   console.log('          custos (toques / teclas / apertos do controle, a partir do jogo):');
   for (const n of nomes) console.log(`            ${n}: ${custo('toque', n) ?? '-'} / ${custo('teclado', n) ?? '-'} / ${custo('controle', n) ?? '-'}`);
 }
+if (P.p11n) meta('P11 a linha "Duração | Dificuldade" (item 33): à vista onde vale, escondida no resto; os rótulos inteiros; no celular a altura do nível igual',
+  `${P.p11n} medidas; problemas: ${lista(P.p11, 6)}`, 'nenhum', P.p11.length === 0);
 if (P.s1.length) meta('S1 o mundo parado com a pausa aberta (0/60 passos; 10/10 fechada); no online o jogo anda', P.s1.join('; '), '0/10 fora do online', !P.s1.some(x => x.startsWith('FALHA')));
 if (P.s5n) meta('S5 a menor letra da pausa ≥ 11 px (o campinho ≥ 10 em 568×320, ≥ 11 a partir de 640)', `${P.s5n} medidas; abaixo: ${lista(P.s5)}`, 'nenhuma', P.s5.length === 0);
 meta('S2 0 erros no console', erros.length ? erros.slice(0, 4).join(' | ') : '0', '0', erros.length === 0);

@@ -75,6 +75,9 @@ export const TEMPOS_NODE = {
   'teste-ia-corre.mjs --sementes 8': 330,
   // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
   'teste-pressao.mjs --humano': 300, // (31/10: 96 sementes, eram 48)
+  // (item 33: 4 níveis × 4 roteiros × 8 sementes = 128 partidas de 2 × 4 min + ~30 cenas de hash de 2 × 1 min; localmente 732 s
+  // com 2 processos numa máquina de 4 vCPU; estimado com 3)
+  'teste-dificuldade.mjs': 700,
   'teste-goleiro-regras.mjs': 146,
   'teste-reposicao.mjs': 150, // C5: 12 partidas da demo (31/10: eram 6; o canhão de ~200 reposições) + 4 cenas do gesto; estimado
   'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
@@ -138,7 +141,7 @@ export const TEMPOS_NAVEGADOR = {
   'teste-replay-paradas-tela.mjs': 400,
   // (item 31: + o H, 4 páginas novas — 844×390 ?tm pro, 568×320 ?tm pública, a cena curta e o pular no PC, 1366×600 com as fotos
   // em 404 — e 6 gols; 291 s aqui o teste inteiro com outra página junto; estimado ~+70 s no CI; acertar pelo log do CI)
-  'teste-comemoracao-tela.mjs': 150,
+  'teste-comemoracao-tela.mjs': 85,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
   // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s, intervalo 68, pós-jogo 569) + o C12d, o I8b, o I13 e o I14
