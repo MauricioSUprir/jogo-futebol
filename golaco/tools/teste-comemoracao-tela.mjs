@@ -39,9 +39,14 @@
 //      H8 ?autorGol=0 (a página do A6): a cena sem cartão (estado.cartao null, 0 quadros);
 //      H9 o "Replay" da pausa pedido com o cartão na tela (a página do H5): o cartão escondido com a pausa aberta e o replay
 //         inteiro (0 quadros com o cartão e o replay juntos, nunca cruzando a marca REPLAY); depois a cena continua (antes da
-//         correção R1 da revisão: o cartão congelado por cima da jogada e da marca REPLAY em todos os quadros).
+//         correção R1 da revisão: o cartão congelado por cima da jogada e da marca REPLAY em todos os quadros);
+//      H10 (revisão V1) o nome COMPLETO da ficha também no celular, sem reticências (os pedidos do H3 e do H4 com o último nome de 11
+//         letras: o de camisa do tm-times o corta em 10 — "Albuquerqu");
+//      H11 (revisão V3) o nome é a linha principal (letra maior que a do número, que vai na pílula com a sigla) e, com foto, a
+//         coluna centrada na altura dela (± 3 px);
+//      H12 (revisão V4) sem foto, o cartão de uma linha na altura do placar (os topos e os pés a ± 1 px) — 568×320 e PC.
 // Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
-// sem o cartão (a base do item 31) reprovam H1–H7 e H9.
+// sem o cartão (a base do item 31) reprovam H1–H7 e H9–H12; antes das correções da revisão (b719f4ed) reprovam H9–H12.
 //   node tools/teste-comemoracao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,D,E,F,H]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -175,6 +180,13 @@ function avaliarCartao(r) {
     folga: ultimo != null && r.replay ? (r.replay.n - ultimo) / 60 : null, cobre: vis.filter(x => cruza(x.ag.caixa, x.ab)).length,
     a: i0 >= 0 ? q[i0].ag : null, ca: q.find(x => x.ca)?.ca ?? null, semEstado: q.every(x => x.ca == null),
   };
+}
+/** (revisão V4) H12: o cartão sem foto na altura do placar, na mesma linha (o topo e o pé a ± 1 px dos dele). */
+function alinhadoAoPlacar(r, c) {
+  const p = r.geo?.placar, cx = c.a?.caixa;
+  if (!p || !cx) return { ok: false, texto: 'sem cartão ou sem placar' };
+  const dTopo = cx.y0 - p.y0, dPe = cx.y1 - p.y1;
+  return { ok: Math.abs(dTopo) <= 1 && Math.abs(dPe) <= 1, texto: `cartão ${Math.round(cx.y0)}–${Math.round(cx.y1)} × placar ${Math.round(p.y0)}–${Math.round(p.y1)} (topo ${f2(dTopo)}, pé ${f2(dPe)} px)` };
 }
 /** (item 31) H2: o cartão a ≥ 8 px do placar e do "Pular", dentro da janela e da área segura (a 1ª amostra visível e a geometria). */
 function encostos(r, c) {
@@ -537,6 +549,8 @@ if (faz('H')) {
       const fi = await fichaNaPagina(pg, gol.autor);
       meta('H10 celular 568×320 (sem foto): o nome COMPLETO da ficha, sem cortar', a ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
         'o completo; sem reticências', !!a && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
+      const al = alinhadoAoPlacar(r, c);
+      meta('H12 celular 568×320 (sem foto): o cartão de uma linha na altura do placar, os topos e os pés alinhados (± 1 px)', al.texto, '± 1 px', al.ok);
     } finally { await P.fechar(); }
   } catch (e) { meta('H4 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H5 a cena curta e H6 pular com o cartão na tela (PC, sem ?tm)
@@ -551,6 +565,8 @@ if (faz('H')) {
       meta('H5 a cena curta (o gol da IA contra a pessoa): aparece, ≥ 2,2 s, some antes do replay', c1.n ? `entra ${f2(c1.entra)} s, fica ${f2(c1.fica)} s; folga até o replay ${f2(c1.folga)} s; no replay ${c1.noReplay}` : 'nenhum cartão',
         '≥ 2,2 s; folga > 0; 0', curta && c1.n > 0 && c1.fica >= 2.2 && c1.folga != null && c1.folga > 0 && c1.noReplay === 0 && c1.depois === 0);
       meta('H11 PC 1280×720 (sem foto): o nome é a linha principal (letra maior que a do número)', c1.a ? `nome ${c1.a.letraNome} px × número ${c1.a.letraNum} px` : 'nenhum cartão', 'nome > número', !!c1.a && c1.a.letraNome > c1.a.letraNum);
+      const al1 = alinhadoAoPlacar(r1, c1);
+      meta('H12 PC 1280×720 (sem foto): o cartão de uma linha na altura do placar, os topos e os pés alinhados (± 1 px)', al1.texto, '± 1 px', al1.ok);
       const g0 = await golRoteirizado(pg, { semente: 5, time: 0 });
       const ate = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !(g.comemoracao.estado.t >= 2.2 && g.comemoracao.cartaoTela?.visivel)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { t: g.comemoracao.estado?.t ?? null, vis: !!g.comemoracao.cartaoTela?.visivel }; });
       await pg.keyboard.down('KeyK');

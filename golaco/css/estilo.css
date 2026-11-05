@@ -1041,7 +1041,8 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
   .autor-gol { --ag-foto: clamp(64px, 23.5vh, 96px); --ag-nome: clamp(18px, 5.4vh, 20px); --ag-sigla: 12px; --ag-pad: 6px; --ag-vao: 10px; }
 }
 .autor-gol[hidden] { display: none; }
-.autor-gol.sem-foto { align-items: center; }
+/* sem foto: uma barra da altura do placar, na mesma linha (os topos e os pés alinhados; revisão V4) — as letras pela altura dela */
+.autor-gol.sem-foto { height: var(--placar-h); padding-top: 0; padding-bottom: 0; }
 .ag-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* a foto (a JPG 220 × 220 do TM: busto com o fundo, o rosto em x 0,50 / y 0,44) numa moldura, um leve aproximar (esconde parte
    da camisa de outro clube); nada recortado nem desenhado no lugar dela */
@@ -1051,6 +1052,9 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 .ag-foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.12); transform-origin: 50% 40%; }
 .ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(5px, 0.9vh, 9px); min-width: 0; }
 .autor-gol.sem-foto .ag-texto { flex-direction: row; align-items: center; gap: var(--ag-vao); }
+.autor-gol.sem-foto .ag-time { padding-top: 1px; padding-bottom: 1px; }
+.autor-gol.sem-foto .ag-nome { font-size: min(var(--ag-nome), calc(var(--placar-h) * 0.6)); }
+.autor-gol.sem-foto .ag-num { font-size: min(var(--ag-num), calc(var(--placar-h) * 0.55)); }
 .ag-time {
   flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; border-radius: 5px;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
