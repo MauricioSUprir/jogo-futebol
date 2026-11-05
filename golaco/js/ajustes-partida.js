@@ -1,9 +1,10 @@
 // O tempo de jogo e a dificuldade da partida (item 33 da FILA; dono, 17/10: "editar o TEMPO de jogo e a DIFICULDADE (na
 // pausa/antes do jogo e vindo do TM pelo pedido)"; contrato "Tempo de jogo e dificuldade" no CONTRATOS.md). PURO: sem DOM e
-// sem three.js; importa só o config.js e FICA FORA do fecho do hash (só a página o lê: main.js, e o teste-ponte-tm). A conta
-// que mexe no mundo mora no partida.js (mudarDuracao, definirDificuldade); aqui ficam a leitura do pedido do Total Match, os
-// ciclos da pausa, os textos e o resultado que volta ao TM.
+// sem three.js; importa o config.js e o tatica.js (só LÊ o mundo) e FICA FORA do fecho do hash (só a página o lê: main.js, e o
+// teste-ponte-tm). A conta que mexe no mundo mora no partida.js (mudarDuracao, definirDificuldade); aqui ficam a leitura do
+// pedido do Total Match, os ciclos da pausa, os textos e o resultado que volta ao TM.
 import { PARTIDA, DIFICULDADE, PASSO } from './config.js';
+import { contraPessoa } from './tatica.js';
 
 /** As durações (minutos REAIS por tempo) que a pessoa escolhe; o padrão (4) entre elas. */
 export const DURACOES = PARTIDA.duracoes;
@@ -51,6 +52,17 @@ export function maisFacil(a, b) {
   return ka <= kb ? a : b;
 }
 
+/**
+ * O nível que o passo que ACABOU de rodar usou contra a pessoa, ou null: só na partida (não no online, no Livre nem nos
+ * Pênaltis), com UMA pessoa jogando de verdade contra a IA (contraPessoa do time da IA: a entrada sem a marca da IA — o Simular
+ * o resto e a demo não contam — e o travado do TM em campo). A página chama depois de cada passo e guarda o mais fácil
+ * (`maisFacil`): um nível só atravessado no ciclo da pausa, sem nenhum passo jogado nele, não conta (revisão do item 33, A3).
+ */
+export function nivelDoPasso(m) {
+  if (!m?.partida || m.modo !== 'partida' || m.online || m.livre || m.disputa || m.humanos?.length !== 1) return null;
+  return contraPessoa(m, 1 - m.humanos[0]) ? (m.dificuldade ?? 'normal') : null;
+}
+
 const num = v => String(Math.round(v * 100) / 100).replace('.', ',');
 /** "2 × 4 min" (a curta da pausa e do celular). */
 export function textoDuracao(min) { return `2 × ${num(min)} min`; }
@@ -59,8 +71,9 @@ export function textoNivel(n) { return NOME_NIVEL[n] ?? NOME_NIVEL.normal; }
 
 /**
  * O resultado ao Total Match com os 2 campos do item 33 (opcionais; o TM decide depois o que faz com eles): `dificuldade` = a
- * MAIS FÁCIL usada na partida (a.maisFacil) e `minutosPorTempo` = a duração no apito (pelo mundo). Só na partida (não no Livre
- * nem nos Pênaltis) e nunca no online (sem dificuldade). Devolve um objeto novo (r fica como está).
+ * MAIS FÁCIL em que a pessoa JOGOU pelo menos um passo (a.maisFacil, nivelDoPasso; sem nenhum passo jogado — o Simular o resto
+ * desde o começo, a IA × IA, onde a dificuldade não age —, o Normal) e `minutosPorTempo` = a duração no apito (pelo mundo). Só na
+ * partida (não no Livre nem nos Pênaltis) e nunca no online (sem dificuldade). Devolve um objeto novo (r fica como está).
  */
 export function resultadoComAjustes(r, a, m) {
   if (!r || typeof r !== 'object' || !m?.partida || m.modo !== 'partida') return r;

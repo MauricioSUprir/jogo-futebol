@@ -163,7 +163,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, maisFacil, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -303,8 +303,9 @@ const prefs = lerPrefs();
 // (sobrevive ao Personalizar, ao Jogar de novo, ao Reiniciar e à troca de modo — todos recriam o mundo pelo criarMundoTreino).
 // De onde vem: ?min / ?dif (testes) > o pedido do TM (no online, só a duração, a do anfitrião: o mesmo pedido nos dois
 // aparelhos; o ticksPorTempo está no hash do lockstep) > golaco.prefs.v1 (fora do TM e do online) > o padrão (4 min, Normal).
-// maisFacil: a dificuldade mais fácil usada na partida em andamento (vai ao resultado do TM); fixos: o pedido trava os dois
-// (as Batalhas do Ultimate: a linha some da pausa).
+// maisFacil: a dificuldade mais fácil em que a pessoa JOGOU pelo menos um passo na partida em andamento (vai ao resultado do TM;
+// rodarPasso, nivelDoPasso: um nível só atravessado no ciclo da pausa não conta); fixos: o pedido trava os dois (as Batalhas do
+// Ultimate: a linha some da pausa).
 const AJ_PEDIDO = TM ? ajustesDoPedido(PEDIDO_TM) : { minutosPorTempo: null, dificuldade: null, fixos: false };
 const DIF_PARAM = nivelValido(params.get('dif'));
 const ajustes = {
@@ -314,7 +315,6 @@ const ajustes = {
   maisFacil: null,
   fixos: !ONLINE && AJ_PEDIDO.fixos,
 };
-ajustes.maisFacil = ajustes.dificuldade;
 // Tela limpa (dono, 11/10): o minimapa e os nomes nos botões de toque são opções da pausa. Minimapa sem escolha
 // salva: desligado no celular e ligado no PC (o CSS decide por html.com-toque). Nomes: LIGADOS sem escolha salva
 // (dono, 12/10: "coloca o nome da função do botão de novo"); desligados na pausa = só o ícone.
@@ -387,14 +387,14 @@ function criarMundoTreino(opc = {}) {
   }
   if (o.modo === 'partida') {
     // (a escalação escolhida no Personalizar da tela antes do jogo — item 64 — vale nesta página: timesAntes)
-    // (o tempo e a dificuldade: os da página — ajustes, item 33; a partida nova começa com a mais fácil usada = a escolhida)
+    // (o tempo e a dificuldade: os da página — ajustes, item 33; a partida nova começa sem nenhum nível jogado: rodarPasso)
     const dif = ONLINE ? undefined : o.dificuldade ?? ajustes.dificuldade;
     const m = criarPartida({
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? ajustes.minutosPorTempo, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
       humanos: ONLINE ? [0, 1] : undefined, ...(dif && dif !== 'normal' ? { dificuldade: dif } : {}),
     });
-    ajustes.maisFacil = dif ?? 'normal';
+    ajustes.maisFacil = null;
     if (ONLINE) m.online = true; // (fora do hash: o passo é o passoOnline com as duas entradas)
     return m;
   }
@@ -789,6 +789,8 @@ function rodarPasso(entrada, acoes) {
   const eventos = passoDoMundo(mundo, mundo.online ? entrada : entradaDoTime(entrada), acoes) ?? mundo.eventos ?? [];
   // a súmula (só lê o mundo e os eventos do passo; na partida, fora do Livre e da disputa)
   if (sumula && mundo.modo === 'partida') sumulaPasso(sumula, mundo, eventos);
+  // o nível em que a pessoa jogou este passo (item 33: a dificuldade mais fácil USADA vai ao resultado do TM; só lê o mundo)
+  { const nv = nivelDoPasso(mundo); if (nv) ajustes.maisFacil = maisFacil(ajustes.maisFacil, nv); }
   const t1 = agoraMs();
   contPassos++;
   passosTotais++;
@@ -3303,8 +3305,6 @@ function marcarAjustes() {
 function mudarAjuste(qual, v) {
   if (ajustes.fixos || ONLINE) return false;
   const jogo = partidaViva();
-  // (a partida ainda não começou: o mundo do tick 0, a tela antes do jogo)
-  const antes = jogo && mundo.tick === 0;
   if (qual === 'duracao') {
     if (!(+v > 0)) return false;
     ajustes.minutosPorTempo = +v;
@@ -3315,7 +3315,7 @@ function mudarAjuste(qual, v) {
     if (!n) return false;
     ajustes.dificuldade = n;
     if (!TM) { prefs.dificuldade = n; salvarPrefs(prefs); }
-    if (jogo) { definirDificuldade(mundo, n); ajustes.maisFacil = antes ? n : maisFacil(ajustes.maisFacil, n); }
+    if (jogo) definirDificuldade(mundo, n);
   }
   marcarAjustes();
   return true;

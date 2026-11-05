@@ -51,7 +51,8 @@
 //      pedido do online (modo 'online') → a duração do anfitrião e NUNCA a dificuldade; ajustesFixos → fixos. A partida do pedido
 //      com eles: ticksPorTempo 21 600 (6 min), m.dificuldade 'dificil' ('normal': sem o campo), com a trava (B) a dificuldade vale
 //      contra o travado em campo (nivelContra do time da IA não-nulo) e o resultadoComAjustes põe a mais fácil usada e a duração
-//      (não no online nem no Livre). Na versão sem js/ajustes-partida.js REPROVA.
+//      (não no online nem no Livre). A "mais fácil usada" conta só os níveis em que a pessoa jogou um passo (nivelDoPasso: o nível
+//      atravessado no ciclo da pausa sem passo não conta; a demo e o online não contam). Na versão sem js/ajustes-partida.js REPROVA.
 //
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
@@ -694,6 +695,36 @@ if (typeof SU.melhorEmCampo === 'function') {
       && AJ.maisFacil('lenda', 'dificil') === 'dificil' && AJ.maisFacil('facil', 'normal') === 'facil';
     reg('P12 resultadoComAjustes: a dificuldade mais fácil usada e a duração no apito; o online sem a dificuldade; o Livre igual',
       `partida ${JSON.stringify(rA)}; online ${JSON.stringify(rOn)}; Livre ${rLv === r0 ? 'igual' : JSON.stringify(rLv)}`, 'facil/6; sem dificuldade/4; igual', okR);
+    // revisão A3: a "mais fácil usada" conta só o nível em que a pessoa JOGOU um passo (como o main.js rodarPasso: nivelDoPasso
+    // depois de cada passo). Lenda 600 passos → no ciclo da pausa Difícil → Lenda → Fácil → Normal SEM passo → 60 passos no
+    // Normal: o resultado diz 'normal' (antes, 'facil': o Fácil só atravessado contava). A demo (a IA pela pessoa, o Simular o
+    // resto) e o online não contam; sem nenhum passo jogado, 'normal'.
+    if (typeof AJ.nivelDoPasso !== 'function') {
+      reg('P12 a dificuldade usada = só a dos passos jogados pela pessoa (revisão A3)', 'sem ajustes-partida.js nivelDoPasso', 'existe', false);
+    } else {
+      const a = { maisFacil: null }, vistos = [];
+      const passo = (m, e) => { P.passoPartida(m, e); const nv = AJ.nivelDoPasso(m); if (nv) a.maisFacil = AJ.maisFacil(a.maisFacil, nv); };
+      const NEU = { x: 0, z: 0, botoes: 0 };
+      const mC = P.criarPartida({ semente: 4, minutosPorTempo: 1, dificuldade: 'lenda' });
+      for (let i = 0; i < 600; i++) passo(mC, NEU);
+      vistos.push(a.maisFacil);
+      for (const n of ['dificil', 'lenda', 'facil', 'normal']) P.definirDificuldade(mC, n);
+      vistos.push(a.maisFacil);
+      for (let i = 0; i < 60; i++) passo(mC, NEU);
+      vistos.push(a.maisFacil);
+      const rC = AJ.resultadoComAjustes(r0, a, mC);
+      // a demo (a IA jogando pela pessoa) e o online não contam; sem passo jogado → 'normal'
+      const aD = { maisFacil: null };
+      const mD = P.criarPartida({ semente: 4, minutosPorTempo: 1, dificuldade: 'facil' });
+      for (let i = 0; i < 300; i++) { P.passoPartida(mD, P.entradaDemoPartida(mD)); const nv = AJ.nivelDoPasso(mD); if (nv) aD.maisFacil = AJ.maisFacil(aD.maisFacil, nv); }
+      const rD = AJ.resultadoComAjustes(r0, aD, mD);
+      const mO = P.criarPartida({ semente: 4, humanos: [0, 1] }); mO.online = true;
+      P.passoPartida(mO, { 0: NEU, 1: NEU });
+      const okC = vistos.join(',') === 'lenda,lenda,normal' && rC.dificuldade === 'normal' && aD.maisFacil === null && rD.dificuldade === 'normal' && AJ.nivelDoPasso(mO) === null;
+      reg('P12 a dificuldade usada = só a dos passos jogados pela pessoa (revisão A3: o nível só atravessado no ciclo não conta)',
+        `Lenda 600 passos → ${vistos[0]}; o ciclo sem passo → ${vistos[1]}; 60 no Normal → ${vistos[2]}; resultado ${rC.dificuldade}; a demo no Fácil → ${aD.maisFacil ?? 'nada'} (resultado ${rD.dificuldade}); online ${AJ.nivelDoPasso(mO) ?? 'nada'}`,
+        'lenda, lenda, normal; normal; nada (normal); nada', okC);
+    }
   }
 }
 
