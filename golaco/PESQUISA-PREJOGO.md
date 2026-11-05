@@ -114,6 +114,7 @@ torcedores nunca entram no quadro): 6 peças em vez de 12.
 | Cenas antes da saída de bola | 0 (abre na saída; apito no carregamento) | 12 planos, 60,5 s (curto 20 s) | ≥ 11 planos, 50–65 s |
 | Escalações no campinho | não havia | mandante 10,0 s e visitante 10,0 s inteiras na tela, o mesmo fundo | 10 ± 0,2 s cada |
 | Nada encosta na escalação (568×320 a 1920×1080) | — | folga mín. 10 px, letra ≥ 10 px, 0 fora, 0 cortado, Pular sem encostar | ≥ 6 px, ≥ 10 px |
+| Escalação em pé (item 29; §9): 11 telas do PC, o celular e `?tm` com nomes longos | deitada (L/A 1,30–1,68), o GOL à esquerda | em pé (L/A 0,80–0,85), o GOL embaixo, o círculo redondo, a letra do §7.4/§7.5, a tinta do nome inteira, TM Cond | E1–E11 do `teste-prejogo` 4b/15 |
 | Cortejo: pé plantado / pé que salta / corpos | — | 0 m/s / razão 0,90 / ≥ 0,85 m | ≤ 0,05 / ≤ 1 / ≥ 0,6 m |
 | Fila: vaga / rumo / último parado | — | 4 cm / 0° / 42,4 s | ≤ 10 cm / ≤ 5° / ≤ 50 s |
 | Trilhos dentro de sólidos (3 modos + abertura, 1200 pontos) | — | 0 | 0 |
@@ -147,3 +148,71 @@ muda AQUI:
 - **O Personalizar antes do jogo** recria o mundo do tick 0 com a escalação nova; o diretor refaz o cortejo, os treinadores, as
   fotos e as escalações (`refazerTimes`) sem remontar o lado de fora — o reserva escalado sai do túnel e aparece na escalação.
 - **Toques até o jogo** na partida com o pré-jogo: 2, como antes (Jogar + Pular no lugar de toque para começar + Pular).
+
+## 9. A escalação em pé (item 29, 05/11)
+
+Pedido do dono (17/10): "o campinho da escalação do jogo EM PÉ (retrato), não deitado". Antes, o `escalacao-tela.js` decidia
+`vertical = W/H < 0,95` pela ÁREA do campinho (a tela menos a coluna do time), sempre deitada no celular e no PC: o campo saía
+deitado com o gol à esquerda em todas as telas (só a janela de PC em pé virava). O nó era a LARGURA: em pé, as 5 filas ficam na
+altura (a carta com a altura de antes) e 5 cartas lado a lado têm de caber numa caixa mais estreita que alta — com a letra do
+sistema (a DejaVu dos testes, larga) não cabia no celular; com a TM Cond (a letra das fichas da tela antes do jogo) cabe.
+
+**Fontes e o que foi aproveitado de cada uma:**
+
+| fonte | aproveitado |
+|---|---|
+| Globo 2025, Brasileirão (o pacote do Premiere) | o gol embaixo; o campo INTEIRO plano achatado a L/A 0,80; os jogadores das pontas ~9% para dentro das laterais. A caixa alta dos nomes ficou de fora (escolha do dono, abaixo) |
+| Football Manager 26 (a tela da tática) | as marcas no tamanho real e só a distância entre as laterais esticada (o círculo redondo; o FM estica ~1,45×, aqui 1,24–1,31×) |
+| Copa 2026 (FIFA) | o gol embaixo e a escalação de UM time em pé ao lado da coluna. A metade do campo ficou como alternativa (não é retrato) |
+| Premier League 2023/24–2025/26 | a ordem goleiro → defesa → meio → ataque (a cascata das cartas sobe do gol ao ataque); o campo deitado é o gráfico dos DOIS times, o de um time é em pé |
+| EA FC 26 (Team Management), FC Mobile 26/27, FC 27 (pacote Bundesliga e "MUN") | o goleiro embaixo é a regra dos jogos; a coluna à esquerda + o campo em pé é o nosso modelo |
+| LFU 2025 (Prime Video, Record, CazéTV) | contraexemplo: o goleiro EM CIMA; ficamos com a Globo, a Copa e os jogos |
+| PESQUISA-ESTADIO §7.4/§7.5 (Apple HIG, Material, WCAG, XAG, Valve) | a letra: nome ≥ 10 px em 568×320 e ≥ 11 nos outros celulares, informação ≥ 11, PC ≥ 13 |
+| A ficha do item 64 (`prepartida.js`) | a TM Cond 800 e a tabela de avanços (a conta não espera a fonte) |
+
+**Decisões** (as recomendadas da especificação; o dono pode trocar):
+- O campo inteiro em pé a L/A 0,80, alargando até 0,85 quando o nome mais largo pede; as cartas das pontas ~9% para dentro das
+  laterais e, no aperto, sobre a linha (no máximo meia carta para fora). Alternativas: a escala real 0,648 com as pontas sobre as
+  laterais; a metade do campo (Copa 2026; cartas maiores, mas o desenho fica deitado, L/A 1,3); as cartas sempre dentro das
+  laterais (com camisas de 10 letras do TM em 568×320 a caixa passa de quadrada: não cabe).
+- O nome de camisa em TM Cond 800, caixa NORMAL (a caixa alta da Globo/Copa custa ~14% de largura: com camisas de 10 letras do
+  TM, 4 nomes sairiam com "…" em 568×320). O número e a posição na letra de antes.
+- Ao lado do campo, a coluna de antes (escudo com `?tm`, a faixa, "Escalação", o nome e a formação; sem técnico nem reservas),
+  agora do tamanho do conteúdo (até 34vw) e centrada junto com o campo. O goleiro numa fila própria.
+- A posição sobe de 10 para 11 px nos celulares a partir de 350 px de altura (568×320 continua com 10); o nome com entrelinha
+  1,25 (os traços de baixo de g, y, ç saíam cortados).
+- **A largura do nome na tela** (achado na implementação): o Chromium sem posição subpixel do texto (Linux, o CI) arredonda o
+  avanço de cada letra ao px — "Mmmmmmmmmm" a 14,44 px dá 97,1 px pela tabela e 98 na tela, e saía com "…" numa carta de 106
+  px. A conta usa a maior entre a tabela exata e a dos avanços arredondados (`letra-cond.js larguraCondInteira`), e o teste
+  confere o corte também por fração de px (a largura do texto no canvas × a caixa).
+- A janela de PC em pé: a coluna em cima e o campo embaixo; se a largura não dá, a altura desce e, se o nome mais largo segurar
+  a carta, a letra e as cartas pela largura.
+
+**Antes → depois** (o `teste-prejogo --so-esc` e o `mapa/medir-escalacao.mjs`; elenco fictício, as duas folhas iguais):
+
+| tela | antes: o campo (L/A) | depois: o campo (L/A) | carta antes → depois | nome / posição (px) antes → depois |
+|---|---|---|---|---|
+| 844×390 | 578×364 (1,59), o GOL à esquerda | 291×364 (0,80), o GOL embaixo | 105×62 → 50×62 | 11,8 / 10 → 11,8 / 11 |
+| 844×390 com entalhe | 508×343 (1,48) | 275×343 (0,80) | 91×58 → 47×58 | 11,0 / 10 → 11,0 / 11 |
+| 667×375 | 457×350 (1,31) | 280×350 (0,80) | 81×59 → 47×59 | 11,2 / 10 → 11,2 / 11 |
+| 640×360 | 438×336 (1,30) | 275×336 (0,82) | 77×56 → 47×56 | 10,6 / 10 → 11 / 11 |
+| 568×320 | 394×298 (1,32) | 253×298 (0,85) | 68×49 → 43×49 | 10 / 10 → 10 / 10 |
+| 1280×720 | 877×604 (1,45) | 541×671 (0,81) | 120×76 → 100×76 | 14,4 / 11,4 (igual) |
+| 1366×600 | 937×559 (1,68) | 448×559 (0,80) | 120×76 → 81×76 | igual |
+| 1440×900 (16:10) | 992×683 (1,45) | 672×840 (0,80) | 120×76 (igual) | igual |
+| 1024×768 (4:3) | 701×483 (1,45) | 577×716 (0,81) | 120×76 → 107×76 | igual |
+| 1920×1080 | 1352×931 (1,45) | 816×1020 (0,80) | 120×76 (igual) | igual |
+| 800×1000 (janela de PC em pé) | 752×830 (0,91; o círculo achatado, 1,40) | 665×830 (0,80; o círculo redondo) | 120×76 (igual) | igual |
+| `?tm`, nomes longos | deitado; 3 nomes de estresse cortados | 568×320 253×298, 640×360 285×336, 844×390 com entalhe 291×343 (0,85), 1366×600 475×559 (0,85), 1920×1080 816×1020 | celular 53–62, PC 107–120 | celular: só os 3 de estresse com "…"; PC: nenhum |
+
+A tinta do nome (os traços de baixo de g, y, ç) saía da caixa em 11 das 16 telas medidas na base; agora em nenhuma. A
+letra do nome em TM Cond em todas (antes, a do sistema). Os tempos não mudaram (cada escalação inteira 9,95 e 10,0 s; as duas
+juntas 0,55 s); o plano da escalação no celular Média: 31 chamadas e 128 mil triângulos (o 3D; a mudança é só DOM). Download
+inicial +14 KB (o `escalacao-tela.js` com a conta e os comentários, o `letra-cond.js`, o `@font-face` no `prejogo.css`; folga
+720 → 706 KB). As 5 mutações da especificação (a escalação da base, a carta sem o nome, a entrelinha 1, o nome sem a TM Cond e o
+campinho sem a largura) reprovam o 4b ou o `teste-escalacao-campo`.
+
+**Riscos que ficam:** antes de a TM Cond chegar, a letra de reserva (mais larga) pode pôr "…" nos primeiros quadros, sobretudo no
+modo "só a escalação" (o `montar` pede a fonte com o texto dos nomes; a cascata só começa em 0,12 s; `font-display: swap`); a
+coluna do tamanho do conteúdo muda o x do campo entre as duas folhas (até ~30 px, durante o deslize); as cartas ficam mais
+estreitas que as deitadas (celular 68–105 → 43–62 px, PC 120 → 81–120), com as letras iguais ou maiores.
