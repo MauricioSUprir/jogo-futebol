@@ -251,7 +251,8 @@ vez por passo de simulação; o desenho interpola entre a pose anterior e a atua
   roteiro), reiniciar(opc), relogio:{usarManual, avancar(ms, {desenhar})}, forcarEntrada(e),
   estado(), desenhar(), cameraLivre({de, para, fov} | null), naTela(x, y, z) → {x, y} px CSS e `atras` (o ponto atrás da
   câmera: a projeção dele cai espelhada dentro da tela — "no quadro" é na tela E `!atras`)}`.
-  Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador ?prints ?qps ?toque ?entalhe`.
+  Parâmetros: `?semente ?q ?hora ?camera ?demo ?marcador ?prints ?qps ?toque ?entalhe` (e, entre outros, `?prejogo` e
+  `?prepartida=1|0`, a tela antes do jogo do item 64).
 - `render/jogador3d.js`: todas as cápsulas de todos os jogadores num `InstancedMesh` (atributos
   por instância: raios, comprimento, achatamento, cores e padrão); cabeça e cabelo instanciados.
   Os raios vêm de `SEGMENTOS` (anim.js); o desenho pode afinar um segmento (`estilo().r`).
@@ -568,7 +569,8 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   null)`, `estadoSaot`. `main.js desenharReplay`: na análise só os jogadores do lance (`soDaCena`, lista de referências;
   `jogador3d.js` não muda), `linhaImped.mostrarSaot`, `hud.terco(...)` só com `decidido`; `fimReplay` apaga os dois.
   Cores: impedimento #ff3b30, legal #19e07a, parede branco-gelo #eef6ff, plano neutro #d8dee2, pulso #6fc3ff.
-- **Selo e terço de baixo** — a ÚNICA exceção à "sem narração" (dono, 12/10): `index.html #terco` (irmão de `#replay`,
+- **Selo e terço de baixo** — a exceção à "sem narração" de 12/10 (dono; a única naquele dia: depois vieram a faixa ENTRA/SAI,
+  o nome do condutor, as tarjas das cenas e o cartão do autor do gol, item 31): `index.html #terco` (irmão de `#replay`,
   z-index 31, `pointer-events: none`, `data-caixa="terco"`, canto de baixo à esquerda), `hud.terco(spec | null)` (só mexe
   no DOM quando o tipo muda; `spec.tipo` 'impedimento' → "IMPEDIMENTO", 'legal' → "POSIÇÃO LEGAL"; exatamente esses
   textos, sem nome nem minuto; a cena de substituição acrescenta o tipo dela), `hud.tercoTipo`. Só no quadro final da
@@ -801,9 +803,48 @@ Constantes em `config.js COMEMORACAO`.
 - **HUD (`hud.js`, `index.html`, `css/estilo.css`)**: `hud.comemoracao(ativo)` (classe `em-comemoracao`: minimapa, menu,
   avisos, barra de força, cartão, dica, painel, faixa e botões de toque somem — só o placar e o "GOL!" até o 1º corte;
   camada `#comemoracao` com o "Pular" só com toque, ≥ 48 px no canto de baixo à direita), `hud.cortina()` (a faixa verde).
+- **Cartão do autor (item 31, PR #615; dono, 17/10: "a FOTO do autor com o número e o nome"; `PESQUISA-ESTADIO.md` §10.1)**:
+  `#autor-gol` DENTRO da camada `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à DIREITA na linha do
+  placar (o único lugar medido livre do autor, dos outros e do HUD em todos os planos, PC e celular). Mostra a foto (só a da
+  edição pro do TM, abaixo) e a coluna [pílula do time: escudo + sigla | número / NOME]: o nome COMPLETO da ficha é a linha
+  principal (peso 800), também no celular (o de camisa do `tm-times` corta o último nome em 10 letras sem reticências —
+  revisão V1), o número vai na pílula depois de um filete (1,3 × a sigla — revisão V3) e a coluna fica centrada na altura da
+  foto; o pé da foto escurece até a cor do fundo do cartão (42% de baixo: some a maior parte da camisa de outro clube, mas as
+  listras logo abaixo do queixo continuam — revisão V2; o enquadramento foto a foto é o item 112). Sem minuto nem "GOL"; sem
+  foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`; os topos e os pés alinhados, as letras 0,6/0,55 × a altura —
+  revisão V4) — nada desenhado no lugar. Medidas pela altura da janela: foto
+  `clamp(96px, 18vh, 196px)` no PC e `clamp(64px, 23.5vh, 96px)` no celular deitado, nome `clamp(22px, 4vh, 40px)` /
+  `clamp(18px, 5.4vh, 20px)`, sigla 13–20 / 12 px; `max-width` até a direita do placar + 12 px (o hud mede: `--ag-esq`; o nome
+  que não couber corta com reticências). Quando: `js/autor-cartao.js`
+  (puro, estático, fora do fecho; as constantes `AUTOR_GOL` moram nele): `autorDoCartao(plano, gol)` = o autor só se ele é
+  quem comemora (gol contra e sem autor = nada); `janelaCartao({rede, duracao, curta})` = entra `rede + 0,4` s (1,6 s), sai
+  em `min(entra + 3,5 (curta 2,6), duracao − 0,5)`, null com menos de 1,5 s; `faseCartao(janela, t, duracao)` relê a duração
+  a cada quadro (o `kFim` encurta). A página (`main.js quadroCartaoAutor`) anda pelo relógio da CENA (parado na pausa; a
+  animação do CSS só enfeita: entra 0,3 s, sai 0,2 s) e mexe no DOM só nas trocas de fase; nunca antes do 1º corte; os dados
+  (`dadosAutorGol`, a montagem da tarja das cenas) são lidos na entrada — com a foto já decodificada, a MESMA `<img>` da
+  pré-carga (pinta no 1º quadro) —, e o cartão nunca muda de forma depois (só a foto que falhar depois de entrar — cache
+  limpo, rede — o deixa só com o texto, na hora: `hud.js fotoFalhou`). Pular, a cena encerrada (saída, intervalo, fim,
+  Reiniciar, Simular o resto, a cena do cartão no gol + 149) = some na hora (`apagarCartaoAutor`). Com a pausa aberta e no
+  "Replay" da pausa pedido no meio da cena (o comando não espera a cena: a jogada com a bola rolando, a marca REPLAY no mesmo
+  canto) ele fica escondido (`html.pausa-aberta`/`html.em-replay`, `visibility`; revisão R1) e volta onde estava se a cena
+  continuar; o selo "Conexão instável" do online espera a comemoração (`html.em-comemoracao`; revisão R3). `?autorGol=0` desliga só
+  ele (padrão ligado, também com webdriver: os testes de outros assuntos abrem com `?comemoracao=0`). No online, cada
+  aparelho na sua cena (só desenho). Exceção escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa
+  ENTRA/SAI, o nome do condutor e as tarjas das cenas): só dentro da cena, nunca com a bola rolando. Com `?tm`, a cara do TM
+  (`css/tm.css`); sem, o molde das tarjas (`css/estilo.css`). `hud.autorGol(spec | null)`, `hud.autorGolSai()`,
+  `hud.autorGolEstado` (as caixas do LAYOUT, sem o translateX da animação).
+- **Fotos da edição pro (item 31)**: `js/tm-fotos.js` (puro, fora do fecho, só por `import()` com `?tm` e `edicao: 'pro'`,
+  depois do `pronto`: `main.js agendarFotosTM`, `requestIdleCallback` com 1,5 s de teto) — `fotosDoPedido(pedido, TM.mapa,
+  location.origin)` lê o campo `foto` do PRÓPRIO pedido pelo lado + `tmId` (o `tm-times.js` não o vê: hash igual) e
+  `fotoAceita` só deixa `data:image/(jpeg|png|webp);base64` até 48 000 caracteres ou http(s) absoluto da MESMA origem.
+  `garantirFoto(id)` pede uma vez (os 22 em campo, quem entra na substituição, o autor no gol) e decodifica (`img.decode()`);
+  `fotoPronta(id)` só devolve a já decodificada. API `__golaco.tm.fotos` ({n, pedidas, prontas, erros, primeiraEm, prontoEm,
+  de(id)}). Sem `?tm` (e na edição pública) o `tm-fotos.js` e as fotos nunca são pedidos, nem na pré-carga (`teste-carga`,
+  lista `SO_TM_ARQ`; `teste-comemoracao-tela` H4: 0 pedidos).
 - **API (`window.__golaco.comemoracao`)**: `ativa`, `estado` ({fase, t, duracao, k, estado: 'rodando' | 'solta', rapida,
   autor, alvo, variante, corrida, curta, time, golTick, colegas, reacao, contra, plano, kFinal, kFimFinal, kFimAbraco,
-  kFim, kPulo}), `atores()`, `naTela(id?)` (caixa px da pose desenhada), `pular()`, `ligada(v?)` (sem salvar),
+  kFim, kPulo, cartao: {id, entra, sai, fase, mostrado, foto} | null}), `cartaoTela` (o `hud.autorGolEstado`), `atores()`,
+  `naTela(id?)` (caixa px da pose desenhada), `pular()`, `ligada(v?)` (sem salvar),
   `forcarFinal(v)` (a do próximo gol), `custo` ({msPorTick, ticks}), `zerarCusto()`. `estadio.planoCamera` = 'comemoracao'
   com a câmera de cinema.
 - **Testes**: `tools/teste-comemoracao.mjs` (Node, padrão; `--js <pasta>` mede outra versão: sem o módulo, reprova) —
@@ -817,7 +858,14 @@ Constantes em `config.js COMEMORACAO`.
   duração, autor no quadro ≥ 85% com ≥ 100 px, simulação parada no gol + 149 com o relógio parado, ordem cena → replay →
   saída no tick de sempre com o mesmo hash, só o placar na tela, torcida ≥ 30% no contraplano, pular (antes de 0,5 s não;
   depois em ≤ 2 quadros; o mesmo aperto não pula o replay), celular ("Pular" sem encostar, botões escondidos, toque), gol
-  natural, treino sem cena, CPU do quadro ≤ p95 do jogo + 1 ms, console. Os testes de navegador que não são da comemoração
+  natural, treino sem cena, CPU do quadro ≤ p95 do jogo + 1 ms, console; H (item 31; `--so A,…,H`) o cartão do autor — H1
+  entra 1,55–1,75 s, ≥ 3,0 s, o número e o nome da ficha, nunca com o "GOL!", na rede, no replay nem depois da cena; H2 nada
+  encosta (placar, "Pular", área segura) e nunca sobre o autor (a pose desenhada) no PC, 844×390 com o entalhe, 568×320 e no
+  gol natural; H3 a foto do tmId do autor no 1º quadro (`?tm` pro, a rota `/__fotos/` com JPGs do TM) e nada no gol contra
+  (`golRoteirizado({contra: true})`); H4 o TM público sem foto e sem pedido; H5 a curta; H6 pular = some no quadro; H7 as
+  fotos em 404; H8 `?autorGol=0`; H9 o "Replay" da pausa com o cartão na tela (0 quadros juntos); H10 o nome completo no celular
+  (o último nome de 11 letras); H11 o nome maior que o número e a coluna no meio da foto; H12 sem foto na altura do placar.
+  `teste-comemoracao` 15 (a janela, puro). Os testes de navegador que não são da comemoração
   e atravessam um gol esperando a saída abrem com `?comemoracao=0` (`teste-estadio`, `teste-desempenho-celular` — que
   mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
 
@@ -919,7 +967,12 @@ faixa ENTRA/SAI (a simulação não muda).
 Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
 as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o
 pré-jogo acontece ANTES do 1º passo da partida (o mundo fica no tick 0; `hash-igual` IGUAL; `teste-prejogo` confere o hash
-de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída (`eventosIniciais`) só toca no fim.
+de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída (`eventosIniciais`) só toca no fim. **Desde o
+item 64** a TELA ANTES DO JOGO vem antes dele em todo jogo (contrato "Tela antes do jogo (item 64)"): com ela ligada a abertura
+de texto ("Toque para começar") fica CALADA atrás dela, com o aéreo de fora como fundo, e o GESTO que libera o som é o "Jogar
+partida" da tela (que chama `prejogo.comecar()`); sem ela (webdriver, `?prints=1`, `?demo=1`, `?prepartida=0`, a reserva de
+1,5 s) a abertura de texto continua sendo o gesto, como antes. O resto do pré-jogo (roteiro, cortejo, Pular, preferências) não
+mudou.
 - **`js/cortejo.js`** (puro): `CORTEJO` (velocidade 1,45 m/s, espaçamentos no túnel/andando/na fila, colunas, árbitros
   ids 200–202), `criarCortejo(times)` → `{tick, mini, andantes: [{j, id, time (0, 1 ou 2 = árbitro), arb, goleiro, kit,
   k, caminho, s0, sFim, atraso, chegou}]}` (mini-mundo `{tick, posse, naMao, parada, voo, bola}`: só o que a pose e a
@@ -942,13 +995,15 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
   com `fora` o vão das placas também — o `teste-cortejo` confere que nenhum andante entra em sólido),
   `noCorredorDoTunel`.
 - **`js/render/prejogo.js`** (diretor): `criarPrejogo({cena3d, cam, jog3d, bola3d, campo, torcida, som(), mundo(), hora(),
-  qualidade(), comToque(), aoFim()})` → `{iniciar(modo, {abertura}), quadro(dt, agoraMs, desenhar, parado) (false quando
-  acabou; parado = celular em pé: o tempo não anda e o som fica como na pausa do jogo — `som.cena(null)` e
-  `som.atualizar(emo, true)`),
-  acao(a) ('pausa' pula tudo), proximo, pularTudo, irPara(t), comecar, cancelar, ativo, naAbertura, api}`. Câmera: escreve
-  direto em `cam.camera` (fov do roteiro = vertical em 16:9; mais estreito, a mesma largura; near/far e a névoa por plano,
-  restaurados no fim). Desenha o cortejo por `jog3d.atualizar(lista)` (kit `arbitro`), força o lado de cá visível pelo
-  frustum (a regra `cameraNoLadoDeCa` é do jogo), um ânimo próprio (`criarEmocao`) para a torcida e o som, `som.cena({ganho,
+  qualidade(), comToque(), aoFim()})` → `{iniciar(modo, {abertura, muda}) (muda: a abertura calada, a tela antes do jogo por
+  cima — item 64), refazerTimes() (o time mudou no tick 0 pelo Personalizar ou pelo Livre da tela: refaz o cortejo, os
+  treinadores, as fotos e as escalações com os times NOVOS do mundo; o lado de fora e o roteiro ficam), mudo(v),
+  quadro(dt, agoraMs, desenhar, parado) (false quando acabou; parado = celular em pé: o tempo não anda e o som fica como na
+  pausa do jogo — `som.cena(null)` e `som.atualizar(emo, true)`), acao(a) ('pausa' pula tudo), proximo, pularTudo, irPara(t),
+  comecar, cancelar, ativo, naAbertura, api}`. Câmera: escreve direto em `cam.camera` (fov do roteiro = vertical em 16:9; mais
+  estreito, a mesma largura; near/far e a névoa por plano, restaurados no fim). Desenha o cortejo por `jog3d.atualizar(lista)`
+  (kit `arbitro`), força o lado de cá visível pelo frustum (a regra `cameraNoLadoDeCa` é do jogo), um ânimo próprio
+  (`criarEmocao`) para a torcida e o som, `som.cena({ganho,
   filtro})` por plano. A fila parada "respira" só no desenho (peito ±1 cm, peso de um pé para o outro; os pés plantados
   não mexem). **Vão das placas**: no `iniciar` recorta as duas malhas das placas (`placas` e `placas-estrutura` do
   `campo.grupo`) com `Material.clippingPlanes` + `clipIntersection` (|x| < `FORA.vaoPlacas.meia`, z além da linha das
@@ -961,27 +1016,73 @@ de `criarPartida` depois dele e 600 passos Node = Chromium) e o apito da saída 
 - **`js/prejogo-tela.js`** (DOM): `criarPrejogoTela({aoProximo, aoPularTudo, aoComecar, comToque})` → `{raiz (#prejogo,
   criado no body), escalacao, mostrar(v) (põe html.prejogo: o HUD, os controles de toque e a dica somem), abertura(times
   | null), faixas(k, proporção), preto(a), fundoEscalacao(a), atualizar(agora) (A do controle; o Pular some parado),
-  pularVisivel, botaoPular}`. Toque/clique = próximo bloco (abertura: começa); Enter/Espaço também (na captura); Esc/P/Start
-  chegam pela entrada bloqueada (`main.js tratarAcao('pausa')`).
-- **`js/escalacao-tela.js`** (DOM): `criarEscalacaoTela(raiz)` → `{montar(times), mostrar(e) (escalacaoEm + tau),
-  esconder(), estado, cartas(t), folha(t)}`; `tamanhoEscalacao(W, H, vertical)` (cartas até 120 × 76; passo ≥ carta + 10
-  px). Usa `posicaoNaTela` (editor-time.js) e `svgCampinho` (campinho.js). O movimento sai do relógio do roteiro (nada de
-  transição do CSS: o relógio manual dos testes e prints vale).
-- **`js/campinho.js`** (puro): `svgCampinho(vertical)` → `{viewBox, html}` (o editor passou a usar; layout idêntico).
+  pularVisivel, botaoPular, mudo(v), muda}`. Toque/clique = próximo bloco (abertura: começa); Enter/Espaço também (na captura);
+  Esc/P/Start chegam pela entrada bloqueada (`main.js tratarAcao('pausa')`). `mudo(true)` (item 64) cala os três ouvintes — o
+  toque da camada, o Enter/Espaço na captura e o Ⓐ do controle — e `.muda` esconde a abertura; o Ⓐ é lido sempre (`lerPad`)
+  e, quando a camada volta a ouvir (`mudo(false)`, `mostrar(true)`), um Ⓐ que já estava apertado NÃO conta como aperto novo (o
+  do "Jogar partida" pulava o bloco das cenas; revisão A1 do item 64).
+- **`js/escalacao-tela.js`** (DOM; desde o item 29 o campinho EM PÉ — dono, 17/10: "o campinho da escalação do jogo EM PÉ
+  (retrato), não deitado"): `criarEscalacaoTela(raiz, ident)` → `{montar(times), mostrar(e) (escalacaoEm + tau), esconder(),
+  estado, cartas(t), folha(t), campo(t)}`. Puras e exportadas: `ESCALACAO` (L/A do campo 0,80 — a Globo 2025 — até o teto
+  0,85; o passo-alvo 0,164 × a altura (o da Globo: o CENTRO das cartas das pontas ~9% para dentro; a borda decide, abaixo);
+  folga 10 px; `margem` 6 / `margemMin` 5; a carta até 120 px de largura e 44–76 de altura; as letras; fora do `config.js`, que
+  é do fecho), `tamanhoEscalacao(W, H, {larguraNome, alturaTela, caixa})` → `{w, h, cw, ch, passo, inset, fora, fonteNome,
+  fontePos, comPos, largura, teto, naLinha}` (W = a largura máxima do grupo do campo, H = a altura da área = a altura do
+  campo; `larguraNome(px)` = o nome mais largo do conjunto — os 22 titulares para a altura, os 11 da folha para a carta
+  (`tamanhosDasFolhas`); celular = `alturaTela` ≤ 480, 568×320 = < 350. O que cede, nesta ordem (revisão V1: as pontas NUNCA tangentes à lateral): as cartas das
+  pontas DENTRO, com a borda a `margem` 6 px da lateral (mínimo `margemMin` 5) — o campo alarga de 0,80 até 0,85 —, na letra da
+  conta e depois na mínima da tela (§7.4/§7.5 do PESQUISA-ESTADIO: celular 11, 568×320 10, PC 13); senão as pontas SOBRE a
+  linha, centradas nela (inset 0, `naLinha`; meia carta para fora, `fora`); senão o nome sai com "…" (`teto`; só os de
+  estresse). `caixa: {w, h}` = o campo já decidido (só as cartas saem da conta). A linha da posição sai (`sem-pos`, a posição
+  fica no `aria-label`) se a carta não comporta as 3 linhas (`comPos`). Janela de PC em pé: a altura desce até o grupo caber e,
+  se o nome segurar a carta, a letra e as cartas pela largura), `posicaoCarta(vaga, tam)` (o centro: x = inset + (col + 2) ·
+  passo; y pela grade de 5 filas do `posicaoNaTela(…, true)`: o GOL embaixo, o LE à esquerda), `nomesTitulares(times)` e
+  `larguraNomes(nomes)` (TM Cond 800, caixa normal: a maior entre a tabela exata e a dos avanços arredondados ao px) e
+  `tamanhosDasFolhas(W, H, {larguras: [l0, l1], alturaTela})` → `[T0, T1]` (revisões A1/V2): as DUAS folhas com a MESMA caixa
+  do campo — a altura pela conta dos 22 nomes, a largura pela maior das duas folhas (cada uma com os 11 nomes dela; volta à dos
+  22 se o grupo não couber) — e a carta, a letra e o inset de cada folha pelos nomes dela. O layout refaz as duas juntas: a
+  escondida é medida sem aparecer (visibility), a largura do grupo sai da coluna MAIS LARGA das duas e a altura da menor; na
+  janela em pé as colunas ficam com a altura da maior. O campo tem o mesmo tamanho e o mesmo topo nas duas. `campo(t)` (só
+  leitura; também `prejogo.escalacao.campo(t)`) → `{x, y, w, h, viewBox, largura, cw, ch, fonteNome, fontePos, comPos, inset,
+  fora, teto}`. O nome do time acima de `ESCALACAO.nomeTimeLongo` (22) letras ganha `.longo` (menor, em até 3 linhas; revisão V6).
+  As linhas do campo recortadas pelo canto arredondado (`clip-path` só no SVG; as cartas podem passar da lateral); a posição na
+  TM Cond, mais leve que o nome; a reserva da TM Cond = faces `local()` com `size-adjust` (`css/prejogo.css`, revisão V5). O
+  layout refaz a conta SEM os tamanhos de antes (o campo velho seguraria a linha da grade e o grupo largo
+  espremeria a coluna do time) quando a folha, a área, a coluna ou a altura da tela mudam; o `montar` pede a TM Cond com o
+  texto dos nomes (`document.fonts.load`). O movimento sai do relógio do roteiro (nada de transição do CSS: o relógio manual
+  dos testes e prints vale); a cascata das cartas sobe do gol ao ataque.
+- **`js/campinho.js`** (puro): `svgCampinho(vertical, largura?)` → `{viewBox, html}`. `largura` (m; item 29), em pé e > 68:
+  as laterais até ela e a linha do meio na largura toda, o círculo (r 9,15) e as áreas (40,32 × 16,5 e 18,32 × 5,5) no tamanho
+  real e centrados, viewBox `0 0 <largura> 105` — só a distância entre as laterais estica (o FM26). Sem ela, a saída de sempre
+  byte a byte (o editor e a pausa; `teste-escalacao-campo` N3 compara com o hash da base). `posicaoNaTela(vaga, W, H, cw, ch,
+  vertical)` não mudou.
+- **`js/letra-cond.js`** (puro, item 29): `AVANCO` (os avanços da TM Cond 800 em 1/1000 em, latin-1), `larguraCond(texto, px,
+  caixaAlta = true)` (a conta do nome que não espera a fonte; o `prepartida.js` reexporta — a mesma função) e
+  `larguraCondInteira(...)` (cada avanço arredondado ao px: o Chromium sem posição subpixel do texto — Linux, o CI — dá até
+  +0,5 px por letra). O `@font-face` da TM Cond mora no `css/prejogo.css` (do download inicial; a fonte só baixa quando um
+  texto com ela aparece — com webdriver, nunca: `teste-carga`); o `css/prepartida.css` usa o mesmo.
 - **`som.js`**: `cena({ganho, filtro})` / `cena(null)` (substitui o alvo do barramento e do passa-baixas da pausa);
   `cenaPre`. **`jogador3d.js`**: `KITS.arbitro`.
 - **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
-  `prefs.prejogo`, padrão 'completo'), `comecarPrejogo(modo, abertura)` (bloqueia a entrada), `fimDoPrejogo()` (libera a
-  entrada, corta a câmera, `eventosIniciais()`), `quadro()` (no pré-jogo o laço fica parado: `laco.ultimo = agora`),
-  `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao'})`, comandos `prejogo` (valor) e `prejogo-ciclo` (o botão "Pré-jogo da
-  partida" do submenu "Modo de jogo": o próximo modo; `#estado-prejogo` mostra o atual), API `__golaco.prejogo`
-  (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(), pularTudo(), irPara(t), comecar(),
-  iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel, time, cheia, cartas(t), folha(t),
-  pular, info(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo, fora}`); `quadro()` passa
-  `parado` = `retratoBloqueado()`; `desenhar()` desenha o pré-jogo
-  quando ele está ativo.
-- **Testes**: `tools/teste-cortejo.mjs` e `tools/teste-prejogo-roteiro.mjs` (Node, padrão do CI), `tools/teste-prejogo.mjs`
-  (navegador, CI), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
+  `prefs.prejogo`, padrão 'completo'), `comecarPrejogo(modo, abertura, muda = false)` (bloqueia a entrada; `muda` = a tela
+  antes do jogo por cima), `fimDoPrejogo()` (libera a entrada, corta a câmera, `eventosIniciais()`), `quadro()` (no pré-jogo
+  o laço fica parado: `laco.ultimo = agora`), `tratarAcao`, `trocarMundo(m, {prejogo: 'preferencia'|'escalacao', prepartida,
+  antesDoJogo})` (`prepartida`: a tela antes do jogo abre e o pré-jogo fica para o Jogar; `antesDoJogo`: o mundo do tick 0
+  recriado com a tela e o diretor mantidos), comandos `prejogo` (valor) e `prejogo-ciclo` (o botão "Pré-jogo da partida" do
+  submenu "Modo de jogo": o próximo modo; `#estado-prejogo` mostra o atual; com a tela antes do jogo aberta, a escolha nova
+  vale no Jogar), API `__golaco.prejogo` (`ativo, fase, modo, bloco, plano, indice, tempo, total, fimCenas, planos, pular(),
+  pularTudo(), irPara(t), comecar(), iniciar(modo, {abertura}), andantesNaTela(), posicaoAndante(id), escalacao: {visivel,
+  time, cheia, cartas(t), folha(t), pular, info(t), campo(t)}, camera, desenho: {chamadas, triangulos}, somCena, parado, vao, cortejo,
+  fora}`); `quadro()` passa `parado` = `retratoBloqueado()`; `desenhar()` desenha o pré-jogo quando ele está ativo.
+- **Testes**: `tools/teste-cortejo.mjs`, `tools/teste-prejogo-roteiro.mjs` e `tools/teste-escalacao-campo.mjs` (item 29: as
+  contas da escalação em pé, N1–N5: em pé e no teto, a carta e a letra, o campinho do editor e da pausa byte a byte, a janela
+  em pé, a mesma caixa nas duas folhas) (Node, padrão do CI), `tools/teste-prejogo.mjs` (navegador, CI; itens 4b e 15: a
+  escalação em pé E1–E14 — em pé, o GOL embaixo, o lado, as linhas recortadas, as cartas no campo, a letra, nada cortado nem
+  pela tinta nem por fração de px, sem rolar, a mesma caixa nas duas folhas, o Pular, a TM Cond, as pontas nunca tangentes, o
+  nome do time em ≤ 3 linhas, a faixa da carta na cor do time — em 11 telas do PC e no celular; com `?tm` e nomes longos em 5
+  telas — `lib/pedidos-tm.mjs PED_NOMES_LONGOS` —, o pedido misto `PED_NOMES_MISTOS` (colunas diferentes, a mesma caixa, as
+  pontas do time de nomes curtos dentro) e 568×320 com o arquivo da TM Cond bloqueado (a reserva não corta nome); `--so-esc` roda
+  só a escalação, ~1m40s), `tools/prints-prejogo.mjs` (prints de cada plano e das escalações + folhas de contato).
 
 ## Etapa 2 — ações com bola, goleiro e vários jogadores (contrato)
 - **Entradas por TIME**: `passo(m, { [time]: {x, z, botoes} })`. O time humano (0) controla UM jogador por vez:
@@ -1909,6 +2010,170 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   de 28–44 px no celular, abaixo dos 44 da Apple (revisão F7: decisão do dono, "Depende do dono" 18; item 99).
 - **Limite**: 568×320 está no limite — 8 linhas de 28,6 px no 1º nível e um cartão de ~236×217. Item novo no 1º nível (ou modo
   novo com mais itens) pede rever a conta, ou entrar num submenu.
+- **Modo "antes do jogo"** (item 64; o ≡ da tela antes do jogo): `hud.definirAntes(true)` → `#menu[data-antes]`, "Voltar" no
+  lugar de "Voltar ao jogo" (também no `aria-label` do X) e, pelo `css/prepartida.css`, sem Editar time (a tela tem o
+  Personalizar), Estatísticas, Replay, Reiniciar, Simular o resto, Pausar do online, o cartão e a pílula; a tela some atrás da
+  pausa (só o véu) e o Voltar devolve o foco ao ≡ da tela. `hud.antes` lê o modo. Contrato "Tela antes do jogo (item 64)".
+
+## Tela antes do jogo (item 64; 04/11) — a pré-partida do EA FC com a cara do TM (contrato)
+Pedido do dono (23/10, com o print da pré-partida do FC): "quero que fique NESSE NÍVEL; só altere para o Total Match com cores e
+etc, mas é do mesmo nível" (FILA item 64, PR #613; as escolhas no "Depende do dono" 19; o que ficou nos itens 100–107). Pesquisa
+em `PESQUISA-ESTADIO.md` §7.5. A ORDEM do começo passa a ser: tela antes do jogo → (o "Jogar") → pré-jogo cinematográfico
+(contrato "Pré-jogo") → o apito da saída; sem a tela (webdriver, `?prepartida=0`, a reserva), a abertura "Toque para começar" de
+antes. **Só
+DOM, CSS e página**: os novos `js/prepartida.js` (puro, FORA do fecho: nenhuma constante no `config.js`), `js/prepartida-tela.js`
++ `css/prepartida.css` + `assets/tm/fontes/tmcond-800-latin(-ext).woff2` (a TM Cond 800 = Barlow Condensed ExtraBold, OFL, a
+letra da carta do TM; desde o item 29 o `@font-face` dela e a tabela de avanços — `js/letra-cond.js` — são comuns com a escalação
+do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
+`editor-time.js`, `online-pagina.js`. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS: a tela segura o laço no tick 0
+(nenhum passo) e nada dela vai ao passo.
+- **Quando aparece** (`main.js prepartidaLigada`): em todo JOGO — partida, TM (também o Rumo ao Estrelato), Livre, Pênaltis e
+  online — ANTES do pré-jogo; nos treinos não. `?prepartida=1|0` força; sem o parâmetro, DESLIGADA com `navigator.webdriver`,
+  `?prints=1` e `?demo=1` (a regra do `modoPrejogo`). Sem opção para desligar (é o portão do som e do Personalizar, como no FC).
+  "Jogar de novo" (fim) e a troca de modo pela pausa a mostram de novo; o "Reiniciar partida" no meio não; o `trocarMundo` da
+  API dos testes só com `opc.prepartida`.
+- **Carga** (sob demanda, fora do download inicial): `carregarPrepartida()` no TOPO do `iniciar()` (com a tela ligada) baixa o
+  `prepartida-tela.js`, o `prepartida.js`, o `css/prepartida.css` (antes do `prejogo.css`) e pede a Inter TM (600/800) e a TM Cond
+  (o layout não espera as fontes: a conta do nome usa a tabela de avanços da TM Cond, `larguraCond`). **Reserva**: sem o módulo
+  até 1,5 s depois do 3D pronto (`esperarPrepartida`), a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
+  partida. Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`).
+- **O fundo**: partida com o pré-jogo ligado → a fase `abertura` do diretor do pré-jogo de hoje (o aéreo de fora, o som abafado)
+  CALADA (`prejogo.iniciar(modo, {abertura, muda})` → `prejogo-tela.mudo(true)`: os três ouvintes dela — o toque da camada, o
+  Enter/Espaço na captura e o Ⓐ — não agem) e o fundo `'abertura'`; o resto (pré-jogo desligado, Livre, Pênaltis) → o JOGO PARADO
+  no tick 0 (`'jogo'`). Um véu em degradê por cima (sem `backdrop-filter`); o 3D atrás desenha a 30 qps (`PP_QPS`); em pé (o
+  `#girar` cobre) ou com a aba escondida não desenha. O ramo do laço (`quadroPrepartida`, no TOPO do `quadro()`): `entrada.ler`,
+  as ações `menu-*` para a tela, `laco.ultimo = agora` (o tempo não se acumula) e, no online, o pacote. `pausado()` e
+  `marcarCondutor` olham a tela; o HUD, os botões de toque, as cenas, o canvas e o `#prejogo` ficam `inert` atrás dela.
+- **O "Jogar partida"** (`jogarPrepartida`): é o GESTO (o `som.js` cria e retoma o contexto no 1º gesto; a tela cheia deitada do
+  Android dentro do handler); a tela some e começa o pré-jogo escolhido no "Pré-jogo da partida" (completo, curto, só escalação —
+  `prejogo.comecar()` no fundo da abertura, ou `comecarPrejogo` se a escolha mudou com a tela aberta) ou, desligado, o apito
+  (`eventosIniciais`). Pelo controle, se o contexto do som não estiver `running` 0,3 s depois, o aviso discreto "Toque ou aperte
+  uma tecla para ligar o som" (`hud.evento('somGesto')`). O Ⓐ do Jogar, ainda segurado nos quadros seguintes, NÃO é um aperto
+  novo para a camada do pré-jogo (`prejogo-tela.js lerPad(false)` ao voltar a ouvir: `mudo(false)` e `mostrar(true)`); sem isso
+  ele pulava o bloco inteiro das cenas (~60 s; revisão A1). Nos Pênaltis a disputa só anda depois do "Bater pênaltis" (antes do
+  item 64 andava 7–12 passos no 1º quadro); no Livre o Jogar fecha a tela com o N contra M escolhido.
+- **Layout** (`prepartida.js layoutPrepartida(W, H, sa, formacao, nAbas, {canto})`, puro; o mesmo nos testes): o celular deitado
+  pela ALTURA útil Hu = H − sa.t − sa.b, em px (regimes normal ≥ 352, compacto 316–351, mínimo 277–315, emergência < 277); o PC
+  (Hu > 480 e W ≥ 560) pelas proporções do FC 24 medidas em 1280×720 (barra 15,5–22%, info 24,6%, campinho 32–78%, abas
+  83,5–90,8% de 5% a 95% da largura, comandos 95,4%). De cima para baixo: a competição + o ≡ (e o [<] do canto), a BARRA (o
+  botão de cada time com a camisa, o escudo e a sigla — no PC o nome e o selo —, a hora no meio), a linha de INFORMAÇÃO
+  (estádio · data · árbitro · duração · período; `linhaInfo` corta por prioridade: período → árbitro curto → árbitro → data →
+  o estádio com "…"; no PC em 2 linhas), o CAMPINHO em trapézio (topo = 0,70 da base, perspectiva verdadeira por `projetar`, 5
+  fileiras de altura hc = ⌊(Hcampo − 4·folga)/5⌋), o selo da tática e o GERAL nos cantos de baixo, as ABAS e, no PC, a linha dos
+  comandos (Enter/Ⓐ Selecionar · Esc/Ⓑ Voltar · Q E/LB RB Time · P/Start Opções · Ⓨ Personalizar · Ⓧ Vista). Layout só no
+  `resize`, na troca de time e na troca de vista (`pp.layout()`); a cascata das fichas só ao abrir. Da revisão: nada sai cortado
+  pelo CSS — a linha de informação recebe o separador como ele é DESENHADO (`linhaInfo(…, larguraSep)` = `medir('|')` + 0,9 em) e
+  a tela confere no DOM e corta de novo se passar (a duração nunca sai; só o estádio leva "…"); o ícone das abas é decidido para a
+  barra INTEIRA, pelo rótulo mais longo que cada aba pode mostrar (com 4 abas em 568, 640 e 667 nenhuma tem ícone); a vista
+  encurta "Sem a bola ⇄" → "Sem a bola" → "Sem bola" e o Simular armado "Toque de novo: simular" → "De novo: simular" →
+  "Simular?" (o `aria-label` inteiro), e o glifo Ⓐ/Ⓨ do controle sai da aba onde não caberia; a competição do celular aperta as
+  letras (0,02 em), tira o ícone e, por fim, quebra em 2 linhas (nunca "…"); o selo da tática e o GERAL ficam dentro da borda
+  inclinada (a posição pela largura do trapézio no ALTO do bloco, não pela base).
+- **A ficha** (11 por time): a carta de campo — moldura chanfrada (`clip-path`) e filete CHEIO na cor da raridade da carta do TM
+  (`raridade`: Base < 65, Elite < 75, Craque < 85, Lenda ≥ 85; a nota é a `notaExibida`, a mesma do TM e do GERAL), o busto
+  VESTIDO na cor do uniforme (o goleiro com o dele), a nota, a posição e o nome de camisa em TM Cond 800 (nome = clamp(10/11,
+  round(0,235·hc), 20) px; "…" só sem a fonte). No Rumo ao Estrelato a ficha do travado diz "VOCÊ" (em cima do filete, sobre o
+  pé da moldura). Nos Pênaltis o campinho dá lugar à FILA dos cobradores (o goleiro + 1º…5º do `m.disputa`); no Livre só quem
+  está em campo, com "N contra M". A camisa ESCURA (luminância WCAG < 0,07: some no preto da tela e da carta) clareia o ombro do
+  busto e ganha um disco claro atrás do ícone da barra. O clássico do TM pelo `textoClassico` (o nome que já começa com
+  "Clássico" fica como veio). A letra do resto: ≥ 11 px no celular e ≥ 12 no PC — também o VOCÊ, o "1º…5º" da ordem, as teclas
+  da linha dos comandos (`max(12px, 0.85em)`) e a competição nos regimes mínimo e emergência.
+- **Visão tática** (aba; Ⓧ): Escalação → Sem a bola → Com a bola (o FC IQ do FC 25), só leitura — os pontos da `posicaoTatica`
+  (`pontosVisao`, a MESMA função da IA e da prévia do editor) num campo aproximado no bloco (± 6 m), discos com o NÚMERO e o nome
+  só do disco em foco/tocado; `layoutVisao` afasta os discos que encostariam (≤ 4 px do ponto); a grande e a pequena área
+  desenhadas, recortadas pela janela (`linhasCampinho(L, janela)`). Com discos à vista o bloco deixa de ser `aria-hidden` e vira
+  um `role="group"` com o nome da vista, cada disco um `role="button"` com o rótulo ("9 Diego, ATA"); o foco num disco que some
+  volta à aba. Esc volta à Escalação.
+- **As abas por modo** (`abasDoModo`): partida Jogar partida · Visão tática · Personalizar; TM + **Simular partida** (armada:
+  "Toque de novo: simular", 3 s; o 2º toque = `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`); Rumo ao
+  Estrelato Jogar · Visão · Simular (sem Personalizar); Livre Jogar · Jogadores · Câmera (os submenus do Livre; o Voltar deles
+  volta à tela e o N contra M novo vale já, no mundo do tick 0); Pênaltis Bater pênaltis · Cobradores do adversário; online
+  **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match" (o Livre manda `tm3d:fim
+  {livre}`; os Pênaltis `tm3d:sair`, sem resultado — nada é simulado, como o X do TM neles; antes da revisão A2 o `voltarAoTM()`
+  simulava a disputa inteira e o TM mostrava o vencedor dela); no online "Sair da partida". O ≡ (P, Start) abre a pausa no modo
+  "antes do jogo" (`hud.definirAntes`: `#menu[data-antes]`, "Voltar" no lugar de "Voltar ao jogo"; somem Editar time,
+  Estatísticas, Replay, Reiniciar, Simular o resto, Pausar do online, o cartão e a pílula).
+- **Dados** (`main.js dadosPrepartida()` → `prepartida.js dadosDaPartida(m, ctx)`: só LÊ o mundo): os dois times (sigla, nome,
+  escudo do TM/`<symbol>`, cores do uniforme, formação, as fichas, o selo `seloTatica`, o GERAL, a pessoa no online), a competição
+  (`textoCompeticao`), a hora (16:00 de dia, 21:30 à noite), o estádio (`IDENT.estadio.nome` ou "Estádio Golaço"), a data (do
+  pedido do TM; fora do TM a do aparelho; no TM sem data, nenhuma), o ÁRBITRO fictício (`arbitroDe(semente)`: 32 nomes conferidos
+  contra os quadros da CBF/FIFA — `tools/dados/arbitros-reais.txt`; hash da semente, nunca o `m.rng`; nenhum no Livre), a
+  duração (os minutos por tempo) e o período.
+- **Navegação** (`prepartida-tela.js`; WAI-ARIA APG): `role="dialog"` + `aria-modal` + `aria-labelledby` ("Antes do jogo:
+  <casa> × <fora>, <hora>"), as abas numa `role="toolbar"` com tabindex itinerante, a lista `.pp-lista` só para o leitor de tela
+  (posição, nome, nota), uma região `aria-live`. Foco inicial na 1ª aba (o Ⓐ do FC). Tab PRESO: a aba itinerante → os dois times
+  → o ≡ → o [<] → volta. Setas: ←/→ nas abas e na barra, ↑/↓ entre as linhas (barra, discos, abas). Enter/Espaço/Ⓐ age; Esc/Ⓑ
+  volta um nível (vista → escalação, adversário → o meu time; no 1º nível, no TM o foco no "Simular partida", no resto nada);
+  Q/E e LB/RB trocam o time mostrado; P/Start = ≡; Ⓨ = Personalizar; Ⓧ = a próxima vista. O teclado por um ouvinte na CAPTURA da `window`; o controle pelas ações
+  `menu-*` do `tratarAcao` e o Ⓨ/Ⓧ/LB/RB lidos em `pp.atualizar`. Toque: as abas e os botões por `aoTocar`; tocar no campinho =
+  Personalizar (só onde é editável); na Visão tática, tocar num disco mostra o nome. No aparelho de toque, enquanto nenhuma
+  tecla foi apertada, o meio é o toque e não há anel de foco (nem ao abrir); a aba com o foco tem UM indicador (o preenchimento
+  verde, com o anel escuro por dentro). Com a pausa, a Ajuda, o editor ou um submenu do Livre por cima, a entrada volta a valer
+  para eles (`abrirMenuDaTela`) e a tela some atrás deles, só o véu (`pp.cobrir(true)` → `#prepartida.coberta`: cada camada
+  sozinha sobre o 3D, como a pausa sobre o jogo — revisões V5/V6); quando fecham, `voltarParaTela()` mostra a tela ANTES de
+  devolver o foco (o ≡ escondido não o recebe), bloqueia de novo, refaz os dados e devolve o foco (ao ≡ depois das Opções, ao
+  Personalizar depois do editor).
+- **Personalizar antes do jogo** (aba; Ⓨ; o toque no campinho): o Editar time de hoje com `antesDoJogo` (o rótulo "Antes do
+  jogo: as trocas viram a escalação"); o PRONTO NÃO passa pela fila de edições (que viraria substituição pendente no 1º passo):
+  `timesAntes[TIME_HUMANO] = edicaoParaTimes(ed)` e o mundo do tick 0 é RECRIADO por `criarPartida({times})` (`trocarMundo(…,
+  {antesDoJogo: true})` mantém a tela e o pré-jogo; `prejogo.refazerTimes()` refaz o cortejo, os técnicos, as fotos e as
+  escalações — não o lado de fora). O reserva escalado joga, conta no resultado do TM e ninguém "saiu" (`teste-ponte-tm` P9).
+- **Online** (§4.5 da especificação; `online.js` INTOCADO): a fase vai no byte 19 do pacote em bits definidos na PÁGINA
+  (`online-pagina.js E_TELA = 8`, `E_PRONTO = 16`, `E_PREJOGO = 32`; os bits 0–2 continuam os do `online.js`); todo pacote leva a
+  fase e a do outro é o MAIOR valor recebido (`faseRemota`: −1 nenhum pacote, 0 tela, 1 pronto, 2 pré-jogo, 3 jogo — um pacote
+  velho não desfaz nada). "Pronto" é final: o botão vira "Aguardando {nome}…" (`aria-disabled`, a bolinha girando) e o pacote sai
+  na hora; a saída conjunta é eu pronto e o outro com fase ≥ 1 (pronto ou além da tela: a reserva sem a tela manda `E_PREJOGO`)
+  → `jogarPrepartida()`, conferida no EVENTO (`saidaOnlineTela`: o clique do Pronto e a mensagem que sobe a fase, `ao.fase` do
+  `criarPaginaOnline`) e a cada quadro (rede de segurança) — esperar o quadro dava 900 ms com o 3D atrás da tela no Chromium sem
+  GPU; no evento, 12–19 ms de um lado ao outro. O 1º passo continua decidido pelo lockstep. Com a tela aberta,
+  `PAG_ONLINE.quadro(agora, {antes: true})` a cada quadro (o abandono, a ligação fechada e o "Aguardando" só sem pacote por 5 s valem; o "espera" de 0,9 s não); com 60 s
+  esperando, o [<] "Sair da partida" ganha destaque (`destacarCanto`, nada automático). No jogo, com pacotes chegando e o outro
+  ainda na tela ou no pré-jogo, o aviso de espera diz "{nome} ainda está antes do jogo." / "{nome} ainda está no pré-jogo." (antes:
+  "A conexão parou", enganoso); o W.O. continua só sem pacote por 90 s. Sem Personalizar no online (v1: no passo ≥ D viraria
+  substituição). O Sair armado = o da pausa: `PAG_ONLINE.sair()` + `tm3d:sair {abandono}` (derrota; o outro recebe o W.O.).
+- **API de teste** (`__golaco.prepartida`): `ligada`, `carregada`, `aberta`, `estado` (modo, fundo, regime, abas, foco, time,
+  visão, armado, aguardando, destaqueCanto), `dados()`, `layout()`, `visao()`, `jogar()`, `personalizar()`, `adversario(t)`,
+  `vista()`, `simular()`, `abrir()`, `carregar()`, `timesAntes`, `desenhos`, `fechadaEm`, `escalar(ed)`; `__golaco.online` ganhou
+  `fase`, `faseRemota`, `encerrado` e `aviso`; `sobDemanda.estado.prepartida`.
+- **Metas** (cobradas pelos testes abaixo; os números do PR no `PESQUISA-ESTADIO.md` §7.5): a simulação no tick 0 com a tela
+  aberta (0 passos, o hash = o do Node; depois do Jogar, 600 passos = Node); 0 px de rolagem e 0 encosto em 4 telas do celular
+  (844×390 com o entalhe, 667×375, 640×360, 568×320), no regime mínimo (640×304, 568×280) e em 6 do PC, × o meu time e o outro
+  × as três vistas, também SEM as fontes; o nome ≥ 10 px em 568×320, ≥ 11 nos outros celulares e ≥ 13 no PC; a info ≥ 11; as
+  abas ≥ 13 de letra e ≥ 177 × 40 (568) / 200 × 44 (640+); o resto ≥ 11/12; toques até o jogo: a partida com o pré-jogo 2 (Jogar
+  + Pular), o pré-jogo desligado e os Pênaltis 1; o som `running` em ≤ 1 s depois do Jogar; o Personalizar com 0
+  substituições; ≤ 40 chamadas, ≤ 130 mil triângulos e ≤ 31 desenhos 3D por segundo (844×390 Média); o contraste atrás do texto
+  ≤ 50/255 de dia e de noite; as proporções do FC 24 no PC a ±1,5 ponto; com a tela, ≤ 140 KB TRANSFERIDOS a mais até +2,5 s
+  (medido +99 KB; crus +160); online: a saída conjunta em ≤ 0,5 s (≤ 1 s com 20% de perda), os hashes iguais em todas as
+  conferências até ~1200 passos (≥ 20 em comum).
+  Fora do teste por enquanto (item 101): o tempo até a tela e do Jogar ao 1º plano (E8), o download com `?tm` e 4 das 5
+  mutações da especificação.
+- **Testes**: `teste-prepartida` (Node, padrão: L1 o layout da maquete medida em 11 telas × 6 formações, L2 a Visão tática sem
+  encosto, L3 a linha de informação, L4 o árbitro, L5 a edição → times, L6 os dados por modo, L7 a pureza e o fecho);
+  `teste-prepartida-tela` (navegador, CI e deploy; `--so pc,cel,telas,modos,pad,tm,online,carga`, `--raiz` mede a base, `--espera <s>`
+  o O5): E1–E21 (liga/desliga, simulação parada e hash = Node, sem rolar e nada encosta em 10 telas também sem as fontes, letras,
+  alvos, toques até o jogo, som, teclado, controle, leitor de tela, Personalizar, modos, desenho, download, contraste, em pé,
+  voltas, proporções do FC 24, reserva) e O1–O7 (duas abas pelo BroadcastChannel); da revisão: E4b/E5b (os Pênaltis, o TM pro com
+  o clássico e os nomes longos — 4 abas, as duas vistas, o Simular armado — e o Rumo ao Estrelato, também no regime mínimo e no PC:
+  a info, as abas e a competição sem o corte do CSS, o ícone igual na barra, os cantos dentro da borda do campinho, a letra do
+  resto), E11b (o Ⓐ do Jogar com o pré-jogo não pula as cenas), E12b/E12c (os discos da Visão tática para o leitor de tela; o toque
+  sem anel de foco), E19b (o "Pré-jogo da partida" mudado pelo ≡ vale no Jogar, com o webdriver de um usuário), E14 dos Pênaltis
+  do TM (o [<] manda `tm3d:sair`) e a tela coberta pela pausa e pelo editor (E10/E13); `teste-ponte-tm` P9; `teste-carga`
+  (`SO_COM_TELA`).
+- **Fica** (fora da v1, anotado; FILA itens 100–107 e "Depende do dono" 19): o tempo do `teste-prepartida-tela` no
+  `tempos-ci.mjs` (600 s, estimado aqui; item 100); as metas da especificação que não entraram no teste — E8, o E16 com `?tm`, 4
+  das 5 mutações, o O5 de 100 s e o destaque do Sair aos 60 s (item 101); o fundo escuro e desfocado como o do FC, com o
+  `pixelRatio` baixo atrás da tela (item 102, decisão do dono); o nome embaixo de cada disco da Visão tática (item 103); o selo
+  grande da competição no alto do PC (item 104); o Editar time com a cara da tela (item 105); a "tela cedo", durante o
+  carregamento (item 106, decisão do dono); o Personalizar no online (item 107, decisão do dono); as FOTOS no lugar do busto
+  (feitas no item 31, #615, só a edição pro: abaixo); a dificuldade e o clima na linha de informação (item 33). Nada foi medido
+  num celular de verdade.
+
+- **A foto da edição pro nas fichas (item 31, #615)**: `criarPrepartida({…, fotoDe(id)})` (a página passa `fotoPronta`: só a já
+  decodificada) e `pp.fotoChegou(id, u)` (a página liga `FOTOS.aoChegar`): a `<img class="pp-foto">` entra no `.pp-miolo` POR
+  CIMA do busto (a reserva: sem foto, com erro, no regime de emergência sem rosto), recortada pelo chanfro — a ficha não muda de
+  medida (L1 do `teste-prepartida` intocado). As fotos chegam depois do `pronto` e trocam o busto ficha a ficha (fade de 0,2 s),
+  sem refazer a tela. As cartas da escalação do pré-jogo (item 29) ficam sem foto (não cabem no celular: item 110); as fichas
+  não têm o degradê do pé da foto do cartão do autor (item 112). Teste: `teste-prepartida-tela` E22 (`--so fotos`).
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -2404,7 +2669,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   fecha pré-jogo, replay, comemoração, substituição e editor, a IA joga pelo humano (`entradaDemoPartida`) e `passoPartida` roda
   em pedaços de 30 ms por quadro SEM desenhar, com a faixa "Simulando o resto da partida… 63' · FLA 1 × 0 PAL"; no apito, a faixa
   do fim. `window.__golaco.tm = {id, pedido, humano, trava, mapa, controlado, simulando, mensagens, sumula(), resultado(),
-  simularResto() (Promise), resultadoGravado()}` (null sem `?tm`).
+  simularResto() (Promise), resultadoGravado(), fotos (item 31: as da edição pro, contrato "Comemoração do gol")}` (null sem
+  `?tm`).
 - **`hud.js` / `index.html`**: `criarHud({tm: {trava, timeHumano}})` — a pausa sem "Reiniciar partida", com o "Modo de jogo"
   como "Cenas da partida" (pré-jogo e substituição, sem os treinos), `#btn-simular-resto` (até o apito) e `#btn-voltar-tm` (no
   fim; desde o item 58 os dois no fim da lista e, no fim de jogo, o Voltar ao TM sobe para o 1º lugar: seção "Pausa (item
@@ -2414,6 +2680,16 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   partidas inteiras, P6 súmula com eventos montados; os pedidos em `tools/lib/pedidos-tm.mjs`) e `teste-tm-tela` (navegador; o
   TM imitado por um quadro pai na mesma origem: pronto, pausa, Simular o resto, faixa, `tm3d:fim`, Estrelato no celular, sem
   `?tm` nada muda; `--pedido <arquivo>` usa um pedido de verdade do TM).
+
+- **A FOTO do jogador (item 31, #615)**: campo OPCIONAL `foto` em cada jogador do pedido (`home/away.players[i]`), só na edição PRO
+  (o `tm3d.js` confere `TM.storage.edition()`: o `TM.img.playerPhotoUrl` não confere e devolve o `player.photo` também na
+  pública): a foto real de licença livre do TM (`assets/jogadores/…`, em endereço ABSOLUTO pelo `abs`) ou a importada pela
+  carreira própria (`data:image/jpeg|png|webp`, até 48 000 caracteres cada e 240 000 por time; acima, a foto fica de fora). O
+  "rae-me" do Rumo ao Estrelato nunca tem. Sem espaço no localStorage (os saves do TM moram nele), o `abre3d` grava o pedido sem
+  as importadas e, se ainda faltar, sem foto nenhuma (`gravaPedido`, `TM.tm3d._gravaPedido`; `teste-ponte-tm` P11) — a foto
+  sai, o 3D não. O pedido continua `v: 2`; o `tm-times.js` não copia o campo (`teste-ponte-tm` P10e:
+  `timesDoPedido` e o hash iguais com e sem fotos); o golaco lê pelo lado + `tmId` (`js/tm-fotos.js`, contrato "Comemoração do
+  gol"). No online, a foto do time montado num aparelho pro aparece se o pedido do anfitrião for pro (como os rostos reais).
 
 ## Identidade visual de cada time (Total Match, 15/10)
 Pedido do dono: "a logo dos times, torcida, e estádio adaptáveis a cada time". Só DESENHO (render/DOM): nada entra no mundo
@@ -2432,7 +2708,8 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   branco da bola, ≥ 3:1 no fundo, ≥ 25 entre os times; jogo neutro: o Estádio Total Match (seção "Estádio de cada clube"),
   torcida 45% misturada; `publico` 0,1–1 = ocupação.
 - **Página**: `render/identidade-pagina.js identidadeDaPagina()` — null sem `?tm` (identidade.js nem é baixado: import
-  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores) ANTES de
+  dinâmico); com `?tm` decodifica os escudos (≤ 1,5 s; falhou → `urlEscudoSigla`, a sigla nas cores — a letra 30/38 desce só
+  quando a sigla passa de `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, `larguraSiglaEm`: revisão V9 do item 29) ANTES de
   `criarCampo`/`criarTorcida`. main.js: `IDENT` → `criarCampo({identidade})`, `criarTorcida({identidade, mascara:
   mascaraDaIdentidade})`, `jog3d.definirKits(IDENT.kits)`, `criarPrejogo({identidade})`, `COR_TIME` (faixa ENTRA/SAI) e
   `timesDoMundo` com `extrasPlacar` (`{escudoUrl, cor, corTexto, mapa}` → hud.js `<symbol id="escudo-tm-i">` com `<image>`,
@@ -2445,7 +2722,9 @@ nem no hash; a geometria (placas, arquibancadas) não muda.
   túnel, cantos, torcedores), `prejogo-tela.js` (escudos e estádio na abertura), `escalacao-tela.js` (escudo e cor).
 - **Teste**: `teste-identidade` (Node, padrão): padrão = constantes de hoje (torcida byte a byte), ΔE₀₀ nos pares de Sharma
   et al., 7 pedidos difíceis (dois vermelhos, azul × árbitro azul, preto-e-branco × branco-e-preto, 3 uniformes iguais,
-  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro).
+  escolhido que confunde, sem identidade, neutro com público baixo) e a torcida do TM (mesmos lugares, público, neutro); seção G
+  (item 29, revisão V9): a sigla do escudo de reserva cabe em ≤ `SIGLA_CABE` 70 de largura na DejaVu Sans Bold, e as que já
+  cabiam ficam no tamanho de antes (30 com 3 letras, 38 com 2).
 
 ## Estádio de cada clube no pré-jogo (Total Match, 15/10)
 Pedido do dono: na edição pro (licenciada) o estádio REAL do mandante; na pública, o Estádio Golaço com o nome do jogo. Só
@@ -2666,6 +2945,10 @@ módulos novos (`disputa.js`, `disputa-tela.js`) só por import dinâmico (fora 
   cada "Jogar de novo" (no meio, "Reiniciar disputa" repete a do começo); sem elas, SORTEADA na página a cada disputa nova (a
   1ª, Reiniciar, Jogar de novo, a volta pelo Modo de jogo) — antes toda disputa começava igual (a mesma moeda, os mesmos lados
   do goleiro da IA). Ela fica no mundo (`m.semente`): o hash continua valendo. `window.__golaco.disputa` (o resumo), `telaDisputa()` e `planoCamera`.
+  **Item 64**: com a tela antes do jogo ligada (contrato "Tela antes do jogo (item 64)") a disputa NÃO anda sozinha no 1º quadro
+  (antes: 7–12 passos) — o campinho da tela dá lugar à fila dos cobradores (o goleiro + 1º…5º), as abas são "Bater pênaltis" e
+  "Cobradores do adversário", e o "Bater pênaltis" (1 toque) solta a disputa; no TM, o [<] "Voltar ao Total Match" antes do Bater
+  manda `tm3d:sair` (sem resultado, como o X do TM). Sem a tela (webdriver, `?prepartida=0`), como antes.
 - **`hud.js` / `index.html`**: `data-so` aceita vários modos ("partida penaltis": Replay e Reiniciar; o Editar time é só da
   partida); `em-penaltis` no `<html>`; "Reiniciar disputa"; com `?tm` o "Simular o resto" diz "até o fim da disputa" e o
   submenu "Cenas da partida" some. A Ajuda tem o item "Pênaltis" em cada coluna (`.so-disputa`, só com `modo-penaltis`: bater
@@ -3847,7 +4130,11 @@ que eu escolher, contra a quantidade de jogadores que eu escolher, pode ser adap
 EA FC). `?modo=livre` (sem `?tm`: Golaço FC × Ventania FC), "Modo Livre <small>N contra M</small>" no "Modo de jogo" da pausa
 (linha própria; os dois treinos numa `.linha-cenas`: o submenu segue com 5 linhas) e, com `?tm`, o pedido com `modo: "livre"`.
 **Sem o Livre nada muda**: `hash-partida`/`hash-igual` IGUAIS contra a base; `livre.js` e `livre-pagina.js` só por import
-dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,99 MB).
+dinâmico (o download inicial do teste-carga cresce ~7,7 KB, só dos ganchos; 3,99 MB). **Item 64**: com a tela antes do jogo
+ligada, ela abre no lugar do submenu Jogadores do começo — as abas Jogar · Jogadores · Câmera (os submenus de sempre; o Voltar
+deles volta à tela), o campinho com quem está em campo e "N contra M", sem árbitro nem duração; o N contra M mudado nela vale
+já, no mundo do tick 0 recriado (`trocarMundo(…, {antesDoJogo: true})`); no TM o [<] "Voltar ao Total Match" manda `tm3d:fim
+{livre}` (contrato "Tela antes do jogo (item 64)").
 - **`livre.js`** (puro; constantes `config.js LIVRE`, o porquê de cada número no cabeçalho do arquivo). O mundo é o da
   partida (`criarPartida`, sem a trava; o relógio com `LIVRE.relogioMin` minutos por tempo: nunca acaba) com `m.modo =
   'livre'` e `m.livre = {linha: [a, b], goleiro: [g0, g1], fora: {id: jogador guardado}, ajustes, pressao: [da tática]}`,
@@ -4057,6 +4344,12 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o editor abertos NÃO param
   (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal confiável). O hash a
   cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
+- **Antes do 1º passo** (item 64; contrato "Tela antes do jogo (item 64)", parte Online): os dois veem a tela antes do jogo com
+  "Pronto" · Visão tática; a fase de cada lado vai no byte 19 de todo pacote (bits da página `E_TELA`/`E_PRONTO`/`E_PREJOGO`; o
+  `online.js` intocado) e os dois saem juntos para o pré-jogo quando os dois estão prontos; o 1º passo continua decidido pelo
+  lockstep. Com a tela aberta, `PAG_ONLINE.quadro(agora, {antes: true})` (só abandono, ligação fechada e 5 s sem pacote
+  valem); no jogo, com pacotes chegando e o outro ainda na tela ou no pré-jogo, o aviso de espera diz "{nome} ainda está antes
+  do jogo." / "{nome} ainda está no pré-jogo." no lugar de "A conexão parou". Sem Personalizar no online (v1; item 107).
 - Avisos (`#online-aviso`, no meio da tela; `#online-selo` "Conexão instável" no canto de cima à direita, dentro de `--sa-r`/
   `--sa-t`, e fora de cena com a pausa aberta — o X da pausa mora nesse canto): "Aguardando <nome>…", "Pausado por
   <nome> · 0:52", "Você pausou" com "Continuar a partida" e a contagem de 3 s, "<nome> saiu da partida. Vitória por W.O.",
@@ -4377,7 +4670,8 @@ Porte da branch `golaco/cenas-jogo` (1df2ca34) para fora do fecho: `js/cenas-con
     (`render/vao-placas.js`, o mesmo do pré-jogo, que passou a importar dele) abre no plano do túnel; `jog3d.reservar` + 3.
   - A tarja de identificação (`js/cenas-tela.js`): o cartão desenhado, a sigla, a cor e o escudo do time, o número e o
     nome — nem motivo nem minuto; entra com o cartão no alto e sai com a cena (≤ `CENAS.tarja` s), nunca por cima da bola
-    rolando. É uma exceção escrita à "sem narração" (como a faixa ENTRA/SAI e o selo IMPEDIMENTO/POSIÇÃO LEGAL). O
+    rolando. É uma exceção escrita à "sem narração" (como a faixa ENTRA/SAI, o selo IMPEDIMENTO/POSIÇÃO LEGAL, o nome do
+    condutor e o cartão do autor do gol na comemoração — item 31 —, que nunca fica junto dela: `teste-cenas-tela` C11). O
     `#cartao-icone` não aparece para quem teve a cena (nem antes nem depois dela); sem a cena, aparece como antes.
   - TM "só o meu jogador" com o travado expulso: a faixa "Você foi expulso" espera a cena E o replay de parada daquela bola
     morta (`expulsoPendente`, `talvezFaixaExpulso`) e os 6 s contam de quando ela aparece. Na vantagem que acaba em gol ela

@@ -270,6 +270,17 @@ html.tm .terco-selo {
 }
 html.tm .terco-selo b { font-weight: 800; }
 html.tm .faixa-subst { font-family: var(--fonte); background: rgba(11, 17, 14, 0.9); border-radius: 12px; }
+/* o cartão do autor do gol (item 31): a Inter do TM, o painel e a borda fina do TM; a borda esquerda na cor do time */
+html.tm .autor-gol {
+  font-family: var(--fonte); background: rgba(11, 17, 14, 0.92); border: 1px solid var(--tm-linha2);
+  border-left: 2px solid var(--cor-time, var(--tm-verde)); border-radius: 12px;
+}
+html.tm .ag-foto { border-radius: 8px; }
+html.tm .autor-gol { --ag-fundo: 11, 17, 14; }
+html.tm .ag-time { border-radius: 7px; }
+html.tm .ag-sigla { font-weight: 800; letter-spacing: 0.04em; }
+html.tm .ag-num { font-weight: 800; }
+html.tm .ag-nome { color: var(--tm-texto); }
 html.tm .fs-sigla { border-radius: 7px; }
 
 /* ------------------------------------------------------------------ celular em pé: "Gire o celular" com a logo do TM */
@@ -302,8 +313,10 @@ html.tm .pj-esc-rotulo::before { content: ""; flex: none; width: 22px; height: 1
 html.tm .pj-esc-nome { font-weight: 800; letter-spacing: -0.02em; }
 html.tm .pj-esc-forma { color: var(--tm-verde-cl); font-weight: 700; }
 html.tm .pj-esc-campo { background: rgba(10, 29, 18, 0.82); border-color: rgba(34, 197, 94, 0.34); border-radius: 14px; }
+html.tm .pj-esc-linhas { clip-path: inset(0 round 13px); }
 html.tm .pj-esc-linhas * { stroke: rgba(34, 197, 94, 0.4); }
-html.tm .pj-carta { background: rgba(11, 17, 14, 0.95); border-color: var(--tm-linha2); border-radius: 10px; }
+/* (a faixa de cima da carta na cor do time, como fora do TM: o atalho border-color a apagava — revisão V7) */
+html.tm .pj-carta { background: rgba(11, 17, 14, 0.95); border-color: var(--tm-linha2); border-top-color: var(--cor-time, var(--tm-verde-cl)); border-radius: 10px; }
 html.tm .pj-pos { color: var(--tm-verde-cl); }
 
 /* ------------------------------------------------------------------ Editar time (os cartões e as abas do TM) */

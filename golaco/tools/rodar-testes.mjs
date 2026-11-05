@@ -139,6 +139,10 @@ const LISTA = [
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
   ['pré-jogo no Maracanã (forma própria): os trilhos ajustados fora dos sólidos dele', 'teste-prejogo-roteiro.mjs', ['--forma', 'maracana']],
+  // Item 29 (dono, 17/10: "o campinho da escalação do jogo EM PÉ (retrato), não deitado"): as contas puras da escalação em pé
+  ['escalação do pré-jogo em pé (item 29): tamanho do campo e das cartas em 10 telas × 3 conjuntos de nomes, posições nas 6 formações, o campinho.js do editor e da pausa igual, a tabela da TM Cond num módulo só', 'teste-escalacao-campo.mjs'],
+  // Item 64 (dono, 23/10: "quero que fique NESSE NÍVEL" — a tela antes do jogo do EA FC com a cara do TM): as contas puras
+  ['tela antes do jogo (item 64): layout em 13 telas, Visão tática, info, árbitro fictício, recriação pela escalação, selo e fecho', 'teste-prepartida.mjs'],
   // Total Match (dono, 15/10: "a logo dos times, torcida, e estádio adaptáveis a cada time"): identidade visual
   ['identidade dos times: padrão = hoje, uniformes sem confusão (ΔE₀₀), torcida, faixas, placas, HUD do TM e o estádio (real na pro, Estádio Total Match na pública)', 'teste-identidade.mjs'],
   // Estádio com forma própria (dono, 16/10: "não tem nada a ver com o maracanã"): a tigela do Maracanã (estadio-planta.js)

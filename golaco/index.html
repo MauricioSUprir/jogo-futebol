@@ -206,6 +206,17 @@
        botão do controle pula a comemoração (o replay vem depois e tem o pulo dele). "Pular" só aparece com toque. -->
   <div id="comemoracao" class="replay comemoracao" hidden>
     <button id="comemoracao-pular" class="btn-replay-pular" data-caixa="comemoracao-pular" type="button" aria-label="Pular a comemoração">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
+    <!-- Cartão do autor do gol (item 31; js/autor-cartao.js, hud.js autorGol): a foto (só a da edição pro do TM), o escudo e a
+         sigla, o número e o nome — sem minuto nem "GOL". Exceção escrita à "sem narração": só dentro da cena (some com ela),
+         nunca com a bola rolando. No canto de cima à direita, na linha do placar. Não pega toque (o toque na camada pula a cena). -->
+    <div id="autor-gol" class="autor-gol" data-caixa="autor-gol" role="status" aria-live="polite" hidden>
+      <span class="ag-sr"></span>
+      <span class="ag-foto" aria-hidden="true" hidden><img alt="" decoding="async" data-cartao="1"></span>
+      <span class="ag-texto" aria-hidden="true">
+        <span class="ag-time"><svg class="ag-escudo" viewBox="0 0 20 22"><use/></svg><b class="ag-sigla"></b><b class="ag-num"></b></span>
+        <span class="ag-nome"></span>
+      </span>
+    </div>
   </div>
   <!-- Cena de substituição (js/substituicao.js): a mesma camada — depois de 0,5 s qualquer toque, clique, tecla (menos a
        pausa) ou botão do controle pula a cena; a faixa ENTRA/SAI continua no jogo. "Pular" só aparece com toque. -->
@@ -232,7 +243,7 @@
        Livre, Jogadores e Câmera (livre-pagina.js); no PC, a linha dos comandos no pé. No canto de cima à direita a pílula do
        placar e o X no lugar do ≡; embaixo dele o cartão do meu time (js/pausa-tela.js, sob demanda). Os id, data-cmd,
        data-valor e data-grupo são o contrato dos testes. A ordem do 1º nível é a do DOM (hud.js aplicarModoNoMenu esconde por
-       modo e, no fim de jogo, sobe o primário do fim para o 1º lugar; ele volta para antes da âncora <!--fim-->) -->
+       modo e, no fim de jogo, sobe o primário do fim para o 1º lugar; ele volta para antes da âncora, o comentário "fim") -->
   <div id="menu" class="sobreposicao pausa" data-entrada="teclado" hidden>
     <div class="janela janela-menu" role="dialog" aria-modal="true" aria-labelledby="menu-titulo">
       <div class="pausa-faixa">

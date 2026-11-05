@@ -13,7 +13,9 @@
 // Devolve {ok, golTick, autor, lado, n, tickChute} (ok = o gol saiu em até 90 passos).
 //   golRoteirizado(pagina, {semente = 5, time = 0, v = 23, y = 1.0, z = -1.4, z0 = 3.0, dist = 9.5, reiniciar = true,
 //     marcarChute = false (o chute conta para o autor como um de verdade: replay.chuteDeTeste — a 1ª pessoa do replay),
-//     preparo = (marcarChute ? 60 : 0) (passos da corrida do autor até a bola antes do chute, com o corte para trás)})
+//     preparo = (marcarChute ? 60 : 0) (passos da corrida do autor até a bola antes do chute, com o corte para trás),
+//     contra = false (item 31: GOL CONTRA — o mesmo lance, mas o último toque de verdade é de um jogador de linha do OUTRO time, o
+//       mais perto da bola: render/autor-gol.js marca o gol contra; devolve autor = ele e contra = true)})
 
 export async function golRoteirizado(pagina, opc = {}) {
   return pagina.evaluate(async o => {
@@ -96,13 +98,20 @@ export async function golRoteirizado(pagina, opc = {}) {
     m.bola.p.y = 0.25; m.bola.v.x = dx * v; m.bola.v.z = dz * v; m.bola.v.y = vy; m.bola.rolando = false;
     m.ultimoToque = { id: autor.id, time: autor.time, tick: m.tick };
     // {marcarChute}: o chute conta para o autor do gol como um de verdade (o replay da 1ª pessoa precisa dele)
-    if (o.marcarChute && g.replay?.chuteDeTeste) g.replay.chuteDeTeste(autor.id);
+    if (o.marcarChute && !o.contra && g.replay?.chuteDeTeste) g.replay.chuteDeTeste(autor.id);
+    // {contra}: o último toque de verdade é de um zagueiro do outro time (o mais perto da bola, de linha) — o gol vira contra
+    let contraId = null;
+    if (o.contra) {
+      let dm = Infinity;
+      for (const j of m.jogadores) { if (j.time === time || j.posicao === 'GOL') continue; const d = Math.hypot(j.x - P0.x, j.z - P0.z); if (d < dm) { dm = d; contraId = j.id; } }
+      if (contraId != null) { m.ultimoToque = { id: contraId, time: 1 - time, tick: m.tick }; g.replay?.chuteDeTeste?.(contraId, 'toque'); }
+    }
     const tickChute = m.tick;
     let golTick = null;
     for (let i = 0; i < 90 && golTick == null; i++) {
       g.rodarPassos(1, 'demo');
       if (g.mundo.eventos.some(e => e.tipo === 'gol')) golTick = g.mundo.tick;
     }
-    return { ok: golTick != null, golTick, autor: autor.id, lado: s, n, tickChute, movidos: k, vy: +vy.toFixed(2) };
+    return { ok: golTick != null, golTick, autor: contraId ?? autor.id, lado: s, n, tickChute, movidos: k, vy: +vy.toFixed(2), contra: contraId != null, chutou: autor.id };
   }, opc);
 }

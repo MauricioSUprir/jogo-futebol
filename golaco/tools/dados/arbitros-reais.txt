@@ -1,0 +1,135 @@
+# Árbitros REAIS (para conferir que os 32 nomes FICTÍCIOS de js/prepartida.js ARBITROS não repetem nenhum; teste-prepartida L4).
+# Um nome por linha; linhas com # são comentário. Conferido em 04/11/2026.
+# Fonte 1: CBF, "Confira a lista de árbitros brasileiros que integrarão quadro FIFA em 2026" (19/12/2025)
+#   https://www.cbf.com.br/a-cbf/noticias/arbitragem/informes-arbitragem/confira-a-lista-de-arbitros-brasileiros-que-integrarao-quadro-fifa-em-2026
+# Fonte 2: ge, "Veja a lista de 72 indicados no programa de profissionalização de arbitragem da CBF" (27/01/2026)
+#   https://ge.globo.com/futebol/noticia/2026/01/27/veja-a-lista-de-72-indicados-no-programa-de-profissionalizacao-de-arbitragem-da-cbf.ghtml
+# --- Fonte 1: árbitros
+Ramon Abatti Abel
+Raphael Claus
+Wilton Pereira Sampaio
+Anderson Daronco
+Rafael Rodrigo Klein
+Rodrigo Jose Pereira de Lima
+Matheus Delgado Candançan
+Paulo Cesar Zanovelli da Silva
+Flavio Rodrigues de Souza
+Bruno Arleu de Araújo
+Edina Alves Batista
+Deborah Cecilia Cruz Correia
+Charly Wendy Straub Deretti
+Daiane Caroline Muniz dos Santos
+Rejane Caetano da Silva
+Thayslane de Melo Costa
+Andreza Helena Siqueira
+Gleika Oliveira Pinheiro
+# --- Fonte 1: assistentes
+Danilo Ricardo Simon Manis
+Bruno Boschilia
+Bruno Raphael Pires
+Rodrigo Figueiredo Henrique Correa
+Guilherme Dias Camilo
+Neuza Ines Back
+Rafael da Silva Alves
+Nailton Junior de Sousa Oliveira
+Alex Ang Ribeiro
+Victor Hugo Imazu dos Santos
+Fabrini Bevilaqua Costa
+Luanderson Lima dos Santos
+Leila Naiara Moreira da Cruz
+Maíra Mastella Moreira
+Anne Kesy Gomes de Sá
+Fernanda Nandrea Gomes Antunes
+Brigida Cirilo Ferreira
+Fernanda Kruger
+Gizeli Casaril
+Daniella Coutinho Pinto
+# --- Fonte 1: VAR
+Wagner Reway
+Marco Aurélio Augusto Fazekas
+Rodrigo D'Alonso Ferreira
+Pablo Ramon Gonçalves Pinheiro
+Rodolpho Toski Marques
+Daniel Nobre Bins
+Diego Pombo Lopez
+Rodrigo Nunes de Sá
+Rodrigo Guarizo Ferreira do Amaral
+Caio Max Augusto Vieira
+# --- Fonte 1: futsal e beach soccer
+Alfredo Carlos Wagner
+Ricardo Amaral Messa
+Anelize Meire Schulz
+Guilherme Schwinden Gehrke
+Aline Santos Nascimento
+Eric Fernando Bonifácio
+Juliana Caroline Angelo
+Paula Kamila Silva Cirilo
+Mayron Frederico Reis Novais
+Lucas Estevão
+Luciano Andrade
+Paula Madeira Liberato
+# --- Fonte 2: os 72 do programa de profissionalização (como a matéria escreve)
+Alex Stefano
+Bráulio Machado
+Bruno Arleu
+Davi Lacerda
+Edina Batista
+Felipe Lima
+Flávio Souza
+Jonathan Pinheiro
+Lucas Casagrande
+Lucas Torezin
+Matheus Candançan
+Paulo Zanovelli
+Rafael Klein
+Rodrigo Pereira
+Savio Sampaio
+Wagner Magalhães
+Wilton Sampaio
+Alessandro Matos
+Alex Ang
+Alex Dos Santos
+Alex Tomé
+Andrey Freitas
+Anne Kesy
+Brigida Cirilo
+Bruno Pires
+Celso Silva
+Cipriano Silva
+Daniela Coutinho
+Danilo Manis
+Douglas Pagung
+Eduardo Cruz
+Evandro Lima
+Fabrini Bevilaqua
+Felipe Alan
+Fernanda Nandrea
+Francisco Bezerra
+Guilherme Camilo
+Joverton Lima
+Leila Naiara
+Leone Rocha
+Luiz Regazone
+Maira Mastella
+Michael Stanislau
+Nailton Junior
+Neuza Back
+Rafael Alves
+Rafael Trombeta
+Rodrigo Correa
+Schumacher Gomes
+Thiaggo Labes
+Thiago Farinha
+Tiago Diel
+Victor Imazu
+Caio Max
+Charly Wendy
+Daiane Muniz
+Daniel Bins
+Diego Lopez
+Marco Fazekas
+Pablo Ramon
+Rodolpho Tolski
+Rodrigo Dalonso
+Rodrigo Guarizo
+Rodrigo Sá

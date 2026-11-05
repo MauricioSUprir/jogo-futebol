@@ -1017,6 +1017,72 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .terco-selo { animation: none; } }
 
+/* O CARTÃO DO AUTOR do gol (item 31; hud.js autorGol, js/autor-cartao.js): dentro da camada da comemoração (some com ela),
+   no canto de cima à DIREITA na linha do placar — o único lugar medido livre do autor, dos outros e do HUD em todos os planos
+   da cena, no PC e no celular (o celular põe o autor no terço esquerdo: ajustarCelular). [foto | escudo, sigla e número /
+   NOME]: o nome é a linha principal e o número vai na pílula do time, junto da sigla (o "11 THEMBA ZWANE" da Copa 2026, o
+   "MBAPPÉ" grande do FC Mobile; revisão V3); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número |
+   nome] (o molde das tarjas das cenas). Medidas pela ALTURA da janela
+   (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera). A fase é do relógio da cena (main.js): a
+   animação só enfeita. Não pega toque. */
+.autor-gol {
+  --ag-foto: clamp(96px, 18vh, 196px); --ag-nome: clamp(22px, 4vh, 40px);
+  --ag-sigla: clamp(13px, 1.9vh, 20px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-pad: clamp(8px, 1.2vh, 14px); --ag-vao: clamp(12px, 1.8vh, 20px);
+  --ag-fundo: 7, 9, 10;
+  position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
+  /* (até a direita do placar + 12 px: hud.js mede o placar e põe --ag-esq; o nome corta com reticências) */
+  max-width: calc(100vw - var(--sa-r) - var(--m) - var(--ag-esq, calc(var(--sa-l) + var(--m))));
+  display: flex; align-items: center; gap: var(--ag-vao); min-width: 0; box-sizing: border-box;
+  padding: var(--ag-pad) calc(var(--ag-pad) * 2) var(--ag-pad) var(--ag-pad);
+  background: rgba(7, 9, 10, 0.86); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
+  font-family: Inter, var(--fonte); color: var(--texto);
+}
+@media (max-height: 519px) {
+  .autor-gol { --ag-foto: clamp(64px, 23.5vh, 96px); --ag-nome: clamp(18px, 5.4vh, 20px); --ag-sigla: 12px; --ag-pad: 6px; --ag-vao: 10px; }
+}
+.autor-gol[hidden] { display: none; }
+/* sem foto: uma barra da altura do placar, na mesma linha (os topos e os pés alinhados; revisão V4) — as letras pela altura dela */
+.autor-gol.sem-foto { height: var(--placar-h); padding-top: 0; padding-bottom: 0; }
+.ag-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* a foto (a JPG 220 × 220 do TM: busto com o fundo, o rosto em x 0,50 / y 0,44) numa moldura, um leve aproximar (esconde parte
+   da camisa de outro clube); nada recortado nem desenhado no lugar dela */
+.ag-foto { flex: none; position: relative; width: var(--ag-foto); height: var(--ag-foto); border-radius: 6px; overflow: hidden; background: #0b0f0c; }
+.ag-foto[hidden] { display: none; }
+.ag-foto::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+/* o pé da foto escurece até a cor do fundo do cartão: a camisa (muitas fotos do Commons são de jogos por OUTRO clube, às vezes com o
+   escudo legível) some quase toda sem cortar a cabeça — revisão V2; enquadrar foto a foto pela caixa do rosto fica com o dono */
+.ag-foto::before {
+  content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 42%; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(var(--ag-fundo), 0) 0%, rgba(var(--ag-fundo), 0.8) 50%, rgba(var(--ag-fundo), 0.97) 100%);
+}
+.ag-foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.12); transform-origin: 50% 40%; }
+.ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(5px, 0.9vh, 9px); min-width: 0; }
+.autor-gol.sem-foto .ag-texto { flex-direction: row; align-items: center; gap: var(--ag-vao); }
+.autor-gol.sem-foto .ag-time { padding-top: 1px; padding-bottom: 1px; }
+.autor-gol.sem-foto .ag-nome { font-size: min(var(--ag-nome), calc(var(--placar-h) * 0.6)); }
+.autor-gol.sem-foto .ag-num { font-size: min(var(--ag-num), calc(var(--placar-h) * 0.55)); }
+.ag-time {
+  flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; border-radius: 5px;
+  background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
+}
+.ag-escudo { flex: none; width: calc(var(--ag-sigla) * 1.15); height: calc(var(--ag-sigla) * 1.3); }
+.ag-sigla { font-size: var(--ag-sigla); font-weight: 900; letter-spacing: 0.08em; line-height: 1; }
+/* o número na pílula, depois da sigla e de um filete: maior que ela, menor que o nome */
+.ag-num { flex: none; position: relative; margin-left: 2px; padding-left: 7px; font-size: var(--ag-num); font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.ag-num::before { content: ""; position: absolute; left: 0; top: 10%; bottom: 10%; width: 1px; background: currentColor; opacity: 0.45; }
+.ag-num:empty { display: none; }
+.ag-nome { display: block; max-width: 100%; min-width: 0; font-size: var(--ag-nome); font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; line-height: 1.12; }
+.autor-gol.visivel { animation: autor-gol-entra 0.3s ease-out both; }
+.autor-gol.saindo { animation: autor-gol-sai 0.2s ease-in both; }
+@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(8px); } }
+@media (prefers-reduced-motion: reduce) { .autor-gol.visivel, .autor-gol.saindo { animation: none; } }
+/* a pausa aberta no meio da cena: o cartão do meu time da pausa mora no mesmo canto — o do autor espera atrás dela, escondido; e o
+   "Replay" da pausa pedido no meio da cena (a jogada com a bola rolando, a marca REPLAY no mesmo canto): escondido o replay inteiro
+   (a fase dele é do relógio da cena, parado no replay — volta onde estava se a cena continuar depois) */
+html.pausa-aberta .autor-gol, html.em-replay .autor-gol { visibility: hidden; }
+
 /* ?prints=1: cena limpa para prints (sem dicas, avisos nem menus) */
 html.modo-prints .dica, html.modo-prints .aviso, html.modo-prints .gol-tela, html.modo-prints .carregando, html.modo-prints .replay-faixa,
 html.modo-prints .nome-condutor { display: none; }
