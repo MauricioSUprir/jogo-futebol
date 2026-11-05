@@ -1705,6 +1705,32 @@ export const IA_PESSOA = {
   companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
 
+// Dificuldade (item 33; dono, 17/10: "editar ... a DIFICULDADE"; contrato "Tempo de jogo e dificuldade" no CONTRATOS.md,
+// pesquisa em PESQUISA-DIFICULDADE.md): os 4 níveis do Total Match. Fácil ≈ Amador/Semi-Pro do EA FC, Normal = o jogo de hoje
+// BIT A BIT (≈ Profissional/Classe Mundial; objeto vazio: nada é lido), Difícil ≈ Lendário, Lenda ≈ Ultimate. Vale SÓ no time
+// da IA contra a pessoa (tatica.js nivelContra — a IA × IA, o online, o Simular o resto e os companheiros da pessoa nunca o
+// leem). Cada chave de um nível cobre UMA constante de hoje com o MESMO significado (teste-dificuldade D0 confere): a VONTADE,
+// a DECISÃO e a REAÇÃO da IA — nada de atributo, física, alcance, chance de ganhar a dividida nem árbitro.
+//   boteIA {chancePorPasso, descanso}: ACOES.boteIA (a vontade de tentar o bote com a bola ao alcance e a espera depois; sim.js)
+//   engaja: m somados à linha de engajamento IA_PESSOA.engaja (teto 105; ia-tatica.js)
+//   encurta: a fração do caminho de IA_PESSOA.encurta[2] (quem guarda a zona encurta no gatilho; ia-tatica.js)
+//   utilidade {chute, passeAntecipa}: por cima do UTIL_P (IA_ATAQUE.utilidade + IA_PESSOA.utilidade; a vontade de chutar e a
+//     leitura da defesa da pessoa no passe; ia-ataque.js)
+//   avaliaTicks: IA_ATAQUE.condutor.avaliaTicks (quantas vezes por segundo o condutor da IA pensa; ia-ataque.js)
+//   le: IA_DEFESA.livre.le (o tempo para ler o passe da pessoa antes de ir cortar; só MAIS LENTO; ia-tatica.js cortaPasse)
+//   erro: multiplica o erro do passe e do chute da IA (só ≥ 1, só no Fácil; acoes.js executarAcao)
+//   reacaoGoleiro: GOLEIRO.reacao do goleiro da IA (só mais lento; goleiro.js lerChute)
+// Calibrados contra os 4 roteiros da pessoa (tools/teste-dificuldade.mjs: botes e chutes da IA pareados).
+export const DIFICULDADE = {
+  niveis: ['facil', 'normal', 'dificil', 'lenda'],
+  facil: { boteIA: { chancePorPasso: 0.045, descanso: 75 }, engaja: -6, encurta: 0.15,
+    utilidade: { chute: 2.2, passeAntecipa: 0.25 }, avaliaTicks: 9, le: 0.30, erro: 1.2, reacaoGoleiro: [0.30, 0.24] },
+  normal: {},
+  dificil: { boteIA: { chancePorPasso: 0.11, descanso: 38 }, engaja: 2, encurta: 0.35, utilidade: { chute: 3.4, passeAntecipa: 0.6 } },
+  lenda: { boteIA: { chancePorPasso: 0.15, descanso: 30 }, engaja: 4, encurta: 0.40, utilidade: { chute: 3.8, passeAntecipa: 0.7 },
+    avaliaTicks: 5 },
+};
+
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
 // Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
 // `carrinho` abaixo, carrinho.js).

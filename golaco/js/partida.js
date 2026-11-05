@@ -43,7 +43,7 @@
 // locomoção, e nunca a posição do corpo (os pés seguem pela passada). Nenhuma parada passa de
 // PARTIDA.paradaMax (8 s).
 
-import { PARTIDA, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI, DEFESA_HUMANO } from './config.js';
+import { PARTIDA, DIFICULDADE, PASSO, CAMPO, BOLA, PASSADA, JOGADOR, ACOES, BOTAO, GOLEIRO, FALTAS, LATERAL, TIRO_DE_META, ESCANTEIO, BARREIRA, DISPUTA, CORRIDA_COBRANCA, ESTILO_PENALTI, DEFESA_HUMANO } from './config.js';
 import { criarMundo, passo, jogadorPorId, misturarHash, aplicarEntrada } from './sim.js';
 import { criarBola } from './bola.js';
 import { MD } from './matdet.js';
@@ -110,8 +110,10 @@ export function vagaDoJogador(timeEstado, id) {
  * o Total Match manda o lado do usuário), humanos = [humano] (os times controlados por pessoas: [0, 1] = o online 1×1,
  * cada pessoa no seu aparelho; com 2, `humano` é só o MEU lado, m.timeHumano — o caminho de 2 humanos nunca o lê),
  * trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao Estrelato do Total Match; acoes.js
- * assumirControle; só com 1 humano), log}. O controlado de cada time humano começa no cobrador da saída dele (com a
- * trava, no travado). m.timeHumano e m.trava ficam fora do hash (o controlado entra nele, como antes).
+ * assumirControle; só com 1 humano), dificuldade = 'normal' (item 33: 'facil' | 'normal' | 'dificil' | 'lenda' — a IA contra
+ * a pessoa, config.js DIFICULDADE; só com 1 humano; o Normal não escreve nada no mundo), log}. O controlado de cada time
+ * humano começa no cobrador da saída dele (com a trava, no travado). m.timeHumano, m.trava e m.dificuldade ficam fora do
+ * hash (o controlado entra nele, como antes).
  * iaClassica: true só para os testes medirem o "antes" (a IA do treino no 11×11).
  */
 export function criarPartida(opc = {}) {
@@ -140,6 +142,8 @@ export function criarPartida(opc = {}) {
   m.modo = 'partida';
   m.timeHumano = humanos.includes(h) ? h : humanos[0];
   if (trava != null) m.trava = { [h]: trava };
+  // a dificuldade (item 33): só fora do Normal e com 1 humano (no online são duas pessoas); no Normal o campo NÃO existe
+  if (humanos.length === 1 && nivelValido(opc.dificuldade) && opc.dificuldade !== 'normal') m.dificuldade = opc.dificuldade;
   m.times = times;
   for (const j of m.jogadores) { vestirVaga(m, j, vagaDoJogador(times[j.time], j.id)); j.iaT = null; }
   const min = opc.minutosPorTempo ?? PARTIDA.minutosPorTempo;
@@ -1362,6 +1366,20 @@ export function minutoDeJogo(m) {
   if (p.estado === 'intervalo') return 45;
   const f = Math.min(1, (m.tick - p.tick0Tempo) / p.ticksPorTempo);
   return (p.tempo - 1) * 45 + Math.floor(f * 45);
+}
+
+function nivelValido(n) { return typeof n === 'string' && DIFICULDADE.niveis.includes(n); }
+
+/**
+ * Troca a dificuldade da partida (item 33; também no meio dela, pela pausa): 'normal' tira o campo (o jogo de hoje, bit a
+ * bit), os outros níveis o escrevem. Recusa (false, sem tocar em nada): treinos, Livre, Pênaltis, online/dois humanos e nível
+ * inválido. Fora do hash: a partir da chamada só o comportamento da IA contra a pessoa muda (tatica.js nivelContra).
+ */
+export function definirDificuldade(m, nivel) {
+  if (!m.partida || m.modo !== 'partida' || m.livre || m.disputa || m.online || m.humanos.length !== 1 || !nivelValido(nivel)) return false;
+  if (nivel === 'normal') delete m.dificuldade;
+  else m.dificuldade = nivel;
+  return true;
 }
 
 /** Ticks de um tempo de `min` minutos REAIS (a conta do criarPartida; 4 min = 14 400). */

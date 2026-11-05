@@ -6,7 +6,8 @@
 // Com a bola, a ação sai no próximo toque possível (toque marcado com tipo 'acao', o pé de apoio
 // no chão); com a bola chegando, sai de primeira no tick do domínio.
 
-import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA, BOLA } from './config.js';
+import { ACOES, BOTAO, CAMPO, PASSO, JOGADOR, GOLEIRO, LATERAL, AEREO, RECEPCAO, CABECEIO, MIRA, BOLA, DIFICULDADE } from './config.js';
+import { nivelContra } from './tatica.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { normal } from './rng.js';
@@ -524,14 +525,20 @@ export function executarAcao(m, j, pe, primeira = false) {
     const lado = ataca(m, j.time);
     const perto = MD.hypot(lado * CAMPO.meioX - b.p.x, b.p.z) < 12;
     // (a Panenka — cavadinha pedida no pênalti — tem o erro próprio, ACOES.cavadinha.penalti, sem a pressão do pênalti)
-    const em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
+    let em = (primeira ? ACOES.chute.primeiraErro : 1) * (1 + (perto ? ACOES.chute.pressaoErro : 0) * pressaoSobre(m, j)) * multPeFraco(j, pe)
       * (p.penalti && !p.cavadinha ? ACOES.chute.penaltiErro : 1) // a pressão da cobrança do pênalti
       * (p.erroEstilo && !p.cavadinha ? p.erroEstilo : 1) // o estilo do pênalti (item 70, P2: corrida.js estiloNoPedido, a leitura)
       * (p.barreira ? ACOES.chute.faltaErro : 1); // o tiro livre por cima da barreira: subir e descer no gol é difícil
+    // a dificuldade (item 33): o erro da IA contra a pessoa, um pouco maior (só no Fácil; config.js DIFICULDADE.erro)
+    const nv = nivelContra(m, j.time), en = nv && DIFICULDADE[nv].erro;
+    if (en) em *= en;
     if (p.mirada && !p.cavadinha && m.parada?.mira) return cobrancaMirada(m, j, pe, p, em);
     return chute(m, j, pe, p, em);
   }
-  const erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
+  let erroMult = (primeira ? ACOES.primeiraErro : 1) * (1 + 0.8 * pressaoSobre(m, j)) * multPeFraco(j, pe);
+  // a dificuldade (item 33): o erro do passe da IA contra a pessoa (o mesmo do chute; só no Fácil)
+  const nv = nivelContra(m, j.time), en = nv && DIFICULDADE[nv].erro;
+  if (en) erroMult *= en;
   if (p.mirada && m.parada?.mira) return cobrancaMirada(m, j, pe, p, erroMult);
   switch (p.tipo) {
     case 'passe': return passeRasteiro(m, j, pe, p, erroMult);

@@ -3,7 +3,8 @@
 // alcance real, encaixe ou espalmada, bola nas mãos e reposição, e saída (botão GOLEIRO
 // segurado ou 1×1). Puro: sem three.js nem DOM; sorteios pelo gerador do mundo.
 
-import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA, DISPUTA, CABECEIO, ESTILO_PENALTI } from './config.js';
+import { GOLEIRO, CAMPO, PASSO, BOLA, BOTAO, JOGADOR, G, BARREIRA, DISPUTA, CABECEIO, ESTILO_PENALTI, DIFICULDADE } from './config.js';
+import { nivelContra } from './tatica.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng, tabela } from './mat.js';
 import { uniforme } from './rng.js';
@@ -187,7 +188,10 @@ export function lerChute(m, j) {
   const atras = !plano0 && !!m.partida;
   const plano = plano0 ?? linha;
   const a = j.par.attr;
-  const reac = Math.round(lerp(GOLEIRO.reacao[0], GOLEIRO.reacao[1], a.reflexo / 100) / DT);
+  // (a dificuldade, item 33: o goleiro da IA contra a pessoa reage mais devagar no Fácil — DIFICULDADE.reacaoGoleiro —; nos
+  // níveis de cima nunca mais rápido que o de hoje)
+  const nv = m.partida ? nivelContra(m, j.time) : null, RG = (nv && DIFICULDADE[nv].reacaoGoleiro) || GOLEIRO.reacao;
+  const reac = Math.round(lerp(RG[0], RG[1], a.reflexo / 100) / DT);
   // pênalti (Regra 14): o goleiro já escolheu o lado antes do chute (j.palpite, z do mergulho; partida.js). Lado certo:
   // sai antes (GOLEIRO.penalti.antecipa s a mais); lado errado ou parado no meio com a bola no canto: não chega
   const pen = m.partida?.penaltiAberto;
