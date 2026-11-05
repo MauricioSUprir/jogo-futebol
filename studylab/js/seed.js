@@ -197,6 +197,23 @@ export function seedInicial(s) {
     nt(M.ing, 'Prova 1', 9.2, 3),
     nt(M.cie, 'Prova 1', 8.4, 3),
   ];
+  const ntAntes = (mat, titulo, valor, bim, dias) => ({ ...nt(mat, titulo, valor, bim), data: D(-dias) });
+  s.notas.push(
+    ntAntes(M.port, 'Prova 1', 7.0, 1, 200), ntAntes(M.port, 'Redação', 8.5, 1, 185), ntAntes(M.port, 'Prova 2', 7.8, 2, 110),
+    ntAntes(M.mat, 'Prova 1', 6.0, 1, 200), ntAntes(M.mat, 'Trabalho', 7.5, 1, 190), ntAntes(M.mat, 'Prova 2', 6.8, 2, 115),
+    ntAntes(M.hist, 'Prova 1', 8.5, 1, 198), ntAntes(M.hist, 'Prova 2', 9.2, 2, 112),
+    ntAntes(M.geo, 'Prova 1', 8.0, 1, 196), ntAntes(M.ing, 'Prova 1', 8.8, 2, 108), ntAntes(M.cie, 'Prova 1', 7.6, 1, 194));
+
+  // Matemática com o critério da escola ("Para passar de ano"): Teste 3 + Prova 5 + Trabalho 2, média 6
+  const it = { teste: uid('it'), prova: uid('it'), trab: uid('it') };
+  M.mat.criterio = { tipo: 'media', minimo: 6, periodos: 4, pesos: [1, 1, 1, 1],
+    itens: [{ id: it.teste, nome: 'Teste', vale: 3 }, { id: it.prova, nome: 'Prova', vale: 5 }, { id: it.trab, nome: 'Trabalho', vale: 2 }] };
+  const ntItem = (item, nome, valor, vale, bim, dias) => ({ ...nt(M.mat, nome, valor, bim), maximo: vale, itemId: item, data: D(-dias) });
+  s.notas = s.notas.filter((n) => n.materiaId !== M.mat.id);
+  s.notas.push(
+    ntItem(it.teste, 'Teste', 2.0, 3, 1, 205), ntItem(it.prova, 'Prova', 3.5, 5, 1, 195), ntItem(it.trab, 'Trabalho', 1.8, 2, 1, 188),
+    ntItem(it.teste, 'Teste', 2.4, 3, 2, 120), ntItem(it.prova, 'Prova', 3.0, 5, 2, 110), ntItem(it.trab, 'Trabalho', 1.5, 2, 2, 104),
+    ntItem(it.teste, 'Teste', 2.2, 3, 3, 25));
 
   /* ---------- metas ---------- */
   s.metas = [
