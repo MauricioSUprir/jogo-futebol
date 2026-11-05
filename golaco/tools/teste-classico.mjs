@@ -33,8 +33,10 @@
 //  C8 bola rolando: informativa; reprova só se provar alta.
 //  C9 intensidade dos guiados pela IA de linha: volume (m por minuto de bola rolando) sem alta provada além de +5%; disparada
 //     (> 7 m/s) além de +10%; presença (um adversário a ≤ 5 m do condutor) além de +8%.
-//  C10 a combinação com a dificuldade (contra os 4 roteiros): botes por minuto de posse da pessoa Fácil+C < Normal+C < Lenda+C e
-//     Fácil+C < Normal sem PROVADOS; faltas da IA Lenda+C ≤ 1,8 × Normal+C (reprova quando prova acima); vermelhos pelo C5.
+//  C10 a combinação com a dificuldade (contra os 4 roteiros): botes por minuto de posse da pessoa Fácil+C < Normal+C PROVADO;
+//     Normal+C × Lenda+C e Fácil+C × Normal sem sem o lado errado provado (no --completo, os quatro degraus PROVADOS: com 16
+//     partidas por nível os degraus de ~10–13% não se provam; o K0 confere a ordem nos parâmetros); faltas da IA Lenda+C ≤ 1,8 ×
+//     Normal+C (reprova quando prova acima); vermelhos pelo C5.
 //  C11 os companheiros da pessoa (informativo): tentativas e faltas sem × com.
 // Partidas de 2 × --min (4) min: 'demo' (IA × IA; a IA pelo controlado do time 0) e os 4 roteiros (tools/lib/humano-roteiro.mjs;
 // o time 0 é a pessoa, o time 1 a IA). Lógica INSTRUMENTADA (tools/lib/classico-medidas.mjs: ganchos que só leem).
@@ -461,13 +463,18 @@ async function principal() {
       if (FC.length && LC.length) {
         const a = razao('botesPosse', FC, NC), b = razao('botesPosse', NC, LC), c = razao('botesPosse', FC, NS), d = razao('faltasIA1', LC, NC);
         partes.push(`Fácil+C/Normal+C ${fr(a)}`, `Normal+C/Lenda+C ${fr(b)}`, `Fácil+C/Normal sem ${fr(c)}`, `faltas Lenda+C/Normal+C ${fr(d)}`);
+        // (os degraus de ~10–13% — Normal+C × Lenda+C, com o bote do Lenda no teto 0,26, e Fácil+C × Normal sem, 0,064 × 0,08 por
+        // passo — não se provam com 16 partidas por nível: no CI só o lado errado provado reprova, e o K0 confere a ordem nos
+        // parâmetros; no --completo, 32 por nível, os quatro degraus PROVADOS)
+        const viz = (x, nome) => { if (COMPLETO ? !(x.p95 < 1) : x.p5 > 1) fal.push(COMPLETO ? `${nome} não provado` : `${nome} com o lado errado PROVADO`); };
         if (!(a.p95 < 1)) fal.push('Fácil+C < Normal+C não provado');
-        if (!(b.p95 < 1)) fal.push('Normal+C < Lenda+C não provado');
-        if (!(c.p95 < 1)) fal.push('Fácil+C < Normal sem não provado');
+        viz(b, 'Normal+C < Lenda+C');
+        viz(c, 'Fácil+C < Normal sem');
         if (d.p5 > 1.8) fal.push('faltas Lenda+C > 1,8× Normal+C PROVADO');
       } else fal.push('sem as partidas da dificuldade');
       reg('C10. clássico × dificuldade (roteiros): botes da IA por minuto de posse da pessoa e faltas da IA', `${partes.join(' · ')}${fal.length ? ` — ${fal.join('; ')}` : ''}`,
-        'Fácil+C < Normal+C < Lenda+C e Fácil+C < Normal sem provados; faltas Lenda+C ≤ 1,8× (p5)', !fal.length);
+        COMPLETO ? 'Fácil+C < Normal+C < Lenda+C e Fácil+C < Normal sem provados; faltas Lenda+C ≤ 1,8× (p5)'
+          : 'Fácil+C < Normal+C provado; Normal+C × Lenda+C e Fácil+C × Normal sem sem o lado errado provado; faltas Lenda+C ≤ 1,8× (p5)', !fal.length);
     }
     // C11
     {
