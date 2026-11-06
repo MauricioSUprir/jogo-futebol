@@ -16,7 +16,13 @@
 //  O9 ausência: B some 20 s (aba escondida: nenhum quadro, nenhum pacote) — A mostra "aguardando" em ≤ 5,5 s; B volta e o
 //     jogo segue com o hash igual;
 //  O10 dessincronia: um bit do mundo de B trocado no passo 1200 — os dois acusam em ≤ 2 × 60 passos;
-//  O12 custo: a sessão sem o passo, por quadro (mediana das redes) e a banda por sentido.
+//  O12 custo: a sessão sem o passo, por quadro (mediana das redes) e a banda por sentido;
+//  O13 (item 30) a cena de substituição no online — a regra pura da escolha (online-pagina.js substOnline): a do ANFITRIÃO
+//     vale nos dois aparelhos, o convidado sem a mensagem dele fica com "só a faixa"; o bit E_CENA (este lado segura a
+//     simulação por uma cena local) não se confunde com os bits do online.js nem com as fases da tela antes do jogo;
+//  O14 (item 30) o texto da espera (online-pagina.js textoEspera, puro): com os pacotes do outro chegando nunca "A conexão
+//     parou" — a cena dele ("ainda está vendo a cena"), antes do jogo, no pré-jogo ou "ainda não voltou ao jogo"; sem
+//     pacote há 5 s, "A conexão parou".
 //   node tools/teste-online.mjs [--passos 3600]
 import { tabelaTexto } from './lib/medidas.mjs';
 import { criarRede } from './lib/rede-memoria.mjs';
@@ -283,6 +289,46 @@ for (const x of res) {
   const ms = med(res.map(x => x.msPorQuadro)), frac = med(res.map(x => x.fracPasso)), kbs = Math.max(...res.map(x => x.kbs));
   linha('O12 a sessão (sem o passo) por quadro, mediana das redes', `${(ms * 1000).toFixed(1)} µs = ${(frac * 100).toFixed(1)}% do passo`, '≤ 12% do passo', frac <= 0.12);
   linha('O12 banda por sentido (com ~90 B de cabeçalho do WebRTC por pacote)', `${kbs.toFixed(1)} KB/s`, '≤ 15 KB/s', kbs <= 15);
+}
+
+// O13 e O14 (item 30): a parte pura da página do online (online-pagina.js carrega em Node: o DOM só em criarPaginaOnline)
+{
+  const OP = await imp('online-pagina.js');
+  const f = OP.substOnline;
+  // [lado, a regra local, o `subst` da mensagem do anfitrião (undefined = ainda não chegou), o esperado]
+  const casos = [
+    [0, true, undefined, true], [0, false, true, false], [0, true, false, true],
+    [1, true, undefined, false], [1, false, true, true], [1, true, false, false], [1, false, false, false], [1, true, 'sim', false],
+  ];
+  const erradas = typeof f === 'function' ? casos.filter(([l, m, d, ok]) => f(l, m, d) !== ok).map(c => c.slice(0, 3).join('/')) : ['sem a função'];
+  const bit = OP.E_CENA;
+  const outros = O.E_30QPS | O.E_MENU | O.E_ESCONDIDA | OP.E_TELA | OP.E_PRONTO | OP.E_PREJOGO;
+  const bitLivre = Number.isInteger(bit) && bit > 0 && bit < 256 && (bit & (bit - 1)) === 0 && !(bit & outros);
+  const fase = typeof OP.faseDoEstado === 'function' && bitLivre ? OP.faseDoEstado(bit | O.E_30QPS | O.E_MENU) : null;
+  linha('O13 a cena de substituição no online: a escolha do anfitrião nos dois aparelhos (convidado sem a mensagem = só a faixa); E_CENA um bit livre, na fase do jogo',
+    `${casos.length - (typeof f === 'function' ? erradas.length : casos.length)}/${casos.length} casos certos${erradas.length ? ` (erradas: ${erradas.join(', ')})` : ''}; E_CENA ${bit ?? '—'} ${bitLivre ? 'livre' : 'NÃO livre'}, fase ${fase ?? '—'}`,
+    `${casos.length}/${casos.length}; livre; fase 3`, typeof f === 'function' && !erradas.length && bitLivre && fase === 3);
+
+  const t = OP.textoEspera;
+  const b = { nomeOutro: 'Bia', faseRemota: 3, estadoRemoto: 0, ultimoPacote: 1000, semPacoteMs: 120 };
+  const ec = Number.isInteger(bit) ? bit : 0;
+  // [o, longa (a espera já passou de AGUARDANDO_MS), o texto esperado]
+  const casosT = [
+    [{ ...b, estadoRemoto: ec | O.E_30QPS }, true, /^Bia ainda está vendo a cena\.$/],
+    [{ ...b, estadoRemoto: ec }, false, /^Bia ainda está vendo a cena\.$/],
+    [b, true, /^Bia ainda não voltou ao jogo\.$/],
+    [b, false, /^$/],
+    [{ ...b, faseRemota: 2 }, true, /^Bia ainda está no pré-jogo\.$/],
+    [{ ...b, faseRemota: 1, estadoRemoto: ec }, false, /^Bia ainda está antes do jogo\.$/],
+    [{ ...b, semPacoteMs: O.AGUARDANDO_MS, estadoRemoto: ec }, true, /^A conexão parou\. Se não voltar, vocês podem encerrar\.$/],
+    [{ ...b, ultimoPacote: null, faseRemota: -1 }, true, /^O outro aparelho ainda está abrindo a partida\.$/],
+    [{ ...b, ultimoPacote: null, faseRemota: -1 }, false, /^$/],
+  ];
+  const errT = typeof t === 'function' ? casosT.filter(([o, longa, re]) => !re.test(t(o, longa) ?? '')).map(([o, longa]) => `"${t(o, longa)}"`) : ['sem a função'];
+  const comPacote = typeof t === 'function' ? casosT.filter(([o]) => o.ultimoPacote != null && o.semPacoteMs < O.AGUARDANDO_MS).filter(([o, longa]) => /conexão parou/i.test(t(o, longa) ?? '')).length : -1;
+  linha('O14 o texto da espera: com os pacotes do outro chegando nunca "A conexão parou" (a cena dele, antes do jogo, pré-jogo, "não voltou"); sem pacote há 5 s, "A conexão parou"',
+    `${casosT.length - (typeof t === 'function' ? errT.length : casosT.length)}/${casosT.length} casos certos${errT.length ? ` (erradas: ${errT.slice(0, 3).join(', ')})` : ''}; "conexão parou" com pacotes ${comPacote < 0 ? '—' : comPacote}`,
+    `${casosT.length}/${casosT.length}; 0`, typeof t === 'function' && !errT.length && comPacote === 0);
 }
 
 console.log(tabelaTexto([['item', 'medido', 'meta', 'resultado'], ...linhas]));
