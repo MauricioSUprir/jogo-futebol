@@ -20,8 +20,8 @@ import { atualizarBotoesAcao, processarPedido, executarAcao, bolaAltaPassando, e
 import { iniciarReposicao, reposicaoAtiva, bolaReposicao, chutaDaMao } from './reposicao.js';
 import { lerChute, aplicarDefesa, movimentoGoleiro, bolaNaMao, soltarDaMao, linhaDoGol, mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho, maoNaBola, abafar, goleiroSaiNoAlto, atualizarBaseGoleiro } from './goleiro.js';
 import { entradaIA } from './ia.js';
-import { ACOES, DIFICULDADE } from './config.js';
-import { nivelContra } from './tatica.js';
+import { ACOES, DIFICULDADE, CLASSICO } from './config.js';
+import { nivelContra, timeDaPessoa } from './tatica.js';
 // Etapa 3 (partida 11×11): tudo isto só liga com m.times — o treino continua bit a bit igual
 // (tools/hash-igual.mjs). Exceção: os botões de defesa do humano (defesa.js), que só agem com
 // CONTER/DIVIDIDA/PRESSÃO apertados (nenhum roteiro do treino aperta).
@@ -457,6 +457,43 @@ function roubarComMarcador(m, j) {
 // (o Normal não está aqui: usa o ACOES.boteIA de sempre, o mesmo objeto)
 const BOTE_D = {};
 for (const n of DIFICULDADE.niveis) if (DIFICULDADE[n].boteIA) BOTE_D[n] = { ...ACOES.boteIA, ...DIFICULDADE[n].boteIA };
+// o clássico (item 35; config.js CLASSICO): a vontade do bote dos DOIS times com m.classico, por cima do nível — juntada uma vez
+// na carga em objetos NOVOS (MD.pow: determinístico); o resto (alcance, colada, vParado: o árbitro lê o ACOES.boteIA) copiado do
+// de origem. Duas vontades (revisão do item 35): a da IA × IA (a demo, o Simular o resto) e a do jogo COM uma pessoa (os dois
+// times dela: a IA contra ela, com o nível por cima, e os companheiros) — contra a pessoa a vontade alta virava a dificuldade de
+// cima (a pessoa perdia a bola e chutava um terço menos) e saturava o Difícil e o Lenda no mesmo teto
+function boteClassico(b, vontade) {
+  const C = CLASSICO;
+  return { ...b,
+    chancePorPasso: Math.max(b.chancePorPasso, Math.min(C.boteTeto, 1 - MD.pow(1 - b.chancePorPasso, vontade))),
+    descanso: Math.min(b.descanso, Math.max(C.descansoMin, Math.round(b.descanso / vontade))) };
+}
+const BOTE_C = boteClassico(ACOES.boteIA, CLASSICO.vontade), BOTE_CP = boteClassico(ACOES.boteIA, CLASSICO.vontadePessoa), BOTE_DC = {};
+for (const n of DIFICULDADE.niveis) BOTE_DC[n] = BOTE_D[n] ? boteClassico(BOTE_D[n], CLASSICO.vontadePessoa) : BOTE_CP;
+/** O clássico com uma pessoa jogando de verdade num dos times (tatica.js timeDaPessoa: também o online, as duas)? Senão, IA × IA. */
+function classicoComPessoa(m) {
+  return timeDaPessoa(m, 0) || timeDaPessoa(m, 1);
+}
+/**
+ * A tabela do bote da IA do time t: a dificuldade contra a pessoa (tatica.js nivelContra) e o clássico (m.classico, os DOIS
+ * times: a vontade da IA × IA ou a do jogo com a pessoa); sem nada, o ACOES.boteIA de sempre (o mesmo objeto). Exportada para
+ * o teste-classico (K0/K3).
+ */
+export function cfgBote(m, t) {
+  const nv = nivelContra(m, t);
+  if (m.classico) return nv ? BOTE_DC[nv] : classicoComPessoa(m) ? BOTE_CP : BOTE_C;
+  return nv ? BOTE_D[nv] ?? ACOES.boteIA : ACOES.boteIA;
+}
+/**
+ * O `segura` do clássico (faltas.js faltaTatica) do time t: o da IA × IA nos dois times; no jogo com a pessoa, o da IA contra
+ * ela — os companheiros dela NÃO (1): a falta tática deles é amarelo e suspensão no TM que a pessoa não escolheu (revisão do item
+ * 35: com o segura neles os cartões do time da pessoa iam de 6 a 18 em 128 partidas e os da IA de 68 a 81). Sem o clássico, 1.
+ */
+export function seguraClassico(m, t) {
+  if (!m.classico) return 1;
+  if (!classicoComPessoa(m)) return CLASSICO.segura;
+  return timeDaPessoa(m, t) ? 1 : CLASSICO.seguraPessoa;
+}
 
 /**
  * Bote da IA defensora: com a bola do adversário ao alcance do pé e solta do pé dele, tenta tirar
@@ -470,14 +507,15 @@ function boteIA(m, j) {
   if (naParada(m)) return; // partida: ninguém dá bote na cobrança
   const dono = jogadorPorId(m, m.posse);
   if (!dono || dono.time === j.time) return;
-  // (a dificuldade, item 33: só no time da IA contra a pessoa — nivelContra; o Normal é o ACOES.boteIA de sempre)
-  const nv = nivelContra(m, j.time);
-  const b = m.bola, cfg = nv ? BOTE_D[nv] ?? ACOES.boteIA : ACOES.boteIA;
+  // (a dificuldade, item 33: só no time da IA contra a pessoa — nivelContra; o Normal é o ACOES.boteIA de sempre; e o clássico,
+  // item 35: os dois times com m.classico — cfgBote)
+  const b = m.bola, cfg = cfgBote(m, j.time);
   // Etapa 4 (só na partida): o marcador batido, colado atrás do condutor, segura — o chamado da PRESSÃO não (parar o
   // contra-ataque com falta é decisão da pessoa, pela DIVIDIDA)
   const chamado = m.partida && chamadoRecente(m, j);
   if (m.partida && !m.faltaPendente && !chamado) {
-    const ft = faltaTatica(m, j, dono);
+    // (o clássico, item 35: o batido segura mais — a decisão dele; o apito e o cartão iguais)
+    const ft = faltaTatica(m, j, dono, seguraClassico(m, j.time));
     if (ft) { registrarFalta(m, ft); dono.vx *= 0.3; dono.vz *= 0.3; j.descansoBote = cfg.descanso; return; }
   }
   if (b.p.y > 0.5) return;

@@ -163,7 +163,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, classicoDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -308,6 +308,11 @@ const prefs = lerPrefs();
 // Ultimate: a linha fica travada na pausa, com o cadeado).
 const AJ_PEDIDO = TM ? ajustesDoPedido(PEDIDO_TM) : { minutosPorTempo: null, dificuldade: null, fixos: false };
 const DIF_PARAM = nivelValido(params.get('dif'));
+// O clássico (item 35; config.js CLASSICO): a partida pegada — não é escolha da pessoa (sem prefs, sem botão na pausa), é quem joga
+// contra quem. De onde vem: ?classico=1|0 (testes, demo, prints; por cima do pedido) > o pedido do TM (partida.classico; no online, o
+// do anfitrião, o mesmo nos dois aparelhos) > desligado. Só no modo 'partida' (o Livre e os Pênaltis nunca: criarMundoTreino).
+const CLASSICO_PARAM = params.get('classico') === '1' ? true : params.get('classico') === '0' ? false : null;
+const CLASSICO_PAG = CLASSICO_PARAM ?? (TM ? classicoDoPedido(PEDIDO_TM) : false);
 const ajustes = {
   minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
     : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
@@ -393,6 +398,8 @@ function criarMundoTreino(opc = {}) {
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? ajustes.minutosPorTempo, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
       humanos: ONLINE ? [0, 1] : undefined, ...(dif && dif !== 'normal' ? { dificuldade: dif } : {}),
+      // (o clássico, item 35: só ligado — sem a opção o campo nem existe)
+      ...(CLASSICO_PAG ? { classico: true } : {}),
     });
     ajustes.maisFacil = null;
     if (ONLINE) m.online = true; // (fora do hash: o passo é o passoOnline com as duas entradas)
@@ -3441,8 +3448,8 @@ function dadosPrepartida() {
   const pt = PEDIDO_TM?.partida ?? null;
   return PP_PURO.dadosDaPartida(m, {
     humano: TIME_HUMANO, humanos: m.online ? [0, 1] : [TIME_HUMANO], modo: modoTela(), competicao: textoCompeticao(),
-    // (o clássico do TM: partida.classico + o nome dele, se vier)
-    classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : null,
+    // (o clássico do TM: partida.classico + o nome dele, se vier; fora do TM, o da partida pegada pelo ?classico=1 — item 35)
+    classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : mundo?.modo === 'partida' && mundo.classico ? 'Clássico' : null,
     hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
     // (a dificuldade da IA contra a pessoa, item 33: o "Beginner, 6 minutes" do FC; sem ela no online, no Livre e nos Pênaltis)
     dificuldade: dificuldadeNaTela(),

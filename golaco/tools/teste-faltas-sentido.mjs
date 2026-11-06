@@ -46,6 +46,8 @@
 //   node tools/teste-faltas-sentido.mjs              (lógica do repositório)
 //   node tools/teste-faltas-sentido.mjs --js <pasta> (outra cópia da lógica; a main de 15/10 → REPROVA)
 //   node tools/teste-faltas-sentido.mjs --partidas 4 (partidas por modelo; padrão 4; o 'dribla' com o dobro)
+//   node tools/teste-faltas-sentido.mjs --classico   (item 35: as partidas B jogam o CLÁSSICO — {classico: true}; mais contato
+//                                                    não pode virar falta forçada nem estourar pênalti/vermelho no 'dribla')
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -54,6 +56,7 @@ const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const JS = path.resolve(arg('--js', path.join(AQUI, '../js')));
 const NP = +arg('--partidas', 4);
+const CLASSICO = args.includes('--classico');
 const imp = f => import(pathToFileURL(path.join(JS, f)).href);
 const linhas = [['teste', 'medido', 'meta', 'resultado']];
 let falhas = 0;
@@ -185,7 +188,7 @@ const MOD = ['persegue', 'pressao', 'dribla'];
 const res = {};
 // (o 'dribla' com o dobro das partidas: os vermelhos e pênaltis do B3 são raros)
 const nDe = mod => (mod === 'dribla' ? 2 * NP : NP);
-for (const [k, mod] of MOD.entries()) res[mod] = await registrarFaltas(JS, { sementes: Array.from({ length: nDe(mod) }, (_, i) => 8101 + 100 * k + i), modelos: [mod] });
+for (const [k, mod] of MOD.entries()) res[mod] = await registrarFaltas(JS, { sementes: Array.from({ length: nDe(mod) }, (_, i) => 8101 + 100 * k + i), modelos: [mod], classico: CLASSICO });
 const todas = MOD.flatMap(md => res[md].faltas), NT = MOD.reduce((s, md) => s + nDe(md), 0);
 const semForca = todas.filter(f => f.origem === 'bote' && f.timeDef === 1 && f.forcaContato < 1);
 reg('B1 falta de bote da IA com o contato a < 1 m/s (por partida)', `${f2(semForca.length / NT)} (${semForca.length} em ${NT} partidas)`, '≤ 0,1', semForca.length / NT <= 0.1);
@@ -208,7 +211,7 @@ reg('B2 carga por trás de quem só corria atrás (controlado da pessoa ou chama
 {
   // B4: a pessoa que aperta DIVIDIDA (faltas-registro 'dividida': com a bola a ≤ 1,5 m, no máximo a cada 0,4 s) não leva
   // falta com o corpo entrando a < 1 m/s no condutor (main: ~1,9 por partida, 60% das faltas da DIVIDIDA)
-  res.dividida = await registrarFaltas(JS, { sementes: Array.from({ length: NP }, (_, i) => 8401 + i), modelos: ['dividida'] });
+  res.dividida = await registrarFaltas(JS, { sementes: Array.from({ length: NP }, (_, i) => 8401 + i), modelos: ['dividida'], classico: CLASSICO });
   const dv = res.dividida.faltas.filter(f => f.origem === 'dividida' && f.timeDef === 0);
   const fracas = dv.filter(f => f.forcaContato < 1).length, nd = res.dividida.partidas.length;
   reg("B4 'dividida': falta da DIVIDIDA da pessoa com o contato a < 1 m/s (por partida)", `${f2(fracas / nd)} (${fracas} de ${dv.length} faltas da DIVIDIDA em ${nd} partidas; ${res.dividida.partidas.reduce((s, p) => s + p.divididas, 0)} divididas)`, '≤ 0,1', fracas / nd <= 0.1);
