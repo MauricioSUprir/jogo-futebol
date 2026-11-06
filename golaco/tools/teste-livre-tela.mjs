@@ -678,7 +678,8 @@ document.body.appendChild(f);
   let fr = null;
   for (let i = 0; i < 200 && !fr; i++) { fr = pg.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await pg.waitForTimeout(50); }
   await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 180000 });
-  // a fonte do TM (Inter) chega depois do 1º layout: espera ela antes de medir a pausa
+  // as fontes do TM chegam depois do 1º layout: espera elas antes de medir a pausa. As pílulas de câmera são itens de menu: desde
+  // o item 125 na letra esportiva (a TM Cond, o --f-disp; antes a Inter TM) — vale uma das duas do TM, nunca a do sistema
   await fr.evaluate(() => document.fonts?.ready);
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:pronto'), null, { timeout: 10000 }).catch(() => {});
   const jog = await fr.evaluate(P => {
@@ -708,10 +709,10 @@ document.body.appendChild(f);
   meta('F1 ?tm: a cara do TM e o pedido livre {linha [3, 2], goleiro [sim, não]}: a pausa abre no Jogadores com 4 e 2, e o "Jogar" põe 4 contra 2',
     `html.tm ${jog.tm ? 'sim' : 'NÃO'}; Jogadores ${jog.n.join(' e ')}; em campo ${tmp.conta.join(' × ')}; Jogadores: ${txtPausa(jog)}`,
     jog.tm && jog.n.join() === '4,2' && tmp.conta.join() === '4,2' && okPausa(jog));
-  meta('F2 ?tm 844×390: a pausa do Livre com "Voltar ao Total Match" (sem Modo de jogo, Simular o resto, Reiniciar e Editar time) e o submenu Câmera sem rolar; as câmeras em pílula do TM (a escolhida no degradê)',
+  meta('F2 ?tm 844×390: a pausa do Livre com "Voltar ao Total Match" (sem Modo de jogo, Simular o resto, Reiniciar e Editar time) e o submenu Câmera sem rolar; as câmeras em pílula do TM (a escolhida no degradê, na letra do TM)',
     `${txtPausa(tmp)} · Câmera: ${txtPausa(tmp.camera.sub)}; raio ${tmp.camera.raio} px, escolhida ${/gradient/.test(tmp.camera.fundo) ? 'no degradê' : 'SEM o degradê'}, fonte ${tmp.camera.fonte.split(',')[0]}`,
     okPausa(tmp) && /Voltar ao Total Match/.test(t) && !/Modo de jogo|Simular o resto|Reiniciar|Editar time/.test(t) && /Jogadores.*Câmera/.test(t)
-      && okPausa(tmp.camera.sub) && tmp.camera.raio >= 16 && /gradient/.test(tmp.camera.fundo) && /Inter/.test(tmp.camera.fonte));
+      && okPausa(tmp.camera.sub) && tmp.camera.raio >= 16 && /gradient/.test(tmp.camera.fundo) && /TM Cond|Inter TM/.test(tmp.camera.fonte));
   await fr.evaluate(() => document.getElementById('btn-voltar-tm').click());
   await pg.waitForFunction(() => window.__msgs.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 10000 }).catch(() => {});
   const msgs = await pg.evaluate(() => window.__msgs.map(m => ({ ...m })));
