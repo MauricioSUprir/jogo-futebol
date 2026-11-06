@@ -314,9 +314,10 @@ export function abrirEntrada(aoConcluir) {
       caixa(abas, h('div', { class: 'mt' }, formulario), erro, caixaGoogle),
       h('div', { class: 'center mt2' },
         h('button', {
-          class: 'btn btn--sm', style: { background: 'none', border: 0, color: 'var(--dim2)' },
-          onclick: () => { carregarExemplo(); toast('App aberto com dados de exemplo', 'good'); fechar(); },
-        }, 'ver o app com dados de exemplo')));
+          class: 'btn btn--blk conta-demo', type: 'button',
+          onclick: () => { carregarExemplo(); toast('Demonstração aberta com dados de exemplo', 'good'); fechar(); },
+        }, 'Ver demonstração (sem conta)'),
+        h('p', { class: 'muted small', style: { margin: '6px 0 0' } }, 'Abre o app com dados de exemplo. Dá para criar a conta depois.')));
     pintarForm();
     tela.replaceChildren(conteudo);
 

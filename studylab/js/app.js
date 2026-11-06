@@ -1,6 +1,6 @@
 /* ===== app.js — casca do aplicativo: menu, barra superior, rotas ===== */
 import { $, $$, h, iso, inicial, saudacao } from './util.js';
-import { carregar, st, onChange, salvar, set } from './store.js';
+import { carregar, st, onChange, salvar, set, carregarExemplo } from './store.js';
 import { recalcularDominios, verificarConquistas, notificacoes, nivelDe, tocarStreak } from './engine.js';
 import { toast, modal, fecharModal, gAnel } from './ui.js';
 import { abrirQuickAdd } from './views/quickadd.js';
@@ -232,6 +232,13 @@ function iniciar() {
   carregar();
   montarMenu();
   rotinaDiaria();
+  // link de demonstração (?demo=1 ou #demo): abre direto com os dados de exemplo, sem a tela de conta —
+  // é o link do QR code dos slides, para ninguém ficar travado no login na hora de apresentar
+  const pedeDemo = /[?&]demo\b/.test(location.search) || /^#\/?demo\b/.test(location.hash);
+  if (pedeDemo) {
+    if (precisaEntrar()) carregarExemplo();
+    history.replaceState(null, '', location.pathname + (/^#\/?demo/.test(location.hash) ? '#/inicio' : location.hash));
+  }
   if (precisaEntrar()) abrirEntrada(() => { montarMenu(); rotinaDiaria(); render(); });
   // com servidor, quem manda no plano é ele — o app só espelha
   if (temServidor()) {
