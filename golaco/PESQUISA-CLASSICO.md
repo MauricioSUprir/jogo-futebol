@@ -543,7 +543,8 @@ Leituras:
 
 ### 6.2 O que entrou
 
-`config.js CLASSICO = { vontade: 2,6, descansoMin: 16, boteTeto: 0,26, segura: 2 }` (as chaves da especificação
+**(Substituído pela revisão, §7: a vontade e o segura por contexto — `{ vontade: 2,2, vontadePessoa: 1,6, descansoMin: 16, boteTeto:
+0,26, segura: 1,5, seguraPessoa: 2 }`.)** A primeira versão: `config.js CLASSICO = { vontade: 2,6, descansoMin: 16, boteTeto: 0,26, segura: 2 }` (as chaves da especificação
 `contencaoMenos`, `apertoMenos` e `encostadaVrelMais` saíram com o código delas). Por nível (chance por passo / descanso):
 Fácil 0,025/110 → 0,064/42; Normal 0,080/45 → 0,195/17; Difícil 0,120/34 → 0,26/16 (teto/piso); Lenda 0,22/20 → 0,26/16. O
 Fácil+C continua abaixo do Normal sem clássico (0,064 < 0,08); Difícil+C e Lenda+C ficam iguais no bote (o teto do envelope
@@ -573,3 +574,83 @@ do item 33) — o Lenda continua acima pelo resto da dificuldade (engaja, encurt
   C10 com os 4 degraus provados (Fácil+C/Normal+C 0,58, Normal+C/Lenda+C 0,88 [0,81–0,95], Fácil+C/Normal sem 0,89 [0,81–0,98]).
   Os amarelos variam muito entre amostras (+15% a +59% antes, −2% aqui): com ~0,5 por partida, 96 partidas não separam.
 - **Não rodou:** o celular de verdade.
+
+## 7. A revisão (06/11): a vontade por contexto, o teto por nível e o lado da pessoa
+
+A revisão do item 35 achou, com amostras próprias (outras sementes), cinco defeitos na calibração do §6 — todos de COMBINAÇÃO,
+que o C1/C2 juntos (demo + roteiros) escondiam:
+
+1. **Contra a pessoa o clássico virava a dificuldade de cima** (128 pares contra os 4 roteiros, vontade 2,6 e segura 2 nos dois
+   times): a pessoa chutava 0,66× [0,58–0,75] e fazia 0,60× [0,41–0,86] dos gols (no 'conduz', 0,50×), perdia +28% no bote da
+   IA; os números da IA não mudavam (chutes 1,01, gols 1,00). No real, chutes −4,6% e gols −7% nos DOIS times.
+2. **A IA × IA passava da faixa** (76 pares próprios + a ferramenta do teste em 7001 e 9001): botes 1,62 [1,48–1,77], faltas
+   1,74 [1,48–2,06] — +43%/+47% só nas sementes da calibração.
+3. **O Difícil+C e o Lenda+C saturavam no mesmo teto** (0,26/16): o Lenda deixava de apertar mais que o Difícil no clássico
+   (Lenda+C/Difícil+C nas tentativas 0,79–1,14 conforme a amostra) e o clássico chegava a TIRAR botes do Lenda (26,2 → 24,1);
+   os companheiros da pessoa iam de 1,25 a 2,17 tentativas por partida.
+4. **Os cartões a mais iam para o lado da pessoa:** 10 → 23 do time dela com os da IA iguais (59 → 58) — o `segura` nos
+   companheiros (SPA = amarelo) e o bote deles.
+5. **O `segura` dobrava também a falta tática DENTRO da própria área** (SPA na área = pênalti com amarelo).
+
+### 7.1 O que mudou
+
+- **Duas vontades** (`config.js CLASSICO`; `sim.js cfgBote`, `classicoComPessoa` = `timeDaPessoa` de algum dos dois times):
+  `vontade` 2,2 na IA × IA (a demo, o Simular o resto) e `vontadePessoa` 1,6 no jogo COM uma pessoa (a IA contra ela, com o
+  nível por baixo, e os companheiros; também o online, com as duas pessoas). Por nível no jogo com a pessoa (chance / descanso):
+  Fácil 0,025/110 → 0,040/69; Normal 0,08/45 → 0,125/28; Difícil 0,12/34 → 0,185/21; Lenda 0,22/20 → 0,26/16 — a ordem ESTRITA
+  (o K0 confere) e cada nível+C acima do nível sem. IA × IA: 0,08/45 → 0,168/20.
+- **Dois `segura`** (`sim.js seguraClassico(m, t)`): `segura` 1,5 nos dois times da IA × IA; `seguraPessoa` 2 só na IA contra a
+  pessoa — os companheiros dela ficam com 1 (a falta tática deles é amarelo e suspensão no TM que ela não escolheu). Contra a
+  pessoa as faltas vêm mais do segurar (a vontade alta tiraria a bola dela); na IA × IA, mais do bote.
+- **O `segura` só fora da própria área** (`faltas.js faltaTatica`: `× (naArea ? 1 : segura)`; K5). A falta tática com SPA dentro
+  da área, que já existe na base, é o item 127 da FILA (124–126 já são de outras frentes).
+
+### 7.2 A triagem da revisão (pareada; razão com ÷ sem [p5–p95])
+
+Contra a pessoa, 128 pares (4 roteiros × 2001–2032), o braço sem jogado uma vez (`--sem-de`):
+
+| variação (contra a pessoa) | botes da IA | faltas esperadas | faltas marcadas | só o bote (chance por contato) | chutes da pessoa | gols da pessoa | cartões pessoa × IA |
+|---|---|---|---|---|---|---|---|
+| vontadePessoa 1,7 + segura 2 nos dois times | 1,14 [1,08–1,20] | 1,29 [1,19–1,41] | 1,34 [1,21–1,51] | 1,16 [1,03–1,30] | 0,85 [0,74–0,98] | 1,18 | 6 → 18 × 68 → 81 (P = 0,032: reprova o C12) |
+| 1,7, os companheiros sem o segura | 1,14 [1,08–1,20] | 1,29 [1,19–1,41] | 1,35 [1,21–1,51] | 1,16 [1,03–1,30] | 0,87 [0,76–1,00] | 1,16 | 6 → 14 × 68 → 84 (P = 0,14) |
+| 1,5, idem | 1,09 [1,04–1,14] | 1,25 [1,15–1,35] | 1,26 [1,14–1,41] | 1,10 [0,99–1,23] | 0,93 [0,83–1,05] | 0,89 | 6 → 7 × 68 → 85 |
+| **1,6, idem (a escolhida)** | 1,10 [1,05–1,16] | 1,23 [1,13–1,33] | 1,35 [1,22–1,50] | 1,11 [1,00–1,22] | 0,87 [0,77–0,98] | 1,13 | 6 → 12 × 68 → 96 (P = 0,33) |
+
+O que tira chutes da pessoa é a vontade (a IA rouba mais: roubadas +11–14%, a posse dela −4%), não o segurar com SPA (no 'conduz'
+as faltas táticas da IA foram de 3 para 10 em 8 partidas, ~0,05 chute a menos por partida). O 1,6 fica no meio do que a revisão
+pediu (1,6–1,8) com a chance por contato no bote mais perto do real.
+
+IA × IA, 32 partidas por amostra (a demo; o braço sem reaproveitado):
+
+| variação (IA × IA) | sementes | botes | faltas esperadas | faltas marcadas |
+|---|---|---|---|---|
+| vontade 2,2 + segura 2 | 1001 / 7001 / 9001 | 1,32 / 1,48 / 1,45 | 1,25 / 1,46 / 1,76 | 1,39 / 1,57 / 1,86 |
+| **2,2 + segura 1,5 (a escolhida)** | 1001 / 7001 / 9001 / 1–32 | 1,37 / 1,51 / 1,45 / 1,58 | 1,20 / 1,33 / 1,59 / 1,30 | 1,30 / 1,43 / 1,73 / 1,13 |
+| 2,0 + segura 1,5 | 1 / 1001 / 7001 / 9001 | 1,41 / 1,24 / 1,50 / 1,44 | 1,23 / 1,06 / 1,38 / 1,54 | 1,23 / 0,97 / 1,49 / 1,65 |
+
+As amostras da demo de 32 partidas variam ±0,2 entre conjuntos de sementes (a base das faltas vai de 1,5 a 2,0 por partida): o
+2,0 deixava as faltas no pé da faixa (+28–30% juntas) e o 2,2 com o segura 1,5 centra as faltas (+34–38%) com os botes em +47%.
+
+### 7.3 A conferência (as amostras com a configuração final juntas)
+
+| | IA × IA (128 pares: 1–32, 1001, 7001, 9001) | contra a pessoa (192 pares: 4 roteiros × 1–16 e 2001–2032) |
+|---|---|---|
+| botes (tentativas da IA) | 5,50 → 8,11: 1,47 [1,37–1,59] | 18,20 → 20,34: 1,12 [1,07–1,17] |
+| faltas esperadas da IA | 1,72 → 2,31: 1,34 [1,22–1,49] | 2,43 → 2,99: 1,23 [1,14–1,33] |
+| faltas marcadas da IA | 1,73 → 2,38: 1,38 [1,20–1,59] | 2,39 → 3,14: 1,31 [1,20–1,44] |
+| chance por contato (bote + carga) | 1,00 [0,90–1,12] | 1,01 [0,93–1,10] |
+| só o bote | 1,08 [0,95–1,23] | 1,07 [0,98–1,17] |
+| amarelos da IA | 0,48 → 0,55: 1,15 [0,89–1,49] | 0,49 → 0,65: 1,32 [1,06–1,67] |
+| gols / chutes (os dois times) | 1,03 / 0,97 | 1,14 [1,01–1,30] / 0,97 |
+| chutes / gols da pessoa | — | 0,88 [0,80–0,97] / 1,19 [0,92–1,59] |
+| cartões: time da pessoa × IA | — | 10 → 16 × 108 → 141 (a razão 1,23, sem subida provada) |
+| companheiros: tentativas / faltas | — | 0,96 → 1,29 / 0,18 → 0,22 |
+
+- `teste-classico` (CI, 160 partidas: demo 16 + 4 roteiros × 8 por braço + Fácil+C, Difícil+C, Lenda+C e Lenda sem × 4 × 4):
+  PASSOU. O `--completo` (96 por braço + 32 por braço da dificuldade): PASSOU — o C10 com Fácil+C/Normal+C 0,47, Difícil+C/
+  Lenda+C 0,81 [0,73–0,89], Lenda sem/Lenda+C 0,87 [0,78–0,97] (o Lenda+C aperta MAIS que o Lenda), Fácil+C/Normal sem 0,60;
+  **o Normal+C × Difícil+C ficou em 0,93 [0,85–1,02]**: os parâmetros guardam a razão de sem o clássico (chance × 1,48, descanso
+  ÷ 1,33), mas o bote SATURA no jogo e o degrau de 1,25× sem o clássico vira ~1,07× — o teste reprova só com o lado errado
+  provado nesse degrau ("Depende do dono" 23).
+- Lição: a demo e os roteiros respondem diferente à mesma alavanca (a IA × IA tem ~5 botes por partida, os roteiros ~18) — medir
+  POR MODO; e no jogo com a pessoa olhar o lado DELA (chutes, gols, cartões), não só o total dos dois times.
