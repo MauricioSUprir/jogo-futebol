@@ -487,7 +487,9 @@ IGUAIS; `teste-replay` B1/B2). Constantes em `config.js REPLAY`.
   passo que abriu o replay interrompe os que sobravam no quadro, `desenharReplay` desenha do anel (rede re-balança com o
   relógio gravado; sem marcas de queda nem do lateral; a linha pelo `linhaImped.mostrar(diretor.linha(dt))`). Pula:
   qualquer ação (Esc/Start não abre a pausa), um botão APERTADO durante o replay (o já segurado não conta), clique ou
-  toque (camada `#replay`); no pulo, a entrada é solta e o botão do controle segurado só vale de novo depois de solto.
+  toque (camada `#replay`); no pulo, a entrada é solta e o botão do controle segurado só vale de novo depois de solto. No
+  online, com o menu, a Ajuda ou o editor abertos (lá eles não congelam o replay), nada apertado neles pula (item 129;
+  contrato "Online 1×1", etapa 3: "O menu nas cenas").
   Sons do passo que abriu o replay do gol (o apito da saída) tocam no fim dele. Um passo rodado com o replay ativo (só pela
   API `rodarPassos`) encerra o replay. Mundo novo: anel e diretor limpos. Depois do replay do impedimento, a linha parada
   do apito não se repete ao vivo enquanto a bola não rola (`linhaNoReplay`).
@@ -789,7 +791,9 @@ Constantes em `config.js COMEMORACAO`.
   gramado, barra de força nem cartão. Câmera: até o 1º corte (`rede`, 1,2 s) a câmera do gol do jogo; no 1º corte sai o
   "GOL!" e `cam.encerrarGol()`; depois `cam.definirCinema(planoCam)`. Pular: um botão APERTADO depois de 0,5 s (o que
   estava segurado ou foi apertado antes não conta), qualquer ação de tecla (Esc, Enter → ação `pular`, R, C, H...), clique
-  ou toque na camada `#comemoracao` (o "Pular" do toque é o alvo visível). `fimComemoracao(pulou)`: estado 'solta' (a
+  ou toque na camada `#comemoracao` (o "Pular" do toque é o alvo visível); no online, com o menu, a Ajuda ou o editor abertos
+  (lá eles não congelam a cena), nada apertado neles pula (item 129; contrato "Online 1×1", etapa 3: "O menu nas cenas").
+  `fimComemoracao(pulou)`: estado 'solta' (a
   cena fica parada no último quadro até a saída); pulada antes da hora, os passos que faltam até a saída rodam a
   `passosCortina` (40) por quadro com a faixa verde cruzando a tela (`hud.cortina()`); o aperto que pulou não vira jogada
   (entrada solta e bloqueada/desbloqueada, como no replay) e NÃO pula o replay (outro aperto pula). Quando a camada sai
@@ -4728,7 +4732,8 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   mudou), {t:'estado'} da ligação; {t:'religar'} depois de 5 s sem nada.
 - `quadroOnline`: só roda o passo com as duas entradas; o MEU replay, a comemoração, a cena de substituição (item 30), a
   minha pausa e o celular em pé seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o
-  editor abertos NÃO param (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal
+  editor abertos NÃO param (`pausado()` do online) — a minha entrada vai com o bit IA — nem congelam as cenas, mas nada
+  apertado neles as pula ("O menu nas cenas", abaixo). A edição do MEU time vira AÇÃO (canal
   confiável). O hash a cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
 - **A cena de substituição no online (item 30, 06/11)**: liga com a opção do ANFITRIÃO ("Cena de substituição" do Modo de
   jogo, a regra local dele: `?substituicao`, a preferência salva, desligada com webdriver/prints/demo, o padrão), mandada pelo
@@ -4740,13 +4745,25 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   fora do online): o lockstep faz quem acabou antes esperar o outro; o "Pular" pula só a minha; a troca pelo editor do outro
   jogador chega como ação e abre a cena no mesmo tick nos dois. A minha pausa combinada, o celular em pé e a aba escondida
   congelam a cena; o menu, a Ajuda e o editor NÃO (como na comemoração), mas com eles abertos nenhum aperto pula a cena (a
-  ação é do menu: H abre a Ajuda, Enter aperta o botão em foco; os botões do jogo apertados ali só pulam depois de soltos e
-  apertados de novo, com o menu fechado: `quadroSubst(dt, ent, semPulo)`). Com a cena, o selo "Conexão instável" fica
+  regra "O menu nas cenas", abaixo — desde o item 129 vale também para o replay e a comemoração). Com a cena, o selo "Conexão instável" fica
   escondido (`html.em-substituicao`, como na comemoração). A espera pela cena do outro não é conexão ruim: o W.O. e o selo
   continuam só pela falta de pacote (na espera os pacotes chegam a cada quadro) e, com a cena, o `quadroOnline` não marca
   "parado" (`quer` 0); o D não sobe por ela (o freio e o D que só sobe agem como na espera pelo replay e pela comemoração).
   As escolhas (S1 a do anfitrião, S2 cada um pula a sua, S3 a troca do outro abre a cena nos dois) e as alternativas estão no
   "Depende do dono" 26 da `FILA.md`.
+- **O menu nas cenas (item 30 na substituição; item 129, 06/11, no replay e na comemoração — dono: "corrige")**: no online o
+  menu, a Ajuda e o editor abertos não congelam o replay, a comemoração nem a cena de substituição (lá eles não param o jogo),
+  mas nada apertado neles as pula: a cena segue andando e só um aperto NOVO, com o menu fechado, pula — como fora do online.
+  As ações (`tratarAcao`, `menuDoOnline`) são do menu: P/Start e o Esc fecham (a Ajuda volta ao menu; o Esc chega como
+  `menu-voltar`), H abre a Ajuda, Enter aperta o botão em foco (a ação `pular` não faz nada) — antes o P, o H e o Enter pulavam
+  o replay e a comemoração e deixavam o menu aberto (ou a Ajuda sem abrir). Os botões do jogo (`quadroSubst`/
+  `quadroComemoracao(dt, ent, semPulo)`, `botaoPula(botoes, semPulo)`) contam como segurados enquanto `semPulo` = o menu, a
+  Ajuda ou o editor abertos AGORA ou no fim do quadro anterior (`menuAntOn`: o A do controle que aperta "Voltar ao jogo" fecha
+  o menu DENTRO do `entrada.ler`, antes do `quadroOnline` — sem o quadro anterior, o mesmo aperto pulava a cena); só pulam
+  depois de soltos e apertados de novo. Num quadro sem passo (a cena segura a minha simulação) os pulsos que o menu segurou
+  saem (`entrada.limparPulsos()`, como na cena do cartão): preso, o pulso de um toque deixava o bit sempre "segurado" e o
+  aperto novo do mesmo botão não pulava a cena. Fora do online nada muda (lá o menu congela as cenas: `pausado()`). Só
+  página: o fecho do hash não muda.
 - **A marca E_CENA (item 30)**: o bit 64 do byte 19 do pacote (`online-pagina.js E_CENA`; o `online.js` não o lê; sobra o
   128) = este lado segura a SUA simulação por uma cena (a substituição, um replay, a comemoração no gol + 149), do quadro da
   cena até o 1º passo rodado depois dela (`marcaCena`, pura: o quadro em que a cena acaba sai sem passo e sem entrada nova) e
@@ -4783,7 +4800,12 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   passo de B + D + 2, com "Lado 1 ainda está vendo a cena", nunca "A conexão parou", W.O. nem o selo por ≥ 1 s), P8d hashes
   iguais, P8e desligada no anfitrião (nenhuma cena, só a faixa, hashes iguais) e, da revisão, P8f o menu de A aberto na cena
   (a cena anda; nem o J segurado nem o H a pulam, o H abre a Ajuda), P8g B em pé na cena (a de B congela; A não lê "vendo a
-  cena"), P8h o fim da espera sem piscar "ainda não voltou ao jogo" e P8i o selo aceso à força na cena com display none. O
+  cena"), P8h o fim da espera sem piscar "ainda não voltou ao jogo" e P8i o selo aceso à força na cena com display none; P10
+  (item 129; `--so p10`; uma sessão de 568×320, a semente achada em Node com o 1º gol cedo do time de A — hoje a 62, tick
+  1239 —, A com `?comemoracao=1&replay=1`, B com os dois desligados): o menu de A aberto (pela API) em cada cena, uma tecla
+  ou botão por vez com o menu reaberto antes — P10a a comemoração (P fecha o menu; J segurado, H, Esc, Enter e o A do
+  controle de mentira `window.__pad`: a cena segue andando) e P10b o replay do gol (A, Enter, J, H, Esc, P), cada um com um J
+  novo que pula depois, com o menu fechado; P10c hashes iguais (na base o P pulava a comemoração e o A, o replay). O
   `teste-online` O13–O15 (as funções puras), o `teste-replay-paradas-tela` V8b (a espera pelo replay do outro: "vendo a
   cena", nunca "conexão parou", sem piscar) e o `legacy-total-match/ferramentas/testar-online3d.mjs --golaco` G1c (a Ana
   com a cena ligada e o Bruno desligada: `ligada()` verdadeiro nos dois quadros, pela porta do TM) completam. (O Chromium sem
