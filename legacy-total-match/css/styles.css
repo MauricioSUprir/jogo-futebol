@@ -6609,18 +6609,7 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
   .ut-pitch .ut-card.mini { --w: clamp(40px, 12.6vw, 60px); }
 }
 /* ================= TOTAL MATCH 3D (js/tm3d.js) ================= */
-.tm3d-escolha .ut-sheet-in{max-width:460px}
-.tm3d-confronto{text-align:center;font-size:17px;font-weight:900;margin:6px 0 12px}
-.tm3d-op{display:flex;align-items:center;gap:13px;width:100%;text-align:left;padding:14px;margin-bottom:9px;border-radius:15px;cursor:pointer;
-  font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--line-2)}
-.tm3d-op.tres{border-color:rgba(34,197,94,.6);background:radial-gradient(120% 140% at 0% 0%,rgba(34,197,94,.24),transparent 60%),var(--panel)}
-.tm3d-op-ic{flex:0 0 auto;width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;background:rgba(34,197,94,.14);color:var(--gold-light)}
-.tm3d-op-ic .tm-ic{width:24px;height:24px}
-.tm3d-op-i{display:flex;flex-direction:column;gap:3px;min-width:0}
-.tm3d-op-i b{font-size:16px}
-.tm3d-op-i span{font-size:12.5px;color:var(--text-dim)}
-.tm3d-sempre{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);margin-top:4px;cursor:pointer}
-.tm3d-sempre input{width:18px;height:18px;accent-color:var(--gold)}
+/* (item 124: a janela "Jogar em 3D / Simular" saiu — o "Jogar" abre o 3D direto, na tela antes do jogo) */
 /* o 3D ocupa a tela inteira por cima do TM (com a área da barra do iPhone) */
 .tm3d-tela{position:fixed;inset:0;z-index:5000;background:#000}
 .tm3d-quadro{position:absolute;inset:0;width:100%;height:100%;border:0;display:block;background:#000}
@@ -6631,6 +6620,9 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 .tm3d-sair:hover{opacity:1}
 .tm3d-sair .tm-ic{width:18px;height:18px}
 body.tm3d-aberto{overflow:hidden}
+/* a confirmação do X ("Sair do 3D?", TM.ui.confirm) vai para o body: por CIMA do quadro do 3D (z-index 5000), senão o toque
+   no X não mostrava nada (item 124: toda partida passa pelo "Abrindo o estádio 3D…") */
+body.tm3d-aberto .sheet-overlay{z-index:5100}
 
 /* ---------- Viverde FC (time especial com senha: js/viverde.js) ---------- */
 .vv-sheet .vv-sheet-in{max-width:380px}

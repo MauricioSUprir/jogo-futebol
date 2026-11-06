@@ -6183,8 +6183,11 @@
     var teamA = { id: "myb", name: club.name + " Sub-19", players: myYouth, club: club };
     var teamB = { id: "opb", name: TM.data.club(oppId).name + " Sub-19", players: oppYouth, club: TM.data.club(oppId) };
     var result = TM.engine.simulate(teamA, teamB, { realism: TM.storage.settings().realism });
+    // o seu time (A) também no 3D (item 124: "em todos os modos"), na tela antes do jogo; com a base de 7 a 10 jogadores, só o 2D
+    // (o 3D joga 11 contra 11). O empate é o resultado (amistoso)
     TM.matchview.play(screen, {
       teamA: teamA, teamB: teamB, result: result, title: "Partida de Base",
+      pauseSide: 0, sem3d: myYouth.length < 11, empateContinua: false,
       onBack: function () { TM.ui.go("coach-youth"); },
       onDone: function () { driftYouthPotential(c, result, myYouth); TM.storage.saveCoachCareer(c); TM.ui.go("coach-match", { teamA: teamA, teamB: teamB, result: result }); }
     });
