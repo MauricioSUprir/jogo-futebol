@@ -1,8 +1,9 @@
 # Pesquisa — item 35 (F): clássico mais PEGADO pela agressividade dos jogadores, com o árbitro IGUAL
 
-Contrato: "Clássico pegado (item 35)" no `CONTRATOS.md`. Teste: `tools/teste-classico.mjs` (medida: `tools/lib/classico-medidas.mjs`).
-A proposta do §3 foi o ponto de partida; o que entrou de fato (a tabela `config.js CLASSICO`, os valores finais e a triagem) está
-no §6.
+Contrato: "Clássico pegado (item 35)" no `CONTRATOS.md` (PR #619). Teste: `tools/teste-classico.mjs` (medida:
+`tools/lib/classico-medidas.mjs`). A proposta do §3 foi o ponto de partida; a 1ª calibração (05/11) está no §6 e a REVISÃO (06/11),
+com os valores que estão no jogo — a tabela `config.js CLASSICO` por contexto, a triagem e a conferência —, no §7. O §8 diz o que
+se aproveitou de cada fonte no que entrou.
 
 Pedido do dono (17/10): "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais
 contato), não pelo árbitro (o pedido do TM já traz `partida.classico`)". Esta pesquisa junta (1) dados reais de clássicos ×
@@ -50,6 +51,12 @@ não ficam no repositório (baixáveis: StatsBomb Open Data no GitHub e a API p�
    +25–50%, faltas +25–50% (o "clássico quente" real; a média real, +11%, não se percebe numa partida de 8 min),
    chance de falta por contato ±10%, amarelos +20–60%, vermelhos ≤ 0,2/partida, gols e chutes sem queda provada além
    de −25%/−15%, bola rolando −2% a −8%, intensidade (m/min, PPDA) sem subir além de +5%.
+7. **O que entrou (§6–§7):** só a VONTADE do bote (taxa por cima do nível, com o teto 0,26 e o piso 16 do item 33) e o batido
+   que SEGURA mais quem escapa, fora da própria área — por contexto: na IA × IA vontade 2,2 e segura 1,5; no jogo com a pessoa
+   vontade 1,6, o segura 2 só na IA contra ela (os companheiros dela sem). A contenção, o aperto e a bola encostada saíram (menos
+   botes e a chance por contato mais alta). Resultado (sem → com): IA × IA botes +47%, faltas +34–38%; contra a pessoa faltas da
+   IA +23–31%, botes da IA +12%, amarelos da IA +32%, chutes da pessoa −12%; a chance de falta por contato 1,00–1,01 (só o bote
+   1,07–1,08; real +4%); gols, chutes, bola rolando e volume quase iguais.
 
 ---
 
@@ -652,5 +659,36 @@ As amostras da demo de 32 partidas variam ±0,2 entre conjuntos de sementes (a b
   **o Normal+C × Difícil+C ficou em 0,93 [0,85–1,02]**: os parâmetros guardam a razão de sem o clássico (chance × 1,48, descanso
   ÷ 1,33), mas o bote SATURA no jogo e o degrau de 1,25× sem o clássico vira ~1,07× — o teste reprova só com o lado errado
   provado nesse degrau ("Depende do dono" 23).
+- O CI do `teste-classico` com a configuração final (sementes 1–16 da demo e 4 roteiros × 1–8): IA × IA botes 1,43 [1,11–1,84],
+  faltas esperadas 1,15 [0,98–1,36], marcadas 1,00 [0,72–1,33] (16 partidas da demo: as faltas dessa amostra ficaram baixas — a
+  meta só reprova quando prova; as marcadas dão +38% nas amostras juntas, 128 pares, e +13% [−10; +45] no `--completo`, 32 pares
+  da demo); contra a pessoa botes 1,22 [1,13–1,33], faltas esperadas 1,20
+  [0,97–1,49], marcadas 1,30 [0,99–1,72]; chance por contato 0,94 (só o bote 1,02); chutes da pessoa 0,96; cartões do time dela 1 → 1
+  × os da IA 18 → 20 — PASSOU (463 s com 2 processos).
+- `teste-faltas-sentido --classico` (8 partidas por roteiro): B1 0,00 · B2 0,19 · B3 4,88 faltas fortes, 0,13 vermelho e 0,13
+  pênalti da IA no 'dribla' · B4 0,00 — passa (sem o clássico: 0,00 · 0,31 · 3,75/0,00/0,38 · 0,00; a 1ª versão dava 0,50 pênalti
+  no 'dribla', perto do teto 0,6).
+- `painel-equilibrio --classico` (48 partidas IA × IA, sementes 1001–1048; a versão medida com o clássico, a base sem): faltas 2,2
+  → 3,0, amarelos 0,60 → 0,71, vermelhos 0,02 → 0,08, gols 1,77 → 1,98, chutes 9,0 → 8,8, roubadas no bote 4,04 → 5,44, passe certo
+  86,4 → 87,2%; o goleiro de 6 a 16,5 m 61,7 → 53,2% em 128/124 chutes (informativo: as metas do painel são do jogo sem o clássico).
+- **Não rodou:** o celular de verdade, o online com `?classico=1` nas duas abas e o `testar-3d` com um pedido `classico: true` (a
+  ligação pedido → mundo está no `teste-ponte-tm` P13 e foi conferida na página por uma ferramenta da bateria, fora do repositório).
 - Lição: a demo e os roteiros respondem diferente à mesma alavanca (a IA × IA tem ~5 botes por partida, os roteiros ~18) — medir
   POR MODO; e no jogo com a pessoa olhar o lado DELA (chutes, gols, cartões), não só o total dos dois times.
+
+---
+
+## 8. As fontes e o que se aproveitou de cada no que entrou
+
+| Fonte | O que se aproveitou (onde está no jogo) |
+|---|---|
+| Medição própria — StatsBomb Open Data 2015/16 (§1.1) | A pressão por minuto de bola rolando IGUAL no clássico (+0,0% [−5,6; +6,2]) com os desarmes por minuto +11%: nada no volume de pressão (engaja, encurta, contrapressão, recomposição) e o clássico pela VONTADE de disputar quando a bola está perto (`CLASSICO.vontade`); o `teste-classico` C9 (volume, disparada, presença sem alta provada). A bola rolando −4%: o C8 |
+| Medição própria — ESPN, Brasil, Argentina, Inglaterra, Espanha e Itália 2023–25, e o resultado JUNTO de 226 clássicos (§1.2–§1.3) | A faixa das faltas do "clássico quente" (+25% a +50%: Barça × Real +48%, Galo × Cruzeiro +45%, Newell's × Central +30%, Fla-Flu +28%) = a meta do C2; a falta por disputa +4% [+2; +6] = o "árbitro igual" (chance por contato ±10%, C3b/C3c); chutes −4,6% e gols −7% nos DOIS times = as guardas C6/C7 e, na revisão, o C6p/C7p do lado da pessoa (a 1ª versão tirava 34% dos chutes dela); amarelos +30% e amarelo por falta +15% = o C4 (medido: +32% contra a pessoa) |
+| Kilduff et al. (2016); Kruse & Maennig (2019) | Com o rigor do árbitro controlado os cartões continuam subindo: o efeito é do JOGADOR — os cartões do jogo sobem só porque há mais faltas, com o critério igual (o `segura` é decisão do batido; o apito e o cartão os de sempre). O teto dos amarelos (+42–50%) limita o C4 |
+| Harvard Sports Analysis Collective (2015, 2018) | As faltas dos dérbis da Premier League (+6% a +25%) e o efeito concentrado em poucas rivalidades: o clássico só quando o TM marca a rivalidade (`partida.classico`), sem botão na pausa |
+| Bäker, Mechtel & Vetter (2012) | Gols iguais nos dérbis: o C6 (sem queda > 25% nem alta > 10% provadas) |
+| Buraimo et al. (2010); Dawson et al. (2007); Nevill et al. (2002), Unkelbach & Memmert (2010), Pettersson-Lidbom & Priks (2010) | O viés do árbitro vem da torcida e do mando, não do dérbi: nada no árbitro (`faltas.js`, `FALTAS.*` iguais; o K4 prova em 25 920 chamadas) — o pedido do dono ("não pelo árbitro") |
+| El Gráfico (Superclásico); Maisfutebol (Porto × Sporting 2022) | Casos extremos (vermelhos +167% na Argentina, tempo útil 41%): as guardas de teto — vermelhos ≤ 0,2 por partida (C5) e a bola rolando sem queda provada > 10% (C8) |
+| EA SPORTS FC 26 ("Tackle Aggression – CPU" × "Referee Strictness"); FIFA 13–17 ("Aggression" × "Pressure"); Football Manager ("Aggression" × "Dirtiness", "Get Stuck In") | A separação que o dono pediu: a vontade de entrar no bote (`vontade`, como o "Tackle Aggression"/"Aggression") separada do árbitro e separada de ONDE se aperta (o "Pressure": o volume de pressão não muda); o "Dirtiness" do FM — a disposição de fazer a falta, à parte da vontade de disputar — é o `segura` (o batido que segura quem escapa) |
+| Total Match 2D (`legacy-total-match/js/engine.js`) | NÃO copiado: os cartões ×1,6 e as chances ×1,06 da simulação contrariam os dados (chutes iguais ou −4%; +60% de cartões no teto). Informativo; o TM não mudou |
+| Netflu (Bolavip) | Não usado (sem método nem período) |

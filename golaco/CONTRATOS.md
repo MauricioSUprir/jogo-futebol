@@ -5027,7 +5027,7 @@ Fácil > Lenda; o Difícil e o Lenda quase empatam no resultado (o Lenda se sepa
   celular de verdade (item 115); a distância entre os níveis vizinhos (item 116); o ← → nos ciclos e a duração no item do celular
   (item 117); o TM usar a `dificuldade` e o `minutosPorTempo` do resultado (item 118).
 
-## Clássico pegado (item 35; 05/11; contrato)
+## Clássico pegado (item 35, #619; 05/11, revisão 06/11; contrato)
 
 Pedido do dono (17/10): "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais contato), não
 pelo árbitro (o pedido do TM já traz `partida.classico`)". Pesquisa e calibração em `PESQUISA-CLASSICO.md` (226 clássicos reais:
@@ -5164,10 +5164,14 @@ iguais ou −1–4% (`teste-classico` C8/C9). Na página: ~0,6–0,7 falta a mai
   chutes, informativo: o painel e as metas dele são do jogo sem o clássico).
 - **Sem recuo:** `hash-igual --ref 29d67bad --rapido` e `hash-partida --ref 29d67bad --sementes 2 --min 1 --par 2` IGUAIS;
   `fecho-hash --diff 29d67bad`: `config.js`, `faltas.js`, `partida.js`, `sim.js` (o `ia-tatica.js` voltou à base; a revisão mexeu
-  em `config.js`, `faltas.js` e `sim.js` — os dois hashes IGUAIS de novo depois dela); download inicial sem `?tm` +7,6 KB (folga
-  642,2 → 639,9 KB com a revisão). Passam também: `teste-faltas`, `teste-faltas-sentido`, `teste-cenas`, `teste-math-proibido`,
-  `teste-dificuldade --so portao`, `teste-online`, `teste-carga`, `teste-tm-tela` e o `testar-3d` do TM (pro e `--publica`; os
-  quatro últimos de tela não rodaram de novo na revisão: ela não mexe na página); o caso do Viverde (senha) não rodou.
+  em `config.js`, `faltas.js` e `sim.js` — os dois hashes IGUAIS de novo depois dela); download inicial sem `?tm` +7,5 KB (folga
+  647,4 KB na base → 642,2 na 1ª versão → 639,9 com a revisão). Passam também: `teste-faltas`, `teste-faltas-sentido`,
+  `teste-cenas`, `teste-math-proibido`, `teste-dificuldade --so portao`, `teste-online`, `teste-carga`, `teste-tm-tela` e o
+  `testar-3d` do TM (pro e `--publica`). Depois da revisão rodaram de novo `teste-faltas`, `teste-faltas-sentido --classico`,
+  `teste-math-proibido`, `teste-dificuldade --so portao`, `teste-online`, `teste-carga` e os dois hashes; o `teste-cenas`, o
+  `teste-ponte-tm`, o `teste-prepartida-tela`, o `teste-tm-tela` e o `testar-3d` não (a revisão não mexe na página nem na ponte,
+  e sem o clássico o hash é igual). Não rodaram: o caso do Viverde (senha), o online com `?classico=1` nas duas abas e o celular
+  de verdade.
 
 ## A IA contra a pessoa — categoria D (24/10; contrato)
 
