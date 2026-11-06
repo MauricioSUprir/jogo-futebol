@@ -4804,8 +4804,10 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   (item 129; `--so p10`; uma sessão de 568×320, a semente achada em Node com o 1º gol cedo do time de A — hoje a 62, tick
   1239 —, A com `?comemoracao=1&replay=1`, B com os dois desligados): o menu de A aberto (pela API) em cada cena, uma tecla
   ou botão por vez com o menu reaberto antes — P10a a comemoração (P fecha o menu; J segurado, H, Esc, Enter e o A do
-  controle de mentira `window.__pad`: a cena segue andando) e P10b o replay do gol (A, Enter, J, H, Esc, P), cada um com um J
-  novo que pula depois, com o menu fechado; P10c hashes iguais (na base o P pulava a comemoração e o A, o replay). O
+  controle de mentira `window.__pad`: a cena segue andando) e P10b o replay do gol (A, Enter, H, Esc, J, P; o J depois do
+  H, cujo `soltarTudo` limparia o pulso dele: sem o `limparPulsos` o pulso preso reprova no replay sempre, que segura a
+  simulação o tempo todo — na comemoração só depois do gol + 149), cada um com um J novo que pula depois, com o menu
+  fechado; P10c hashes iguais (na base o P pulava a comemoração e o A, o replay). O
   `teste-online` O13–O15 (as funções puras), o `teste-replay-paradas-tela` V8b (a espera pelo replay do outro: "vendo a
   cena", nunca "conexão parou", sem piscar) e o `legacy-total-match/ferramentas/testar-online3d.mjs --golaco` G1c (a Ana
   com a cena ligada e o Bruno desligada: `ligada()` verdadeiro nos dois quadros, pela porta do TM) completam. (O Chromium sem

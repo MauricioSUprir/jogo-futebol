@@ -44,8 +44,10 @@
 //      P10a a comemoração: o P (a pausa) fecha o menu; o J (PASSE) segurado, o H (abre a Ajuda), o Esc (fecha a Ajuda e o
 //           menu), o Enter (aperta o botão em foco) e o A do controle (idem) — a cena segue andando depois de cada um; com o
 //           menu fechado, um J NOVO pula;
-//      P10b o replay do gol (na saída, depois da comemoração): o mesmo, noutra ordem (A, Enter, J, H, Esc, P) — na base cada
-//           cena cai numa tecla diferente;
+//      P10b o replay do gol (na saída, depois da comemoração): o mesmo, noutra ordem (A, Enter, H, Esc, J, P) — na base cada
+//           cena cai numa tecla diferente; o J vem DEPOIS do H (o soltarTudo do H limparia o pulso dele): o replay segura a
+//           simulação o tempo todo, então o pulso do J preso sem o limparPulsos do quadro sem passo reprova aqui sempre — na
+//           comemoração só reprova se o A cair depois do gol + 149 (a simulação ainda anda antes disso: depende do tempo);
 //      P10c o mesmo jogo nas duas abas (hashes a cada 60 passos) com as cenas e o menu.
 //   node tools/teste-online-tela.mjs [--so principal|p8|p10]
 import { servidor, abrir } from './lib/navegador.mjs';
@@ -597,13 +599,13 @@ async function secaoP10() {
     await Promise.all([pA, pB].map(p => p.waitForFunction(() => window.__golaco && window.__golaco.pronto && window.__golaco.online, null, { timeout: 300000 })));
     // (o replay é sob demanda: baixado bem antes do gol)
     await pA.waitForFunction(() => window.__golaco.sobDemanda.ja(), null, { timeout: 300000, polling: 500 });
-    const OC = ['P', 'J', 'H', 'Esc', 'Enter', 'A'], OR = ['A', 'Enter', 'J', 'H', 'Esc', 'P'];
+    const OC = ['P', 'J', 'H', 'Esc', 'Enter', 'A'], OR = ['A', 'Enter', 'H', 'Esc', 'J', 'P'];
     const com = await roteiroMenuCena(pA, 'comemoracao', OC);
     const rep = await roteiroMenuCena(pA, 'replay', OR);
     const ac = avaliarMenuCena(com, OC), ar = avaliarMenuCena(rep, OR);
     meta('P10a a comemoração no online com o menu de A aberto: P fecha o menu; J segurado, H (Ajuda), Esc (fecha), Enter e o A do controle não a pulam; depois, com o menu fechado, um J novo pula',
       `semente ${SG.semente} (gol no tick ${SG.tick}) · ${ac.txt}`, ac.ok);
-    meta('P10b o replay do gol no online com o menu de A aberto: A do controle, Enter, J segurado, H, Esc e P não o pulam; depois, um J novo pula', ar.txt, ar.ok);
+    meta('P10b o replay do gol no online com o menu de A aberto: A do controle, Enter, H, Esc, J segurado e P não o pulam; depois, um J novo pula', ar.txt, ar.ok);
     // P10c: o mesmo jogo nas duas, passando do gol
     const ate = p => p.waitForFunction(k => (window.__golaco.online?.n ?? 0) >= k, SG.tick + 300, { timeout: 300000, polling: 250 }).then(() => true, () => false);
     const okN = await Promise.all([ate(pA), ate(pB)]);
