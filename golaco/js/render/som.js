@@ -267,9 +267,12 @@ export function criarSom(opc = {}) {
   }
 
   /** Primeiro gesto (e depois de uma interrupção): cria/retoma o contexto (política de reprodução automática). */
-  function desbloquear() {
+  function desbloquear(e) {
     // som desligado: o gesto não cria nada (nem baixa os arquivos)
     if (!Ctx || !ligado) return;
+    // opc.gestoVale(evento) = false: este gesto não liga o som (o "Simular partida" da tela antes do jogo no TM — main.js gestoDoSom;
+    // o próximo gesto que valer liga). Chamado sem evento (o "Som" ligado no menu): vale
+    if (e && opc.gestoVale && !opc.gestoVale(e)) return;
     try {
       sessao('playback');
       if (!ctx) {

@@ -108,7 +108,7 @@ export function criarPrepartida(opc) {
   document.body.appendChild(sonda);
   const st = {
     aberta: false, modo: 'partida', fundo: 'jogo', dados: null, abas: [], canto: null, meu: 0, time: 0, visao: 'escalacao',
-    foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
+    foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, armadoId: null, armadoEm: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
     saindo: null, nomeMostrado: null, ultimaChave: '', destaqueCanto: false,
   };
   const medidor = document.createElement('canvas').getContext('2d');
@@ -491,7 +491,15 @@ export function criarPrepartida(opc) {
   }
 
   // ------------------------------------------------------------------------------------------------ ações
-  function acionarAba(i) {
+  // O armado (Simular partida, Voltar ao TM, Sair) vale pela HORA DO TOQUE (event.timeStamp, a mesma base do performance.now()), não
+  // pela hora em que o quadro o processa: com o quadro pesado, dois toques com 1,8 s entre eles chegavam com 3,05 s e o 2º armava de
+  // novo (item 124, revisão A5 — o Simular passou a ser o caminho de toda partida do TM). O rótulo volta sozinho pela hora do
+  // processamento (atualizar); o armadoId fica: um 2º toque FEITO dentro dos 3 s ainda vale. Sem o evento (o controle): agora.
+  const horaDo = e => (e && Number.isFinite(e.timeStamp) && e.timeStamp > 0 ? e.timeStamp : performance.now());
+  function desarmar() { st.armado = null; st.armadoId = null; }
+  function armar(id, t) { st.armado = st.armadoId = id; st.armadoEm = t; st.armadoAte = performance.now() + PREPARTIDA.armadoMs; }
+  const armadoVale = (id, t) => st.armadoId === id && t >= st.armadoEm && t - st.armadoEm < PREPARTIDA.armadoMs;
+  function acionarAba(i, t = performance.now()) {
     const a = st.abas[i];
     if (!a || st.saindo) return;
     focarAba(i);
@@ -500,20 +508,18 @@ export function criarPrepartida(opc) {
     if (a.id === 'pronto' && st.aguardando) return;
     if (a.id === 'adversario') { trocarTime(st.time === st.meu ? 1 - st.meu : st.meu); return; }
     if (a.armar) {
-      const agora = performance.now();
-      if (st.armado === a.id && agora < st.armadoAte) { st.armado = null; marcarAbas(); opc.aoAcao(a.id); return; }
-      st.armado = a.id; st.armadoAte = agora + PREPARTIDA.armadoMs;
+      if (armadoVale(a.id, t)) { desarmar(); marcarAbas(); opc.aoAcao(a.id); return; }
+      armar(a.id, t);
       marcarAbas();
       viva(a.armar);
       return;
     }
     opc.aoAcao(a.id);
   }
-  function acionarCanto() {
+  function acionarCanto(t = performance.now()) {
     if (!st.canto) return;
-    const agora = performance.now();
-    if (st.armado === 'canto' && agora < st.armadoAte) { st.armado = null; marcarAbas(); opc.aoAcao('canto'); return; }
-    st.armado = 'canto'; st.armadoAte = agora + PREPARTIDA.armadoMs;
+    if (armadoVale('canto', t)) { desarmar(); marcarAbas(); opc.aoAcao('canto'); return; }
+    armar('canto', t);
     marcarAbas();
     viva(st.canto.armar);
   }
@@ -538,7 +544,8 @@ export function criarPrepartida(opc) {
   }
   /** Esc / Ⓑ: volta um nível (a vista → a escalação; o adversário → o meu time; no 1º nível: o Simular no TM, senão nada). */
   function voltar() {
-    if (st.armado) { st.armado = null; marcarAbas(); return; }
+    if (st.armado) { desarmar(); marcarAbas(); return; }
+    st.armadoId = null;
     if (st.visao !== 'escalacao') { st.visao = 'com'; proximaVista(); return; }
     if (st.time !== st.meu) { trocarTime(st.meu); return; }
     const i = st.abas.findIndex(a => a.id === 'simular');
@@ -569,10 +576,10 @@ export function criarPrepartida(opc) {
 
   // os ouvintes (a cada montagem: o innerHTML é novo)
   function ligar() {
-    abasEl().forEach((b, i) => aoTocar(b, () => { if (!opc.ocupado()) acionarAba(i); }));
+    abasEl().forEach((b, i) => aoTocar(b, e => { if (!opc.ocupado()) acionarAba(i, horaDo(e)); }));
     for (const b of raiz.querySelectorAll('.pp-time')) aoTocar(b, () => { if (!opc.ocupado()) { st.linhaFoco = 'barra'; trocarTime(+b.dataset.t); } });
     aoTocar(raiz.querySelector('[data-pp="menu"]'), () => { if (!opc.ocupado() && !st.saindo) opc.aoAcao('opcoes'); });
-    aoTocar(raiz.querySelector('[data-pp="canto"]'), () => { if (!opc.ocupado()) acionarCanto(); });
+    aoTocar(raiz.querySelector('[data-pp="canto"]'), e => { if (!opc.ocupado()) acionarCanto(horaDo(e)); });
     // tocar no campinho = Personalizar (só na escalação e onde é editável); na Visão tática, tocar num disco mostra o nome
     const campo = raiz.querySelector('.pp-campo');
     campo.addEventListener('pointerdown', e => {
@@ -602,7 +609,7 @@ export function criarPrepartida(opc) {
     else if (c === 'ArrowRight') mover('dir');
     else if (c === 'ArrowUp') mover('cima');
     else if (c === 'ArrowDown') mover('baixo');
-    else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space') { if (!e.repeat) ativar(document.activeElement); }
+    else if (c === 'Enter' || c === 'NumpadEnter' || c === 'Space') { if (!e.repeat) ativar(document.activeElement, horaDo(e)); }
     else if (c === 'Escape') { if (!e.repeat) voltar(); }
     else if (c === 'KeyQ') trocarTime(0);
     else if (c === 'KeyE') trocarTime(1);
@@ -611,14 +618,14 @@ export function criarPrepartida(opc) {
     if (usado) { e.preventDefault(); e.stopPropagation(); }
   }, true);
   /** Enter / Espaço / Ⓐ: o botão em foco (fora da tela: a aba itinerante). */
-  function ativar(el) {
-    if (!raiz.contains(el) || el === raiz) { acionarAba(st.foco); return; }
-    if (el.classList.contains('pp-aba')) acionarAba(+el.dataset.i);
+  function ativar(el, t = performance.now()) {
+    if (!raiz.contains(el) || el === raiz) { acionarAba(st.foco, t); return; }
+    if (el.classList.contains('pp-aba')) acionarAba(+el.dataset.i, t);
     else if (el.classList.contains('pp-time')) trocarTime(+el.dataset.t);
     else if (el.dataset.pp === 'menu') opc.aoAcao('opcoes');
-    else if (el.dataset.pp === 'canto') acionarCanto();
+    else if (el.dataset.pp === 'canto') acionarCanto(t);
     else if (el.classList.contains('pp-disco')) mostrarNomeDisco(el);
-    else acionarAba(st.foco);
+    else acionarAba(st.foco, t);
   }
 
   function marcarMeio() {
@@ -639,7 +646,7 @@ export function criarPrepartida(opc) {
      */
     abrir(o) {
       st.modo = o.modo; st.fundo = o.fundo; st.dados = o.dados; st.abas = o.abas; st.canto = o.canto ?? null;
-      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; st.armado = null; st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1;
+      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; desarmar(); st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1;
       st.saindo = null;
       st.foco = Math.max(0, st.abas.findIndex(a => a.id === (o.foco ?? st.abas[0]?.id)));
       st.aberta = true;

@@ -2032,12 +2032,16 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   online — ANTES do pré-jogo; nos treinos não. `?prepartida=1|0` força; sem o parâmetro, DESLIGADA com `navigator.webdriver`,
   `?prints=1` e `?demo=1` (a regra do `modoPrejogo`). Sem opção para desligar (é o portão do som e do Personalizar, como no FC).
   "Jogar de novo" (fim) e a troca de modo pela pausa a mostram de novo; o "Reiniciar partida" no meio não; o `trocarMundo` da
-  API dos testes só com `opc.prepartida`.
+  API dos testes só com `opc.prepartida`. No TM, desde o item 124 (05/11), ela está NO LUGAR da janela "Jogar em 3D / Simular": o
+  "Jogar" de todo modo com o time da pessoa abre o 3D direto nela (contrato "Ponte com o Total Match", parte "A tela no lugar da
+  janela"); o quadro do TM pede `&prepartida=1` só nos testes (`TM.tm3d.PARAMS`: com o webdriver ela fica desligada).
 - **Carga** (sob demanda, fora do download inicial): `carregarPrepartida()` no TOPO do `iniciar()` (com a tela ligada) baixa o
   `prepartida-tela.js`, o `prepartida.js`, o `css/prepartida.css` (antes do `prejogo.css`) e pede a Inter TM (600/800) e a TM Cond
   (o layout não espera as fontes: a conta do nome usa a tabela de avanços da TM Cond, `larguraCond`). **Reserva**: sem o módulo
   até 1,5 s depois do 3D pronto (`esperarPrepartida`), a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
-  partida. Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`).
+  partida — no TM (partida e Rumo ao Estrelato) com o botão "Simular partida" no canto de baixo à direita (item 124, revisão A6:
+  sem ele a única saída era começar o jogo e usar o "Simular o resto"; contrato "Ponte com o Total Match", parte "A tela no lugar
+  da janela"). Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`).
 - **O fundo**: partida com o pré-jogo ligado → a fase `abertura` do diretor do pré-jogo de hoje (o aéreo de fora, o som abafado)
   CALADA (`prejogo.iniciar(modo, {abertura, muda})` → `prejogo-tela.mudo(true)`: os três ouvintes dela — o toque da camada, o
   Enter/Espaço na captura e o Ⓐ — não agem) e o fundo `'abertura'`; o resto (pré-jogo desligado, Livre, Pênaltis) → o JOGO PARADO
@@ -2046,7 +2050,9 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   as ações `menu-*` para a tela, `laco.ultimo = agora` (o tempo não se acumula) e, no online, o pacote. `pausado()` e
   `marcarCondutor` olham a tela; o HUD, os botões de toque, as cenas, o canvas e o `#prejogo` ficam `inert` atrás dela.
 - **O "Jogar partida"** (`jogarPrepartida`): é o GESTO (o `som.js` cria e retoma o contexto no 1º gesto; a tela cheia deitada do
-  Android dentro do handler); a tela some e começa o pré-jogo escolhido no "Pré-jogo da partida" (completo, curto, só escalação —
+  Android dentro do handler; no TM com a tela aberta SÓ ele liga o som — `criarSom({gestoVale})` + `main.js gestoDoSom`: os toques
+  no "Simular partida", na Visão tática, no Personalizar e no ≡ não criam o contexto nem baixam os ~1,35 MB da torcida; item 124,
+  revisão A4); a tela some e começa o pré-jogo escolhido no "Pré-jogo da partida" (completo, curto, só escalação —
   `prejogo.comecar()` no fundo da abertura, ou `comecarPrejogo` se a escolha mudou com a tela aberta) ou, desligado, o apito
   (`eventosIniciais`). Pelo controle, se o contexto do som não estiver `running` 0,3 s depois, o aviso discreto "Toque ou aperte
   uma tecla para ligar o som" (`hud.evento('somGesto')`). O Ⓐ do Jogar, ainda segurado nos quadros seguintes, NÃO é um aperto
@@ -2086,10 +2092,14 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   um `role="group"` com o nome da vista, cada disco um `role="button"` com o rótulo ("9 Diego, ATA"); o foco num disco que some
   volta à aba. Esc volta à Escalação.
 - **As abas por modo** (`abasDoModo`): partida Jogar partida · Visão tática · Personalizar; TM + **Simular partida** (armada:
-  "Toque de novo: simular", 3 s; o 2º toque = `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`); Rumo ao
-  Estrelato Jogar · Visão · Simular (sem Personalizar); Livre Jogar · Jogadores · Câmera (os submenus do Livre; o Voltar deles
-  volta à tela e o N contra M novo vale já, no mundo do tick 0); Pênaltis Bater pênaltis · Cobradores do adversário; online
-  **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match" (o Livre manda `tm3d:fim
+  "Toque de novo: simular", 3 s contados pela HORA DO TOQUE — o `event.timeStamp`, não a hora em que o quadro o processa: com o
+  quadro pesado, dois toques com 1,8 s entre eles chegavam com 3,05 s e o 2º armava de novo; item 124, revisão A5 —; o 2º toque =
+  `simularNoTM()` = `sairTM({motivo: 'simular', titulares})`: o 3D volta SEM resultado e o TM simula lance a lance com os
+  titulares que a tela mostrou — item 124, o "Simular" da janela que a tela substituiu; a tela fica aberta, o mundo no tick 0, até
+  o TM fechar o quadro. Até o item 124 o 2º toque era o `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`);
+  Rumo ao Estrelato Jogar · Visão · Simular (sem Personalizar; o Simular igual, e a simulação é a do Estrelato); Livre Jogar ·
+  Jogadores · Câmera (os submenus do Livre; o Voltar deles volta à tela e o N contra M novo vale já, no mundo do tick 0);
+  Pênaltis Bater pênaltis · Cobradores do adversário; online **Pronto** · Visão tática. O [<] do canto (armado): no TM Livre/Pênaltis "Voltar ao Total Match" (o Livre manda `tm3d:fim
   {livre}`; os Pênaltis `tm3d:sair`, sem resultado — nada é simulado, como o X do TM neles; antes da revisão A2 o `voltarAoTM()`
   simulava a disputa inteira e o TM mostrava o vencedor dela); no online "Sair da partida". O ≡ (P, Start) abre a pausa no modo
   "antes do jogo" (`hud.definirAntes`: `#menu[data-antes]`, "Voltar" no lugar de "Voltar ao jogo"; somem Editar time,
@@ -2119,6 +2129,9 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   `timesAntes[TIME_HUMANO] = edicaoParaTimes(ed)` e o mundo do tick 0 é RECRIADO por `criarPartida({times})` (`trocarMundo(…,
   {antesDoJogo: true})` mantém a tela e o pré-jogo; `prejogo.refazerTimes()` refaz o cortejo, os técnicos, as fotos e as
   escalações — não o lado de fora). O reserva escalado joga, conta no resultado do TM e ninguém "saiu" (`teste-ponte-tm` P9).
+  No "Simular partida" do TM a escalação da tela também vale: o `tm3d:sair` leva os titulares (`titularesTM()`: os tmIds das
+  vagas do mundo do tick 0, 11 por lado) e o TM simula com eles (item 124, revisão A2; contrato "Ponte com o Total Match"). A
+  formação e a tática do Personalizar não chegam ao TM: o motor dele só lê os 11.
 - **Online** (§4.5 da especificação; `online.js` INTOCADO): a fase vai no byte 19 do pacote em bits definidos na PÁGINA
   (`online-pagina.js E_TELA = 8`, `E_PRONTO = 16`, `E_PREJOGO = 32`; os bits 0–2 continuam os do `online.js`); todo pacote leva a
   fase e a do outro é o MAIOR valor recebido (`faseRemota`: −1 nenhum pacote, 0 tela, 1 pronto, 2 pré-jogo, 3 jogo — um pacote
@@ -2158,8 +2171,13 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   a info, as abas e a competição sem o corte do CSS, o ícone igual na barra, os cantos dentro da borda do campinho, a letra do
   resto), E11b (o Ⓐ do Jogar com o pré-jogo não pula as cenas), E12b/E12c (os discos da Visão tática para o leitor de tela; o toque
   sem anel de foco), E19b (o "Pré-jogo da partida" mudado pelo ≡ vale no Jogar, com o webdriver de um usuário), E14 dos Pênaltis
-  do TM (o [<] manda `tm3d:sair`) e a tela coberta pela pausa e pelo editor (E10/E13); `teste-ponte-tm` P9; `teste-carga`
-  (`SO_COM_TELA`).
+  do TM (o [<] manda `tm3d:sair`) e a tela coberta pela pausa e pelo editor (E10/E13); do item 124: E14 do TM e do Rumo ao
+  Estrelato (o "Simular partida" arma no 1º toque e no 2º manda `tm3d:sair` {motivo: 'simular'} em ≤ 2 s, nenhum `tm3d:fim`, o
+  mundo no tick 0; na base o motor 3D simulava e mandava `tm3d:fim` em ~6 s) e E14r com o TM num quadro — R1* em pé (390×844,
+  toque: o "Gire o celular" tem o "Simular partida", que leva os 11 + 11 titulares e não liga o som), R2*/R2b (a Visão tática e o
+  1º toque do Simular não ligam o som nem baixam os sons; o Jogar liga em ≤ 1,5 s), R3* (o 2º toque dentro dos 3 s vale pela hora
+  do toque com o quadro preso 3,6 s) e R4* (a reserva com o "Simular partida" no canto, sem encostar no texto da abertura); os
+  quatro R reprovam antes da revisão (212ec359); `teste-ponte-tm` P9; `teste-carga` (`SO_COM_TELA`).
 - **Fica** (fora da v1, anotado; FILA itens 100–107 e "Depende do dono" 19): o tempo do `teste-prepartida-tela` no
   `tempos-ci.mjs` (600 s, estimado aqui; item 100); as metas da especificação que não entraram no teste — E8, o E16 com `?tm`, 4
   das 5 mutações, o O5 de 100 s e o destaque do Sair aos 60 s (item 101); o fundo escuro e desfocado como o do FC, com o
@@ -2637,7 +2655,11 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
 - **`ponte-tm.js`** (página): `ID_TM`, `PEDIDO_TM` (lidos na importação, síncronos), `NO_QUADRO`, `MENSAGENS`, `sementeTM(id)`
   (a semente da partida pelo id: cada partida do TM é outro jogo), `avisarTM(tipo, extra)` (`window.parent.postMessage({tipo,
   id, ...}, location.origin)`), `gravarResultadoTM(r)`, `fimTM(r)` (grava + `tm3d:fim`; fora do quadro volta a `../index.html`)
-  e `sairTM()` (`tm3d:sair`: o TM simula do começo — sem WebGL 2, pedido sumido, falha ao subir o 3D).
+  e `sairTM(extra)` (`tm3d:sair`, SEM resultado: o TM simula a partida lance a lance, como sem o 3D; `extra` vai na mensagem —
+  `{motivo: 'simular', titulares: {home, away}}` = o "Simular partida" antes do jogo (item 124: o TM fica calado e simula com os
+  titulares mostrados, tmIds, 11 por lado), `{motivo: 'erro'}` = o 3D não roda aqui (sem WebGL 2, pedido sumido, erro no início:
+  o TM avisa "O 3D não abriu: partida simulada."); sem motivo (os Pênaltis 3D antes do Bater) o TM só volta. O abandono do
+  Online 3D vai pelo `avisarTM` direto: `{abandono: true}`).
 - **`tm-times.js`** (puro): `timesDoPedido(pedido)` → `{elencos: [tmcasa, tmfora], times: {0, 1}, humano, trava, mapa}`. Time 0 =
   mandante do TM (`home`). Ids 1001–1018 (casa) e 2001–2018 (fora); `mapa[id] = {tmId, nome (o curto do TM), lado}`. Formação
   do TM → `FORMACAO_TM` (as 6 do jogo). Os 11 primeiros do pedido vão às vagas pelo `hungaro` com custo = distância (m) entre a
@@ -2693,6 +2715,78 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   sai, o 3D não. O pedido continua `v: 2`; o `tm-times.js` não copia o campo (`teste-ponte-tm` P10e:
   `timesDoPedido` e o hash iguais com e sem fotos); o golaco lê pelo lado + `tmId` (`js/tm-fotos.js`, contrato "Comemoração do
   gol"). No online, a foto do time montado num aparelho pro aparece se o pedido do anfitrião for pro (como os rostos reais).
+
+- **A tela no lugar da janela "Jogar em 3D / Simular" (item 124, 05/11; PR #620)**. Pedido do dono (com o print da tela antes
+  do jogo): "essa tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular; quando clica em jogar, já entra essa tela,
+  e é em todos os modos". As escolhas E1–E5 abaixo são as recomendadas (FILA "Depende do dono" 24: o dono pode trocar). Só a
+  página e o TM: `fecho-hash --diff 29d67bad` 0; `hash-igual --ref 29d67bad --rapido` e `hash-partida --ref 29d67bad` IGUAIS.
+  - **E1, o "Jogar" abre o 3D direto** (`tm3d.js`): o `TM.matchview.play` embrulhado chama `jogarCfg` em todo cfg com
+    `pauseSide`, `teamA`/`teamB` e `result` (`ofereceEm`), menos `ja3d`, `sem3d` e `result.penaltyOnly`; o 3D abre na tela antes
+    do jogo (Jogar partida · Visão tática · Personalizar · Simular partida). Saíram a janela (`escolha()`, `api.escolha`,
+    `salvaPreferencia` e o CSS `.tm3d-escolha`/`.tm3d-op*`/`.tm3d-sempre`/`.tm3d-confronto`). Sem WebGL 2: a simulação de sempre e
+    o aviso "Este aparelho não tem WebGL 2, que o 3D precisa: as partidas do seu time são simuladas." UMA vez por sessão
+    (`api.avisaSemWebgl`; antes, nenhum aviso). Rumo ao Estrelato titular (`rae.js`): o `jogar3d` direto (3 abas e a ficha VOCÊ);
+    "entra", banco ou fora dos relacionados, "Sempre simular" ou sem WebGL 2 (com o aviso): a simulação dele. Os modos que já
+    iam direto (Pênaltis 3D, Modo Livre 3D, Online 3D) não mudam. A Partida de Base entrou (`coach.js`: `pauseSide: 0`,
+    `simOpts`, `empateContinua: false` e `sem3d` com menos de 11 na base — o 3D joga 11 contra 11; efeito colateral: o 2D dela
+    ganhou a pausa e a tática da tela de jogo). O "Simular direto" da Partida rápida passa `sem3d` (o botão diz simular: sem o 3D;
+    o "Iniciar partida" e o "Jogar de novo" abrem a tela; revisão A3). O título vai ao 3D sem emoji (`TM.icones.semEmoji`, o
+    critério do conversor: "👑 Chefão das Lendas" → "Chefão das Lendas" — o conversor do TM não alcança o quadro; revisão A3).
+  - **E2, o "Simular partida" = o "Simular" da janela**: o 2º toque manda `tm3d:sair {motivo: 'simular', titulares}` e o
+    `jogarCfg.sair` chama `escalacaoDaTela(cfg, titulares)`: se um lado mudou (o Personalizar, ou o time que o `escalacao()` do
+    `tm3d.js` remonta quando não vem montado), os 11 da tela passam à frente num ARRAY NOVO (quem fica não muda de índice, quem
+    entra ocupa o lugar de quem saiu, quem saiu vira o 1º do banco; o `TM.data` intacto) e o MESMO `cfg.result` é simulado de novo
+    (`Object.assign(cfg.result, TM.engine.simulate(teamA, teamB, simOpts))`, como o `aplicaResultado`); sem mudança, o result de
+    sempre, bit a bit. Depois o `playOrig` com `ja3d`: a tela de jogo do TM anima lance a lance na velocidade da Config, sem o toast
+    "Partida simulada." (ele saía ANTES da simulação). No Rumo ao Estrelato o `fns.sair` é a simulação dele (`jogaPartida`, com a
+    escalação própria: os titulares da tela não chegam — ele não tem Personalizar). O "Simular o resto" e o "Voltar ao Total Match"
+    da PAUSA, com a partida começada, continuam pelo motor 3D (`tm3d:fim`). Na página: a tela fica aberta, o mundo no tick 0, até o
+    TM fechar o quadro (com o `fecharPrepartida` o jogo andava ~5 passos e aparecia nesse meio-tempo). Em pé, o `#girar` cobre a
+    tela e o X do TM já sumiu no `tm3d:pronto` (e o PWA do TM é travado em pé): a tela "Gire o celular" ganha o botão "Simular
+    partida" (um toque, sem armar; revisão A1); na reserva da tela, o mesmo botão no canto de baixo à direita (revisão A6) —
+    `main.js criarSimularTM/atualizarSimularTM`, `css/tm.css .tm-simular`; só no TM partida e Estrelato (não no Online, nos
+    Pênaltis e no Livre) e só antes do jogo, com o mundo no tick 0.
+  - **E3, a Config "Partidas do seu time"** (`settings.js`, `storage.js`): a chave NOVA `partidasTela` — `"tela"` (padrão, "Tela
+    antes do jogo") | `"simular"` ("Sempre simular": o 3D não abre; para o celular fraco ou a carreira rápida). O `partidas3d`
+    antigo (perguntar | 3d | simular, gravado pela Config e pelo "Lembrar minha escolha" da janela) é IGNORADO: a migração para a
+    tela é única por construção, e o "Sempre simular" escolhido e salvo depois vale. `preferencia()` devolve `"simular"` só com
+    `partidasTela === "simular"` e é lida a cada partida (nunca na carga: o `teste-ponte-tm` P11 carrega o `tm3d.js` sem o
+    `TM.storage`). A dica da Config diz o que fica fora (abaixo).
+  - **E4, o que fica fora do 3D, e por quê**: o Online de salas (`online.js`) e o Duelo ao vivo do Ultimate (`utonline.js`),
+    `pauseSide: null` — o resultado é dividido com a outra pessoa (FILA 40); a disputa de pênaltis e a prorrogação 2D do TM
+    (`penaltyOnly`, `playShootout`: o 3D cuida dos 90 minutos; FILA 36/37); o Rumo ao Estrelato no banco ou fora dos relacionados
+    (FILA 38); o Palpite da Arena, sem time do jogador (FILA 39); a Partida de Base com menos de 11. Continuam no 3D, como já
+    estavam pela janela: o "Enfrentar" do Ultimate Online (`utonline.js`, assíncrono contra o elenco publicado de outra pessoa; o
+    placar vai ao `utRecord`) e os jogos da Copa Online (`copa.js`) — a E4 pedia o online assíncrono fora: decisão do dono
+    ("Depende do dono" 24; para tirar, `sem3d: true` no cfg deles).
+  - **E5, o X "Voltar e simular"** do "Abrindo o estádio 3D…" (até o `tm3d:pronto`): a confirmação "Sair do 3D?" diz "A partida é
+    simulada lance a lance, sem o 3D." e o "Simular" dela fecha o quadro sem resultado, calado. Ela ficava ATRÁS do quadro (z-index
+    5000; o toque no X não mostrava nada): `body.tm3d-aberto .sheet-overlay` com z-index 5100, no meio da tela (440 px). Vale
+    para todo quadro: o X antes do pronto passou a funcionar também nos Pênaltis 3D, no Livre e no Online 3D (no Online o "Sair"
+    registra o W.O., `sair {abandono: true}`, como o texto promete; revisão A4). O "Abrindo o estádio 3D…" some quando o documento
+    do quadro já tem o `#carregando` (o texto ficava por cima da marca do TM da tela de carregar; revisão A7); o aviso de demora
+    (30 s, "Simular a partida") volta embaixo, com fundo próprio (`.tm3d-aviso.demora`). Fora do 3D, a `.sheet-overlay.modal` do
+    TM abaixo do PC (deitado, ou de 600 a 1023 px) também fica no meio da tela (revisão A8; o celular em pé com menos de 600 px
+    continua com o cartão de 380 px à esquerda, como era).
+  - **`TM.tm3d`**: `PARAMS` (parâmetros a mais depois do `?tm=<id>`; os testes passam `&prepartida=1`), `avisaSemWebgl`,
+    `preferencia()` ("tela" | "simular"); saíram `escolha` e `salvaPreferencia`. Versão do TM: v379.
+  - **Medido** (Chromium sem GPU, com outras frentes na máquina; nada num celular de verdade): a mensagem do Simular chega ao TM
+    em 0,001–0,06 s; o quadro some 1,1–9 s depois (o `remove()` do iframe desmontando o WebGL, até 6,5 s, conforme a carga); a
+    tela aparece 5,4–12,9 s depois do Jogar (8,1–8,5 s na Partida rápida). Quem só simula espera esse carregamento a cada partida
+    (na janela, um toque e nada do 3D baixado) — por isso a "tela cedo" (item 106) subiu de prioridade.
+  - **Testes**: `legacy-total-match/ferramentas/testar-3d.mjs` — a migração (os 4 casos: perguntar, 3d, simular, nada salvo), a
+    Config, o quadro sem a janela no Ultimate Rivais, na Carreira e no Rumo ao Estrelato com o golaco de verdade (a tela, o Simular
+    calado com os titulares da tela, o Jogar partida → Simular o resto → `tm3d:fim`), o Personalizar + Simular (A2) e o aviso fora
+    da marca (A7) na Partida rápida; um caso por modo com uma página de ENSAIO no lugar do 3D (Partida rápida, Arena Chefão com o
+    título sem emoji, Batalha, Base com 14 e com 8, o Estrelato com o Simular, a falha e o "Sempre simular"), o "Simular direto", a
+    falha 'erro', o X por cima do quadro, o "Sempre simular" da Config, sem WebGL 2 (um aviso) e a confirmação no meio em 960×540
+    (A8). Na base 29d67bad reprovavam 19 (a 1ª versão do teste); os 6 casos da revisão reprovavam em 212ec359; depois, 66/66 na pro
+    e 65/65 com `--publica`. `testar-ultimate` ("Sempre simular" pela `partidasTela`: nenhuma partida abre o 3D);
+    `golaco/tools/teste-prepartida-tela` E14 e E14r (contrato "Tela antes do jogo (item 64)"). Não testados: a Copa Online e o
+    "Enfrentar" (dependem do Firebase); a Base com ≥ 11 no golaco de verdade só num ensaio fora do repositório (passou).
+  - **Limites conhecidos**: a formação e a tática do Personalizar não chegam ao Simular do TM (o motor dele só lê os 11); fechar o
+    app com a tela aberta, na carreira sem "reiniciar partidas", não registra o placar (já era assim no 3D; agora vale para toda
+    partida); a confirmação do TM fora do 3D no celular em pé com menos de 600 px segue com o cartão de 380 px.
 
 ## Identidade visual de cada time (Total Match, 15/10)
 Pedido do dono: "a logo dos times, torcida, e estádio adaptáveis a cada time". Só DESENHO (render/DOM): nada entra no mundo

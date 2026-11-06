@@ -1,13 +1,19 @@
 /* ================= TOTAL MATCH 3D — partidas em 3D =================
-   O jogo é um só: o Total Match. O motor 3D (pasta golaco/, no mesmo site — o GOLAÇO novo) roda a
-   partida do seu time quando você escolhe "Jogar em 3D". O motor antigo (futebol3d/) continua
+   O jogo é um só: o Total Match. O motor 3D (pasta golaco/, no mesmo site — o GOLAÇO novo) abre em TODA partida do seu time
+   (item 124; dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular; quando clica em jogar, já
+   entra essa tela, e é em todos os modos"): o "Jogar" do modo abre o 3D na tela antes do jogo — "Jogar partida" (no estádio) ou
+   "Simular partida" (o 3D fecha com 'tm3d:sair' {motivo: 'simular'} e o TM simula lance a lance, como a janela antiga fazia).
+   A Config "Partidas do seu time" (settings.partidasTela): "tela" (padrão) | "simular" (não abre o 3D). O partidas3d antigo
+   (perguntar | 3d | simular, da janela "Jogar em 3D / Simular" que saiu) é ignorado: a migração para a tela é única por
+   construção (a chave é nova). Sem WebGL 2, a partida é simulada (um aviso por sessão). O motor antigo (futebol3d/) continua
    publicado como reserva e lê os mesmos campos da versão 1 do pedido.
 
    Como os dois conversam (mesmo endereço = mesmo armazenamento do navegador):
      TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle, partida }
           e abre o 3D num quadro (iframe) por cima do TM: golaco/index.html?tm=<id>
-     3D → window.parent.postMessage({ tipo: "tm3d:pronto" | "tm3d:fim" | "tm3d:sair", id, resultado })
-          (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder)
+     3D → window.parent.postMessage({ tipo: "tm3d:pronto" | "tm3d:fim" | "tm3d:sair", id, resultado, motivo? })
+          (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder; o 'tm3d:sair' diz o motivo:
+          "simular" = o "Simular partida" da tela, calado; "erro" = o 3D não subiu — sem WebGL 2, pedido sumido —, com o aviso)
    Cada time leva nome, sigla, cores, uniformes, os jogadores (11 titulares na ordem da prancheta
    + reservas) com atributos, posição e aparência, e a identidade (v2): o MESMO escudo que o TM
    mostra (TM.img.clubImg/nationImg; Ultimate: o escudo desenhado), bandeira, liga, técnico e o
@@ -45,6 +51,8 @@
 
   var api = {
     PASTA: "golaco/index.html",            // os testes trocam por uma página de ensaio
+    PARAMS: "",                               // parâmetros a mais depois do ?tm=<id> (os testes: "&prepartida=1" — com o
+                                              // webdriver a tela antes do jogo fica desligada sem ele)
     ESPERA_MS: 30000                          // sem sinal do 3D nesse tempo: oferece simular
   };
 
@@ -69,9 +77,17 @@
   function clareia(h, pct) { return soma(h, Math.round(255 * pct / 100)); }
   function escurece(h, pct) { return soma(h, -Math.round(255 * pct / 100)); }
 
-  /* ---------- preferência (Config) ---------- */
-  function preferencia() { try { return TM.storage.settings().partidas3d || "perguntar"; } catch (e) { return "perguntar"; } }
-  function salvaPreferencia(v) { try { var s = TM.storage.settings(); s.partidas3d = v; TM.storage.saveSettings(s); } catch (e) {} }
+  /* ---------- preferência (Config "Partidas do seu time"; item 124) ----------
+     "tela" (padrão: o 3D abre na tela antes do jogo — Jogar partida ou Simular partida) | "simular" (o 3D não abre). Lida a cada
+     partida (nunca na carga: o teste-ponte-tm P11 carrega este arquivo sem o TM.storage). O partidas3d antigo não conta. */
+  function preferencia() { try { return TM.storage.settings().partidasTela === "simular" ? "simular" : "tela"; } catch (e) { return "tela"; } }
+  // sem WebGL 2 a partida é simulada como sempre; o aviso sai uma vez por sessão (em toda partida ele seria barulho)
+  var avisouSemWebgl = false;
+  function avisaSemWebgl() {
+    if (avisouSemWebgl) return;
+    avisouSemWebgl = true;
+    try { TM.ui.toast("Este aparelho não tem WebGL 2, que o 3D precisa: as partidas do seu time são simuladas.", "alerta"); } catch (e) {}
+  }
 
   /* ---------- time do TM → time do 3D ---------- */
   var POS_3D = { GOL: "GOL", ZAG: "ZAG", LD: "LD", LE: "LE", VOL: "VOL", MC: "MC", MEI: "MEI", MD: "MD", ME: "ME", CA: "CA", SA: "ATA", PD: "PD", PE: "PE" };
@@ -215,6 +231,11 @@
       estadio: st && st.name ? { nome: st.name, capacidade: st.capacity || 0, foto: abs(foto) } : null
     };
   }
+  // o título da partida vai ao 3D sem emoji ("⚡ Relâmpago", "👑 Chefão das Lendas", "🏖️ ..."; revisão A3): o js/icones.js limpa o
+  // DOM do TM, não o do quadro, e o TM não usa emoji (só o critério dele: TM.icones.semEmoji)
+  function tituloSemEmoji(t) {
+    try { return TM.icones && TM.icones.semEmoji ? TM.icones.semEmoji(t) : t; } catch (e) { return t; }
+  }
   // o empate desta partida CONTINUA no TM (prorrogação ou pênaltis)? o.empateContinua do modo: true/false, ou uma função
   // (gols da casa, gols de fora) → o modo iria a prorrogação/pênaltis com esse empate (a ida e volta depende do placar). Com a
   // função: true/false quando todo empate de 0×0 a 6×6 dá a mesma resposta; senão (ou sem o campo) undefined — o 3D usa a
@@ -240,7 +261,7 @@
     try { if (classico && ca && cb && D.derbyName) nomeCl = D.derbyName(ca.id, cb.id) || null; } catch (e) {}
     var pub = typeof so.crowd === "number" && isFinite(so.crowd) ? Math.max(0.1, Math.min(1, so.crowd)) : 0.75;
     var r = { neutro: !!so.neutral, publico: Math.round(pub * 100) / 100, classico: classico, nomeClassico: nomeCl,
-             competicao: o.title || "", estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
+             competicao: tituloSemEmoji(o.title || ""), estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
     var ec = empateContinuaDe(o.empateContinua);
     if (ec !== undefined) r.empateContinua = ec;
     // o tempo de jogo e a dificuldade (item 33): a Config (Duração em 3D, Dificuldade) ou o que o modo manda (as Batalhas)
@@ -358,7 +379,7 @@
   // textos do quadro (o X, a confirmação e o aviso de demora): a partida é simulada quando o 3D não vem; os Pênaltis 3D
   // (jogarPenaltis) não simulam nada — só voltam à escolha dos times (fns.textos)
   var TEXTOS_PARTIDA = { quadro: "Partida em 3D", sair: "Voltar e simular", confirma: "Sair do 3D?",
-    confirmaTexto: "A partida é simulada do começo, como sem o 3D.", confirmaBotao: "Simular", demora: "Simular a partida" };
+    confirmaTexto: "A partida é simulada lance a lance, sem o 3D.", confirmaBotao: "Simular", demora: "Simular a partida" };
   // grava o pedido para o 3D. Sem espaço (os saves do TM moram no MESMO localStorage): de novo sem as fotos importadas (data:, as
   // grandes — item 31) e, se ainda faltar, sem foto nenhuma — a foto sai, o jogo 3D não (antes das fotos o pedido tinha ~18 KB;
   // com as importadas pode passar de 400 KB). true = gravado.
@@ -383,7 +404,7 @@
     var T = Object.assign({}, TEXTOS_PARTIDA, fns.textos || {});
     if (!gravaPedido(pedido)) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
-    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
+    var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id) + (api.PARAMS || ""), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
     var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
       TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair", null, T.sairDados || null); });
     } } }, [TM.ic("x")]);
@@ -391,9 +412,22 @@
     document.body.appendChild(tela);
     document.body.classList.add("tm3d-aberto");
     var pronto = false, acabou = false;
+    // o "Abrindo o estádio 3D…" some quando a página do 3D já mostra a tela de carregar DELA (a marca do TM no meio da tela: o
+    // texto ficava escrito por cima da logo — revisão A7 do item 124, agora em toda partida); o X fica até o 'tm3d:pronto'. Mesmo
+    // site: o TM lê o documento do quadro (a página de ensaio dos testes não tem a tela de carregar: o aviso fica)
+    var olhaCarga = setInterval(function () {
+      if (pronto || acabou || !quadro.isConnected) { clearInterval(olhaCarga); return; }
+      try {
+        var d = quadro.contentDocument;
+        if (d && d.getElementById("carregando")) { aviso.style.display = "none"; clearInterval(olhaCarga); }
+      } catch (e) { clearInterval(olhaCarga); }
+    }, 100);
     var espera = setTimeout(function () {
       if (pronto || acabou) return;
+      // (a oferta de simular volta à vista, embaixo — no meio fica a tela de carregar do 3D)
       aviso.textContent = "O 3D está demorando para abrir.";
+      aviso.classList.add("demora");
+      aviso.style.display = "";
       aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair"); } } }));
     }, api.ESPERA_MS);
     function lerResultado() { try { var t = localStorage.getItem("tm3d:resultado:" + pedido.id); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
@@ -414,7 +448,7 @@
     function termina(como, res, dados) {
       if (acabou) return;
       acabou = true;
-      clearTimeout(espera);
+      clearTimeout(espera); clearInterval(olhaCarga);
       fecha3d();
       try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
       if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null);
@@ -430,38 +464,11 @@
     ativo = null;
   }
 
-  /* ---------- escolha antes do jogo: Jogar em 3D ou Simular ---------- */
-  function escolha(cfg, simular, tres) {
-    var sempre = false;
-    var ov = el("div", { class: "ut-sheet tm3d-escolha" });
-    var caixa = el("label", { class: "tm3d-sempre" }, [
-      el("input", { type: "checkbox", on: { change: function (e) { sempre = !!e.target.checked; } } }),
-      el("span", { text: "Lembrar minha escolha (dá para mudar em Config)" })
-    ]);
-    function vai(fn, pref) { return function () { if (sempre) salvaPreferencia(pref); fecha(); fn(); }; }
-    var a = cfg.teamA || {}, b = cfg.teamB || {};
-    ov.appendChild(el("div", { class: "ut-sheet-in" }, [
-      el("div", { class: "ut-sheet-h" }, [el("span", { text: cfg.title || "Partida" }), el("button", { class: "ut-x", text: "✕", on: { click: function () { fecha(); simular(); } } })]),
-      el("div", { class: "tm3d-confronto", text: (a.name || "Casa") + " × " + (b.name || "Fora") }),
-      el("button", { class: "tm3d-op tres", type: "button", on: { click: vai(tres, "3d") } }, [
-        el("span", { class: "tm3d-op-ic" }, [TM.ic("gamepad-2")]),
-        el("span", { class: "tm3d-op-i" }, [el("b", { text: "Jogar em 3D" }), el("span", { text: cfg.controle && cfg.controle.tmId ? "Você controla só o seu jogador, no estádio 3D." : "Você controla o seu time, no estádio 3D." })])
-      ]),
-      el("button", { class: "tm3d-op", type: "button", on: { click: vai(simular, "simular") } }, [
-        el("span", { class: "tm3d-op-ic" }, [TM.ic("fast-forward")]),
-        el("span", { class: "tm3d-op-i" }, [el("b", { text: "Simular" }), el("span", { text: "Acompanhe lance a lance, como sempre." })])
-      ]),
-      caixa
-    ]));
-    document.body.appendChild(ov);
-    requestAnimationFrame(function () { ov.classList.add("show"); });
-    function fecha() { ov.classList.remove("show"); setTimeout(function () { ov.remove(); }, 200); }
-  }
-
   /* ---------- jogar uma partida do TM em 3D ----------
      cfg = o mesmo cfg do TM.matchview.play (teamA, teamB, result, pauseSide, formation,
      formationB, title, controle?). Ao fim, o result vira o do 3D e a tela de jogo do TM
-     mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo. */
+     mostra o placar na hora (velocidade instantânea), seguindo o fluxo normal do modo.
+     "Simular partida" na tela antes do jogo (ou o X do TM): o result de sempre, lance a lance. */
   // v2 = v1 + identidade de cada time + partida (o motor antigo ignora os campos novos)
   function novoPedido(o) {
     // o cfg.formation do TM é a do time do usuário: jogando fora, ela é a do time B
@@ -470,7 +477,7 @@
     var home = time3d(o.teamA, fA), away = time3d(o.teamB, fB);
     var p = {
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
-      titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
+      titulo: tituloSemEmoji(o.title || "") || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
       home: home, away: away, partida: partidaDe(o, home, away),
       // edição do TM: na pro (licenciada) o 3D desenha o estádio real do mandante; na pública, o Estádio Total Match
       edicao: (function () { try { return TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) { return "public"; } })(),
@@ -499,11 +506,15 @@
     var goleiro = [0, 1].map(function (t) { return !l.goleiro || l.goleiro[t] == null ? true : !!l.goleiro[t]; });
     return { linha: linha, goleiro: goleiro };
   }
+  // o 3D falhou depois de abrir ('tm3d:sair' com motivo "erro": sem WebGL 2 no quadro, pedido sumido, erro no início): o aviso
+  // que a página do 3D mostrava some com o quadro — o TM avisa. O "Simular partida" e o X ficam calados
+  function avisoDeSaida(dados) { if (dados && dados.motivo === "erro") TM.ui.toast("O 3D não abriu: partida simulada.", "alerta"); }
   /* partida 3D fora da tela de jogo do TM (ex.: Rumo ao Estrelato, que tem a própria súmula):
      o = { teamA, teamB, formation?, formationB?, userSide: 0|1, controle?: { tmId }, title, simOpts? }
-     fns.fim(resultado3d) | fns.sair() (voltou sem jogar: o modo simula como sempre) */
+     fns.fim(resultado3d) | fns.sair() (voltou sem jogar — o "Simular partida" da tela, o X do TM — ou o 3D falhou: o modo
+     simula como sempre) */
   function jogar3d(o, fns) {
-    abre3d(novoPedido(o), { fim: fns.fim, sair: fns.sair,
+    abre3d(novoPedido(o), { fim: fns.fim, sair: function (dados) { avisoDeSaida(dados); fns.sair(); },
       falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); fns.sair(); } });
   }
   /* Pênaltis 3D: o = { teamA, teamB, userSide: 0|1, title?, simOpts? }; fns.fim(resultado3d) com resultado3d.penaltis |
@@ -552,6 +563,39 @@
     });
     return true;
   }
+  /* item 124 (revisão A2): o "Simular partida" da tela traz os titulares que ela mostrou (tit = { home: [tmId × 11], away }): a
+     escalação montada aqui (escalacao(): o time que não vem pronto é remontado) e a do Personalizar. O result calculado antes de o
+     3D abrir usou players.slice(0, 11) — se um lado mudou, os 11 da tela passam à frente (quem fica no XI não muda de índice; quem
+     entra ocupa o lugar de quem saiu; quem saiu vira o 1º do banco) e o MESMO result é simulado de novo (Object.assign, como o
+     aplicaResultado) com o simOpts do modo. O array de jogadores é trocado, não mexido (o teamFromClub passa o do TM.data). Sem
+     mudança (o time pronto e nada personalizado), nada muda: o result de sempre. true = simulou de novo. */
+  function ordemDaTela(time, ids) {
+    var ps = (time && time.players) || [];
+    if (!ids || ids.length !== 11 || ps.length < 11) return null;
+    var porId = {}, quer = {};
+    ps.forEach(function (p) { if (p) porId[String(p.id)] = p; });
+    for (var i = 0; i < 11; i++) { var k = String(ids[i]); if (!porId[k] || quer[k]) return null; quer[k] = 1; }
+    var xi = ps.slice(0, 11), fica = {};
+    xi.forEach(function (p) { if (p && quer[String(p.id)]) fica[String(p.id)] = 1; });
+    if (Object.keys(fica).length === 11) return null;
+    var entram = ids.filter(function (id) { return !fica[String(id)]; }).map(function (id) { return porId[String(id)]; });
+    var novo = xi.map(function (p) { return p && fica[String(p.id)] ? p : entram.shift(); });
+    var saem = xi.filter(function (p) { return p && !fica[String(p.id)]; });
+    var noXi = {}; novo.forEach(function (p) { noXi[String(p.id)] = 1; });
+    return novo.concat(saem, ps.slice(11).filter(function (p) { return p && !noXi[String(p.id)]; }));
+  }
+  function escalacaoDaTela(cfg, tit) {
+    if (!tit || !cfg || !cfg.result || !TM.engine || !TM.engine.simulate) return false;
+    var mudou = false;
+    [[cfg.teamA, tit.home], [cfg.teamB, tit.away]].forEach(function (par) {
+      var novo = ordemDaTela(par[0], par[1]);
+      if (novo) { par[0].players = novo; mudou = true; }
+    });
+    if (!mudou) return false;
+    var so = cfg.simOpts || { realism: (cfg.settings || TM.storage.settings()).realism };
+    try { Object.assign(cfg.result, TM.engine.simulate(cfg.teamA, cfg.teamB, so)); } catch (e) { return false; }
+    return true;
+  }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
       userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
@@ -561,32 +605,37 @@
         var s2 = Object.assign({}, cfg.settings || TM.storage.settings(), { matchSpeed: "instantaneo" });
         playOrig(screen, Object.assign({}, cfg, { settings: s2, ja3d: true }));
       },
-      sair: function () { TM.ui.toast("Partida simulada.", "ok"); playOrig(screen, Object.assign({}, cfg, { ja3d: true })); },
+      // o "Simular partida" da tela (ou o X do TM): a tela de jogo do TM simula lance a lance o result de sempre, na velocidade da
+      // Config (o toast "Partida simulada." saiu: ele vinha antes da simulação — item 124), com os titulares que a tela mostrou
+      sair: function (dados) {
+        avisoDeSaida(dados);
+        if (dados && dados.motivo === "simular") escalacaoDaTela(cfg, dados.titulares);
+        playOrig(screen, Object.assign({}, cfg, { ja3d: true }));
+      },
       falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); playOrig(screen, Object.assign({}, cfg, { ja3d: true })); }
     });
   }
-  // o 3D entra em toda partida que tem um lado do jogador (pauseSide) e não é online contra outra pessoa
+  // o 3D entra em toda partida que tem um lado do jogador (pauseSide) e não é online contra outra pessoa (o resultado
+  // compartilhado do Online de salas e do Duelo do Ultimate: pauseSide null), nem só a disputa de pênaltis do TM (penaltyOnly),
+  // nem a que o modo marca sem3d (a Partida de Base com menos de 11). O WebGL 2 é conferido à parte (o aviso)
   function ofereceEm(cfg) {
     if (!cfg || cfg.ja3d || cfg.sem3d || cfg.pauseSide == null || !cfg.teamA || !cfg.teamB || !cfg.result) return false;
-    if (cfg.result.penaltyOnly) return false;
-    return webgl();
+    return !cfg.result.penaltyOnly;
   }
 
   if (TM.matchview && TM.matchview.play) {
     var playOrig = TM.matchview.play;
+    // o "Jogar" de todo modo com o seu time: o 3D direto, na tela antes do jogo (item 124; a janela "Jogar em 3D / Simular" saiu)
     TM.matchview.play = function (screen, cfg) {
-      if (!ofereceEm(cfg)) return playOrig(screen, cfg);
-      var pref = preferencia();
-      if (pref === "simular") return playOrig(screen, cfg);
-      if (pref === "3d") return jogarCfg(screen, cfg, playOrig);
-      // a escolha aparece por cima da tela atual; a tela de jogo só é montada depois
-      escolha(cfg, function () { playOrig(screen, cfg); }, function () { jogarCfg(screen, cfg, playOrig); });
+      if (!ofereceEm(cfg) || preferencia() === "simular") return playOrig(screen, cfg);
+      if (!webgl()) { avisaSemWebgl(); return playOrig(screen, cfg); }
+      return jogarCfg(screen, cfg, playOrig);
     };
   }
 
   api.disponivel = webgl;
   api.preferencia = preferencia;
-  api.salvaPreferencia = salvaPreferencia;
+  api.avisaSemWebgl = avisaSemWebgl;
   api.time3d = time3d;
   api.novoPedido = novoPedido;
   api.aplicaResultado = aplicaResultado;
@@ -596,7 +645,6 @@
   api.jogarPenaltis = jogarPenaltis;
   api.jogarLivre = jogarLivre;
   api.jogarOnline = jogarOnline;
-  api.escolha = escolha;
   api.fechar = fecha3d;
   api._gravaPedido = gravaPedido;   // (testes: golaco/tools/teste-ponte-tm.mjs P11)
   TM.tm3d = api;
