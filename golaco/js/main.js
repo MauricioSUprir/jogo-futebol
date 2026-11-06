@@ -603,9 +603,12 @@ const custoTec = { n: 0, ms: 0 };
 const _leituraVazia = [];
 // Substituição (js/substituicao.js): ?substituicao=0|1 força; senão a preferência salva ("Cena de substituição" no "Modo de
 // jogo"); senão desligada nos testes automatizados (webdriver), nos prints e na demonstração; senão SUBST.ligada.
+// No online (item 30) vale a escolha do ANFITRIÃO nos dois aparelhos (online-pagina.js substOnline): o lado 0 usa a regra de
+// cima e a manda pelo controle ('opcoes'); o convidado começa com "só a faixa" e adota a dele quando ela chega (a preferência
+// e o ?substituicao do convidado não contam).
 const SUBC = CFG.SUBST;
 const substParam = params.get('substituicao');
-let substLigada = ONLINE ? false : substParam === '1' ? true : substParam === '0' ? false
+let substLigada = ONLINE && LADO_ONLINE === 1 ? false : substParam === '1' ? true : substParam === '0' ? false
   : typeof prefs.substituicao === 'boolean' ? prefs.substituicao : (navigator.webdriver || PRINTS || DEMO_ON) ? false : SUBC.ligada;
 let cenaSub = null;          // a cena em andamento (o laço segura a simulação)
 let subBotoes = 0;           // botões segurados no começo: só pulam depois de soltos e apertados de novo
@@ -2972,7 +2975,13 @@ function quadroOnline(dt, ent, agoraMs) {
   dtMedioOn += (dt - dtMedioOn) * 0.05;
   const segPausa = PAG_ONLINE.quadro(agoraMs, { fim: mundo.partida?.estado === 'fim' });
   let segura = segPausa || retratoBloqueado() || PAG_ONLINE.encerrado;
-  if (diretor && diretor.ativo) {
+  if (cenaSub) {
+    // a cena de substituição (item 30): segura só a MINHA simulação, como fora do online (o outro espera sozinho: o lockstep);
+    // a minha pausa combinada, o celular em pé e a aba escondida congelam a cena (ela volta de onde parou); o menu e o editor
+    // não (no online eles não param o jogo, como na comemoração); o "Pular" pula só a minha
+    segura = true;
+    if (!pausado() && !pausaTeste && !document.hidden) quadroSubst(dt, ent);
+  } else if (diretor && diretor.ativo) {
     segura = true;
     if (botaoPula(ent.botoes)) fimReplay(true);
     else if (!diretor.avancar(dt)) fimReplay(false);
@@ -3015,7 +3024,11 @@ function quadroOnline(dt, ent, agoraMs) {
   MOD_ON.marcarParado(s, parado, agoraMs);
   // parado esperando o outro: o tempo parado não é recuperado depois (correr para alcançar gasta a folga do atraso D)
   if (parado || segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); if (segurou) alfa = 1; }
-  PAG_ONLINE.enviarPacote(agoraMs, (trintaQps() ? MOD_ON.E_30QPS : 0) | (ia ? MOD_ON.E_MENU : 0));
+  // (item 30) segurando a MINHA simulação por uma cena — a substituição, o replay, a comemoração no gol + 149 — o pacote diz
+  // isso (E_CENA): o outro, esperando, mostra "{nome} ainda está vendo a cena", não "A conexão parou". Pelo estado, não pelo
+  // `segurou` do laço (num quadro sem passo a marca piscaria)
+  const emCena = !!cenaSub || !!(diretor && diretor.ativo) || seguraSimulacao();
+  PAG_ONLINE.enviarPacote(agoraMs, (trintaQps() ? MOD_ON.E_30QPS : 0) | (ia ? MOD_ON.E_MENU : 0) | (emCena ? MOD_PAG_ON.E_CENA : 0));
 }
 
 function medirQps(dt, agora) {
@@ -4151,7 +4164,14 @@ async function iniciar() {
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
         // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
         fase: () => saidaOnlineTela(),
+        // (item 30, só no convidado) as opções do anfitrião chegaram: a cena de substituição dele vale aqui também
+        opcoes: m => {
+          const v = MOD_PAG_ON.substOnline(LADO_ONLINE, substLigada, m.subst);
+          if (v !== substLigada) { substLigada = v; marcarSubst(); }
+        },
       },
+      // (item 30, só no anfitrião) o que ele decide pelos dois: a cena de substituição (a regra local dele, acima)
+      opcoes: LADO_ONLINE === 0 ? { subst: substLigada } : null,
     });
   }
   hud.progresso('Preparando o gramado…');

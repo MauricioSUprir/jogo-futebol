@@ -14,11 +14,43 @@ import { aoTocar } from './toque-botao.js';
 // dele (30 qps, menu, aba escondida). Todo pacote leva a fase: o canal do jogo é sem ordem e sem reenvio, mas a fase só avança
 // (tela → pronto → pré-jogo → jogo), então a do outro é o MAIOR valor já recebido — um pacote velho não desfaz nada.
 export const E_TELA = 8, E_PRONTO = 16, E_PREJOGO = 32;
+// Item 30: E_CENA = este lado segura a SUA simulação por uma cena local (a substituição, o replay, a comemoração no gol + 149):
+// o outro, parado esperando, diz "{nome} ainda está vendo a cena." em vez de "A conexão parou" (os pacotes chegam: a conexão
+// não parou). Só texto: a fase continua a do jogo (faseDoEstado não o lê) e o online.js não o lê.
+export const E_CENA = 64;
 /** A fase (0 tela, 1 pronto, 2 pré-jogo, 3 jogo) pelo byte de estado de um pacote. */
 export function faseDoEstado(e) {
   if (e & E_PREJOGO) return 2;
   if (e & E_TELA) return e & E_PRONTO ? 1 : 0;
   return 3;
+}
+
+/**
+ * A cena de substituição no online (item 30): a escolha do ANFITRIÃO (lado 0) vale nos dois aparelhos. minha = a regra local
+ * (?substituicao, a preferência salva, desligada nos testes automatizados, o padrão); doAnfitriao = o `subst` da mensagem
+ * 'opcoes' dele (undefined = ainda não chegou). O convidado sem a mensagem fica com "só a faixa": a cena é só desenho, então
+ * a diferença nunca dessincroniza — no máximo um aparelho espera o outro.
+ */
+export function substOnline(lado, minha, doAnfitriao) {
+  if (lado !== 1) return !!minha;
+  return typeof doAnfitriao === 'boolean' ? doAnfitriao : false;
+}
+
+/**
+ * O texto de baixo do aviso de espera (puro). o = {nomeOutro, faseRemota (-1 sem pacote), estadoRemoto (o byte 19 do último
+ * pacote), ultimoPacote (null = nenhum pacote do outro ainda), semPacoteMs}; longa = a espera já passou de AGUARDANDO_MS (o
+ * estado 'aguardando' do online.js; na curta, sem motivo conhecido, nada). Com os pacotes do outro chegando, o motivo dele —
+ * antes do jogo, no pré-jogo, vendo uma cena (E_CENA) ou, na espera longa, "ainda não voltou ao jogo" (o celular em pé) —;
+ * "A conexão parou" só sem pacote há AGUARDANDO_MS (antes ela aparecia em toda espera longa: a do replay, da comemoração e
+ * da cena de substituição do outro).
+ */
+export function textoEspera(o, longa) {
+  if (o.ultimoPacote == null) return longa ? 'O outro aparelho ainda está abrindo a partida.' : '';
+  if (o.semPacoteMs >= O.AGUARDANDO_MS) return longa ? 'A conexão parou. Se não voltar, vocês podem encerrar.' : '';
+  if (o.faseRemota === 0 || o.faseRemota === 1) return `${o.nomeOutro} ainda está antes do jogo.`;
+  if (o.faseRemota === 2) return `${o.nomeOutro} ainda está no pré-jogo.`;
+  if (o.estadoRemoto & E_CENA) return `${o.nomeOutro} ainda está vendo a cena.`;
+  return longa ? `${o.nomeOutro} ainda não voltou ao jogo.` : '';
 }
 
 const CSS = `
@@ -49,8 +81,9 @@ const seg = ms => Math.max(0, Math.ceil(ms / 1000));
 const mmss = ms => { const s = seg(ms); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 
 /**
- * opc: {lado, D, nomes: [anfitrião, convidado], transporte: 'porta' | 'bc', sala, ao: {sair(motivo), wo(vencedor, motivo),
- * dessinc(info), fase(f) — a fase do outro subiu}}. Devolve a página do online (s = a sessão).
+ * opc: {lado, D, nomes: [anfitrião, convidado], transporte: 'porta' | 'bc', sala, opcoes (só o anfitrião: o que ele decide pelos
+ * dois — {subst}; item 30), ao: {sair(motivo), wo(vencedor, motivo), dessinc(info), fase(f) — a fase do outro subiu, opcoes(m)
+ * — as do anfitrião chegaram (só no convidado)}}. Devolve a página do online (s = a sessão).
  */
 export function criarPaginaOnline(opc) {
   const lado = opc.lado === 1 ? 1 : 0;
@@ -68,6 +101,8 @@ export function criarPaginaOnline(opc) {
     if (!m || typeof m !== 'object') return;
     if (m.tipo === 'acao') O.receberAcao(s, m.n, m.acao);
     else if (m.tipo === 'hash') O.receberHash(s, m.n, m.h);
+    // (item 30) as opções do anfitrião: na hora, só no convidado (o anfitrião manda; repetidas, quem recebe só copia)
+    else if (m.tipo === 'opcoes') { if (lado === 1) ao.opcoes?.(m); }
     else ctrlRecebidos.push(m);
   }
   // a fase do outro: o maior valor recebido (-1 = nenhum pacote ainda)
@@ -76,7 +111,13 @@ export function criarPaginaOnline(opc) {
     if (!d || typeof d !== 'object') return;
     if (d.t === 'j' && d.b instanceof ArrayBuffer) {
       // (a fase que subiu avisa na hora — a saída conjunta da tela não espera o próximo quadro, que com o 3D atrás é lento)
-      if (O.receber(s, d.b, performance.now())) { const f = faseDoEstado(s.estadoRemoto); if (f > faseRemota) { faseRemota = f; ao.fase?.(f); } }
+      if (O.receber(s, d.b, performance.now())) {
+        const f = faseDoEstado(s.estadoRemoto), primeiro = faseRemota < 0;
+        if (f > faseRemota) { faseRemota = f; ao.fase?.(f); }
+        // (item 30) o 1º pacote do outro: as opções do anfitrião de novo (no BroadcastChannel dos testes a mandada ao criar se
+        // perde quando a outra aba ainda não abriu o canal; a porta do TM guarda — repetir não faz mal)
+        if (primeiro) mandarOpcoes();
+      }
     }
     else if (d.t === 'c') aoControle(d.m);
     else if (d.t === 'estado') estadoLig = { estado: d.estado, rtt: d.rtt ?? null, motivo: d.motivo ?? null };
@@ -105,6 +146,12 @@ export function criarPaginaOnline(opc) {
     });
   }
   const enviarControle = m => enviar({ t: 'c', m });
+  // (item 30) o que o ANFITRIÃO decide pelos dois sem entrar no mundo (a cena de substituição): pelo canal de controle
+  // (confiável e em ordem), ao criar e de novo no 1º pacote do outro; nunca pelo pedido (a cena não está no hash e a
+  // preferência é do GOLAÇO, não do TM)
+  const opcoes = lado === 0 && opc.opcoes ? { ...opc.opcoes } : null;
+  function mandarOpcoes() { if (opcoes) enviarControle({ ...opcoes, tipo: 'opcoes' }); }
+  mandarOpcoes();
   function enviarPacote(agora, bits) {
     const ab = O.pacote(s, agora, bits);
     enviar({ t: 'j', b: ab }, porta ? [ab] : []);
@@ -153,13 +200,8 @@ export function criarPaginaOnline(opc) {
     enviarControle({ tipo: 'retoma' });
   }
 
-  /** O outro ainda não começou o jogo: o texto do aviso de espera (pacotes chegando; null = a conexão parou de verdade). */
-  function antesDoOutro(c) {
-    if (s.ultimoPacote == null || c.semPacoteMs >= O.AGUARDANDO_MS) return null;
-    if (faseRemota === 0 || faseRemota === 1) return `${nomeOutro} ainda está antes do jogo.`;
-    if (faseRemota === 2) return `${nomeOutro} ainda está no pré-jogo.`;
-    return null;
-  }
+  /** O texto de baixo do aviso de espera (textoEspera, puro). */
+  const espera = (c, longa) => textoEspera({ nomeOutro, faseRemota, estadoRemoto: s.estadoRemoto, ultimoPacote: s.ultimoPacote, semPacoteMs: c.semPacoteMs }, longa);
   /**
    * A cada quadro (agora em ms): trata o controle que chegou, a pausa, o W.O. e a dessincronia, e mostra o aviso certo.
    * ctx: {fim: a partida acabou, antes: a tela antes do jogo aberta (sem passos: só a saída do outro e a ligação valem)}.
@@ -196,13 +238,12 @@ export function criarPaginaOnline(opc) {
         { texto: 'Encerrar com vitória por W.O.', primario: true, fn: () => { encerrado = true; ao.wo?.(lado, 'sumiu'); } },
         { texto: 'Esperar mais', fn: () => { esperaWO = semNada + 60000; avisoChave = ''; } },
       ] : [];
-      // (o outro ainda na tela antes do jogo ou no pré-jogo, com os pacotes chegando: é isso que o aviso diz — "a conexão parou"
-      // enganava; o W.O. continua só sem pacote por 90 s)
-      const antesOutro = antesDoOutro(c);
-      mostrar('aguardando', `Aguardando ${nomeOutro}…`, s.ultimoPacote == null ? 'O outro aparelho ainda está abrindo a partida.' : antesOutro ?? 'A conexão parou. Se não voltar, vocês podem encerrar.', botoes);
+      // (o outro ainda na tela antes do jogo, no pré-jogo ou vendo uma cena, com os pacotes chegando: é isso que o aviso diz —
+      // "a conexão parou" enganava; o W.O. continua só sem pacote por 90 s)
+      mostrar('aguardando', `Aguardando ${nomeOutro}…`, espera(c, true), botoes);
       if (c.semPacoteMs >= O.AGUARDANDO_MS && porta && (Math.floor(c.semPacoteMs / 5000) !== quadro.ultReligar)) { quadro.ultReligar = Math.floor(c.semPacoteMs / 5000); enviar({ t: 'religar' }); }
     } else if (c.paradoMs >= 900 && !ctx.antes) {
-      mostrar('espera', `Aguardando ${nomeOutro}…`, antesDoOutro(c) ?? '');
+      mostrar('espera', `Aguardando ${nomeOutro}…`, espera(c, false));
     } else esconder();
     // selo pequeno de conexão instável (só quando não há aviso maior)
     const instavel = c.estado === 'instavel' && aviso.hidden;
