@@ -15,11 +15,20 @@
 // posicao 'MEI' (com 'GOL' a pose põe as mãos "prontas" à frente da cintura); o uniforme dele vem só da lista do
 // desenho (goleiro: true).
 //
+// Passada natural (item 61; dono, 23/10: "parecem que estão marchando, parecendo NPC"; js/marcha.js): cada um nasce com a
+// SUA fase da passada (pelo id: antes todos com fase 0 e o mesmo atraso — o k-ésimo do mandante e o do visitante no mesmo
+// pé, os 3 árbitros juntos), anda com o SEU ritmo (×1–1,12 da cadência: passos um pouco mais curtos ou mais longos) e sai
+// do parado devagar: o ponto do caminho acelera como 1 − e^(−t/τ) (3–5 passos até o regime; antes ia de 0 a 1,45 m/s em
+// ~0,6 s e o corpo agachava 27 cm no 1º passo), começando τ antes — no regime cada um está no MESMO ponto do caminho de
+// antes (as chegadas na fila e o plano alto do roteiro não mudam). Os árbitros saem até 0,35 s um depois do outro. O
+// desenho de cada um é a pose do jogo + a camada do braço e do tronco (poseAndante; render/prejogo.js desenha por ela).
+//
 // Contrato: criarCortejo(times) → c; passoCortejo(c) (1/60 s); tempoCortejo(c); fotoCortejo(c) / restaurarCortejo(c, f)
 // (os planos de câmera cortam e pulam no tempo do cortejo); filaFinal(c) monta a fila já parada sem simular;
-// vagaFinal(c, i); chegaram(c). Sem three.js nem DOM.
-import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
-import { alturaQuadril } from './anim.js';
+// vagaFinal(c, i); chegaram(c); poseAndante(c, a, out) (a pose desenhada). Sem three.js nem DOM.
+import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, freqPassada } from './jogador.js';
+import { alturaQuadril, pose } from './anim.js';
+import { parametrosMarcha, espalharFase, marchar, MARCHA } from './marcha.js';
 import { PASSO, ESTADIO } from './config.js';
 import { ELENCOS, fichaDe, atributosDe } from './elenco.js';
 import { FORMACOES } from './formacoes.js';
@@ -38,6 +47,8 @@ export const CORTEJO = {
   zArbitro: 45.3,
   xArbitros: [0, -0.85, 0.85],
   atrasoTimes: 1.6,       // s — os times saem depois dos árbitros
+  tau: 0.7,               // s — a saída do parado: o ponto do caminho acelera como 1 − e^(−t/τ) (95% em ~2 s)
+  atrasoArb: [0, 0.35],   // s — os árbitros não saem juntos (a mais do atraso deles, que era 0)
   chegada: 1.6,           // ganho (1/s) da freada na vaga
   paraEm: 0.04,           // m da vaga: parado
   viraEm: 0.3,            // m da vaga: o corpo vira para a tribuna
@@ -112,11 +123,13 @@ export function criarCortejo(times) {
       const j = criarJogador(id, q.x, q.z, q.rumo, atributosDe(ficha), t);
       // anda como jogador de linha (a pose do goleiro com 'GOL' põe as mãos prontas); o uniforme vem da lista
       j.posicao = 'MEI';
+      const mp = parametrosMarcha(id);
+      espalharFase(j, mp.fase);
       const goleiro = ficha.pos === 'GOL';
       mini.jogadores.push(j);
       andantes.push({
         j, id, time: t, arb: false, goleiro, kit: el ? (goleiro ? el.uniforme.goleiro : el.uniforme.linha) : null,
-        k, caminho: cam, s0, sFim: cam.L - k * C.gapFila, atraso: C.atrasoTimes + k * (C.gapColuna - C.gapTunel) / C.vel, chegou: null,
+        k, caminho: cam, s0, sFim: cam.L - k * C.gapFila, atraso: C.atrasoTimes + k * (C.gapColuna - C.gapTunel) / C.vel, chegou: null, mp,
       });
     });
   }
@@ -125,8 +138,12 @@ export function criarCortejo(times) {
     const id = C.idArbitro + i;
     const j = criarJogador(id, dx, C.zArbitro, -Math.PI / 2, {}, 2);
     j.posicao = 'ARB';
+    const mp = parametrosMarcha(id);
+    espalharFase(j, mp.fase);
     mini.jogadores.push(j);
-    andantes.push({ j, id, time: 2, arb: true, goleiro: false, kit: 'arbitro', k: i, caminho: cam, s0: 0, sFim: cam.L, atraso: 0, chegou: null });
+    // (o atraso dos árbitros conta a partir de τ: a rampa começa τ antes do atraso — ninguém sai antes do tick 0)
+    const atraso = C.tau + C.atrasoArb[0] + (C.atrasoArb[1] - C.atrasoArb[0]) * mp.atrasoSaida;
+    andantes.push({ j, id, time: 2, arb: true, goleiro: false, kit: 'arbitro', k: i, caminho: cam, s0: 0, sFim: cam.L, atraso, chegou: null, mp });
   });
   for (const a of andantes) a.j.quadril = alturaQuadril(a.j, mini);
   return { tick: 0, mini, andantes };
@@ -138,15 +155,20 @@ export const tempoCortejo = c => c.tick * PASSO;
 const _q = {}, _cmd = { ux: 0, uz: 0, vel: 0, rumo: 0, fim: false };
 function comando(a, t) {
   const C = CORTEJO;
-  const tt = Math.max(0, t - a.atraso);
+  // a saída do parado (item 61): o ponto do caminho acelera como 1 − e^(−u/τ), com u contado τ antes do atraso — no
+  // regime, s0 + vel·(t − atraso), o mesmo ponto de antes (as chegadas não mudam)
+  const u = Math.max(0, t - a.atraso + C.tau);
+  const e = Math.exp(-u / C.tau);
+  const vRef = C.vel * (1 - e);
   // quem já chegou fica na vaga (a fila montada por filaFinal também)
-  const sAlvo = a.chegou != null ? a.sFim : Math.min(a.s0 + C.vel * tt, a.sFim);
+  const sAlvo = a.chegou != null ? a.sFim : Math.min(a.s0 + C.vel * (u - C.tau * (1 - e)), a.sFim);
   pontoCaminho(a.caminho, sAlvo, _q);
   const j = a.j;
   const dx = _q.x - j.x, dz = _q.z - j.z, d = Math.hypot(dx, dz);
   const fim = sAlvo >= a.sFim - 1e-6;
-  // a velocidade do cortejo + a correção do atraso; chegando na vaga, freia pela distância
-  let vel = fim ? Math.min(C.vel, d * C.chegada) : Math.max(0, Math.min(C.vel + C.correcao[0], C.vel + (d - 0.25) * C.correcao[1]));
+  // a velocidade do ponto + a correção do atraso (no regime o corpo fica 0,25 m atrás do ponto; na saída, menos);
+  // chegando na vaga, freia pela distância
+  let vel = fim ? Math.min(C.vel, d * C.chegada) : Math.max(0, Math.min(vRef + C.correcao[0], vRef + (d - 0.25 * vRef / C.vel) * C.correcao[1]));
   if (d < C.paraEm) vel = 0;
   _cmd.ux = d > 1e-6 ? dx / d : Math.cos(j.rumo);
   _cmd.uz = d > 1e-6 ? dz / d : Math.sin(j.rumo);
@@ -167,11 +189,26 @@ export function passoCortejo(c) {
     passoCorpo(a.j, cm.ux, cm.uz, cm.vel, cm.rumo, a.j.par, PASSO, false);
     if (cm.fim && a.chegou == null) a.chegou = t;
   }
-  for (let i = 0; i < As.length; i++) passoPassada(As[i].j, false, PASSO, null, null);
+  for (let i = 0; i < As.length; i++) {
+    const a = As[i], j = a.j, v = Math.hypot(j.vx, j.vz);
+    // o ritmo de cada um, só andando e antes da vaga (com os dois pés no chão e parado, a `saida` faria a passada andar
+    // no lugar: jogador.js passoPassada)
+    _saida.ritmoVoo = freqPassada(v, false) * a.mp.ritmo;
+    passoPassada(j, false, PASSO, null, v > 0.5 && v < MARCHA.vRitmo && a.chegou == null ? _saida : null);
+  }
   for (let i = 0; i < As.length; i++) passoPeDesenhado(As[i].j, c.mini, PASSO);
   c.tick++;
   c.mini.tick = c.tick;
   for (let i = 0; i < As.length; i++) As[i].j.quadril = alturaQuadril(As[i].j, c.mini);
+}
+
+const _saida = { ritmoVoo: 0 };
+
+/** A pose desenhada do andante (a do jogo + a camada do braço e do tronco: marcha.js). */
+export function poseAndante(c, a, out) {
+  pose(a.j, c.mini, out);
+  marchar(out, a.j, a.mp, 1);
+  return out;
 }
 
 /** Todos parados na vaga? */
