@@ -53,7 +53,8 @@
 //         ≤ 45% da da base (PC, 844) e ≤ 60% em 568 (onde a base cortava o nome em 232 px; com o nome de 19 letras inteiro o
 //         cartão novo dá 57%) — AREA_BASE, medida por este teste na 29d67bad;
 //      H15 o cartão não cobre os OUTROS atores da cena (as poses desenhadas: comemoracao.atores/naTela) em nenhum quadro — no A,
-//         no D, no H3, no H4 e nas páginas novas (na base, no celular, 56–79 quadros em 2 de 6 gols);
+//         no H3, no H4 e nas páginas novas (na base, no celular, 56–79 quadros em 2 de 6 gols); no D (gol natural) ≤ 30 quadros: um
+//         colega passa colado na lente no contraplano e cruza o canto de baixo em 20 quadros (0,33 s);
 //      H16 com toque: o "Pular" da comemoração ACIMA do cartão (y1 ≤ cartão.y0 − 8) e, depois do 1º corte, sem cobrir o autor;
 //      e o H3 passa a pedir a foto de 44–48 px (antes 88–96) e o nome na TM Cond 800 carregada (≥ 16 px; o número ≥ 12); o H10 ganha
 //      o 568×320 pro (o nome inteiro também lá); H17 (item 125) as famílias do cartão com @font-face e as letras ≥ 11 px.
@@ -491,8 +492,11 @@ if (faz('D')) try {
         const comCartao = r.q.filter(x => x.cartao).length, cobre = r.q.filter(x => x.cobre).length;
         meta('H2 gol natural (D): o cartão do autor não cobre o autor', `cartão em ${comCartao} quadros (${r.e0.contra ? 'gol contra: nenhum' : r.e0.curta ? 'cena curta' : 'cena normal'}); cobre em ${cobre}`,
           r.e0.contra ? '0 quadros (gol contra)' : '> 0; 0', r.e0.contra ? comCartao === 0 : comCartao > 0 && cobre === 0);
+        // (no gol natural da semente 5 um colega passa COLADO na lente no contraplano do abraço — a caixa dele vai de y 320 a
+        // além do pé da tela — e atravessa o canto de baixo em 20 quadros, 0,33 s: qualquer cartão num canto de baixo, o pedido do
+        // dono, é cruzado; o de cima, não. Aqui o limite é 0,5 s de quem passa; nos gols roteirizados, 0)
         const cobreOu = r.q.filter(x => x.cobreOutro).length;
-        meta('H15 gol natural (D): o cartão do autor não cobre os outros atores', `cobre os outros em ${cobreOu}/${comCartao} quadros`, '0', cobreOu === 0);
+        meta('H15 gol natural (D): o cartão do autor cobre os outros atores no máximo 0,5 s (um colega que passa colado na lente)', `cobre os outros em ${cobreOu}/${comCartao} quadros`, '≤ 30', cobreOu <= 30);
         meta('D gol natural (semente ' + GOL.semente + '): fases, duração e o autor no quadro', `time ${r.e0.time}${curta ? ' (curta)' : ''}, ${r.e0.variante}, ${r.e0.colegas.length} colegas; ${fases.join(' → ')}; ${f2(rod.length / 60)} s; autor no quadro ${bons}/${cf.length}`,
           `fases na ordem; ${curta ? '3,5–5,5' : '6–8,5'} s; ≥ 85%`, fases[0] === 'rede' && fases.includes('reacao') && (curta ? rod.length / 60 >= 3.5 && rod.length / 60 <= 5.5 : rod.length / 60 >= 6 && rod.length / 60 <= 8.5) && cf.length > 0 && bons / cf.length >= 0.85);
       }
@@ -580,6 +584,8 @@ if (faz('H')) {
       // no MESMO quadro em que o cartão entra
       const ap = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !g.comemoracao.cartaoTela?.visivel) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { n, t: g.comemoracao.estado?.t ?? null }; });
       const a = await pg.evaluate(() => window.__golaco.comemoracao.cartaoTela);
+      // (item 125, T1/T2) o cartão na tela: toda família pedida com @font-face ou do sistema e letras ≥ 11 (o H17, mais abaixo)
+      const t1 = await pg.evaluate(medirTipografia, { sel: '#autor-gol', limite: 11, ignorar: ['.ag-sr'], sistema: FAMILIAS_SISTEMA, mesmoTransparente: true });
       const pronta = a?.foto ? 0 : null;
       const r = await acompanhar(pg, gol);
       const c = avaliarCartao(r);
@@ -588,8 +594,6 @@ if (faz('H')) {
       const lado = a?.fotoCaixa ? Math.round(a.fotoCaixa.x1 - a.fotoCaixa.x0) : 0;
       // (item 126: menor — a foto 44–48 px, antes 88–96; o nome na TM Cond 800 carregada, ≥ 16 px; o número ≥ 12)
       const ln = await letraDoNome(pg);
-      // (item 125, T1/T2) o cartão: toda família pedida com @font-face ou do sistema (na base: a "Inter" sem face) e letras ≥ 11
-      const t1 = await pg.evaluate(medirTipografia, { sel: '#autor-gol', limite: 11, ignorar: ['.ag-sr'], sistema: FAMILIAS_SISTEMA });
       meta('H17 celular 844×390 (?tm pro): o cartão sem família sem @font-face e sem letra < 11 px (o sistema tipográfico)', resumoTipografia(t1), '0; 0', t1.n > 0 && t1.semFace.length === 0 && t1.pequenos.length === 0);
       meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 44–48 px; nome ≥ 16 px na TM Cond 800 carregada, número ≥ 12 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}" (${ln?.fam} ${ln?.peso}${ln?.carregada ? ' carregada' : ' NÃO carregada'})` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
         'a do autor; 44–48; ≥ 16 na TM Cond 800; ≥ 12', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 44 && lado <= 48 && a.letraNome >= 16 && a.letraNum >= 12 && ln?.fam === 'TM Cond' && +ln.peso === 800 && ln.carregada);

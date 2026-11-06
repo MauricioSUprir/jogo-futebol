@@ -13,9 +13,10 @@ export const FAMILIAS_SISTEMA = ['system-ui', '-apple-system', 'blinkmacsystemfo
 /**
  * NA PÁGINA: o texto visível dentro de `sel` (cada elemento com um nó de texto próprio não vazio, com caixa > 0 e visível).
  * Volta { n, familias: {família: n}, semFace: [{fam, el, txt}], minimo: {px, el, txt}, pequenos: [{px, el, txt}] }.
- * `limite` = a letra mínima (padrão 11); `ignorar` = seletores cujo texto não conta (ex.: o leitor de tela).
+ * `limite` = a letra mínima (padrão 11); `ignorar` = seletores cujo texto não conta (ex.: o leitor de tela); `mesmoTransparente`
+ * = conta também o texto com opacidade 0 (o 1º quadro de uma animação de entrada).
  */
-export function medirTipografia({ sel, limite = 11, ignorar = [], sistema }) {
+export function medirTipografia({ sel, limite = 11, ignorar = [], sistema, mesmoTransparente = false }) {
   const raizes = [...document.querySelectorAll(sel)];
   const faces = new Set();
   try { for (const f of document.fonts) faces.add(String(f.family).replace(/^["']|["']$/g, '').toLowerCase()); } catch (_) { /* sem a API */ }
@@ -33,7 +34,8 @@ export function medirTipografia({ sel, limite = 11, ignorar = [], sistema }) {
       vistos.add(e);
       if (ignorar.some(s => e.closest(s))) continue;
       const cs = getComputedStyle(e);
-      if (cs.visibility !== 'visible' || +cs.opacity === 0) continue;
+      // (mesmoTransparente: o texto no começo de uma animação de entrada — opacidade 0 no 1º quadro — conta)
+      if (cs.visibility !== 'visible' || (!mesmoTransparente && +cs.opacity === 0)) continue;
       const r = e.getBoundingClientRect();
       if (!(r.width > 0 && r.height > 0)) continue;
       // fora da janela (um submenu escondido por transform, o leitor de tela recortado): não conta
