@@ -930,10 +930,17 @@ faixa ENTRA/SAI (a simulação não muda).
   a cena segue com a faixa e o replay vem depois dela (T12). `trocarMundo` cancela a cena, a fila e a faixa. Opção "Substituição: ligada | só a
   faixa" no submenu "Modo de jogo" (`prefs.substituicao`; `?substituicao=0|1` força; desligada por padrão com
   `navigator.webdriver`, `?prints=1` e `?demo=1`).
-- **Online** (item 30, 06/11; contrato "Online 1×1"): vale a opção do ANFITRIÃO nos dois aparelhos (pelo canal de controle,
-  nunca pelo pedido); cada aparelho roda a sua cena segurando só a sua simulação no `quadroOnline` e o lockstep faz o outro
-  esperar ("{nome} ainda está vendo a cena", a marca E_CENA); o "Pular" pula só a minha; o menu e o editor abertos não
-  congelam a cena e nada apertado neles a pula. Antes era desligada no online (`main.js` `substLigada = ONLINE ? false : …`).
+- **Online** (item 30, 06/11; contrato "Online 1×1", etapa 3; as escolhas no "Depende do dono" 26 da `FILA.md`): S1 vale a
+  opção do ANFITRIÃO nos dois aparelhos (o lado 0 manda `{tipo: 'opcoes', subst}` pelo canal de controle, nunca pelo pedido;
+  o convidado começa com "só a faixa" e adota a dele — `online-pagina.js substOnline`); a faixa ENTRA/SAI aparece sempre. S2
+  cada aparelho roda a SUA cena segurando só a SUA simulação no `quadroOnline` (`segura = true` + `quadroSubst`, como aqui
+  fora) e o lockstep faz quem acabou antes esperar, com "{nome} ainda está vendo a cena" (a marca E_CENA do pacote), sem o
+  selo "Conexão instável" e sem W.O. (os dois só pela falta de pacote); o "Pular" pula só a minha. S3 a troca pelo editor
+  do outro jogador chega como ação pelo canal confiável e abre a cena no mesmo tick nos dois (as dos dois juntos: uma cena
+  com os 2 pares). A minha pausa combinada, o celular em pé e a aba escondida congelam a cena; o menu, a Ajuda e o editor não,
+  e nada apertado neles a pula. A cena continua só desenho: a escolha diferente nos dois aparelhos nunca dessincroniza (no
+  máximo um espera o outro). Antes era desligada no online (`main.js` `substLigada = ONLINE ? false : …`; ligada pela API, a
+  cena congelava e a simulação andava por baixo).
 - **HUD**: `hud.substituicao(ativo)` (classe `em-substituicao`: some o mesmo que na comemoração), `hud.faixaSubst(pares,
   agora, cena | null)`, `faixaSubstQuadro(agora, cena)`, `faixaSubstEstado(agora)` → `{visivel, modo: 'cena' | 'jogo',
   pagina, n, texto, restante, dur}`, `esconderFaixaSubst()`. `#faixa-subst` (role status, aria-live polite): sigla do
@@ -965,7 +972,10 @@ faixa ENTRA/SAI (a simulação não muda).
   na fila e o apito depois; intervalo sem cena (a troca pedida nele e a feita no apito dele: a faixa na saída do 2º tempo); pausa, aba escondida, em pé, `trocarMundo`; nada sobre nada em 4 telas e a
   opção salva; CPU, chamadas de desenho, programas e memória no celular; a placa ≥ 40 px; T11 2 a 5 pares: cada um na faixa
   ≥ 1,5 s, nenhuma página < 0,5 s; T12 o "Replay" da pausa no meio da cena). `teste-editor-tela` 5 confere
-  a faixa (data-texto exato; "ENTRA 22 Wallace" e "SAI 9 Diego" na tela) e `teste-hud-minimo` H7 o submenu sem rolar.
+  a faixa (data-texto exato; "ENTRA 22 Wallace" e "SAI 9 Diego" na tela) e `teste-hud-minimo` H7 o submenu sem rolar. No
+  online (item 30): `teste-online-tela` P8a–P8i (`--so p8`; a escolha do anfitrião, cada lado segurando só a sua, o "Pular"
+  de um só, os hashes, a opção desligada, o menu, o celular em pé, o fim da espera e o selo), `teste-online` O13–O15 e
+  `testar-online3d --golaco` G1c (contrato "Online 1×1").
 
 ## Pré-jogo (pedido de 11/10; contrato)
 Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
@@ -4442,7 +4452,8 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   gancho no `main.js`/`hud.js`).
 - Transporte: a MessagePort que o TM entrega em resposta ao 'tm3d:pronto' ({tipo: 'tm3d:porta'}; protocolo no topo de
   `legacy-total-match/js/online3d.js`, seção 5) — {t:'j', b} pacote, {t:'c', m} controle ('acao', 'hash', 'pausa',
-  'retoma', 'abandono'), {t:'estado'} da ligação; {t:'religar'} depois de 5 s sem nada.
+  'retoma', 'abandono' e, desde o item 30, 'opcoes' do anfitrião — o TM repassa todo controle sem ler: o `online3d.js` não
+  mudou), {t:'estado'} da ligação; {t:'religar'} depois de 5 s sem nada.
 - `quadroOnline`: só roda o passo com as duas entradas; o MEU replay, a comemoração, a cena de substituição (item 30), a
   minha pausa e o celular em pé seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o
   editor abertos NÃO param (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal
@@ -4459,7 +4470,11 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   congelam a cena; o menu, a Ajuda e o editor NÃO (como na comemoração), mas com eles abertos nenhum aperto pula a cena (a
   ação é do menu: H abre a Ajuda, Enter aperta o botão em foco; os botões do jogo apertados ali só pulam depois de soltos e
   apertados de novo, com o menu fechado: `quadroSubst(dt, ent, semPulo)`). Com a cena, o selo "Conexão instável" fica
-  escondido (`html.em-substituicao`, como na comemoração).
+  escondido (`html.em-substituicao`, como na comemoração). A espera pela cena do outro não é conexão ruim: o W.O. e o selo
+  continuam só pela falta de pacote (na espera os pacotes chegam a cada quadro) e, com a cena, o `quadroOnline` não marca
+  "parado" (`quer` 0); o D não sobe por ela (o freio e o D que só sobe agem como na espera pelo replay e pela comemoração).
+  As escolhas (S1 a do anfitrião, S2 cada um pula a sua, S3 a troca do outro abre a cena nos dois) e as alternativas estão no
+  "Depende do dono" 26 da `FILA.md`.
 - **A marca E_CENA (item 30)**: o bit 64 do byte 19 do pacote (`online-pagina.js E_CENA`; o `online.js` não o lê; sobra o
   128) = este lado segura a SUA simulação por uma cena (a substituição, um replay, a comemoração no gol + 149), do quadro da
   cena até o 1º passo rodado depois dela (`marcaCena`, pura: o quadro em que a cena acaba sai sem passo e sem entrada nova) e
@@ -4497,9 +4512,10 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   iguais, P8e desligada no anfitrião (nenhuma cena, só a faixa, hashes iguais) e, da revisão, P8f o menu de A aberto na cena
   (a cena anda; nem o J segurado nem o H a pulam, o H abre a Ajuda), P8g B em pé na cena (a de B congela; A não lê "vendo a
   cena"), P8h o fim da espera sem piscar "ainda não voltou ao jogo" e P8i o selo aceso à força na cena com display none. O
-  `teste-online` O13–O15 (as funções puras) e o `teste-replay-paradas-tela` V8b (a espera pelo replay do outro: "vendo a
-  cena", nunca "conexão parou", sem piscar) completam. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste
-  espera passos, não tempo.)
+  `teste-online` O13–O15 (as funções puras), o `teste-replay-paradas-tela` V8b (a espera pelo replay do outro: "vendo a
+  cena", nunca "conexão parou", sem piscar) e o `legacy-total-match/ferramentas/testar-online3d.mjs --golaco` G1c (a Ana
+  com a cena ligada e o Bruno desligada: `ligada()` verdadeiro nos dois quadros, pela porta do TM) completam. (O Chromium sem
+  GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não tempo.)
 
 ## Corpo humano realista — Etapa 5.1 (22/10; contrato)
 
