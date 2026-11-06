@@ -104,7 +104,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   em todos os estádios, na I. Status, plano, fontes e as decisões dele em `golaco/FILA.md` ("Depende do dono" 11 e 12);
   resumo em `golaco/CATEGORIAS.md`.
   **Categoria I (visual, corpo e estádios; aprovada pelo dono)**: I-1 (itens 62 nuca, 63 bordas dos decalques e 77 mão
-  de apoio do carrinho) ENTREGUE no PR #631 (06/11); as escolhas em `golaco/FILA.md` "Depende do dono" 27.
+  de apoio do carrinho) ENTREGUE no PR #631 (06/11); I-2 (item 61, a passada natural fora da partida) ENTREGUE no PR
+  #632 (06/11); as escolhas em `golaco/FILA.md` "Depende do dono" 27 e 28.
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
   `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
@@ -757,6 +758,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+  **Passada natural** (item 61; dono, 23/10: "parecem que estão marchando, parecendo NPC"; contrato "Passada natural fora da
+  partida (item 61)", `PESQUISA-PREJOGO.md` §10): `js/marcha.js` (puro, FORA do fecho) dá a cada um a SUA fase da passada e o
+  SEU ritmo (×[1; 1,07] pelo id) e uma CAMADA do desenho depois da pose — o braço contra a perna do mesmo lado, o cotovelo que
+  dobra à frente, a pelve ±4° e o tórax ±3° ao contrário —, com o estado filtrado por ator e a faixa de 2,6–3,2 m/s em que ela
+  VIRA a pose do jogo. Vale no cortejo (`poseAndante`; a saída do parado em rampa τ 0,7 s que cai no mesmo ponto do caminho, os
+  árbitros pré-rolados, o rumo ≤ 2,2 rad/s), nas cenas (intervalo, fim, cartão, substituição), na comemoração (pela página,
+  `avancarComMarcha`: a `comemoracao.js` é do fecho) e nos treinadores (só a pelve e o tórax). Corpo novo: `render/esqueleto.js
+  maoSolta` (o braço solto com a dobra do jogo, também na partida). A partida não muda (`fecho-hash --diff` 0, hash IGUAL); o
+  quique da pelve (~13 cm) e o calcanhar ficam para o mocap (itens 50–52, que entram no lugar do `marchar`). Teste:
+  `teste-marcha` (padrão; o cortejo e as cenas nos dois corpos, guardas por boneco e por tick). Lições: quem nasce junto
+  (`criarJogador`, `recriarAtor`) nasce com a mesma fase — sem espalhar pelo id, toda cópia anda no mesmo pé; a `saida =
+  {ritmoVoo}` sem `pe` no `passoPassada` é um contrato implícito com o fecho (G7 do `teste-marcha`).
   **Escalação em pé** (item 29, dono 17/10; PR #614; `PESQUISA-PREJOGO.md` §9): o campo inteiro com o GOL embaixo (L/A
   0,80–0,85, as marcas no tamanho real: `campinho.js svgCampinho(true, largura)`), a carta da ponta 6 px para dentro ou centrada
   sobre a linha, a mesma caixa nas duas folhas e as cartas de cada uma pelos nomes dela (`escalacao-tela.js tamanhosDasFolhas`),

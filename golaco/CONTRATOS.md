@@ -6267,7 +6267,7 @@ Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos 
   fileira), `teste-estadio-generico` G2 (até `TETO_LUGARES`); a auditoria `tools/auditar-cadeiras.mjs` (por estádio) e
   `tools/medir-cadeiras.mjs --tm --estadios a,b,c` (os planos no navegador).
 
-## Passada natural fora da partida (item 61, #PRNUM; 06/11; contrato)
+## Passada natural fora da partida (item 61, #632; 06/11; contrato)
 Pedido do dono (23/10, com print): no túnel e na fila "parecem que estão marchando, parecendo NPC". **Só desenho** e FORA do
 fecho do hash (`tools/fecho-hash.mjs --diff` = 0; `hash-igual` e `hash-partida` IGUAIS): a pose da partida (`anim.js`), a
 passada (`jogador.js`), o `config.js` e a `comemoracao.js` não mudam — os jogadores DURANTE O JOGO andam e correm como antes (no corpo novo, só o cotovelo do braço solto: "Corpo
