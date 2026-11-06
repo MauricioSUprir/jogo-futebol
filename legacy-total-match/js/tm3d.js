@@ -231,6 +231,11 @@
       estadio: st && st.name ? { nome: st.name, capacidade: st.capacity || 0, foto: abs(foto) } : null
     };
   }
+  // o título da partida vai ao 3D sem emoji ("⚡ Relâmpago", "👑 Chefão das Lendas", "🏖️ ..."; revisão A3): o js/icones.js limpa o
+  // DOM do TM, não o do quadro, e o TM não usa emoji (só o critério dele: TM.icones.semEmoji)
+  function tituloSemEmoji(t) {
+    try { return TM.icones && TM.icones.semEmoji ? TM.icones.semEmoji(t) : t; } catch (e) { return t; }
+  }
   // o empate desta partida CONTINUA no TM (prorrogação ou pênaltis)? o.empateContinua do modo: true/false, ou uma função
   // (gols da casa, gols de fora) → o modo iria a prorrogação/pênaltis com esse empate (a ida e volta depende do placar). Com a
   // função: true/false quando todo empate de 0×0 a 6×6 dá a mesma resposta; senão (ou sem o campo) undefined — o 3D usa a
@@ -256,7 +261,7 @@
     try { if (classico && ca && cb && D.derbyName) nomeCl = D.derbyName(ca.id, cb.id) || null; } catch (e) {}
     var pub = typeof so.crowd === "number" && isFinite(so.crowd) ? Math.max(0.1, Math.min(1, so.crowd)) : 0.75;
     var r = { neutro: !!so.neutral, publico: Math.round(pub * 100) / 100, classico: classico, nomeClassico: nomeCl,
-             competicao: o.title || "", estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
+             competicao: tituloSemEmoji(o.title || ""), estadio: so.neutral ? null : (home.identidade && home.identidade.estadio) || null };
     var ec = empateContinuaDe(o.empateContinua);
     if (ec !== undefined) r.empateContinua = ec;
     // o tempo de jogo e a dificuldade (item 33): a Config (Duração em 3D, Dificuldade) ou o que o modo manda (as Batalhas)
@@ -407,9 +412,22 @@
     document.body.appendChild(tela);
     document.body.classList.add("tm3d-aberto");
     var pronto = false, acabou = false;
+    // o "Abrindo o estádio 3D…" some quando a página do 3D já mostra a tela de carregar DELA (a marca do TM no meio da tela: o
+    // texto ficava escrito por cima da logo — revisão A7 do item 124, agora em toda partida); o X fica até o 'tm3d:pronto'. Mesmo
+    // site: o TM lê o documento do quadro (a página de ensaio dos testes não tem a tela de carregar: o aviso fica)
+    var olhaCarga = setInterval(function () {
+      if (pronto || acabou || !quadro.isConnected) { clearInterval(olhaCarga); return; }
+      try {
+        var d = quadro.contentDocument;
+        if (d && d.getElementById("carregando")) { aviso.style.display = "none"; clearInterval(olhaCarga); }
+      } catch (e) { clearInterval(olhaCarga); }
+    }, 100);
     var espera = setTimeout(function () {
       if (pronto || acabou) return;
+      // (a oferta de simular volta à vista, embaixo — no meio fica a tela de carregar do 3D)
       aviso.textContent = "O 3D está demorando para abrir.";
+      aviso.classList.add("demora");
+      aviso.style.display = "";
       aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair"); } } }));
     }, api.ESPERA_MS);
     function lerResultado() { try { var t = localStorage.getItem("tm3d:resultado:" + pedido.id); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
@@ -430,7 +448,7 @@
     function termina(como, res, dados) {
       if (acabou) return;
       acabou = true;
-      clearTimeout(espera);
+      clearTimeout(espera); clearInterval(olhaCarga);
       fecha3d();
       try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
       if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null);
@@ -459,7 +477,7 @@
     var home = time3d(o.teamA, fA), away = time3d(o.teamB, fB);
     var p = {
       v: 2, id: "j" + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
-      titulo: o.title || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
+      titulo: tituloSemEmoji(o.title || "") || "Partida", origem: (TM.ui.current && TM.ui.current()) || "",
       home: home, away: away, partida: partidaDe(o, home, away),
       // edição do TM: na pro (licenciada) o 3D desenha o estádio real do mandante; na pública, o Estádio Total Match
       edicao: (function () { try { return TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) { return "public"; } })(),
@@ -545,6 +563,39 @@
     });
     return true;
   }
+  /* item 124 (revisão A2): o "Simular partida" da tela traz os titulares que ela mostrou (tit = { home: [tmId × 11], away }): a
+     escalação montada aqui (escalacao(): o time que não vem pronto é remontado) e a do Personalizar. O result calculado antes de o
+     3D abrir usou players.slice(0, 11) — se um lado mudou, os 11 da tela passam à frente (quem fica no XI não muda de índice; quem
+     entra ocupa o lugar de quem saiu; quem saiu vira o 1º do banco) e o MESMO result é simulado de novo (Object.assign, como o
+     aplicaResultado) com o simOpts do modo. O array de jogadores é trocado, não mexido (o teamFromClub passa o do TM.data). Sem
+     mudança (o time pronto e nada personalizado), nada muda: o result de sempre. true = simulou de novo. */
+  function ordemDaTela(time, ids) {
+    var ps = (time && time.players) || [];
+    if (!ids || ids.length !== 11 || ps.length < 11) return null;
+    var porId = {}, quer = {};
+    ps.forEach(function (p) { if (p) porId[String(p.id)] = p; });
+    for (var i = 0; i < 11; i++) { var k = String(ids[i]); if (!porId[k] || quer[k]) return null; quer[k] = 1; }
+    var xi = ps.slice(0, 11), fica = {};
+    xi.forEach(function (p) { if (p && quer[String(p.id)]) fica[String(p.id)] = 1; });
+    if (Object.keys(fica).length === 11) return null;
+    var entram = ids.filter(function (id) { return !fica[String(id)]; }).map(function (id) { return porId[String(id)]; });
+    var novo = xi.map(function (p) { return p && fica[String(p.id)] ? p : entram.shift(); });
+    var saem = xi.filter(function (p) { return p && !fica[String(p.id)]; });
+    var noXi = {}; novo.forEach(function (p) { noXi[String(p.id)] = 1; });
+    return novo.concat(saem, ps.slice(11).filter(function (p) { return p && !noXi[String(p.id)]; }));
+  }
+  function escalacaoDaTela(cfg, tit) {
+    if (!tit || !cfg || !cfg.result || !TM.engine || !TM.engine.simulate) return false;
+    var mudou = false;
+    [[cfg.teamA, tit.home], [cfg.teamB, tit.away]].forEach(function (par) {
+      var novo = ordemDaTela(par[0], par[1]);
+      if (novo) { par[0].players = novo; mudou = true; }
+    });
+    if (!mudou) return false;
+    var so = cfg.simOpts || { realism: (cfg.settings || TM.storage.settings()).realism };
+    try { Object.assign(cfg.result, TM.engine.simulate(cfg.teamA, cfg.teamB, so)); } catch (e) { return false; }
+    return true;
+  }
   function jogarCfg(screen, cfg, playOrig) {
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
       userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
@@ -555,8 +606,12 @@
         playOrig(screen, Object.assign({}, cfg, { settings: s2, ja3d: true }));
       },
       // o "Simular partida" da tela (ou o X do TM): a tela de jogo do TM simula lance a lance o result de sempre, na velocidade da
-      // Config (o toast "Partida simulada." saiu: ele vinha antes da simulação — item 124)
-      sair: function (dados) { avisoDeSaida(dados); playOrig(screen, Object.assign({}, cfg, { ja3d: true })); },
+      // Config (o toast "Partida simulada." saiu: ele vinha antes da simulação — item 124), com os titulares que a tela mostrou
+      sair: function (dados) {
+        avisoDeSaida(dados);
+        if (dados && dados.motivo === "simular") escalacaoDaTela(cfg, dados.titulares);
+        playOrig(screen, Object.assign({}, cfg, { ja3d: true }));
+      },
       falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); playOrig(screen, Object.assign({}, cfg, { ja3d: true })); }
     });
   }
