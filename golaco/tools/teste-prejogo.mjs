@@ -631,7 +631,8 @@ try {
           if (nm.scrollWidth > nm.clientWidth + 1 || ctx.measureText(nm.textContent).width > r.width + 0.05) cortados.push(nm.textContent);
         }
       }
-      const tmCond = [...document.fonts].filter(f => f.family.replace(/["']/g, '') === 'TM Cond').map(f => f.status);
+      // (item 125: a TM Cond ganhou o peso 600 — o dos menus, que a pré-carga traz e não é bloqueado aqui; a dos nomes é a 800)
+      const tmCond = [...document.fonts].filter(f => f.family.replace(/["']/g, '') === 'TM Cond' && String(f.weight) === '800').map(f => f.status);
       return { n, cortados, tmCond: [...new Set(tmCond)].join('/') };
     });
     meta('Escalação em 568×320 sem a TM Cond (o arquivo bloqueado): a reserva encolhida não corta nome nenhum', semFonte ? `${semFonte.cortados.length} de ${semFonte.n} cortados${semFonte.cortados.length ? ': ' + semFonte.cortados.join(', ') : ''} (TM Cond: ${semFonte.tmCond})` : 'o pré-jogo não ligou',
