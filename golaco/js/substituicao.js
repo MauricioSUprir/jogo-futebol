@@ -33,6 +33,7 @@ import { criarAtor, separar, maoEm, gesto, hashGol, limitarCamera, ajustarCelula
 import { fichaDe, atributosDe } from './elenco.js';
 import { solidoEm } from './estadio-forma.js';
 import { teleportar } from './partida.js';
+import { parametrosMarcha, marchar, rampaMarcha, filtrarMarcha } from './marcha.js';
 
 const S = SUBST;
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -567,6 +568,10 @@ const _g = [0, 0, 0, 0, 0, 0];
 function poseAtor(c, a, t) {
   const o = a.atu, j = a.j, h = j.rumo;
   pose(j, c.mF, o);
+  // a passada natural (item 61, marcha.js): o braço e o tronco de quem anda, antes dos gestos; na rampa do começo da cena
+  // (a velocidade filtrada: recomeça no 1º quadro da cena, t = 0)
+  filtrarMarcha(j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, !(t > 0), o);
+  marchar(o, j, a.mp ?? (a.mp = parametrosMarcha(a.id)), rampaMarcha(t), a.vm);
   if (a.tipo === SAI_T && a.cruzou >= 0) palmas(o, h, t, suave((t - a.cruzou * PASSO) / S.aplauso.entra));
   else if (a.tipo === ENTRA_T && a.fase === 'espera') trocaPeso(o, j, t, a.ordem * 1.7);
   else if (a.tipo === QUARTO_T) {

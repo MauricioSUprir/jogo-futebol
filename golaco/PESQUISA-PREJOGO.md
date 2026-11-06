@@ -57,6 +57,11 @@ goleiro anda com `posicao 'MEI'` (com 'GOL' a pose põe as mãos "prontas" à fr
 (`teste-cortejo`): pé plantado 0 m/s, pé que salta razão 0,90, corpos a ≥ 0,85 m, vaga 4 cm, rumo 0°, último na fila aos
 42,4 s, 0,14 ms por passo dos 25 no Node, hash da partida igual.
 
+Desde o item 61 (06/11; §10) cada um anda com a SUA fase e o SEU ritmo, sai do parado numa rampa (τ 0,7 s) que cai no mesmo
+ponto do caminho no regime, os árbitros saem já andando (pré-rolados) com 0–0,15 s entre eles e o rumo pedido gira no máximo
+2,2 rad/s; o desenho é a pose do jogo + a camada do braço e do tronco (`poseAndante`). As chegadas dos times na fila não
+mudaram (±0,00 s); os árbitros chegam +0,11 s.
+
 ## 3. Lado de fora (estadio-forma.js + render/estadio-fora.js)
 
 A câmera de TV do jogo fica DENTRO da arquibancada do lado de cá: cobertura e fachada só existem no pré-jogo (criadas no
@@ -129,6 +134,8 @@ torcedores nunca entram no quadro): 6 peças em vez de 12.
 - Rostos: os closes ficam a 4,6 m (o manequim não tem rosto até a Etapa 5); depois dos rostos o trilho da fila pode chegar
   a 3 m.
 - Aperto de mão, mascotes e o hino: precisam de animação de braço (mocap da Etapa 5).
+- A passada de perto (§10): o quique da pelve de ~13 cm por passo (o real ~4–5 cm), o calcanhar que não sobe no fim do apoio
+  e o joelho dobrado no apoio são a pose do jogo (fecho do hash); vão com o mocap (itens 50–52 da FILA).
 - A cobertura e a fachada só no pré-jogo (a TV do jogo fica dentro da arquibancada de cá); se um dia a câmera de jogo sair
   dali, elas podem ficar no jogo (o plano geral do intervalo atravessaria a cobertura: CAMERA_GERAL [0, 34, 78]).
 
@@ -273,3 +280,39 @@ teste que reprova antes em cada um):
   outro navegador rodando junto e 39 sozinho (a base 43; lado a lado, a base também reprovou, no item 3) — com webdriver o pré-jogo
   nem liga (item 81 da FILA); o tempo do `teste-prejogo` (712–1063 s aqui, conforme a carga) no `tempos-ci.mjs` é estimado, 430 s
   (item 109).
+
+## 10. A passada natural (item 61, 06/11)
+
+Pedido do dono (23/10, com print do túnel): "parecem que estão marchando, parecendo NPC". Contrato "Passada natural fora da
+partida (item 61)" no `CONTRATOS.md`; código em `js/marcha.js` (puro, FORA do fecho do hash) com as chamadas no `cortejo.js`,
+nas cenas (`cena-atores.js`, `substituicao.js`), na comemoração (pela página) e nos treinadores; régua no
+`tools/teste-marcha.mjs`. Só desenho: a pose e a passada da partida não mudam (os jogadores no jogo andam como antes; o
+"completo" é o mocap, itens 50–52 da FILA).
+
+**O que fazia parecer NPC** (auditoria na base `7cb052ad`): todos no mesmo pé (o k-ésimo do mandante e o do visitante em
+99,6% das amostras; os 3 árbitros juntos; no intervalo e no fim 86–100% dos pares perto), todos com a mesma cadência (CV 0%),
+o pé direito saindo primeiro em 25 de 25 e a pelve caindo 27 cm no 1º passo (90% dos 1,45 m/s em 0,38 s), o braço 1/4 de
+ciclo fora da perna (o balanço `sen(π·fase)` do `anim.js`, zero no toque do pé) com o cotovelo duro, e a pelve e o tórax
+quase parados (±1,3° e ±1,8°).
+
+| Fonte | O que aproveitamos |
+|---|---|
+| Hansen et al. 2017 (a tabela `PASSADA` do jogo: 1,96 passos/s a 1,47 m/s) e a faixa real de 1,7–2,0 passos/s andando | A média já era a real: o ritmo de cada um só SOBE a partir dela, ×[1; 1,07] (o `ritmoVoo` do `jogador.js` só acelera a passada): 1,96–2,09 passos/s e passos de 0,69–0,74 m a 1,45 m/s. |
+| Sekiya 1996 (o walk ratio, passo ÷ cadência, varia ~10–12% entre pessoas) e PMC3756042 (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3756042/: dentro da mesma pessoa a velocidade oscila ~2%) | O ritmo POR JOGADOR, uniforme, com o walk ratio de cada um até ~1,5 desvio abaixo da média real (0,0055–0,0063). A 1ª versão (×[1; 1,12], sorteio nas pontas) deixava um terço com passos de 0,66 m, a 2 desvios (revisão A5). |
+| Collins, Adamczyk & Kuo 2009 (https://pmc.ncbi.nlm.nih.gov/articles/PMC2817299) | O braço "normal" balança em oposição de fase à perna do MESMO lado, com o pico à frente logo depois do toque do pé do outro lado: `−cos(π(fase − atraso))`, atraso 0,04–0,12 passo por jogador (braço × coxa oposta −0,19 → 0,82). |
+| Revisão da cinemática do membro superior na marcha (Gait & Posture 2018, https://documentserver.uhasselt.be//bitstream/1942/26634/1/1-s2.0-S0966636218313006-main.pdf): ROM do ombro ~20–35° | A amplitude ±11° × [0,8; 1,2] por jogador a 1,4 m/s, crescendo com a velocidade (medida ±12,6° no manequim e ±13,8° no corpo novo; antes ±22° e ±26°). |
+| CiSE 2023 (https://www.cisejournal.org/journal/view.php?number=923): cotovelo 29,7 ± 10,2° de ROM no ciclo | A dobra do cotovelo que muda com o braço, de 7° atrás a 46° à frente (excursão 0,5° → 38° no manequim); no corpo novo o `maoSolta` do `esqueleto.js` deixa o braço solto com a dobra do jogo (p5/p95 54/61° → 15/50°: acabou o "segurando uma bandeja"). |
+| Saunders, Inman & Eberhart 1953; Kong 2010 (https://pmc.ncbi.nlm.nih.gov/articles/PMC2843703); Lamoth 2002 e Bruijn 2008 (https://research.rug.nl/en/publications/pelvis-thorax-coordination-in-the-transverse-plane-during-walking/) | A pelve ±4° com a perna da frente e o tórax ±3° ao contrário (tórax × pelve indo para a contrafase com a velocidade): medido ±4,2° e ±3,3°, correlação −0,96 entre os dois. |
+| Brenière & Do 1991; Frontiers 2016 (https://www.frontiersin.org/articles/10.3389/fnhum.2016.00445/full): o início da marcha leva 3–5 passos até o regime | A saída do parado do cortejo: o ponto do caminho acelera como 1 − e^(−t/0,7 s), começando 0,7 s antes, e cai no mesmo ponto de antes no regime (90% da velocidade em 1,40 s, antes 0,38 s; a pelve no 1º passo 0,67 → 0,84 m; as chegadas dos times iguais). |
+| Zivotofsky & Hausdorff 2007 (https://link.springer.com/content/pdf/10.1186/1743-0003-4-28.pdf); Sylos-Labini 2018 (https://www.frontiersin.org/journals/physiology/articles/10.3389/fphys.2018.00179/full) | Gente lado a lado sincroniza às vezes, também a 180°, mas nunca travada: a meta é ≤ 25% dos pares no mesmo pé (ao acaso, 10%), não zero. |
+| Unity `AnimatorState.cycleOffset` (https://docs.unity3d.com/2018.2/Documentation/ScriptReference/Animations.AnimatorState-cycleOffset.html); Softimage ICE "Randomize Animation State Speed" (https://download.autodesk.com/global/docs/softimage2014/en_us/userguide/files/iceref_Randomize_Animation_State_Speed.htm); SideFX, fórum do Houdini (https://www.sidefx.com/ja/forum/topic/39366): réplicas do mesmo clipe sincronizadas apesar do offset | A fase inicial e o ritmo de cada um pelo id (`parametrosMarcha`, `espalharFase`), também nas cenas recriadas: o `recriarAtor` criava todos com a fase 0 e a mesma pré-rolagem, o defeito das "réplicas" do Houdini. |
+| Rosen, GDC 2014, "Animation Bootcamp: An Indie Approach to Procedural Animation" (https://gdcvault.com/play/1020049/Animation-Bootcamp-An-Indie-Approach; só o resumo) | A camada procedural dirigida pela fase da passada que o jogo já tem, sem clipes nem dados novos no download. |
+| Kerrigan 2000 (https://pesquisa.bvsalud.org/portal/resource/pt/mdl-10943758); Della Croce 2001 | NÃO entrou: o calcanhar que sobe no fim do apoio tira ~2/3 da queda do centro de massa; sem ele (a pose do jogo é do fecho) o quique de ~13 cm por passo e o joelho dobrado no apoio ficam. Fica para o mocap, ou uma camada do pé no desenho (que troca a régua do "pé plantado"). |
+
+**Decisões da revisão** (medidas no `teste-marcha`): a camada VIRA a pose do jogo entre 2,6 e 3,2 m/s em vez de misturar dois
+balanços 1/4 de ciclo fora de fase (quem sai na substituição anda a 2,2 m/s); o rumo pedido do cortejo gira no máximo 2,2 rad/s
+(a quina da coluna virava ~70° de uma vez e a mão de fora passava na frente da virilha: 23,7% → 0% na curva) e o braço de fora
+abre pela inclinação do tronco; os árbitros saem pré-rolados (sem isso o trio colava nas colunas no plano da entrada: 3,42 m na
+base, 2,08 m na 1ª versão, 3,28 m agora); a velocidade, a mistura, o ganho e a conferência do braço andam em rampas por ator
+(a mão nunca dá tranco: ≤ +2,2 cm/tick² sobre o sem a camada) e o 1º quadro de cada cena é a pose do jogo (0,000 mm).
+Reduzir a amplitude na curva (sugestão da revisão) piorava a medida e não entrou.

@@ -592,6 +592,7 @@ em `config.js REPLAY.impedimento` e `REPLAY.saot`.
   sequência `pc-impedimento` → `pc-impedimento-saot-orbita` → `pc-impedimento-saot`.
 
 ## Área técnica, treinadores e as câmeras 3 e 4 do replay do gol (pedidos de 12/10; contrato)
+(A camada da passada em `poseTec` — `tc.mp`, `tc.vm`: a pelve e o tórax; os braços ficam nas posturas — está no contrato "Passada natural fora da partida (item 61)", no fim.)
 Pedidos do dono (12/10): "quero que tenha uma 3ª e uma 4ª câmera de replay, onde uma é a visão em 1ª pessoa do jogador
 fazendo o gol"; "a 4ª pode ser a visão do treinador, quero a área técnica e o treinador". Pesquisa: `PESQUISA-ESTADIO.md`
 §12 e §13. **Só desenho**: os treinadores andam num mundo à parte e só LEEM a partida; o replay lê o anel e a simulação
@@ -729,6 +730,7 @@ espera parada (`hash-igual` e `hash-partida` IGUAIS; `teste-tecnicos` T10). Cons
   ganha isso de graça.
 
 ## Comemoração do gol (pedido de 11/10: "não tem cena de comemoração!!!"; contrato)
+(Desde o item 61 a página anda a cena por `marcha.js avancarComMarcha(c, dt, passoCena)` — a mesma conta do `avancarCena` com a camada da passada nos atores depois de cada passo; só desenho, o `comemoracao.js` não muda. Contrato "Passada natural fora da partida (item 61)", no fim.)
 Pesquisa: `PESQUISA-ESTADIO.md` §10. **Só desenho: a cena anda num mundo à parte (cópias dos 22) e a simulação nunca é
 escrita** — a página só SEGURA o laço no passo antes da montagem da saída (gol + 149) enquanto a cena roda; a saída sai no
 mesmo tick (gol + 150), com o mesmo hash (`hash-igual` e `hash-partida` IGUAIS; `teste-comemoracao` 11 e
@@ -917,6 +919,7 @@ Constantes em `config.js COMEMORACAO`.
   mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
 
 ## Cena de substituição e faixa ENTRA/SAI (pedido de 12/10; contrato)
+(A camada da passada em `poseAtor` — `a.mp`, `a.vm`, a rampa pelo tempo da cena — está no contrato "Passada natural fora da partida (item 61)", no fim.)
 Pedido do dono: "quando tiver substituição, quero que tenha a cena de substituição, só jogador saindo e entrando, e
 embaixo, no modelo, a informação de quem entra e quem sai". Pesquisa: `PESQUISA-ESTADIO.md` §11. Constantes em `config.js
 SUBST`. **Só desenho**: a troca acontece na simulação como sempre (`escalacao.js aplicarPendentes`, evento `substituicao
@@ -1027,6 +1030,8 @@ faixa ENTRA/SAI (a simulação não muda).
   `testar-online3d --golaco` G1c (contrato "Online 1×1").
 
 ## Pré-jogo (pedido de 11/10; contrato)
+(A passada de quem anda no cortejo — a fase e o ritmo de cada um, a saída do parado, os árbitros pré-rolados, o rumo pedido com
+giro limitado e a camada do braço e do tronco — está no contrato "Passada natural fora da partida (item 61)", no fim.)
 Pedido do dono: cenas de fora do estádio, o estádio, a entrada dos times, a fila com a câmera passando, cortes de torcida e
 as duas escalações no campinho (~10 s cada, o mesmo fundo). Pesquisa e números em `PESQUISA-PREJOGO.md`. **Só desenho**: o
 pré-jogo acontece ANTES do 1º passo da partida (o mundo fica no tick 0; `hash-igual` IGUAL; `teste-prejogo` confere o hash
@@ -1037,12 +1042,15 @@ partida" da tela (que chama `prejogo.comecar()`); sem ela (webdriver, `?prints=1
 1,5 s) a abertura de texto continua sendo o gesto, como antes. O resto do pré-jogo (roteiro, cortejo, Pular, preferências) não
 mudou.
 - **`js/cortejo.js`** (puro): `CORTEJO` (velocidade 1,45 m/s, espaçamentos no túnel/andando/na fila, colunas, árbitros
-  ids 200–202), `criarCortejo(times)` → `{tick, mini, andantes: [{j, id, time (0, 1 ou 2 = árbitro), arb, goleiro, kit,
-  k, caminho, s0, sFim, atraso, chegou}]}` (mini-mundo `{tick, posse, naMao, parada, voo, bola}`: só o que a pose e a
+  ids 200–202; desde o item 61 a saída do parado `tau` 0,7 s, `atrasoArb` [0; 0,15] s e `giroMax` 2,2 rad/s),
+  `criarCortejo(times)` → `{tick, mini, andantes: [{j, id, time (0, 1 ou 2 = árbitro), arb, goleiro, kit,
+  k, caminho, s0, sFim, atraso, chegou, mp, vm}]}` (`mp` = `parametrosMarcha(id)`, `vm` = o estado da camada da passada — item
+  61; mini-mundo `{tick, posse, naMao, parada, voo, bola}`: só o que a pose e a
   passada leem; lê `m.times` UMA vez, nunca o mundo depois), `passoCortejo(c)` (corpo, passada, pé desenhado, quadril — a
   ordem do `sim.js`), `tempoCortejo`, `fotoCortejo(c)`/`restaurarCortejo(c, f)` (structuredClone), `filaFinal(c)` (a fila
   montada parada, sem simular), `vagaFinal(c, i)`, `chegaram(c)`, `ordemDaColuna(tm)` (capitão, goleiro, vagas),
-  `pontoCaminho`, `cabeNoTunel()`. Sem rng. Campo novo que `anim.js`/`jogador.js` passarem a ler do mundo tem que entrar no
+  `pontoCaminho`, `cabeNoTunel()`, `poseAndante(c, a, out)` (a pose DESENHADA: a do jogo + a camada do braço e do tronco; o
+  `render/prejogo.js` desenha por ela). Sem rng. Campo novo que `anim.js`/`jogador.js` passarem a ler do mundo tem que entrar no
   mini-mundo (o `teste-cortejo` pega NaN ou exceção na pose).
 - **`js/prejogo-roteiro.js`** (puro): `PREJOGO` (modos, tempos da escalação, preto, mergulho, faixas 2,39:1),
   `criarRoteiro(modo)` → `{modo, planos: [{id, nome, bloco 'cenas'|'escalacao0'|'escalacao1', dur, t0, t1, cam: {de, para,
@@ -5026,6 +5034,7 @@ desenha nada.
   maiores só para eles ("Depende do dono" 27 da FILA).
 
 ## Cenas das paradas — replays nas paradas, cartão, intervalo e pós-jogo (22/10; contrato)
+(A camada da passada nos atores — `a.mp`, `a.vm`, `a.wm` — está no contrato "Passada natural fora da partida (item 61)", no fim.)
 Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
 na tela enquanto o jogo tá parado". Plano em `PLANO-CENAS.md`; pesquisa em `PESQUISA-CENAS-TV.md` (§0.1 o roteiro da DFL,
 §0.2 SoccerNet-v2, §4 replays nas paradas). **Só desenho**: a simulação fica parada e volta no mesmo tick. Nada entra no
@@ -6257,3 +6266,80 @@ Pedido do dono (29/10): "cadeiras parecidas com as reais e torcida 3D, em todos 
   `teste-cadeiras` (C2 com o s de cada fileira por ângulo e a capacidade do Golaço 29.400–29.700; C3 com o corredor e o v por
   fileira), `teste-estadio-generico` G2 (até `TETO_LUGARES`); a auditoria `tools/auditar-cadeiras.mjs` (por estádio) e
   `tools/medir-cadeiras.mjs --tm --estadios a,b,c` (os planos no navegador).
+
+## Passada natural fora da partida (item 61, #632; 06/11; contrato)
+Pedido do dono (23/10, com print): no túnel e na fila "parecem que estão marchando, parecendo NPC". **Só desenho** e FORA do
+fecho do hash (`tools/fecho-hash.mjs --diff` = 0; `hash-igual` e `hash-partida` IGUAIS): a pose da partida (`anim.js`), a
+passada (`jogador.js`), o `config.js` e a `comemoracao.js` não mudam — os jogadores DURANTE O JOGO andam e correm como antes (no corpo novo, só o cotovelo do braço solto: "Corpo
+novo", abaixo; o "completo" é o mocap, itens 50–52). Fontes no cabeçalho do `js/marcha.js` e no `PESQUISA-PREJOGO.md` §10 (com o que se
+aproveitou de cada uma); os números antes → depois na `FILA.md` (linha 61); a régua é o `tools/teste-marcha.mjs`.
+
+**A variação por jogador** (tudo pelo id, o mesmo em todo pré-jogo e em toda cena): a fase inicial da passada (0–2: o pé que
+sai primeiro e o ponto do ciclo), o ritmo ×[1; 1,07] da cadência da tabela (uniforme; só sobe — o `ritmoVoo` só acelera —,
+então quem tem ritmo alto dá passos um pouco mais curtos: 1,96–2,09 passos/s e 0,69–0,74 m a 1,45 m/s), a amplitude do braço
+×[0,8; 1,2], o atraso do pico do braço (0,04–0,12 passo), o tronco ×[0,85; 1,15], o cotovelo ±0,05 rad e o atraso de saída
+(os árbitros do cortejo). Os parâmetros são independentes entre si (sais diferentes na mistura de 32 bits).
+
+**`js/marcha.js`** (puro: sem three.js, DOM, `m.rng` nem `Math.random`; a variação sai de um sorteio pelo id):
+- `MARCHA` — as constantes (`ritmo` [1; 1,07] uniforme, `rampa` 0,6 s, `vSai` [2,6; 3,2] m/s, `taxaSai` 0,5 s, `filtroV`
+  0,15 s, `vCheia`, `taxaGanho` 3/s, `abreRoll` 1, `braco` 0,19 rad × [0,8; 1,2], `atraso`, `cotovelo`, `pelve`, `torax`,
+  `confere` [1,5; 6] cm, `taxaConfere` 0,3 s); `ligada: false` desliga a camada (os testes comparam a mesma locomoção).
+- `parametrosMarcha(id)` → `{fase, ritmo, braco, atraso, tronco, cotovelo, atrasoSaida}` (sempre os mesmos para o id);
+  `espalharFase(j, fase)` — a fase inicial da passada de um jogador recém-criado, parado (o pé que sai primeiro é o de cada um).
+- `conferencia(P, j)` → 0–1: o braço da pose é o da passada (1) ou de um gesto, da bola nas mãos, do lateral, do cabeceio (0).
+- `marchar(P, j, mp, w = 1, est = null)` — a CAMADA sobre a pose `P` (19 juntas, alterada no lugar), depois do `anim.js pose`:
+  o braço oposto à perna do mesmo lado (−cos(π(fase − atraso))), o cotovelo que dobra mais à frente (de lado e freando, a dobra
+  da pose), a pelve ±4° com a perna da frente e o tórax ±3° ao contrário, o braço de fora aberto pela inclinação do tronco na
+  curva; os tornozelos e os comprimentos dos ossos não mudam; o braço misturado vai pela MÃO em linha reta e o cotovelo pela
+  IK com os comprimentos da pose. Entre `vSai[0]` e `[1]` a camada VIRA a pose do jogo (a fase e a amplitude do braço, a
+  dobra, a pelve e o tórax): acima, nada. `w` = a rampa de entrada da cena. Parado com a fase 0 não muda nada. Devolve o peso.
+- `filtrarMarcha(j, est, dt, inicio = false, P = null)` — o estado do ator `est` = `{v, f, k, g, c}`: a velocidade e a componente
+  para a frente filtradas (`filtroV`), a mistura com a pose pela velocidade (no máximo 1 em `taxaSai` s), o ganho das
+  amplitudes (no máximo `taxaGanho` por s) e, com a pose `P`, a conferência (no máximo 1 em `taxaConfere` s); `inicio` recomeça
+  do de agora. UMA vez por tick do ator, com a pose dele já feita (o `marchar` com o `est` não o altera).
+- `rampaMarcha(t)` — a rampa de entrada pelo tempo da cena (smoothstep em `rampa` s).
+- `marcharAtores(atores, dt)` / `avancarComMarcha(c, dt, passoCena)` — a comemoração (o `comemoracao.js` é do fecho): o mesmo
+  laço do `comemoracao.js avancarCena` com a camada DEPOIS de cada `passoCena`, em cada ator `{j, atu, id, mp?, vm?, wm?}`
+  (pulados — e a rampa recomeça — no mergulho, carrinho, joelhos, pulo, no ar, parado fixo e agachado; os braços com gesto
+  ficam pela conferência). A página (`main.js quadroComemoracao`) e o teste chamam este.
+
+**Quem usa** (os campos novos não vão para o mundo da partida):
+- `cortejo.js` — cada andante tem `mp` e `vm` (o estado, avançado uma vez por tick em `poseAndante(c, a, out)`; redesenhado no
+  mesmo tick, reaproveita; depois de um salto no tempo recomeça); `j.rumoCmd` no jogador do cortejo (o rumo pedido gira no
+  máximo `CORTEJO.giroMax` 2,2 rad/s: a quina da coluna e a meia-volta dos árbitros; a foto e a restauração o levam). A
+  saída do parado: o ponto do caminho acelera como 1 − e^(−u/τ) (`CORTEJO.tau` 0,7 s), começando τ antes — no regime, o ponto
+  de antes. Os árbitros têm `atraso` = `atrasoArb` [0; 0,15] s e a rampa deles começa τ ANTES do tick 0: `criarCortejo`
+  PRÉ-ROLA esse trecho só com eles (chegam ao tick 0 andando, no ponto de antes menos o atraso). `render/prejogo.js` desenha
+  por `poseAndante`.
+- `cena-atores.js` (intervalo, fim, cartão) — `a.mp`, `a.vm`, `a.wm` (a rampa por ator: 0 no 1º quadro e no carrinho; cheia
+  na elipse) em `marcharAtor`; `ritmoAtor` dá a `saida` do ritmo de cada um; `recriarAtor` espalha a fase.
+- `substituicao.js poseAtor` — `a.mp`, `a.vm`, a rampa pelo tempo da cena (`t`).
+- `tecnicos.js poseTec` — `tc.mp`, `tc.vm`: na prática a pelve e o tórax (os braços ficam nas posturas — mãos nas costas,
+  cruzados, na cintura —, `teste-marcha` T2 informativo).
+
+**Contrato implícito com o `jogador.js passoPassada` (R5 da revisão):** o cortejo e as cenas passam `saida = {ritmoVoo}` SEM `pe`
+nem `em`, e só andando (0,5 < v < `MARCHA.vRitmo`, antes da vaga): com os dois pés no chão o `passoPassada` trata a `saida` como
+`pedido`, e sem `pe` (`faseLocal(f0, undefined)` = NaN) nada acontece — só o ritmo muda (`Math.max` com o natural: o apoio nunca
+fica mais longo). Parado, a `saida` faria a passada andar no lugar. O `teste-marcha` G7 compara bit a bit `{ritmoVoo: natural}` ×
+sem `saida` andando (com os dois pés no chão também): uma refatoração do `jogador.js` que mude isso reprova ali.
+
+**Corpo novo (`render/esqueleto.js juntasDesenho`, `maoSolta`; A1 da revisão):** com o braço SOLTO (elevação ≥ ~0,95) e o
+cotovelo do jogo até ~50°, a mão do desenho desce junto com o ombro descido o que falta para o cotovelo do corpo novo ficar com
+a dobra do jogo (no mínimo 15°); antes, com a mão do jogo no lugar e o ombro 4,5 cm abaixo, o cotovelo ficava a 48–63° a
+passada inteira ("segurando uma bandeja"). Vale também no jogo para quem anda ou está parado (o desenho do corpo novo; na
+partida s3 a mão muda > 1 cm em 58,6% dos quadros, até 4,7 cm, e o cotovelo andando p50 59° → 46°; correndo, igual).
+
+**Testes:** `teste-marcha` (padrão, ~30 s no CI; `--sem-cenas` ~10 s; `--js <pasta>` mede outra versão; o cortejo da semente
+7, 25 andantes × 50 s, no manequim e no corpo novo pelo `render/esqueleto.js`, e as cenas de intervalo, fim, substituição,
+cartão e comemoração): C0–C10 (o cortejo: os pares lado a lado no mesmo pé, também nos 3 s depois de sair, os 3 árbitros, a
+onda na coluna, o 1º pé, a cadência e o walk ratio de cada um, a saída do parado, as chegadas na fila, o trio na frente das
+colunas e em linha), B1–B6 (braço × perna oposta, amplitude, cotovelo, pelve, tórax, o cotovelo do corpo novo — os dois
+corpos), G1–G9 (guardas: tornozelos e ossos, o tranco da mão por boneco e por tick, parado com a fase 0, o custo ≤ o da pose,
+a mão na coxa, a virilha na curva, o contrato da `saida`, a conferência, a faixa de saída), T1–T2 (treinadores), S1–S4 (as
+cenas e a comemoração; o 1º quadro com × sem a camada). Na base 7cb052ad reprova 23 itens e no 80b0e50d (a 1ª versão do item
+61) 14; as mutações das guardas (a camada fora dos treinadores, sem a rampa do 1º quadro, sem a fase espalhada, sem a rampa da
+substituição, sem a conferência, `pe ?? 0` no `jogador.js`, sem a camada na comemoração) reprovam. Continuam conferindo: o
+`teste-cortejo` (pé plantado 0 m/s, corpos ≥ 0,85 m, a fila, o último aos 42,4 s, foto/restauração), o `teste-patinacao`, o
+`teste-prejogo` (navegador: andantes na tela e o pior plano do celular), `teste-cenas`, `teste-substituicao`,
+`teste-comemoracao`, `teste-tecnicos`, `teste-ossos` (O2: 117 → 168 saltos, 0,0231% ≤ 0,03% — os novos nos treinadores e na
+comemoração; na partida, 66 como antes) e `teste-corpo-tela`.

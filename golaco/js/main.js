@@ -184,9 +184,12 @@ import { criarAnel, lerQuadro, tempoEstadio as tempoEstadioAnel, jogadorNoTick, 
 import { criarTecnicos, criarLeitura, leituraDoMundo, passoTecnicos, afastarDeTecnicos, infoTecnicos, IDS_TECNICOS, kitTecnico, treinadorDoTime } from './tecnicos.js';
 import { OCULTA, KITS } from './render/jogador3d.js';
 import {
-  planejarComemoracao, criarCena as criarCenaComemoracao, avancarCena, planoCamera, criarPlanoCamera, faseCena,
+  planejarComemoracao, criarCena as criarCenaComemoracao, passoCena as passoCenaComemoracao, planoCamera, criarPlanoCamera, faseCena,
   tempoCena, duracaoCena, infoAtores,
 } from './comemoracao.js';
+// a passada natural na comemoração (item 61; marcha.js, fora do fecho do hash): o braço e o tronco de quem anda, depois de
+// cada passo da cena (comemoracao.js é do fecho: a camada vem por fora, só no desenho)
+import { avancarComMarcha } from './marcha.js';
 import {
   planejarSubstituicao, criarCenaSubst, avancarCenaSubst, planoCameraSubst, criarPlanoCameraSubst, tempoCenaSubst,
   duracaoCenaSubst, infoAtoresSubst, consumirEventosSubst, paresDaPlaca, placaNasMaos, planoEm,
@@ -1684,7 +1687,7 @@ function quadroComemoracao(dt, ent, semPulo = false) {
   const t0 = performance.now();
   // a simulação já está segura no gol + 149: os treinadores andam os passos da cena, com o mundo parado
   const segura = seguraSimulacao();
-  const nCena = avancarCena(c, dt);
+  const nCena = avancarComMarcha(c, dt, passoCenaComemoracao);
   custoCena.n += nCena;
   quadroCartaoAutor(c);
   if (segura && tecnicos && nCena > 0) {
