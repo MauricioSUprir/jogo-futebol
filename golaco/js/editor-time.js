@@ -516,7 +516,8 @@ export function criarEditorTime(opc) {
     for (const n of raiz.querySelectorAll('.c-nome, .ed-passo-nivel')) {
       if (n.offsetParent === null) continue;
       n.style.fontSize = '';
-      const min = n.classList.contains('c-nome') ? 8 : 10;
+      // (item 125: o nome na TM Cond em caixa alta; a rede de segurança para em 11 px — nada abaixo de 11 na tela)
+      const min = 11;
       let fs = parseFloat(getComputedStyle(n).fontSize) || 11;
       for (let k = 0; k < 16 && n.scrollWidth > n.clientWidth + 0.5 && fs > min; k++) { fs -= 0.5; n.style.fontSize = `${fs}px`; }
     }

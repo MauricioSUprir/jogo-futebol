@@ -56,7 +56,7 @@
 //         no D, no H3, no H4 e nas páginas novas (na base, no celular, 56–79 quadros em 2 de 6 gols);
 //      H16 com toque: o "Pular" da comemoração ACIMA do cartão (y1 ≤ cartão.y0 − 8) e, depois do 1º corte, sem cobrir o autor;
 //      e o H3 passa a pedir a foto de 44–48 px (antes 88–96) e o nome na TM Cond 800 carregada (≥ 16 px; o número ≥ 12); o H10 ganha
-//      o 568×320 pro (o nome inteiro também lá).
+//      o 568×320 pro (o nome inteiro também lá); H17 (item 125) as famílias do cartão com @font-face e as letras ≥ 11 px.
 // Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
 // sem o cartão (a base do item 31) reprovam H1–H7 e H9–H12; antes das correções da revisão (b719f4ed) reprovam H9–H12. Na base do
 // item 126 (29d67bad, o cartão em cima, grande) reprovam H3, H10 (568 pro), H12, H13, H14, H15 (no celular) e H16.
@@ -67,6 +67,7 @@ import fs from 'node:fs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
 import { acharGol } from './lib/acha-gol.mjs';
 import { PED_A, comFotos, urlFoto } from './lib/pedidos-tm.mjs';
+import { medirTipografia, resumoTipografia, FAMILIAS_SISTEMA } from './lib/tipografia.mjs';
 
 const args = process.argv.slice(2);
 const raiz = path.resolve(args.includes('--raiz') ? args[args.indexOf('--raiz') + 1] : RAIZ);
@@ -587,6 +588,9 @@ if (faz('H')) {
       const lado = a?.fotoCaixa ? Math.round(a.fotoCaixa.x1 - a.fotoCaixa.x0) : 0;
       // (item 126: menor — a foto 44–48 px, antes 88–96; o nome na TM Cond 800 carregada, ≥ 16 px; o número ≥ 12)
       const ln = await letraDoNome(pg);
+      // (item 125, T1/T2) o cartão: toda família pedida com @font-face ou do sistema (na base: a "Inter" sem face) e letras ≥ 11
+      const t1 = await pg.evaluate(medirTipografia, { sel: '#autor-gol', limite: 11, ignorar: ['.ag-sr'], sistema: FAMILIAS_SISTEMA });
+      meta('H17 celular 844×390 (?tm pro): o cartão sem família sem @font-face e sem letra < 11 px (o sistema tipográfico)', resumoTipografia(t1), '0; 0', t1.n > 0 && t1.semFace.length === 0 && t1.pequenos.length === 0);
       meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 44–48 px; nome ≥ 16 px na TM Cond 800 carregada, número ≥ 12 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}" (${ln?.fam} ${ln?.peso}${ln?.carregada ? ' carregada' : ' NÃO carregada'})` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
         'a do autor; 44–48; ≥ 16 na TM Cond 800; ≥ 12', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 44 && lado <= 48 && a.letraNome >= 16 && a.letraNum >= 12 && ln?.fam === 'TM Cond' && +ln.peso === 800 && ln.carregada);
       // (revisão V3) o nome é a linha principal (o número vai na pílula, junto da sigla) e a coluna fica no meio da altura da foto

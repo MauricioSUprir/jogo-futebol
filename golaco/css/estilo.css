@@ -250,6 +250,10 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
    (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
 html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
 html.com-toque .gol-palavra { font-size: clamp(40px, 12.5vmin, 96px); -webkit-text-stroke-width: 2px; }
+/* (item 125) "GOL!" na TM Cond 800, reta e em caixa alta, ×1,1 (a letra estreita). Só com ele na tela (.visivel): a camada fica no
+   layout escondida (visibility) e a família pedida desde o 1º quadro baixaria a fonte no download inicial sem ?tm */
+.gol-tela.visivel .gol-palavra { font-family: var(--f-disp); font-weight: 800; font-style: normal; text-transform: uppercase; letter-spacing: 0.02em; font-size: clamp(70px, 18.7vmin, 185px); }
+html.com-toque .gol-tela.visivel .gol-palavra { font-size: clamp(44px, 13.75vmin, 106px); }
 html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 @media (prefers-reduced-motion: reduce) {
   .gol-tela.visivel .gol-faixa, .gol-tela.visivel .gol-palavra { animation: none; }
@@ -273,8 +277,8 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); pointer-events: none;
 }
 .faixa[hidden] { display: none; }
-.faixa-titulo { font-size: 22px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
-.faixa-placar { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.faixa-titulo { font: 800 26px / 1.1 var(--f-disp); letter-spacing: 0.08em; text-transform: uppercase; }
+.faixa-placar { font: 800 18px / 1.1 var(--f-disp); letter-spacing: 0.06em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .faixa-placar:empty { display: none; }
 .faixa-botoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
 .faixa-botoes[hidden] { display: none; }
@@ -488,7 +492,7 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
   padding: 12px 12px 10px 20px; background: #0e1314; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.janela-topo h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
+.janela-topo h2 { margin: 0 auto 0 0; font: 800 18px / 1.2 var(--f-disp); letter-spacing: 0.1em; text-transform: uppercase; }
 .janela-topo h2::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--verde); margin-right: 10px; vertical-align: -1px; border-radius: 2px; }
 .btn-fechar[hidden] { display: none; }
 .btn-fechar {
@@ -513,7 +517,8 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
 html:not(.com-toque) .chip-nomes { display: none; }
 
 .ajuda-colunas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; padding: 16px 20px 20px; }
-.ajuda-colunas h3 { margin: 0 0 10px; font-size: 12px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--verde); }
+.ajuda-colunas h3 { margin: 0 0 10px; font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0.12em; text-transform: uppercase; color: var(--verde); }
+.ajuda-colunas kbd { font: 800 13px / 1.3 var(--f-disp); letter-spacing: 0.02em; }
 .ajuda-colunas dl { margin: 0; line-height: 1.5; }
 /* tecla e descrição na mesma linha (quebra só quando não cabe): ajuda curta no celular */
 .ajuda-colunas dt { display: inline; font-size: 12px; font-weight: 700; color: var(--texto); }
@@ -958,14 +963,14 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
   display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 9px;
   background: rgba(7, 9, 10, 0.8); border: 1px solid var(--linha); border-left: 4px solid var(--verde); border-radius: 8px;
-  font-size: 12px; font-weight: 900; letter-spacing: 0.22em; color: var(--texto);
+  font: 800 14px / 1 var(--f-disp); letter-spacing: 0.16em; color: var(--texto);
 }
 .replay-marca svg { width: 15px; height: 15px; fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .replay-marca svg path + path { fill: var(--verde); stroke: none; }
 .btn-replay-pular {
   display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + 6px); bottom: calc(var(--sa-b) + var(--m) + 6px);
   align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 52px; padding: 0 18px; cursor: pointer;
-  font-size: 14px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto);
+  font: 800 17px / 1 var(--f-disp); letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto);
   background: rgba(7, 9, 10, 0.78); border: 2px solid var(--verde); border-radius: 26px; opacity: 0.92;
 }
 .btn-replay-pular svg { width: 18px; height: 18px; fill: none; stroke: var(--verde); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -1003,7 +1008,7 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
   padding: 8px 16px 8px 8px; box-sizing: border-box;
   background: var(--painel); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  font-family: var(--f-texto); color: var(--texto);
 }
 .faixa-subst[hidden] { display: none; }
 .faixa-subst.visivel { animation: faixa-subst-entra 0.25s ease-out both; }
@@ -1011,7 +1016,7 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
 @media (prefers-reduced-motion: reduce) { .faixa-subst.visivel { animation: none; } }
 .fs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .fs-sigla {
-  flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font-size: 14px; font-weight: 900; letter-spacing: 0.08em;
+  flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font: 800 15px / 1 var(--f-disp); letter-spacing: 0.06em;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
 /* as linhas dividem as colunas (subgrid): a do número tem a largura do maior número escrito, em qualquer fonte (no CI a
@@ -1022,11 +1027,11 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
 .fs-tri { width: 14px; height: 14px; }
 .fs-entra .fs-tri { fill: var(--verde); }
 .fs-sai .fs-tri { fill: var(--sai); }
-.fs-palavra { font-size: 12px; font-weight: 900; letter-spacing: 0.12em; }
+.fs-palavra { font: 800 14px / 1 var(--f-disp); letter-spacing: 0.1em; }
 .fs-entra .fs-palavra { color: var(--verde); }
 .fs-sai .fs-palavra { color: var(--sai); }
-.fs-num { font-size: 22px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
-.fs-nome { font-size: 20px; font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.15; }
+.fs-num { font: 800 24px / 1.1 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
+.fs-nome { font: 800 22px / 1.15 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .fs-nome-curto { display: none; }
 .fs-conta { flex: none; align-self: flex-end; font-size: 11px; font-weight: 700; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .fs-conta:empty { display: none; }
@@ -1042,9 +1047,9 @@ html.com-toque .fs-sigla { font-size: 12px; padding: 4px 6px; }
 html.com-toque .fs-linhas { grid-template-columns: 11px 42px max-content minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
 html.com-toque .fs-linha { grid-template-columns: 11px 42px 22px minmax(0, 1fr); grid-template-columns: subgrid; column-gap: 6px; }
 html.com-toque .fs-tri { width: 11px; height: 11px; }
-html.com-toque .fs-palavra { font-size: 10px; }
-html.com-toque .fs-num { font-size: 17px; }
-html.com-toque .fs-nome { font-size: 15px; }
+html.com-toque .fs-palavra { font-size: 11px; }
+html.com-toque .fs-num { font-size: 18px; }
+html.com-toque .fs-nome { font-size: 16px; }
 /* celular, no jogo: uma linha compacta no lugar do aviso — "[GLÇ] ▲ ENTRA 22 Wallace · ▼ SAI 9 Diego" (o nome da camisa) */
 html.com-toque .faixa-subst.jogo {
   top: calc(var(--sa-t) + var(--m) + 74px); bottom: auto; left: 50%; transform: translateX(-50%); animation: none;
@@ -1053,8 +1058,8 @@ html.com-toque .faixa-subst.jogo {
 html.com-toque .faixa-subst.jogo .fs-linhas { display: flex; flex-direction: row; align-items: center; gap: 7px; }
 html.com-toque .faixa-subst.jogo .fs-linha { display: flex; align-items: baseline; gap: 4px; opacity: 1; }
 html.com-toque .faixa-subst.jogo .fs-tri { align-self: center; }
-html.com-toque .faixa-subst.jogo .fs-num { font-size: 15px; }
-html.com-toque .faixa-subst.jogo .fs-nome { font-size: 14px; }
+html.com-toque .faixa-subst.jogo .fs-num { font-size: 16px; }
+html.com-toque .faixa-subst.jogo .fs-nome { font-size: 15px; }
 html.com-toque .faixa-subst.jogo .fs-nome-completo { display: none; }
 html.com-toque .faixa-subst.jogo .fs-nome-curto { display: inline; }
 html.com-toque .faixa-subst.jogo .fs-sai::before { content: "·"; color: var(--texto-2); font-weight: 900; margin-right: 3px; }
@@ -1087,15 +1092,15 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 .terco-selo {
   display: flex; align-items: center; gap: 9px; height: 40px; padding: 0 16px 0 11px;
   background: rgba(7, 9, 10, 0.85); border: 1px solid var(--linha); border-left: 4px solid var(--decisao); border-radius: 8px;
-  font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto); white-space: nowrap;
+  font: 800 17px / 1 var(--f-disp); letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto); white-space: nowrap;
   animation: terco-entra 0.2s ease-out both;
 }
-.terco-selo b { font-weight: 900; }
+.terco-selo b { font-weight: 800; }
 .terco-selo svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--decisao); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .terco-selo svg path + path { fill: var(--decisao); }
 @keyframes terco-entra { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 @media (max-height: 480px), (max-width: 680px) {
-  .terco-selo { height: 34px; font-size: 13px; gap: 7px; padding: 0 13px 0 9px; }
+  .terco-selo { height: 34px; font-size: 15px; gap: 7px; padding: 0 13px 0 9px; }
   .terco-selo svg { width: 15px; height: 15px; }
 }
 @media (prefers-reduced-motion: reduce) { .terco-selo { animation: none; } }

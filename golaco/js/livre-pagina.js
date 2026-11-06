@@ -26,11 +26,11 @@ const SETA = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6 8.5 1
 const CSS = `
 /* os submenus Jogadores e Câmera: cada linha com o nome à esquerda e o −/+ (e o Goleiro) à direita */
 #menu .livre-time { display: flex; flex-wrap: wrap; align-items: center; column-gap: 8px; row-gap: 4px; min-height: 44px; }
-#menu .livre-rotulo { flex: 1 1 auto; min-width: 0; font: 700 14px / 1.2 var(--p-fonte); color: var(--p-texto); white-space: nowrap; }
+#menu .livre-rotulo { flex: 1 1 auto; min-width: 0; font: 800 16px / 1.2 var(--f-disp, var(--p-fonte)); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-texto); white-space: nowrap; }
 #menu .livre-ctrl { display: flex; align-items: center; gap: 6px; flex: none; margin-left: auto; }
 #menu .livre-time .btn { flex: none; justify-content: center; min-width: 44px; padding: 0 14px; }
 #menu .livre-time .livre-passo { width: 44px; padding: 0; font-size: 20px; }
-#menu .livre-n { flex: none; width: 2.2em; text-align: center; font: 800 20px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
+#menu .livre-n { flex: none; width: 2.2em; text-align: center; font: 800 22px / 1 var(--f-disp, var(--p-fonte)); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
 #menu .livre-gol[aria-pressed="true"] { border-color: var(--p-verde); color: var(--p-verde-cl); }
 #menu .livre-gol[aria-pressed="false"] { opacity: 0.55; }
 #menu #menu-livre .btn[aria-disabled="true"], #menu #menu-camera-livre .btn[aria-disabled="true"] { opacity: 0.4; cursor: default; }

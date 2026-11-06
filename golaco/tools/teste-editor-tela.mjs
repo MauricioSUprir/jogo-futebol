@@ -24,12 +24,15 @@
 //  13  Sem erro no console em nenhuma tela.
 //  14  Fim de jogo: faixa "Fim de jogo" com o placar e "Jogar de novo" (também no lugar de Continuar
 //      na pausa); o botão começa outra partida.
+//  15  (item 125, o sistema tipográfico) nas 6 telas × 3 abas do 10: nenhuma letra abaixo de 11 px (T2; na base 4 classes com 10 px:
+//      a posição, o número, o grupo e o selo da carta) e toda família pedida com @font-face ou do sistema (T1).
 // Saída PASSOU/REPROVOU por item; código 1 se algum reprovar.
 //   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>] [--semente N]
 //   (--raiz: mede outra cópia, ex.: a base; --semente soma N a todas as sementes: outro conjunto)
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { medirTipografia, resumoTipografia, FAMILIAS_SISTEMA } from './lib/tipografia.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -524,12 +527,17 @@ for (const t of TELAS) {
     await novaPartida(pg, 2);
     await pg.evaluate(() => window.__golaco.editor.abrir());
     const toque = t.toque ? tocar : clicar;
-    const textos = [];
-    let ok = true;
+    const textos = [], tipos = [];
+    let ok = true, okTipo = true;
     const conferir = async rot => {
       const l = await conferirEditor(pg);
       if (l.problemas.length) ok = false;
       textos.push(`${rot}: ${l.resumo}${l.problemas.length ? ' — ' + l.problemas.slice(0, 4).join('; ') : ''}`);
+      // (item 125) T1/T2: a letra mínima e as famílias pedidas, com as fontes carregadas
+      await pg.evaluate(() => document.fonts.ready);
+      const tp = await pg.evaluate(medirTipografia, { sel: '#editar-time', limite: 11, ignorar: ['.sr', '.ed-sr', '[class$="-sr"]'], sistema: FAMILIAS_SISTEMA });
+      if (tp.pequenos.length || tp.semFace.length) { okTipo = false; tipos.push(`${rot}: ${resumoTipografia(tp)}`); }
+      else if (!tipos.length) tipos.push(`${rot}: ${resumoTipografia(tp)}`);
     };
     await conferir('escalação');
     await toque(pg, '#editar-time [data-jogador="10"]');
@@ -548,6 +556,7 @@ for (const t of TELAS) {
     await toque(pg, '#editar-time [data-previa="com"]');
     await conferir('com a bola');
     meta(`10 ${t.nome}: nada encosta (≥ 48 px, folga ≥ 4, área segura, nomes inteiros, listas)`, textos.join(' | '), ok && pendente === 1);
+    meta(`15 ${t.nome}: letras ≥ 11 px e famílias com @font-face ou do sistema (o sistema tipográfico do item 125)`, tipos.join(' | '), okTipo);
     meta(`13 ${t.nome}: sem erro no console`, erros.length ? erros.slice(0, 3).join(' | ') : '0', erros.length === 0);
   } catch (e) {
     meta(`10 ${t.nome}: execução`, e.message, false);

@@ -141,7 +141,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-replay-paradas-tela.mjs': 400,
   // (item 31: + o H, 4 páginas novas — 844×390 ?tm pro, 568×320 ?tm pública, a cena curta e o pular no PC, 1366×600 com as fotos
   // em 404 — e 6 gols; 291 s aqui o teste inteiro com outra página junto; estimado ~+70 s no CI; acertar pelo log do CI)
-  'teste-comemoracao-tela.mjs': 85,
+  // (item 126: + 2 páginas com as fotos — 1920×1010 e 568×320 ?tm pro — e 2 gols; ~+30 s estimado; acertar pelo log do CI)
+  'teste-comemoracao-tela.mjs': 115,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
   // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s, intervalo 68, pós-jogo 569) + o C12d, o I8b, o I13 e o I14
