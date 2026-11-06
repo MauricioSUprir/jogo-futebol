@@ -77,7 +77,7 @@ export const TEMPOS_NODE = {
   'teste-pressao.mjs --humano': 300, // (31/10: 96 sementes, eram 48)
   // (item 33: 4 níveis × 4 roteiros × 8 sementes = 128 partidas de 2 × 4 min + ~30 cenas de hash de 2 × 1 min; localmente 732 s
   // com 2 processos numa máquina de 4 vCPU; estimado com 3)
-  'teste-dificuldade.mjs': 700,
+  'teste-dificuldade.mjs': 792, // 791,9 s no log do 1º CI do #618 (item 114)
   'teste-classico.mjs': 600, // item 35 (revisão): 160 partidas de 2 × 4 min + 21 cenas de hash em 3 processos (463 s aqui com 2 e a máquina livre; 390–690 s antes, com ela dividida; estimado — corrigir pelo log do 1º CI, FILA 123)
   'teste-goleiro-regras.mjs': 146,
   'teste-reposicao.mjs': 150, // C5: 12 partidas da demo (31/10: eram 6; o canhão de ~200 reposições) + 4 cenas do gesto; estimado
@@ -127,7 +127,7 @@ export const TEMPOS_NAVEGADOR = {
   // (item 109: 549,1 s no log do CI do #614, navegador, antes do item 31)
   // (item 31: + o E22, 4 páginas ?tm com as fotos — 844×390, 1280×720, a pública e a de 404 —; ~+50 s estimado; acertar pelo log
   // do CI — item 111)
-  'teste-prepartida-tela.mjs': 600,
+  'teste-prepartida-tela.mjs': 430, // 429,5 s no log do 1º CI do #618 (item 114)
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
@@ -154,7 +154,7 @@ export const TEMPOS_NAVEGADOR = {
   // o online em 6 telas da revisão, 390 s aqui dividindo a máquina com outro teste de navegador (carga ~9) e 33–71 s por parte
   // sozinho; acertar pelo log do CI)
   // (item 93: 242,8 s no log do CI do #613)
-  'teste-pausa-tela.mjs': 243,
+  'teste-pausa-tela.mjs': 250, // 249,5 s no log do 1º CI do #618 (item 114)
   'teste-online-tela.mjs': 160,
   'teste-corpo-tela.mjs': 150,
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)

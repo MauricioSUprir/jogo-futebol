@@ -40,7 +40,7 @@
 | 109 | ✅ O tempo do teste do pré-jogo na divisão do CI: 580 s, do log do CI (#614; no #615) | 0,25 |
 | 111 | ✅ Os tempos dos testes da comemoração e da tela antes do jogo na divisão do CI: 85 s e 600 s, do log do CI do #615 (no #618) | 0,25 |
 | 113 | 🔎 Conferir rodando o que a foto do autor não rodou: o online com uma pessoa na edição pro e a outra na pública, o aviso "Conexão instável" escondido na comemoração, as fotos nas fichas no Modo Livre e nos Pênaltis, e se o boneco parece com a foto (fora dos rostos reais) | 2 |
-| 114 | 🔎 Os tempos do teste da dificuldade (700 s estimados), do teste da pausa e do teste da tela antes do jogo na divisão do CI, do log do 1º CI do #618 | 0,25 |
+| 114 | ✅ Os tempos do teste da dificuldade (792 s), do teste da pausa (250 s) e do teste da tela antes do jogo (430 s) na divisão do CI, do log do 1º CI do #618 (#619) | 0,25 |
 | 115 | 🔎 Conferir rodando o que o tempo de jogo e a dificuldade não rodaram depois da revisão: o online do TM, o TM na edição pública, os Pênaltis e o Modo Livre do TM, o Viverde e o ‹ › da pausa num celular de verdade | 1,5 |
 | 127 | 🔎 A falta tática dentro da própria área (o zagueiro batido puxa a camisa e é pênalti com amarelo): tirar, como já é no "segurar" | 1 |
 
