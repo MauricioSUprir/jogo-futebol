@@ -6621,8 +6621,11 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 .tm3d-sair .tm-ic{width:18px;height:18px}
 body.tm3d-aberto{overflow:hidden}
 /* a confirmação do X ("Sair do 3D?", TM.ui.confirm) vai para o body: por CIMA do quadro do 3D (z-index 5000), senão o toque
-   no X não mostrava nada (item 124: toda partida passa pelo "Abrindo o estádio 3D…") */
+   no X não mostrava nada (item 124: toda partida passa pelo "Abrindo o estádio 3D…"). Por cima do 3D ela fica no meio da tela:
+   a regra geral .modal (o cartão de 380 px) também pega a .sheet-overlay.modal e a prendia no canto esquerdo */
 body.tm3d-aberto .sheet-overlay{z-index:5100}
+body.tm3d-aberto .sheet-overlay.modal{max-width:none;border:0;border-radius:0;padding:16px;align-items:center;justify-content:center;background:rgba(0,0,0,.6)}
+body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-radius:18px;border:1px solid var(--line);transform:none}
 
 /* ---------- Viverde FC (time especial com senha: js/viverde.js) ---------- */
 .vv-sheet .vv-sheet-in{max-width:380px}
