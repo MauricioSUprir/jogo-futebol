@@ -467,6 +467,72 @@ elencos antes do código.
   exatos; nada medido em celular de verdade (só o Chromium sem GPU); o regime mínimo (a barra do navegador antes da tela cheia)
   medido só no Chromium.
 
+### 7.6 A letra esportiva, o campinho maior e o cartão do autor no canto de baixo (itens 125 e 126, dono 05/11; `css/estilo.css`, `css/tm.css`, `css/pausa.css`, `css/editor.css`, `css/cenas.css`, `css/prepartida.css`, `css/prejogo.css`, `index.html`, `js/main.js`, `js/hud.js`, `js/tm-cara.js`, `js/pausa-tela.js`, `js/editor-time.js`, `js/prepartida-tela.js`, `js/disputa-tela.js`, `assets/tm/fontes/`)
+Pedidos (05/11, com o print da pausa no PC 1917×1010 com `?tm`): "fontes tem que ser mais legais, o campinho um pouco maior,
+tem que ser mais legal, e não é só aí" (item 125) e "a foto com o nome tem que ser mais embaixo e menor, tem que ser no canto
+inferior" (item 126). Contratos "Sistema tipográfico (item 125)", "Pausa (item 58)" (os blocos do item 125) e "Comemoração do
+gol" (o cartão do autor, item 126) no `CONTRATOS.md`. Pesquisa de 06/11: capturas de referência medidas (Pillow, ±1 px nos JPEGs
+de 720p; as imagens ficaram fora do repositório), 25 famílias OFL baixadas da API css2 do Google Fonts e medidas com fontTools
+(bytes, x-height, altura da maiúscula, largura média, `tnum`, acentos) e desenhadas em 11–14 px; depois um PROTÓTIPO na página de
+verdade (a cópia da base 29d67bad com 4 variantes por parâmetro) medido em 6 telas antes do código.
+
+| Fonte | O que diz / o que se mediu | O que foi aproveitado |
+|---|---|---|
+| F37, a família do EA SPORTS FC (https://f37.com/custom-fonts/eafc) | Encomendada pela Uncommon: uma sem serifa de LARGURA NORMAL em 6 pesos (reta, inclinada para trás e itálica) + uma monoespaçada; espaços afinados "for in gameplay"; cortes triangulares; a serifa "Marta" para títulos e momentos especiais. Nenhuma largura condensada | A "cara esportiva" do FC vem do PESO, da escala e do movimento, não de uma condensada em tudo: a lista da pausa fica em caixa NORMAL (como o FC 24), e a condensada vai nos títulos, nomes, números e siglas |
+| Fonts In Use (https://fontsinuse.com/uses/63122/ea-sports-fc24) e Typeroom (https://typeroom.eu/uncommon-ea-sports-fc-logo-branding-bespoke-type) | A família se chama Cruyff Sans, exclusiva da EA, usada "in brand communications, marketing and UI"; hastes nos 60° do giro de Cruyff | Não dá para usar (exclusiva); confirma que a UI do FC é uma grotesca: a Inter (a do TM) fica no texto corrido |
+| Design Week, Creative Boom e It's Nice That (lançamento da marca, 04/2023: https://www.designweek.co.uk/issues/10-april-14-april-2023/ea-sports-fc-identity-uncommon/ ; https://creativeboom.com/news/uncommon-creates-triangle-based-identity-for-ea-sports-fc ; https://www.itsnicethat.com/news/uncommon-creative-studio-ea-sports-fc-graphic-design-130423) | Confirmam a Uncommon, a F37, as duas famílias e o triângulo como motivo | Só contexto (o triângulo do TM já está na carta) |
+| BUCK, o sistema de movimento do FC 24 (https://buck.co/work/ea-sports-fc-24) | "Trajectory, Formation, Momentum, Match Cuts"; 1.028 composições, com "transitions, lower thirds, end slates, animated typography" | O movimento é parte da identidade: o foco da pausa que cresce e anda 6 px, a cascata curta ao abrir e o cartão do autor que "corre" da borda direita como um lower third |
+| A pausa do FC 24 medida (r/FifaCareers 196r3j5, captura 1280×720 — https://www.reddit.com/r/FifaCareers/comments/196r3j5/ ; Charlie Intel, https://www.charlieintel.com/ea-sports-fc/ea-fc-24-new-matchday-features-264853/ ; YouTube Shorts nondP8ptfq8) | Item ~2,7% da altura (≈ 19–20 px a 720p), foco ~3,3% e em negrito (~1,22×), linhas de 6,7%, margem de 5,2% da largura | **Correção da pesquisa**: no PC a nossa lista JÁ tinha a escala do FC (26,8/36,4 px em 1010, a `--item-f` do item 58); só o celular estava em 15/17 px fixos. O que deixava a pausa "sem graça" no PC era a FAMÍLIA (a Inter, neutra) → a TM Cond nos itens; no celular 18/20 px |
+| O menu do FC 25 (r/EASportsFC 1jlse8h, 2000×1000 — https://www.reddit.com/r/EASportsFC/comments/1jlse8h/) | A mesma hierarquia; o foco ~1,36×; o botão principal é uma pílula VERDE com brilho | O foco 1,25–1,3× (31/39 px em 1010; 18/20 no celular) e o brilho verde na barra do foco |
+| O "Team Management" do FC (r/FifaCareers 1xdn5jn, NOVO × ANTIGO — https://www.reddit.com/r/FifaCareers/comments/1xdn5jn/ ; 1hmn286 — https://www.reddit.com/r/FifaCareers/comments/1hmn286/) e a tela de formação do FC 24 (GamesRadar — https://www.gamesradar.com/fc-24-formations/) | NOME EM CAIXA ALTA, negrito e estreito, numa faixa escura embaixo da foto; o jogador SELECIONADO com a pílula BRANCA; o campo com faixas de corte; a formação GRANDE no canto ("4-4-2" com "FLAT" pequeno embaixo) | As fichas da pausa: o nome em caixa alta na TM Cond 800 numa plaquinha escura e "você" com a plaquinha BRANCA; o campo com 11 faixas de corte sutis; a formação grande e a mentalidade em caixa alta DENTRO do campo |
+| eFootball, "Game Plan" (r/eFootball 1dxjwrj — https://www.reddit.com/r/eFootball/comments/1dxjwrj/) e Football Manager 24 (The Athletic — https://www.nytimes.com/athletic/5002823/2023/11/08/football-manager-2024-best-tactics-formation-fm24/) | eFootball: "4-2-3-1" embaixo à ESQUERDA do campo e o estilo ao lado, em negrito estreito; FM: camisa com o número e a pílula do nome | A formação + a mentalidade no canto de baixo à esquerda do MEU meio campo (livre em toda formação: a fila do goleiro só tem o goleiro); o disco na cor da camisa com o número |
+| Fórum da EA, "Goal scorer card not fully on screen" (FC 24 UT, 23/09/2023 — https://forums.ea.com/discussions/fc-24-ultimate-team-en/goal-scorer-card-not-fully-on-screen/11489495) | "Only the very top of the scorers card visible at bottom of the screen. Used to be bang in the middle of the screen" | Reforça o pedido do dono: no FC o cartão do autor mora na metade de BAIXO. NÃO confirmado por imagem (posição, tamanho e duração oficiais) |
+| A linha do tempo dos gols do FC recente (r/FifaCareers 1xlhbt6 — https://www.reddit.com/r/FifaCareers/comments/1xlhbt6/) | Cartões de evento arredondados: foto recortada, pílula "Goal", nome, minuto, placar em ladrilhos | A estrutura que já tínhamos ([foto \| pílula escudo, sigla e número / NOME], sem minuto) cabe MENOR sem perder nada |
+| ITU-R BT.1848-1 (https://www.itu.int/dms_pubrec/itu-r/rec/bt/R-REC-BT.1848-1-201510-I!!PDF-E.pdf) e EBU R 95 (https://tech.ebu.ch/publications/r095) | Margem de ação 3,5% e de grafismo seguro 5% em cada lado (16:9) | O cartão na margem do HUD (`--m` + a área segura do aparelho), a mesma do placar: a tela do aparelho não corta a imagem como a TV, então os 5% não se aplicam ao pé da letra (registrado como dúvida) |
+| Premier League 2023/24, foto da TV (r/PremierLeague 15p64cq — https://www.reddit.com/r/PremierLeague/comments/15p64cq/) | Placar em cima à esquerda; o lower third numa pílula embaixo à ESQUERDA, ~5% da altura, ~1/3 da largura | O cartão pequeno e baixo (9–10% da altura no PC com a foto; sem foto, a altura do placar). O canto de baixo à ESQUERDA foi MEDIDO e descartado: no celular cobre o autor em 73–78% dos quadros (o `ajustarCelular` põe o autor no terço esquerdo), no PC 2–3% dos outros |
+| Pacote da Premier League 2016–23 (recriação de fã — https://www.youtube.com/watch?v=GKH40DrbM-8; não é oficial) | O autor numa aba pequena com o nome e a faixa da cor; a substituição "20 Jota ▶ / 11 Salah ◀" | A versão sem foto: uma linha só, da altura do placar |
+| Monotype, Premier Sans (https://enterprise.monotype.com/resources/case-studies/premier-league), footyheadlines (https://www.footyheadlines.com/2023/08/premier-league-broadcast-design-launched.html), Stash/DixonBaxi (https://www.stashmedia.tv/dixonbaxi-takes-premier-league/) e Design Museum (https://designmuseum.org/exhibitions/beazley-designs-of-the-year/digital/premier-league-on-air-branding) | "One core brand typeface in two key weights"; o placar com as cores dos uniformes; o lower third sem medidas publicadas | DOIS pesos de uma família só (a TM Cond 600 e 800) e a cor de cada time no grafismo: a borda de cima do cartão do time na pausa e a barrinha da posse dividida nas cores dos dois |
+| Guias de lower third: keepthescore (https://keepthescore.com/blog/posts/lower-thirds/) e School of Motion (https://schoolofmotion.com/blog/sports-lower-thirds) | 3–7 s na tela, ~2 s para ser lido, entrada e saída curtas; caber nomes, números e acentos de tamanhos diferentes | O tempo do cartão (3,5 s; 2,6 na curta) não mudou; a entrada 280 ms e a saída 200 ms; o nome de 19 letras e os acentos conferidos nos testes |
+| Material Design 3, tokens de movimento (https://m3.material.io/styles/motion/easing-and-duration/tokens-specs; os valores pela listagem https://docs.rs/crate/hydrolysis-m3/latest/source/src/theme/motion/tokens.rs, porque a página oficial não renderizou) | `short3` 150 ms e `short4` 200 ms para estado; `medium` 250–400 ms para entrar e sair; "emphasized decelerate" `cubic-bezier(0.05, 0.7, 0.1, 1)` | O foco da pausa em 160 ms, a cascata ≤ 200 ms, a entrada do cartão em 280 ms, todos com essa curva; com "reduzir movimento", só a troca de estado (o cartão só na opacidade) |
+| Google Fonts (API css2) + `METADATA.pb` do repositório google/fonts + fontTools, 25 famílias OFL | Bytes por peso, x-height, maiúscula, largura média, `tnum`, acentos e º/ª (tabela completa na especificação do item); desenho em 11–14 px pelo FreeType | **Barlow Condensed**: já no jogo (o 800 da carta do TM e da `letra-cond.js`), com `tnum` (o relógio MM:SS não treme), º/ª e os acentos, 22 KB por peso no latin. Descartadas: Saira (Semi) Condensed, Oswald, Teko, Big Shoulders, Anton, Antonio, Kanit, Chakra Petch (sem `tnum`), Rajdhani (sem º nem ª: quebra "1º T"), Bebas (1 peso, só maiúsculas), Fjalla (45 KB), Sofia Sans Condensed (x-height 0,487, fraca em 11–12 px), Archivo Narrow e Roboto Condensed (corretas, sem personalidade); a Barlow Semi Condensed foi testada no protótipo (variante c) e ficou perto demais da Inter. Em 11–12 px a Inter é a mais legível (x-height 0,546): condensada só a partir de ~14 px ou em caixa alta |
+| Barlow (https://github.com/jpt/barlow) | "Slightly rounded, low-contrast grotesk … car plates, highway signs, busses, and trains"; 9 pesos e itálico verdadeiro | A cara de placa e de estádio; a mesma família da carta do Ultimate do TM: o 3D e o TM falam a mesma letra nos números e nomes |
+| MDN, `unicode-range` (https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face/unicode-range) e web.dev, "Best practices for fonts" (https://web.dev/articles/font-best-practices) | O arquivo só baixa se a página usar um caractere do intervalo; `swap` para marca e elementos de destaque; o `preload` ignora o `unicode-range`; `size-adjust` na reserva reduz o pulo; só WOFF2 | latin e latin-ext separados (o ext só com č/ł/ğ); `swap` em tudo; com `?tm` o `preload` só do 800 latin (o do placar no 1º quadro); as reservas com `size-adjust` (do item 29) passaram a valer também para o 600 |
+| WCAG 2.2, 1.4.3 (https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) e Apple HIG / Xbox Accessibility Guideline 101 (§7.4) | 4,5:1 no texto, 3:1 no grande (≥ 18,5 px em negrito); texto mínimo de 11 pt | P8 (texto 11,2:1, a barra do foco 7,1:1); o número do disco preto ou branco pelo contraste; nenhuma letra < 11 px (≥ 10 só nas fichas da pausa em 568×320): o Editar time tinha 10 px em 4 lugares e nomes encolhendo até 8,5 |
+
+**O canto do cartão do autor** (o protótipo, o gol roteirizado na página de verdade com `?tm` pro, 6 gols × 5 telas, quadro a
+quadro depois do 1º corte, 1.911 quadros por tela; a caixa do autor e dos outros pela pose desenhada; candidato de 330×92 no PC e
+230×60 no celular): embaixo à DIREITA 0% de autor e 0% de outros no PC (1280×720 e 1920×1010); embaixo à esquerda 0% / 3,3% e 0% /
+2,0% no PC, mas 73,2% / 28,5% (844), 73,3% / 27,8% (667) e 77,8% / 27,7% (568) no celular; embaixo no meio 7–49%; em cima à
+direita (o de antes) 0% / 0%; no celular, ACIMA do "Pular" 0% / 0% (y 229–289 em 844×390) e à esquerda dele 34–50% em 667 e 568.
+O autor vai no máximo a 59,5% da largura no PC e a 44% no celular. Depois da revisão (R3: o "Pular" fixo no canto do replay e o
+cartão acima dele), o `teste-comemoracao-tela` H15 dá 0 quadros sobre os outros nos gols roteirizados (a base cobria os outros em
+56–79 quadros em 2 de 6 gols no celular) e 20/222 no gol natural (um colega colado na lente no abraço, 0,33 s).
+
+**Decisões** (medidas no protótipo e no PR com o `teste-pausa-tela`, o `teste-comemoracao-tela`, o `teste-editor-tela`, o
+`teste-hud-minimo` e o `teste-carga`; as alternativas no "Depende do dono" 25):
+- **O par TM Cond (Barlow Condensed) + Inter TM**, dois pesos da TM Cond (600 + 800): +22.308 B de arquivo novo (o 600 latin; o
+  latin-ext de 14.516 B só com č/ł/ğ). Sem `?tm` o download inicial não cresce (a pré-carga ociosa traz a fonte; folga até os 4
+  MB 647,4 → 636,6 KB pelo CSS/JS); a exceção é o modo Pênaltis (~44 KB no começo: o painel aparece no 1º quadro).
+- **Os itens da pausa em caixa NORMAL** (a 600; o foco na 800), como o FC 24; nomes, siglas, rótulos curtos e títulos em CAIXA
+  ALTA. A TM Cond em caixa normal SEM espaçamento extra (com 0,01–0,04 em os botões pequenos saíam "Per sonalizar", "Simul ar").
+- **O campinho da pausa**: o cartão a 36vw no PC (até 400 px no celular, ajustado ao campo), o campo 1,54–1,58× no PC, 1,32× em
+  844×390 e 1,18× em 667×375; o jogo à vista (P3) em 1280×720 44,6 → 42,9% (meta ≥ 40): a faixa da lista ficou mais estreita
+  com a letra condensada e pagou o cartão maior. Corrigiu o campo que vazava 9 px do cartão em 568×320.
+- **O cartão do autor embaixo à DIREITA** no PC e no celular, ~4× menor no PC (a altura 20,6 → 9,0% da janela) e ~2× no celular
+  (27,2 → 14,6–15,6%); com toque logo ACIMA do "Pular", que fica no canto de sempre (o mesmo lugar do replay).
+- **O placar com `?tm` na TM Cond** (letras maiores, a barra igual ou mais estreita) e o **Editar time maior no PC** (até
+  1400×860, as cartas junto até 1,3×).
+- **Correções da revisão** (06/11): o item desabilitado da pausa voltou a aparecer apagado (a cascata com `both`); o cartão do time
+  não pula mais na volta de um submenu (o ResizeObserver); os acentos das maiúsculas inteiros no Editar time; a seta do "ATAQUE" em
+  SVG (a TM Cond não tem →); as abas da tela antes do jogo medidas na letra do desenho; a mentalidade e os botões da faixa no papel
+  certo; a fonte da disputa pedida na importação; a sombra do cartão do autor (o `clip-path` final).
+- **Dúvidas em aberto**: a fonte oficial da pausa e do Team Management do FC (identificada pela aparência; pode ser a própria
+  Cruyff Sans em negrito, sem condensar); a posição, o tamanho e a duração oficiais do cartão do autor no FC (só o relato do
+  fórum); o lower third oficial do autor do gol na Premier League, na Champions, na Copa e na Globo (não achado); os 3–7 s vêm de
+  guias genéricos; as medidas das capturas com ±1 px ou ~10% (fotos de TV); os tokens do Material 3 por listagens secundárias; a
+  legibilidade conferida no Chromium daqui (sem GPU, sem posição subpixel do texto), não num celular de verdade — o espaçamento da
+  TM Cond pequena em caixa normal ("Per sonalizar") pode ser do rasterizador; a margem de 5% da TV × a margem do HUD.
+
 ## 8. Rede véu de noiva e branca (pedido de 11/10; `js/rede-forma.js`, `js/bola.js`, `js/render/rede-onda.js`, `js/render/campo.js`)
 
 Pedido do dono: "as redes têm que ser brancas, e ter uma movimentação na rede quando a bola toca nela, quero que seja
@@ -688,6 +754,15 @@ Bundesliga, Globo, Premiere, CazéTV e eFootball sem captura do grafismo do auto
 da escalação do pré-jogo (item 110: no celular não cabe sem refazer o item 29), os tempos do CI (item 111), o enquadramento foto a
 foto (item 112) e o que não rodou — o online com edições diferentes, o Livre e os Pênaltis com as fotos, a foto ao lado do boneco
 fora dos rostos reais (revisão V5, item 113); a foto chegando pela rede de um celular de verdade só o dono confere.
+
+**Item 126 (05/11) — o canto e o tamanho mudaram.** O dono pediu o cartão "mais embaixo e menor, no canto inferior". A medida
+nova (§7.6: os 4 cantos com um candidato do tamanho NOVO, 330×92 no PC e 230×60 no celular, 6 gols × 5 telas) mostra que o canto
+de baixo à DIREITA também é livre — 0% de autor e 0% de outros no PC, e no celular logo ACIMA do "Pular" (y 229–289 em 844×390) —;
+o "único lugar livre" desta seção valia para o cartão GRANDE de antes, e o de baixo à esquerda continua descartado (73–78% sobre o
+autor no celular). Desde o item 126: embaixo à direita no PC e no celular (com toque, o "Pular" fica no canto do replay e o
+cartão logo acima dele), a foto 182 → 73 px no PC 1920×1010 e 92 → 47 px no 844×390, a altura 20,6 → 9,0% e 27,2 → 14,6% da
+janela, o nome em caixa alta na TM Cond 800 (inteiro também em 568×320, onde antes saía "Eduardo Pa…"), a entrada de 280 ms
+pela borda da direita. Os tempos (`autor-cartao.js`) não mudaram. Contrato "Comemoração do gol".
 
 ## 11. Cena de substituição e faixa ENTRA/SAI (`js/substituicao.js`, `render/placa-subst.js`, `main.js`, `hud.js`; pedido do dono de 12/10)
 
