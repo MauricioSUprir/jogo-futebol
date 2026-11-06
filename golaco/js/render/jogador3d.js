@@ -466,7 +466,9 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       let w = (d.larg > 0 ? Math.min(d.larg, 0.8) : LARG_DECAL[pos]) * 0.34;
       if (w / asp > ALTMAX_DECAL[pos]) w = ALTMAX_DECAL[pos] * asp;
       const o = (17 + 2 * i) * 4;
-      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w; L[o + 3] = asp;
+      // w é a largura do DESENHO; a máscara tem a margem em volta dele (item 63, tools/patrocinios/borda.mjs: o desenho
+      // ocupa a fração `escala` da caixa): a caixa do shader alarga por 1 ÷ escala e o logo fica do mesmo tamanho
+      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w / (d.escala > 0 ? d.escala : 1); L[o + 3] = asp;
       let cor = d.cor || '#ffffff';
       const fundo = kb[FUNDO_DECAL[pos]] ?? kb.camisa, lf = lumHex(fundo);
       if (Math.abs(lumHex(cor) - lf) < 0.12) cor = lf > 0.25 ? '#15191b' : '#f2f4f5';

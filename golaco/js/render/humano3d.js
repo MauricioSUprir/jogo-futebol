@@ -107,6 +107,17 @@ varying float vParte;
 varying float vSlot;
 varying vec4 vMembro;
 vec4 kit(int i) { return texelFetch(tKits, ivec2(i, int(vSlot + 0.5)), 0); }
+// SEM DERIVADA DENTRO DE DESVIO (item 63, "retângulos tracejados brancos em volta dos números e patrocínios"): a derivada
+// implícita (texture() com mipmap, dFdx, fwidth) dentro de fluxo NÃO UNIFORME é indefinida (GLSL ES 3.00 §8.9) — a região
+// pela máscara, a caixa do decalque e a célula do dígito mudam de pixel para pixel, e a GPU de verdade (celular, ANGLE
+// sobre D3D/Metal) que achata o desvio pega um mip qualquer nos quads da borda: o traço de 2 px, um quad sim, outro não,
+// na cor do logo ou do número. As derivadas saem no TOPO do COR_F (fluxo uniforme) e as leituras com mipmap vão por
+// textureGrad com o gradiente de cada projeção (todas afins na posição de repouso ou na UV). Custo: as mesmas leituras.
+// (Stack Overflow 53734640, "get the derivatives outside"; Khronos, VK_KHR_shader_quad_control: o LoD indefinido dentro
+// do if não uniforme)
+vec3 gRx, gRy; // dFdx/dFdy da posição de repouso
+vec2 gUx, gUy; // dFdx/dFdy da UV
+float fwR(vec3 k) { return abs(dot(k, gRx)) + abs(dot(k, gRy)); } // fwidth(dot(k, vRest)) sem derivada no desvio
 float aa(float x, float w) { return smoothstep(-w, w, x); }
 // padrões da camisa pela posição de repouso (x = frente, y = cima, z = direita; a camisa vai da barra em y 1,03 à gola em
 // 1,50, com ~0,2 m de meia largura)
@@ -118,43 +129,48 @@ float padrao(float tipo, float n, float larg) {
     float x = p.z / per;                 // 0 no meio do peito
     float f = abs(fract(x + 0.5) - 0.5); // 0 no meio da faixa da 1ª cor... (o meio do peito é da 1ª cor)
     float w = clamp(larg * 0.40 / per, 0.05, 0.95) * 0.5;
-    float fw = fwidth(x) + 1e-4;
+    float fw = fwR(vec3(0.0, 0.0, 1.0 / per)) + 1e-4;
     return aa(f - (0.5 - w), fw);
   }
   if (tipo < 2.5) {                      // aros: a camisa (barra → ombro) em 2n + 1 faixas iguais, a 2ª cor nas ímpares
-    float t = (p.y - 1.03) / 0.44 * (2.0 * max(n, 1.0) + 1.0);
-    float m = mod(t, 2.0), a = fwidth(t) + 1e-4;
+    float k = (2.0 * max(n, 1.0) + 1.0) / 0.44;
+    float t = (p.y - 1.03) * k;
+    float m = mod(t, 2.0), a = fwR(vec3(0.0, k, 0.0)) + 1e-4;
     float c = smoothstep(1.0 - a, 1.0 + a, m) * (1.0 - smoothstep(2.0 - a, 2.0, m));
-    return t < 0.0 || t > 2.0 * max(n, 1.0) + 1.0 ? 0.0 : c;
+    // o corte de cima fica a meia rampa ANTES do fim: no t → 2n + 1 o m → 1⁻ começava a faixa seguinte (c ≈ 0,5) e
+    // sobrava um fio de 1 px da 2ª cor no alto das costas
+    return t < 0.0 || t > 2.0 * max(n, 1.0) + 1.0 - a ? 0.0 : c;
   }
   if (tipo < 3.5) {                      // faixa diagonal: do ombro esquerdo (z < 0, alto) ao quadril direito
     float d = ((p.y - 1.25) + 1.0 * p.z) * 0.7071;
     float w = max(larg, 0.08) * 0.20;
-    return aa(w - abs(d), fwidth(d) + 1e-4);
+    return aa(w - abs(d), fwR(vec3(0.0, 0.7071, 0.7071)) + 1e-4);
   }
   if (tipo < 4.5) {                      // faixa horizontal no peito
     float d = p.y - 1.32;
     float w = max(larg, 0.08) * 0.25;
-    return aa(w - abs(d), fwidth(d) + 1e-4);
+    return aa(w - abs(d), fwR(vec3(0.0, 1.0, 0.0)) + 1e-4);
   }
-  return aa(p.z, fwidth(p.z) + 1e-4);    // metades (direita na 2ª cor)
+  return aa(p.z, fwR(vec3(0.0, 0.0, 1.0)) + 1e-4);    // metades (direita na 2ª cor)
 }
-float digito(float d, vec2 q) { // q em [0, 1]² dentro da célula do dígito (y para cima)
-  return texture(tDigitos, vec2((d + q.x) / 10.0, q.y)).r;
+// q em [0, 1]² dentro da célula do dígito (y para cima); dx, dy: a derivada de q na tela
+float digito(float d, vec2 q, vec2 dx, vec2 dy) {
+  return textureGrad(tDigitos, vec2((d + q.x) / 10.0, q.y), dx * vec2(0.1, 1.0), dy * vec2(0.1, 1.0)).r;
 }
 // PATROCÍNIOS (só a versão de teste da edição pro): até 6 decalques por uniforme nas linhas 17–28 do kit — A = [camada do
 // logo, posição, largura (m), largura ÷ altura], B = [cor, lado]. Projeção plana na posição de REPOUSO (x frente, y cima,
 // z direita do jogador), só na face virada para o plano (a normal de repouso pela derivada da tela); a máscara do logo
-// (512 × 256, o desenho centrado e encaixado) pinta a cor do patrocínio na camisa
-float decalLogo(vec4 A, vec2 uv) {
+// (512 × 256, o desenho centrado e encaixado) pinta a cor do patrocínio na camisa. dx, dy: a derivada de uv na tela (a
+// leitura vai por textureGrad: ver "SEM DERIVADA DENTRO DE DESVIO")
+float decalLogo(vec4 A, vec2 uv, vec2 dx, vec2 dy) {
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) return 0.0;
   float asp = max(A.w, 0.05);
-  vec2 t = vec2(0.5 + (uv.x - 0.5) * min(1.0, asp / 2.0), 0.5 + (uv.y - 0.5) * min(1.0, 2.0 / asp));
-  return texture(tLogos, vec3(t, A.x)).r;
+  vec2 kk = vec2(min(1.0, asp / 2.0), min(1.0, 2.0 / asp));
+  return textureGrad(tLogos, vec3(0.5 + (uv - 0.5) * kk, A.x), dx * kk, dy * kk).r;
 }
 vec3 decais(vec3 cor, int reg) {
   vec3 p = vRest;
-  vec3 nR = normalize(cross(dFdx(vRest), dFdy(vRest)));
+  vec3 nR = normalize(cross(gRx, gRy));
   for (int i = 0; i < 6; i++) {
     vec4 A = kit(17 + 2 * i);
     if (A.x < 0.5) continue;
@@ -169,11 +185,12 @@ vec3 decais(vec3 cor, int reg) {
       vec3 eixo = normalize(vec3(0.0, -0.22, 0.21 * s)), fora = normalize(vec3(0.0, 0.69, 0.72 * s));
       if (dot(nR, fora) < 0.2) continue;
       vec3 c = vec3(0.0, 1.375, 0.215 * s), d = p - c;
-      m = decalLogo(A, vec2(0.5 + s * d.x / w, 0.5 - dot(d, eixo) / h));
+      m = decalLogo(A, vec2(0.5 + s * d.x / w, 0.5 - dot(d, eixo) / h),
+        vec2(s * gRx.x / w, -dot(gRx, eixo) / h), vec2(s * gRy.x / w, -dot(gRy, eixo) / h));
     } else if (pos == 5 || pos == 6) {                // costas: em cima e embaixo do número
       if (reg != 1 || nR.x > -0.25) continue;
       float cy = pos == 5 ? 1.43 : 1.09;
-      m = decalLogo(A, vec2(0.5 + p.z / w, 0.5 + (p.y - cy) / h));
+      m = decalLogo(A, vec2(0.5 + p.z / w, 0.5 + (p.y - cy) / h), vec2(gRx.z / w, gRx.y / h), vec2(gRy.z / w, gRy.y / h));
     } else {                                          // de frente: peito, ombro, barra, calção, fornecedor
       if (nR.x < 0.25) continue;
       if (pos == 7) { if (reg != 5) continue; } else if (reg != 1) continue;
@@ -182,7 +199,7 @@ vec3 decais(vec3 cor, int reg) {
       if (pos == 2) cz = (lado == 1 ? -0.085 : lado == 2 ? 0.085 : (p.z >= 0.0 ? 0.085 : -0.085));
       if (pos == 7) cz = lado == 2 ? 0.085 : -0.085;  // o calção: na perna esquerda (o padrão)
       if (pos == 8) cz = 0.085;                       // a marca do fornecedor: no peito direito (o escudo fica no esquerdo)
-      m = decalLogo(A, vec2(0.5 - (p.z - cz) / w, 0.5 + (p.y - cy) / h));
+      m = decalLogo(A, vec2(0.5 - (p.z - cz) / w, 0.5 + (p.y - cy) / h), vec2(-gRx.z / w, gRx.y / h), vec2(-gRy.z / w, gRy.y / h));
     }
     cor = mix(cor, B.rgb, m);
   }
@@ -191,13 +208,14 @@ vec3 decais(vec3 cor, int reg) {
 `;
 const COR_F = `
 {
+  gRx = dFdx(vRest); gRy = dFdy(vRest); gUx = dFdx(vUv); gUy = dFdy(vUv); // no fluxo uniforme (item 63)
   vec3 cor;
   if (vParte > 0.5) {
     float camada = kit(13).w;
     if (camada > 0.5) {
-      cor = texture(tRostos, vec3(vUv, camada)).rgb;     // o rosto do próprio jogador (a foto levada à pele da cabeça)
+      cor = textureGrad(tRostos, vec3(vUv, camada), gUx, gUy).rgb; // o rosto do próprio jogador (a foto levada à pele da cabeça)
     } else {
-      vec4 tc = texture(tCabeca, vUv);
+      vec4 tc = textureGrad(tCabeca, vUv, gUx, gUy);
       vec3 pele = kit(11).rgb, tomRB = vec3(0.78, 0.55, 0.43);
       // a pele da cabeça do Rocketbox no tom do jogador (o cabelo e as sobrancelhas escuros quase não mudam)
       float lum = dot(tc.rgb, vec3(0.299, 0.587, 0.114));
@@ -219,13 +237,14 @@ const COR_F = `
       else cor = decais(cor, 1);
       // número das costas
       if (vRest.x < -0.02 && est.z > 0.5 && vUv.x > uNumero.x && vUv.x < uNumero.z && vUv.y > uNumero.y && vUv.y < uNumero.w) {
-        vec2 q = vec2((vUv.x - uNumero.x) / (uNumero.z - uNumero.x), (vUv.y - uNumero.y) / (uNumero.w - uNumero.y));
-        q = 1.0 - q;                                      // o número do original está de cabeça para baixo na UV
+        vec2 sz = uNumero.zw - uNumero.xy;
+        vec2 q = 1.0 - (vUv - uNumero.xy) / sz;           // o número do original está de cabeça para baixo na UV
+        vec2 dx = -gUx / sz * vec2(2.0, 1.0), dy = -gUy / sz * vec2(2.0, 1.0); // a derivada da célula (2 por caixa)
         float num = est.z, dz = floor(num / 10.0), un = num - dz * 10.0;
         float t = 0.0;
         if (dz > 0.5) {
-          if (q.x < 0.5) t = digito(dz, vec2(q.x * 2.0, q.y)); else t = digito(un, vec2(q.x * 2.0 - 1.0, q.y));
-        } else if (q.x > 0.25 && q.x < 0.75) t = digito(un, vec2((q.x - 0.25) * 2.0, q.y));
+          if (q.x < 0.5) t = digito(dz, vec2(q.x * 2.0, q.y), dx, dy); else t = digito(un, vec2(q.x * 2.0 - 1.0, q.y), dx, dy);
+        } else if (q.x > 0.25 && q.x < 0.75) t = digito(un, vec2((q.x - 0.25) * 2.0, q.y), dx, dy);
         cor = mix(cor, kit(14).rgb, t);
       }
     } else if (r == 2) cor = decais(mix(kit(2).rgb, k1.rgb, pad.w > 0.5 ? padrao(pad.x, pad.y, pad.z) : 0.0), 2);
@@ -236,7 +255,7 @@ const COR_F = `
     else if (r == 7) {                                    // meião (a faixa do meio do cano, se houver)
       cor = kit(7).rgb;
       vec4 md = kit(16);
-      if (md.a > 0.5) cor = mix(cor, md.rgb, aa(0.035 - abs(vRest.y - 0.30), fwidth(vRest.y) + 1e-4));
+      if (md.a > 0.5) cor = mix(cor, md.rgb, aa(0.035 - abs(vRest.y - 0.30), fwR(vec3(0.0, 1.0, 0.0)) + 1e-4));
     }
     else if (r == 8) cor = kit(8).rgb;
     else cor = kit(15).rgb;                               // sola
@@ -318,7 +337,7 @@ export function criarHumano3D(cena, dados, opc = {}) {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, normalMap: texNormal, normalScale: new THREE.Vector2(0.8, 0.8) });
   mat.defines = { USE_UV: '' }; // o vUv (máscara de regiões, cabeça, número) sem um mapa de cor
   mat.onBeforeCompile = sh => remendo(sh, uniforms, true);
-  mat.customProgramCacheKey = () => 'humano-v2';
+  mat.customProgramCacheKey = () => 'humano-v3';
   const matSombra = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   matSombra.onBeforeCompile = sh => remendo(sh, uniforms, false);
   matSombra.customProgramCacheKey = () => 'humano-sombra-v1';

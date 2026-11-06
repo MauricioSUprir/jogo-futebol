@@ -15,13 +15,20 @@
 //      mapa de normais do pano (normalScale 0,8, o de sempre) e sem ele (0): no disco do meio da tela (só cabeça), o |ΔL*|
 //      p99 ≤ 2 — a cabeça não usa o mapa de normais do CORPO (lido pela UV da cabeça, ele punha um arco escuro de orelha a
 //      orelha, uma faixa e um "V" na nuca e rugas no rosto; na base: p99 ~11–28).
-// Na versão sem o corpo humano reprova (C0); na base do item 62 (7cb052ad) reprova o C9.
-//   node tools/teste-corpo-tela.mjs [--so-pro] [--prints <pasta>]   (--so-pro: só o pedido pro — C4, C6, C8 e C9; --prints:
+//   C10 as MÁSCARAS dos patrocínios (item 63: "retângulos tracejados brancos em volta dos números e patrocínios"), lidas no
+//      navegador como o jogo lê (o alfa do WebP): em cada uma das do índice, contra a caixa que o shader recorta
+//      (humano3d.js decalLogo; tools/patrocinios/borda.mjs) — o desenho (α > 8) a ≥ 8 px da borda (2³: limpa até o mip 3;
+//      encostado, o borrão do mip grosso e o próprio desenho saíam cortados retos), a névoa (0 < α ≤ 36 longe do desenho:
+//      na mistura em cor linear, α 12 de branco numa camisa preta leva o L* de 0 a 25 — um retângulo sujo) ≤ 0,25% da caixa
+//      e nada fora da caixa. Na base: 161 de 161 sem a margem.
+// Na versão sem o corpo humano reprova (C0); na base dos itens 62 e 63 (7cb052ad) reprovam o C9 e o C10.
+//   node tools/teste-corpo-tela.mjs [--so-pro] [--prints <pasta>]   (--so-pro: só o pedido pro — C4, C6, C8, C9 e C10; --prints:
 //   grava os closes do C9)
 import fs from 'node:fs';
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 import { timeTM } from './lib/pedidos-tm.mjs';
+import { medirMascara, lerAlfa, BORDA } from './patrocinios/borda.mjs';
 
 const res = [];
 const meta = (nome, medido, alvo, ok) => res.push({ nome, medido, alvo, ok: !!ok });
@@ -209,6 +216,29 @@ meta('C6 patrocínios na edição pro (versão de teste): os logos das camisas r
 meta('C7 na edição pública nada de patrocínio é pedido',
   rPub ? `${rPub.baixouPat.length} pedidos a assets/tm/patrocinios*; logos ${JSON.stringify(rPub.lg)}` : 'não abriu', '0', rPub && rPub.baixouPat.length === 0 && !(rPub.lg?.pedidos > 0));
 
+// C10: as máscaras dos patrocínios (o alfa lido no navegador; as contas do borda.mjs)
+try {
+  const idx = JSON.parse(fs.readFileSync(path.join(RAIZ, 'assets/tm/patrocinios.json'), 'utf8'));
+  const asp = new Map();
+  for (const kits of Object.values(idx.clubes)) for (const lista of Object.values(kits)) for (const d of lista) asp.set(d.logo, d.asp);
+  const nav = await abrir({ largura: 600, altura: 400 });
+  let semMargem = 0, nevoa = 0, fora = 0, pior = Infinity, piorN = 0, exM = '', exN = '';
+  for (const [rel, a] of asp) {
+    const buf = fs.readFileSync(path.join(RAIZ, 'assets/tm/patrocinios', rel));
+    const m = medirMascara(await lerAlfa(nav.pagina, 'data:image/webp;base64,' + buf.toString('base64')), a);
+    if (m.margem !== null && m.margem < BORDA.margem) { semMargem++; exM ||= `${rel} ${m.margem.toFixed(1)} px`; }
+    if (m.margem !== null) pior = Math.min(pior, m.margem);
+    if (m.nevoa > 0.0025) { nevoa++; exN ||= `${rel} ${(m.nevoa * 100).toFixed(1)}%`; }
+    piorN = Math.max(piorN, m.nevoa);
+    if (m.fora > 0) fora++;
+  }
+  erros.push(...nav.erros.map(e => 'máscaras: ' + e));
+  await nav.navegador.close();
+  meta('C10 as máscaras dos patrocínios: o desenho a ≥ 8 px da caixa do shader, névoa ≤ 0,25%, nada fora da caixa',
+    `${asp.size} máscaras: ${semMargem} sem a margem${exM ? ' (ex.: ' + exM + ')' : ''} (pior ${pior.toFixed(1)} px); ${nevoa} com névoa${exN ? ' (ex.: ' + exN + ')' : ''} (pior ${(piorN * 100).toFixed(2)}%); ${fora} com alfa fora`,
+    '0; 0; 0', asp.size > 0 && semMargem === 0 && nevoa === 0 && fora === 0);
+} catch (e) { erros.push('máscaras: ' + e.message); meta('C10 as máscaras dos patrocínios', e.message, 'medidas', false); }
+
 const h = humanoCel;
 meta('C0 o corpo humano carrega e desenha todos os bonecos (soma dos níveis = bonecos; ≥ 22)',
   h ? `pronto ${!!h.corpo?.pronto}${h.corpo?.erro ? ' erro ' + h.corpo.erro : ''}; ${h.n} quadros medidos; bonecos ≥ ${h.bonecosMin}; soma ${h.somaOk ? 'certa' : 'ERRADA'}` : 'não abriu',
@@ -220,7 +250,7 @@ meta('C2 triângulos dos jogadores ≤ o teto (Média 60 mil no celular, Alta 12
   `celular ${h?.maxTri ?? '-'}; PC ${pc?.maxTri ?? '-'}`, '≤ 60000; ≤ 120000', h && pc && h.maxTri <= 6e4 && pc.maxTri <= 1.2e5 && pc.corpo?.pronto);
 meta('C8 sem erro no console', erros.length ? erros.slice(0, 3).join(' | ').slice(0, 300) : '0', '0', erros.length === 0);
 
-if (SO_PRO) for (let i = res.length - 1; i >= 0; i--) if (!/^C[4689] /.test(res[i].nome)) res.splice(i, 1);
+if (SO_PRO) for (let i = res.length - 1; i >= 0; i--) if (!/^C([4689]|10) /.test(res[i].nome)) res.splice(i, 1);
 const L = Math.max(...res.map(r => r.nome.length));
 for (const r of res) console.log(`${r.ok ? 'PASSOU  ' : 'REPROVOU'}  ${r.nome.padEnd(L)}  ${r.medido}   (alvo: ${r.alvo})`);
 const falhou = res.some(r => !r.ok);

@@ -7,12 +7,15 @@
 //   assets/tm/patrocinios/<clube>/<marca>.webp   a MÁSCARA do logo (branco, a forma no alfa), 512 × 256 com o desenho
 //     centrado e encaixado (o jogo pinta com a cor da camisa: na camisa o logo é de uma cor só)
 // A máscara sai no Chromium (SVG e PNG): PNG com transparência → o alfa; sem transparência → a distância ao fundo (a cor
-// da borda). Recortada no desenho, com 2% de folga.
+// da borda). Recortada no desenho, com 2% de folga; depois a BORDA (item 63, borda.mjs prepararMascara: sem a névoa, nada
+// fora da caixa do shader e o desenho a ≥ 8 px dela, encolhido pela `escala` que o índice guarda em cada decalque e no
+// registro `bordas`). As máscaras publicadas antes disso passaram pela mesma conta no refazer-bordas.mjs.
 //   node tools/patrocinios/gerar.mjs <pasta da pesquisa>
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { abrir } from '../lib/navegador.mjs';
+import { prepararMascara, webpDoAlfa } from './borda.mjs';
 
 const AQUI = path.dirname(fileURLToPath(import.meta.url));
 const RAIZ = path.resolve(AQUI, '../..');
@@ -65,7 +68,7 @@ for (const f of fs.readdirSync(PASTA).filter(f => f.endsWith('.json')).sort()) {
 // a conversão no Chromium
 fs.mkdirSync(SAIDA, { recursive: true });
 const nav = await abrir({ largura: 600, altura: 400 });
-const asp = {}, cheio = {};
+const asp = {}, cheio = {}, escala = {};
 for (const [orig, rel] of pedidos) {
   const tipo = orig.endsWith('.svg') ? 'image/svg+xml' : orig.endsWith('.png') ? 'image/png' : 'image/jpeg';
   const dados = 'data:' + tipo + ';base64,' + fs.readFileSync(orig).toString('base64');
@@ -147,13 +150,17 @@ for (const [orig, rel] of pedidos) {
     const og = o.getContext('2d');
     const k = Math.min(512 / cw, 256 / ch), dw = cw * k, dh = ch * k;
     og.drawImage(t, (512 - dw) / 2, (256 - dh) / 2, dw, dh);
-    const url = o.toDataURL('image/webp', 0.9);
-    return { url, aspecto, comAlfa, cheio };
+    // o alfa (a borda sai no Node: borda.mjs)
+    const od = og.getImageData(0, 0, 512, 256).data;
+    let bin = ''; for (let i = 0; i < 512 * 256; i++) bin += String.fromCharCode(od[i * 4 + 3]);
+    return { alfa: btoa(bin), aspecto, comAlfa, cheio };
   }, dados).catch(e => ({ erro: String(e) }));
-  if (!r || r.erro || !r.url) { console.warn(`${rel}: não converteu (${r?.erro ?? 'vazio'})`); continue; }
-  fs.mkdirSync(path.join(SAIDA, path.dirname(rel)), { recursive: true });
-  fs.writeFileSync(path.join(SAIDA, rel), Buffer.from(r.url.split(',')[1], 'base64'));
+  if (!r || r.erro || !r.alfa) { console.warn(`${rel}: não converteu (${r?.erro ?? 'vazio'})`); continue; }
   asp[rel] = Math.round(r.aspecto * 1000) / 1000;
+  const b = prepararMascara(new Uint8Array(Buffer.from(r.alfa, 'base64')), asp[rel]);
+  escala[rel] = b.escala;
+  fs.mkdirSync(path.join(SAIDA, path.dirname(rel)), { recursive: true });
+  fs.writeFileSync(path.join(SAIDA, rel), await webpDoAlfa(nav.pagina, b.alfa));
   cheio[rel] = Math.round(r.cheio * 1000) / 1000;
 }
 await nav.navegador.close();
@@ -161,7 +168,7 @@ await nav.navegador.close();
 // o índice (só os decalques cujo logo converteu)
 let n = 0;
 for (const c of Object.values(clubes)) for (const k of KITS) {
-  c[k] = c[k].filter(x => asp[x.logo]).map(x => ({ ...x, asp: asp[x.logo] }));
+  c[k] = c[k].filter(x => asp[x.logo]).map(x => ({ ...x, asp: asp[x.logo], ...(escala[x.logo] < 1 ? { escala: escala[x.logo] } : {}) }));
   n += c[k].length;
 }
 const indice = {
@@ -169,6 +176,8 @@ const indice = {
   versao: 1, clubes,
   // a fração cheia da caixa de cada máscara (teste-patrocinios P5: logo virando mancha)
   cheio,
+  // as máscaras com a borda feita e a escala de cada uma (teste-patrocinios P7)
+  bordas: Object.fromEntries(Object.entries(escala).sort(([a], [b]) => (a < b ? -1 : 1))),
 };
 fs.writeFileSync(path.join(RAIZ, 'assets/tm/patrocinios.json'), JSON.stringify(indice) + '\n');
 const bytes = [...new Set(Object.keys(asp))].reduce((s, r) => s + fs.statSync(path.join(SAIDA, r)).size, 0);
