@@ -574,12 +574,14 @@ html.pausa-aberta #hud { z-index: 41; }
   /* o celular deitado (o padrão; o PC muda no bloco min-height: 481px). M = --pm, a margem da borda útil ao texto */
   --pm: 16px;
   --fx-x: calc(var(--sa-l) + var(--pm));
-  --fx-w: clamp(196px, calc(18vw + 100px), 260px);
+  /* (item 125: a letra esportiva — a TM Cond, ~25% mais estreita que a Inter — deixa a faixa mais estreita e o cartão do time maior;
+     a letra dos itens 15/17 → 18/20) */
+  --fx-w: clamp(176px, calc(18vw + 80px), 236px);
   --fx-cheia: calc(var(--fx-x) + var(--fx-w) + 16px);
   --fx-fade: 12vw;
   --topo-y: var(--pm); --topo-h: 28px; --topo-gap: 10px;
-  --item-f: 15px; --item-f-foco: 17px;
-  --card-w: min(300px, calc(100vw - var(--sa-r) - var(--pm) - var(--fx-x) - var(--fx-w) - 10px));
+  --item-f: 18px; --item-f-foco: 20px;
+  --card-w: min(400px, calc(100vw - var(--sa-r) - var(--pm) - var(--fx-x) - var(--fx-w) - 10px));
   --card-y: 66px;
   position: absolute; inset: 0; width: auto; max-height: none; overflow: hidden; overscroll-behavior: none;
   border: 0; border-radius: 0; box-shadow: none; color: var(--p-texto); font-family: var(--p-fonte);
@@ -594,7 +596,7 @@ html.pausa-aberta #hud { z-index: 41; }
   display: flex; align-items: center; gap: 8px; padding: 0; background: none; border: 0;
 }
 #menu .janela-topo h2 {
-  margin: 0; min-width: 0; flex: 1 1 auto; font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: 0; text-transform: none;
+  margin: 0; min-width: 0; flex: 1 1 auto; font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--p-texto);
 }
 #menu .janela-topo h2::before { display: none; }
@@ -616,14 +618,31 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu #menu-acoes > .btn, #menu .linha-par > .btn {
   position: relative; min-width: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 0 8px 0 14px; background: transparent; border: 0; border-radius: 4px; box-shadow: none; outline: 0;
-  font: 500 var(--item-f) / 1.15 var(--p-fonte); letter-spacing: 0; text-transform: none; color: rgba(238, 245, 240, 0.86);
+  font: 600 var(--item-f) / 1.15 var(--f-disp); letter-spacing: 0.01em; text-transform: none; color: rgba(238, 245, 240, 0.86);
   white-space: nowrap; text-align: left; cursor: pointer;
 }
+/* (item 125) o foco com movimento curto, como o FC 24 (Material 3: a duração "short3" de estado, ~150 ms, e a curva "emphasized
+   decelerate"): a barra de 4 px cresce de 20% a 100% da altura com o brilho, o texto anda 6 px; com "reduzir movimento", só a troca */
 #menu #menu-acoes > .btn::before, #menu .linha-par > .btn::before {
-  content: ""; position: absolute; left: 2px; top: 5px; bottom: 5px; width: 3px; border-radius: 2px; background: transparent;
+  content: ""; position: absolute; left: 2px; top: 5px; bottom: 5px; width: 4px; border-radius: 2px; background: transparent;
+  transform: scaleY(0.2); transition: transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1), background-color 160ms;
 }
+#menu #menu-acoes .item-txt { transition: transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1); }
+#menu #menu-acoes > .btn.selecionado .item-txt, #menu #menu-acoes > .btn:focus-visible .item-txt { transform: translateX(6px); }
+#menu #menu-acoes > .btn.selecionado::before, #menu #menu-acoes > .btn:focus-visible::before,
+#menu .linha-par > .btn.selecionado::before, #menu .linha-par > .btn:focus-visible::before { transform: none; box-shadow: 0 0 12px rgba(34, 197, 94, 0.7); }
 #menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible, #menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible {
-  font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0) 80%);
+  font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.26), rgba(34, 197, 94, 0.06) 60%, rgba(34, 197, 94, 0) 92%);
+}
+/* a entrada da lista em cascata ao abrir a pausa (20 ms por item, ≤ 200 ms no total) */
+@keyframes pausa-item-entra { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+#menu:not([hidden]) #menu-acoes > .btn, #menu:not([hidden]) #menu-acoes > .linha-par { animation: pausa-item-entra 120ms cubic-bezier(0.05, 0.7, 0.1, 1) both; }
+#menu #menu-acoes > :nth-child(2) { animation-delay: 20ms; } #menu #menu-acoes > :nth-child(3) { animation-delay: 40ms; }
+#menu #menu-acoes > :nth-child(4) { animation-delay: 60ms; } #menu #menu-acoes > :nth-child(5) { animation-delay: 80ms; }
+#menu #menu-acoes > :nth-child(n + 6) { animation-delay: 80ms; }
+@media (prefers-reduced-motion: reduce) {
+  #menu #menu-acoes > .btn, #menu #menu-acoes > .linha-par, #menu .linha-par > .btn { animation: none !important; transition: none; }
+  #menu #menu-acoes > .btn::before, #menu .linha-par > .btn::before, #menu #menu-acoes .item-txt { transition: none; }
 }
 #menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible { font-size: var(--item-f-foco); }
 #menu #menu-acoes > .btn.selecionado::before, #menu #menu-acoes > .btn:focus-visible::before,
@@ -636,12 +655,12 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu #menu-acoes .item-txt { flex: 0 0 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
 /* a linha com dois (no Livre: Recomeçar | Bola no meu pé): o peso não muda no foco (em 568×320 os dois cabem por pouco) */
 #menu #menu-acoes > .linha-par { display: flex; gap: 6px; }
-#menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 13px; font-weight: 500; }
-#menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible { font-weight: 600; }
+#menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 15px; font-weight: 600; }
+#menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible { font-weight: 800; }
 /* o estado à direita (o modo, o marcador, os do Livre, as pausas do online): o único que pode ganhar "…" */
 #menu small.estado, #menu #menu-acoes small:not(.desc) {
   flex: 0 1 auto; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis;
-  font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco);
+  font: 600 12px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-fraco);
 }
 #menu .btn-alternar[aria-pressed="true"] small { color: var(--p-verde-cl); }
 /* a descrição (escalação e tática, até o apito final...): só para o leitor de tela (aria-describedby; fica no textContent) */
@@ -649,19 +668,19 @@ html.pausa-aberta #hud { z-index: 41; }
 
 /* os submenus: a linha de cima (Voltar + o nome) e os botões em pílula do TM, borda fina, o escolhido em verde */
 #menu .sub-topo { display: flex; align-items: center; gap: 12px; flex: none; min-height: 44px; }
-#menu .sub-titulo { margin: 0; min-width: 0; font: 800 15px / 1.2 var(--p-fonte); color: var(--p-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu .sub-titulo { margin: 0; min-width: 0; font: 800 16px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #menu .btn-voltar {
   flex: none; display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-width: 44px; min-height: 36px; height: 36px;
   padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--p-linha); background: var(--p-painel);
-  font: 600 13px / 1 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); cursor: pointer; outline: 0;
+  font: 800 14px / 1 var(--f-disp); letter-spacing: 0.02em; text-transform: none; color: var(--p-texto); cursor: pointer; outline: 0;
 }
 #menu .btn-voltar svg { width: 18px; height: 18px; flex: none; }
 /* (:where: a especificidade de um #menu .x .btn — as regras próprias do submenu, como as do Livre, ficam por cima) */
 #menu .menu-acoes:where(:not(#menu-acoes)) .btn:where(:not(.btn-voltar)) {
   min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--p-painel); border: 1px solid var(--p-linha);
-  font: 600 14px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); box-shadow: none; outline: 0;
+  font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0.01em; text-transform: none; color: var(--p-texto); box-shadow: none; outline: 0;
 }
-#menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco); }
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font: 600 12px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-fraco); }
 #menu .menu-acoes:where(:not(#menu-acoes)) .btn:hover, #menu .menu-acoes:where(:not(#menu-acoes)) .btn.selecionado, #menu .menu-acoes:where(:not(#menu-acoes)) .btn:focus-visible {
   border-color: var(--p-verde); box-shadow: 0 0 0 1px var(--p-verde) inset;
 }
@@ -692,7 +711,7 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 16px; line-height: 1.2; }
 #menu .linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #menu .linha-cenas.tres { gap: 6px; }
-#menu .linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 12px; white-space: nowrap; font-size: 13px; }
+#menu .linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 12px; white-space: nowrap; font-size: 14px; }
 #menu .linha-cenas.tres .btn small { font-size: 11px; }
 
 /* Opções: cada linha com o nome à esquerda e o controle à direita; liga/desliga = a linha inteira é o botão, a chave desenhada */
@@ -709,7 +728,7 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu .segmentado button {
   flex: none; min-width: 44px; height: 32px; padding: 0 10px; cursor: pointer; border-radius: 8px;
   border: 1px solid var(--p-linha); background: var(--p-painel); color: var(--p-fraco);
-  font: 600 13px / 1 var(--p-fonte); white-space: nowrap; outline: 0;
+  font: 600 14px / 1 var(--f-disp); letter-spacing: 0.02em; white-space: nowrap; outline: 0;
 }
 #menu .segmentado button:hover { color: var(--p-texto); border-color: rgba(34, 197, 94, 0.45); }
 #menu .segmentado button[aria-pressed="true"] { background: linear-gradient(120deg, #4ade80, #22c55e); color: var(--p-preto); border-color: transparent; font-weight: 800; }
@@ -753,10 +772,11 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 }
 #menu .pausa-placar[hidden] { display: none; }
 #menu .pp-escudo { flex: none; width: 15px; height: 17px; }
-#menu .pp-sigla { font-size: 12px; font-weight: 800; letter-spacing: 0.02em; }
-#menu .pp-gols { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
+/* (item 125) siglas, gols e relógio na TM Cond 800 (a altura e as regras de lugar de antes) */
+#menu .pp-sigla { font: 800 14px / 1 var(--f-disp); letter-spacing: 0.06em; }
+#menu .pp-gols { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font: 800 18px / 1 var(--f-disp); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
 #menu .pp-gols i { width: 6px; height: 2px; border-radius: 1px; background: var(--p-fraco); }
-#menu .pp-relogio { padding-left: 8px; border-left: 1px solid var(--p-linha); font: 600 12px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-fraco); }
+#menu .pp-relogio { padding-left: 8px; border-left: 1px solid var(--p-linha); font: 800 14px / 1 var(--f-disp); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--p-fraco); }
 #menu .pp-relogio[hidden], #menu .pausa-placar.sem-relogio .pp-relogio, #menu .pausa-placar.sem-escudo .pp-escudo { display: none; }
 /* o cartão do meu time (o conteúdo e o desenho: js/pausa-tela.js e css/pausa.css, sob demanda) */
 #menu .pausa-time { position: absolute; top: calc(var(--sa-t) + var(--card-y)); right: calc(var(--sa-r) + var(--pm)); width: var(--card-w); max-height: calc(100% - var(--sa-t) - var(--card-y) - var(--sa-b) - var(--pm)); pointer-events: auto; }
@@ -771,8 +791,13 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 
 /* ---- celular deitado: as margens e as letras pela largura (844 → 16, 667/640 → 14, 568 → 12) */
 @media (max-height: 480px) and (max-width: 760px) { #menu .janela-menu { --pm: 14px; --topo-gap: 8px; } }
-@media (max-height: 480px) and (max-width: 660px) { #menu .janela-menu { --item-f-foco: 16px; } }
-@media (max-height: 480px) and (max-width: 600px) { #menu .janela-menu { --pm: 12px; --topo-h: 24px; --item-f-foco: 15px; } }
+@media (max-height: 480px) and (max-width: 660px) { #menu .janela-menu { --item-f-foco: 19px; } }
+@media (max-height: 480px) and (max-width: 600px) {
+  #menu .janela-menu { --pm: 12px; --topo-h: 24px; --item-f: 17px; --item-f-foco: 18px; }
+  #menu .janela-topo h2 { font-size: 14px; }
+  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: 11px; }
+  #menu .sub-titulo { font-size: 15px; }
+}
 /* os submenus no celular: a faixa LARGA (até a borda útil da direita menos M), sem a competição em cima (a linha do Voltar fica
    na altura do X), o cartão e a pílula saem de cena; Opções, Modo de jogo e os do Livre em 2 colunas */
 @media (max-height: 480px) {
@@ -813,13 +838,16 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 @media (min-height: 481px) {
   #menu .janela-menu {
     --fx-x: calc(var(--sa-l) + 5.2vw);
-    --fx-w: max(24vw, min(42.66vh, 30vw));
+    /* (item 125: a TM Cond nos itens — ~25% mais estreita que a Inter — deixa a faixa em 21–27vw, antes 24–30vw, e o degradê em
+       18vw, antes 22vw: o cartão do time cresce a 36vw, antes 30vw, e o jogo à vista não cai. A letra: o item mais longo com o foco,
+       "Voltar ao Total Match" na TM Cond 800, mede 7,9 em e o foco anda 6 px — (faixa − 38 px) / 8,1) */
+    --fx-w: max(21vw, min(38vh, 27vw));
     --fx-cheia: max(28vw, calc(var(--fx-x) + var(--fx-w) + 16px));
-    --fx-fade: 22vw;
+    --fx-fade: 18vw;
     --item-h: clamp(42px, calc(6.67vh - 2px), 70px);
-    --item-f: min(2.65vh, calc((var(--fx-w) - 32px) / 14.4)); --item-f-foco: min(3.6vh, calc((var(--fx-w) - 32px) / 10.6));
-    /* (o cartão ≥ 270 px: o campo de dentro ≥ 242 px dá o disco de 20 px e a letra de 11 — em 800×600, com 30vw, saía 10,5) */
-    --card-w: max(30vw, 270px); --card-y: 72px;
+    --item-f: min(3.1vh, calc((var(--fx-w) - 32px) / 11.5)); --item-f-foco: min(3.9vh, calc((var(--fx-w) - 38px) / 8.1));
+    /* (o cartão ≥ 300 px: o campo de dentro ≥ 280 px dá o disco de 25 px e a letra de 11) */
+    --card-w: max(36vw, 300px); --card-y: 72px;
   }
   /* os submenus com linhas de controles (Opções, Estatísticas, Modo de jogo e os do Livre) não cabem na faixa estreita de 4:3
      ou da janela pequena (F3: em 800×600 o "Substituição" saía da pílula e encostava no "Cenas") */
@@ -827,6 +855,14 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu .janela-menu[data-sub="menu-livre"], #menu .janela-menu[data-sub="menu-camera-livre"] { --fx-w: max(24vw, min(380px, calc(100vw - var(--fx-x) - var(--sa-r) - 16px))); }
   #menu .janela-topo { top: calc(var(--sa-t) + 4.3vh); height: calc(min(3vh, 30px) * 1.5); gap: 12px; }
   #menu .janela-topo h2 { font-size: min(3vh, 30px); }
+  #menu .sub-titulo { font-size: clamp(16px, 2.4vh, 26px); }
+  #menu .btn-voltar { height: clamp(36px, 4.4vh, 46px); font-size: clamp(14px, 1.6vh, 18px); }
+  #menu .menu-acoes:where(:not(#menu-acoes)) .btn:where(:not(.btn-voltar)) { min-height: clamp(44px, 5.4vh, 56px); font-size: clamp(15px, 1.8vh, 19px); }
+  #menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font-size: clamp(11px, 1.3vh, 14px); }
+  #menu .linha-cenas.tres .btn { font-size: clamp(14px, 1.7vh, 18px); }
+  #menu .linha-cenas.tres .btn small { font-size: clamp(11px, 1.2vh, 13px); }
+  #menu #linha-ajustes .btn::before, #menu #linha-ajustes .btn::after { font-size: clamp(15px, 2vh, 21px); }
+  #menu .segmentado button { font-size: clamp(14px, 1.6vh, 17px); }
   #menu .pausa-marca { width: calc(min(3vh, 30px) * 1.25); height: min(3vh, 30px); }
   #menu .menu-corpo { top: calc(var(--sa-t) + 19.3vh); bottom: calc(var(--sa-b) + 9vh); }
   #menu #menu-acoes { height: auto; }
@@ -834,10 +870,10 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu #menu-acoes > .btn { padding-left: 18px; }
   #menu #menu-acoes > .btn::before { top: 22%; bottom: 22%; }
   #menu .linha-par > .btn { font-size: var(--item-f); }
-  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: max(12px, 1.9vh); }
+  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: max(12px, 1.7vh); }
   #menu .sub-topo { margin-bottom: 6px; }
-  #menu .opcao { min-height: clamp(34px, 5.2vh, 48px); font-size: 14px; }
-  #menu .opcao-rotulo { font-size: 14px; }
+  #menu .opcao { min-height: clamp(34px, 5.2vh, 48px); font-size: clamp(14px, 1.7vh, 18px); }
+  #menu .opcao-rotulo { font-size: clamp(14px, 1.7vh, 18px); }
   #menu .segmentado button { height: clamp(32px, 5vh, 40px); }
   #menu .pausa-comandos { display: flex; gap: 22px; position: absolute; left: var(--fx-x); top: 93vh; font: 600 14px / 1.4 var(--p-fonte); color: var(--p-fraco); white-space: nowrap; }
   #menu .pausa-comandos > span { display: inline-flex; align-items: center; gap: 7px; }

@@ -36,6 +36,16 @@
 //       cada toque nos ciclos anda um valor a partir da escolha da página e o rótulo mostra a escolha; o toque no terço da
 //       esquerda (‹) volta um valor (revisão A3); o "Jogar de novo" começa com a escolha (revisão do item 33, A1: lendo a partida
 //       que acabou o ciclo travava)
+//   (item 125, dono 05/11: "fontes tem que ser mais legais, o campinho um pouco maior, tem que ser mais legal")
+//   P4  + o campo MAIOR: a área do campo ≥ 1,30 × a da base no PC (1920×1010, 1280×720, 1024×768) e em 844×390, ≥ 1,15 em 667×375 e
+//       ≥ 1,10 em 568×320 sobre o certo da base (220×173: lá ele vazava); o campo DENTRO do cartão em todas (na base vazava 8 px em
+//       568×320: o parseFloat de um calc() dava NaN)
+//   P8  a letra dos itens é a TM Cond (600; o foco 800), carregada (antes a Inter TM); a barra e o contraste como antes
+//   P12 nomes cortados ("…") no campinho: PC 0; 844 0; 667 ≤ 1; 568 ≤ 5 (na base 0/1/3 no PC e 4/4/8 no celular com o pedido A)
+//   P13 PC 1920×1010: a letra mínima dos submenus — rótulos das Opções ≥ 14, títulos ≥ 20, valores das Estatísticas ≥ 20 (na base,
+//       px fixos: 13–15)
+//   (as medidas com as transições e animações da pausa DESLIGADAS — o foco anda 6 px em 160 ms e a lista entra em cascata: o teste
+//   mede o estado final, não o meio do movimento; lição do relógio das animações sem GPU, "Tela limpa")
 //   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
 //   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online]
@@ -44,6 +54,7 @@ import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
 import { PED_A, PED_B } from './lib/pedidos-tm.mjs';
 import { ORDEM, COMANDOS, SECOS, MEDIR, FOCO, FOCO_LARGURA, margemCelular, LINHA_AJUSTES } from './lib/pausa-medidas.mjs';
+import { medirTipografia, resumoTipografia, FAMILIAS_SISTEMA } from './lib/tipografia.mjs';
 
 const args = process.argv.slice(2);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
@@ -60,7 +71,10 @@ const res = [];
 const meta = (nome, medido, alvo, ok) => { res.push({ nome, medido, alvo, ok: !!ok }); console.log(`${ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}\n          ${medido}  (alvo: ${alvo})`); };
 const erros = [];
 // as coletas das metas (cada sessão soma aqui; as metas saem no fim)
-const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0 };
+const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0, p12: [], p13: [] };
+// (item 125) a área do campo da BASE (29d67bad; o mapa do item 125, a mesma pausa, com o entalhe no celular) e a meta de cada tela
+const CAMPO_BASE = { '1920x1010': [554, 444, 1.30], '1280x720': [362, 290, 1.30], '1024x768': [285, 228, 1.30], '844x390': [282, 226, 1.30], '667x375': [282, 226, 1.15], '568x320': [220, 173, 1.10] };
+const CORTADOS_MAX = { '1920x1010': 0, '1280x720': 0, '1024x768': 0, '844x390': 0, '667x375': 1, '568x320': 5 };
 /** P11: confere a medida da linha "Duração | Dificuldade" (LINHA_AJUSTES) contra o esperado (vis: à vista?; cel: celular deitado). */
 function conferirAjustes(rot, a, vis, { cel = false, titulo = null, travada = false, item = true } = {}) {
   P.p11n++;
@@ -85,6 +99,49 @@ const quadros = (pg, n = 2) => pg.evaluate(n => new Promise(ok => { let k = 0; c
 async function pronta(pg) {
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
   await pg.evaluate(() => document.fonts?.ready);
+  // (item 125) as transições e animações da pausa desligadas: mede o estado FINAL (o foco andou os 6 px; a lista já entrou)
+  await pg.evaluate(() => { const e = document.createElement('style'); e.dataset.teste = 'sem-movimento'; e.textContent = '#menu *, #menu *::before, #menu *::after { transition: none !important; animation: none !important; }'; document.head.appendChild(e); });
+}
+/** (item 125) O campinho da pausa na tela de agora: o campo, o cartão (dentro?), os nomes cortados, a letra. */
+async function medirCampinho(pg) {
+  return pg.evaluate(() => {
+    const t = window.__golaco.pausa?.tela, c = document.getElementById('pausa-time'), cp = c?.querySelector('.pt-campo');
+    if (!t || !t.visivel || !c || !cp) return null;
+    const rc = c.getBoundingClientRect(), rf = cp.getBoundingClientRect(), cs = getComputedStyle(c);
+    const dentroBaixo = rc.bottom - parseFloat(cs.borderBottomWidth) - rf.bottom, dentroDir = rc.right - parseFloat(cs.borderRightWidth) - rf.right;
+    return { w: rf.width, h: rf.height, dentro: dentroBaixo >= -0.5 && dentroDir >= -0.5, vaza: Math.max(0, -dentroBaixo, -dentroDir),
+      cortados: t.fichas.filter(f => f.nomeCortado).map(f => f.nome), n: t.fichas.length, letra: Math.min(...t.fichas.map(f => f.letra ?? 99)), disco: t.tamanhos?.disco };
+  });
+}
+/** (item 125) P4 (área e dentro) e P12 (cortados) de uma medida. */
+function conferirCampinho(tela, m) {
+  const b = CAMPO_BASE[tela];
+  if (!m) { P.p4.push({ nome: `${tela}: o campo maior e dentro do cartão`, ok: false, medido: 'sem o campinho' }); P.p12.push({ tela, ok: false, medido: 'sem o campinho' }); return; }
+  const raz = b ? (m.w * m.h) / (b[0] * b[1]) : null;
+  P.p4.push({ nome: `${tela}: o campo ≥ ${b?.[2] ?? '-'} × a área da base e dentro do cartão`, ok: !!b && raz >= b[2] && m.dentro,
+    medido: `campo ${m.w.toFixed(0)}×${m.h.toFixed(0)} (base ${b?.[0]}×${b?.[1]}: ${raz?.toFixed(2)}×); ${m.dentro ? 'dentro' : `VAZA ${m.vaza.toFixed(1)} px`}; disco ${m.disco}, letra ${m.letra}` });
+  const lim = CORTADOS_MAX[tela] ?? 0;
+  P.p12.push({ tela, ok: m.cortados.length <= lim, medido: `${tela} ${m.cortados.length} (≤ ${lim})${m.cortados.length ? ': ' + m.cortados.join(', ') : ''}` });
+}
+/** (item 125) P13: a letra mínima dos submenus no PC grande (rótulos ≥ 14, títulos ≥ 20, valores ≥ 20). */
+async function letrasSubmenus(pg) {
+  const out = [];
+  for (const [nome, sel, regras] of [
+    ['Opções', '#btn-opcoes', [['título', '#menu-opcoes .sub-titulo', 20], ['rótulos', '#menu-opcoes .opcao-rotulo', 14], ['botões', '#menu-opcoes .segmentado button', 14]]],
+    ['Partida e cenas', '#btn-modos', [['título', '#menu-modos .sub-titulo', 20], ['botões', '#menu-modos .btn:not(.btn-voltar)', 15]]],
+    ['Estatísticas', '#btn-estatisticas', [['título', '#menu-estatisticas .sub-titulo', 20], ['rótulos', '#menu-estatisticas .pausa-est tbody th', 14], ['valores', '#menu-estatisticas .pausa-est tbody td b', 20]]]]) {
+    await abrirPausa(pg);
+    const tem = await pg.evaluate(s => { const b = document.querySelector(s); return !!b && !b.hidden && b.getClientRects().length > 0; }, sel);
+    if (!tem) { out.push({ ok: false, medido: `${nome}: sem o item` }); continue; }
+    await pg.evaluate(s => document.querySelector(s).click(), sel);
+    await quadros(pg, 2);
+    for (const [rot, q, min] of regras) {
+      const px = await pg.evaluate(q => { const l = [...document.querySelectorAll(q)].filter(e => e.getClientRects().length && getComputedStyle(e).visibility !== 'hidden'); return l.length ? Math.min(...l.map(e => parseFloat(getComputedStyle(e).fontSize))) : null; }, q);
+      out.push({ ok: px != null && px >= min, medido: `${nome} ${rot} ${px ?? '—'} px (≥ ${min})` });
+    }
+  }
+  await pg.evaluate(() => window.__golaco.fecharMenu());
+  return out;
 }
 /** Fecha tudo e abre a pausa no 1º nível; espera o cartão (data-pronto) quando o módulo dele existe. */
 async function abrirPausa(pg) {
@@ -494,11 +551,13 @@ async function partidaCelular(s, pg) {
   await pg.setViewportSize({ width: 844, height: 390 });
   await pg.waitForTimeout(80);
 
-  // ---- P4: o campinho em 844×390 e 568×320
-  for (const [W, H] of [[844, 390], [568, 320]]) {
+  // ---- P4: o campinho em 844×390, 667×375 e 568×320
+  for (const [W, H] of [[844, 390], [667, 375], [568, 320]]) {
     await pg.setViewportSize({ width: W, height: H });
     await pg.waitForTimeout(80);
     await abrirPausa(pg);
+    conferirCampinho(`${W}x${H}`, await medirCampinho(pg));
+    if (W === 667) continue;
     const r = await pg.evaluate(async () => {
       const g = window.__golaco, t = g.pausa?.tela;
       if (!t || !t.visivel) return null;
@@ -614,7 +673,10 @@ async function partidaCelular(s, pg) {
     const barra = getComputedStyle(b, '::before').backgroundColor;
     const txt = getComputedStyle(document.querySelector('#menu-acoes [data-cmd="ajuda"]')).color;
     const fundo = getComputedStyle(document.querySelector('.janela-menu')).backgroundImage;
-    return { fam, ok: document.fonts.check('15px "Inter TM"'), barra, txt, fundo };
+    // (item 125) a TM Cond 600 nos itens e 800 no foco, carregadas
+    await Promise.all(['600 15px "TM Cond"', '800 15px "TM Cond"'].map(f => document.fonts.load(f).catch(() => null)));
+    const famIt = getComputedStyle(document.querySelector('#menu-acoes [data-cmd="ajuda"]')).fontFamily.split(',')[0].trim().replace(/["']/g, '');
+    return { fam, famIt, ok: document.fonts.check('600 15px "TM Cond"') && document.fonts.check('800 15px "TM Cond"'), barra, txt, fundo };
   });
   const rgb = t => (t.match(/[\d.]+/g) ?? []).map(Number);
   const L = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
@@ -625,8 +687,11 @@ async function partidaCelular(s, pg) {
   const t0 = rgb(c8.txt), at = t0[3] ?? 1;
   const texto = [0, 1, 2].map(i => t0[i] * at + fundo[i] * (1 - at));
   const cTexto = contraste(texto, fundo), cBarra = contraste(rgb(c8.barra), fundo);
-  P.p8.push({ ok: c8.fam === 'Inter TM' && c8.ok && /34,\s*197,\s*94/.test(c8.barra) && cTexto >= 4.5 && cBarra >= 3,
-    medido: `fonte "${c8.fam}" (carregada ${c8.ok}); barra ${c8.barra}; contraste do texto ${cTexto.toFixed(1)}:1, da barra ${cBarra.toFixed(1)}:1 (faixa sobre branco)` });
+  // (item 125, T1) toda família pedida na pausa com @font-face ou do sistema (a régua do sistema tipográfico)
+  const t8 = await pg.evaluate(medirTipografia, { sel: '#menu', limite: 11, ignorar: ['.sr', '.pt-sr'], sistema: FAMILIAS_SISTEMA });
+  P.p8.push({ ok: t8.semFace.length === 0, medido: `T1: ${resumoTipografia(t8)}` });
+  P.p8.push({ ok: c8.fam === 'TM Cond' && c8.famIt === 'TM Cond' && c8.ok && /34,\s*197,\s*94/.test(c8.barra) && cTexto >= 4.5 && cBarra >= 3,
+    medido: `fonte do foco "${c8.fam}", do item "${c8.famIt}" (600 e 800 carregadas ${c8.ok}); barra ${c8.barra}; contraste do texto ${cTexto.toFixed(1)}:1, da barra ${cBarra.toFixed(1)}:1 (faixa sobre branco)` });
   await pg.evaluate(() => window.__golaco.fecharMenu());
 }
 
@@ -656,6 +721,16 @@ async function sessaoPC() {
         await abrirPausa(pg);
         const f = await jogoAVista(pg, pg).catch(() => 0);
         P.p3.push({ tela: `${PC[0]}×${PC[1]}`, f, meta: META_P3[PC[0]], ok: f >= META_P3[PC[0]] });
+        // (item 125) o campinho maior no PC (P4, P12) e as letras dos submenus no PC grande (P13)
+        for (const [W, H] of [[1280, 720], [1920, 1010], [1024, 768]]) {
+          await pg.setViewportSize({ width: W, height: H });
+          await pg.waitForTimeout(120);
+          await abrirPausa(pg);
+          conferirCampinho(`${W}x${H}`, await medirCampinho(pg));
+          if (W === 1920) P.p13.push(...await letrasSubmenus(pg));
+        }
+        await pg.setViewportSize({ width: PC[0], height: PC[1] });
+        await pg.waitForTimeout(120);
         await pcTeclado(pg, kb);
         await pcEditor(pg);
       }
@@ -933,7 +1008,9 @@ if (P.p4.length) meta('P4 o campinho do meu time (fichas, ordem, nomes, marcas, 
 if (P.p5.length) meta('P5 teclado: ↓/↑ andam, Esc volta um nível (o foco no item que abriu) e depois fecha, Tab preso, fundo inert', P.p5.map(x => x.medido).join(' | '), 'tudo certo', P.p5.every(x => x.ok));
 if (P.p6n) meta('P6 alvos ≥ 44 × 32 px no celular (28 em 568×320) e altura ≥ 32 no PC', `${P.p6n} medidas; pequenos: ${lista(P.p6, 6)}`, 'nenhum', P.p6.length === 0);
 if (P.p7.length) meta('P7 leitor de tela: "Pausa: …", grupos das Opções com nome, o cartão como região com resumo, Estatísticas em tabela', P.p7.map(x => x.medido).join(' | '), 'tudo certo', P.p7.every(x => x.ok));
-if (P.p8.length) meta('P8 a cara do TM sem ?tm (Inter TM carregada, barra #22c55e, contraste ≥ 4,5:1 e ≥ 3:1)', P.p8.map(x => x.medido).join(' | '), 'tudo certo', P.p8.every(x => x.ok));
+if (P.p8.length) meta('P8 a cara do TM sem ?tm (a TM Cond 600/800 carregada nos itens, barra #22c55e, contraste ≥ 4,5:1 e ≥ 3:1)', P.p8.map(x => x.medido).join(' | '), 'tudo certo', P.p8.every(x => x.ok));
+if (P.p12.length) meta('P12 nomes cortados ("…") no campinho (PC 0; 844 0; 667 ≤ 1; 568 ≤ 5)', P.p12.map(x => `${x.ok ? '' : 'FALHA '}${x.medido}`).join(' | '), 'nos limites', P.p12.every(x => x.ok));
+if (P.p13.length) meta('P13 PC 1920×1010: a letra mínima dos submenus (rótulos ≥ 14, títulos ≥ 20, valores ≥ 20)', P.p13.map(x => `${x.ok ? '' : 'FALHA '}${x.medido}`).join(' | '), 'todas', P.p13.every(x => x.ok));
 if (P.p9.length) meta('P9 o toque: o X no lugar do ≡ fecha e não reabre; tocar no jogo fecha; a faixa vazia não', P.p9.map(x => `${x.ok ? 'ok' : 'FALHA'} ${x.nome}: ${x.medido}`).join(' | '), 'tudo certo', P.p9.every(x => x.ok));
 if (P.p10custo.length || P.p10.length) {
   const custo = (meio, nome) => P.p10custo.find(x => x.meio === meio && x.nome === nome)?.n ?? null;
