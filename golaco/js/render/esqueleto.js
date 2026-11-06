@@ -93,6 +93,12 @@ export function criarEsqueleto(repouso) {
     const qe = QUEDA * elevacao(po, JE.ombroE, JE.cotoveloE, yx, yy, yz) / Q_REP, qd = QUEDA * elevacao(po, JE.ombroD, JE.cotoveloD, yx, yy, yz) / Q_REP;
     o[e] = po[e] - qe * yx - ABRE * xx; o[e + 1] = po[e + 1] - qe * yy - ABRE * xy; o[e + 2] = po[e + 2] - qe * yz - ABRE * xz;
     o[d] = po[d] - qd * yx + ABRE * xx; o[d + 1] = po[d + 1] - qd * yy + ABRE * xy; o[d + 2] = po[d + 2] - qd * yz + ABRE * xz;
+    // o braço SOLTO e quase reto (andando, parado): a mão desce junto com o ombro o que falta para o cotovelo do desenho ficar
+    // com a dobra do jogo (item 61, A1 da revisão: com o ombro descido e a mão do jogo no lugar, o cotovelo ficava a 48–63°
+    // a passada inteira — o antebraço à frente, "segurando uma bandeja"). Com o braço erguido, dobrado ou nas mãos juntas
+    // (a bola, o cartão, a cintura), a mão do jogo fica onde está
+    maoSolta(po, o, JE.ombroE, JE.cotoveloE, JE.maoE, yx, yy, yz);
+    maoSolta(po, o, JE.ombroD, JE.cotoveloD, JE.maoD, yx, yy, yz);
     // para trás do peito (Z = X × Y): o cotovelo de um braço solto aponta para trás
     const zx = xy * yz - xz * yy, zy = xz * yx - xx * yz, zz = xx * yy - xy * yx;
     ikBraco(po, o, JE.ombroE, JE.cotoveloE, JE.maoE, zx - 0.35 * xx, zy - 0.35 * xy, zz - 0.35 * xz);
@@ -139,6 +145,28 @@ export function criarEsqueleto(repouso) {
     return (1 - (bx * yx + by * yy + bz * yz) / l) / 2;
   }
   let Q_REP = 1;
+  const DOBRA_MIN = 15; // ° — a dobra mínima do cotovelo do braço solto no desenho (maoSolta)
+  /**
+   * A mão do desenho do braço solto (juntasDesenho): o deslocamento do ombro (a queda e a abertura) também na mão, na fração
+   * que leva a distância ombro → mão do desenho à do braço do corpo com a dobra do cotovelo do JOGO (L1, L2) — só com o braço
+   * para baixo (elevação ≥ ~0,95) e o cotovelo do jogo até ~50° (nem a mão na cintura, nem a bola nas mãos, nem a corrida).
+   */
+  function maoSolta(po, o, io, ic, im, yx, yy, yz) {
+    const a = io * 3, c = ic * 3, m = im * 3;
+    const sv = (x0, x1, x) => { const t = Math.min(1, Math.max(0, (x - x0) / (x1 - x0))); return t * t * (3 - 2 * t); };
+    const w = sv(0.93, 0.97, elevacao(po, io, ic, yx, yy, yz)) * (1 - sv(40, 60, angJunta(po, io, ic, im)));
+    if (!(w > 0)) return;
+    const dx = o[a] - po[a], dy = o[a + 1] - po[a + 1], dz = o[a + 2] - po[a + 2];
+    const Ld = sq((po[m] - o[a]) ** 2 + (po[m + 1] - o[a + 1]) ** 2 + (po[m + 2] - o[a + 2]) ** 2);
+    const Lg = sq((po[m] - po[a]) ** 2 + (po[m + 1] - po[a + 1]) ** 2 + (po[m + 2] - po[a + 2]) ** 2);
+    // (a dobra do desenho nunca abaixo de DOBRA_MIN: com o braço quase reto, o lado da dobra — a torção do braço na pele —
+    // fica mal definido e pula; o cotovelo de verdade anda a 10–20° na volta do balanço)
+    const cb = Math.cos(Math.max(DOBRA_MIN, angJunta(po, io, ic, im)) * Math.PI / 180);
+    const Lt = Math.min(sq(L1 * L1 + L2 * L2 + 2 * L1 * L2 * cb), L1 + L2);
+    if (!(Lt > Ld) || !(Lg > Ld + 1e-6)) return;
+    const f = w * Math.min(1, (Lt - Ld) / (Lg - Ld));
+    o[m] = po[m] + dx * f; o[m + 1] = po[m + 1] + dy * f; o[m + 2] = po[m + 2] + dz * f;
+  }
   /**
    * Cotovelo do desenho: IK de dois ossos (L1, L2) do ombro do desenho à mão do jogo. O lado da dobra é o do braço do jogo
    * (o cotovelo do jogo fora da reta ombro→mão do JOGO); com o braço do jogo quase reto (seno < 0,087 ≈ 5°), mistura com o
