@@ -54,6 +54,11 @@
 //      (não no online nem no Livre). A "mais fácil usada" conta só os níveis em que a pessoa jogou um passo (nivelDoPasso: o nível
 //      atravessado no ciclo da pausa sem passo não conta; a demo e o online não contam). Na versão sem js/ajustes-partida.js REPROVA.
 //
+//  P13 (item 35: o clássico no pedido; js/ajustes-partida.js classicoDoPedido, fora do fecho): partida.classico true → true;
+//      false, ausente, 'true' (texto) e sem `partida` → false; o pedido do online (modo 'online': o do anfitrião, o mesmo objeto
+//      nos dois aparelhos) → true nos dois lados. A partida do pedido (como o main.js: {classico: true} só quando ligado) com
+//      m.classico === true; sem ele o campo NÃO existe (fora do hash). Na versão sem classicoDoPedido REPROVA.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -725,6 +730,36 @@ if (typeof SU.melhorEmCampo === 'function') {
         `Lenda 600 passos → ${vistos[0]}; o ciclo sem passo → ${vistos[1]}; 60 no Normal → ${vistos[2]}; resultado ${rC.dificuldade}; a demo no Fácil → ${aD.maisFacil ?? 'nada'} (resultado ${rD.dificuldade}); online ${AJ.nivelDoPasso(mO) ?? 'nada'}`,
         'lenda, lenda, normal; normal; nada (normal); nada', okC);
     }
+  }
+}
+
+// ------------------------------------------------------------------ P13 o clássico do pedido (item 35)
+{
+  let AJ = null;
+  try { AJ = await imp('ajustes-partida.js'); } catch (_) { AJ = null; }
+  if (!AJ || typeof AJ.classicoDoPedido !== 'function') {
+    reg('P13 o clássico no pedido (item 35)', 'sem ajustes-partida.js classicoDoPedido', 'existe', false);
+  } else {
+    const comP = (ped, partida) => ({ ...ped, partida: { ...ped.partida, ...partida } });
+    const semClassico = (() => { const pt = { ...PED_A.partida }; delete pt.classico; return { ...PED_A, partida: pt }; })();
+    const online = { ...comP(PED_A, { classico: true, nomeClassico: 'Clássico de teste' }), modo: 'online' };
+    // (o online: o anfitrião monta o pedido e o convidado recebe o MESMO objeto clonado — os dois lados leem igual)
+    const convidado = JSON.parse(JSON.stringify(online));
+    const casos = [
+      ['true', comP(PED_A, { classico: true }), true], ['false', PED_A, false], ['ausente', semClassico, false],
+      ['"true"', comP(PED_A, { classico: 'true' }), false], ['sem partida', { v: 2 }, false], ['nulo', null, false],
+      ['online anfitrião', online, true], ['online convidado', convidado, true],
+    ];
+    const ruins = casos.filter(([, ped, quer]) => AJ.classicoDoPedido(ped) !== quer).map(([n, ped]) => `${n} → ${AJ.classicoDoPedido(ped)}`);
+    // a partida do pedido como o main.js monta: {classico: true} só quando ligado
+    const pedC = comP(PED_A, { classico: true });
+    const T = (() => { const t = TT.timesDoPedido(pedC); registrar(t); return t; })();
+    const opc = c => ({ semente: 3, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano, trava: T.trava, ...(c ? { classico: true } : {}) });
+    const mC = P.criarPartida(opc(AJ.classicoDoPedido(pedC))), mS = P.criarPartida(opc(AJ.classicoDoPedido(PED_A)));
+    const ok = !ruins.length && mC.classico === true && !('classico' in mS);
+    reg('P13 classicoDoPedido: true só com partida.classico === true (o online: o pedido do anfitrião nos dois lados); a partida do pedido com m.classico só quando ligado',
+      `${ruins.length ? ruins.join('; ') : `os ${casos.length} casos certos`}; ligado ${mC.classico === true ? 'm.classico true' : 'SEM'}; desligado ${'classico' in mS ? 'COM o campo' : 'sem o campo'}`,
+      `os ${casos.length} casos certos; true; sem o campo`, ok);
   }
 }
 

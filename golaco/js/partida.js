@@ -111,9 +111,10 @@ export function vagaDoJogador(timeEstado, id) {
  * cada pessoa no seu aparelho; com 2, `humano` é só o MEU lado, m.timeHumano — o caminho de 2 humanos nunca o lê),
  * trava = null (id: "só o meu jogador", o controle nunca sai dele — o Rumo ao Estrelato do Total Match; acoes.js
  * assumirControle; só com 1 humano), dificuldade = 'normal' (item 33: 'facil' | 'normal' | 'dificil' | 'lenda' — a IA contra
- * a pessoa, config.js DIFICULDADE; só com 1 humano; o Normal não escreve nada no mundo), log}. O controlado de cada time
- * humano começa no cobrador da saída dele (com a trava, no travado). m.timeHumano, m.trava e m.dificuldade ficam fora do
- * hash (o controlado entra nele, como antes).
+ * a pessoa, config.js DIFICULDADE; só com 1 humano; o Normal não escreve nada no mundo), classico (item 35: só `true` liga
+ * m.classico — a partida pegada, config.js CLASSICO; com 1 ou 2 humanos), log}. O controlado de cada time
+ * humano começa no cobrador da saída dele (com a trava, no travado). m.timeHumano, m.trava, m.dificuldade e m.classico ficam
+ * fora do hash (o controlado entra nele, como antes).
  * iaClassica: true só para os testes medirem o "antes" (a IA do treino no 11×11).
  */
 export function criarPartida(opc = {}) {
@@ -144,6 +145,9 @@ export function criarPartida(opc = {}) {
   if (trava != null) m.trava = { [h]: trava };
   // a dificuldade (item 33): só fora do Normal e com 1 humano (no online são duas pessoas); no Normal o campo NÃO existe
   if (humanos.length === 1 && nivelValido(opc.dificuldade) && opc.dificuldade !== 'normal') m.dificuldade = opc.dificuldade;
+  // o clássico (item 35; config.js CLASSICO): a partida pegada — a vontade dos jogadores dos DOIS times, nunca o árbitro. Vale com
+  // 1 ou 2 humanos (online: o pedido do anfitrião) e na IA × IA; sem a opção o campo NÃO existe (fora do hash, como o m.dificuldade)
+  if (opc.classico === true) m.classico = true;
   m.times = times;
   for (const j of m.jogadores) { vestirVaga(m, j, vagaDoJogador(times[j.time], j.id)); j.iaT = null; }
   const min = opc.minutosPorTempo ?? PARTIDA.minutosPorTempo;

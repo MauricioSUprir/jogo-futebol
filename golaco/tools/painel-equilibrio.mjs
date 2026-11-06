@@ -33,6 +33,8 @@
 //   node tools/painel-equilibrio.mjs --json saida.json     (grava as partidas, para comparar depois)
 //   node tools/painel-equilibrio.mjs --base-json saida.json (a base é a rodada gravada: não roda de novo)
 //   node tools/painel-equilibrio.mjs --set IA_ATAQUE.utilidade.chute=3 (repetível: constante trocada só na versão medida)
+//   node tools/painel-equilibrio.mjs --classico --base-json sem.json (item 35: a versão medida joga o CLÁSSICO, {classico: true}
+//                                                          no criarPartida; a base, não — o sem × com com as mesmas sementes)
 //   node tools/painel-equilibrio.mjs --retomar parciais.jsonl (grava cada partida; de novo, continua de onde parou;
 //                                                          com --parcial, só mostra as que já estão lá)
 //   --par N (processos; padrão: CPUs)   --min 4 (minutos reais por tempo)   --estrito (sai com 1 fora da meta)
@@ -76,7 +78,8 @@ async function partida(pastaJs, sem) {
   }
   const P = await import(pathToFileURL(path.join(pastaJs, 'partida.js')).href);
   const M = await import(pathToFileURL(path.join(AQUI, 'lib/partida-medidas.mjs')).href);
-  const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO });
+  // (--classico, item 35: só na versão medida — o rodar() passa a flag ao filho dela)
+  const m = P.criarPartida({ semente: sem, minutosPorTempo: MIN_TEMPO, ...(args.includes('--classico') ? { classico: true } : {}) });
   const R = {
     sem, gols: [0, 0], golsContra: 0, chutes: [], passes: 0, passesOk: 0, posse: [0, 0], intercept: [0, 0],
     posses: 0, possesTerco: 0, origem: { trabalhada: 0, contra: 0, erroSaida: 0, bolaParada: 0, outro: 0 },
@@ -233,6 +236,7 @@ async function pastaCache(pastaJs) {
   h.update(fs.readFileSync(fileURLToPath(import.meta.url))).update(String(MIN_TEMPO));
   // (os --set trocam constantes só na versão medida: entram na chave, senão a variação pegaria o cache da sem eles)
   if (pastaJs === JS) h.update(JSON.stringify(args.flatMap((a, i) => (a === '--set' ? [args[i + 1]] : []))));
+  if (pastaJs === JS && args.includes('--classico')) h.update('--classico');
   const d = path.join(CACHE, h.digest('hex').slice(0, 16));
   fs.mkdirSync(d, { recursive: true });
   return d;
@@ -260,7 +264,7 @@ async function rodar(pastaJs) {
       const arqC = dc ? path.join(dc, `${s}.json`) : null;
       if (arqC && fs.existsSync(arqC)) { const r = JSON.parse(fs.readFileSync(arqC, 'utf8')); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); res.push(r); feitas++; continue; }
       res.push(await new Promise((ok, erro) => {
-        const sets = pastaJs === JS ? args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])) : [];
+        const sets = pastaJs === JS ? [...args.flatMap((a, i) => (a === '--set' ? ['--set', args[i + 1]] : [])), ...(args.includes('--classico') ? ['--classico'] : [])] : [];
         const c = fork(fileURLToPath(import.meta.url), ['--filho', '--pasta', pastaJs, '--s', String(s), '--min', String(MIN_TEMPO), ...sets]);
         c.on('message', r => { if (arqC) fs.writeFileSync(arqC, JSON.stringify(r)); if (ret) fs.appendFileSync(ret, JSON.stringify(r) + '\n'); ok(r); }); c.on('error', erro);
         c.on('exit', cod => { if (cod) erro(new Error(`semente ${s}: saiu com ${cod}`)); });

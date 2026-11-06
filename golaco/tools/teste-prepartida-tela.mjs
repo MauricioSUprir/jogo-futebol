@@ -58,6 +58,9 @@
 //   E24 (item 33) ≡ → "Modo de jogo" → Duração até 6 e Dificuldade até Lenda → volta: a linha diz "2 × 6 min | … | Lenda"; o Jogar
 //       começa com ticksPorTempo 21 600 e m.dificuldade "lenda"; E24b o mesmo depois de um Personalizar (o mundo recriado leva os
 //       ajustes). Na base reprovam (sem o ciclo nem o nível)
+//   E25 (item 35) o clássico pelo ?classico=1 fora do TM: o selo "Clássico" no PC (1280×720, .pp-classico) e o prefixo
+//       "Clássico · " no estádio no celular (844×390 com toque), com m.classico true; sem o parâmetro, nem o selo nem o prefixo e
+//       o campo ausente (como antes). Na base reprova (o selo só vinha do pedido do TM)
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
 //   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
@@ -954,6 +957,29 @@ if (faz('ajustes')) {
     }
     meta('E23 a dificuldade na linha de informação (item 33): "Difícil" no celular, "Dificuldade: Difícil" no PC, com a duração e sem passar da linha; o Livre e os Pênaltis sem nível',
       out.join(' · '), 'o nível certo em cada tela; nenhum nível no Livre e nos Pênaltis', ok);
+  }
+  // E25 (item 35): o selo do clássico com ?classico=1 (fora do TM); sem o parâmetro, nada
+  {
+    const out = [];
+    let ok = true;
+    for (const [w, h, toque, cl] of [[1280, 720, false, true], [844, 390, true, true], [1280, 720, false, false], [844, 390, true, false]]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w, h, toque, q: `${Q}&prepartida=1&semente=3${cl ? '&classico=1' : ''}` });
+      try {
+        await quadros(pg, 3);
+        const r = await pg.evaluate(() => {
+          const sel = document.querySelector('#prepartida .pp-classico');
+          const linhas = [...document.querySelectorAll('#prepartida .pp-info-l')].filter(l => l.getClientRects().length).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+          const m = window.__golaco.mundo;
+          return { selo: sel && sel.getClientRects().length ? sel.textContent.trim() : null, info: linhas.join(' / '), tem: 'classico' in m, v: m.classico ?? null };
+        });
+        const prefixo = /(^|\/ )Clássico · /.test(r.info);
+        out.push(`${w}×${h}${cl ? ' ?classico=1' : ''}: selo ${r.selo ?? '—'}, prefixo ${prefixo ? 'sim' : 'não'}, mundo ${r.tem ? r.v : 'sem o campo'}`);
+        if (cl) { if (!(r.v === true && (toque ? prefixo && !r.selo : r.selo === 'Clássico' && !prefixo))) ok = false; }
+        else if (r.tem || r.selo || prefixo) ok = false;
+      } finally { await navegador.close(); }
+    }
+    meta('E25 o clássico pelo ?classico=1 (item 35): o selo "Clássico" no PC e "Clássico · " no estádio no celular, com m.classico; sem o parâmetro nada',
+      out.join(' · '), 'o selo/prefixo e true com o parâmetro; nada sem', ok);
   }
   // E24 e E24b: pelo ≡ (a pausa "antes do jogo") → Modo de jogo → Duração 6 e Dificuldade Lenda
   for (const personalizar of [false, true]) {

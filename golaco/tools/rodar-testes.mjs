@@ -130,6 +130,7 @@ const LISTA = [
   // quando a amostra PROVA o contrário; 128 partidas de 2 × 4 min em 3 processos. O --completo — 16 sementes, os degraus vizinhos
   // provados — é a medida do dono, FORA do CI e não é passo antes do merge: PESQUISA-DIFICULDADE.md §11)
   ['dificuldade só contra a pessoa: portão, Normal = hoje, a ordem dos 4 níveis em botes, chances e resultado', 'teste-dificuldade.mjs', [], 'padrao', 3],
+  ['clássico pegado (item 35): a marca, sem ela o hash igual, os dois times e não o controlado, o árbitro igual; botes e faltas pela vontade, a chance por contato, cartões, gols, intensidade e a combinação com a dificuldade', 'teste-classico.mjs', [], 'padrao', 3],
   ['goleiro pelas Leis do Jogo (mão só na área, recuo, 8 s) e na mão do humano (anda, TROCAR, PEGAR)', 'teste-goleiro-regras.mjs'],
   // C5 (item 16 da FILA): a reposição com a bola nas mãos — canhão de estados do meio da partida (IA × IA) e o gesto
   ['reposição do goleiro com a mão: a IA rola/arremessa ou dá o chutão pela pressão, a bola na mão desenhada, o bate-pronto quica antes do pé', 'teste-reposicao.mjs'],
