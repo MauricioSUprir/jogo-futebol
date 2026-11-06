@@ -12,9 +12,10 @@
 //
 // Total Match (?tm=<id>; ponte-tm.js, tm-times.js, sumula.js; contrato "Ponte com o Total Match" no CONTRATOS.md): os
 // times do pedido (o time 0 é o mandante do TM), o humano no lado do usuário, a trava "só o meu jogador" (TROCAR e GOLEIRO
-// mascarados e escondidos), a súmula alimentada a cada passo, 'tm3d:pronto' no api.pronto, 'tm3d:sair' sem WebGL 2, a
-// pausa sem Reiniciar/Modo de jogo e com "Simular o resto" (os passos em pedaços sem desenhar) e a faixa do fim com
-// "Voltar ao Total Match" ('tm3d:fim'; o resultado é gravado já no apito). Sem ?tm nada disso existe (TM = null).
+// mascarados e escondidos), a súmula alimentada a cada passo, 'tm3d:pronto' no api.pronto, 'tm3d:sair' {motivo: 'erro'} sem
+// WebGL 2 (o TM avisa e simula) e {motivo: 'simular'} no "Simular partida" da tela antes do jogo (item 124: o TM simula lance a
+// lance, calado), a pausa sem Reiniciar/Modo de jogo e com "Simular o resto" (os passos em pedaços sem desenhar) e a faixa do
+// fim com "Voltar ao Total Match" ('tm3d:fim'; o resultado é gravado já no apito). Sem ?tm nada disso existe (TM = null).
 //
 // Partida (Etapa 3): criarPartida/passoPartida (partida.js) — o mesmo que sessao.js usa para o modo
 // 'partida', chamado direto aqui. A pausa ganha "Editar time" (js/editor-time.js): a tela entrega
@@ -3544,9 +3545,12 @@ function acaoPrepartida(id) {
       break;
     // (o "Voltar" da pausa devolve o foco ao ≡)
     case 'opcoes': ppVolta = 'menu'; abrirMenuDaTela(() => hud.abrirMenu(true)); break;
-    // TM: "Simular partida" (2º toque) = o "Voltar ao Total Match" da pausa: o motor 3D simula do tick 0 (simularResto) e manda
-    // o resultado
-    case 'simular': fecharPrepartida(true); voltarAoTM(); break;
+    // TM e Rumo ao Estrelato: "Simular partida" (2º toque) = o "Simular" da janela que ela substituiu (item 124; dono, 05/11: "essa
+    // tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular"): o 3D fecha SEM resultado ('tm3d:sair' {motivo:
+    // 'simular'}) e o TM simula lance a lance, como sempre — antes o motor 3D simulava do tick 0 (~11 s) e mandava 'tm3d:fim'. O
+    // "Simular o resto" da pausa, com a partida já começada, continua pelo motor 3D. A tela fica (o mundo parado no tick 0) até o
+    // TM fechar o quadro: fechada aqui, o jogo andava e aparecia nesse meio-tempo
+    case 'simular': sairTM({ motivo: 'simular' }); break;
     case 'canto':
       if (mundo.online) { acaoPrepartidaOnline('sair'); break; }
       // os Pênaltis 3D do TM antes do Bater: volta SEM resultado ('tm3d:sair' → a escolha dos times; o X do TM nos Pênaltis diz
@@ -4049,14 +4053,14 @@ async function iniciar() {
   // Total Match: ?tm sem o pedido (sumiu do armazenamento) — o TM simula a partida
   if (ID_TM && !TM) {
     hud.erro('A partida do Total Match não foi encontrada. Ela será simulada.');
-    sairTM();
+    sairTM({ motivo: 'erro' });
     return;
   }
   if (!temWebGL2()) {
     hud.erro(ID_TM ? 'Este navegador não tem WebGL 2, que a partida em 3D precisa. A partida será simulada.'
       : 'Este navegador não tem WebGL 2, que o GOLAÇO precisa para o 3D. Atualize o navegador ou ative a aceleração de hardware.');
-    // Total Match: o 3D não roda aqui — o TM simula a partida (sem esperar os 30 s do aviso dele)
-    if (ID_TM) sairTM();
+    // Total Match: o 3D não roda aqui — o TM avisa e simula a partida (sem esperar os 30 s do aviso dele)
+    if (ID_TM) sairTM({ motivo: 'erro' });
     return;
   }
   // a tela antes do jogo (item 64): o código, o CSS e a fonte pedidos já, em paralelo com o 3D (só com a tela ligada)
@@ -5256,6 +5260,6 @@ window.__golaco = api;
 iniciar().catch(err => {
   console.error(err);
   hud.erro('Não foi possível iniciar o 3D: ' + (err && err.message ? err.message : String(err)));
-  // Total Match: o 3D não subiu — o TM simula a partida
-  if (ID_TM && !api.pronto) sairTM();
+  // Total Match: o 3D não subiu — o TM avisa e simula a partida
+  if (ID_TM && !api.pronto) sairTM({ motivo: 'erro' });
 });

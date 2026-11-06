@@ -1,8 +1,9 @@
 // Ponte com o Total Match (TM): o GOLAÇO é o motor 3D das partidas do TM (mesmo site, mesmo armazenamento).
 //   TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle, partida }
 //        e abre golaco/index.html?tm=<id> num quadro (iframe) por cima do TM
-//   3D → window.parent.postMessage({ tipo: 'tm3d:pronto' | 'tm3d:fim' | 'tm3d:sair', id, resultado }, location.origin)
-//        (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder)
+//   3D → window.parent.postMessage({ tipo: 'tm3d:pronto' | 'tm3d:fim' | 'tm3d:sair', id, resultado, motivo? }, location.origin)
+//        (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder; o 'tm3d:sair' leva o motivo:
+//        'simular' = o "Simular partida" da tela antes do jogo — item 124 —, 'erro' = o 3D não rodou)
 // Lado do TM: legacy-total-match/js/tm3d.js. Sem ?tm na página, nada daqui é usado (PEDIDO_TM = null).
 // Pênaltis 3D: o pedido com modo: 'penaltis' abre só a disputa de pênaltis (main.js + disputa.js) e o resultado é
 // { penaltis: { vencedor, placar, cobrancas } } (disputa.js resultadoPenaltisTM).
@@ -72,10 +73,15 @@ export function fimTM(resultado, extra = null) {
   return true;
 }
 
-/** O 3D não roda aqui (sem WebGL 2, pedido inválido): 'tm3d:sair' (o TM simula a partida do começo). */
-export function sairTM() {
+/**
+ * Volta ao TM SEM resultado: 'tm3d:sair' (o TM simula a partida lance a lance, como sem o 3D). extra vai junto na mensagem:
+ * {motivo: 'simular'} = o "Simular partida" da tela antes do jogo (item 124; o TM fica calado), {motivo: 'erro'} = o 3D não roda
+ * aqui (sem WebGL 2, pedido sumido, erro no início; o TM avisa). Sem motivo (os Pênaltis 3D antes do Bater): o TM só volta. (O
+ * abandono do Online 3D vai pelo avisarTM direto: {abandono: true}.)
+ */
+export function sairTM(extra = null) {
   if (!ID_TM) return false;
-  avisarTM('tm3d:sair');
+  avisarTM('tm3d:sair', extra ?? {});
   if (!NO_QUADRO) voltarAoTM();
   return true;
 }
