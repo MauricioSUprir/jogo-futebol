@@ -67,7 +67,7 @@ uniform highp sampler2D tKits;
 varying vec3 vRest;
 varying float vParte;
 varying float vSlot;
-varying vec4 vMembro; // pesos: antebraço, mão, canela+pé, coxa
+varying vec4 vMembro; // pesos: braço + antebraço (abaixo da clavícula), mão, canela+pé, coxa
 mat4 ossoPele(float b) {
   int x = int(b + 0.5) * 3, y = int(iSlot + 0.5);
   vec4 r0 = texelFetch(tOssos, ivec2(x, y), 0), r1 = texelFetch(tOssos, ivec2(x + 1, y), 0), r2 = texelFetch(tOssos, ivec2(x + 2, y), 0);
@@ -92,7 +92,10 @@ vec3 objectNormal = normalize(mat3(_S) * normal);
 const POS_V = `
 vec3 transformed = (_S * vec4(position, 1.0)).xyz;
 vRest = position; vParte = aParte; vSlot = iSlot;
-vMembro = vec4(pesoEm(7.0, 11.0), pesoEm(8.0, 12.0), pesoEm(14.0, 17.0) + pesoEm(15.0, 18.0) + pesoEm(19.0, 20.0), pesoEm(13.0, 16.0));
+// x: o braço abaixo da clavícula (braço, antebraço e o ajudante do cotovelo) — a manga comprida do goleiro e do técnico cobre o
+// braço inteiro, como no manequim (R2 da revisão do item 77: só com o antebraço sobrava uma faixa de pele entre o punho da
+// manga curta e o cotovelo, que abria quando a IK da mão de apoio dobrava o braço no carrinho)
+vMembro = vec4(pesoEm(7.0, 11.0) + pesoEm(6.0, 10.0) + pesoEm(21.0, 22.0), pesoEm(8.0, 12.0), pesoEm(14.0, 17.0) + pesoEm(15.0, 18.0) + pesoEm(19.0, 20.0), pesoEm(13.0, 16.0));
 `;
 const DECL_F = `
 uniform highp sampler2D tKits;
