@@ -144,6 +144,9 @@ const LISTA = [
   // Pré-jogo (pedido de 11/10): o cortejo do túnel até a fila e o roteiro com os trilhos de câmera (contas puras)
   ['pré-jogo: cortejo do túnel até a fila (pés, colisão, vaga, rumo, custo, hash da partida)', 'teste-cortejo.mjs'],
   ['pré-jogo: roteiro, escalações de 10 s, pular e trilhos de câmera fora dos sólidos', 'teste-prejogo-roteiro.mjs'],
+  // Item 61 (dono, 23/10: no túnel e na fila "parecem que estão marchando, parecendo NPC"): fases, ritmo e saída de cada
+  // um no cortejo e nas cenas; o braço oposto à perna, o cotovelo e o tronco girando (manequim e corpo novo)
+  ['passada natural (item 61): fases espalhadas, ritmo por jogador, saída do parado, braço × perna, cotovelo, pelve e tórax — cortejo e cenas', 'teste-marcha.mjs'],
   ['pré-jogo no Maracanã (forma própria): os trilhos ajustados fora dos sólidos dele', 'teste-prejogo-roteiro.mjs', ['--forma', 'maracana']],
   // Item 29 (dono, 17/10: "o campinho da escalação do jogo EM PÉ (retrato), não deitado"): as contas puras da escalação em pé
   ['escalação do pré-jogo em pé (item 29): tamanho do campo e das cartas em 10 telas × 3 conjuntos de nomes, posições nas 6 formações, o campinho.js do editor e da pausa igual, a tabela da TM Cond num módulo só', 'teste-escalacao-campo.mjs'],
