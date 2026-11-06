@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>MindTrack AI — Apresentação</title>
+<meta name="description" content="Apresentação do projeto de startup MindTrack AI." />
+<meta name="theme-color" content="#0a0b10" />
+<link rel="icon" href="../assets/icon.svg" />
+<style>
+@font-face{font-family:'Anton';src:url('../assets/fontes/anton-latin.woff2') format('woff2');font-display:block}
+@font-face{font-family:'Inter';src:url('../assets/fontes/inter-latin.woff2') format('woff2');font-weight:100 900;font-display:block}
+:root{
+  --preto:#0a0b10;--preto2:#14161d;--linha:#272a35;--bege:#f0ead9;--dim:#b2ac9c;
+  --papel:#f6e7bd;--papel2:#fdf6e0;--tinta:#191511;--tinta2:#5f584a;--borda:#e3d3a4;
+  --neon:#3ec9f5;--neon2:#2fa8e8;--ouro:#f1d794;--verde:#8fd3a8;
+  --W:1600px;--H:900px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#050608;color:var(--bege);font-family:'Inter',system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+.palco{position:fixed;inset:0;display:grid;place-items:center}
+.deck{position:relative;width:var(--W);height:var(--H);transform-origin:center center;flex:none}
+.slide{position:absolute;inset:0;padding:84px 104px;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .45s ease}
+.slide.on{opacity:1;visibility:visible}
+
+/* fundos */
+.escuro{background:radial-gradient(1200px 700px at 85% -10%,#0f2a36 0%,transparent 60%),radial-gradient(900px 600px at -10% 110%,#11202a 0%,transparent 55%),var(--preto);color:var(--bege)}
+.claro{background:radial-gradient(900px 600px at 100% 0%,#fdf6e0 0%,transparent 60%),var(--papel);color:var(--tinta)}
+.marca-dagua{position:absolute;right:-90px;bottom:-110px;width:620px;opacity:.07;pointer-events:none}
+.claro .marca-dagua{opacity:.10}
+
+/* topo e rodapé */
+.topo{display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:18px}
+.logo img{width:64px;height:64px;border-radius:18px;background:var(--preto);padding:8px;border:1px solid #ffffff1a}
+.claro .logo img{background:var(--preto)}
+.logo b{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:34px;letter-spacing:.06em}
+.logo b i{font-style:normal;color:var(--neon)}
+.pilula{border:1.5px solid var(--neon);color:var(--neon);padding:10px 22px;border-radius:99px;font-weight:700;font-size:19px}
+.claro .pilula{border-color:var(--tinta);color:var(--tinta);background:#ffffff66}
+.rodape{position:absolute;left:104px;right:104px;bottom:56px;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid #ffffff22;padding-top:22px;font-size:19px}
+.claro .rodape{border-top-color:#19151122}
+.rodape small{display:block;font-size:14px;font-weight:800;letter-spacing:.14em;color:var(--neon);margin-bottom:6px}
+.claro .rodape small{color:var(--neon2)}
+.rodape .lema{color:var(--neon);font-weight:700}
+.claro .rodape .lema{color:var(--tinta)}
+
+/* textos */
+.etiqueta{font-weight:800;letter-spacing:.2em;font-size:18px;color:var(--neon);text-transform:uppercase}
+.claro .etiqueta{color:var(--neon2)}
+h1,h2{font-family:'Anton',Impact,sans-serif;font-weight:400;text-transform:uppercase;line-height:.98;letter-spacing:.005em}
+h1{font-size:118px}
+h2{font-size:78px;margin-top:14px}
+h1 i,h2 i{font-style:normal;color:var(--neon)}
+.claro h2 i{color:var(--neon2)}
+.sub{font-size:28px;line-height:1.45;color:var(--dim);max-width:1050px;margin-top:22px}
+.claro .sub{color:var(--tinta2)}
+
+/* cartões */
+.cards{display:grid;gap:26px;margin-top:46px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:repeat(4,1fr)}
+.card{border-radius:26px;padding:26px 30px;background:#ffffff0b;border:1px solid #ffffff1c}
+.claro .card{background:var(--papel2);border:1px solid var(--borda);box-shadow:0 18px 40px rgba(16,16,16,.08)}
+.card .ic{font-size:40px;line-height:1;margin-bottom:16px;display:block}
+.card h3{font-size:27px;font-weight:800;margin-bottom:10px}
+.card p{font-size:20px;line-height:1.5;color:var(--dim)}
+.claro .card p{color:var(--tinta2)}
+.card ul{list-style:none;margin-top:6px}
+.card li{font-size:19px;line-height:1.35;color:var(--dim);padding:5px 0 5px 22px;position:relative}
+.card li::before{content:'';position:absolute;left:2px;top:14px;width:8px;height:8px;border-radius:50%;background:var(--neon)}
+.borda-neon{border-left:6px solid var(--neon)}
+.borda-ouro{border-left:6px solid var(--ouro)}
+.borda-tinta{border-left:6px solid var(--tinta)}
+
+/* números */
+.numero{font-family:'Anton',Impact,sans-serif;font-size:64px;line-height:1;color:var(--tinta)}
+.escuro .numero{color:var(--neon)}
+
+/* faixa */
+.faixa{margin-top:20px;border:2px dashed #3ec9f566;border-radius:24px;padding:22px 34px;display:flex;align-items:center;gap:22px;font-size:26px;font-weight:700}
+.faixa b{color:var(--neon)}
+
+/* ecossistema */
+.eco{margin-top:28px;border-radius:26px;padding:26px 36px;background:#ffffff0b;border:1px solid #ffffff1c;display:flex;align-items:center;gap:36px}
+.eco .t{flex:1}
+.eco .t small{font-weight:800;letter-spacing:.18em;color:var(--neon);font-size:16px}
+.eco .t div{font-family:'Anton',Impact,sans-serif;font-size:50px;text-transform:uppercase;margin-top:6px}
+.eco .t div i{font-style:normal;color:var(--neon)}
+.eco .itens{display:flex;gap:34px;border-left:1px solid #ffffff22;padding-left:34px}
+.eco .item{text-align:center;font-size:17px;color:var(--dim);width:118px}
+.eco .item span{display:block;font-size:38px;margin-bottom:8px}
+
+/* demonstração */
+.demo{display:grid;grid-template-columns:auto 1fr;gap:48px;margin-top:26px;align-items:start}
+.celulares{display:flex;gap:18px}
+.cel{width:244px;border-radius:30px;padding:7px;background:var(--preto);box-shadow:0 26px 50px rgba(0,0,0,.25)}
+.cel img{display:block;width:100%;border-radius:24px}
+.cel figcaption{color:var(--bege);text-align:center;font-size:15px;font-weight:700;padding:9px 0 3px}
+.recursos{display:flex;flex-direction:column;gap:16px;padding-top:10px}
+.recurso{display:flex;gap:18px;align-items:flex-start;background:var(--papel2);border:1px solid var(--borda);border-radius:20px;padding:16px 22px}
+.recurso span{font-size:30px;line-height:1}
+.recurso b{display:block;font-size:22px}
+.recurso p{font-size:17px;color:var(--tinta2);margin-top:3px;line-height:1.4}
+.acesso{display:flex;align-items:center;gap:22px;margin-top:8px}
+.acesso img{width:118px;height:118px;background:#fff;padding:9px;border-radius:14px}
+.acesso b{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:34px;text-transform:uppercase;display:block}
+.acesso a{color:var(--neon2);font-size:20px;font-weight:700;text-decoration:underline}
+
+/* negócio */
+.planos{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px}
+.plano{border:1.5px solid #ffffff2a;border-radius:24px;padding:30px 26px 26px;text-align:center}
+.plano.top{border-color:var(--neon);background:#3ec9f512}
+.plano h3{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:34px;text-transform:uppercase;letter-spacing:.04em}
+.preco{margin:14px auto 16px;border-radius:99px;background:var(--neon);color:#07202c;font-weight:900;font-size:30px;padding:8px 0}
+.plano:not(.top) .preco{background:var(--ouro);color:#2b220a}
+.preco small{font-size:17px;font-weight:700}
+.plano ul{list-style:none;text-align:left}
+.plano li{font-size:19px;line-height:1.35;padding:8px 0 8px 28px;position:relative;color:var(--bege)}
+.plano li::before{content:'✓';position:absolute;left:0;top:7px;color:var(--neon);font-weight:900}
+.negocio{display:grid;grid-template-columns:1.62fr 1fr;gap:40px;margin-top:40px}
+.custo{border-left:1px solid #ffffff22;padding-left:40px}
+.custo small{font-weight:800;letter-spacing:.18em;color:var(--neon);font-size:16px}
+.custo .numero{font-size:76px;margin:6px 0 14px}
+.linha{display:flex;justify-content:space-between;gap:16px;font-size:20px;padding:14px 0;border-bottom:1px solid #ffffff18;color:var(--dim)}
+.linha b{color:var(--bege);white-space:nowrap}
+.sustenta{margin-top:40px;border:1.5px solid var(--neon);border-radius:24px;padding:20px 30px;display:grid;grid-template-columns:auto 1px 1.2fr 1fr;gap:28px;align-items:center}
+.sustenta .s1{font-weight:800;letter-spacing:.16em;color:var(--neon);font-size:18px}
+.sustenta .div{height:64px;background:#ffffff33}
+.sustenta .s2{font-size:22px}
+.sustenta .s2 b{font-family:'Anton',Impact,sans-serif;font-weight:400;font-size:42px;color:var(--neon)}
+.sustenta .s3{font-size:17px;color:var(--dim);line-height:1.45}
+
+/* capa e final */
+.capa{display:flex;flex-direction:column}
+.capa .meio{margin-top:auto;margin-bottom:auto}
+.centro{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+.centro .sub{margin-left:auto;margin-right:auto}
+.icone-grande{width:116px;height:116px;border-radius:30px;background:var(--preto2);padding:16px;border:1px solid #3ec9f544;box-shadow:0 0 60px #3ec9f533}
+.obrigado{font-family:'Anton',Impact,sans-serif;font-size:190px;text-transform:uppercase;line-height:.95;background:linear-gradient(90deg,#5ad7ff,#2fa8e8 60%,#f1d794);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* navegação */
+.nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:#0a0b10cc;border:1px solid #ffffff22;border-radius:99px;padding:6px 8px;z-index:5;backdrop-filter:blur(8px);transition:opacity .3s}
+.nav button{background:none;border:0;color:var(--bege);font:700 15px 'Inter',sans-serif;padding:8px 13px;border-radius:99px;cursor:pointer}
+.nav button:hover{background:#ffffff18}
+.nav .pos{color:var(--dim);font:600 14px 'Inter',sans-serif;min-width:54px;text-align:center}
+.nav.some{opacity:0}
+.barra{position:fixed;left:0;top:0;height:3px;background:var(--neon);z-index:6;transition:width .4s}
+
+/* PDF / impressão: um slide por página 16:9 */
+@page{size:1600px 900px;margin:0}
+@media print{
+  html,body{overflow:visible;background:none;height:auto}
+  .palco{position:static;display:block}
+  .deck{transform:none!important;width:auto;height:auto}
+  .slide{position:relative;width:1600px;height:900px;opacity:1;visibility:visible;page-break-after:always;break-after:page;transition:none}
+  .nav,.barra{display:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="barra" id="barra"></div>
+<div class="palco"><div class="deck" id="deck">
+
+<!-- CAPA -->
+<section class="slide escuro capa" aria-label="Capa">
+  <img class="marca-dagua" src="../assets/logo.svg" alt="" />
+  <div class="topo">
+    <div class="logo"><img src="../assets/logo.svg" alt="" /><b>MINDTRACK <i>AI</i></b></div>
+    <span class="pilula">Projeto de Startup • Empreendedorismo</span>
+  </div>
+  <div class="meio">
+    <div class="etiqueta">Apresentação do projeto</div>
+    <h1 style="margin-top:22px">MindTrack AI:<br>a escola inteira <i>no bolso</i></h1>
+    <p class="sub">O app de estudos com inteligência artificial que conhece a sua escola: organiza as aulas e as provas, diz o que estudar agora e calcula quanto falta para passar de ano.</p>
+  </div>
+  <div class="rodape">
+    <div><small>RESPONSÁVEIS PELO PROJETO</small>Caio, Cauã, Eduardo, Guilherme, Khoan, Lucas, Thiago e Tarso</div>
+    <span class="lema">Estude. Pratique. Evolua.</span>
+  </div>
+</section>
+
+<!-- 01 PROBLEMA -->
+<section class="slide claro" aria-label="O problema">
+  <img class="marca-dagua" src="../assets/logo.svg" alt="" />
+  <div class="topo">
+    <div class="logo"><img src="../assets/logo.svg" alt="" /><b>MINDTRACK <i>AI</i></b></div>
+    <span class="pilula">Projeto de Startup • Empreendedorismo</span>
+  </div>
+  <div style="margin-top:58px">
+    <div class="etiqueta">Slide 01 • O cenário atual</div>
+    <h2>O problema que <i>vivemos</i> todo dia</h2>
+    <p class="sub">Somos estudantes e vimos de perto três desafios que atrapalham quem quer ir bem na escola:</p>
+  </div>
+  <div class="cards c3">
+    <div class="card borda-tinta"><span class="ic">🗂️</span><h3>Tudo espalhado</h3><p>Provas, tarefas e datas ficam soltas entre caderno, grupo de WhatsApp, Classroom e agenda. Fácil esquecer, difícil se organizar.</p></div>
+    <div class="card borda-neon"><span class="ic">🤯</span><h3>"O que eu estudo agora?"</h3><p>Sem saber por onde começar, o aluno procrastina e só descobre no fim do bimestre que precisava de mais nota para passar.</p></div>
+    <div class="card borda-ouro"><span class="ic">💸</span><h3>Ajuda cara</h3><p>Aula particular e cursinho não cabem no bolso da maioria. Quem mais precisa de apoio é quem menos tem acesso a ele.</p></div>
+  </div>
+  <div class="rodape">
+    <div><b>46 milhões</b> de estudantes na educação básica no Brasil (Censo Escolar, Inep)</div>
+    <span class="lema">Startup MindTrack AI</span>
+  </div>
+</section>
+
+<!-- 02 SOLUÇÃO -->
+<section class="slide escuro" aria-label="Nossa solução">
+  <img class="marca-dagua" src="../assets/logo.svg" alt="" />
+  <div class="etiqueta">Slide 02 • Nossa solução</div>
+  <h2>Solução: aplicativo <i>MindTrack AI</i></h2>
+  <p class="sub" style="margin-top:14px;font-size:25px">Um app só para organizar a escola, estudar com inteligência artificial e acompanhar o próprio desempenho, no celular e no computador.</p>
+  <div class="eco">
+    <div class="t"><small>ECOSSISTEMA INTEGRADO</small><div>Organização <i>+</i> IA <i>+</i> Hábito</div></div>
+    <div class="itens">
+      <div class="item"><span>🏫</span>Minha escola</div>
+      <div class="item"><span>🧠</span>Tutor com IA</div>
+      <div class="item"><span>🎯</span>Metas e notas</div>
+      <div class="item"><span>⚔️</span>Estudar junto</div>
+    </div>
+  </div>
+  <div class="cards c4" style="margin-top:20px">
+    <div class="card"><span class="ic">🏫</span><h3>Minha Escola</h3><ul><li>Aulas, provas e tarefas</li><li>Calendário lido por foto</li><li>Google Classroom e Agenda</li></ul></div>
+    <div class="card"><span class="ic">💬</span><h3>MindTrack AI</h3><ul><li>Chat que conhece o aluno</li><li>Foto da lição explicada</li><li>Resumos, questões e slides</li></ul></div>
+    <div class="card"><span class="ic">🎯</span><h3>Passar de ano</h3><ul><li>Notas do ano por bimestre</li><li>Critério de cada matéria</li><li>Quanto falta em cada prova</li></ul></div>
+    <div class="card"><span class="ic">🔥</span><h3>Estudar junto</h3><ul><li>Amigos e chat com emojis</li><li>Foguinho de sequência</li><li>Duelos de quiz ao vivo</li></ul></div>
+  </div>
+  <div class="faixa"><span>🚀</span><span>Da organização à aprovação: <b>o estudo inteiro num app só.</b></span></div>
+</section>
+
+<!-- 03 DEMONSTRAÇÃO -->
+<section class="slide claro" aria-label="Demonstração">
+  <div class="topo">
+    <div><div class="etiqueta">Slide 03 • Demonstração prática</div><h2 style="font-size:64px">O app funcionando no celular</h2></div>
+    <span class="pilula">App real, já no ar</span>
+  </div>
+  <div class="demo">
+    <div class="celulares">
+      <figure class="cel"><img src="img/inicio.png" alt="Tela de início do MindTrack" /><figcaption>Início</figcaption></figure>
+      <figure class="cel"><img src="img/chat.png" alt="Chat do MindTrack AI" /><figcaption>MindTrack AI</figcaption></figure>
+      <figure class="cel"><img src="img/passar-de-ano.png" alt="Quanto falta para passar de ano" /><figcaption>Passar de ano</figcaption></figure>
+    </div>
+    <div class="recursos">
+      <div class="recurso"><span>💬</span><div><b>"O que eu estudo agora?"</b><p>Responde na hora com base nas provas, tarefas e notas do aluno.</p></div></div>
+      <div class="recurso"><span>🎯</span><div><b>Quanto falta para passar</b><p>Cada matéria com o critério da escola: o app diz quanto tirar em cada prova.</p></div></div>
+      <div class="recurso"><span>⚔️</span><div><b>Duelo de quiz ao vivo</b><p>Dois celulares, as mesmas perguntas ao mesmo tempo, placar em tempo real.</p></div></div>
+      <div class="acesso"><img src="img/qr.svg" alt="QR code do app" /><div><b>Aponte a câmera e teste!</b><a href="https://mindtrack-ai-ws6c.onrender.com/">mindtrack-ai-ws6c.onrender.com</a></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 04 MODELO DE NEGÓCIOS -->
+<section class="slide escuro" aria-label="Modelo de negócios">
+  <div class="etiqueta">Slide 04 • Investimento e sustentabilidade</div>
+  <h2 style="font-size:70px">Modelo de <i>negócios</i></h2>
+  <div class="negocio">
+    <div class="planos">
+      <div class="plano"><h3>Grátis</h3><div class="preco">R$ 0</div><ul><li>Agenda, provas e Minha Escola</li><li>Notas e "passar de ano"</li><li>Amigos e duelos de quiz</li></ul></div>
+      <div class="plano top"><h3>Pro</h3><div class="preco">R$ 24,90 <small>/mês</small></div><ul><li>MindTrack AI completo</li><li>Foto da lição no chat</li><li>Slides prontos e relatório para os pais</li></ul></div>
+      <div class="plano"><h3>Plus</h3><div class="preco">R$ 44,90 <small>/mês</small></div><ul><li>A IA mais forte primeiro</li><li>Correção de redação ENEM</li><li>Plano da semana e simulados</li></ul></div>
+    </div>
+    <div class="custo">
+      <small>CUSTO PARA LANÇAR</small>
+      <div class="numero">≈ R$ 180</div>
+      <div class="linha"><span>Servidor e banco de dados</span><b>R$ 0</b></div>
+      <div class="linha"><span>IA (cota grátis, ~1.000 respostas/dia)</span><b>R$ 0</b></div>
+      <div class="linha"><span>Domínio próprio (.com.br, por ano)</span><b>≈ R$ 40</b></div>
+      <div class="linha"><span>Conta na Play Store (uma vez)</span><b>≈ R$ 140</b></div>
+    </div>
+  </div>
+  <div class="sustenta">
+    <div class="s1">SUSTENTABILIDADE</div>
+    <div class="div"></div>
+    <div class="s2"><b>500</b> assinantes Pro geram <b>R$ 12.450</b>/mês</div>
+    <div class="s3">No pior caso a IA custa ~R$ 4,50 por aluno Pro: <b style="color:var(--bege)">mais de 80% de margem.</b> Também: plano Família e licença para Escolas.</div>
+  </div>
+</section>
+
+<!-- 05 AÇÃO SOCIAL -->
+<section class="slide escuro" aria-label="Ação social">
+  <img class="marca-dagua" src="../assets/logo.svg" alt="" />
+  <div class="etiqueta">Slide 05 • Contribuição social</div>
+  <h2>Nossa ação social: <i>estudo para todos</i></h2>
+  <p class="sub" style="margin-bottom:6px">Quem paga ajuda quem não pode: transformamos as assinaturas em acesso para alunos de escola pública.</p>
+  <div class="cards c3">
+    <div class="card"><span class="ic">🎓</span><h3>O programa</h3><p>A cada 10 assinaturas, 1 aluno de escola pública ganha o plano Plus completo, sem pagar nada.</p></div>
+    <div class="card"><span class="ic">🤝</span><h3>Como funciona</h3><p>Parceria com escolas públicas: a escola indica os alunos e o MindTrack libera o acesso para a turma.</p></div>
+    <div class="card"><span class="ic">📈</span><h3>Impacto</h3><p>Um tutor com IA e organização para quem não pode pagar aula particular: menos reprovação e mais autonomia.</p></div>
+  </div>
+  <div class="faixa" style="margin-top:34px"><span>💙</span><span>Cada assinatura do MindTrack <b>ajuda um estudante que não poderia pagar.</b></span></div>
+  <div class="rodape">
+    <div>MindTrack AI — organização, tutor com IA e aprovação</div>
+    <span class="lema">Feito por estudantes, para estudantes</span>
+  </div>
+</section>
+
+<!-- 06 FECHAMENTO -->
+<section class="slide escuro centro" aria-label="Conclusão">
+  <img class="icone-grande" src="../assets/logo.svg" alt="" />
+  <h2 style="font-size:92px;margin-top:40px">Transformando estudo em <i>aprovação</i></h2>
+  <p class="sub" style="max-width:1120px">O <b style="color:var(--bege)">MindTrack AI</b> une organização da escola, um tutor com inteligência artificial e o acompanhamento das notas, para que todo estudante saiba o que fazer, estude com motivação e passe de ano.</p>
+  <div class="rodape" style="justify-content:center"><span class="lema" style="font-size:30px;font-family:'Anton',Impact,sans-serif;font-weight:400;letter-spacing:.04em">OBRIGADO PELA ATENÇÃO!</span></div>
+</section>
+
+<!-- 07 OBRIGADO -->
+<section class="slide escuro centro" aria-label="Muito obrigado">
+  <div class="obrigado">Muito<br>obrigado</div>
+  <div class="acesso" style="margin-top:46px"><img src="img/qr.svg" alt="QR code do app" /><div style="text-align:left"><b style="color:var(--bege)">Teste o MindTrack AI</b><a href="https://mindtrack-ai-ws6c.onrender.com/" style="color:var(--neon)">mindtrack-ai-ws6c.onrender.com</a></div></div>
+</section>
+
+</div></div>
+
+<nav class="nav" id="nav" aria-label="Slides">
+  <button id="ant" aria-label="Slide anterior">‹</button>
+  <span class="pos" id="pos">1 / 8</span>
+  <button id="prox" aria-label="Próximo slide">›</button>
+  <button id="tela" aria-label="Tela cheia">⛶</button>
+  <a href="MindTrack-AI-Apresentacao.pdf" download style="color:var(--neon);font:700 15px 'Inter',sans-serif;padding:8px 13px;text-decoration:none">PDF</a>
+</nav>
+
+<script>
+(() => {
+  const deck = document.getElementById('deck');
+  const slides = [...deck.querySelectorAll('.slide')];
+  const pos = document.getElementById('pos'), barra = document.getElementById('barra'), nav = document.getElementById('nav');
+  let i = Math.max(0, Math.min(slides.length - 1, (Number(location.hash.slice(1)) || 1) - 1));
+  const encaixar = () => {
+    const e = Math.min(innerWidth / 1600, innerHeight / 900);
+    deck.style.transform = `scale(${e})`;
+  };
+  const ir = (n) => {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    pos.textContent = `${i + 1} / ${slides.length}`;
+    barra.style.width = `${((i + 1) / slides.length) * 100}%`;
+    history.replaceState(null, '', `#${i + 1}`);
+  };
+  addEventListener('resize', encaixar);
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); ir(i + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); ir(i - 1); }
+    else if (e.key === 'Home') ir(0); else if (e.key === 'End') ir(slides.length - 1);
+    else if (e.key === 'f' || e.key === 'F') telaCheia();
+  });
+  const telaCheia = () => (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.())?.catch?.(() => {});
+  document.getElementById('ant').onclick = () => ir(i - 1);
+  document.getElementById('prox').onclick = () => ir(i + 1);
+  document.getElementById('tela').onclick = telaCheia;
+  // toque: metade direita avança, esquerda volta; arrastar também
+  let x0 = null;
+  document.querySelector('.palco').addEventListener('pointerdown', (e) => { x0 = e.clientX; });
+  document.querySelector('.palco').addEventListener('pointerup', (e) => {
+    if (x0 === null || e.target.closest('a')) return;
+    const dx = e.clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) ir(i + (dx < 0 ? 1 : -1)); else ir(i + (e.clientX > innerWidth / 2 ? 1 : -1));
+  });
+  // a barra de navegação some quando o mouse fica parado (fica limpo no projetor)
+  let t; const mostrar = () => { nav.classList.remove('some'); clearTimeout(t); t = setTimeout(() => nav.classList.add('some'), 2500); };
+  addEventListener('pointermove', mostrar); mostrar();
+  encaixar(); ir(i);
+})();
+</script>
+</body>
+</html>
