@@ -174,9 +174,9 @@
 |---|---|---|
 | 69 | ✅ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs: a cadeira e o degrau (#586); o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro (#593); o impostor octaédrico assado na carga, a escolha por bloco e a densidade real perto (#595); os 523 estádios calibrados — fileiras de 0,8 m por metro, caimento ≤ 34°, escada de ~1,2 m, nenhuma cadeira sobreposta ou dentro de um sólido, o torcedor no tamanho de gente, a lotação dos sem forma e as cores da base = as desenhadas (#596)) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
-| 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
-| 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |
-| 77 | 🔎 Carrinho: a mão de apoio do boneco simples encostar no chão | 2 |
+| 62 | ✅ Linha escura na nuca: era o mapa de normais do pano na cabeça (#PRNUM) | 2 |
+| 63 | ✅ Bordas tracejadas em volta dos números e patrocínios das camisas: o shader sem derivada dentro de desvio e as máscaras com margem e sem névoa (#PRNUM) | 2 |
+| 77 | ✅ Carrinho: a mão de apoio no chão nos dois corpos, a palma virada para o chão no corpo novo (#PRNUM) | 2 |
 | F1 | Rostos do Brasileirão com o processo novo (a versão de teste) | 6 |
 | 45 | Gráficos melhores no celular (Baixa e Média) | 12 |
 | 46 | Sombra do estádio no gramado de dia | 6 |

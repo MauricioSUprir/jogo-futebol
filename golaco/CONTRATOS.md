@@ -4834,9 +4834,33 @@ manequim) até o rosto de cada jogador chegar.
   velocidade do boneco em m/s (`main.js` pelos dois últimos passos, o anel do replay pelos passos gravados, a comemoração e
   a substituição pelos atores; sem ela, 1,5); `peso` 1 (o goleiro 0,4: a base de espera dele é dobrada de verdade). O
   repouso não muda. Medido nas partidas: joelho parado 38–42° → 10°, tronco correndo 22–24° → 15–17°, cabeça 30° → 23°.
+- **A mão de apoio do carrinho** (item 77: "a mão de apoio do manequim deitado fica 0,073 m acima do chão"; SÓ DESENHO —
+  a pose do jogo, `anim.js poseCarrinho`, não muda): `js/render/apoio-mao.js` (puro, sem alocar; `APOIO_MAO`):
+  - `pesoApoio(pose, lado)`: um peso contínuo 0–1 pela POSE (as cenas e o replay desenham pela pose) — o produto das
+    rampas da pelve baixa (`pelve` [0,25; 0,55] m), da mão baixa (`mao` [0,14; 0,45] m), do antebraço quase deitado
+    (`ante`/`sobe`), do tronco de costas até ~65° (`tronco`: o cosseno [0,26; 0,42]; deitado de lado ou de bruços = 0), do
+    cotovelo dobrado (`dobra`) e das mãos separadas (`maos`: juntas = a bola nas mãos = 0);
+  - `maoNoChao(pose, out, lado, w, alvoY)`: a mão desce ATÉ `desce` (0,1 m, teto macio de ±`joelho` 0,025) além da do jogo
+    — não "até o chão pelo peso": assim ela anda junto da do jogo na queda e no levantar (R1 da revisão: ia ao chão de
+    estalo, o dobro do pico da base) — e nunca além de `alcance` (0,95) × braço + antebraço do ombro (o piso entra macio:
+    `joelhoAlcance` 0,04); o cotovelo sai da IK de dois ossos com os mesmos comprimentos, do lado do de antes;
+  - manequim (`jogador3d.js poseDoManequim`, também a `poseDesenhada`): a ponta da mão ao raio da cápsula + 3 mm;
+  - corpo novo (`esqueleto.js postura`): o punho a 0,04 m e a PALMA virada para o chão (`palmaNoChao`; a normal da palma
+    no descanso sai da leitura do corpo, `corpo-dados.js lerCorpo` → `repouso.palma` {E, D}, pela menor variância dos
+    vértices da mão): 70% da pronação no osso do antebraço e o resto, com a dobra, no punho (100% no antebraço murchava o
+    cotovelo a 86%; 50%, o punho a 89%).
+- **Manga comprida** (goleiro e técnico): a região de pele com o peso do braço INTEIRO abaixo da clavícula (braço,
+  antebraço e o ajudante do cotovelo: `vMembro.x`) > 0,5, como o manequim — só com o antebraço sobrava uma faixa de pele
+  entre o punho da manga curta e o cotovelo (R2 da revisão do item 77).
+- **A cabeça sem o mapa de normais do pano** (item 62: "linha escura na nuca"): o `pano-normal.webp` é do corpo; a
+  cabeça (`vParte`) usa a normal da malha (`normal_fragment_maps` trocado pelo trecho aberto: `mapN` = (0, 0, 1)).
 - **Testes**: `teste-ossos` (Node: juntas ≤ 1 mm, saltos ≤ 0,03%, sola 0–1,5 cm em ≥ 95% do apoio, volume ≥ 85% a 90°,
-  assets, O7 postura: joelho parado ≤ 20°, disparada muda ≤ 3°, tronco correndo ≤ 17°, nada no ar/mãos juntas/pés), `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto
-  de triângulos, nada baixado sem `?corpo=humano`, 0 erro).
+  assets, O7 postura: joelho parado ≤ 20°, disparada muda ≤ 3°, tronco correndo ≤ 17°, nada no ar/mãos juntas/pés; O8 a
+  mão de apoio só no chão — IA × IA, comemorações, os mergulhos do goleiro e o tronco deitado com peso 0, as sondas das
+  guardas da pelve e do tronco no deslize do carrinho; O9 a manga comprida cobre o braço), `teste-carrinho` P6 (a mão de
+  apoio no chão no deslize nos dois corpos, a palma, o punho, a seção da pele e a continuidade por fase),
+  `teste-lod-humano` (Node), `teste-corpo-tela` (navegador, CI: todos desenhados, chamadas ≤ manequim + 1, teto de
+  triângulos, nada baixado sem `?corpo=humano`, 0 erro; C9/C9b a cabeça e a nuca até a gola sem o mapa de normais).
 
 ## Rostos reais — Etapa 5.2 (22/10; contrato)
 
@@ -4882,32 +4906,59 @@ desenha nada.
 - **Pesquisa** (`tools/patrocinios/pesquisa/<clube>.json`, com as fontes): o máster e os outros patrocinadores da camisa em
   outubro de 2026, cada um com a posição, os uniformes, a cor na camisa e a largura relativa, mais a marca do fornecedor.
 - **Gerador** (`tools/patrocinios/gerar.mjs <pasta da pesquisa com os logos>`, Chromium): cada logo (SVG ou PNG) vira a
-  MÁSCARA branca em `assets/tm/patrocinios/<clube>/<marca>.webp`, de 512 × 256, com o desenho recortado, centrado e
-  encaixado.
+  MÁSCARA branca em `assets/tm/patrocinios/<clube>/<marca>.webp`, de 512 × 256, com o desenho recortado e centrado, e passa
+  pela BORDA (abaixo) antes de gravar.
   - Logo sem transparência: a máscara é a distância à cor da borda.
   - Logo com forma cheia e texto dentro: o texto sai vazado (Otsu do brilho; a forma é a cor da borda).
+- **Borda** (item 63, "retângulos tracejados brancos em volta dos números e patrocínios"; `tools/patrocinios/borda.mjs`,
+  conta pura no canal alfa, `BORDA = {margem: 8, nevoa: [36, 72], desenho: 8}`):
+  - a NÉVOA sai: α ≤ 36 vira 0, rampa contínua até 72 (a mistura do shader é em cor linear: α 12 de branco numa camisa
+    preta já leva o L* de 0 a 25);
+  - nada FORA da caixa que o shader recorta (`caixaDoShader(asp)`, o centro com a proporção do decalque);
+  - o desenho (α > 8) a ≥ 8 px (2³: limpo até o mip 3) da borda da caixa: ele ENCOLHE em volta do centro pela `escala` s
+    (filtro de área) e o jogo alarga a caixa por 1 ÷ s — o logo fica do mesmo tamanho na camisa e perde até 1 − s da
+    resolução (hoje s de 0,72 a 1, mediana 0,92).
+  - As máscaras já publicadas (os logos de origem não estão no repositório) passaram pela mesma conta em
+    `tools/patrocinios/refazer-bordas.mjs` (`--conferir` só mede). A rampa da névoa NÃO é idempotente: só passa uma vez por
+    logo — o registro `bordas` do índice diz quais já passaram (o refazer pula esses; rodar de novo não muda nada). Máscara
+    nova fora do gerar.mjs tem de passar pelo `prepararMascara` e entrar no registro.
 - **Índice** (`assets/tm/patrocinios.json`): `{clubes: {<nome de uniformes.json>: {casa|fora|terceira|goleiro: [{logo, asp,
-  pos, lado, larg, cor, nome}]}}, cheio: {logo: fração cheia}}`.
+  pos, lado, larg, cor, nome, escala?}]}}, cheio: {logo: fração cheia}, bordas: {logo: escala}}` — `escala` (ausente = 1) é
+  a da borda, igual à do registro `bordas`.
   - `pos` ∈ peito, ombro, manga, barra_frontal, acima_numero, abaixo_numero, calcao, fornecedor.
 - **Caminho**:
   - `render/identidade-pagina.js carregarUniformes` baixa junto (só na pro).
   - `identidade.js comCamisasReais` põe `decais` (com a `url`) dentro de cada kit real.
   - `render/jogador3d.js linhaKit` escreve até 6 decalques nas linhas 17–28 do kit (`TEXELS_KIT` 32):
     - A = [camada do logo, posição, largura em m, largura ÷ altura]; B = [cor, lado];
-    - a largura relativa é da frente do tronco (0,34 m), com um teto de altura por posição;
+    - a largura relativa é da frente do tronco (0,34 m), com um teto de altura por posição; a caixa escrita é a largura ÷
+      `escala` (a margem da borda fica fora do logo);
     - a ordem quando passa de 6: peito, fornecedor, acima do número, manga, ombro, calção, barra, abaixo do número;
     - a cor que some no tecido vai para o contraste.
   - `render/humano3d.js`:
     - as máscaras ficam numa `DataArrayTexture` R8 de 40 camadas (`logoDe(url)` pede na 1ª vez; só a camada nova sobe);
     - o shader projeta cada decalque PLANO na posição de repouso, só na face virada para o plano (a normal de repouso pela
-      derivada da tela), na região certa (camisa, manga, calção).
+      derivada da tela), na região certa (camisa, manga, calção);
+    - SEM DERIVADA DENTRO DE DESVIO (item 63; GLSL ES 3.00 §8.9: a derivada implícita em fluxo não uniforme é indefinida e a
+      GPU de verdade pega um mip qualquer nos quads da borda da caixa — o tracejado): `dFdx`/`dFdy` da posição de repouso
+      e da UV saem no TOPO do `COR_F` (`gRx`, `gRy`, `gUx`, `gUy`); logos e dígitos leem por `textureGrad` com o gradiente
+      analítico de cada projeção; a cabeça (rosto e cabeça base, sem anisotropia) por `textureLod` com o nível da mesma
+      derivada (`lodUv`: o `textureGrad` é mais lento nas GPUs de celular); os `fwidth` dos padrões e do meião pela `fwR`.
+      Nenhum `texture()` nas texturas com mipmap nem derivada nas funções ou depois do 1º `if` do `COR_F` (o `tReg` é sem
+      mipmap). Toda troca no texto do shader passa por `trocar()` (avisa no console quando o trecho não existe: o
+      `onBeforeCompile` vê os `#include` FECHADOS).
 - **Testes**:
   - `teste-patrocinios` (Node):
     - todo clube com camisa real tem decalques;
     - logos 512 × 256 ≤ 48 KB, nenhum sobrando, ≤ 2 MB;
     - os decalques entram nos kits só com a base;
-    - no máximo 3 máscaras viram mancha.
-  - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido.
+    - no máximo 3 máscaras viram mancha;
+    - P6 a regra das derivadas no texto do shader; P7 o registro `bordas` e as escalas.
+  - `teste-corpo-tela` C6/C7: na pro, os logos carregam; na pública, nada é pedido. C10: as 161 máscaras lidas como o
+    jogo lê (margem ≥ 8 px, névoa ≤ 0,25%, nada fora da caixa). C11: o mesmo quadro com o shader de sempre, com a derivada
+    implícita (`textureGrad`/`textureLod` → `texture()`) e com a caixa cheia/vazia — longe da borda das caixas o de sempre
+    = o implícito (os gradientes analíticos e o nível da cabeça certos); na faixa de ±2 px da borda de cada logo o
+    implícito mostra o defeito (pontos e blocos; ≥ 5 px) e, nos pontos que ele escurece, o de sempre é a camisa.
 
 ## Cenas das paradas — replays nas paradas, cartão, intervalo e pós-jogo (22/10; contrato)
 Pedido do dono: "a cena de pós jogo, e a cena de intervalo, as cenas de cartões, e os replays de faltas e jogadas passando
