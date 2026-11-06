@@ -51,6 +51,13 @@ html.modo-penaltis .minimapa, html.modo-penaltis #chip-minimapa { display: none 
 
 const JANELA = 7; // bolinhas visíveis por time (as alternadas longas mostram as últimas)
 
+// (item 125, revisão R4) a letra do painel (a TM Cond 800 e 600, o --f-disp) pedida JÁ na importação deste módulo — no modo Pênaltis
+// ela vem no começo da página (main.js carregarDisputa), segundos antes do 1º quadro da disputa: sem isso a fonte só era pedida
+// quando o painel pintava pela 1ª vez e o texto trocava de letra na chegada. Exceção anotada ao "sem ?tm o download inicial não
+// cresce" (o teste-carga mede a partida padrão): só no modo Pênaltis, ~44 KB (as faces latin 600 e 800); o latin-ext só com um
+// nome que peça (unicode-range)
+if (typeof document !== 'undefined' && document.fonts?.load) for (const f of ['800 13px "TM Cond"', '600 13px "TM Cond"']) document.fonts.load(f).catch(() => null);
+
 /**
  * opc = {raiz (onde o painel entra; padrão #hud), times: () => [{sigla, nome, cor?}] (os do placar), nome: id → {num, nome}}.
  * Devolve {atualizar(m, timeHumano), limpar(), estado()}.

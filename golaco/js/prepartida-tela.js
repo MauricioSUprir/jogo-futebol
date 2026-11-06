@@ -123,7 +123,12 @@ export function criarPrepartida(opc) {
     const A = st.L.abas;
     return A.larguraAba - 1.2 * A.letra - 2 - (icone ? 1.8 * A.letra : 0) - (glifo ? 1.45 * A.letra : 0) - 1;
   }
-  const cabeAba = (t, icone, glifo = false) => medir(t, st.L.abas.letra, 800) <= espacoTexto(icone, glifo);
+  // (revisão R5) a conta com a MESMA letra do desenho: a TM Cond 800 a 1,12 em da aba (prepartida.css .pp-aba-txt) — medida na
+  // Inter 800 a 1 em ela saía 12–18% mais larga (abas encurtadas e sem o ícone à toa). Antes de a TM Cond chegar a medida cai na
+  // reserva da mesma pilha do --f-disp (ou numa letra mais larga: a conta erra para o lado de encurtar, sem "…") e a tela refaz o
+  // layout quando a fonte chega (main.js carregarPrepartida)
+  const medirDisp = (t, px) => { medidor.font = `800 ${px}px "TM Cond", "TM Cond reserva", "TM Cond reserva larga", "Arial Narrow", sans-serif`; return medidor.measureText(t).width; };
+  const cabeAba = (t, icone, glifo = false) => medirDisp(t, 1.12 * st.L.abas.letra) <= espacoTexto(icone, glifo);
   /** O 1º rótulo da lista que cabe (nenhum: o último, com o "…" do CSS). */
   const rotuloQueCabe = (lista, icone) => lista.find(t => cabeAba(t, icone)) ?? lista[lista.length - 1];
 
