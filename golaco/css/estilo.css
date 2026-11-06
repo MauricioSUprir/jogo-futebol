@@ -641,9 +641,13 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible, #menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible {
   font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.26), rgba(34, 197, 94, 0.06) 60%, rgba(34, 197, 94, 0) 92%);
 }
-/* a entrada da lista em cascata ao abrir a pausa (20 ms por item, ≤ 200 ms no total) */
+/* a entrada da lista em cascata ao abrir a pausa (20 ms por item, ≤ 200 ms no total). `backwards` (revisão R1): só o "from" no atraso
+   e nada depois do fim — com `both` o "to { opacity: 1 }" ficava valendo e passava por cima do apagado do item desabilitado (o
+   "Pausar a partida" do online sem pausas); o desabilitado entra até o apagado dele */
 @keyframes pausa-item-entra { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
-#menu:not([hidden]) #menu-acoes > .btn, #menu:not([hidden]) #menu-acoes > .linha-par { animation: pausa-item-entra 120ms cubic-bezier(0.05, 0.7, 0.1, 1) both; }
+@keyframes pausa-item-entra-off { from { opacity: 0; transform: translateX(-8px); } to { opacity: 0.45; transform: none; } }
+#menu:not([hidden]) #menu-acoes > .btn, #menu:not([hidden]) #menu-acoes > .linha-par { animation: pausa-item-entra 120ms cubic-bezier(0.05, 0.7, 0.1, 1) backwards; }
+#menu:not([hidden]) #menu-acoes > .btn:disabled { animation-name: pausa-item-entra-off; }
 #menu #menu-acoes > :nth-child(2) { animation-delay: 20ms; } #menu #menu-acoes > :nth-child(3) { animation-delay: 40ms; }
 #menu #menu-acoes > :nth-child(4) { animation-delay: 60ms; } #menu #menu-acoes > :nth-child(5) { animation-delay: 80ms; }
 #menu #menu-acoes > :nth-child(n + 6) { animation-delay: 80ms; }

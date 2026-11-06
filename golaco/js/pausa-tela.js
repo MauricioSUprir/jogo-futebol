@@ -132,6 +132,9 @@ export function criarPausaTela({ cartao, est }) {
   /** Mede o cartão e põe o campo e as fichas (o ResizeObserver chama sozinho; a tela muda de tamanho). */
   function layout() {
     if (!cartao || cartao.hidden || !dados) return;
+    // (revisão R2) fora de cena (num submenu a lista e o cartão saem: display none) não mexe na largura: zerada aqui, o cartão
+    // voltava do submenu 2 quadros na largura do CSS e o próprio ResizeObserver o encolhia dentro do callback (o erro de laço)
+    if (!cartao.getClientRects().length) return;
     // (item 125) a largura do CSS (o ajuste ao campo da vez anterior sai: a conta parte da largura de verdade)
     cartao.style.width = '';
     const cs = getComputedStyle(cartao);
@@ -166,16 +169,33 @@ export function criarPausaTela({ cartao, est }) {
     cartao.style.setProperty('--pt-ment-f', `${Math.round(Math.max(11, Math.min(15, sz.campo.w * 0.03)))}px`);
     // a mentalidade só com lugar (mais de 300 px: o 844×390 e o PC)
     cartao.classList.toggle('largo', cartao.clientWidth > 300);
+    const pos = dados.fichas.map(f => posicaoNaTela(f, sz.campo.w, sz.campo.h, sz.cw, sz.ch, true));
+    // (revisão V8) a plaquinha do nome passa da largura da coluna (sz.cw) quando há lugar: até 4 px do vizinho mais perto que está
+    // na mesma altura (as caixas das fichas se cruzam na vertical), da borda do campo e do bloco da formação no canto de baixo à
+    // esquerda — no 667×375 e no 568×320 os nomes de 10 letras ("CAVALCANTI") saíam com "…" com o lado vazio. Nunca menor que sz.cw
+    const fo = q('.pt-formacao'), fw = fo ? fo.offsetWidth : 0, fh = fo ? fo.offsetHeight : 0;
+    const foTopo = sz.campo.h - (fo ? parseFloat(getComputedStyle(fo).bottom) || 0 : 0) - fh, foDir = (fo ? fo.offsetLeft : 0) + fw;
     dados.fichas.forEach((f, i) => {
       const e = fichasEl[i];
       if (!e) return;
-      const p = posicaoNaTela(f, sz.campo.w, sz.campo.h, sz.cw, sz.ch, true);
+      const p = pos[i];
       e.style.left = `${Math.round(p.x)}px`;
       e.style.top = `${Math.round(p.y - sz.ch / 2)}px`;
+      let lim = 2 * Math.min(p.x, sz.campo.w - p.x) - 4;
+      pos.forEach((o, k) => { if (k !== i && Math.abs(o.y - p.y) < sz.ch) lim = Math.min(lim, Math.abs(o.x - p.x) - 4); });
+      if (fw && p.y + sz.ch / 2 > foTopo - 2) lim = Math.min(lim, 2 * (p.x - foDir - 4));
+      e.style.setProperty('--pt-nm-max', `${Math.max(sz.cw, Math.floor(lim))}px`);
     });
+    // ainda sem lugar para algum nome (as 4 da defesa no celular pequeno): os nomes do cartão TODO na TM Cond 600, ~5% mais estreita
+    // (a mesma letra em todas as fichas; o "…" fica só para o que nem assim cabe)
+    cartao.classList.remove('nomes-estreitos');
+    if (fichasEl.some(e => { const n = e.querySelector('.pt-nm'); return !!n && n.scrollWidth > n.clientWidth + 0.5; })) cartao.classList.add('nomes-estreitos');
   }
   const ro = typeof ResizeObserver === 'function' && cartao ? new ResizeObserver(() => layout()) : null;
   ro?.observe(cartao);
+  // (revisão R2) com a largura ajustada ao campo o cartão não muda de tamanho quando a janela muda (o observador não vê): a janela
+  // também refaz a conta (layout() não faz nada com a pausa fechada)
+  if (cartao && typeof addEventListener === 'function') addEventListener('resize', () => layout());
 
   // ---- as estatísticas: uma tabela (o leitor de tela lê "Posse de bola, GLÇ 55%"); a posse com a barrinha dividida
   function valor(itm, v, t) {

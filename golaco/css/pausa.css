@@ -30,8 +30,12 @@
 #menu .pt-linhas { position: absolute; inset: 0; width: 100%; height: 100%; fill: none; stroke: rgba(255, 255, 255, 0.26); stroke-width: 1px; vector-effect: non-scaling-stroke; }
 #menu .pt-linhas * { vector-effect: non-scaling-stroke; }
 /* a formação (grande, branca) e a mentalidade (verde-claro, caixa alta) no canto de baixo à esquerda do meu meio campo: livre em
-   toda formação (a fila do goleiro só tem o goleiro, no meio da área) */
-#menu .pt-formacao { position: absolute; left: 8px; bottom: 6px; z-index: 1; pointer-events: none; display: flex; flex-direction: column; line-height: 0.95; }
+   toda formação (a fila do goleiro só tem o goleiro, no meio da área). Numa plaquinha escura como a dos nomes (revisão V5: no
+   celular a mentalidade passava por cima da linha da grande área — "nada sobre nada") */
+#menu .pt-formacao {
+  position: absolute; left: 6px; bottom: 5px; z-index: 1; pointer-events: none; display: flex; flex-direction: column; line-height: 0.95;
+  padding: 3px 6px 4px; border-radius: 4px; background: rgba(5, 8, 7, 0.72);
+}
 #menu .pt-formacao b { font: 800 var(--pt-forma-f, 22px) / 0.95 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 #menu .pt-formacao span { font: 600 var(--pt-ment-f, 11px) / 1.1 var(--f-disp); color: var(--p-verde-cl); letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px; }
 #menu .pt-formacao span:empty { display: none; }
@@ -48,10 +52,12 @@
 }
 #menu .pt-ficha.gol .pt-disco { background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 55%), var(--pt-gol, #b8f02e); color: var(--pt-gol-txt, #050807); }
 #menu .pt-nm {
-  max-width: var(--pt-nome-w, 52px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;
+  max-width: var(--pt-nm-max, var(--pt-nome-w, 52px)); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; box-sizing: border-box;
   font: 800 var(--pt-letra, 11px) / 1.15 var(--f-disp); letter-spacing: 0; text-transform: uppercase; color: var(--p-texto);
   padding: 1px 3px; border-radius: 3px; background: rgba(5, 8, 7, 0.72);
 }
+/* (revisão V8) algum nome sem lugar na 800 (pausa-tela.js layout): todos na 600 — mais estreita, a mesma letra em todas as fichas */
+#menu .pausa-time.nomes-estreitos .pt-nm { font-weight: 600; }
 /* "você" (o controlado ou o travado do Rumo ao Estrelato): a plaquinha BRANCA e o anel verde-claro com brilho */
 #menu .pt-ficha.voce .pt-nm { background: #fff; color: #050807; }
 #menu .pt-ficha.voce .pt-disco { box-shadow: 0 0 0 2px #050807, 0 0 0 4px var(--p-verde-cl), 0 0 14px rgba(74, 222, 128, 0.7); }

@@ -673,8 +673,8 @@ async function partidaCelular(s, pg) {
     const barra = getComputedStyle(b, '::before').backgroundColor;
     const txt = getComputedStyle(document.querySelector('#menu-acoes [data-cmd="ajuda"]')).color;
     const fundo = getComputedStyle(document.querySelector('.janela-menu')).backgroundImage;
-    // (item 125) a TM Cond 600 nos itens e 800 no foco, carregadas
-    await Promise.all(['600 15px "TM Cond"', '800 15px "TM Cond"'].map(f => document.fonts.load(f).catch(() => null)));
+    // (item 125) a TM Cond 600 nos itens e 800 no foco, carregadas PELO JOGO: o check vem antes de qualquer pedido do teste (revisão
+    // R7: com o load do teste antes do check a meta passava por construção) — o fonts.ready lá em cima só espera o que já foi pedido
     const famIt = getComputedStyle(document.querySelector('#menu-acoes [data-cmd="ajuda"]')).fontFamily.split(',')[0].trim().replace(/["']/g, '');
     return { fam, famIt, ok: document.fonts.check('600 15px "TM Cond"') && document.fonts.check('800 15px "TM Cond"'), barra, txt, fundo };
   });
