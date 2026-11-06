@@ -2961,8 +2961,9 @@ function quadro(agoraMs, desenhar = true) {
 
 /**
  * Online 1×1 (contrato "Online 1×1"): o laço pela sessão (online.js). Só roda o passo com as DUAS entradas dele; a minha
- * lida agora vale para o passo n + D. O que é local — o replay, a comemoração, a minha pausa, o celular em pé — só segura
- * a MINHA simulação (sem passo, sem entrada nova): o outro espera sozinho ("Aguardando…"). Menu, Ajuda e o editor
+ * lida agora vale para o passo n + D. O que é local — o replay, a comemoração, a cena de substituição (item 30), a minha
+ * pausa, o celular em pé — só segura a MINHA simulação (sem passo, sem entrada nova): o outro espera sozinho ("Aguardando…";
+ * com a marca E_CENA no pacote, "{nome} ainda está vendo a cena"). Menu, Ajuda e o editor
  * abertos NÃO param o jogo: a minha entrada vai com o bit IA (a IA joga pelo meu controlado, nos dois aparelhos). Um
  * pacote por quadro; o hash do mundo a cada 60 passos (dessincronia).
  */
