@@ -11,8 +11,10 @@
 //   P6 o shader do corpo (js/render/humano3d.js, DECL_F + COR_F) sem derivada implícita dentro de desvio (item 63:
 //      "retângulos tracejados brancos em volta dos números e patrocínios"; GLSL ES 3.00 §8.9 — indefinida em fluxo não
 //      uniforme; a GPU de verdade pega um mip qualquer na borda da caixa): nenhum texture() nas texturas com mipmap (logos,
-//      dígitos, rostos, cabeça) — só textureGrad —, nenhum dFdx/dFdy/fwidth nas funções do DECL_F e, no COR_F, só antes do
-//      1º desvio (no topo). Estático: o SwiftShader do CI calcula a derivada certa mesmo dentro do if (não mostra o defeito).
+//      dígitos, rostos, cabeça) — só textureGrad ou textureLod —, nenhum dFdx/dFdy/fwidth nas funções do DECL_F e, no COR_F,
+//      só antes do 1º desvio (no topo). É a REGRA no texto; o comportamento se mede no navegador (teste-corpo-tela C11: o
+//      SwiftShader do CI mostra uma parte do defeito — o ponto no canto da caixa, a linha pontilhada na manga e o decalque de
+//      cima apagando o de baixo em quads — e o C11 compara o shader com a variante de derivada implícita).
 //   P7 a borda das máscaras feita (item 63; tools/patrocinios/borda.mjs + refazer-bordas.mjs — sem a névoa, o desenho a ≥ 8
 //      px da caixa do shader, encolhido pela `escala`): cada logo no registro `bordas` do índice e a `escala` de cada
 //      decalque = a do registro (ausente quando 1), entre 0,7 e 1 (o logo não perde mais de 30% da resolução). A máscara em

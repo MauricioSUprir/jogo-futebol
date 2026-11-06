@@ -41,7 +41,7 @@ const LISTA = [
   ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular; a cena de substituição com a escolha do anfitrião, cada lado segurando só a sua — item 30)', 'teste-online-tela.mjs', { deploy: true }],
   // Item 58 (dono, 23/10: "quero ele igual ao do FIFA ... o campinho do time no canto direito")
   ['pausa do FC 24 com o campinho (lista à esquerda, cartão do time à direita, sem rolar em 4 telas do celular e no PC, o jogo à vista, teclado/controle/toque, leitor de tela, ?tm e online)', 'teste-pausa-tela.mjs', { deploy: true }],
-  ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele, a nuca, as máscaras dos patrocínios)', 'teste-corpo-tela.mjs'],
+  ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele, a nuca até a gola, as máscaras e as bordas dos patrocínios)', 'teste-corpo-tela.mjs'],
   ['mira pelo que se vê na tela (o meio e os paus vistos → a mira no alvo, PC e celular, pênalti, câmera aproximada e as do Livre)', 'teste-mira-tela.mjs'],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],

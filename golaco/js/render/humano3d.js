@@ -115,12 +115,19 @@ vec4 kit(int i) { return texelFetch(tKits, ivec2(i, int(vSlot + 0.5)), 0); }
 // pela máscara, a caixa do decalque e a célula do dígito mudam de pixel para pixel, e a GPU de verdade (celular, ANGLE
 // sobre D3D/Metal) que achata o desvio pega um mip qualquer nos quads da borda: o traço de 2 px, um quad sim, outro não,
 // na cor do logo ou do número. As derivadas saem no TOPO do COR_F (fluxo uniforme) e as leituras com mipmap vão por
-// textureGrad com o gradiente de cada projeção (todas afins na posição de repouso ou na UV). Custo: as mesmas leituras.
+// textureGrad com o gradiente de cada projeção (todas afins na posição de repouso ou na UV; a cabeça, por textureLod com o
+// nível da mesma derivada: lodUv). As mesmas leituras de antes (nenhuma a mais).
 // (Stack Overflow 53734640, "get the derivatives outside"; Khronos, VK_KHR_shader_quad_control: o LoD indefinido dentro
 // do if não uniforme)
 vec3 gRx, gRy; // dFdx/dFdy da posição de repouso
 vec2 gUx, gUy; // dFdx/dFdy da UV
 float fwR(vec3 k) { return abs(dot(k, gRx)) + abs(dot(k, gRy)); } // fwidth(dot(k, vRest)) sem derivada no desvio
+// o nível do mip de uma textura de lado tam lida pela UV (a conta do GLSL ES 3.00 §3.8.10: λ = log2 ρ, ρ = o maior
+// comprimento da derivada da UV em texels): a CABEÇA (todo pixel dela; o rosto e a cabeça não têm anisotropia) lê por
+// textureLod com ele — o textureGrad é mais lento que o texture() e o textureLod nas GPUs de celular (Arm, "Texture
+// sampling performance": "do not use textureGrad() unless necessary"); os logos e os dígitos (poucos pixels, o logo com
+// anisotropia 4) ficam no textureGrad (R1-1 da revisão)
+float lodUv(vec2 tam) { vec2 a = gUx * tam, b = gUy * tam; return 0.5 * log2(max(max(dot(a, a), dot(b, b)), 1e-12)); }
 float aa(float x, float w) { return smoothstep(-w, w, x); }
 // padrões da camisa pela posição de repouso (x = frente, y = cima, z = direita; a camisa vai da barra em y 1,03 à gola em
 // 1,50, com ~0,2 m de meia largura)
@@ -216,9 +223,9 @@ const COR_F = `
   if (vParte > 0.5) {
     float camada = kit(13).w;
     if (camada > 0.5) {
-      cor = textureGrad(tRostos, vec3(vUv, camada), gUx, gUy).rgb; // o rosto do próprio jogador (a foto levada à pele da cabeça)
+      cor = textureLod(tRostos, vec3(vUv, camada), lodUv(vec2(textureSize(tRostos, 0).xy))).rgb; // o rosto do próprio jogador (a foto levada à pele da cabeça)
     } else {
-      vec4 tc = textureGrad(tCabeca, vUv, gUx, gUy);
+      vec4 tc = textureLod(tCabeca, vUv, lodUv(vec2(textureSize(tCabeca, 0))));
       vec3 pele = kit(11).rgb, tomRB = vec3(0.78, 0.55, 0.43);
       // a pele da cabeça do Rocketbox no tom do jogador (o cabelo e as sobrancelhas escuros quase não mudam)
       float lum = dot(tc.rgb, vec3(0.299, 0.587, 0.114));
