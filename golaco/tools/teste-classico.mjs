@@ -5,9 +5,10 @@
 //
 // Estruturais (reprovam na base: a lógica não existe):
 //  K0 a tabela CLASSICO: só as chaves da lista, nos sentidos permitidos, nenhuma com o nome da constante que cobre; cfgBote({}, t)
-//     é o MESMO objeto ACOES.boteIA; com m.classico cada nível tem todas as chaves iguais (===) às do de origem menos
-//     chancePorPasso e descanso, que batem com a fórmula; a ordem Fácil+C < Normal+C < Difícil+C ≤ Lenda+C (e
-//     Fácil+C abaixo do Normal sem).
+//     é o MESMO objeto ACOES.boteIA; com m.classico cada nível (a vontade do jogo com a pessoa), os companheiros dela (idem) e a
+//     IA × IA (a vontade própria) têm todas as chaves iguais (===) às do de origem menos chancePorPasso e descanso, que batem com
+//     a fórmula; a ordem ESTRITA Fácil+C < Normal+C < Difícil+C < Lenda+C, cada nível+C acima do nível sem (o clássico mexe
+//     também no Lenda), Fácil+C abaixo do Normal sem; o seguraClassico (1 sem a marca; o da IA × IA e o do jogo com a pessoa).
 //  K1 a marca: {classico: true} → m.classico === true; sem o campo, false, 'sim', 1, 'true' → o campo AUSENTE; dois humanos →
 //     true; o Livre e os Pênaltis nunca o recebem.
 //  K2 o hash: sem × {classico: false} × {classico: 'sim'} → o MESMO hash a cada 300 passos (demo + 4 roteiros, 1 semente × 2
@@ -25,27 +26,37 @@
 //  KI a instrumentação só lê: a cópia com os ganchos ligados dá o mesmo hash da lógica original.
 // Medidas (pareadas: as mesmas sementes com e sem o clássico; "PROVADO" = bootstrap pareado e estratificado por modo, 2000×,
 // unilateral 95%; as metas reprovam só quando PROVAM, nunca pelo ponto — lição do D3/D8):
-//  C1 botes (TENTATIVAS da IA: a demo os dois times, os roteiros o time da IA): +25–50% (reprova se provar < +20% ou > +60%).
-//  C2 faltas da IA (não o controlado): as ESPERADAS pelo árbitro — Σ p·cuidado de cada bote avaliado + Σ p de cada carga + Σ p
-//     de cada passo do batido que segura —; no --completo também as MARCADAS. +25–50% (reprova se provar < +20% ou > +60%).
+//  C1 botes (TENTATIVAS da IA: a demo os dois times, os roteiros o time da IA), POR MODO (revisão do item 35: juntas, a demo e os
+//     roteiros escondiam a IA × IA acima da faixa): IA × IA +25–50% (reprova se provar < +20% ou > +60%); contra a pessoa
+//     (META_C1.rot) +15–50% (reprova se provar < +10% ou > +60%: a vontade alta contra ela virava a dificuldade de cima).
+//  C2 faltas da IA (não o controlado), POR MODO: as ESPERADAS pelo árbitro — Σ p·cuidado de cada bote avaliado + Σ p de cada
+//     carga + Σ p de cada passo do batido que segura —; no --completo também as MARCADAS. +25–50% (reprova se provar < +20% ou >
+//     +60%), nos dois modos.
 //  C3b a chance por contato (Σ p ÷ N do árbitro nos botes e cargas avaliados): razão em [0,90; 1,10] (reprova se provar fora).
+//  C3c a mesma só no bote (a carga junto diluía a alta do bote): em [0,90; 1,10] (reprova se provar fora).
 //  C4 amarelos da IA: CI reprova se provar > +100% ou < 0%; --completo +20–60% (reprova se provar < +10% ou > +80%) e o amarelo
 //     por falta sem provar acima de +40%.
 //  C5 vermelhos da IA ≤ 0,2 por partida com o clássico (Normal+C e Lenda+C; Poisson: reprova se a contagem provar acima).
 //  C6 gols: sem queda provada além de −25% nem alta provada além de +10%.   C7 chutes: sem queda provada além de −15%.
+//  C6p/C7p o time da PESSOA (roteiros, time 0): gols sem queda provada além de −25%, chutes além de −15% (o clássico não vira a
+//     dificuldade de cima; revisão do item 35: com a vontade 2,6 nos dois times, chutes 0,66 e gols 0,60 da pessoa).
+//  C12 os cartões do time da pessoa ÷ os da IA (roteiros), com × sem: sem subida provada do lado da pessoa (binomial condicional;
+//     revisão do item 35: 10 → 23 do lado da pessoa com os da IA iguais).
 //  C8 bola rolando: informativa; reprova só se provar alta.
 //  C9 intensidade dos guiados pela IA de linha: volume (m por minuto de bola rolando) sem alta provada além de +5%; disparada
 //     (> 7 m/s) além de +10%; presença (um adversário a ≤ 5 m do condutor) além de +8%.
 //  C10 a combinação com a dificuldade (contra os 4 roteiros): botes por minuto de posse da pessoa Fácil+C < Normal+C PROVADO;
-//     Normal+C × Lenda+C e Fácil+C × Normal sem sem o lado errado provado (no --completo, os quatro degraus PROVADOS: com 16
-//     partidas por nível os degraus de ~10–13% não se provam; o K0 confere a ordem nos parâmetros); faltas da IA Lenda+C ≤ 1,8 ×
-//     Normal+C (reprova quando prova acima); vermelhos pelo C5.
+//     Normal+C × Difícil+C, Difícil+C × Lenda+C e Fácil+C × Normal sem sem o lado errado provado (no --completo, 32 por nível,
+//     esses degraus PROVADOS menos o Normal+C × Difícil+C, que o bote satura: ~1,07×; o K0 confere a ordem estrita nos
+//     parâmetros); o Lenda+C sem MENOS botes PROVADOS que o Lenda sem; faltas da
+//     IA Lenda+C ≤ 1,8 × Normal+C (reprova quando prova acima); vermelhos pelo C5 (Normal+C, Difícil+C e Lenda+C).
 //  C11 os companheiros da pessoa (informativo): tentativas e faltas sem × com.
 // Partidas de 2 × --min (4) min: 'demo' (IA × IA; a IA pelo controlado do time 0) e os 4 roteiros (tools/lib/humano-roteiro.mjs;
 // o time 0 é a pessoa, o time 1 a IA). Lógica INSTRUMENTADA (tools/lib/classico-medidas.mjs: ganchos que só leem).
 //
-//   node tools/teste-classico.mjs                   (CI: demo 16 + 4 roteiros × 8 = 48 por braço; + Fácil+C e Lenda+C × 4 × 4)
-//   node tools/teste-classico.mjs --completo        (a medida do dono, fora do CI: 96 por braço; + Fácil+C e Lenda+C × 4 × 8)
+//   node tools/teste-classico.mjs                   (CI: demo 16 + 4 roteiros × 8 = 48 por braço; + Fácil+C, Difícil+C, Lenda+C e
+//                                                    Lenda sem × 4 × 4)
+//   node tools/teste-classico.mjs --completo        (a medida do dono, fora do CI: 96 por braço; + os 4 braços da dificuldade × 4 × 8)
 //   node tools/teste-classico.mjs --so portao       (só K0–K4 e KI, rápido)
 //   node tools/teste-classico.mjs --so medida --sementes 8 --demo 32 --sem0 1001 --set CLASSICO.vontade=1.8 --json t.json
 //        --sem-de sem.json    (a triagem: o braço sem o clássico já jogado — guardado por --json — não roda de novo)
@@ -82,6 +93,12 @@ const BOOT = 2000;
 const CADA = 300;
 const MH = 2; // minutos por tempo nas cenas de hash (K2, KI)
 const INSTR_ENV = 'GOLACO_CLASSICO_INSTR';
+const ARMS_DIF = [['facil', true], ['dificil', true], ['lenda', true], ['lenda', false]];
+// C1/C2 por modo (revisão do item 35: a demo junto dos roteiros escondia a IA × IA acima da faixa): [reprova se provar abaixo,
+// reprova se provar acima] da razão com ÷ sem. A IA × IA: +25–50% (reprova < +20% ou > +60%). Contra a pessoa a vontade é menor
+// (o jogo com a pessoa: CLASSICO.vontadePessoa — a alta virava a dificuldade de cima) e as faltas vêm também do `segura`
+const META_C1 = { demo: [1.20, 1.60], rot: [1.10, 1.60] };
+const META_C2 = { demo: [1.20, 1.60], rot: [1.20, 1.60] };
 
 // ------------------------------------------------------------------------------------------- processo filho
 const estadoRot = sem => ({ s: (sem * 2654435761) >>> 0 || 1, carga: null, id: -1, desde: 0, espera: 0 });
@@ -147,6 +164,13 @@ async function rodarTarefas(tarefas, instr) {
   return res;
 }
 
+/** C(n, k) em ponto flutuante. */
+function binom(n, k) {
+  let r = 1;
+  for (let i = 1; i <= k; i++) r = r * (n - k + i) / i;
+  return r;
+}
+
 /** P(X ≥ k) para X ~ Poisson(λ). */
 function caudaPoisson(k, lam) {
   let termo = Math.exp(-lam), acum = 0;
@@ -174,7 +198,7 @@ async function principal() {
     const K = C.CLASSICO;
     // (a contenção e o aperto do 1º homem mais perto e a bola encostada — contencaoMenos/apertoMenos/encostadaVrelMais da
     // especificação — saíram na triagem, PESQUISA-CLASSICO.md §6; voltando, entram aqui com as faixas e os pisos conferidos)
-    const FAIXA = { vontade: [1, 3], descansoMin: [12, 45], boteTeto: [0.22, 0.30], segura: [1, 2] };
+    const FAIXA = { vontade: [1, 3], vontadePessoa: [1, 3], descansoMin: [12, 45], boteTeto: [0.22, 0.30], segura: [1, 2], seguraPessoa: [1, 2] };
     const COBERTAS = ['chancePorPasso', 'descanso', 'contencao', 'aperto', 'encostadaVrel', 'encostada', 'alcance', 'colada', 'vParado', 'boteIA', 'engaja', 'encurta', 'tatica', 'semSPA'];
     if (!K) prob.push('sem config.js CLASSICO');
     else {
@@ -185,34 +209,53 @@ async function principal() {
         if (!(typeof v === 'number' && v >= a && v <= b)) prob.push(`${k} ${v} fora de [${a}; ${b}]`);
         if (k === 'descansoMin' && !Number.isInteger(v)) prob.push('descansoMin não é inteiro');
       }
-      for (const k of ['vontade', 'descansoMin', 'boteTeto']) if (!(k in K)) prob.push(`sem ${k}`);
+      for (const k of ['vontade', 'vontadePessoa', 'descansoMin', 'boteTeto', 'segura', 'seguraPessoa']) if (!(k in K)) prob.push(`sem ${k}`);
     }
     if (typeof S.cfgBote !== 'function' || !K) prob.push('sem sim.js cfgBote');
     else {
       for (const t of [0, 1]) if (S.cfgBote({}, t) !== C.ACOES.boteIA) prob.push(`cfgBote({}, ${t}) não é o ACOES.boteIA`);
-      const fake = (n, cl) => ({ humanos: [0], iaNaEntrada: {}, ...(n !== 'normal' ? { dificuldade: n } : {}), ...(cl ? { classico: true } : {}) });
-      const ch = {}, ds = {};
-      for (const n of C.DIFICULDADE.niveis) {
-        const o = S.cfgBote(fake(n, false), 1), c = S.cfgBote(fake(n, true), 1);
-        if (o === c) { prob.push(`${n}: o objeto do clássico é o mesmo do de origem`); continue; }
+      // (o jogo com a pessoa: o time 0 dela, sem marca da IA na entrada; a IA × IA: a entrada do time 0 com a marca)
+      const fake = (n, cl, ia = false) => ({ humanos: [0], iaNaEntrada: ia ? { 0: true } : {}, ...(n !== 'normal' ? { dificuldade: n } : {}), ...(cl ? { classico: true } : {}) });
+      const confere = (nome, o, c, V) => {
+        if (o === c) { prob.push(`${nome}: o objeto do clássico é o mesmo do de origem`); return; }
         // (só a chance e o descanso mudam; o resto — alcance, colada, encostada, vParado (o árbitro lê o ACOES.boteIA) — igual)
         const ko = Object.keys(o).sort().join(','), kc = Object.keys(c).sort().join(',');
-        if (ko !== kc) prob.push(`${n}: chaves diferentes (${kc})`);
+        if (ko !== kc) prob.push(`${nome}: chaves diferentes (${kc})`);
         for (const k of Object.keys(o)) {
           if (['chancePorPasso', 'descanso'].includes(k)) continue;
-          if (o[k] !== c[k]) prob.push(`${n}.${k} ${c[k]} ≠ ${o[k]} (o árbitro e o alcance leem o de origem)`);
+          if (o[k] !== c[k]) prob.push(`${nome}.${k} ${c[k]} ≠ ${o[k]} (o árbitro e o alcance leem o de origem)`);
         }
-        const V = K.vontade;
         const pe = Math.max(o.chancePorPasso, Math.min(K.boteTeto, 1 - Math.pow(1 - o.chancePorPasso, V)));
         const de = Math.min(o.descanso, Math.max(K.descansoMin, Math.round(o.descanso / V)));
-        if (Math.abs(c.chancePorPasso - pe) > 1e-12) prob.push(`${n}.chancePorPasso ${c.chancePorPasso} ≠ ${pe}`);
-        if (c.descanso !== de) prob.push(`${n}.descanso ${c.descanso} ≠ ${de}`);
-        ch[n] = c.chancePorPasso; ds[n] = c.descanso;
+        if (Math.abs(c.chancePorPasso - pe) > 1e-12) prob.push(`${nome}.chancePorPasso ${c.chancePorPasso} ≠ ${pe}`);
+        if (c.descanso !== de) prob.push(`${nome}.descanso ${c.descanso} ≠ ${de}`);
+      };
+      const ch = {}, ds = {}, orig = {};
+      for (const n of C.DIFICULDADE.niveis) {
+        const o = S.cfgBote(fake(n, false), 1), c = S.cfgBote(fake(n, true), 1);
+        confere(n, o, c, K.vontadePessoa);
+        ch[n] = c.chancePorPasso; ds[n] = c.descanso; orig[n] = o;
       }
+      // os companheiros da pessoa (o time 0, guiados pela IA) com a vontade do jogo com a pessoa, por cima do Normal
+      confere('companheiros', S.cfgBote(fake('normal', false), 0), S.cfgBote(fake('normal', true), 0), K.vontadePessoa);
+      // a IA × IA (a demo, o Simular o resto): a vontade própria, nos dois times
+      for (const t of [0, 1]) confere(`IA × IA time ${t}`, S.cfgBote(fake('normal', false, true), t), S.cfgBote(fake('normal', true, true), t), K.vontade);
       const N = C.DIFICULDADE.niveis;
-      if (!(ch.facil < ch.normal && ch.normal < ch.dificil && ch.dificil <= ch.lenda)) prob.push(`ordem da chance ${N.map(n => f3(ch[n])).join(' · ')}`);
+      // a ordem ESTRITA dos níveis com o clássico (revisão do item 35: com a vontade 2,6 o Difícil+C e o Lenda+C batiam no mesmo
+      // teto, 0,26/16, e o Lenda deixava de apertar mais que o Difícil no clássico) e o clássico mexendo também no Lenda
+      if (!(ch.facil < ch.normal && ch.normal < ch.dificil && ch.dificil < ch.lenda)) prob.push(`ordem estrita da chance ${N.map(n => f3(ch[n])).join(' · ')}`);
       if (!(ds.facil >= ds.normal && ds.normal >= ds.dificil && ds.dificil >= ds.lenda)) prob.push(`descanso crescente ${N.map(n => ds[n]).join(' · ')}`);
       if (!(ch.facil < C.ACOES.boteIA.chancePorPasso)) prob.push(`Fácil+C ${f3(ch.facil)} ≥ Normal sem ${C.ACOES.boteIA.chancePorPasso}`);
+      for (const n of N) if (!(ch[n] > orig[n].chancePorPasso)) prob.push(`${n}+C ${f3(ch[n])} não passa o ${n} sem (${f3(orig[n].chancePorPasso)})`);
+      // o segura: o da IA × IA e o do jogo com a pessoa; sem o clássico, 1
+      if (typeof S.seguraClassico !== 'function') prob.push('sem sim.js seguraClassico');
+      else {
+        // (sem a marca 1; no jogo com a pessoa, a IA contra ela com o seguraPessoa e os companheiros dela com 1; a IA × IA com o segura)
+        const sg = [S.seguraClassico(fake('normal', false), 1), S.seguraClassico(fake('normal', true), 1), S.seguraClassico(fake('normal', true), 0),
+          S.seguraClassico(fake('normal', true, true), 0), S.seguraClassico(fake('normal', true, true), 1)];
+        const esp = [1, K.seguraPessoa, 1, K.segura, K.segura];
+        if (sg.some((v, i) => v !== esp[i])) prob.push(`seguraClassico ${sg.join(' · ')} (esperado ${esp.join(' · ')})`);
+      }
     }
     reg('K0. a tabela CLASSICO: chaves e sentidos; cfgBote sem a marca = ACOES.boteIA; com ela só a chance e o descanso mudam, pela fórmula; ordem dos níveis',
       prob.length ? prob.slice(0, 5).join('; ') : `ok (${Object.entries(C.CLASSICO).map(([k, v]) => `${k} ${v}`).join(', ')})`, 'ok', !prob.length);
@@ -286,7 +329,8 @@ async function principal() {
       for (let s = SEM0; s < SEM0 + NDEMO; s++) pede('demo', s, cl, 'normal');
       for (const rot of ROTS) for (let s = SEM0; s < SEM0 + NSEM; s++) pede(rot, s, cl, 'normal');
     }
-    if (!SEM_DIF) for (const dif of ['facil', 'lenda']) for (const rot of ROTS) for (let s = SEM0; s < SEM0 + NDIF; s++) pede(rot, s, true, dif);
+    // a combinação com a dificuldade (C10): Fácil+C, Difícil+C e Lenda+C, e o Lenda sem (o clássico não pode tirar botes do Lenda)
+    if (!SEM_DIF) for (const [dif, cl] of ARMS_DIF) for (const rot of ROTS) for (let s = SEM0; s < SEM0 + NDIF; s++) pede(rot, s, cl, dif);
   }
   const todas = [...tarefasH, ...tarefasJ];
   console.log(`  ${tarefasH.length} cenas de hash + ${tarefasJ.length} partidas (${quer.length - tarefasJ.length} reaproveitadas) em ${PAR} processos`);
@@ -361,6 +405,12 @@ async function principal() {
     botesComp: Ls => somaR(Ls, r => r.t[0].tenta) / Ls.length,
     faltasComp: Ls => somaR(Ls, r => r.t[0].faltas) / Ls.length,
     botesT0: Ls => somaR(Ls, r => r.t[0].tenta) / Ls.length,
+    // o time da pessoa (roteiros, time 0: ela e os companheiros) — o clássico não pode virar a dificuldade de cima (C6p/C7p)
+    golsP: Ls => somaR(Ls, r => r.t[0].gols) / Ls.length,
+    chutesP: Ls => somaR(Ls, r => r.t[0].chutes) / Ls.length,
+    posseP: Ls => somaR(Ls, r => r.t[0].posse) / 60 / Ls.length,
+    golsIA1: Ls => somaR(Ls, r => r.t[1].gols) / Ls.length,
+    chutesIA1: Ls => somaR(Ls, r => r.t[1].chutes) / Ls.length,
     botesT1: Ls => somaR(Ls, r => r.t[1].tenta) / Ls.length,
     contatos: Ls => somaR(Ls, r => r.contatos) / Ls.length,
   };
@@ -408,27 +458,28 @@ async function principal() {
         `cfg certo ${ok}, errado ${err}${ex ? ` (${ex.modo} s${ex.sem} ${ex.t[0].cfgErrEx || ex.t[1].cfgErrEx})` : ''}; controlado ${ctrl}; demo time 0 ${fr(d0)}, time 1 ${fr(d1)}`,
         'errado 0; controlado 0; nenhum provado ≤ 1', err === 0 && ok > 0 && ctrl === 0 && subOk);
     }
-    // C1
-    {
-      const x = razao('botes', COM, SEM), a = faixa(x, 1.20, 1.60);
-      reg('C1. botes da IA (tentativas; demo os dois times, roteiros o time da IA), com ÷ sem', `${a.txt} (${grupos('botes')}; ${f2(MED.botes(SEM))} → ${f2(MED.botes(COM))} por partida)`,
-        '+25–50% (reprova se provar < +20% ou > +60%)', a.ok);
-    }
-    // C2
-    {
-      const x = razao('faltasEsp', COM, SEM), a = faixa(x, 1.20, 1.60);
-      const m = razao('faltas', COM, SEM), b = faixa(m, 1.20, 1.60);
-      reg('C2. faltas ESPERADAS da IA (Σ p do árbitro: bote · cuidado, carga, batido que segura), com ÷ sem', `${a.txt} (${grupos('faltasEsp')}; ${f2(MED.faltasEsp(SEM))} → ${f2(MED.faltasEsp(COM))} por partida)`,
-        '+25–50% (reprova se provar < +20% ou > +60%)', a.ok);
-      reg('C2m. faltas MARCADAS da IA, com ÷ sem', `${b.txt} (${grupos('faltas')}; ${f2(MED.faltas(SEM))} → ${f2(MED.faltas(COM))} por partida)`,
-        COMPLETO ? '+25–50% (reprova se provar < +20% ou > +60%)' : 'informativo no CI (a meta no --completo)', b.ok, !COMPLETO);
-    }
-    // C3b
+    // C1 e C2: POR MODO (a IA × IA e contra a pessoa têm vontades próprias; juntas, uma escondia a outra)
+    const pct = v => `${v >= 1 ? '+' : '−'}${Math.abs(100 * (v - 1)).toFixed(0)}%`;
+    const porModo = (nome, med, META, alvoTxt, info = false) => {
+      for (const md of ['demo', 'rot']) {
+        const A = so(COM, md), B = so(SEM, md);
+        if (!A.length || !B.length) continue;
+        const [lo, hi] = META[md], a = faixa(razao(med, A, B), lo, hi);
+        reg(`${nome} — ${md === 'demo' ? 'IA × IA (demo)' : 'contra a pessoa (roteiros)'}`, `${a.txt} (${f2(MED[med](B))} → ${f2(MED[med](A))} por partida)`,
+          info ? 'informativo no CI (a meta no --completo)' : `${alvoTxt(lo, hi)} (reprova se provar < ${pct(lo)} ou > ${pct(hi)})`, a.ok, info);
+      }
+    };
+    porModo('C1. botes da IA (tentativas; demo os dois times, roteiros o time da IA), com ÷ sem', 'botes', META_C1, (lo, hi) => (lo >= 1.2 ? '+25–50%' : '+15–50%'));
+    porModo('C2. faltas ESPERADAS da IA (Σ p do árbitro: bote · cuidado, carga, batido que segura), com ÷ sem', 'faltasEsp', META_C2, () => '+25–50%');
+    porModo('C2m. faltas MARCADAS da IA, com ÷ sem', 'faltas', META_C2, () => '+25–50%', !COMPLETO);
+    // C3b (também só o bote: a carga junto diluía a alta do bote — revisão do item 35)
     {
       const x = razao('chance', COM, SEM), a = faixa(x, 0.90, 1.10);
-      const b = razao('chanceBote', COM, SEM);
-      reg('C3b. a chance de falta por contato (Σ p ÷ N do árbitro nos botes e cargas avaliados), com ÷ sem', `${a.txt} (${f3(MED.chance(SEM))} → ${f3(MED.chance(COM))}; só o bote ${fr(b)})`,
+      const b = faixa(razao('chanceBote', COM, SEM), 0.90, 1.10);
+      reg('C3b. a chance de falta por contato (Σ p ÷ N do árbitro nos botes e cargas avaliados), com ÷ sem', `${a.txt} (${f3(MED.chance(SEM))} → ${f3(MED.chance(COM))})`,
         'em [0,90; 1,10] (reprova se provar fora)', a.ok);
+      reg('C3c. a chance de falta por contato SÓ no bote, com ÷ sem', `${b.txt} (${f3(MED.chanceBote(SEM))} → ${f3(MED.chanceBote(COM))}; demo ${fr(razao('chanceBote', so(COM, 'demo'), so(SEM, 'demo')))} · roteiros ${fr(razao('chanceBote', so(COM, 'rot'), so(SEM, 'rot')))})`,
+        'em [0,90; 1,10] (reprova se provar fora)', b.ok);
     }
     // C4
     {
@@ -442,7 +493,7 @@ async function principal() {
     {
       const parte = [];
       let ok = true;
-      for (const [nome, Ls] of [['Normal+C', COM], ['Lenda+C', arm(true, 'lenda')]]) {
+      for (const [nome, Ls] of [['Normal+C', COM], ['Difícil+C', arm(true, 'dificil')], ['Lenda+C', arm(true, 'lenda')]]) {
         if (!Ls.length) continue;
         const k = somaIA(Ls, t => t.vermelhos), n = Ls.length, pv = caudaPoisson(k, 0.2 * n);
         if (pv < 0.05) ok = false;
@@ -460,6 +511,29 @@ async function principal() {
       const b = faixa(razao('rol', COM, SEM), null, 1.0);
       reg('C8. bola rolando (min por partida), com ÷ sem', `${b.txt} (${f2(MED.rol(SEM))} → ${f2(MED.rol(COM))})`, 'informativo; reprova se provar alta', b.ok);
     }
+    // C6p e C7p: o time da PESSOA (roteiros, time 0) — o clássico não vira a dificuldade de cima (revisão do item 35: com a vontade
+    // 2,6 nos dois times a pessoa chutava 34% menos e fazia 40% menos gols, e os números da IA não mudavam)
+    {
+      const A = so(COM, 'rot'), B = so(SEM, 'rot');
+      if (A.length && B.length) {
+        const g = faixa(razao('golsP', A, B), 0.75, null), c = faixa(razao('chutesP', A, B), 0.85, null);
+        const ps = razao('posseP', A, B), gi = razao('golsIA1', A, B), ci = razao('chutesIA1', A, B);
+        reg('C6p. gols do time da pessoa (roteiros), com ÷ sem', `${g.txt} (${f2(MED.golsP(B))} → ${f2(MED.golsP(A))}; da IA ${fr(gi)})`, 'sem queda provada > 25%', g.ok);
+        reg('C7p. chutes do time da pessoa (roteiros), com ÷ sem', `${c.txt} (${f2(MED.chutesP(B))} → ${f2(MED.chutesP(A))}; da IA ${fr(ci)}; a posse da pessoa ${fr(ps)})`, 'sem queda provada > 15%', c.ok);
+        // C12: os cartões do time da pessoa (ela e os companheiros) ÷ os da IA, com × sem. Teste condicional: dados os cartões do
+        // time da pessoa nos dois braços, a parte do braço com o clássico segue a binomial com a parte dos cartões da IA (a razão
+        // igual); reprova se a subida do lado da pessoa for PROVADA (P < 0,05). Revisão do item 35: 10 → 23 do lado da pessoa com
+        // os da IA iguais (a subida dos cartões ia toda para o lado errado)
+        const cart = (Ls, t) => somaR(Ls, r => r.t[t].amarelos + r.t[t].vermelhos);
+        const pC = cart(A, 0), pS = cart(B, 0), iC = cart(A, 1), iS = cart(B, 1);
+        const q = iC + iS > 0 ? iC / (iC + iS) : 0.5, n = pC + pS;
+        let pv = 0;
+        for (let k = pC; k <= n; k++) pv += binom(n, k) * q ** k * (1 - q) ** (n - k);
+        if (!n) pv = 1;
+        reg('C12. cartões do time da pessoa ÷ cartões da IA (roteiros), com × sem', `pessoa ${pS} → ${pC}, IA ${iS} → ${iC} (P(≥ ${pC} de ${n} | ${f3(q)}) = ${f3(pv)})`,
+          'sem subida provada do lado da pessoa (reprova se P < 0,05)', pv >= 0.05);
+      }
+    }
     // C9
     {
       const v = faixa(razao('volume', COM, SEM), null, 1.05), d = faixa(razao('disparada', COM, SEM), null, 1.10), p = faixa(razao('presenca', COM, SEM), null, 1.08);
@@ -469,23 +543,32 @@ async function principal() {
     }
     // C10
     if (!SEM_DIF) {
-      const FC = arm(true, 'facil'), LC = arm(true, 'lenda'), NC = so(COM, 'rot'), NS = so(SEM, 'rot');
+      const FC = arm(true, 'facil'), DC = arm(true, 'dificil'), LC = arm(true, 'lenda'), LS = arm(false, 'lenda'), NC = so(COM, 'rot'), NS = so(SEM, 'rot');
       const fal = [], partes = [];
-      if (FC.length && LC.length) {
-        const a = razao('botesPosse', FC, NC), b = razao('botesPosse', NC, LC), c = razao('botesPosse', FC, NS), d = razao('faltasIA1', LC, NC);
-        partes.push(`Fácil+C/Normal+C ${fr(a)}`, `Normal+C/Lenda+C ${fr(b)}`, `Fácil+C/Normal sem ${fr(c)}`, `faltas Lenda+C/Normal+C ${fr(d)}`);
-        // (os degraus de ~10–13% — Normal+C × Lenda+C, com o bote do Lenda no teto 0,26, e Fácil+C × Normal sem, 0,064 × 0,08 por
-        // passo — não se provam com 16 partidas por nível: no CI só o lado errado provado reprova, e o K0 confere a ordem nos
-        // parâmetros; no --completo, 32 por nível, os quatro degraus PROVADOS)
-        const viz = (x, nome) => { if (COMPLETO ? !(x.p95 < 1) : x.p5 > 1) fal.push(COMPLETO ? `${nome} não provado` : `${nome} com o lado errado PROVADO`); };
+      if (FC.length && DC.length && LC.length && LS.length) {
+        const a = razao('botesPosse', FC, NC), b = razao('botesPosse', NC, DC), e = razao('botesPosse', DC, LC), c = razao('botesPosse', FC, NS);
+        const g = razao('botesPosse', LS, LC), d = razao('faltasIA1', LC, NC);
+        partes.push(`Fácil+C/Normal+C ${fr(a)}`, `Normal+C/Difícil+C ${fr(b)}`, `Difícil+C/Lenda+C ${fr(e)}`, `Fácil+C/Normal sem ${fr(c)}`,
+          `Lenda sem/Lenda+C ${fr(g)}`, `faltas Lenda+C/Normal+C ${fr(d)}`);
+        // (os degraus vizinhos de ~10–20% não se provam com 16 partidas por nível: no CI só o lado errado provado reprova, e o K0
+        // confere a ordem ESTRITA nos parâmetros; no --completo, 32 por nível, os degraus PROVADOS. O Lenda+C nunca com MENOS botes
+        // que o Lenda sem — revisão do item 35: com o teto comum o clássico chegava a tirar botes do Lenda. O Normal+C × Difícil+C
+        // só pelo lado errado também no --completo: os parâmetros guardam a razão de sem o clássico — chance × 1,48, descanso ÷ 1,33
+        // — mas o bote SATURA no jogo (mais chance por passo fecha a janela antes) e o degrau de 1,25× sem o clássico vira ~1,07×:
+        // 0,93 [0,85–1,02] em 32 pares, a revisão; "Depende do dono" 23)
+        const viz = (x, nome, sempreLado = false) => {
+          if (COMPLETO && !sempreLado ? !(x.p95 < 1) : x.p5 > 1) fal.push(COMPLETO && !sempreLado ? `${nome} não provado` : `${nome} com o lado errado PROVADO`);
+        };
         if (!(a.p95 < 1)) fal.push('Fácil+C < Normal+C não provado');
-        viz(b, 'Normal+C < Lenda+C');
+        viz(b, 'Normal+C < Difícil+C', true);
+        viz(e, 'Difícil+C < Lenda+C');
         viz(c, 'Fácil+C < Normal sem');
+        if (g.p5 > 1) fal.push('Lenda+C com MENOS botes que o Lenda sem PROVADO');
         if (d.p5 > 1.8) fal.push('faltas Lenda+C > 1,8× Normal+C PROVADO');
       } else fal.push('sem as partidas da dificuldade');
       reg('C10. clássico × dificuldade (roteiros): botes da IA por minuto de posse da pessoa e faltas da IA', `${partes.join(' · ')}${fal.length ? ` — ${fal.join('; ')}` : ''}`,
-        COMPLETO ? 'Fácil+C < Normal+C < Lenda+C e Fácil+C < Normal sem provados; faltas Lenda+C ≤ 1,8× (p5)'
-          : 'Fácil+C < Normal+C provado; Normal+C × Lenda+C e Fácil+C × Normal sem sem o lado errado provado; faltas Lenda+C ≤ 1,8× (p5)', !fal.length);
+        COMPLETO ? 'Fácil+C < Normal+C, Difícil+C < Lenda+C e Fácil+C < Normal sem provados; Normal+C × Difícil+C sem o lado errado provado; Lenda+C não abaixo do Lenda; faltas Lenda+C ≤ 1,8× (p5)'
+          : 'Fácil+C < Normal+C provado; os outros degraus sem o lado errado provado; Lenda+C não abaixo do Lenda; faltas Lenda+C ≤ 1,8× (p5)', !fal.length);
     }
     // C11
     {
@@ -508,9 +591,9 @@ async function principal() {
       if (b.length) linha(`${md} com`, b);
     }
     linha('roteiros sem', so(SEM, 'rot')); linha('roteiros com', so(COM, 'rot'));
-    for (const d of ['facil', 'lenda']) { const Ls = arm(true, d); if (Ls.length) linha(`roteiros ${d}+C`, Ls); }
+    for (const [d, cl] of ARMS_DIF) { const Ls = arm(cl, d); if (Ls.length) linha(`roteiros ${d}${cl ? '+C' : ' sem'}`, Ls); }
     console.log(tab.map(l => l.join(' | ')).join('\n'));
-    console.log(`\n${jogos.length} partidas de 2 × ${MIN} min (demo ${NDEMO} + ${ROTS.join(', ')} × ${NSEM} desde ${SEM0}, por braço${SEM_DIF ? '' : `; Fácil+C e Lenda+C × ${NDIF}`}) · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
+    console.log(`\n${jogos.length} partidas de 2 × ${MIN} min (demo ${NDEMO} + ${ROTS.join(', ')} × ${NSEM} desde ${SEM0}, por braço${SEM_DIF ? '' : `; Fácil+C, Difícil+C, Lenda+C e Lenda sem × ${NDIF}`}) · ${((Date.now() - t0) / 1000).toFixed(0)} s`);
   } else reg('as partidas existem', 'sem partidas', '—', false);
   if (semPar) reg('as partidas chegam ao fim', `${semPar} não chegaram`, 'todas', false);
   return fechar();
