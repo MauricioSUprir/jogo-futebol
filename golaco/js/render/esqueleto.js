@@ -19,7 +19,12 @@
 // repouso.json), e o COTOVELO do desenho sai de uma IK com esse ombro, a MÃO do jogo (as luvas na bola) e o lado da
 // dobra do braço do jogo. O TORNOZELO do desenho fica `sobeTornozelo` acima do do jogo, ao longo da canela (o pé do
 // Rocketbox gira 11,8 cm acima da sola; o do jogo apoiado, a 8 cm).
+// A MÃO DE APOIO do carrinho deitado (item 77; render/apoio-mao.js): o punho desce até o chão (a IK refaz o cotovelo) e a
+// palma vira para o chão — a pronação vai no osso do ANTEBRAÇO (torção em volta do eixo dele, como o rádio sobre a ulna) e no
+// punho fica só a dobra (extensão): girar a mão sozinha 86° em volta do antebraço fazia o "embrulho de bala" da pele linear
+// no punho (Kavan et al. 2007).
 // Coordenadas do jogo: x = comprimento, z = largura, y para cima (as mesmas da pose).
+import { pesoApoio, maoNoChao } from './apoio-mao.js';
 
 export const JUNTAS_ESQ = [
   'pelve', 'lombar', 'peito', 'pescoco', 'cabeca',
@@ -281,7 +286,75 @@ export function criarEsqueleto(repouso) {
       baseYX(BP[0], BP[1], BP[2], -BP[6], -BP[7], -BP[8], o, b * 12, po[t], po[t + 1], po[t + 2]);
     }
     copiarNaJunta(po, o, 8, 7); copiarNaJunta(po, o, 12, 11);
+    for (let l = 0; l < 2; l++) if (WAP[l] > 0 && PALMA_L[l]) palmaNoChao(po, o, l, WAP[l]);
     return o;
+  }
+  // ---- a mão de apoio (item 77): o peso de cada lado (da última postura), a normal da palma no referencial do osso da mão
+  const APOIO_PUNHO = { alvo: 0.04, torcao: 0.7 };
+  const WAP = new Float64Array(2);
+  const PALMA_L = [null, null];
+  const R3 = new Float64Array(9), RT = new Float64Array(9), RH = new Float64Array(9), qh = new Float64Array(4), qt = new Float64Array(4);
+  /** 3×3 por linhas da rotação de o[ob..] (3×4). */
+  const rot = (o, ob, R) => { for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) R[r * 3 + c] = o[ob + r * 4 + c]; return R; };
+  function quat3(R, q) {
+    const m00 = R[0], m01 = R[1], m02 = R[2], m10 = R[3], m11 = R[4], m12 = R[5], m20 = R[6], m21 = R[7], m22 = R[8];
+    const tr = m00 + m11 + m22;
+    if (tr > 0) { const s = sq(tr + 1) * 2; q[3] = 0.25 * s; q[0] = (m21 - m12) / s; q[1] = (m02 - m20) / s; q[2] = (m10 - m01) / s; }
+    else if (m00 > m11 && m00 > m22) { const s = sq(1 + m00 - m11 - m22) * 2; q[3] = (m21 - m12) / s; q[0] = 0.25 * s; q[1] = (m01 + m10) / s; q[2] = (m02 + m20) / s; }
+    else if (m11 > m22) { const s = sq(1 + m11 - m00 - m22) * 2; q[3] = (m02 - m20) / s; q[0] = (m01 + m10) / s; q[1] = 0.25 * s; q[2] = (m12 + m21) / s; }
+    else { const s = sq(1 + m22 - m00 - m11) * 2; q[3] = (m10 - m01) / s; q[0] = (m02 + m20) / s; q[1] = (m12 + m21) / s; q[2] = 0.25 * s; }
+  }
+  function mat3(q, R) {
+    const x = q[0], y = q[1], z = q[2], w = q[3];
+    R[0] = 1 - 2 * (y * y + z * z); R[1] = 2 * (x * y - w * z); R[2] = 2 * (x * z + w * y);
+    R[3] = 2 * (x * y + w * z); R[4] = 1 - 2 * (x * x + z * z); R[5] = 2 * (y * z - w * x);
+    R[6] = 2 * (x * z - w * y); R[7] = 2 * (y * z + w * x); R[8] = 1 - 2 * (x * x + y * y);
+  }
+  /**
+   * A palma da mão `l` no chão com o peso w: a mão (osso 8/12, até aqui a cópia do antebraço) vai, pelo nlerp, à rotação que
+   * leva a normal da palma a −Y e o eixo da mão à direção do antebraço no chão (os dedos para fora, como na mão espalmada
+   * do apoio); a torção dessa rotação em volta do eixo do antebraço passa ao osso do antebraço (a pronação) e no punho
+   * fica a dobra.
+   */
+  function palmaNoChao(D, o, l, w) {
+    const b = l ? 12 : 8, fa = l ? 11 : 7, jc = (l ? JE.cotoveloD : JE.cotoveloE) * 3, jm = (l ? JE.maoD : JE.maoE) * 3;
+    const n = PALMA_L[l];
+    // o eixo da mão no osso (Y) sem a parte da normal; o terceiro eixo
+    let yx = -n[1] * n[0], yy = 1 - n[1] * n[1], yz = -n[1] * n[2];
+    let ly = sq(yx * yx + yy * yy + yz * yz) || 1e-9; yx /= ly; yy /= ly; yz /= ly;
+    const cx = n[1] * yz - n[2] * yy, cy = n[2] * yx - n[0] * yz, cz = n[0] * yy - n[1] * yx;
+    // no mundo: N = −Y, F = o antebraço desenhado no chão (sem o y), C = N × F
+    let fx = D[jm] - D[jc], fz = D[jm + 2] - D[jc + 2];
+    let lf = sq(fx * fx + fz * fz);
+    if (lf < 1e-6) { rot(o, b * 12, R3); fx = R3[1]; fz = R3[7]; lf = sq(fx * fx + fz * fz) || 1; }
+    fx /= lf; fz /= lf;
+    const Cx = -fz, Cy = 0, Cz = fx; // (0, −1, 0) × (fx, 0, fz)
+    // RT = [N F C] [n y c]ᵀ
+    for (let r = 0; r < 3; r++) {
+      const Nr = r === 1 ? -1 : 0, Fr = r === 0 ? fx : r === 2 ? fz : 0, Kr = r === 0 ? Cx : r === 1 ? Cy : Cz;
+      RT[r * 3] = Nr * n[0] + Fr * yx + Kr * cx;
+      RT[r * 3 + 1] = Nr * n[1] + Fr * yy + Kr * cy;
+      RT[r * 3 + 2] = Nr * n[2] + Fr * yz + Kr * cz;
+    }
+    quat3(rot(o, b * 12, R3), qh); quat3(RT, qt);
+    const sg = qh[0] * qt[0] + qh[1] * qt[1] + qh[2] * qt[2] + qh[3] * qt[3] < 0 ? -1 : 1;
+    for (let k = 0; k < 4; k++) qh[k] += (sg * qt[k] - qh[k]) * w;
+    const lq = sq(qh[0] * qh[0] + qh[1] * qh[1] + qh[2] * qh[2] + qh[3] * qh[3]) || 1;
+    for (let k = 0; k < 4; k++) qh[k] /= lq;
+    mat3(qh, RH);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) o[b * 12 + r * 4 + c] = RH[r * 3 + c];
+    // a torção da mão em volta do eixo (Y) do antebraço: Δ = Rfaᵀ · RH; o ângulo da parte em volta de Y vai ao antebraço
+    rot(o, fa * 12, R3);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) RT[r * 3 + c] = R3[r] * RH[c] + R3[3 + r] * RH[3 + c] + R3[6 + r] * RH[6 + c];
+    quat3(RT, qt);
+    let th = 2 * Math.atan2(qt[1], qt[3]);
+    if (th > Math.PI) th -= 2 * Math.PI; else if (th < -Math.PI) th += 2 * Math.PI;
+    th *= APOIO_PUNHO.torcao;
+    const c = Math.cos(th), s = Math.sin(th), ob = fa * 12;
+    for (let r = 0; r < 3; r++) {
+      const X = o[ob + r * 4], Z = o[ob + r * 4 + 2];
+      o[ob + r * 4] = X * c - Z * s; o[ob + r * 4 + 2] = X * s + Z * c;
+    }
   }
   function quat(o, i, q) {
     const m00 = o[i], m01 = o[i + 1], m02 = o[i + 2], m10 = o[i + 4], m11 = o[i + 5], m12 = o[i + 6], m20 = o[i + 8], m21 = o[i + 9], m22 = o[i + 10];
@@ -327,6 +400,15 @@ export function criarEsqueleto(repouso) {
   }
   const D0 = juntasDesenho(R0, new Float64Array(NJE * 3));
   const W0 = mundoDesenho(D0, new Float64Array(NOSSOS * 12));
+  // a normal da palma (corpo-dados.js, do descanso) no referencial do osso da mão: nₗ = R₀ᵀ n
+  for (let l = 0; l < 2; l++) {
+    const n = repouso.palma?.[l ? 'D' : 'E'];
+    if (!n) continue;
+    const ob = (l ? 12 : 8) * 12, v3 = [0, 0, 0];
+    for (let k = 0; k < 3; k++) v3[k] = W0[ob + k] * n[0] + W0[ob + 4 + k] * n[1] + W0[ob + 8 + k] * n[2];
+    const lv = sq(v3[0] * v3[0] + v3[1] * v3[1] + v3[2] * v3[2]) || 1;
+    PALMA_L[l] = [v3[0] / lv, v3[1] / lv, v3[2] / lv];
+  }
   for (let i = 0; i < MEMBROS.length; i++) {
     const b = MEMBROS[i][0], p = MEMBROS[i][1];
     for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
@@ -397,8 +479,22 @@ export function criarEsqueleto(repouso) {
     px /= lp; py /= lp; pz /= lp;
     o[k] = o[h] + ex * x + px * y; o[k + 1] = o[h + 1] + ey * x + py * y; o[k + 2] = o[h + 2] + ez * x + pz * y;
   }
-  /** A pose po com a postura corrigida, em o. v: velocidade do boneco (m/s); peso: 0–1 (0 = como a do jogo). */
+  /**
+   * A pose po com a postura corrigida, em o. v: velocidade do boneco (m/s); peso: 0–1 (0 = como a do jogo). Por cima, a
+   * mão de apoio do carrinho deitado (item 77): o punho no chão (render/apoio-mao.js); o peso de cada lado fica para a palma
+   * (mundoDesenho).
+   */
   function postura(po, v, peso, o) {
+    posturaCorpo(po, v, peso, o);
+    WAP[0] = WAP[1] = 0;
+    if (peso > 0) for (let l = 0; l < 2; l++) {
+      const w = pesoApoio(po, l);
+      WAP[l] = w;
+      if (w > 0) maoNoChao(o, o, l, w, APOIO_PUNHO.alvo);
+    }
+    return o;
+  }
+  function posturaCorpo(po, v, peso, o) {
     for (let k = 0; k < NJE * 3; k++) o[k] = po[k];
     if (!(peso > 0)) return o;
     const yMin = Math.min(po[JE.tornozeloE * 3 + 1], po[JE.tornozeloD * 3 + 1]);

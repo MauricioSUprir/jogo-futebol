@@ -46,6 +46,12 @@
 //     ≤ 0,03%, O3 NaN 0 e a escala no limite ≤ 0,5% (as réguas do teste-ossos, que só vê IA × IA); P4 a cabeça ≤ 17° da linha
 //     peito → pescoço (o portão da postura do corpo novo) e o tronco 40–60° do vertical no deslize; P5 100 leituras da pose
 //     e da altura do quadril não escrevem no plano.
+//     P6 (item 77: "a mão de apoio do manequim deitado fica 0,073 m acima do chão") a mão de apoio no DESENHO, no deslize e no
+//     chão (fases 2–3; render/apoio-mao.js — a pose do jogo não muda): no manequim, a pose desenhada (poseManequim, os raios
+//     da cápsula do anim.js FORMA_SEG) com o fundo da cápsula da mão de apoio a −1 a +1,5 cm do chão e o fundo de todas as
+//     cápsulas ≥ −1 cm; no corpo novo, o vértice mais baixo da mão (LOD0, osso dominante) a −1 a +1,5 cm, a normal da palma
+//     a ≤ 25° de −Y e a dobra do punho (o eixo da mão × o do antebraço) ≤ 70° (a extensão funcional: Ryu et al. 1991). Na
+//     base (7cb052ad): manequim 0,073 m, corpo novo 0,063 m e a palma a 86,7° (de lado).
 //  E. as travas na simulação (estados de uma partida de verdade, semente 3102; o humano no time 0): E1 com o carrinho os
 //     outros botões não mexem no corpo dele (bit a bit), ele não domina a bola (colada no pé no tick do aperto; rolando
 //     para ele no chão), não recebe o controle (TROCAR, candidatoTroca), o boteIA dele não sai e volta no passo do fim;
@@ -201,6 +207,10 @@ try {
   CORPO = CD.lerCorpo(ix, bf.buffer.slice(bf.byteOffset, bf.byteOffset + bf.byteLength));
 } catch { ES = null; CORPO = null; }
 const TEM_POSE = typeof A.poseCarrinho === 'function';
+// a mão de apoio no chão no DESENHO (item 77: render/apoio-mao.js, usado pelo manequim e pelo corpo novo); sem ele (a base) o
+// desenho é a pose do jogo
+let AM = null;
+try { AM = await imp('render/apoio-mao.js'); } catch { AM = null; }
 const CC = CFG.DEFESA_HUMANO.carrinho;
 const PASSO = CFG.PASSO;
 const T_AR = CC.tAr, T_D = CC.tAr + CC.tImpacto;
@@ -469,7 +479,17 @@ const RP = {
   troncoFaixa: [Infinity, -Infinity], p5: 0, nan: 0,
   // o corpo novo: o vértice mais baixo da pele (LOD0), O1 juntas, O2 saltos, O3 NaN/escala no limite
   peleN: 0, pele: 0, pelePior: Infinity, o1: 0, o1pior: 0, o2: 0, o2n: 0, o2ex: '', o3nan: 0, o3lim: 0, o3n: 0,
+  // P6 (item 77): a mão de apoio no deslize e no chão (fases 2–3), no DESENHO — o manequim (a pose desenhada) e o corpo novo
+  // (a pele): a altura ao chão, a palma e a dobra do punho; o fundo de tudo no manequim desenhado
+  maoN: 0, maoManeq: 0, maoManeqF: [Infinity, -Infinity], maoManeqEx: '', fundoDes: 0, fundoDesPior: Infinity,
+  maoPeleN: 0, maoPele: 0, maoPeleF: [Infinity, -Infinity], maoPeleEx: '', palma: 0, palmaPior: 0, punho: 0, punhoPior: 0,
+  secao: 0, secaoPior: [Infinity, Infinity], // a seção da pele no cotovelo e no punho do braço de apoio (÷ a do descanso)
 };
+const SECAO_MIN = 0.85; // a régua do teste-ossos O5 (volume na dobra)
+const MAO_FAIXA = [-0.01, 0.015], PALMA_MAX = 25, PUNHO_MAX = 70; // m; °; ° (a extensão funcional do punho: Ryu et al. 1991)
+// o manequim desenhado (P6): os raios das cápsulas (anim.js FORMA_SEG: os do desenho) e a cápsula da mão de cada lado
+const FORMA = A.FORMA_SEG, S_MAO = [[A.J.cotoveloE, A.J.maoE], [A.J.cotoveloD, A.J.maoD]].map(([a, b]) => SEG.findIndex(s2 => s2[0] === a && s2[1] === b));
+const _poDes = new Float32Array(A.NJ * 3);
 const angulo = (ax, ay, az, bx, by, bz) => Math.acos(Math.max(-1, Math.min(1, (ax * bx + ay * by + az * bz) / (Math.hypot(ax, ay, az) * Math.hypot(bx, by, bz) || 1)))) / GRAU;
 const dif3 = (po, i, a, b) => [po[b * 3] - po[a * 3], po[b * 3 + 1] - po[a * 3 + 1], po[b * 3 + 2] - po[a * 3 + 2]];
 // o esqueleto do corpo novo (as contas do teste-ossos)
@@ -479,7 +499,53 @@ if (ES && CORPO) {
   const JE = Object.fromEntries(ES.JUNTAS_ESQ.map((n, i) => [n, i]));
   for (const n of ES.JUNTAS_ESQ) if (JE[n] !== A.J[n]) throw new Error(`a ordem das juntas do esqueleto (${n}) não é a do anim.js`);
   const partes = Object.values(CORPO.lods[0].partes).map(pt => ({ nv: pt.nv, pos: pt.pos, ossos: pt.ossos, w: Float64Array.from(pt.pesos, x => x / 255) }));
+  const L0 = CORPO.lods[0].partes.corpo, maoV = [[], []];
+  for (let v = 0; v < L0.nv; v++) {
+    let b = -1, w = -1;
+    for (let k = 0; k < 4; k++) if (L0.pesos[v * 4 + k] > w) { w = L0.pesos[v * 4 + k]; b = L0.ossos[v * 4 + k]; }
+    if (b === 8) maoV[0].push(v); else if (b === 12) maoV[1].push(v);
+  }
+  // a normal da palma de cada mão no descanso, medida AQUI (o árbitro do P6 não usa a conta do render/corpo-dados.js): a
+  // direção de menor espalhamento dos vértices da mão (componentes principais; Jacobi), para dentro do corpo (no descanso as
+  // palmas olham as coxas)
+  const palma = {};
+  maoV.forEach((ids, l) => {
+    const mu = [0, 0, 0];
+    for (const v of ids) for (let k = 0; k < 3; k++) mu[k] += L0.pos[v * 3 + k] / ids.length;
+    const M = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], V = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+    for (const v of ids) for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) M[a][b] += (L0.pos[v * 3 + a] - mu[a]) * (L0.pos[v * 3 + b] - mu[b]);
+    for (let it = 0; it < 60; it++) for (let p = 0; p < 3; p++) for (let r = p + 1; r < 3; r++) {
+      if (Math.abs(M[p][r]) < 1e-18) continue;
+      const th = 0.5 * Math.atan2(2 * M[p][r], M[r][r] - M[p][p]), cs = Math.cos(th), sn = Math.sin(th);
+      for (let k = 0; k < 3; k++) { const a = M[k][p], b = M[k][r]; M[k][p] = cs * a - sn * b; M[k][r] = sn * a + cs * b; }
+      for (let k = 0; k < 3; k++) { const a = M[p][k], b = M[r][k]; M[p][k] = cs * a - sn * b; M[r][k] = sn * a + cs * b; }
+      for (let k = 0; k < 3; k++) { const a = V[k][p], b = V[k][r]; V[k][p] = cs * a - sn * b; V[k][r] = sn * a + cs * b; }
+    }
+    let i = 0;
+    for (let k = 1; k < 3; k++) if (M[k][k] < M[i][i]) i = k;
+    const n = [V[0][i], V[1][i], V[2][i]];
+    if (n[2] * mu[2] > 0) for (let k = 0; k < 3; k++) n[k] = -n[k];
+    palma[l ? 'D' : 'E'] = n;
+  });
+  // os vértices da seção do cotovelo e do punho de cada lado (a seleção do teste-ossos O5: perto da junta no descanso e
+  // divididos entre os ossos dela, nenhum peso > 0,9)
+  const D0r = E.desenhoRepouso, JEr = Object.fromEntries(ES.JUNTAS_ESQ.map((n, i) => [n, i]));
+  const secao = (j, par, raio) => {
+    const v = [];
+    for (let u = 0; u < L0.nv; u++) {
+      if (Math.hypot(L0.pos[u * 3] - D0r[j * 3], L0.pos[u * 3 + 1] - D0r[j * 3 + 1], L0.pos[u * 3 + 2] - D0r[j * 3 + 2]) > raio) continue;
+      let wPar = 0, wMax = 0;
+      for (let k = 0; k < 4; k++) { const w = L0.pesos[u * 4 + k] / 255; if (par.includes(L0.ossos[u * 4 + k])) wPar += w; wMax = Math.max(wMax, w); }
+      if (wPar >= 0.99 && wMax <= 0.9) v.push(u);
+    }
+    return { j, v };
+  };
+  const secoes = [
+    [secao(JEr.cotoveloE, [6, 7, 21], 0.09), secao(JEr.maoE, [7, 8], 0.07)],
+    [secao(JEr.cotoveloD, [10, 11, 22], 0.09), secao(JEr.maoD, [11, 12], 0.07)],
+  ];
   EQ = {
+    L0, L0w: Float64Array.from(L0.pesos, x => x / 255), maoV, palma, secoes,
     E, JE, partes, NOS: ES.NOSSOS, NPR: ES.N_PRINC, D0: E.desenhoRepouso, COMPR: E.comprimentos,
     IA: ES.OSSOS.map(o => JE[o[0]]), IB: ES.OSSOS.map(o => (o[1] ? JE[o[1]] : -1)), S: new Float64Array(ES.NOSSOS * 12),
   };
@@ -488,12 +554,55 @@ const angAxis = (pa, po, a, b) => angulo(pa[b * 3] - pa[a * 3], pa[b * 3 + 1] - 
 const dobraJ = (q, a, b, c) => angulo(q[b * 3] - q[a * 3], q[b * 3 + 1] - q[a * 3 + 1], q[b * 3 + 2] - q[a * 3 + 2], q[c * 3] - q[b * 3], q[c * 3 + 1] - q[b * 3 + 1], q[c * 3 + 2] - q[b * 3 + 2]);
 /** O corpo novo numa sequência de poses (a normal no aperto, as do carrinho, a normal de pé no fim): O1, O2 e O3 como no
  * teste-ossos (O2 entre quadros seguidos) e o vértice mais baixo da pele a cada `cada` quadros. */
-function esqueletoSeq(poses, vels, cada, nome) {
+function esqueletoSeq(poses, vels, cada, nome, apoio = null) {
   const { E, JE, partes, NOS, NPR, D0, COMPR, IA, IB, S } = EQ;
   let aS = null, aD = null;
   for (let i = 0; i < poses.length; i++) {
     E.pele(poses[i], S, 0, vels[i], 1);
     const D = E.desenho;
+    // P6 (corpo novo): a mão de apoio — o vértice mais baixo da mão (osso dominante), a normal da palma × −Y e a dobra do
+    // punho (o eixo da mão × o do antebraço)
+    if (apoio && apoio[i] >= 0) {
+      const l = apoio[i], bM = l ? 12 : 8, bA = l ? 11 : 7, W = E.mundo;
+      let mn = Infinity;
+      for (const v of EQ.maoV[l]) {
+        const x = EQ.L0.pos[v * 3], y = EQ.L0.pos[v * 3 + 1], z = EQ.L0.pos[v * 3 + 2];
+        let oy = 0;
+        for (let k = 0; k < 4; k++) { const wk = EQ.L0w[v * 4 + k]; if (!wk) continue; const ib = EQ.L0.ossos[v * 4 + k] * 12; oy += wk * (S[ib + 4] * x + S[ib + 5] * y + S[ib + 6] * z + S[ib + 7]); }
+        mn = Math.min(mn, oy);
+      }
+      RP.maoPeleN++;
+      RP.maoPeleF[0] = Math.min(RP.maoPeleF[0], mn); RP.maoPeleF[1] = Math.max(RP.maoPeleF[1], mn);
+      if (mn < MAO_FAIXA[0] || mn > MAO_FAIXA[1]) { RP.maoPele++; RP.maoPeleEx ||= `${nome} quadro ${i}: ${f3(mn)} m`; }
+      const n = EQ.palma[l ? 'D' : 'E'], o = bM * 12;
+      const nw = [0, 1, 2].map(k => S[o + k * 4] * n[0] + S[o + k * 4 + 1] * n[1] + S[o + k * 4 + 2] * n[2]);
+      const ap = angulo(...nw, 0, -1, 0);
+      RP.palmaPior = Math.max(RP.palmaPior, ap); if (ap > PALMA_MAX) RP.palma++;
+      const dp = angulo(W[bA * 12 + 1], W[bA * 12 + 5], W[bA * 12 + 9], W[bM * 12 + 1], W[bM * 12 + 5], W[bM * 12 + 9]);
+      RP.punhoPior = Math.max(RP.punhoPior, dp); if (dp > PUNHO_MAX) RP.punho++;
+      // a seção da pele perto do cotovelo e do punho (como o teste-ossos O5): a pronação no antebraço e a dobra do punho
+      // não podem murchar a pele (o "embrulho de bala" da pele linear)
+      let ruim = false;
+      EQ.secoes[l].forEach((sc, k) => {
+        let r0 = 0, r1 = 0;
+        for (const v of sc.v) {
+          const x = EQ.L0.pos[v * 3], y = EQ.L0.pos[v * 3 + 1], z = EQ.L0.pos[v * 3 + 2];
+          let px = 0, py = 0, pz = 0;
+          for (let q = 0; q < 4; q++) {
+            const wk = EQ.L0w[v * 4 + q]; if (!wk) continue; const ib = EQ.L0.ossos[v * 4 + q] * 12;
+            px += wk * (S[ib] * x + S[ib + 1] * y + S[ib + 2] * z + S[ib + 3]);
+            py += wk * (S[ib + 4] * x + S[ib + 5] * y + S[ib + 6] * z + S[ib + 7]);
+            pz += wk * (S[ib + 8] * x + S[ib + 9] * y + S[ib + 10] * z + S[ib + 11]);
+          }
+          r0 += Math.hypot(x - D0[sc.j * 3], y - D0[sc.j * 3 + 1], z - D0[sc.j * 3 + 2]);
+          r1 += Math.hypot(px - D[sc.j * 3], py - D[sc.j * 3 + 1], pz - D[sc.j * 3 + 2]);
+        }
+        const a = (r1 / r0) ** 2;
+        RP.secaoPior[k] = Math.min(RP.secaoPior[k], a);
+        if (a < SECAO_MIN) ruim = true;
+      });
+      if (ruim) RP.secao++;
+    }
     if (!S.every(Number.isFinite)) RP.o3nan++;
     for (let b = 0; b < NPR; b++) {
       const o = b * 12, temEixo = IB[b] >= 0 && b !== 15 && b !== 18;
@@ -593,11 +702,26 @@ const p999 = l => { const s = Float64Array.from(l).sort(); return s.length ? s[M
 function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
   const antes = JSON.stringify(c), salvo = j.carrinho;
   j.carrinho = c;
-  const poses = [], vels = [];
+  const poses = [], vels = [], apoio = [];
   for (let i = 0; i < qs.length; i++) {
     mw.tick = c.tick0 + i;
     const po = A.pose(j, mw, new Float32Array(NJ * 3));
     poses.push(po);
+    apoio.push(i > 0 && (qs[i].fase === 2 || qs[i].fase === 3) ? (qs[i].lado < 0 ? 0 : 1) : -1);
+    // P6 (manequim): a pose DESENHADA (render/apoio-mao.js poseManequim com os raios da cápsula da mão do manequim); o fundo
+    // da cápsula da mão de apoio e o fundo de todas as cápsulas
+    if (i > 0) {
+      const pd = AM ? AM.poseManequim(po, FORMA[S_MAO[0]].rB, FORMA[S_MAO[1]].rB, _poDes) : po;
+      let fd = Infinity;
+      for (let s2 = 0; s2 < SEG.length; s2++) fd = Math.min(fd, pd[SEG[s2][0] * 3 + 1] - FORMA[s2].rA, pd[SEG[s2][1] * 3 + 1] - FORMA[s2].rB);
+      RP.fundoDesPior = Math.min(RP.fundoDesPior, fd); if (fd < -0.01 - 1e-6) RP.fundoDes++;
+      if (apoio[i] >= 0) {
+        const l = apoio[i], fm = pd[(l ? A.J.maoD : A.J.maoE) * 3 + 1] - FORMA[S_MAO[l]].rB;
+        RP.maoN++;
+        RP.maoManeqF[0] = Math.min(RP.maoManeqF[0], fm); RP.maoManeqF[1] = Math.max(RP.maoManeqF[1], fm);
+        if (fm < MAO_FAIXA[0] || fm > MAO_FAIXA[1]) { RP.maoManeq++; RP.maoManeqEx ||= `${nome} quadro ${i}: ${f3(fm)} m`; }
+      }
+    }
     vels.push(i === 0 ? Math.hypot(j.vx, j.vz) : Math.hypot(qs[i].vx, qs[i].vz));
     if (i === 0) continue;
     RP.quadros++;
@@ -646,7 +770,7 @@ function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
   if (JSON.stringify(c) !== antes) RP.p5++;
   j.carrinho = salvo;
   RP.seqs++;
-  if (EQ) esqueletoSeq([...poses, poseFim], [...vels, velFim], cada, nome);
+  if (EQ) esqueletoSeq([...poses, poseFim], [...vels, velFim], cada, nome, [...apoio, -1]);
 }
 
 /** Mede o plano c do jogador j (pel0: a pelve da pose normal no aperto; mw: o mundo da pose) em todas as metas por quadro. */
@@ -996,6 +1120,9 @@ reg('nenhum NaN nos quadros', R.nan, '0', R.nan === 0);
 if (!TEM_POSE) reg('P a pose do carrinho (anim.js poseCarrinho)', 'não existe nesta lógica', 'existe', false);
 else {
   reg('P2 as juntas das pernas da pose = as do quadro (Float32)', `${RP.p2} juntas×quadros (pior ${RP.p2pior.toExponential(1)} m) em ${RP.quadros} quadros`, '0', RP.p2 === 0 && RP.quadros > 0);
+  reg('P6 manequim: a mão de apoio no chão no deslize (o fundo da cápsula da mão, pose desenhada) −1 a +1,5 cm',
+    `${RP.maoManeq} fora de ${RP.maoN} quadros (${f3(RP.maoManeqF[0])} a ${f3(RP.maoManeqF[1])} m)${RP.maoManeqEx ? '; ex.: ' + RP.maoManeqEx : ''}`, '0', RP.maoManeq === 0 && RP.maoN > 0);
+  reg('P6 manequim: o fundo de todas as cápsulas da pose DESENHADA ≥ −1 cm', `${RP.fundoDes} (pior ${f3(RP.fundoDesPior)} m)`, '0', RP.fundoDes === 0);
   reg('P1 fundo das cápsulas do manequim e da cabeça (pose) ≥ −1 cm', `${RP.fundo} (pior ${f3(RP.fundoPior)} m${RP.fundo || DETALHE ? `: ${RP.fundoEx}` : ''})`, '0', RP.fundo === 0);
   reg('P4 cabeça ≤ 17° da linha peito → pescoço', `${RP.cab} (pior ${f2(RP.cabPior)}°)`, '0', RP.cab === 0);
   reg('P4 tronco 40–60° do vertical no deslize (pose)', `${RP.tronco} de ${RP.troncoN} (${f2(RP.troncoFaixa[0])}–${f2(RP.troncoFaixa[1])}°)`, '0', RP.tronco === 0 && RP.troncoN > 0);
@@ -1004,6 +1131,12 @@ else {
   if (!EQ) reg('P1/P3 o corpo novo (render/esqueleto.js, assets/jogador/corpo.*)', 'não carregou', 'carrega', false);
   else {
     reg('P1 vértice mais baixo da pele do corpo novo (LOD0) ≥ −1 cm', `${RP.pele} de ${RP.peleN} quadros (pior ${f3(RP.pelePior)} m${RP.pele || DETALHE ? `: ${RP.peleEx}` : ''})`, '0', RP.pele === 0 && RP.peleN > 0);
+    reg('P6 corpo novo: a mão de apoio no chão no deslize (o vértice mais baixo dela, LOD0) −1 a +1,5 cm',
+      `${RP.maoPele} fora de ${RP.maoPeleN} quadros (${f3(RP.maoPeleF[0])} a ${f3(RP.maoPeleF[1])} m)${RP.maoPeleEx ? '; ex.: ' + RP.maoPeleEx : ''}`, '0', RP.maoPele === 0 && RP.maoPeleN > 0);
+    reg(`P6 corpo novo: a palma da mão de apoio para o chão (a normal ≤ ${PALMA_MAX}° de −Y) e a dobra do punho ≤ ${PUNHO_MAX}°`,
+      `palma ${RP.palma} (pior ${f2(RP.palmaPior)}°); punho ${RP.punho} (pior ${f2(RP.punhoPior)}°) em ${RP.maoPeleN} quadros`, '0; 0', RP.palma === 0 && RP.punho === 0 && RP.maoPeleN > 0);
+    reg(`P6 corpo novo: a seção da pele no cotovelo e no punho do braço de apoio ≥ ${SECAO_MIN * 100}% da do descanso (sem murchar na torção)`,
+      `${RP.secao} quadros abaixo (pior: cotovelo ${f2(RP.secaoPior[0] * 100)}%, punho ${f2(RP.secaoPior[1] * 100)}%)`, '0', RP.secao === 0 && RP.maoPeleN > 0);
     reg('P3 O1 juntas do esqueleto ≤ 1 mm', `${RP.o1} (pior ${(RP.o1pior * 1000).toFixed(3)} mm)`, '0', RP.o1 === 0);
     const tx = RP.o2 / Math.max(1, RP.o2n);
     reg('P3 O2 saltos (> 40° com o eixo < 20°)', `${RP.o2} em ${RP.o2n} quadros (${(tx * 100).toFixed(4)}%)${RP.o2ex ? '; ex.: ' + RP.o2ex : ''}`, '≤ 0,03%', tx <= 0.0003);

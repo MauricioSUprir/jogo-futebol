@@ -19,6 +19,10 @@
 //      pose do jogo: ~42°); na DISPARADA (≥ 6 m/s) a mediana do joelho muda ≤ 3° (a corrida fica a do jogo); tronco
 //      correndo (3,6–6 m/s) ≤ 17° de inclinação (jogo ~22°); nada muda NO AR (tornozelo mais baixo ≥ 0,25 m); com as
 //      duas mãos a < 0,3 m (segurando a bola) elas nunca saem do lugar (≤ 1 mm); os pés nunca (≤ 1 mm).
+//   O8 a mão de apoio no chão (item 77, render/apoio-mao.js: o punho e a palma do braço de apoio do carrinho deitado) só com
+//      o corpo NO CHÃO: nas partidas IA × IA (a IA não dá carrinho) e nas comemorações, nenhuma pose com o peso > 0,01 e a
+//      pelve acima de 0,3 m (o goleiro do mergulho, o agachado, o ajoelhado e quem segura a bola ficam como estavam; quem
+//      senta no chão depois do cabeceio apoia a mão, como no carrinho — informativo). O carrinho em si: teste-carrinho P6.
 // Na versão sem o corpo humano (main antes da 5.1a) reprova: o esqueleto e os assets não existem.
 //   node tools/teste-ossos.mjs [--sementes 8] [--detalhe]
 import fs from 'node:fs';
@@ -80,6 +84,9 @@ const D0 = E.desenhoRepouso, COMPR = E.comprimentos;
 // ------------------------------------------------------------------------------------------------ medidor por quadro
 const S = new Float64Array(NOSSOS * 12);
 const ant = new Map();          // id → {S, po}
+let AMo = null;
+try { AMo = await imp('render/apoio-mao.js'); } catch { AMo = null; }
+const apoio = { n: 0, alto: 0, max: 0, ex: '', exAlto: '' };
 const st = { amostras: 0, erroJ: 0, nErroJ: 0, nan: 0, limite: 0, ossosQ: 0, saltos: 0, saltosPorOsso: new Int32Array(NOSSOS), maxTronco: 0, exemplo: '', porFonte: {} };
 const p3 = new Float64Array(3);
 const angAxis = (pa, po, a, b) => {
@@ -96,6 +103,14 @@ const dobra = (q, a, b, c) => {
 };
 function medir(chave, po, corte, v = 1.5, peso = 1) {
   E.pele(po, S, 0, v, peso);
+  if (AMo) {
+    const w = Math.max(AMo.pesoApoio(po, 0), AMo.pesoApoio(po, 1));
+    if (w > 0.01) {
+      apoio.n++;
+      if (w > apoio.max) { apoio.max = w; apoio.ex = String(chave); }
+      if (po[J.pelve * 3 + 1] > 0.3) { apoio.alto++; apoio.exAlto ||= `${chave} (pelve ${fmt(po[J.pelve * 3 + 1], 2)} m, peso ${fmt(w, 2)})`; }
+    }
+  }
   const D = E.desenho;
   st.amostras++;
   for (let k = 0; k < NOSSOS * 12; k++) if (!Number.isFinite(S[k])) { st.nan++; break; }
@@ -319,6 +334,8 @@ else {
   reg('O7d no ar, mãos juntas (segurando a bola) e pés: nada muda', `no ar ${pst.noAr}/${pst.nAr}; mão ${pst.maoPresa}/${pst.nMao}; pés ${pst.pes}`, '0; 0; 0',
     pst.noAr === 0 && pst.maoPresa === 0 && pst.pes === 0 && pst.nAr > 0);
 }
+reg('O8 a mão de apoio só com o corpo no chão: poses com o peso > 0,01 e a pelve > 0,3 m (IA × IA e comemorações)',
+  AMo ? `${apoio.alto}${apoio.exAlto ? ' (ex.: ' + apoio.exAlto + ')' : ''}; sentados no chão (informativo): ${apoio.n} de ${st.amostras}${apoio.n ? `, peso máx ${fmt(apoio.max, 2)}` : ''}` : 'sem render/apoio-mao.js', '0', !!AMo && apoio.alto === 0);
 reg('O5 volume na dobra a 90° (área da seção perto da junta ÷ a do descanso)',
   vols.map(v => `${v.nome} ${fmt(v.area * 100, 0)}% (${v.n} v)`).join('; '), '≥ 85% em cada', vols.every(v => v.area >= 0.85 && v.n >= 8));
 
