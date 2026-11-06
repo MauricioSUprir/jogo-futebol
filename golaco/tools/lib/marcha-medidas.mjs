@@ -71,3 +71,51 @@ export function pct(xs, p) {
 }
 /** Diferença de fase da passada (mod 2) entre dois jogadores, em passos: 0 = no mesmo pé, 1 = com o pé trocado. */
 export function difFase(a, b) { const d = (((a - b) % 2) + 2) % 2; return Math.min(d, 2 - d); }
+
+/** Distância mínima entre os segmentos P[a0]–P[a1] e Q[b0]–Q[b1] e os parâmetros (0–1) dos pontos mais perto: {d, s, t}. */
+export function segSeg(P, a0, a1, Q, b0, b1) {
+  const px = P[a0 * 3], py = P[a0 * 3 + 1], pz = P[a0 * 3 + 2];
+  const ux = P[a1 * 3] - px, uy = P[a1 * 3 + 1] - py, uz = P[a1 * 3 + 2] - pz;
+  const qx = Q[b0 * 3], qy = Q[b0 * 3 + 1], qz = Q[b0 * 3 + 2];
+  const vx = Q[b1 * 3] - qx, vy = Q[b1 * 3 + 1] - qy, vz = Q[b1 * 3 + 2] - qz;
+  const wx = px - qx, wy = py - qy, wz = pz - qz;
+  const a = ux * ux + uy * uy + uz * uz, b = ux * vx + uy * vy + uz * vz, c = vx * vx + vy * vy + vz * vz;
+  const d = ux * wx + uy * wy + uz * wz, e = vx * wx + vy * wy + vz * wz;
+  const D = a * c - b * b;
+  let sN, sD = D, tN, tD = D;
+  if (D < 1e-9) { sN = 0; sD = 1; tN = e; tD = c; }
+  else { sN = b * e - c * d; tN = a * e - b * d; if (sN < 0) { sN = 0; tN = e; tD = c; } else if (sN > sD) { sN = sD; tN = e + b; tD = c; } }
+  if (tN < 0) { tN = 0; if (-d < 0) sN = 0; else if (-d > a) sN = sD; else { sN = -d; sD = a; } }
+  else if (tN > tD) { tN = tD; if (-d + b < 0) sN = 0; else if (-d + b > a) sN = sD; else { sN = -d + b; sD = a; } }
+  const s = Math.abs(sN) < 1e-9 ? 0 : sN / sD, t = Math.abs(tN) < 1e-9 ? 0 : tN / tD;
+  return { d: Math.hypot(wx + s * ux - t * vx, wy + s * uy - t * vy, wz + s * uz - t * vz), s, t };
+}
+
+/**
+ * A mão na coxa (A4 da revisão do item 61): a folga (m) entre o antebraço (cotovelo → mão) e a coxa do mesmo lado (quadril →
+ * joelho), com os raios do manequim (anim.js SEGMENTOS: antebraço 0,04 → 0,035; coxa 0,085 → 0,062); < 0 = dentro. A menor
+ * dos dois lados.
+ */
+export function folgaMaoCoxa(P, J) {
+  let f = Infinity;
+  for (const [iC, iM, iQ, iK] of [[J.cotoveloE, J.maoE, J.quadrilE, J.joelhoE], [J.cotoveloD, J.maoD, J.quadrilD, J.joelhoD]]) {
+    const r = segSeg(P, iC, iM, P, iQ, iK);
+    f = Math.min(f, r.d - (0.04 - 0.005 * r.s) - (0.085 - 0.023 * r.t));
+  }
+  return f;
+}
+
+/**
+ * A mão na frente da virilha (A3 da revisão): no referencial da linha dos quadris, a < 0,15 m do meio para o lado, mais de
+ * 4 cm à frente dela e abaixo de 10 cm acima dela (a mesma régua da revisão).
+ */
+export function maoNaVirilha(P, J, h) {
+  const qx = P[J.quadrilD * 3] - P[J.quadrilE * 3], qz = P[J.quadrilD * 3 + 2] - P[J.quadrilE * 3 + 2], ql = Math.hypot(qx, qz) || 1;
+  const rx = qx / ql, rz = qz / ql, sg = Math.cos(h) * rz - Math.sin(h) * rx < 0 ? -1 : 1, fx = sg * rz, fz = -sg * rx;
+  const mx = (P[J.quadrilE * 3] + P[J.quadrilD * 3]) / 2, my = (P[J.quadrilE * 3 + 1] + P[J.quadrilD * 3 + 1]) / 2, mz = (P[J.quadrilE * 3 + 2] + P[J.quadrilD * 3 + 2]) / 2;
+  for (const iM of [J.maoE, J.maoD]) {
+    const dx = P[iM * 3] - mx, dz = P[iM * 3 + 2] - mz;
+    if (Math.abs(dx * rx + dz * rz) < 0.15 && dx * fx + dz * fz > 0.04 && P[iM * 3 + 1] < my + 0.1) return true;
+  }
+  return false;
+}

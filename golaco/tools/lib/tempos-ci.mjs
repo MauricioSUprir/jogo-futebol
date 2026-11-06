@@ -85,7 +85,7 @@ export const TEMPOS_NODE = {
   'teste-bolas-paradas.mjs': 237,
   'teste-botoes.mjs': 95,
   'teste-cortejo.mjs': 4,
-  'teste-marcha.mjs': 18, // item 61 (medido: ~15 s aqui com 2 processos)
+  'teste-marcha.mjs': 30, // item 61 (medido: ~24 s aqui sozinho; a revisão juntou a comemoração, os treinadores e as guardas)
   'teste-prejogo-roteiro.mjs': 0.3,
   'teste-prejogo-roteiro.mjs --forma maracana': 0.3,
   'teste-prepartida.mjs': 1.6,
