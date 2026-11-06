@@ -245,18 +245,35 @@ const COR_F = `
 }
 `;
 
+// A CABEÇA sem o mapa de normais do PANO (item 62, "linha escura na nuca"): o pano-normal.webp é o do corpo do Rocketbox;
+// lido pela UV da cabeça, as costuras e dobras do molde do corpo viravam vincos nela — um arco escuro de orelha a orelha,
+// uma faixa e um "V" na nuca, rugas no rosto. O onBeforeCompile vê o shader com os #include ainda FECHADOS (o
+// WebGLProgram os abre depois: a troca de 'mapN.xy *= normalScale;' no texto do material não achava nada e passava calada),
+// então o include inteiro sai pelo trecho aberto, com a normal da malha na cabeça (mapN = (0, 0, 1): normal = tbn[2] = N).
+// (fórum do three.js, "How to change size of normalMap": a mesma troca do include pelo trecho expandido)
+const NORMAL_MAPS_F = trocar(THREE.ShaderChunk.normal_fragment_maps, 'mapN.xy *= normalScale;',
+  'mapN.xy *= normalScale;\n\tmapN = mix(mapN, vec3(0.0, 0.0, 1.0), vParte); // a cabeça: a normal da malha', 'normal_fragment_maps');
+
+/** texto.replace(de, para) que AVISA no console quando `de` não está no texto (a troca que falha calada: item 62). */
+function trocar(texto, de, para, onde) {
+  if (!texto.includes(de)) console.error(`humano3d: a troca de "${de}" não achou o trecho (${onde}) — o shader do corpo saiu sem ela`);
+  return texto.replace(de, para);
+}
+
 function remendo(sh, uniforms, cor) {
   Object.assign(sh.uniforms, uniforms);
-  sh.vertexShader = sh.vertexShader
-    .replace('#include <common>', '#include <common>\n' + DECL_V)
-    .replace('#include <beginnormal_vertex>', NORMAL_V)
-    // a sombra (MeshDepthMaterial) só tem a normal com displacementMap: a pele entra junto com a posição
-    .replace('#include <begin_vertex>', cor ? POS_V : PELE_V + POS_V);
+  let v = sh.vertexShader;
+  v = trocar(v, '#include <common>', '#include <common>\n' + DECL_V, 'vertex');
+  v = trocar(v, '#include <beginnormal_vertex>', NORMAL_V, 'vertex');
+  // a sombra (MeshDepthMaterial) só tem a normal com displacementMap: a pele entra junto com a posição
+  v = trocar(v, '#include <begin_vertex>', cor ? POS_V : PELE_V + POS_V, 'vertex');
+  sh.vertexShader = v;
   if (cor) {
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + DECL_F)
-      .replace('#include <color_fragment>', '#include <color_fragment>\n' + COR_F)
-      .replace('mapN.xy *= normalScale;', 'mapN.xy *= normalScale * (1.0 - vParte);');
+    let f = sh.fragmentShader;
+    f = trocar(f, '#include <common>', '#include <common>\n' + DECL_F, 'fragment');
+    f = trocar(f, '#include <color_fragment>', '#include <color_fragment>\n' + COR_F, 'fragment');
+    f = trocar(f, '#include <normal_fragment_maps>', NORMAL_MAPS_F, 'fragment');
+    sh.fragmentShader = f;
   }
 }
 
@@ -301,7 +318,7 @@ export function criarHumano3D(cena, dados, opc = {}) {
   const mat = new THREE.MeshStandardMaterial({ roughness: 0.78, metalness: 0, normalMap: texNormal, normalScale: new THREE.Vector2(0.8, 0.8) });
   mat.defines = { USE_UV: '' }; // o vUv (máscara de regiões, cabeça, número) sem um mapa de cor
   mat.onBeforeCompile = sh => remendo(sh, uniforms, true);
-  mat.customProgramCacheKey = () => 'humano-v1';
+  mat.customProgramCacheKey = () => 'humano-v2';
   const matSombra = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   matSombra.onBeforeCompile = sh => remendo(sh, uniforms, false);
   matSombra.customProgramCacheKey = () => 'humano-sombra-v1';
