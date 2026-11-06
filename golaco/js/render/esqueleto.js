@@ -20,9 +20,10 @@
 // dobra do braço do jogo. O TORNOZELO do desenho fica `sobeTornozelo` acima do do jogo, ao longo da canela (o pé do
 // Rocketbox gira 11,8 cm acima da sola; o do jogo apoiado, a 8 cm).
 // A MÃO DE APOIO do carrinho deitado (item 77; render/apoio-mao.js): o punho desce até o chão (a IK refaz o cotovelo) e a
-// palma vira para o chão — a pronação vai no osso do ANTEBRAÇO (torção em volta do eixo dele, como o rádio sobre a ulna) e no
-// punho fica só a dobra (extensão): girar a mão sozinha 86° em volta do antebraço fazia o "embrulho de bala" da pele linear
-// no punho (Kavan et al. 2007).
+// palma vira para o chão — 70% da pronação vai no osso do ANTEBRAÇO (torção em volta do eixo dele, como o rádio sobre a
+// ulna) e no punho fica a dobra (extensão) e o resto: girar a mão sozinha ~90° em volta do antebraço fazia o "embrulho de
+// bala" da pele linear no punho (Kavan et al. 2007), e a pronação inteira no antebraço murchava o cotovelo (o ajudante
+// dele leva metade: a seção a 86%; com 70%, cotovelo 92% e punho 95% — teste-carrinho P6).
 // Coordenadas do jogo: x = comprimento, z = largura, y para cima (as mesmas da pose).
 import { pesoApoio, maoNoChao } from './apoio-mao.js';
 
@@ -313,8 +314,8 @@ export function criarEsqueleto(repouso) {
   /**
    * A palma da mão `l` no chão com o peso w: a mão (osso 8/12, até aqui a cópia do antebraço) vai, pelo nlerp, à rotação que
    * leva a normal da palma a −Y e o eixo da mão à direção do antebraço no chão (os dedos para fora, como na mão espalmada
-   * do apoio); a torção dessa rotação em volta do eixo do antebraço passa ao osso do antebraço (a pronação) e no punho
-   * fica a dobra.
+   * do apoio); a torção dessa rotação em volta do eixo do antebraço passa ao osso do antebraço (a pronação, a fração
+   * APOIO_PUNHO.torcao) e no punho fica a dobra com o resto.
    */
   function palmaNoChao(D, o, l, w) {
     const b = l ? 12 : 8, fa = l ? 11 : 7, jc = (l ? JE.cotoveloD : JE.cotoveloE) * 3, jm = (l ? JE.maoD : JE.maoE) * 3;
