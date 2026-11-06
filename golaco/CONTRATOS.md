@@ -930,6 +930,10 @@ faixa ENTRA/SAI (a simulação não muda).
   a cena segue com a faixa e o replay vem depois dela (T12). `trocarMundo` cancela a cena, a fila e a faixa. Opção "Substituição: ligada | só a
   faixa" no submenu "Modo de jogo" (`prefs.substituicao`; `?substituicao=0|1` força; desligada por padrão com
   `navigator.webdriver`, `?prints=1` e `?demo=1`).
+- **Online** (item 30, 06/11; contrato "Online 1×1"): vale a opção do ANFITRIÃO nos dois aparelhos (pelo canal de controle,
+  nunca pelo pedido); cada aparelho roda a sua cena segurando só a sua simulação no `quadroOnline` e o lockstep faz o outro
+  esperar ("{nome} ainda está vendo a cena", a marca E_CENA); o "Pular" pula só a minha; o menu e o editor abertos não
+  congelam a cena e nada apertado neles a pula. Antes era desligada no online (`main.js` `substLigada = ONLINE ? false : …`).
 - **HUD**: `hud.substituicao(ativo)` (classe `em-substituicao`: some o mesmo que na comemoração), `hud.faixaSubst(pares,
   agora, cena | null)`, `faixaSubstQuadro(agora, cena)`, `faixaSubstEstado(agora)` → `{visivel, modo: 'cena' | 'jogo',
   pagina, n, texto, restante, dur}`, `esconderFaixaSubst()`. `#faixa-subst` (role status, aria-live polite): sigla do
@@ -4439,10 +4443,33 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
 - Transporte: a MessagePort que o TM entrega em resposta ao 'tm3d:pronto' ({tipo: 'tm3d:porta'}; protocolo no topo de
   `legacy-total-match/js/online3d.js`, seção 5) — {t:'j', b} pacote, {t:'c', m} controle ('acao', 'hash', 'pausa',
   'retoma', 'abandono'), {t:'estado'} da ligação; {t:'religar'} depois de 5 s sem nada.
-- `quadroOnline`: só roda o passo com as duas entradas; o MEU replay, a comemoração, a minha pausa e o celular em pé
-  seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o editor abertos NÃO param
-  (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal confiável). O hash a
-  cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
+- `quadroOnline`: só roda o passo com as duas entradas; o MEU replay, a comemoração, a cena de substituição (item 30), a
+  minha pausa e o celular em pé seguram só a minha simulação (o outro espera e mostra "Aguardando <nome>…"); menu, Ajuda e o
+  editor abertos NÃO param (`pausado()` do online) — a minha entrada vai com o bit IA. A edição do MEU time vira AÇÃO (canal
+  confiável). O hash a cada 60 passos; um pacote por quadro (também no pré-jogo, o curto no online).
+- **A cena de substituição no online (item 30, 06/11)**: liga com a opção do ANFITRIÃO ("Cena de substituição" do Modo de
+  jogo, a regra local dele: `?substituicao`, a preferência salva, desligada com webdriver/prints/demo, o padrão), mandada pelo
+  canal de controle (`{tipo: 'opcoes', subst}`, ao criar a página e de novo no 1º pacote do outro — o BroadcastChannel dos
+  testes perde a 1ª; quem recebe só copia) e adotada pelo convidado (`online-pagina.js substOnline`, pura; sem a mensagem, "só
+  a faixa": a cena é só desenho, a diferença nunca dessincroniza — no máximo um espera o outro); a preferência e o
+  `?substituicao` do convidado não contam. Nunca pelo pedido (a cena não está no hash; a preferência é do GOLAÇO). A faixa
+  ENTRA/SAI aparece sempre. Cada aparelho roda a SUA cena segurando só a SUA simulação (`segura = true` + `quadroSubst`, como
+  fora do online): o lockstep faz quem acabou antes esperar o outro; o "Pular" pula só a minha; a troca pelo editor do outro
+  jogador chega como ação e abre a cena no mesmo tick nos dois. A minha pausa combinada, o celular em pé e a aba escondida
+  congelam a cena; o menu, a Ajuda e o editor NÃO (como na comemoração), mas com eles abertos nenhum aperto pula a cena (a
+  ação é do menu: H abre a Ajuda, Enter aperta o botão em foco; os botões do jogo apertados ali só pulam depois de soltos e
+  apertados de novo, com o menu fechado: `quadroSubst(dt, ent, semPulo)`). Com a cena, o selo "Conexão instável" fica
+  escondido (`html.em-substituicao`, como na comemoração).
+- **A marca E_CENA (item 30)**: o bit 64 do byte 19 do pacote (`online-pagina.js E_CENA`; o `online.js` não o lê; sobra o
+  128) = este lado segura a SUA simulação por uma cena (a substituição, um replay, a comemoração no gol + 149), do quadro da
+  cena até o 1º passo rodado depois dela (`marcaCena`, pura: o quadro em que a cena acaba sai sem passo e sem entrada nova) e
+  só com a cena andando (sem a minha pausa e sem o celular em pé). O texto de baixo do aviso de espera (`textoEspera`, puro):
+  com os pacotes do outro chegando, o motivo dele — "{nome} ainda está antes do jogo." / "no pré-jogo." / "ainda está vendo a
+  cena." (E_CENA) / na espera longa sem motivo conhecido "{nome} ainda não voltou ao jogo." —; "A conexão parou. Se não
+  voltar, vocês podem encerrar." só sem pacote há 5 s (antes aparecia em toda espera longa, também na do replay e da
+  comemoração do outro). Com a entrada do outro para o meu próximo passo já chegada, a espera acaba no MESMO quadro
+  (`conexaoNoQuadro`, puro: o `paradoDesde` só zera depois do passo — sem isso o aviso ficava um quadro a mais e piscava
+  "ainda não voltou ao jogo"). W.O. e o selo continuam só pela falta de pacote.
 - **Antes do 1º passo** (item 64; contrato "Tela antes do jogo (item 64)", parte Online): os dois veem a tela antes do jogo com
   "Pronto" · Visão tática; a fase de cada lado vai no byte 19 de todo pacote (bits da página `E_TELA`/`E_PRONTO`/`E_PREJOGO`; o
   `online.js` intocado) e os dois saem juntos para o pré-jogo quando os dois estão prontos; o 1º passo continua decidido pelo
@@ -4456,14 +4483,23 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   aparelhos ficaram diferentes por um erro do jogo… nada conta").
 - Pausa do online: "Pausar a partida" (3 por jogador, até 60 s cada; só quem pausou retoma) e "Sair da partida" (dois
   toques — o 1º arma por 3 s com "Toque de novo: sair", curto para caber com o foco no PC e em 667×375; 'abandono' ao outro e 'tm3d:sair' {abandono: true} ao TM = derrota); sem Replay da pausa, Simular o resto,
-  Reiniciar, Modo de jogo/Cenas e a cena de substituição (seguraria a simulação de um lado só). Fim: 'tm3d:fim'
+  Reiniciar e Modo de jogo/Cenas (a cena de substituição vale desde o item 30: a opção do anfitrião, acima). Fim: 'tm3d:fim'
   {resultado (a súmula: a mesma nos dois), online: {hashFinal | wo: {vencedor, motivo} | dessinc}} (`fimTM(resultado, extra)`).
 - **Teste `teste-online-tela`** (navegador, CI e deploy): duas abas do mesmo Chromium jogando a mesma partida (IA nos dois
   lados): P1 andam, P2 os hashes iguais (0 de 12), P3 a pausa de A para os dois, B mostra "Pausado por", depois seguem
   iguais, P4 o menu aberto não para, P5 a partida inteira (?min=0.25) acaba igual nas duas (0 de 36), P6 a pausa do online
   em 844×390 sem rolar, P9 (item 58: o Pausar depois do Voltar ao jogo e o Sair por último, os dois por `aoTocar`) o Pausar
-  pelo toque pausa e o Sair arma com outro dedo no analógico, 0 erros. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste espera passos, não
-  tempo.)
+  pelo toque pausa e o Sair arma com outro dedo no analógico, 0 erros; P8 (item 30; `--so p8`; duas sessões próprias de
+  568×320, a semente achada em Node com as duas trocas cedo — hoje a 16, tick 380 —, cada aba pede a troca do SEU time):
+  P8a a escolha do anfitrião nos dois (A `?substituicao=1`, B `=0`: as duas abrem a cena no tick do Node, 2 pares, a faixa),
+  P8b cada aba segura só a sua (0 passos com a cena) e a cena anda, P8c o "Pular" de A só pula a dele (A espera parada ≤ o
+  passo de B + D + 2, com "Lado 1 ainda está vendo a cena", nunca "A conexão parou", W.O. nem o selo por ≥ 1 s), P8d hashes
+  iguais, P8e desligada no anfitrião (nenhuma cena, só a faixa, hashes iguais) e, da revisão, P8f o menu de A aberto na cena
+  (a cena anda; nem o J segurado nem o H a pulam, o H abre a Ajuda), P8g B em pé na cena (a de B congela; A não lê "vendo a
+  cena"), P8h o fim da espera sem piscar "ainda não voltou ao jogo" e P8i o selo aceso à força na cena com display none. O
+  `teste-online` O13–O15 (as funções puras) e o `teste-replay-paradas-tela` V8b (a espera pelo replay do outro: "vendo a
+  cena", nunca "conexão parou", sem piscar) completam. (O Chromium sem GPU daqui desenha ~6 quadros/s com duas abas: o teste
+  espera passos, não tempo.)
 
 ## Corpo humano realista — Etapa 5.1 (22/10; contrato)
 
