@@ -26,8 +26,11 @@
 //   E13* Personalizar: abre o editor "antes do jogo" sem a tela atrás dele (V5); o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
 //       no cortejo e o lado de fora NÃO remontado
-//   E14 por modo: TM "Simular partida" só no 2º toque → tm3d:fim com o resultado do motor 3D; Rumo ao Estrelato sem Personalizar,
-//       com "VOCÊ"; Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a fila e a disputa só anda depois do Bater;
+//   E14 por modo: TM "Simular partida" só no 2º toque → 'tm3d:sair' {motivo: 'simular'} em ≤ 2 s, nenhum tm3d:fim e o mundo
+//       parado no tick 0 (item 124, dono 05/11: a tela no lugar da janela "Jogar em 3D / Simular" — o Simular dela é o da janela: o
+//       TM simula lance a lance; na base o motor 3D simulava do tick 0 e mandava tm3d:fim); Rumo ao Estrelato sem Personalizar,
+//       com "VOCÊ", e o Simular dele igual (tm3d:sair 'simular'); Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a
+//       fila e a disputa só anda depois do Bater;
 //       Pênaltis 3D do TM: o [<] "Voltar ao Total Match" antes do Bater volta SEM resultado (tm3d:sair; revisão A2)
 //   E15 desenho (celular Média): ≤ 40 chamadas e ≤ 130 mil triângulos com a tela; ≤ 31 desenhos 3D por segundo
 //   E16 download: os bytes até +2,5 s com a tela ≤ os sem ela + 140 KB; a TM Cond só com a tela
@@ -720,6 +723,24 @@ if (faz('pad')) {
 }
 
 // ================================================================================================ TM: público (Simular partida) e o Rumo ao Estrelato
+/**
+ * (item 124) "Simular partida" da tela no TM (2 toques): o 1º arma (a tela fica, nenhuma mensagem de saída), o 2º manda
+ * 'tm3d:sair' {motivo: 'simular'} — o TM fecha o 3D e simula lance a lance — sem 'tm3d:fim' e sem andar o mundo.
+ */
+async function simularDaTela(pg) {
+  await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
+  const arm = await pg.evaluate(() => ({ armado: window.__golaco.prepartida.estado.armado, aberta: window.__golaco.prepartida.aberta, msgs: window.__golaco.tm.mensagens.map(m => m.tipo) }));
+  const t0 = Date.now();
+  await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
+  await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim' || m.tipo === 'tm3d:sair'), null, { timeout: 20000 }).catch(() => {});
+  const s = +((Date.now() - t0) / 1000).toFixed(2);
+  // (meio segundo a mais: um tm3d:fim atrasado — o motor 3D simulando — apareceria aqui)
+  await pg.waitForTimeout(500);
+  const r = await pg.evaluate(() => ({ msgs: window.__golaco.tm.mensagens.map(m => m.tipo + (m.motivo ? '/' + m.motivo : '')), tick: window.__golaco.mundo.tick, passos: window.__golaco.passos }));
+  const ok = arm.armado === 'simular' && arm.aberta && !arm.msgs.some(m => m === 'tm3d:fim' || m === 'tm3d:sair')
+    && r.msgs.includes('tm3d:sair/simular') && !r.msgs.some(m => m.startsWith('tm3d:fim')) && s <= 2 && r.tick === 0;
+  return { arm, s, ...r, ok };
+}
 if (faz('tm')) {
   const PED_PEN = { ...PED_A, id: 'tPenPP', modo: 'penaltis' };
   for (const [nome, ped] of [['TM pública', PED_A], ['Rumo ao Estrelato', PED_B], ['Pênaltis 3D do TM', PED_PEN]]) {
@@ -750,12 +771,10 @@ document.body.appendChild(f);
       const voce = await pg.evaluate(() => [...document.querySelectorAll('#prepartida .pp-ficha.voce')].length);
       if (ped === PED_A) {
         meta('E14 TM: 4 abas (Simular partida), o escudo do TM, o estádio "Estádio Total Match"', `abas ${e.pp.abas}; ${await pg.evaluate(() => { const d = window.__golaco.prepartida.dados(); return `${d.estadio}, escudo ${d.times[0].escudo?.url ? 'url' : d.times[0].escudo?.simbolo}`; })}`, 'jogar,visao,personalizar,simular; Estádio Total Match, url', e.pp.abas.join() === 'jogar,visao,personalizar,simular');
-        await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
-        const arm = await pg.evaluate(() => ({ armado: window.__golaco.prepartida.estado.armado, aberta: window.__golaco.prepartida.aberta, msgs: window.__golaco.tm.mensagens.map(m => m.tipo) }));
-        await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
-        await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 120000 }).catch(() => {});
-        const fim = await pg.evaluate(() => { const m = window.__golaco.tm.mensagens.find(x => x.tipo === 'tm3d:fim'); return { tem: !!m, placar: m?.dados?.placar ?? m?.resultado?.placar ?? null, estado: window.__golaco.estado().relogio?.estado }; });
-        meta('E14 TM: "Simular partida" arma no 1º toque e simula pelo motor 3D no 2º → tm3d:fim com o resultado', `1º: armado ${arm.armado}, tela ${arm.aberta}, mensagens ${arm.msgs}; 2º: tm3d:fim ${fim.tem}, relógio ${fim.estado}`, 'simular, aberta, sem fim; fim, fim', arm.armado === 'simular' && arm.aberta && !arm.msgs.includes('tm3d:fim') && fim.tem && fim.estado === 'fim');
+        const sim = await simularDaTela(pg);
+        meta('E14 TM: "Simular partida" arma no 1º toque e no 2º volta ao TM SEM resultado do 3D → tm3d:sair {motivo: "simular"} em ≤ 2 s, nenhum tm3d:fim, o mundo no tick 0 (item 124: o TM simula lance a lance)',
+          `1º: armado ${sim.arm.armado}, tela ${sim.arm.aberta}, mensagens ${sim.arm.msgs}; 2º: ${sim.msgs.join(', ')} em ${sim.s} s, tick ${sim.tick}, passos ${sim.passos}`,
+          'simular, aberta, sem sair/fim; tm3d:sair/simular, ≤ 2 s, sem tm3d:fim, tick 0', sim.ok);
       } else if (ped === PED_PEN) {
         // o [<] "Voltar ao Total Match" (2 toques) antes do Bater: volta SEM resultado — 'tm3d:sair' (a escolha dos times), nunca a
         // disputa simulada com 'tm3d:fim' (revisão A2: o TM mostrava o vencedor de uma disputa que ninguém jogou)
@@ -768,6 +787,9 @@ document.body.appendChild(f);
           'jogar,adversario; tm3d:pronto, tm3d:sair', e.pp.abas.join() === 'jogar,adversario' && msgs.includes('tm3d:sair') && !msgs.some(m => m.startsWith('tm3d:fim')));
       } else {
         meta('E14 Rumo ao Estrelato: sem Personalizar (Jogar · Visão tática · Simular), a ficha "VOCÊ"', `abas ${e.pp.abas}; fichas VOCÊ ${voce}`, 'jogar,visao,simular; 1', e.pp.abas.join() === 'jogar,visao,simular' && voce === 1);
+        const sim = await simularDaTela(pg);
+        meta('E14 Rumo ao Estrelato: "Simular partida" (2 toques) → tm3d:sair {motivo: "simular"}, nenhum tm3d:fim, tick 0 (item 124: a simulação do Estrelato)',
+          `1º: armado ${sim.arm.armado}, tela ${sim.arm.aberta}; 2º: ${sim.msgs.join(', ')} em ${sim.s} s, tick ${sim.tick}`, 'simular, aberta; tm3d:sair/simular, sem tm3d:fim, tick 0', sim.ok);
       }
       meta(`S1 0 erros (${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
