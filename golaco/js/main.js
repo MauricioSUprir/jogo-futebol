@@ -1607,7 +1607,12 @@ function iniciarComemoracao(ev) {
   const idCartao = AUTOR_GOL_ON ? autorDoCartao(plano, gol) : null;
   const janela = idCartao != null && fichaDe(idCartao) ? janelaCartao({ rede: COMEM.rede, duracao: duracaoCena(cenaGol), curta: !!plano.curta }) : null;
   cartaoAutor = janela ? { id: idCartao, time: plano.time === 1 ? 1 : 0, janela, fase: 'antes', mostrado: false, foto: false } : null;
-  if (cartaoAutor) garantirFoto(idCartao);
+  if (cartaoAutor) {
+    garantirFoto(idCartao);
+    // (item 126) a letra do nome (a TM Cond, o --f-disp): pedida já — o cartão só entra ~1,6 s depois (sem ?tm, antes da pré-carga
+    // ociosa ela pode não ter chegado; o texto do nome pede também o latin-ext se tiver č/ł/ğ)
+    pedirFontesDisp(fichaDe(idCartao)?.nome);
+  }
 }
 
 /**
@@ -1644,7 +1649,7 @@ function dadosAutorGol(id, t) {
     id, sigla: el?.sigla ?? hud.times[t]?.sigla ?? '', nomeTime: el?.nome ?? hud.times[t]?.nome ?? '', cor1: ct.cor, cor2: ct.texto,
     escudo: document.getElementById(`escudo-${t}`)?.getAttribute('href') ?? null,
     // o nome COMPLETO também no celular (o de camisa do tm-times corta o último nome em 10 letras sem reticências — "Evangelist" —
-    // e no nome composto fica só o fim: revisão V1); o que não couber corta com reticências no --ag-esq
+    // e no nome composto fica só o fim: revisão V1); o que não couber corta com reticências (o max-width do canto de baixo)
     num: f.num ?? '', nome: f.nome ?? String(id), foto: fotoPronta(id),
     // a mesma <img> já decodificada da pré-carga: pinta no 1º quadro do cartão
     fotoEl: FOTOS.ok.has(id) ? FOTOS.im.get(id) ?? null : null,

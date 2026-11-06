@@ -1064,37 +1064,42 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .terco-selo { animation: none; } }
 
-/* O CARTÃO DO AUTOR do gol (item 31; hud.js autorGol, js/autor-cartao.js): dentro da camada da comemoração (some com ela),
-   no canto de cima à DIREITA na linha do placar — o único lugar medido livre do autor, dos outros e do HUD em todos os planos
-   da cena, no PC e no celular (o celular põe o autor no terço esquerdo: ajustarCelular). [foto | escudo, sigla e número /
-   NOME]: o nome é a linha principal e o número vai na pílula do time, junto da sigla (o "11 THEMBA ZWANE" da Copa 2026, o
-   "MBAPPÉ" grande do FC Mobile; revisão V3); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número |
-   nome] (o molde das tarjas das cenas). Medidas pela ALTURA da janela
-   (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera). A fase é do relógio da cena (main.js): a
-   animação só enfeita. Não pega toque. */
+/* O CARTÃO DO AUTOR do gol (item 31 → 126; hud.js autorGol, js/autor-cartao.js): dentro da camada da comemoração (some com ela).
+   Item 126 (dono, 05/11: "a foto com o nome tem que ser mais embaixo e menor, tem que ser no canto inferior"): no canto de BAIXO à
+   DIREITA, no PC e no celular — o único canto de baixo medido livre do autor e dos outros atores em todos os planos da cena (6 gols
+   × 5 telas, quadro a quadro: 0 e 0; o de baixo à esquerda, o "lower third" da TV, cobria o autor em 73–78% dos quadros no celular,
+   que põe o autor no terço esquerdo — comemoracao.js ajustarCelular); ~4× menor no PC e ~2,6× no celular (a altura 20,6 → 9–10% da
+   janela no PC e 27 → 15% no celular). Com toque o "Pular" da comemoração sobe para cima dele (abaixo). [foto | pílula escudo, sigla e
+   número / NOME]: o nome em caixa alta na TM Cond 800 (o --f-disp do item 125: cabe inteiro também em 568×320, onde o de antes cortava
+   "Eduardo Pa…"); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número | NOME] da altura do placar, no pé
+   da tela. As medidas pela ALTURA da janela (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera) e a altura
+   do cartão com foto FIXA (--ag-alt, no pai: o "Pular" fica a 10 px certos dele). A fase é do relógio da cena (main.js): a animação
+   só enfeita. Não pega toque. */
+.comemoracao { --ag-foto: clamp(56px, 7.2vh, 76px); --ag-pad: clamp(7px, 0.9vh, 9px); --ag-alt: calc(var(--ag-foto) + 2 * var(--ag-pad)); }
+@media (max-height: 519px) { .comemoracao { --ag-foto: clamp(40px, 12vh, 48px); --ag-pad: 5px; } }
 .autor-gol {
-  --ag-foto: clamp(96px, 18vh, 196px); --ag-nome: clamp(22px, 4vh, 40px);
-  --ag-sigla: clamp(13px, 1.9vh, 20px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-pad: clamp(8px, 1.2vh, 14px); --ag-vao: clamp(12px, 1.8vh, 20px);
+  --ag-nome: clamp(20px, 2.6vh, 28px); --ag-sigla: clamp(12px, 1.35vh, 14px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-vao: clamp(10px, 1.2vh, 12px);
   --ag-fundo: 7, 9, 10;
-  position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
-  /* (até a direita do placar + 12 px: hud.js mede o placar e põe --ag-esq; o nome corta com reticências) */
-  max-width: calc(100vw - var(--sa-r) - var(--m) - var(--ag-esq, calc(var(--sa-l) + var(--m))));
+  position: absolute; top: auto; bottom: calc(var(--sa-b) + var(--m)); right: calc(var(--sa-r) + var(--m));
+  /* (a borda esquerda sempre além de 62% da largura no PC e de 48% no celular: à direita do máximo do autor — 59,5% e 44% medidos) */
+  max-width: min(38vw, 480px);
   display: flex; align-items: center; gap: var(--ag-vao); min-width: 0; box-sizing: border-box;
-  padding: var(--ag-pad) calc(var(--ag-pad) * 2) var(--ag-pad) var(--ag-pad);
-  background: rgba(7, 9, 10, 0.86); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  padding: var(--ag-pad) 14px var(--ag-pad) var(--ag-pad);
+  background: rgba(7, 9, 10, 0.88); border-left: 3px solid var(--cor-time, var(--verde)); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
+  font-family: var(--f-texto); color: var(--texto);
 }
+.autor-gol.com-foto { height: var(--ag-alt); }
 @media (max-height: 519px) {
-  .autor-gol { --ag-foto: clamp(64px, 23.5vh, 96px); --ag-nome: clamp(18px, 5.4vh, 20px); --ag-sigla: 12px; --ag-pad: 6px; --ag-vao: 10px; }
+  .autor-gol { --ag-nome: 18px; --ag-sigla: 11px; --ag-vao: 8px; max-width: calc(52vw - var(--sa-r) - var(--m)); padding-right: 10px; }
 }
 .autor-gol[hidden] { display: none; }
-/* sem foto: uma barra da altura do placar, na mesma linha (os topos e os pés alinhados; revisão V4) — as letras pela altura dela */
+/* sem foto: uma barra da altura do placar (agora no pé da tela) — as letras pela altura dela */
 .autor-gol.sem-foto { height: var(--placar-h); padding-top: 0; padding-bottom: 0; }
 .ag-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* a foto (a JPG 220 × 220 do TM: busto com o fundo, o rosto em x 0,50 / y 0,44) numa moldura, um leve aproximar (esconde parte
    da camisa de outro clube); nada recortado nem desenhado no lugar dela */
-.ag-foto { flex: none; position: relative; width: var(--ag-foto); height: var(--ag-foto); border-radius: 6px; overflow: hidden; background: #0b0f0c; }
+.ag-foto { flex: none; position: relative; width: var(--ag-foto); height: var(--ag-foto); border-radius: 4px; overflow: hidden; background: #0b0f0c; }
 .ag-foto[hidden] { display: none; }
 .ag-foto::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
 /* o pé da foto escurece até a cor do fundo do cartão: a camisa (muitas fotos do Commons são de jogos por OUTRO clube, às vezes com o
@@ -1104,27 +1109,40 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
   background: linear-gradient(180deg, rgba(var(--ag-fundo), 0) 0%, rgba(var(--ag-fundo), 0.8) 50%, rgba(var(--ag-fundo), 0.97) 100%);
 }
 .ag-foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.12); transform-origin: 50% 40%; }
-.ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(5px, 0.9vh, 9px); min-width: 0; }
+.ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(3px, 0.5vh, 5px); min-width: 0; }
 .autor-gol.sem-foto .ag-texto { flex-direction: row; align-items: center; gap: var(--ag-vao); }
 .autor-gol.sem-foto .ag-time { padding-top: 1px; padding-bottom: 1px; }
 .autor-gol.sem-foto .ag-nome { font-size: min(var(--ag-nome), calc(var(--placar-h) * 0.6)); }
 .autor-gol.sem-foto .ag-num { font-size: min(var(--ag-num), calc(var(--placar-h) * 0.55)); }
 .ag-time {
-  flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; border-radius: 5px;
+  flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 4px; border-radius: 4px;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
 .ag-escudo { flex: none; width: calc(var(--ag-sigla) * 1.15); height: calc(var(--ag-sigla) * 1.3); }
-.ag-sigla { font-size: var(--ag-sigla); font-weight: 900; letter-spacing: 0.08em; line-height: 1; }
+.ag-sigla { font: 800 var(--ag-sigla) / 1 var(--f-disp); letter-spacing: 0.06em; }
 /* o número na pílula, depois da sigla e de um filete: maior que ela, menor que o nome */
-.ag-num { flex: none; position: relative; margin-left: 2px; padding-left: 7px; font-size: var(--ag-num); font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.ag-num { flex: none; position: relative; margin-left: 2px; padding-left: 6px; font: 800 var(--ag-num) / 1 var(--f-disp); font-variant-numeric: tabular-nums; }
 .ag-num::before { content: ""; position: absolute; left: 0; top: 10%; bottom: 10%; width: 1px; background: currentColor; opacity: 0.45; }
 .ag-num:empty { display: none; }
-.ag-nome { display: block; max-width: 100%; min-width: 0; font-size: var(--ag-nome); font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; line-height: 1.12; }
-.autor-gol.visivel { animation: autor-gol-entra 0.3s ease-out both; }
+.ag-nome {
+  display: block; max-width: 100%; min-width: 0; font: 800 var(--ag-nome) / 1.05 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em;
+  color: #fff; overflow: hidden; text-overflow: ellipsis;
+}
+/* a entrada "corre" da borda da direita, como um lower third (Material 3: emphasized decelerate, 280 ms); a saída em 200 ms */
+.autor-gol.visivel { animation: autor-gol-entra 0.28s cubic-bezier(0.05, 0.7, 0.1, 1) both; }
 .autor-gol.saindo { animation: autor-gol-sai 0.2s ease-in both; }
-@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
-@keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(8px); } }
-@media (prefers-reduced-motion: reduce) { .autor-gol.visivel, .autor-gol.saindo { animation: none; } }
+@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(24px); clip-path: inset(0 0 0 100%); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); } }
+@keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .autor-gol.visivel { animation: autor-gol-aparece 0.15s linear both; }
+  .autor-gol.saindo { animation: autor-gol-some 0.15s linear both; }
+}
+@keyframes autor-gol-aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes autor-gol-some { from { opacity: 1; } to { opacity: 0; } }
+/* (item 126) com toque, o "Pular" da comemoração SOBE para cima do cartão, na mesma coluna da direita, desde o começo da cena (o
+   mesmo lugar com e sem cartão: gol contra, ?autorGol=0). A camada inteira já pula a cena com um toque; o botão é a indicação. Os
+   "Pular" do replay, da substituição e da cena do cartão ficam embaixo à direita (o cartão do autor sai ≥ 0,4 s antes do replay) */
+html.com-toque #comemoracao-pular { right: calc(var(--sa-r) + var(--m)); bottom: calc(var(--sa-b) + var(--m) + var(--ag-alt) + 10px); }
 /* a pausa aberta no meio da cena: o cartão do meu time da pausa mora no mesmo canto — o do autor espera atrás dela, escondido; e o
    "Replay" da pausa pedido no meio da cena (a jogada com a bola rolando, a marca REPLAY no mesmo canto): escondido o replay inteiro
    (a fase dele é do relógio da cena, parado no replay — volta onde estava se a cena continuar depois) */

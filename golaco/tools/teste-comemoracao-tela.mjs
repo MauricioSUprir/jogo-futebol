@@ -44,9 +44,22 @@
 //         letras: o de camisa do tm-times o corta em 10 — "Albuquerqu");
 //      H11 (revisão V3) o nome é a linha principal (letra maior que a do número, que vai na pílula com a sigla) e, com foto, a
 //         coluna centrada na altura dela (± 3 px);
-//      H12 (revisão V4) sem foto, o cartão de uma linha na altura do placar (os topos e os pés a ± 1 px) — 568×320 e PC.
+//      H12 (revisão V4 → item 126) sem foto, o cartão de uma linha da ALTURA do placar (± 1 px) e o pé na margem de baixo (± 1 px)
+//         — 568×320 e PC (antes: na linha do placar, em cima);
+//   (item 126, dono 05/11: "a foto com o nome tem que ser mais embaixo e menor, tem que ser no canto inferior")
+//      H13 o cartão no canto de BAIXO à direita: x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px) — no A (PC 1280×720), no H3 (844 pro),
+//         no H4 (568 pública) e nas páginas novas (1920×1010 pro e 568×320 pro, com as fotos);
+//      H14 menor: a altura do cartão ≤ 10,5% da janela no PC e ≤ 17% no celular; a foto 56–76 px no PC e 40–48 no celular; a área
+//         ≤ 45% da da base (PC, 844) e ≤ 60% em 568 (onde a base cortava o nome em 232 px; com o nome de 19 letras inteiro o
+//         cartão novo dá 57%) — AREA_BASE, medida por este teste na 29d67bad;
+//      H15 o cartão não cobre os OUTROS atores da cena (as poses desenhadas: comemoracao.atores/naTela) em nenhum quadro — no A,
+//         no D, no H3, no H4 e nas páginas novas (na base, no celular, 56–79 quadros em 2 de 6 gols);
+//      H16 com toque: o "Pular" da comemoração ACIMA do cartão (y1 ≤ cartão.y0 − 8) e, depois do 1º corte, sem cobrir o autor;
+//      e o H3 passa a pedir a foto de 44–48 px (antes 88–96) e o nome na TM Cond 800 carregada (≥ 16 px; o número ≥ 12); o H10 ganha
+//      o 568×320 pro (o nome inteiro também lá).
 // Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
-// sem o cartão (a base do item 31) reprovam H1–H7 e H9–H12; antes das correções da revisão (b719f4ed) reprovam H9–H12.
+// sem o cartão (a base do item 31) reprovam H1–H7 e H9–H12; antes das correções da revisão (b719f4ed) reprovam H9–H12. Na base do
+// item 126 (29d67bad, o cartão em cima, grande) reprovam H3, H10 (568 pro), H12, H13, H14, H15 (no celular) e H16.
 //   node tools/teste-comemoracao-tela.mjs [--raiz <pasta do jogo>] [--so A,B,C,D,E,F,H]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
@@ -129,17 +142,24 @@ async function acompanhar(pg, gol, opc = {}) {
         const parada = m.partida.estado === 'gol' && m.tick + 1 - desde >= 150;
         if (parada && tick0 == null) { tick0 = m.tick; minuto0 = g.estado().relogio.minuto; }
         const ag = cartao(g);
+        // (item 126) depois do 1º corte (fora do plano da rede): o "Pular" (com toque) × o autor; com o cartão: os OUTROS atores
+        if (e.fase !== 'rede') out.cortou = true;
+        const cruzaQ = (a, b) => !!a && !!b && a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+        const pu = caixaDe('#comemoracao-pular');
+        const pularAutor = out.cortou && !!tela && !tela.atras && cruzaQ(pu, tela);
+        const outros = ag && g.comemoracao.atores ? (g.comemoracao.atores() ?? []).filter(a => a.id !== e.autor).map(a => g.comemoracao.naTela(a.id)).filter(b => b && !b.atras) : [];
+        const cobreOutro = !!ag && outros.some(b => cruzaQ(b, ag.caixa));
         if (ag && !out.geo) {
           const s = document.createElement('i');
-          s.style.cssText = 'position:fixed;padding:var(--sa-t,0px) var(--sa-r,0px) var(--sa-b,0px) var(--sa-l,0px)';
+          s.style.cssText = 'position:fixed;padding:var(--sa-t,0px) var(--sa-r,0px) var(--sa-b,0px) var(--sa-l,0px);margin-left:var(--m,14px)';
           document.body.appendChild(s); const cs = getComputedStyle(s);
-          out.geo = { W: innerWidth, H: innerHeight, sa: { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 }, placar: caixaDe('#hud .placar'), pular: caixaDe('#comemoracao-pular') };
+          out.geo = { W: innerWidth, H: innerHeight, m: parseFloat(cs.marginLeft) || 0, sa: { l: parseFloat(cs.paddingLeft) || 0, r: parseFloat(cs.paddingRight) || 0, t: parseFloat(cs.paddingTop) || 0, b: parseFloat(cs.paddingBottom) || 0 }, placar: caixaDe('#hud .placar'), pular: caixaDe('#comemoracao-pular') };
           s.remove();
         }
         out.q.push({ t: e.t, fase: e.fase, plano: e.plano, estado: e.estado, tick: m.tick, alt: tela ? tela.altura : 0, dentro: !!(tela && tela.dentro), minuto: g.estado().relogio.minuto, parada,
           gol: document.getElementById('gol-tela').classList.contains('visivel'), mapa: vis('minimapa'), menu: vis('btn-menu'), painel: vis('#hud .painel-jogo'), placar: vis('#hud .placar'),
           n: out.n, rp: !!rp?.ativo, ca: e.cartao ?? null, co: !!e.contra, cu: !!e.curta, ag: ag ? { saindo: ag.saindo, foto: ag.foto, fotoSrc: ag.fotoSrc, num: ag.num, nome: ag.nome, caixa: ag.caixa, fotoCaixa: ag.fotoCaixa, letraNum: ag.letraNum, letraNome: ag.letraNome, cortado: ag.cortado, textoCaixa: ag.textoCaixa } : null,
-          ab: tela && !tela.atras ? { x0: tela.x0, y0: tela.y0, x1: tela.x1, y1: tela.y1 } : null });
+          ab: tela && !tela.atras ? { x0: tela.x0, y0: tela.y0, x1: tela.x1, y1: tela.y1 } : null, ou: cobreOutro, pa: pularAutor, pu });
         if (opc.pular && e.estado === 'rodando' && e.t >= opc.pular.em && !out.apertou) { out.apertou = { t: e.t, n: out.n }; window.__aperta = true; break; }
       } else if (m.partida.estado === 'gol' && !out.q.length) {
         // sem cena (versão antiga): o pós-gol na câmera do jogo
@@ -178,16 +198,62 @@ function avaliarCartao(r) {
     n: vis.length, entra: i0 >= 0 ? q[i0].t : null, fica, comGol: vis.filter(x => x.gol).length, naRede: vis.filter(x => x.plano === 'rede' || x.fase === 'rede').length,
     noReplay: vis.filter(x => x.rp).length + (r.cartaoReplay ?? 0), depois: r.cartaoDepois ?? 0,
     folga: ultimo != null && r.replay ? (r.replay.n - ultimo) / 60 : null, cobre: vis.filter(x => cruza(x.ag.caixa, x.ab)).length,
+    cobreOutros: vis.filter(x => x.ou).length, pularAutor: q.filter(x => x.pa).length,
+    // o "Pular" ACIMA do cartão (y1 ≤ cartão.y0 − 8) em todos os quadros com os dois
+    pularAbaixo: vis.filter(x => x.pu && x.pu.y1 > x.ag.caixa.y0 - 8 && x.pu.x0 < x.ag.caixa.x1 && x.ag.caixa.x0 < x.pu.x1).length, comPular: vis.filter(x => x.pu).length,
     a: i0 >= 0 ? q[i0].ag : null, ca: q.find(x => x.ca)?.ca ?? null, semEstado: q.every(x => x.ca == null),
   };
 }
-/** (revisão V4) H12: o cartão sem foto na altura do placar, na mesma linha (o topo e o pé a ± 1 px dos dele). */
+/** (revisão V4 → item 126) H12: o cartão sem foto da ALTURA do placar (± 1 px), agora no pé da tela (o pé na margem de baixo, ± 1). */
 function alinhadoAoPlacar(r, c) {
-  const p = r.geo?.placar, cx = c.a?.caixa;
+  const p = r.geo?.placar, cx = c.a?.caixa, g = r.geo;
   if (!p || !cx) return { ok: false, texto: 'sem cartão ou sem placar' };
-  const dTopo = cx.y0 - p.y0, dPe = cx.y1 - p.y1;
-  return { ok: Math.abs(dTopo) <= 1 && Math.abs(dPe) <= 1, texto: `cartão ${Math.round(cx.y0)}–${Math.round(cx.y1)} × placar ${Math.round(p.y0)}–${Math.round(p.y1)} (topo ${f2(dTopo)}, pé ${f2(dPe)} px)` };
+  const dAlt = (cx.y1 - cx.y0) - (p.y1 - p.y0), pe = g.H - g.sa.b - g.m, dPe = cx.y1 - pe;
+  return { ok: Math.abs(dAlt) <= 1 && Math.abs(dPe) <= 1, texto: `cartão ${Math.round(cx.y0)}–${Math.round(cx.y1)} (altura ${f2(cx.y1 - cx.y0)}) × placar ${f2(p.y1 - p.y0)} px; o pé a ${f2(dPe)} px da margem de baixo (${f2(pe)})` };
 }
+/** (item 126) H13: o cartão no canto de BAIXO à direita — x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px). */
+function noCanto(r, c) {
+  const g = r.geo, cx = c.a?.caixa;
+  if (!g || !cx) return { ok: false, texto: 'sem cartão' };
+  const dx = cx.x1 - (g.W - g.sa.r - g.m), dy = cx.y1 - (g.H - g.sa.b - g.m);
+  return { ok: Math.abs(dx) <= 1 && Math.abs(dy) <= 1, texto: `caixa ${Math.round(cx.x0)}–${Math.round(cx.x1)} × ${Math.round(cx.y0)}–${Math.round(cx.y1)} em ${g.W}×${g.H} (m ${g.m}, sa ${g.sa.r}/${g.sa.b}): direita ${f2(dx)}, pé ${f2(dy)} px do canto` };
+}
+/**
+ * (item 126) H14: o tamanho — a altura do cartão / a da janela, a foto e a área contra a da BASE (29d67bad, o cartão do item 31 no
+ * canto de cima, medido por este mesmo teste com o mesmo pedido e o mesmo gol: AREA_BASE). `cel` = celular (altura < 520).
+ */
+// (medida na 29d67bad com este teste: o cartão em cima, 673×208 / 339×106 / 232×89 px, o nome "Eduardo Albuquerque")
+const AREA_BASE = { '1920x1010': 139984, '844x390': 35934, '568x320': 20648 };
+function tamanhoCartao(r, c, { cel, foto, limiteArea }) {
+  const g = r.geo, cx = c.a?.caixa;
+  if (!g || !cx) return { ok: false, texto: 'sem cartão' };
+  const alt = cx.y1 - cx.y0, pct = 100 * alt / g.H, area = (cx.x1 - cx.x0) * alt, base = AREA_BASE[`${g.W}x${g.H}`];
+  const lado = c.a.fotoCaixa ? c.a.fotoCaixa.x1 - c.a.fotoCaixa.x0 : 0;
+  const [fmin, fmax] = cel ? [40, 48] : [56, 76];
+  const okFoto = !foto || (lado >= fmin && lado <= fmax);
+  const okArea = !base || area <= limiteArea * base;
+  const ok = pct <= (cel ? 17 : 10.5) && okFoto && okArea;
+  return { ok, texto: `altura ${f2(alt)} px = ${f2(pct)}% de ${g.H}; foto ${Math.round(lado)} px; área ${Math.round(area)} px²${base ? ` = ${f2(100 * area / base)}% da base (${base})` : ''}` };
+}
+/** (item 126) H13 (o canto), H14 (o tamanho), H15 (os outros atores) e H16 (o "Pular", com toque) de um acompanhar. */
+function metasCanto(r, c, tela, { cel, foto, limiteArea }) {
+  const k = noCanto(r, c);
+  meta(`H13 ${tela}: o cartão no canto de BAIXO à direita (± 1 px)`, k.texto, '± 1 px', k.ok);
+  if (foto) {
+    const t = tamanhoCartao(r, c, { cel, foto, limiteArea });
+    meta(`H14 ${tela}: o cartão menor — altura ≤ ${cel ? 17 : 10.5}% da janela, foto ${cel ? '40–48' : '56–76'} px, área ≤ ${Math.round(100 * limiteArea)}% da da base`, t.texto, `≤ ${cel ? 17 : 10.5}%; ${cel ? '40–48' : '56–76'}; ≤ ${Math.round(100 * limiteArea)}%`, t.ok);
+  }
+  meta(`H15 ${tela}: o cartão não cobre os OUTROS atores da cena em nenhum quadro`, `cobre os outros em ${c.cobreOutros}/${c.n} quadros`, '0', c.n > 0 && c.cobreOutros === 0);
+  if (cel) meta(`H16 ${tela}: o "Pular" ACIMA do cartão (≥ 8 px) e, depois do 1º corte, sem cobrir o autor`, `"Pular" abaixo/encostado em ${c.pularAbaixo}/${c.comPular} quadros com os dois; cobre o autor depois do corte em ${c.pularAutor} quadros`, '0; 0', c.comPular > 0 && c.pularAbaixo === 0 && c.pularAutor === 0);
+}
+/** (item 126) A família e o peso CARREGADOS do nome do cartão (a TM Cond 800: o --f-disp). */
+const letraDoNome = pg => pg.evaluate(async () => {
+  const n = document.querySelector('#autor-gol .ag-nome');
+  if (!n) return null;
+  const cs = getComputedStyle(n);
+  try { await document.fonts.load(`800 ${cs.fontSize} "TM Cond"`, n.textContent || 'A'); } catch (_) { /* */ }
+  return { fam: cs.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, ''), peso: cs.fontWeight, px: parseFloat(cs.fontSize), carregada: document.fonts.check(`800 ${cs.fontSize} "TM Cond"`, n.textContent || 'A'), caixa: cs.textTransform };
+});
 /** (item 31) H2: o cartão a ≥ 8 px do placar e do "Pular", dentro da janela e da área segura (a 1ª amostra visível e a geometria). */
 function encostos(r, c) {
   const g = r.geo, cx = c.a?.caixa;
@@ -249,6 +315,9 @@ if (faz('A')) {
       '0; 0; ≥ 0,4 s; 0; 0', c.n > 0 && c.comGol === 0 && c.naRede === 0 && c.folga != null && c.folga >= 0.4 && c.noReplay === 0 && c.depois === 0);
     const e = encostos(r, c);
     meta('H2 PC 1280×720: o cartão a ≥ 8 px do placar, na tela; não cobre o autor (a pose desenhada) em nenhum quadro', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+    meta('H15 PC 1280×720: o cartão não cobre os OUTROS atores da cena (as poses desenhadas) em nenhum quadro', `cobre os outros em ${c.cobreOutros}/${c.n} quadros`, '0', c.n > 0 && c.cobreOutros === 0);
+    const k = noCanto(r, c);
+    meta('H13 PC 1280×720 (sem ?tm): o cartão no canto de BAIXO à direita (± 1 px)', k.texto, '± 1 px', k.ok);
   } finally { await P.fechar(); }
 }
 // A6: o contraplano do abraço com e sem a torcida (pixels); com ?autorGol=0 (H8: a cena sem o cartão do autor)
@@ -404,7 +473,10 @@ if (faz('D')) try {
           // (item 31, H2) o cartão do autor e a caixa do autor no mesmo quadro
           const a = g.comemoracao.cartaoTela, cx = a && a.visivel ? a.caixa : null;
           const cobre = !!cx && !!tela && !tela.atras && cx.x0 < tela.x1 && tela.x0 < cx.x1 && cx.y0 < tela.y1 && tela.y0 < cx.y1;
-          q.push({ fase: e.fase, dentro: !!(tela && tela.dentro), alt: tela ? tela.altura : 0, estado: e.estado, cartao: !!cx, cobre });
+          // (item 126, H15) os outros atores
+          const outros = cx && g.comemoracao.atores ? (g.comemoracao.atores() ?? []).filter(a => a.id !== e.autor).map(a => g.comemoracao.naTela(a.id)).filter(b => b && !b.atras) : [];
+          const cobreOutro = outros.some(b => cx.x0 < b.x1 && b.x0 < cx.x1 && cx.y0 < b.y1 && b.y0 < cx.y1);
+          q.push({ fase: e.fase, dentro: !!(tela && tela.dentro), alt: tela ? tela.altura : 0, estado: e.estado, cartao: !!cx, cobre, cobreOutro });
         }
         return { e0, q, n };
       });
@@ -418,6 +490,8 @@ if (faz('D')) try {
         const comCartao = r.q.filter(x => x.cartao).length, cobre = r.q.filter(x => x.cobre).length;
         meta('H2 gol natural (D): o cartão do autor não cobre o autor', `cartão em ${comCartao} quadros (${r.e0.contra ? 'gol contra: nenhum' : r.e0.curta ? 'cena curta' : 'cena normal'}); cobre em ${cobre}`,
           r.e0.contra ? '0 quadros (gol contra)' : '> 0; 0', r.e0.contra ? comCartao === 0 : comCartao > 0 && cobre === 0);
+        const cobreOu = r.q.filter(x => x.cobreOutro).length;
+        meta('H15 gol natural (D): o cartão do autor não cobre os outros atores', `cobre os outros em ${cobreOu}/${comCartao} quadros`, '0', cobreOu === 0);
         meta('D gol natural (semente ' + GOL.semente + '): fases, duração e o autor no quadro', `time ${r.e0.time}${curta ? ' (curta)' : ''}, ${r.e0.variante}, ${r.e0.colegas.length} colegas; ${fases.join(' → ')}; ${f2(rod.length / 60)} s; autor no quadro ${bons}/${cf.length}`,
           `fases na ordem; ${curta ? '3,5–5,5' : '6–8,5'} s; ≥ 85%`, fases[0] === 'rede' && fases.includes('reacao') && (curta ? rod.length / 60 >= 3.5 && rod.length / 60 <= 5.5 : rod.length / 60 >= 6 && rod.length / 60 <= 8.5) && cf.length > 0 && bons / cf.length >= 0.85);
       }
@@ -511,14 +585,17 @@ if (faz('H')) {
       const tm = await pg.evaluate(id => window.__golaco.tm?.mapa?.[id]?.tmId ?? null, gol.autor);
       const esperado = tm ? urlFoto(ORIGEM, 'home', tm) : null;
       const lado = a?.fotoCaixa ? Math.round(a.fotoCaixa.x1 - a.fotoCaixa.x0) : 0;
-      meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 88–96 px; nome ≥ 18 px, número ≥ 14 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}"` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
-        'a do autor; 88–96; ≥ 18; ≥ 14', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 88 && lado <= 96 && a.letraNome >= 18 && a.letraNum >= 14);
+      // (item 126: menor — a foto 44–48 px, antes 88–96; o nome na TM Cond 800 carregada, ≥ 16 px; o número ≥ 12)
+      const ln = await letraDoNome(pg);
+      meta('H3 celular 844×390, ?tm pro: o cartão COM a foto do autor (a do tmId dele no pedido), 44–48 px; nome ≥ 16 px na TM Cond 800 carregada, número ≥ 12 px', a?.visivel ? `fotos ${JSON.stringify(fo)}; entrou em ${f2(ap.t)} s; foto ${a.foto}${pronta === 0 ? ' no 1º quadro' : ' (não no 1º quadro)'} ${a.fotoSrc === esperado ? '(a do autor)' : `(${a.fotoSrc} ≠ ${esperado})`}, ${lado} px; número ${a.letraNum} px "${a.num}", nome ${a.letraNome} px "${a.nome}" (${ln?.fam} ${ln?.peso}${ln?.carregada ? ' carregada' : ' NÃO carregada'})` : `nenhum cartão (fotos ${JSON.stringify(fo)})`,
+        'a do autor; 44–48; ≥ 16 na TM Cond 800; ≥ 12', !!a?.visivel && a.foto && a.fotoSrc === esperado && lado >= 44 && lado <= 48 && a.letraNome >= 16 && a.letraNum >= 12 && ln?.fam === 'TM Cond' && +ln.peso === 800 && ln.carregada);
       // (revisão V3) o nome é a linha principal (o número vai na pílula, junto da sigla) e a coluna fica no meio da altura da foto
       const meioT = a?.textoCaixa ? (a.textoCaixa.y0 + a.textoCaixa.y1) / 2 : NaN, meioF = a?.fotoCaixa ? (a.fotoCaixa.y0 + a.fotoCaixa.y1) / 2 : NaN;
       meta('H11 celular 844×390 (com foto): o nome é a linha principal (letra maior que a do número); a coluna centrada na altura da foto (± 3 px)', a?.visivel ? `nome ${a.letraNome} px × número ${a.letraNum} px; meio da coluna − meio da foto ${f2(meioT - meioF)} px` : 'nenhum cartão',
         'nome > número; ± 3', !!a?.visivel && a.letraNome > a.letraNum && Math.abs(meioT - meioF) <= 3);
       const e = encostos(r, c);
       meta('H2 celular 844×390 com o entalhe (?tm pro): sem encostar no placar nem no "Pular", na área segura; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+      metasCanto(r, c, '844×390 (?tm pro, com foto, entalhe)', { cel: true, foto: true, limiteArea: 0.45 });
       const fi = await fichaNaPagina(pg, gol.autor);
       meta('H10 celular 844×390 (com foto): o nome COMPLETO da ficha, sem cortar (não o da camisa, cortado em 10 letras)', a?.visivel ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
         'o completo; sem reticências', !!a?.visivel && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
@@ -546,11 +623,12 @@ if (faz('H')) {
         'sem; 0; ≥ 15 e > número; ≥ 14', !!a && !a.foto && !a.fotoCaixa && P.fotos.pedidos === 0 && a.letraNome >= 15 && a.letraNome > a.letraNum && a.letraNum >= 14);
       const e = encostos(r, c);
       meta('H2 celular 568×320: sem encostar no placar nem no "Pular"; não cobre o autor', `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros`, 'sem encostar; 0', e.ok && c.n > 0 && c.cobre === 0);
+      metasCanto(r, c, '568×320 (?tm público, sem foto)', { cel: true, foto: false });
       const fi = await fichaNaPagina(pg, gol.autor);
       meta('H10 celular 568×320 (sem foto): o nome COMPLETO da ficha, sem cortar', a ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
         'o completo; sem reticências', !!a && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
       const al = alinhadoAoPlacar(r, c);
-      meta('H12 celular 568×320 (sem foto): o cartão de uma linha na altura do placar, os topos e os pés alinhados (± 1 px)', al.texto, '± 1 px', al.ok);
+      meta('H12 celular 568×320 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé na margem de baixo (± 1 px)', al.texto, '± 1 px', al.ok);
     } finally { await P.fechar(); }
   } catch (e) { meta('H4 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H5 a cena curta e H6 pular com o cartão na tela (PC, sem ?tm)
@@ -566,7 +644,7 @@ if (faz('H')) {
         '≥ 2,2 s; folga > 0; 0', curta && c1.n > 0 && c1.fica >= 2.2 && c1.folga != null && c1.folga > 0 && c1.noReplay === 0 && c1.depois === 0);
       meta('H11 PC 1280×720 (sem foto): o nome é a linha principal (letra maior que a do número)', c1.a ? `nome ${c1.a.letraNome} px × número ${c1.a.letraNum} px` : 'nenhum cartão', 'nome > número', !!c1.a && c1.a.letraNome > c1.a.letraNum);
       const al1 = alinhadoAoPlacar(r1, c1);
-      meta('H12 PC 1280×720 (sem foto): o cartão de uma linha na altura do placar, os topos e os pés alinhados (± 1 px)', al1.texto, '± 1 px', al1.ok);
+      meta('H12 PC 1280×720 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé na margem de baixo (± 1 px)', al1.texto, '± 1 px', al1.ok);
       const g0 = await golRoteirizado(pg, { semente: 5, time: 0 });
       const ate = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !(g.comemoracao.estado.t >= 2.2 && g.comemoracao.cartaoTela?.visivel)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { t: g.comemoracao.estado?.t ?? null, vis: !!g.comemoracao.cartaoTela?.visivel }; });
       await pg.keyboard.down('KeyK');
@@ -630,6 +708,30 @@ if (faz('H')) {
         'sem foto; 22; 0', !!c.a && !c.a.foto && !c.a.fotoCaixa && fo?.erros === 22 && erros.length === 0);
     } finally { await P.fechar(); }
   } catch (e) { meta('H7 execução', e.message.split('\n')[0], 'sem exceção', false); }
+  // (item 126) o cartão COM foto no PC grande (1920×1010, ?tm pro) e no celular pequeno (568×320, ?tm pro, toque e entalhe):
+  // o canto de baixo, o tamanho, os outros atores, o "Pular" e o nome inteiro (A7: na base o 568 pro cortava — "Eduardo Pa…")
+  for (const T of [{ W: 1920, H: 1010, cel: false, id: 'f126pc' }, { W: 568, H: 320, cel: true, id: 'f126cel' }]) {
+    try {
+      const ped = nomesLongos(comFotos({ ...PED_A, id: T.id }, ORIGEM));
+      const P = await pagina(`?q=baixa&hora=dia&tm=${ped.id}&corpo=manequim${T.cel ? '&toque=1&entalhe=1' : ''}`, { largura: T.W, altura: T.H, dpr: 1, toque: T.cel, pedido: ped });
+      try {
+        const pg = P.pagina;
+        const fo = await esperarFotos(pg);
+        const gol = await golRoteirizado(pg, { semente: 5, time: 0 });
+        const r = await acompanhar(pg, gol);
+        const c = avaliarCartao(r);
+        const tela = `${T.W}×${T.H} (?tm pro, com foto${T.cel ? ', entalhe' : ''})`;
+        const e = encostos(r, c);
+        meta(`H2 ${tela}: sem encostar no placar${T.cel ? ' nem no "Pular"' : ''}, na área segura; não cobre o autor`, `${e.texto}; cobre o autor em ${c.cobre}/${c.n} quadros; foto ${c.a?.foto} (fotos ${JSON.stringify(fo)})`, 'sem encostar; 0; com foto', e.ok && c.n > 0 && c.cobre === 0 && !!c.a?.foto);
+        // (568×320: a base cortava o nome em 232 px — "Eduardo Pa…" — e o cartão novo mostra os 19 letras inteiros; com o nome de 15
+        // letras da especificação a área dava 48%, com este 57%: o limite fica em 60% e a altura/foto seguram o "menor")
+        metasCanto(r, c, tela, { cel: T.cel, foto: true, limiteArea: T.cel ? 0.60 : 0.45 });
+        const fi = await fichaNaPagina(pg, gol.autor);
+        meta(`H10 ${tela}: o nome COMPLETO da ficha, sem cortar`, c.a ? `"${c.a.nome}"${c.a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}"); nome ${c.a.letraNome} px` : 'nenhum cartão',
+          'o completo; sem reticências', !!c.a && !!fi && c.a.nome === fi.nome && !c.a.cortado);
+      } finally { await P.fechar(); }
+    } catch (e) { meta(`H13 ${T.W}×${T.H} execução`, e.message.split('\n')[0], 'sem exceção', false); }
+  }
 }
 
 await srv.fechar();
