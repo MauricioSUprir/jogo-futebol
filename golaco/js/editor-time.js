@@ -77,6 +77,8 @@ const SVG = {
   entra: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 10.5V2M2.5 5.2 6 1.7l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   sai: '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M6 1.5V10M2.5 6.8 6 10.3l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   estrela: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.6l2.9 6 6.5.8-4.8 4.5 1.3 6.5L12 17.2l-5.9 3.2 1.3-6.5L2.6 9.4l6.5-.8z" fill="currentColor"/></svg>',
+  // a seta do rótulo "ATAQUE" do campinho (revisão V4: a TM Cond não tem → nem ↑ — saía um tracinho da letra de reserva)
+  seta: '<svg class="campinho-seta" viewBox="0 0 12 12" aria-hidden="true"><path d="M1.5 6h8.5M6.8 2.6 10.2 6 6.8 9.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 
 const esc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -93,10 +95,13 @@ export function modoDaTela(w, h) {
 // posicaoNaTela (a posição de cada vaga no campinho) mora em campinho.js: a escalação do pré-jogo usa sem baixar esta tela
 export { posicaoNaTela };
 
-/** Tamanho das cartas do campinho W × H (tela §5): nada encosta (passo ≥ carta + 6 px de folga). */
-export function tamanhoCarta(modo, W, H) {
+/**
+ * Tamanho das cartas do campinho W × H (tela §5): nada encosta (passo ≥ carta + 6 px de folga). k (só no PC, ≥ 1): a escala da
+ * janela que cresce com a tela (item 125, revisão V2: a janela ia a 1400 × 828 e as cartas ficavam 104 × 64 — o campo mais vazio).
+ */
+export function tamanhoCarta(modo, W, H, k = 1) {
   const Wc = W - 12, Hc = H - 12;
-  const lim = modo === 'pc' ? [104, 64] : modo === 'deitado' ? [76, 48] : [96, 64];
+  const lim = modo === 'pc' ? [Math.round(104 * k), Math.round(64 * k)] : modo === 'deitado' ? [76, 48] : [96, 64];
   const minH = modo === 'empe' ? 52 : 48;
   const cw = Math.max(56, Math.min(lim[0], Math.floor((Wc - 24) / 5), modo === 'empe' ? Math.floor((W - 44) / 5) : Infinity));
   const ch = Math.max(48, Math.min(lim[1], Math.max(minH, Math.floor((Hc - 24) / 5))));
@@ -494,8 +499,8 @@ export function criarEditorTime(opc) {
     if (W > 0 && H > 0) {
       const vertical = st.modo === 'empe';
       if (el.linhas.dataset.vertical !== String(vertical)) { linhasCampo(vertical); el.linhas.dataset.vertical = String(vertical); }
-      el.rotuloCampo.textContent = vertical ? '↑ ATAQUE' : 'ATAQUE →';
-      const { cw, ch } = tamanhoCarta(st.modo, W, H);
+      el.rotuloCampo.innerHTML = vertical ? `<span class="campinho-seta-cima">${SVG.seta}</span>ATAQUE` : `ATAQUE${SVG.seta}`;
+      const { cw, ch } = tamanhoCarta(st.modo, W, H, escalaPC());
       el.campinho.style.setProperty('--cw', `${cw}px`);
       el.campinho.style.setProperty('--ch', `${ch}px`);
       for (const v of forma().vagas) {
@@ -509,16 +514,29 @@ export function criarEditorTime(opc) {
     ajustarNomes();
   }
   /**
-   * Nome de camisa e nível da tática sempre inteiros: diminui a letra do que não couber (até 8 px no
-   * nome da carta e 10 px no nível).
+   * (item 125, revisão V2) A escala do PC: a janela de 1120 × 640 é a 1; maior que ela, as cartas, as letras delas e as reservas
+   * crescem junto (até 1,3) — --ed-k na raiz (editor.css). Fora do PC, 1.
+   */
+  function escalaPC() {
+    const k = st.modo === 'pc' ? Math.max(1, Math.min(1.3, el.janela.clientWidth / 1120, el.janela.clientHeight / 640)) : 1;
+    raiz.style.setProperty('--ed-k', k.toFixed(3));
+    return k;
+  }
+  /**
+   * Nome de camisa e nível da tática sempre inteiros: diminui a letra do que não couber (até 11 px: nada abaixo de 11 na tela) e,
+   * no nome da carta, ainda sem lugar, a TM Cond 600 (~5% mais estreita; revisão R3: os nomes de camisa de 10 letras do TM numa
+   * carta estreita); o que nem assim couber sai com "…" (o CSS do .c-nome).
    */
   function ajustarNomes() {
     for (const n of raiz.querySelectorAll('.c-nome, .ed-passo-nivel')) {
       if (n.offsetParent === null) continue;
       n.style.fontSize = '';
-      const min = n.classList.contains('c-nome') ? 8 : 10;
+      n.classList.remove('estreito');
+      // (item 125: o nome na TM Cond em caixa alta; a rede de segurança para em 11 px — nada abaixo de 11 na tela)
+      const min = 11;
       let fs = parseFloat(getComputedStyle(n).fontSize) || 11;
       for (let k = 0; k < 16 && n.scrollWidth > n.clientWidth + 0.5 && fs > min; k++) { fs -= 0.5; n.style.fontSize = `${fs}px`; }
+      if (n.scrollWidth > n.clientWidth + 0.5 && n.classList.contains('c-nome')) n.classList.add('estreito');
     }
   }
 

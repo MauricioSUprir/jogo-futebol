@@ -22,12 +22,38 @@
   --sa-b: env(safe-area-inset-bottom, 0px);
   --sa-l: env(safe-area-inset-left, 0px);
   --m: 14px;
+  /* o "Pular" das cenas com toque (.btn-replay-pular): a distância do canto e a altura — o cartão do autor sobe por elas */
+  --pular-vao: 6px; --pular-h: 52px;
   --toque-escala: 0.8;
   --analogico-escala: 1;      /* entrada.js escalaAnalogico: no tamanho padrão (80%) o analógico é o de antes */
   --toque-opacidade: 0.55;
   --fonte: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* o sistema tipográfico (item 125, dono 05/11: "fontes tem que ser mais legais"): dois papéis. --f-texto = o texto corrido
+     (com ?tm o tm.css troca o --fonte pela Inter TM); --f-disp = a letra ESPORTIVA, a TM Cond (Barlow Condensed, OFL; a letra da
+     carta do TM) nos títulos, itens de menu, números, nomes e siglas — com as reservas de mesma largura máxima enquanto ela não
+     chega (as faces logo abaixo). Condensada sim, itálico não; o texto de 11–13 px fica no --f-texto. A TM Cond em caixa normal
+     vai SEM espaçamento extra (revisão V6: com 0,01–0,04 em os botões pequenos saíam "Per sonalizar", "Simul ar"); a caixa alta
+     pequena mantém o espaçamento dela */
+  --f-texto: var(--fonte);
+  --f-disp: 'TM Cond', 'TM Cond reserva', 'TM Cond reserva larga', 'Arial Narrow', sans-serif;
   color-scheme: dark;
 }
+/* a TM Cond (Barlow Condensed SemiBold 600 e ExtraBold 800, OFL — assets/tm/fontes/OFL-barlow-condensed.txt; a mesma da carta do
+   TM). Declarar não baixa nada: o arquivo só vem quando um texto com ela aparece (fora do 1º quadro sem ?tm) ou pela pré-carga da
+   pausa (main.js fontesPausa); o latin-ext só com um nome em č/ł/ğ (unicode-range). Sem ?tm o download inicial não cresce
+   (tools/teste-carga.mjs). font-display: swap — a reserva desenha na hora */
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/tm/fontes/tmcond-600-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 600; font-display: swap; src: url('../assets/tm/fontes/tmcond-600-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* a RESERVA da TM Cond, enquanto ela não chega (ou se não chegar): a letra do sistema ENCOLHIDA (size-adjust) para nunca passar da
+   largura da TM Cond — as contas das cartas da escalação são da TM Cond, e a reserva larga sem ajuste punha "…" nos nomes (revisão
+   V5 do item 29). A razão TM Cond ÷ reserva medida no Chromium nos nomes do elenco e do TM: Arial/Liberation/FreeSans 0,72–0,82
+   (média 0,77), DejaVu 0,63–0,74; o ajuste fica no mínimo de cada uma. O 600 com o mesmo ajuste (a 600 é mais estreita que a 800) */
+@font-face { font-family: 'TM Cond reserva'; font-style: normal; font-weight: 800; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold'), local('Helvetica Bold'), local('Helvetica-Bold'), local('Roboto Bold'), local('Roboto-Bold'), local('FreeSans Bold'), local('FreeSansBold'); size-adjust: 71%; }
+@font-face { font-family: 'TM Cond reserva'; font-style: normal; font-weight: 600; src: local('Arial'), local('ArialMT'), local('Liberation Sans'), local('LiberationSans-Regular'), local('Helvetica'), local('Roboto'), local('Roboto-Regular'), local('FreeSans'); size-adjust: 71%; }
+@font-face { font-family: 'TM Cond reserva larga'; font-style: normal; font-weight: 800; src: local('DejaVu Sans Bold'), local('DejaVuSans-Bold'); size-adjust: 62%; }
+@font-face { font-family: 'TM Cond reserva larga'; font-style: normal; font-weight: 600; src: local('DejaVu Sans'), local('DejaVuSans'); size-adjust: 62%; }
 /* ?entalhe=1: simula o entalhe de um iPhone (só para conferir o layout): deitado, nas laterais
    e a barra de início embaixo; em pé, a ilha no topo e a barra embaixo */
 html.entalhe-simulado { --sa-l: 47px; --sa-r: 47px; --sa-b: 21px; }
@@ -228,6 +254,10 @@ html.com-toque .aviso { top: calc(var(--sa-t) + var(--m) + 74px); }
    (tools/teste-estadio confere 568×320, 667×375 e 844×390 nas duas fases dos botões) */
 html.com-toque .gol-tela { top: calc(var(--sa-t) + 128px); gap: 3px; }
 html.com-toque .gol-palavra { font-size: clamp(40px, 12.5vmin, 96px); -webkit-text-stroke-width: 2px; }
+/* (item 125) "GOL!" na TM Cond 800, reta e em caixa alta, ×1,1 (a letra estreita). Só com ele na tela (.visivel): a camada fica no
+   layout escondida (visibility) e a família pedida desde o 1º quadro baixaria a fonte no download inicial sem ?tm */
+.gol-tela.visivel .gol-palavra { font-family: var(--f-disp); font-weight: 800; font-style: normal; text-transform: uppercase; letter-spacing: 0.02em; font-size: clamp(70px, 18.7vmin, 185px); }
+html.com-toque .gol-tela.visivel .gol-palavra { font-size: clamp(44px, 13.75vmin, 106px); }
 html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
 @media (prefers-reduced-motion: reduce) {
   .gol-tela.visivel .gol-faixa, .gol-tela.visivel .gol-palavra { animation: none; }
@@ -251,12 +281,14 @@ html.com-toque .gol-faixa { height: clamp(64px, 26vmin, 150px); }
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55); pointer-events: none;
 }
 .faixa[hidden] { display: none; }
-.faixa-titulo { font-size: 22px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
-.faixa-placar { font-size: 15px; font-weight: 800; letter-spacing: 0.08em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
+.faixa-titulo { font: 800 26px / 1.1 var(--f-disp); letter-spacing: 0.08em; text-transform: uppercase; }
+.faixa-placar { font: 800 18px / 1.1 var(--f-disp); letter-spacing: 0.06em; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .faixa-placar:empty { display: none; }
 .faixa-botoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 4px; }
 .faixa-botoes[hidden] { display: none; }
-.faixa-botao { pointer-events: auto; min-width: 200px; justify-content: center; }
+/* (revisão V7) os botões da faixa na letra do título dela e dos botões das outras telas (a TM Cond 800; o principal em caixa alta) */
+.faixa-botao { pointer-events: auto; min-width: 200px; justify-content: center; font-family: var(--f-disp); font-weight: 800; font-size: 17px; letter-spacing: 0; }
+.faixa-botao.btn-primario { letter-spacing: 0.06em; }
 .faixa-botao[hidden] { display: none; }
 
 /* minimapa: campo preto com linhas verdes e pontos dos dois times e da bola. Opção da pausa ("Minimapa", como o
@@ -466,7 +498,7 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
   position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between;
   padding: 12px 12px 10px 20px; background: #0e1314; border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
-.janela-topo h2 { margin: 0 auto 0 0; font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; }
+.janela-topo h2 { margin: 0 auto 0 0; font: 800 18px / 1.2 var(--f-disp); letter-spacing: 0.1em; text-transform: uppercase; }
 .janela-topo h2::before { content: ""; display: inline-block; width: 4px; height: 14px; background: var(--verde); margin-right: 10px; vertical-align: -1px; border-radius: 2px; }
 .btn-fechar[hidden] { display: none; }
 .btn-fechar {
@@ -491,7 +523,8 @@ html.cobranca-mirada .btn-pegar, html.cobranca-mirada .btn-trocar-mao { display:
 html:not(.com-toque) .chip-nomes { display: none; }
 
 .ajuda-colunas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; padding: 16px 20px 20px; }
-.ajuda-colunas h3 { margin: 0 0 10px; font-size: 12px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--verde); }
+.ajuda-colunas h3 { margin: 0 0 10px; font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0.12em; text-transform: uppercase; color: var(--verde); }
+.ajuda-colunas kbd { font: 800 13px / 1.3 var(--f-disp); letter-spacing: 0.02em; }
 .ajuda-colunas dl { margin: 0; line-height: 1.5; }
 /* tecla e descrição na mesma linha (quebra só quando não cabe): ajuda curta no celular */
 .ajuda-colunas dt { display: inline; font-size: 12px; font-weight: 700; color: var(--texto); }
@@ -552,12 +585,14 @@ html.pausa-aberta #hud { z-index: 41; }
   /* o celular deitado (o padrão; o PC muda no bloco min-height: 481px). M = --pm, a margem da borda útil ao texto */
   --pm: 16px;
   --fx-x: calc(var(--sa-l) + var(--pm));
-  --fx-w: clamp(196px, calc(18vw + 100px), 260px);
+  /* (item 125: a letra esportiva — a TM Cond, ~25% mais estreita que a Inter — deixa a faixa mais estreita e o cartão do time maior;
+     a letra dos itens 15/17 → 18/20) */
+  --fx-w: clamp(176px, calc(18vw + 80px), 236px);
   --fx-cheia: calc(var(--fx-x) + var(--fx-w) + 16px);
   --fx-fade: 12vw;
   --topo-y: var(--pm); --topo-h: 28px; --topo-gap: 10px;
-  --item-f: 15px; --item-f-foco: 17px;
-  --card-w: min(300px, calc(100vw - var(--sa-r) - var(--pm) - var(--fx-x) - var(--fx-w) - 10px));
+  --item-f: 18px; --item-f-foco: 20px;
+  --card-w: min(400px, calc(100vw - var(--sa-r) - var(--pm) - var(--fx-x) - var(--fx-w) - 10px));
   --card-y: 66px;
   position: absolute; inset: 0; width: auto; max-height: none; overflow: hidden; overscroll-behavior: none;
   border: 0; border-radius: 0; box-shadow: none; color: var(--p-texto); font-family: var(--p-fonte);
@@ -572,7 +607,7 @@ html.pausa-aberta #hud { z-index: 41; }
   display: flex; align-items: center; gap: 8px; padding: 0; background: none; border: 0;
 }
 #menu .janela-topo h2 {
-  margin: 0; min-width: 0; flex: 1 1 auto; font-size: 14px; font-weight: 800; line-height: 1.2; letter-spacing: 0; text-transform: none;
+  margin: 0; min-width: 0; flex: 1 1 auto; font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--p-texto);
 }
 #menu .janela-topo h2::before { display: none; }
@@ -594,14 +629,35 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu #menu-acoes > .btn, #menu .linha-par > .btn {
   position: relative; min-width: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
   padding: 0 8px 0 14px; background: transparent; border: 0; border-radius: 4px; box-shadow: none; outline: 0;
-  font: 500 var(--item-f) / 1.15 var(--p-fonte); letter-spacing: 0; text-transform: none; color: rgba(238, 245, 240, 0.86);
+  font: 600 var(--item-f) / 1.15 var(--f-disp); letter-spacing: 0; text-transform: none; color: rgba(238, 245, 240, 0.86);
   white-space: nowrap; text-align: left; cursor: pointer;
 }
+/* (item 125) o foco com movimento curto, como o FC 24 (Material 3: a duração "short3" de estado, ~150 ms, e a curva "emphasized
+   decelerate"): a barra de 4 px cresce de 20% a 100% da altura com o brilho, o texto anda 6 px; com "reduzir movimento", só a troca */
 #menu #menu-acoes > .btn::before, #menu .linha-par > .btn::before {
-  content: ""; position: absolute; left: 2px; top: 5px; bottom: 5px; width: 3px; border-radius: 2px; background: transparent;
+  content: ""; position: absolute; left: 2px; top: 5px; bottom: 5px; width: 4px; border-radius: 2px; background: transparent;
+  transform: scaleY(0.2); transition: transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1), background-color 160ms;
 }
+#menu #menu-acoes .item-txt { transition: transform 160ms cubic-bezier(0.05, 0.7, 0.1, 1); }
+#menu #menu-acoes > .btn.selecionado .item-txt, #menu #menu-acoes > .btn:focus-visible .item-txt { transform: translateX(6px); }
+#menu #menu-acoes > .btn.selecionado::before, #menu #menu-acoes > .btn:focus-visible::before,
+#menu .linha-par > .btn.selecionado::before, #menu .linha-par > .btn:focus-visible::before { transform: none; box-shadow: 0 0 12px rgba(34, 197, 94, 0.7); }
 #menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible, #menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible {
-  font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.16), rgba(34, 197, 94, 0) 80%);
+  font-weight: 800; color: #fff; background: linear-gradient(90deg, rgba(34, 197, 94, 0.26), rgba(34, 197, 94, 0.06) 60%, rgba(34, 197, 94, 0) 92%);
+}
+/* a entrada da lista em cascata ao abrir a pausa (20 ms por item, ≤ 200 ms no total). `backwards` (revisão R1): só o "from" no atraso
+   e nada depois do fim — com `both` o "to { opacity: 1 }" ficava valendo e passava por cima do apagado do item desabilitado (o
+   "Pausar a partida" do online sem pausas); o desabilitado entra até o apagado dele */
+@keyframes pausa-item-entra { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes pausa-item-entra-off { from { opacity: 0; transform: translateX(-8px); } to { opacity: 0.45; transform: none; } }
+#menu:not([hidden]) #menu-acoes > .btn, #menu:not([hidden]) #menu-acoes > .linha-par { animation: pausa-item-entra 120ms cubic-bezier(0.05, 0.7, 0.1, 1) backwards; }
+#menu:not([hidden]) #menu-acoes > .btn:disabled { animation-name: pausa-item-entra-off; }
+#menu #menu-acoes > :nth-child(2) { animation-delay: 20ms; } #menu #menu-acoes > :nth-child(3) { animation-delay: 40ms; }
+#menu #menu-acoes > :nth-child(4) { animation-delay: 60ms; } #menu #menu-acoes > :nth-child(5) { animation-delay: 80ms; }
+#menu #menu-acoes > :nth-child(n + 6) { animation-delay: 80ms; }
+@media (prefers-reduced-motion: reduce) {
+  #menu #menu-acoes > .btn, #menu #menu-acoes > .linha-par, #menu .linha-par > .btn { animation: none !important; transition: none; }
+  #menu #menu-acoes > .btn::before, #menu .linha-par > .btn::before, #menu #menu-acoes .item-txt { transition: none; }
 }
 #menu #menu-acoes > .btn.selecionado, #menu #menu-acoes > .btn:focus-visible { font-size: var(--item-f-foco); }
 #menu #menu-acoes > .btn.selecionado::before, #menu #menu-acoes > .btn:focus-visible::before,
@@ -614,12 +670,12 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu #menu-acoes .item-txt { flex: 0 0 auto; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; line-height: 1.3; }
 /* a linha com dois (no Livre: Recomeçar | Bola no meu pé): o peso não muda no foco (em 568×320 os dois cabem por pouco) */
 #menu #menu-acoes > .linha-par { display: flex; gap: 6px; }
-#menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 13px; font-weight: 500; }
-#menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible { font-weight: 600; }
+#menu .linha-par > .btn { flex: 1 1 auto; width: auto; min-height: 0; padding: 0 6px 0 10px; font-size: 15px; font-weight: 600; }
+#menu .linha-par > .btn.selecionado, #menu .linha-par > .btn:focus-visible { font-weight: 800; }
 /* o estado à direita (o modo, o marcador, os do Livre, as pausas do online): o único que pode ganhar "…" */
 #menu small.estado, #menu #menu-acoes small:not(.desc) {
   flex: 0 1 auto; min-width: 0; margin-left: auto; overflow: hidden; text-overflow: ellipsis;
-  font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco);
+  font: 600 12px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-fraco);
 }
 #menu .btn-alternar[aria-pressed="true"] small { color: var(--p-verde-cl); }
 /* a descrição (escalação e tática, até o apito final...): só para o leitor de tela (aria-describedby; fica no textContent) */
@@ -627,19 +683,19 @@ html.pausa-aberta #hud { z-index: 41; }
 
 /* os submenus: a linha de cima (Voltar + o nome) e os botões em pílula do TM, borda fina, o escolhido em verde */
 #menu .sub-topo { display: flex; align-items: center; gap: 12px; flex: none; min-height: 44px; }
-#menu .sub-titulo { margin: 0; min-width: 0; font: 800 15px / 1.2 var(--p-fonte); color: var(--p-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#menu .sub-titulo { margin: 0; min-width: 0; font: 800 16px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-texto); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #menu .btn-voltar {
   flex: none; display: inline-flex; align-items: center; justify-content: flex-start; gap: 4px; min-width: 44px; min-height: 36px; height: 36px;
   padding: 0 14px 0 8px; border-radius: 999px; border: 1px solid var(--p-linha); background: var(--p-painel);
-  font: 600 13px / 1 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); cursor: pointer; outline: 0;
+  font: 800 14px / 1 var(--f-disp); letter-spacing: 0; text-transform: none; color: var(--p-texto); cursor: pointer; outline: 0;
 }
 #menu .btn-voltar svg { width: 18px; height: 18px; flex: none; }
 /* (:where: a especificidade de um #menu .x .btn — as regras próprias do submenu, como as do Livre, ficam por cima) */
 #menu .menu-acoes:where(:not(#menu-acoes)) .btn:where(:not(.btn-voltar)) {
   min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--p-painel); border: 1px solid var(--p-linha);
-  font: 600 14px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-texto); box-shadow: none; outline: 0;
+  font: 800 15px / 1.2 var(--f-disp); letter-spacing: 0; text-transform: none; color: var(--p-texto); box-shadow: none; outline: 0;
 }
-#menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font: 500 12px / 1.2 var(--p-fonte); letter-spacing: 0; text-transform: none; color: var(--p-fraco); }
+#menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font: 600 12px / 1.2 var(--f-disp); letter-spacing: 0.04em; text-transform: uppercase; color: var(--p-fraco); }
 #menu .menu-acoes:where(:not(#menu-acoes)) .btn:hover, #menu .menu-acoes:where(:not(#menu-acoes)) .btn.selecionado, #menu .menu-acoes:where(:not(#menu-acoes)) .btn:focus-visible {
   border-color: var(--p-verde); box-shadow: 0 0 0 1px var(--p-verde) inset;
 }
@@ -670,7 +726,7 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu .linha-cenas .btn { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: flex-start; justify-content: center; gap: 1px; padding: 4px 16px; line-height: 1.2; }
 #menu .linha-cenas .btn small { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #menu .linha-cenas.tres { gap: 6px; }
-#menu .linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 12px; white-space: nowrap; font-size: 13px; }
+#menu .linha-cenas.tres .btn { flex: 1 1 auto; padding: 4px 12px; white-space: nowrap; font-size: 14px; }
 #menu .linha-cenas.tres .btn small { font-size: 11px; }
 
 /* Opções: cada linha com o nome à esquerda e o controle à direita; liga/desliga = a linha inteira é o botão, a chave desenhada */
@@ -687,7 +743,7 @@ html.pausa-aberta #hud { z-index: 41; }
 #menu .segmentado button {
   flex: none; min-width: 44px; height: 32px; padding: 0 10px; cursor: pointer; border-radius: 8px;
   border: 1px solid var(--p-linha); background: var(--p-painel); color: var(--p-fraco);
-  font: 600 13px / 1 var(--p-fonte); white-space: nowrap; outline: 0;
+  font: 600 14px / 1 var(--f-disp); letter-spacing: 0; white-space: nowrap; outline: 0;
 }
 #menu .segmentado button:hover { color: var(--p-texto); border-color: rgba(34, 197, 94, 0.45); }
 #menu .segmentado button[aria-pressed="true"] { background: linear-gradient(120deg, #4ade80, #22c55e); color: var(--p-preto); border-color: transparent; font-weight: 800; }
@@ -731,10 +787,11 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 }
 #menu .pausa-placar[hidden] { display: none; }
 #menu .pp-escudo { flex: none; width: 15px; height: 17px; }
-#menu .pp-sigla { font-size: 12px; font-weight: 800; letter-spacing: 0.02em; }
-#menu .pp-gols { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font-size: 15px; font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
+/* (item 125) siglas, gols e relógio na TM Cond 800 (a altura e as regras de lugar de antes) */
+#menu .pp-sigla { font: 800 14px / 1 var(--f-disp); letter-spacing: 0.06em; }
+#menu .pp-gols { display: inline-flex; align-items: center; gap: 6px; padding: 0 2px; font: 800 18px / 1 var(--f-disp); font-variant-numeric: tabular-nums; color: var(--p-verde-cl); }
 #menu .pp-gols i { width: 6px; height: 2px; border-radius: 1px; background: var(--p-fraco); }
-#menu .pp-relogio { padding-left: 8px; border-left: 1px solid var(--p-linha); font: 600 12px / 1 var(--p-fonte); font-variant-numeric: tabular-nums; color: var(--p-fraco); }
+#menu .pp-relogio { padding-left: 8px; border-left: 1px solid var(--p-linha); font: 800 14px / 1 var(--f-disp); letter-spacing: 0.04em; font-variant-numeric: tabular-nums; color: var(--p-fraco); }
 #menu .pp-relogio[hidden], #menu .pausa-placar.sem-relogio .pp-relogio, #menu .pausa-placar.sem-escudo .pp-escudo { display: none; }
 /* o cartão do meu time (o conteúdo e o desenho: js/pausa-tela.js e css/pausa.css, sob demanda) */
 #menu .pausa-time { position: absolute; top: calc(var(--sa-t) + var(--card-y)); right: calc(var(--sa-r) + var(--pm)); width: var(--card-w); max-height: calc(100% - var(--sa-t) - var(--card-y) - var(--sa-b) - var(--pm)); pointer-events: auto; }
@@ -749,8 +806,13 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 
 /* ---- celular deitado: as margens e as letras pela largura (844 → 16, 667/640 → 14, 568 → 12) */
 @media (max-height: 480px) and (max-width: 760px) { #menu .janela-menu { --pm: 14px; --topo-gap: 8px; } }
-@media (max-height: 480px) and (max-width: 660px) { #menu .janela-menu { --item-f-foco: 16px; } }
-@media (max-height: 480px) and (max-width: 600px) { #menu .janela-menu { --pm: 12px; --topo-h: 24px; --item-f-foco: 15px; } }
+@media (max-height: 480px) and (max-width: 660px) { #menu .janela-menu { --item-f-foco: 19px; } }
+@media (max-height: 480px) and (max-width: 600px) {
+  #menu .janela-menu { --pm: 12px; --topo-h: 24px; --item-f: 17px; --item-f-foco: 18px; }
+  #menu .janela-topo h2 { font-size: 14px; }
+  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: 11px; }
+  #menu .sub-titulo { font-size: 15px; }
+}
 /* os submenus no celular: a faixa LARGA (até a borda útil da direita menos M), sem a competição em cima (a linha do Voltar fica
    na altura do X), o cartão e a pílula saem de cena; Opções, Modo de jogo e os do Livre em 2 colunas */
 @media (max-height: 480px) {
@@ -791,13 +853,16 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 @media (min-height: 481px) {
   #menu .janela-menu {
     --fx-x: calc(var(--sa-l) + 5.2vw);
-    --fx-w: max(24vw, min(42.66vh, 30vw));
+    /* (item 125: a TM Cond nos itens — ~25% mais estreita que a Inter — deixa a faixa em 21–27vw, antes 24–30vw, e o degradê em
+       18vw, antes 22vw: o cartão do time cresce a 36vw, antes 30vw, e o jogo à vista não cai. A letra: o item mais longo com o foco,
+       "Voltar ao Total Match" na TM Cond 800, mede 7,9 em e o foco anda 6 px — (faixa − 38 px) / 8,1) */
+    --fx-w: max(21vw, min(38vh, 27vw));
     --fx-cheia: max(28vw, calc(var(--fx-x) + var(--fx-w) + 16px));
-    --fx-fade: 22vw;
+    --fx-fade: 18vw;
     --item-h: clamp(42px, calc(6.67vh - 2px), 70px);
-    --item-f: min(2.65vh, calc((var(--fx-w) - 32px) / 14.4)); --item-f-foco: min(3.6vh, calc((var(--fx-w) - 32px) / 10.6));
-    /* (o cartão ≥ 270 px: o campo de dentro ≥ 242 px dá o disco de 20 px e a letra de 11 — em 800×600, com 30vw, saía 10,5) */
-    --card-w: max(30vw, 270px); --card-y: 72px;
+    --item-f: min(3.1vh, calc((var(--fx-w) - 32px) / 11.5)); --item-f-foco: min(3.9vh, calc((var(--fx-w) - 38px) / 8.1));
+    /* (o cartão ≥ 300 px: o campo de dentro ≥ 280 px dá o disco de 25 px e a letra de 11) */
+    --card-w: max(36vw, 300px); --card-y: 72px;
   }
   /* os submenus com linhas de controles (Opções, Estatísticas, Modo de jogo e os do Livre) não cabem na faixa estreita de 4:3
      ou da janela pequena (F3: em 800×600 o "Substituição" saía da pílula e encostava no "Cenas") */
@@ -805,6 +870,14 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu .janela-menu[data-sub="menu-livre"], #menu .janela-menu[data-sub="menu-camera-livre"] { --fx-w: max(24vw, min(380px, calc(100vw - var(--fx-x) - var(--sa-r) - 16px))); }
   #menu .janela-topo { top: calc(var(--sa-t) + 4.3vh); height: calc(min(3vh, 30px) * 1.5); gap: 12px; }
   #menu .janela-topo h2 { font-size: min(3vh, 30px); }
+  #menu .sub-titulo { font-size: clamp(16px, 2.4vh, 26px); }
+  #menu .btn-voltar { height: clamp(36px, 4.4vh, 46px); font-size: clamp(14px, 1.6vh, 18px); }
+  #menu .menu-acoes:where(:not(#menu-acoes)) .btn:where(:not(.btn-voltar)) { min-height: clamp(44px, 5.4vh, 56px); font-size: clamp(15px, 1.8vh, 19px); }
+  #menu .menu-acoes:where(:not(#menu-acoes)) .btn small { font-size: clamp(11px, 1.3vh, 14px); }
+  #menu .linha-cenas.tres .btn { font-size: clamp(14px, 1.7vh, 18px); }
+  #menu .linha-cenas.tres .btn small { font-size: clamp(11px, 1.2vh, 13px); }
+  #menu #linha-ajustes .btn::before, #menu #linha-ajustes .btn::after { font-size: clamp(15px, 2vh, 21px); }
+  #menu .segmentado button { font-size: clamp(14px, 1.6vh, 17px); }
   #menu .pausa-marca { width: calc(min(3vh, 30px) * 1.25); height: min(3vh, 30px); }
   #menu .menu-corpo { top: calc(var(--sa-t) + 19.3vh); bottom: calc(var(--sa-b) + 9vh); }
   #menu #menu-acoes { height: auto; }
@@ -812,10 +885,10 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu #menu-acoes > .btn { padding-left: 18px; }
   #menu #menu-acoes > .btn::before { top: 22%; bottom: 22%; }
   #menu .linha-par > .btn { font-size: var(--item-f); }
-  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: max(12px, 1.9vh); }
+  #menu small.estado, #menu #menu-acoes small:not(.desc) { font-size: max(12px, 1.7vh); }
   #menu .sub-topo { margin-bottom: 6px; }
-  #menu .opcao { min-height: clamp(34px, 5.2vh, 48px); font-size: 14px; }
-  #menu .opcao-rotulo { font-size: 14px; }
+  #menu .opcao { min-height: clamp(34px, 5.2vh, 48px); font-size: clamp(14px, 1.7vh, 18px); }
+  #menu .opcao-rotulo { font-size: clamp(14px, 1.7vh, 18px); }
   #menu .segmentado button { height: clamp(32px, 5vh, 40px); }
   #menu .pausa-comandos { display: flex; gap: 22px; position: absolute; left: var(--fx-x); top: 93vh; font: 600 14px / 1.4 var(--p-fonte); color: var(--p-fraco); white-space: nowrap; }
   #menu .pausa-comandos > span { display: inline-flex; align-items: center; gap: 7px; }
@@ -900,14 +973,14 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
   display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 12px 0 9px;
   background: rgba(7, 9, 10, 0.8); border: 1px solid var(--linha); border-left: 4px solid var(--verde); border-radius: 8px;
-  font-size: 12px; font-weight: 900; letter-spacing: 0.22em; color: var(--texto);
+  font: 800 14px / 1 var(--f-disp); letter-spacing: 0.16em; color: var(--texto);
 }
 .replay-marca svg { width: 15px; height: 15px; fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .replay-marca svg path + path { fill: var(--verde); stroke: none; }
 .btn-replay-pular {
-  display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + 6px); bottom: calc(var(--sa-b) + var(--m) + 6px);
-  align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 52px; padding: 0 18px; cursor: pointer;
-  font-size: 14px; font-weight: 900; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto);
+  display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + var(--pular-vao)); bottom: calc(var(--sa-b) + var(--m) + var(--pular-vao));
+  align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: var(--pular-h); padding: 0 18px; cursor: pointer;
+  font: 800 17px / 1 var(--f-disp); letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto);
   background: rgba(7, 9, 10, 0.78); border: 2px solid var(--verde); border-radius: 26px; opacity: 0.92;
 }
 .btn-replay-pular svg { width: 18px; height: 18px; fill: none; stroke: var(--verde); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -945,7 +1018,7 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
   padding: 8px 16px 8px 8px; box-sizing: border-box;
   background: var(--painel); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  font-family: var(--f-texto); color: var(--texto);
 }
 .faixa-subst[hidden] { display: none; }
 .faixa-subst.visivel { animation: faixa-subst-entra 0.25s ease-out both; }
@@ -953,7 +1026,7 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
 @media (prefers-reduced-motion: reduce) { .faixa-subst.visivel { animation: none; } }
 .fs-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .fs-sigla {
-  flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font-size: 14px; font-weight: 900; letter-spacing: 0.08em;
+  flex: none; align-self: center; padding: 6px 8px; border-radius: 5px; font: 800 15px / 1 var(--f-disp); letter-spacing: 0.06em;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
 /* as linhas dividem as colunas (subgrid): a do número tem a largura do maior número escrito, em qualquer fonte (no CI a
@@ -964,11 +1037,11 @@ html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { disp
 .fs-tri { width: 14px; height: 14px; }
 .fs-entra .fs-tri { fill: var(--verde); }
 .fs-sai .fs-tri { fill: var(--sai); }
-.fs-palavra { font-size: 12px; font-weight: 900; letter-spacing: 0.12em; }
+.fs-palavra { font: 800 14px / 1 var(--f-disp); letter-spacing: 0.1em; }
 .fs-entra .fs-palavra { color: var(--verde); }
 .fs-sai .fs-palavra { color: var(--sai); }
-.fs-num { font-size: 22px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
-.fs-nome { font-size: 20px; font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.15; }
+.fs-num { font: 800 24px / 1.1 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; text-align: right; }
+.fs-nome { font: 800 22px / 1.15 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .fs-nome-curto { display: none; }
 .fs-conta { flex: none; align-self: flex-end; font-size: 11px; font-weight: 700; color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .fs-conta:empty { display: none; }
@@ -984,9 +1057,9 @@ html.com-toque .fs-sigla { font-size: 12px; padding: 4px 6px; }
 html.com-toque .fs-linhas { grid-template-columns: 11px 42px max-content minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
 html.com-toque .fs-linha { grid-template-columns: 11px 42px 22px minmax(0, 1fr); grid-template-columns: subgrid; column-gap: 6px; }
 html.com-toque .fs-tri { width: 11px; height: 11px; }
-html.com-toque .fs-palavra { font-size: 10px; }
-html.com-toque .fs-num { font-size: 17px; }
-html.com-toque .fs-nome { font-size: 15px; }
+html.com-toque .fs-palavra { font-size: 11px; }
+html.com-toque .fs-num { font-size: 18px; }
+html.com-toque .fs-nome { font-size: 16px; }
 /* celular, no jogo: uma linha compacta no lugar do aviso — "[GLÇ] ▲ ENTRA 22 Wallace · ▼ SAI 9 Diego" (o nome da camisa) */
 html.com-toque .faixa-subst.jogo {
   top: calc(var(--sa-t) + var(--m) + 74px); bottom: auto; left: 50%; transform: translateX(-50%); animation: none;
@@ -995,8 +1068,8 @@ html.com-toque .faixa-subst.jogo {
 html.com-toque .faixa-subst.jogo .fs-linhas { display: flex; flex-direction: row; align-items: center; gap: 7px; }
 html.com-toque .faixa-subst.jogo .fs-linha { display: flex; align-items: baseline; gap: 4px; opacity: 1; }
 html.com-toque .faixa-subst.jogo .fs-tri { align-self: center; }
-html.com-toque .faixa-subst.jogo .fs-num { font-size: 15px; }
-html.com-toque .faixa-subst.jogo .fs-nome { font-size: 14px; }
+html.com-toque .faixa-subst.jogo .fs-num { font-size: 16px; }
+html.com-toque .faixa-subst.jogo .fs-nome { font-size: 15px; }
 html.com-toque .faixa-subst.jogo .fs-nome-completo { display: none; }
 html.com-toque .faixa-subst.jogo .fs-nome-curto { display: inline; }
 html.com-toque .faixa-subst.jogo .fs-sai::before { content: "·"; color: var(--texto-2); font-weight: 900; margin-right: 3px; }
@@ -1029,50 +1102,58 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 .terco-selo {
   display: flex; align-items: center; gap: 9px; height: 40px; padding: 0 16px 0 11px;
   background: rgba(7, 9, 10, 0.85); border: 1px solid var(--linha); border-left: 4px solid var(--decisao); border-radius: 8px;
-  font-size: 15px; font-weight: 900; letter-spacing: 0.16em; text-transform: uppercase; color: var(--texto); white-space: nowrap;
+  font: 800 17px / 1 var(--f-disp); letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto); white-space: nowrap;
   animation: terco-entra 0.2s ease-out both;
 }
-.terco-selo b { font-weight: 900; }
+.terco-selo b { font-weight: 800; }
 .terco-selo svg { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--decisao); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .terco-selo svg path + path { fill: var(--decisao); }
 @keyframes terco-entra { from { opacity: 0; transform: scale(0.96); } to { opacity: 1; transform: scale(1); } }
 @media (max-height: 480px), (max-width: 680px) {
-  .terco-selo { height: 34px; font-size: 13px; gap: 7px; padding: 0 13px 0 9px; }
+  .terco-selo { height: 34px; font-size: 15px; gap: 7px; padding: 0 13px 0 9px; }
   .terco-selo svg { width: 15px; height: 15px; }
 }
 @media (prefers-reduced-motion: reduce) { .terco-selo { animation: none; } }
 
-/* O CARTÃO DO AUTOR do gol (item 31; hud.js autorGol, js/autor-cartao.js): dentro da camada da comemoração (some com ela),
-   no canto de cima à DIREITA na linha do placar — o único lugar medido livre do autor, dos outros e do HUD em todos os planos
-   da cena, no PC e no celular (o celular põe o autor no terço esquerdo: ajustarCelular). [foto | escudo, sigla e número /
-   NOME]: o nome é a linha principal e o número vai na pílula do time, junto da sigla (o "11 THEMBA ZWANE" da Copa 2026, o
-   "MBAPPÉ" grande do FC Mobile; revisão V3); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número |
-   nome] (o molde das tarjas das cenas). Medidas pela ALTURA da janela
-   (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera). A fase é do relógio da cena (main.js): a
-   animação só enfeita. Não pega toque. */
+/* O CARTÃO DO AUTOR do gol (item 31 → 126; hud.js autorGol, js/autor-cartao.js): dentro da camada da comemoração (some com ela).
+   Item 126 (dono, 05/11: "a foto com o nome tem que ser mais embaixo e menor, tem que ser no canto inferior"): no canto de BAIXO à
+   DIREITA, no PC e no celular — o único canto de baixo medido livre do autor e dos outros atores em todos os planos da cena (6 gols
+   × 5 telas, quadro a quadro: 0 e 0; o de baixo à esquerda, o "lower third" da TV, cobria o autor em 73–78% dos quadros no celular,
+   que põe o autor no terço esquerdo — comemoracao.js ajustarCelular); ~4× menor no PC e ~2,6× no celular (a altura 20,6 → 9–10% da
+   janela no PC e 27 → 15% no celular). Com toque o cartão fica logo ACIMA do "Pular" (abaixo), que mora no canto de baixo à direita
+   como em todas as cenas (replay, substituição, cartão) — o botão não muda de lugar de uma cena para a outra. [foto | pílula escudo, sigla e
+   número / NOME]: o nome em caixa alta na TM Cond 800 (o --f-disp do item 125: cabe inteiro também em 568×320, onde o de antes cortava
+   "Eduardo Pa…"); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número | NOME] da altura do placar, no pé
+   da tela. As medidas pela ALTURA da janela (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera) e a altura
+   do cartão com foto FIXA (--ag-alt). A fase é do relógio da cena (main.js): a animação
+   só enfeita. Não pega toque. */
+.comemoracao { --ag-foto: clamp(56px, 7.2vh, 76px); --ag-pad: clamp(7px, 0.9vh, 9px); --ag-alt: calc(var(--ag-foto) + 2 * var(--ag-pad)); --ag-sobe: 0px; }
+/* com toque: o pé do cartão a 10 px do topo do "Pular" (o .btn-replay-pular: --pular-vao do canto + --pular-h de altura), com e sem foto */
+html.com-toque .comemoracao { --ag-sobe: calc(var(--pular-vao) + var(--pular-h) + 10px); }
+@media (max-height: 519px) { .comemoracao { --ag-foto: clamp(40px, 12vh, 48px); --ag-pad: 5px; } }
 .autor-gol {
-  --ag-foto: clamp(96px, 18vh, 196px); --ag-nome: clamp(22px, 4vh, 40px);
-  --ag-sigla: clamp(13px, 1.9vh, 20px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-pad: clamp(8px, 1.2vh, 14px); --ag-vao: clamp(12px, 1.8vh, 20px);
+  --ag-nome: clamp(20px, 2.6vh, 28px); --ag-sigla: clamp(12px, 1.35vh, 14px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-vao: clamp(10px, 1.2vh, 12px);
   --ag-fundo: 7, 9, 10;
-  position: absolute; top: calc(var(--sa-t) + var(--m)); right: calc(var(--sa-r) + var(--m));
-  /* (até a direita do placar + 12 px: hud.js mede o placar e põe --ag-esq; o nome corta com reticências) */
-  max-width: calc(100vw - var(--sa-r) - var(--m) - var(--ag-esq, calc(var(--sa-l) + var(--m))));
+  position: absolute; top: auto; bottom: calc(var(--sa-b) + var(--m) + var(--ag-sobe)); right: calc(var(--sa-r) + var(--m));
+  /* (a borda esquerda sempre além de 62% da largura no PC e de 48% no celular: à direita do máximo do autor — 59,5% e 44% medidos) */
+  max-width: min(38vw, 480px);
   display: flex; align-items: center; gap: var(--ag-vao); min-width: 0; box-sizing: border-box;
-  padding: var(--ag-pad) calc(var(--ag-pad) * 2) var(--ag-pad) var(--ag-pad);
-  background: rgba(7, 9, 10, 0.86); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  padding: var(--ag-pad) 14px var(--ag-pad) var(--ag-pad);
+  background: rgba(7, 9, 10, 0.88); border-left: 3px solid var(--cor-time, var(--verde)); border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
+  font-family: var(--f-texto); color: var(--texto);
 }
+.autor-gol.com-foto { height: var(--ag-alt); }
 @media (max-height: 519px) {
-  .autor-gol { --ag-foto: clamp(64px, 23.5vh, 96px); --ag-nome: clamp(18px, 5.4vh, 20px); --ag-sigla: 12px; --ag-pad: 6px; --ag-vao: 10px; }
+  .autor-gol { --ag-nome: 18px; --ag-sigla: 11px; --ag-vao: 8px; max-width: calc(52vw - var(--sa-r) - var(--m)); padding-right: 10px; }
 }
 .autor-gol[hidden] { display: none; }
-/* sem foto: uma barra da altura do placar, na mesma linha (os topos e os pés alinhados; revisão V4) — as letras pela altura dela */
+/* sem foto: uma barra da altura do placar (agora no pé da tela) — as letras pela altura dela */
 .autor-gol.sem-foto { height: var(--placar-h); padding-top: 0; padding-bottom: 0; }
 .ag-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 /* a foto (a JPG 220 × 220 do TM: busto com o fundo, o rosto em x 0,50 / y 0,44) numa moldura, um leve aproximar (esconde parte
    da camisa de outro clube); nada recortado nem desenhado no lugar dela */
-.ag-foto { flex: none; position: relative; width: var(--ag-foto); height: var(--ag-foto); border-radius: 6px; overflow: hidden; background: #0b0f0c; }
+.ag-foto { flex: none; position: relative; width: var(--ag-foto); height: var(--ag-foto); border-radius: 4px; overflow: hidden; background: #0b0f0c; }
 .ag-foto[hidden] { display: none; }
 .ag-foto::after { content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
 /* o pé da foto escurece até a cor do fundo do cartão: a camisa (muitas fotos do Commons são de jogos por OUTRO clube, às vezes com o
@@ -1082,27 +1163,41 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
   background: linear-gradient(180deg, rgba(var(--ag-fundo), 0) 0%, rgba(var(--ag-fundo), 0.8) 50%, rgba(var(--ag-fundo), 0.97) 100%);
 }
 .ag-foto img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 38%; transform: scale(1.12); transform-origin: 50% 40%; }
-.ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(5px, 0.9vh, 9px); min-width: 0; }
+.ag-texto { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: clamp(3px, 0.5vh, 5px); min-width: 0; }
 .autor-gol.sem-foto .ag-texto { flex-direction: row; align-items: center; gap: var(--ag-vao); }
 .autor-gol.sem-foto .ag-time { padding-top: 1px; padding-bottom: 1px; }
 .autor-gol.sem-foto .ag-nome { font-size: min(var(--ag-nome), calc(var(--placar-h) * 0.6)); }
 .autor-gol.sem-foto .ag-num { font-size: min(var(--ag-num), calc(var(--placar-h) * 0.55)); }
 .ag-time {
-  flex: none; display: flex; align-items: center; gap: 5px; padding: 3px 7px 3px 5px; border-radius: 5px;
+  flex: none; display: flex; align-items: center; gap: 4px; padding: 2px 6px 2px 4px; border-radius: 4px;
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
 .ag-escudo { flex: none; width: calc(var(--ag-sigla) * 1.15); height: calc(var(--ag-sigla) * 1.3); }
-.ag-sigla { font-size: var(--ag-sigla); font-weight: 900; letter-spacing: 0.08em; line-height: 1; }
+.ag-sigla { font: 800 var(--ag-sigla) / 1 var(--f-disp); letter-spacing: 0.06em; }
 /* o número na pílula, depois da sigla e de um filete: maior que ela, menor que o nome */
-.ag-num { flex: none; position: relative; margin-left: 2px; padding-left: 7px; font-size: var(--ag-num); font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1; }
+.ag-num { flex: none; position: relative; margin-left: 2px; padding-left: 6px; font: 800 var(--ag-num) / 1 var(--f-disp); font-variant-numeric: tabular-nums; }
 .ag-num::before { content: ""; position: absolute; left: 0; top: 10%; bottom: 10%; width: 1px; background: currentColor; opacity: 0.45; }
 .ag-num:empty { display: none; }
-.ag-nome { display: block; max-width: 100%; min-width: 0; font-size: var(--ag-nome); font-weight: 800; color: #fff; overflow: hidden; text-overflow: ellipsis; line-height: 1.12; }
-.autor-gol.visivel { animation: autor-gol-entra 0.3s ease-out both; }
+.ag-nome {
+  display: block; max-width: 100%; min-width: 0; font: 800 var(--ag-nome) / 1.05 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em;
+  color: #fff; overflow: hidden; text-overflow: ellipsis;
+}
+/* a entrada "corre" da borda da direita, como um lower third (Material 3: emphasized decelerate, 280 ms); a saída em 200 ms. O recorte
+   final passa da sombra (0 8px 24px: ~32 px além da caixa) — com inset(0) mantido pelo `both`, a sombra nunca aparecia */
+.autor-gol.visivel { animation: autor-gol-entra 0.28s cubic-bezier(0.05, 0.7, 0.1, 1) both; }
 .autor-gol.saindo { animation: autor-gol-sai 0.2s ease-in both; }
-@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
-@keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(8px); } }
-@media (prefers-reduced-motion: reduce) { .autor-gol.visivel, .autor-gol.saindo { animation: none; } }
+@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(24px); clip-path: inset(0 0 0 100%); } to { opacity: 1; transform: none; clip-path: inset(-40px); } }
+@keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .autor-gol.visivel { animation: autor-gol-aparece 0.15s linear both; }
+  .autor-gol.saindo { animation: autor-gol-some 0.15s linear both; }
+}
+@keyframes autor-gol-aparece { from { opacity: 0; } to { opacity: 1; } }
+@keyframes autor-gol-some { from { opacity: 1; } to { opacity: 0; } }
+/* (item 126, revisão R3) com toque, o "Pular" da comemoração fica no MESMO lugar dos "Pular" do replay, da substituição e da cena do
+   cartão (o canto de baixo à direita): antes ele subia para cima do cartão e ficava solto no meio da lateral antes e depois dele e
+   pulava ~61 px na passagem para o replay. O cartão é que sobe para cima dele (--ag-sobe). A camada inteira já pula a cena com um
+   toque; o botão é a indicação. */
 /* a pausa aberta no meio da cena: o cartão do meu time da pausa mora no mesmo canto — o do autor espera atrás dela, escondido; e o
    "Replay" da pausa pedido no meio da cena (a jogada com a bola rolando, a marca REPLAY no mesmo canto): escondido o replay inteiro
    (a fase dele é do relógio da cena, parado no replay — volta onde estava se a cena continuar depois) */

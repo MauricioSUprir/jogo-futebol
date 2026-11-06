@@ -121,23 +121,13 @@ export function criarHud(opc) {
     use: el.autorGol.querySelector('.ag-escudo use'), sigla: el.autorGol.querySelector('.ag-sigla'), num: el.autorGol.querySelector('.ag-num'),
     nome: el.autorGol.querySelector('.ag-nome'), texto: el.autorGol.querySelector('.ag-texto'),
   } : null;
-  // a largura que sobra à direita do placar (refeita no resize enquanto o cartão está na tela)
-  const medirAutorGol = () => {
-    const e = el.autorGol;
-    if (!e || e.hidden) return;
-    const r = document.querySelector('#hud .placar')?.getBoundingClientRect();
-    if (r && r.width > 0) e.style.setProperty('--ag-esq', `${Math.ceil(r.right + 12)}px`);
-    else e.style.removeProperty('--ag-esq');
-  };
   // a foto que falhou depois de entrar (cache limpo, rede): o cartão fica só com o texto, na hora
   const fotoFalhou = ev => {
     if (!ag || ev.target !== ag.img || !ag.img.getAttribute('src')) return;
     ag.foto.hidden = true; el.autorGol.classList.remove('com-foto'); el.autorGol.classList.add('sem-foto');
   };
-  if (ag) {
-    ag.img.addEventListener('error', fotoFalhou);
-    window.addEventListener('resize', medirAutorGol);
-  }
+  // (item 126: o cartão saiu da linha do placar — mora no canto de baixo à direita; nada a medir: o --ag-esq saiu)
+  if (ag) ag.img.addEventListener('error', fotoFalhou);
   const cmd = (c, v) => opc.aoComando && opc.aoComando(c, v);
   let ultimoHud = -1, tercoTipo = null;
   const ultimoTexto = { vel: '', modo: '', posicao: null, forte: false };
@@ -1432,8 +1422,8 @@ export function criarHud(opc) {
     /** O tipo do terço de baixo na tela (testes): null, 'impedimento' ou 'legal'. */
     get tercoTipo() { return tercoTipo; },
     /**
-     * O CARTÃO DO AUTOR do gol na comemoração (item 31; o canto de cima à direita, na linha do placar, dentro da camada
-     * #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, foto}
+     * O CARTÃO DO AUTOR do gol na comemoração (item 31 → 126; o canto de BAIXO à direita — com toque, logo acima do "Pular",
+     * que fica no canto como no replay —, dentro da camada #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, foto}
      * — a foto (só a da edição pro do TM, já decodificada: main.js fotoPronta) ou null = só o texto, numa linha. Exceção
      * escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI e as tarjas das cenas): só dentro da
      * cena, nunca com a bola rolando; sem minuto nem "GOL". Não pega toque (o toque na camada pula a cena). spec.fotoEl: a
@@ -1470,7 +1460,6 @@ export function criarHud(opc) {
       e.classList.toggle('sem-foto', !foto);
       e.classList.remove('visivel', 'saindo');
       e.hidden = false;
-      medirAutorGol();
       void e.offsetWidth;
       e.classList.add('visivel');
     },

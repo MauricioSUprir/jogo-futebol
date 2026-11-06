@@ -23,7 +23,8 @@
   </script>
   <!-- html.tm: css/tm.css por último, pelo parser (bloqueia o desenho: nada pisca), e js/tm-cara.js — depois do importmap
        (módulo antes dele faz o navegador ignorar o mapa). Sem ?tm nada disso é baixado -->
-  <script>if (document.documentElement.classList.contains('tm')) { document.write('<link rel="stylesheet" href="css/tm.css">'); import('./js/tm-cara.js').catch(function () {}); }</script>
+  <!-- (item 125) o placar do TM usa a TM Cond 800 desde o 1º quadro: a pré-carga dela (só o latin; o preload ignora o unicode-range) -->
+  <script>if (document.documentElement.classList.contains('tm')) { document.write('<link rel="preload" href="assets/tm/fontes/tmcond-800-latin.woff2" as="font" type="font/woff2" crossorigin><link rel="stylesheet" href="css/tm.css">'); import('./js/tm-cara.js').catch(function () {}); }</script>
 </head>
 <body>
   <canvas id="tela" class="tela" aria-label="Campo 3D"></canvas>
@@ -208,7 +209,8 @@
     <button id="comemoracao-pular" class="btn-replay-pular" data-caixa="comemoracao-pular" type="button" aria-label="Pular a comemoração">Pular<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg></button>
     <!-- Cartão do autor do gol (item 31; js/autor-cartao.js, hud.js autorGol): a foto (só a da edição pro do TM), o escudo e a
          sigla, o número e o nome — sem minuto nem "GOL". Exceção escrita à "sem narração": só dentro da cena (some com ela),
-         nunca com a bola rolando. No canto de cima à direita, na linha do placar. Não pega toque (o toque na camada pula a cena). -->
+         nunca com a bola rolando. No canto de BAIXO à direita, pequeno (item 126; com toque o "Pular" fica em cima dele). Não pega
+         toque (o toque na camada pula a cena). -->
     <div id="autor-gol" class="autor-gol" data-caixa="autor-gol" role="status" aria-live="polite" hidden>
       <span class="ag-sr"></span>
       <span class="ag-foto" aria-hidden="true" hidden><img alt="" decoding="async" data-cartao="1"></span>

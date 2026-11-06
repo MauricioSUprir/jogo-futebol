@@ -11,7 +11,7 @@ const CSS = `
 .disputa { position: absolute; left: calc(var(--sa-l) + var(--m)); top: calc(var(--sa-t) + var(--m) + var(--placar-h) + 5px);
   display: grid; gap: 3px; padding: 5px 7px 6px; pointer-events: none; z-index: 1;
   background: rgba(7, 9, 10, 0.78); border: 1px solid var(--linha); border-radius: 6px; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
-  font: 800 11px/1 var(--fonte); color: var(--texto); white-space: nowrap; }
+  font: 800 13px/1 var(--f-disp, var(--fonte)); letter-spacing: 0.03em; color: var(--texto); white-space: nowrap; }
 .disputa[hidden] { display: none; }
 .disputa-linha { display: flex; align-items: center; gap: 6px; height: 13px; }
 .disputa-sigla { display: flex; align-items: center; gap: 4px; min-width: 34px; letter-spacing: 0.03em; }
@@ -24,12 +24,12 @@ const CSS = `
 .disputa-bola.erro::after { content: ''; position: absolute; left: 1.5px; right: 1.5px; top: 3.25px; height: 1.5px; background: rgba(7, 9, 10, 0.85); border-radius: 1px; }
 .disputa-bola.vez { border-color: var(--texto); animation: disputa-vez 1s ease-in-out infinite; }
 @keyframes disputa-vez { 0%, 100% { box-shadow: 0 0 0 0 rgba(234, 243, 238, 0.55); } 50% { box-shadow: 0 0 0 3px rgba(234, 243, 238, 0); } }
-.disputa-mais { font-size: 10px; color: var(--texto-2); }
-.disputa-vez { display: flex; align-items: center; gap: 5px; margin-top: 2px; height: 14px; font-size: 11px; font-weight: 700; color: var(--texto-2); }
-.disputa-vez b { font-weight: 900; color: var(--texto); }
+.disputa-mais { font-size: 11px; color: var(--texto-2); }
+.disputa-vez { display: flex; align-items: center; gap: 5px; margin-top: 2px; height: 15px; font-size: 13px; font-weight: 600; color: var(--texto-2); }
+.disputa-vez b { font-weight: 800; color: var(--texto); }
 .disputa-vez i { display: block; width: 3px; height: 11px; border-radius: 1px; background: var(--cor-time, var(--verde)); }
 .disputa-vez[hidden] { display: none; }
-@media (min-width: 1001px) { .disputa { font-size: 12px; } .disputa-bola { width: 12px; height: 12px; } .disputa-linha { height: 14px; } }
+@media (min-width: 1001px) { .disputa { font-size: 14px; } .disputa-bola { width: 12px; height: 12px; } .disputa-linha { height: 14px; } }
 @media (prefers-reduced-motion: reduce) { .disputa-bola.vez { animation: none; box-shadow: 0 0 0 2px rgba(234, 243, 238, 0.5); } }
 /* botões de toque na disputa: só o CHUTE quando o humano bate (a fase de ataque do jogo já o mostra) — e os estilos do
    pênalti PARADINHA e PULINHO (item 70, P2; a classe cobranca-penalti do #toque, main.js); defendendo, nenhum */
@@ -50,6 +50,13 @@ html.modo-penaltis .minimapa, html.modo-penaltis #chip-minimapa { display: none 
 `;
 
 const JANELA = 7; // bolinhas visíveis por time (as alternadas longas mostram as últimas)
+
+// (item 125, revisão R4) a letra do painel (a TM Cond 800 e 600, o --f-disp) pedida JÁ na importação deste módulo — no modo Pênaltis
+// ela vem no começo da página (main.js carregarDisputa), segundos antes do 1º quadro da disputa: sem isso a fonte só era pedida
+// quando o painel pintava pela 1ª vez e o texto trocava de letra na chegada. Exceção anotada ao "sem ?tm o download inicial não
+// cresce" (o teste-carga mede a partida padrão): só no modo Pênaltis, ~44 KB (as faces latin 600 e 800); o latin-ext só com um
+// nome que peça (unicode-range)
+if (typeof document !== 'undefined' && document.fonts?.load) for (const f of ['800 13px "TM Cond"', '600 13px "TM Cond"']) document.fonts.load(f).catch(() => null);
 
 /**
  * opc = {raiz (onde o painel entra; padrão #hud), times: () => [{sigla, nome, cor?}] (os do placar), nome: id → {num, nome}}.

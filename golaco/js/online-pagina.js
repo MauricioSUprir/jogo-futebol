@@ -79,18 +79,19 @@ export function conexaoNoQuadro(c, pode) {
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
   background:rgba(5,8,7,.92);color:#fff;border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:14px 18px;text-align:center;
-  font:600 15px/1.35 Inter,system-ui,sans-serif;box-shadow:0 10px 30px rgba(0,0,0,.45);pointer-events:auto}
+  font:600 15px/1.35 var(--p-fonte,var(--fonte));box-shadow:0 10px 30px rgba(0,0,0,.45);pointer-events:auto}
 #online-aviso[hidden]{display:none}
 #online-aviso small{display:block;font-weight:400;opacity:.8;margin-top:4px;font-size:13px}
 #online-aviso .linha{display:flex;gap:8px;justify-content:center;margin-top:12px;flex-wrap:wrap}
 #online-aviso button{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.08);
-  color:#fff;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
+  color:#fff;font:600 14px var(--p-fonte,var(--fonte));cursor:pointer}
 #online-aviso button.primario{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:transparent;color:#04130a}
 #online-selo{position:fixed;right:calc(var(--sa-r,env(safe-area-inset-right,0px)) + 10px);top:calc(var(--sa-t,env(safe-area-inset-top,0px)) + 8px);
-  z-index:40;font:600 12px Inter,system-ui,sans-serif;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
+  z-index:40;font:800 13px var(--f-disp,var(--fonte));letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
 #online-selo[hidden]{display:none}
 html.pausa-aberta #online-selo{display:none}
-/* (a comemoração do gol: o cartão do autor mora no mesmo canto — item 31, revisão R3; como os avisos do jogo, o selo espera a cena) */
+/* (a comemoração do gol: como os avisos do jogo, o selo espera a cena — item 31, revisão R3; desde o item 126 o cartão do autor fica
+   no canto de BAIXO à direita, então o canto de cima não é mais disputado: a regra fica pela tela limpa da cena, não pelo cartão) */
 html.em-comemoracao #online-selo{display:none}
 /* (a cena de substituição, item 30: do HUD fica só o placar e a faixa ENTRA/SAI; com a minha simulação segurada, o atraso do
    outro não me atrasa — o selo enganava) */
