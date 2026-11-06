@@ -37,7 +37,19 @@
 //          no mesmo quadro); e o aviso some;
 //      P8i o selo "Conexão instável" escondido com a cena (html.em-substituicao): aceso à força dentro da cena, nas duas
 //          abas, o estilo calculado dele é display: none.
-//   node tools/teste-online-tela.mjs [--so principal|p8]
+//   P10 (item 129) o menu aberto no online não pula a COMEMORAÇÃO nem o REPLAY do gol, numa sessão própria (568×320; a semente
+//      achada em Node com o 1º gol cedo, do time de A — hoje a 62, tick 1239; A com ?comemoracao=1&replay=1, B com os dois
+//      desligados: só espera). Em cada cena, com o menu de A aberto (no online ele não congela as cenas), uma tecla ou botão
+//      por vez, o menu reaberto antes de cada um:
+//      P10a a comemoração: o P (a pausa) fecha o menu; o J (PASSE) segurado, o H (abre a Ajuda), o Esc (fecha a Ajuda e o
+//           menu), o Enter (aperta o botão em foco) e o A do controle (idem) — a cena segue andando depois de cada um; com o
+//           menu fechado, um J NOVO pula;
+//      P10b o replay do gol (na saída, depois da comemoração): o mesmo, noutra ordem (A, Enter, H, Esc, J, P) — na base cada
+//           cena cai numa tecla diferente; o J vem DEPOIS do H (o soltarTudo do H limparia o pulso dele): o replay segura a
+//           simulação o tempo todo, então o pulso do J preso sem o limparPulsos do quadro sem passo reprova aqui sempre — na
+//           comemoração só reprova se o A cair depois do gol + 149 (a simulação ainda anda antes disso: depende do tempo);
+//      P10c o mesmo jogo nas duas abas (hashes a cada 60 passos) com as cenas e o menu.
+//   node tools/teste-online-tela.mjs [--so principal|p8|p10]
 import { servidor, abrir } from './lib/navegador.mjs';
 
 const args = process.argv.slice(2);
@@ -170,6 +182,7 @@ await s.navegador.close();
 }
 
 if (roda('p8')) await secaoP8();
+if (roda('p10')) await secaoP10();
 
 meta('erros no console', erros.length ? erros.slice(0, 3).join(' | ') : '0', erros.length === 0);
 await srv.fechar();
@@ -446,4 +459,161 @@ async function secaoP8() {
       r.ok.every(Boolean) && a.ligada === false && b.ligada === false && cenaQ === 0 && !!fA && !!fB && fA[2] >= SS.tick && fA[2] <= SS.tick + 6 && fB[2] >= SS.tick && fB[2] <= SS.tick + 6
       && fA[9] === 2 && fB[9] === 2 && a.feitas.join() === '1,1' && b.feitas.join() === '1,1' && c.comuns >= 5 && c.difs === 0 && !a.dessinc && !b.dessinc);
   } catch (e) { meta('P8e execução', String(e?.message ?? e).slice(0, 200), false); }
+}
+
+// ------------------------------------------------------------------------------------------------ P10 (item 129)
+/**
+ * A semente em Node (como as abas jogam com ?ia=1&D=4: os 4 primeiros passos com as entradas neutras do atraso D e depois o bit
+ * IA nos dois times) com o 1º gol cedo, do time 0 (o de A: a comemoração inteira — a do gol do outro time é a curta, de 4,5 s),
+ * antes do intervalo e até o tick 2400. Começa pela 62 (tick 1239 hoje). {semente, tick} ou null.
+ */
+async function sementeGol(min) {
+  const P = await import('../js/partida.js'), O = await import('../js/online.js');
+  const fns = { passoPartida: P.passoPartida, entradaDemoPartida: P.entradaDemoPartida };
+  const ia = { 0: { x: 0, z: 0, botoes: 0, ia: true }, 1: { x: 0, z: 0, botoes: 0, ia: true } };
+  const neutra = { 0: { x: 0, z: 0, botoes: 0 }, 1: { x: 0, z: 0, botoes: 0 } };
+  for (const semente of [62, ...Array.from({ length: 80 }, (_, i) => i + 1).filter(k => k !== 62)]) {
+    const m = P.criarPartida({ semente, humanos: [0, 1], minutosPorTempo: min });
+    m.online = true;
+    for (let n = 0; m.tick < 2400; n++) {
+      const ev = O.passoOnline(m, n < 4 ? neutra : ia, null, fns) ?? [];
+      if (ev.some(e => e.tipo === 'intervalo')) break;
+      const g = ev.find(e => e.tipo === 'gol');
+      if (g) { if (g.time === 0) return { semente, tick: m.tick }; break; }
+    }
+  }
+  return null;
+}
+
+/**
+ * O roteiro do menu de A numa cena ('comemoracao' | 'replay' — o do gol), com a cena andando: em cada passo de `ordem` o menu
+ * é (re)aberto — pela API, como quem o abriu antes do gol (no online ele não para o jogo) — e uma tecla ou botão do menu é
+ * apertado: P (a pausa), J (PASSE, segurado 3 quadros), H (a Ajuda), Esc (até fechar a Ajuda e o menu), Enter (o botão em
+ * foco), A do controle (idem: o controle de mentira do window.__pad). Depois, com o menu fechado, um J NOVO. Para cada passo
+ * {nome, antes, depois} com {ativo, t (a comemoração: o tempo dela em s; o replay: os quadros dele), menu, ajuda}; fim =
+ * {antes, depois} do J novo.
+ */
+async function roteiroMenuCena(p, qual, ordem) {
+  const R = { qual, passos: [], fim: null, erro: null };
+  const quadros = async k => {
+    const n0 = await p.evaluate(() => window.__vigia.log.length);
+    await p.waitForFunction(([n0, k]) => window.__vigia.log.length >= n0 + k, [n0, k], { timeout: 120000, polling: 'raf' });
+  };
+  const st = () => p.evaluate(q => {
+    const g = window.__golaco, c = g.comemoracao.estado, r = g.replay.estado;
+    const ativo = q === 'comemoracao' ? !!c && c.estado === 'rodando' : !!r && !!r.ativo && r.tipo === 'gol';
+    return { ativo, t: q === 'comemoracao' ? (c ? c.t : null) : (r && r.ativo ? r.quadros : null),
+      menu: !document.getElementById('menu').hidden, ajuda: !document.getElementById('ajuda').hidden };
+  }, qual);
+  const tecla = async (k, n = 3) => { await p.keyboard.press(k); await quadros(n); };
+  const PASSOS = {
+    P: () => tecla('KeyP'),
+    J: async () => { await p.keyboard.down('KeyJ'); await quadros(3); await p.keyboard.up('KeyJ'); await quadros(2); },
+    H: () => tecla('KeyH'),
+    Esc: async () => { for (let k = 0; k < 3; k++) { const x = await st(); if (!x.menu && !x.ajuda) break; await tecla('Escape', 2); } },
+    Enter: () => tecla('Enter'),
+    A: async () => {
+      await p.evaluate(() => { window.__pad.ligado = true; window.__pad.botoes = [0]; });
+      await quadros(3);
+      await p.evaluate(() => { window.__pad.botoes = []; });
+      await quadros(2);
+    },
+  };
+  try {
+    await p.waitForFunction(q => {
+      const g = window.__golaco, c = g?.comemoracao?.estado, r = g?.replay?.estado;
+      return q === 'comemoracao' ? !!c && c.estado === 'rodando' && c.t >= 0.6 : !!r && !!r.ativo && r.tipo === 'gol' && r.quadros >= 2;
+    }, qual, { timeout: 420000, polling: 'raf' });
+    for (const nome of ordem) {
+      // o menu (re)aberto: depois do H a Ajuda já está aberta (o Esc a fecha)
+      const x = await st();
+      if (x.ativo && !x.menu && !x.ajuda) { await p.evaluate(() => window.__golaco.abrirMenu()); await quadros(2); }
+      const antes = await st();
+      if (!antes.ativo) break;
+      await PASSOS[nome]();
+      const depois = await st();
+      R.passos.push({ nome, antes, depois });
+      if (!depois.ativo) break;
+    }
+    // o aperto NOVO, com o menu fechado
+    let x = await st();
+    if (x.ativo && R.passos.length === ordem.length) {
+      for (let k = 0; k < 3 && (x.menu || x.ajuda); k++) { await tecla('Escape', 2); x = await st(); }
+      await quadros(2);
+      const antes = await st();
+      await p.keyboard.down('KeyJ'); await quadros(3); await p.keyboard.up('KeyJ'); await quadros(1);
+      R.fim = { antes, depois: await st() };
+    }
+  } catch (e) { R.erro = String(e?.message ?? e).slice(0, 160); }
+  return R;
+}
+
+/** Os critérios de um roteiro: cada passo com a cena andando e o efeito do menu; o J novo pula. {ok, txt}. */
+function avaliarMenuCena(R, ordem) {
+  const f = x => (x == null ? '—' : Number.isInteger(x) ? String(x) : x.toFixed(2));
+  const partes = [];
+  let ok = !R.erro && R.passos.length === ordem.length;
+  for (const { nome, antes, depois } of R.passos) {
+    let bom = depois.ativo && depois.t != null && antes.t != null && depois.t > antes.t;
+    if (nome === 'H') bom &&= depois.ajuda;
+    if (nome === 'Esc' || nome === 'P') bom &&= !depois.menu && !depois.ajuda;
+    ok &&= bom;
+    partes.push(`${nome}: ${depois.ativo ? `segue ${f(antes.t)}→${f(depois.t)}` : 'PULOU'}${depois.menu ? ', menu' : ''}${depois.ajuda ? ', Ajuda' : ''}${bom ? '' : ' ✗'}`);
+  }
+  const fim = R.fim;
+  ok &&= !!fim && fim.antes.ativo && !fim.antes.menu && !fim.antes.ajuda && !fim.depois.ativo;
+  partes.push(`J novo com o menu fechado: ${fim ? (fim.depois.ativo ? 'NÃO pulou' : 'pulou') : '—'}`);
+  return { ok, txt: partes.join(' · ') + (R.erro ? ` (${R.erro})` : '') };
+}
+
+async function secaoP10() {
+  const MIN = 1;
+  const SG = await sementeGol(MIN);
+  if (!SG) { meta('P10 a semente com o gol cedo do time de A (Node)', 'nenhuma das 81 sementes até o tick 2400', false); return; }
+  const s = await abrir({ largura: 568, altura: 320, dpr: 1, toque: true });
+  try {
+    await s.contexto.addInitScript(() => {
+      // o controle de mentira (o A do roteiro): conectado só depois do 1º aperto
+      const P = window.__pad = { ligado: false, botoes: [] };
+      const bt = () => Array.from({ length: 17 }, (_, i) => ({ pressed: P.botoes.includes(i), value: P.botoes.includes(i) ? 1 : 0, touched: false }));
+      const orig = navigator.getGamepads ? navigator.getGamepads.bind(navigator) : () => [];
+      navigator.getGamepads = () => (P.ligado ? [{ connected: true, mapping: 'standard', index: 0, id: 'teste', timestamp: 0, axes: [0, 0, 0, 0], buttons: bt() }] : orig());
+      // um registro por quadro (o roteiro conta os quadros por ele)
+      const V = window.__vigia = { log: [] };
+      const volta = () => {
+        requestAnimationFrame(volta);
+        const g = window.__golaco;
+        if (!g || !g.pronto || !g.online) return;
+        V.log.push(g.online.n);
+      };
+      requestAnimationFrame(volta);
+    });
+    const sala = 'menu' + Date.now();
+    const url = (lado, cenas) => `${srv.url}index.html?online=${sala}&transporte=bc&lado=${lado}&ia=1&semente=${SG.semente}&min=${MIN}&q=baixa&replay=${cenas ? 1 : 0}&comemoracao=${cenas ? 1 : 0}&replayParada=0&cenas=0&prejogo=0&D=4`;
+    const pA = s.pagina, pB = await s.contexto.newPage();
+    for (const [p, nome] of [[pA, 'A'], [pB, 'B']]) {
+      p.on('pageerror', e => erros.push(`P10 ${nome}: ${e.message}`));
+      p.on('console', m => { if (m.type() === 'error') erros.push(`P10 ${nome}: ${m.text()}`); });
+    }
+    await Promise.all([pA.goto(url(0, true), { waitUntil: 'load' }), pB.goto(url(1, false), { waitUntil: 'load' })]);
+    await Promise.all([pA, pB].map(p => p.waitForFunction(() => window.__golaco && window.__golaco.pronto && window.__golaco.online, null, { timeout: 300000 })));
+    // (o replay é sob demanda: baixado bem antes do gol)
+    await pA.waitForFunction(() => window.__golaco.sobDemanda.ja(), null, { timeout: 300000, polling: 500 });
+    const OC = ['P', 'J', 'H', 'Esc', 'Enter', 'A'], OR = ['A', 'Enter', 'H', 'Esc', 'J', 'P'];
+    const com = await roteiroMenuCena(pA, 'comemoracao', OC);
+    const rep = await roteiroMenuCena(pA, 'replay', OR);
+    const ac = avaliarMenuCena(com, OC), ar = avaliarMenuCena(rep, OR);
+    meta('P10a a comemoração no online com o menu de A aberto: P fecha o menu; J segurado, H (Ajuda), Esc (fecha), Enter e o A do controle não a pulam; depois, com o menu fechado, um J novo pula',
+      `semente ${SG.semente} (gol no tick ${SG.tick}) · ${ac.txt}`, ac.ok);
+    meta('P10b o replay do gol no online com o menu de A aberto: A do controle, Enter, H, Esc, J segurado e P não o pulam; depois, um J novo pula', ar.txt, ar.ok);
+    // P10c: o mesmo jogo nas duas, passando do gol
+    const ate = p => p.waitForFunction(k => (window.__golaco.online?.n ?? 0) >= k, SG.tick + 300, { timeout: 300000, polling: 250 }).then(() => true, () => false);
+    const okN = await Promise.all([ate(pA), ate(pB)]);
+    const ler = p => p.evaluate(() => { const o = window.__golaco.online; return { n: o.n, hashes: o.hashes, dessinc: o.dessinc }; });
+    const [a, b] = await Promise.all([ler(pA), ler(pB)]);
+    const c = comparar(a, b);
+    meta('P10c o mesmo jogo nas duas abas com as cenas e o menu (hashes a cada 60 passos)', `${c.difs} diferentes de ${c.comuns} em comum (até o passo ${c.ultimo ?? '—'}; passos ${a.n}/${b.n}); dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}`,
+      okN.every(Boolean) && c.comuns >= 5 && c.difs === 0 && c.ultimo != null && c.ultimo > SG.tick && !a.dessinc && !b.dessinc);
+  } catch (e) { meta('P10 execução', String(e?.message ?? e).slice(0, 200), false); }
+  finally { await s.navegador.close(); }
 }

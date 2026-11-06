@@ -9,8 +9,9 @@
 // times (a capacidade cresce sozinha). Goleiro (posicao 'GOL') com uniforme próprio, manga
 // comprida e luvas.
 import * as THREE from 'three';
-import { SEGMENTOS, RAIO_CABECA, J, FORMA_SEG, FORMA_SEG_GOL, CABECA_ESCALA, CABELO_ESCALA, CABELO_DESLOCA } from '../anim.js';
+import { SEGMENTOS, RAIO_CABECA, J, NJ, FORMA_SEG, FORMA_SEG_GOL, CABECA_ESCALA, CABELO_ESCALA, CABELO_DESLOCA } from '../anim.js';
 import { texMancha, texIndicador, texIndicadorPressao } from './texturas.js';
+import { poseManequim } from './apoio-mao.js';
 
 const NSEG = SEGMENTOS.length;
 
@@ -96,6 +97,12 @@ function estiloTecnico(seg, base) {
 }
 const ESTILOS_TECNICO = SEGMENTOS.map((sg, i) => estiloTecnico(sg, ESTILOS[i]));
 const estilosDe = jg => (jg.tecnico ? ESTILOS_TECNICO : jg.goleiro ? ESTILOS_GOL : ESTILOS);
+// a MÃO DE APOIO no chão (item 77, render/apoio-mao.js poseManequim): no manequim a junta `mao` é a ponta da mão — ela
+// desce até o raio da cápsula da mão e o cotovelo sai da IK com os mesmos comprimentos. Só no desenho (a pose da lista não
+// muda); fora do carrinho deitado (o peso 0) a pose é a de sempre, sem cópia
+const S_ANTEBRACO = [[J.cotoveloE, J.maoE], [J.cotoveloD, J.maoD]].map(([a, b]) => SEGMENTOS.findIndex(s => s[0] === a && s[1] === b));
+const _poseApoio = new Float32Array(NJ * 3);
+const poseDoManequim = (pose, est, out = _poseApoio) => poseManequim(pose, est[S_ANTEBRACO[0]].r[1], est[S_ANTEBRACO[1]].r[1], out);
 // `ocultar` (1ª pessoa do replay: o autor não pode se ver por dentro): bit1 (2) = cabeça e cabelo com escala 0; bit2 (4) =
 // as cápsulas do pescoço, do peito, da lombar, dos ombros e dos braços com raio e comprimento 0. Ficam a pelve e as pernas.
 export const OCULTA = { cabeca: 2, tronco: 4 };
@@ -466,7 +473,9 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
       let w = (d.larg > 0 ? Math.min(d.larg, 0.8) : LARG_DECAL[pos]) * 0.34;
       if (w / asp > ALTMAX_DECAL[pos]) w = ALTMAX_DECAL[pos] * asp;
       const o = (17 + 2 * i) * 4;
-      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w; L[o + 3] = asp;
+      // w é a largura do DESENHO; a máscara tem a margem em volta dele (item 63, tools/patrocinios/borda.mjs: o desenho
+      // ocupa a fração `escala` da caixa): a caixa do shader alarga por 1 ÷ escala e o logo fica do mesmo tamanho
+      L[o] = humano.logoDe(d.url); L[o + 1] = pos; L[o + 2] = w / (d.escala > 0 ? d.escala : 1); L[o + 3] = asp;
       let cor = d.cor || '#ffffff';
       const fundo = kb[FUNDO_DECAL[pos]] ?? kb.camisa, lf = lumHex(fundo);
       if (Math.abs(lumHex(cor) - lf) < 0.12) cor = lf > 0.25 ? '#15191b' : '#f2f4f5';
@@ -607,7 +616,8 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
         const jg = L[p];
         if (jg.id !== id || !jg.pose) continue;
         if (humano) return humano.postura(jg.pose, Number.isFinite(jg.v) ? jg.v : 1.5, jg.goleiro ? 0.4 : 1, out);
-        out.set(jg.pose);
+        const pd = poseDoManequim(jg.pose, estilosDe(jg), out);
+        if (pd !== out) out.set(pd);
         return out;
       }
       return null;
@@ -676,7 +686,7 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
         const chave = kitIdx(jg) * 1e7 + jg.id * 4 + (jg.time === 1 ? 2 : 0) + (jg.goleiro ? 1 : 0);
         if (vagaDe.get(p) !== chave) { vagaDe.set(p, chave); escreverCores(p, jg); }
         const est = estilosDe(jg);
-        const pose = jg.pose;
+        const pose = poseDoManequim(jg.pose, est);
         const ocu = jg.ocultar | 0;
         frente(pose, J.ombroE, J.ombroD, fSup);
         frente(pose, J.quadrilE, J.quadrilD, fInf);
