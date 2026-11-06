@@ -26,10 +26,17 @@ export const APOIO_MAO = {
   tronco: [0.26, 0.42],  // o cosseno da inclinação do tronco (pelve → pescoço): ≥ 0,42 (≤ 65°): 1; ≤ 0,26 (≥ 75°): 0
   dobra: [0.64, 0.9],    // o cosseno entre o braço e o antebraço: dobrado (≤ 0,64, ≥ 50°): 1; reto (≥ 0,9, ≤ 26°): 0
   maos: [0.3, 0.45],     // a distância entre as mãos: juntas (≤ 0,3 m, a bola nas mãos): 0; soltas (≥ 0,45): 1
+  desce: 0.1,            // m — a mão desce no máximo isto além da do jogo (com peso 1 a do jogo está ≤ mao[0] = 0,14 m)
+  joelho: 0.025,         // m — o canto macio do teto: exato até desce − joelho (0,075; o carrinho pede 0,07), teto em desce + joelho
   polo: 0,               // o polo do cotovelo sobe polo × o peso (0: o cotovelo do lado do de antes)
   alcance: 0.95,         // a mão desce até o ombro ficar a no máximo 0,95 × (braço + antebraço) dela
+  joelhoAlcance: 0.04,   // m — o canto macio do piso do alcance (no deslize a mão fica 0,05 m acima dele: sem efeito)
 };
 const suave = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+/** min(x, teto) com o canto arredondado (a parábola tangente de teto − k a teto + k): contínua e com derivada contínua. */
+const tetoMacio = (x, teto, k) => (x <= teto - k ? x : x >= teto + k ? teto : teto - (teto + k - x) ** 2 / (4 * k));
+/** max(a, b) com o canto arredondado (nunca abaixo do max: o braço nunca passa do alcance). */
+const maxMacio = (a, b, k) => { const d = k - Math.abs(a - b); return (a > b ? a : b) + (d > 0 ? d * d / (4 * k) : 0); };
 
 /** O peso 0–1 da mão de apoio no chão do braço `lado` (0 esquerdo, 1 direito) na pose po (19 juntas × 3). */
 export function pesoApoio(po, lado) {
@@ -72,9 +79,16 @@ export function maoNoChao(po, out, lado, w, alvoY) {
   // dobra): esticado, o lado da dobra deixa de existir e o cotovelo (e a torção do braço do corpo novo) virava num quadro
   // na entrada e na saída do carrinho, com o corpo ainda alto
   const mx = po[m], mz = po[m + 2], my0 = po[m + 1];
-  let my = my0 + (alvoY - my0) * w;
+  // a mão desce no máximo APOIO_MAO.desce além da do jogo (R1 da revisão): com o "vai até o chão pelo peso" a mão alta da
+  // queda (0,3–0,4 m, o peso no meio da rampa) descia 10–14 cm por quadro e grudava no chão 2–3 quadros antes da do jogo
+  // chegar (a mão ia ao chão de estalo, o dobro do pico da base); no levantar ficava presa e saía correndo atrás da do jogo.
+  // Assim a mão desenhada anda junto da do jogo e só a DIFERENÇA final (0,07 m no carrinho) entra com o peso. O teto é
+  // macio (o joelho quadrático de ±joelho em volta de `desce`): com o teto seco a mão saía do chão de estalo no levantar
+  let my = my0 + (alvoY >= my0 ? alvoY - my0 : -tetoMacio(my0 - alvoY, APOIO_MAO.desce, APOIO_MAO.joelho)) * w;
   const R = APOIO_MAO.alcance * (L1 + L2), h2 = (mx - ox) ** 2 + (mz - oz) ** 2;
-  if (h2 < R * R) my = Math.max(my, Math.min(oy - Math.sqrt(R * R - h2), my0));
+  // o piso do alcance entra MACIO (o máximo com o canto quadrático de ±APOIO_MAO.joelhoAlcance; R1 da revisão): no levantar o
+  // ombro sobe e o piso alcança a mão pedida — com o máximo seco a mão grudava nele e se soltava de estalo
+  if (h2 < R * R) my = Math.min(maxMacio(my, oy - Math.sqrt(R * R - h2), APOIO_MAO.joelhoAlcance), Math.max(my, my0));
   else my = my0;
   let ux = mx - ox, uy = my - oy, uz = mz - oz;
   const d0 = Math.sqrt(ux * ux + uy * uy + uz * uz) || 1e-9;

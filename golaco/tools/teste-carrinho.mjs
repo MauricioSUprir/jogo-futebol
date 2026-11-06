@@ -51,7 +51,10 @@
 //     da cápsula do anim.js FORMA_SEG) com o fundo da cápsula da mão de apoio a −1 a +1,5 cm do chão e o fundo de todas as
 //     cápsulas ≥ −1 cm; no corpo novo, o vértice mais baixo da mão (LOD0, osso dominante) a −1 a +1,5 cm, a normal da palma
 //     a ≤ 25° de −Y e a dobra do punho (o eixo da mão × o do antebraço) ≤ 70° (a extensão funcional: Ryu et al. 1991). Na
-//     base (7cb052ad): manequim 0,073 m, corpo novo 0,063 m e a palma a 86,7° (de lado).
+//     base (7cb052ad): manequim 0,073 m, corpo novo 0,063 m e a palma a 86,7° (de lado). E a CONTINUIDADE (R1 da revisão):
+//     em cada fase, o pico da 2ª diferença por quadro da mão de apoio desenhada (manequim: a junta; corpo novo: os vértices
+//     da mão) ≤ 1,3 × o do mesmo desenho sem a mão de apoio + 2 mm — na 1ª versão a mão ia ao chão de estalo na queda
+//     (corpo novo 0,106 × 0,055) e saía de estalo no levantar (manequim 0,026 × 0,008).
 //  E. as travas na simulação (estados de uma partida de verdade, semente 3102; o humano no time 0): E1 com o carrinho os
 //     outros botões não mexem no corpo dele (bit a bit), ele não domina a bola (colada no pé no tick do aperto; rolando
 //     para ele no chão), não recebe o controle (TROCAR, candidatoTroca), o boteIA dele não sai e volta no passo do fim;
@@ -484,7 +487,12 @@ const RP = {
   maoN: 0, maoManeq: 0, maoManeqF: [Infinity, -Infinity], maoManeqEx: '', fundoDes: 0, fundoDesPior: Infinity,
   maoPeleN: 0, maoPele: 0, maoPeleF: [Infinity, -Infinity], maoPeleEx: '', palma: 0, palmaPior: 0, punho: 0, punhoPior: 0,
   secao: 0, secaoPior: [Infinity, Infinity], // a seção da pele no cotovelo e no punho do braço de apoio (÷ a do descanso)
+  // P6 continuidade (R1 da revisão): o pico da 2ª diferença por quadro (m/quadro²) da mão de apoio DESENHADA por fase (0 no
+  // ar, 1 queda, 2 deslize, 3 chão, 4 levantar) × o do mesmo desenho SEM a mão de apoio (o manequim: a junta da pose do jogo;
+  // o corpo novo: a pele com o peso do apoio-mao.js zerado)
+  cont: { man: [0, 0, 0, 0, 0], manRef: [0, 0, 0, 0, 0], hum: [0, 0, 0, 0, 0], humRef: [0, 0, 0, 0, 0], n: 0, ex: '' },
 };
+const CONT_FATOR = 1.3, CONT_FOLGA = 0.002; // o pico desenhado ≤ 1,3 × o sem a mão de apoio + 2 mm por quadro², em cada fase
 const SECAO_MIN = 0.85; // a régua do teste-ossos O5 (volume na dobra)
 const MAO_FAIXA = [-0.01, 0.015], PALMA_MAX = 25, PUNHO_MAX = 70; // m; °; ° (a extensão funcional do punho: Ryu et al. 1991)
 // o manequim desenhado (P6): os raios das cápsulas (anim.js FORMA_SEG: os do desenho) e a cápsula da mão de cada lado
@@ -771,6 +779,56 @@ function medirPose(j, c, qs, mw, poseFim, velFim, cada, nome) {
   j.carrinho = salvo;
   RP.seqs++;
   if (EQ) esqueletoSeq([...poses, poseFim], [...vels, velFim], cada, nome, [...apoio, -1]);
+  if (cada === 1) continuidadeMao(poses, vels, qs, nome);
+}
+/**
+ * P6 continuidade (R1 da revisão do item 77): a mão de apoio desenhada não pode ir ao chão (nem sair dele) de estalo — o
+ * pico da 2ª diferença por quadro da junta da mão do manequim desenhado e dos vértices da mão do corpo novo, por fase,
+ * contra o mesmo desenho sem a mão de apoio. Na 1ª versão do item 77 a mão do corpo novo descia ~0,13 m num quadro da
+ * queda (o pico 0,106 contra 0,055) e a do manequim saía do chão de estalo no levantar (0,026 contra 0,008).
+ */
+function continuidadeMao(poses, vels, qs, nome) {
+  if (poses.length < 3) return;
+  const l = qs[Math.min(1, qs.length - 1)].lado < 0 ? 0 : 1, jm = (l ? A.J.maoD : A.J.maoE) * 3;
+  const pico = (serie, fases, alvo) => {
+    for (let i = 1; i < serie.length - 1; i++) {
+      let a = 0;
+      for (let k = 0; k < serie[i].length; k += 3) a = Math.max(a, Math.hypot(serie[i + 1][k] - 2 * serie[i][k] + serie[i - 1][k],
+        serie[i + 1][k + 1] - 2 * serie[i][k + 1] + serie[i - 1][k + 1], serie[i + 1][k + 2] - 2 * serie[i][k + 2] + serie[i - 1][k + 2]));
+      const f = fases[i];
+      if (a > alvo[f]) alvo[f] = a;
+    }
+  };
+  const fases = qs.map(q => q.fase).slice(0, poses.length);
+  const manD = poses.map(po => { const pd = AM ? AM.poseManequim(po, FORMA[S_MAO[0]].rB, FORMA[S_MAO[1]].rB, _poDes) : po; return [pd[jm], pd[jm + 1], pd[jm + 2]]; });
+  const manR = poses.map(po => [po[jm], po[jm + 1], po[jm + 2]]);
+  const antes = RP.cont.man.slice();
+  pico(manD, fases, RP.cont.man); pico(manR, fases, RP.cont.manRef);
+  if (EQ) {
+    const { E, S } = EQ, vs = EQ.maoV[l];
+    const maoPele = () => poses.map((po, i) => {
+      E.pele(po, S, 0, vels[i], 1);
+      const out = new Float64Array(vs.length * 3);
+      vs.forEach((v, k) => {
+        const x = EQ.L0.pos[v * 3], y = EQ.L0.pos[v * 3 + 1], z = EQ.L0.pos[v * 3 + 2];
+        for (let q = 0; q < 4; q++) {
+          const wk = EQ.L0w[v * 4 + q]; if (!wk) continue; const ib = EQ.L0.ossos[v * 4 + q] * 12;
+          out[k * 3] += wk * (S[ib] * x + S[ib + 1] * y + S[ib + 2] * z + S[ib + 3]);
+          out[k * 3 + 1] += wk * (S[ib + 4] * x + S[ib + 5] * y + S[ib + 6] * z + S[ib + 7]);
+          out[k * 3 + 2] += wk * (S[ib + 8] * x + S[ib + 9] * y + S[ib + 10] * z + S[ib + 11]);
+        }
+      });
+      return out;
+    });
+    pico(maoPele(), fases, RP.cont.hum);
+    if (AM) {
+      const salvo = AM.APOIO_MAO.pelve;
+      AM.APOIO_MAO.pelve = [-2, -1]; // a mão de apoio desligada: o peso 0 em toda pose
+      try { pico(maoPele(), fases, RP.cont.humRef); } finally { AM.APOIO_MAO.pelve = salvo; }
+    } else pico(maoPele(), fases, RP.cont.humRef);
+  }
+  RP.cont.n++;
+  if (!RP.cont.ex && RP.cont.man.some((x, f) => x > antes[f] && x > CONT_FATOR * RP.cont.manRef[f] + CONT_FOLGA)) RP.cont.ex = nome;
 }
 
 /** Mede o plano c do jogador j (pel0: a pelve da pose normal no aperto; mw: o mundo da pose) em todas as metas por quadro. */
@@ -1135,6 +1193,13 @@ else {
       `${RP.maoPele} fora de ${RP.maoPeleN} quadros (${f3(RP.maoPeleF[0])} a ${f3(RP.maoPeleF[1])} m)${RP.maoPeleEx ? '; ex.: ' + RP.maoPeleEx : ''}`, '0', RP.maoPele === 0 && RP.maoPeleN > 0);
     reg(`P6 corpo novo: a palma da mão de apoio para o chão (a normal ≤ ${PALMA_MAX}° de −Y) e a dobra do punho ≤ ${PUNHO_MAX}°`,
       `palma ${RP.palma} (pior ${f2(RP.palmaPior)}°); punho ${RP.punho} (pior ${f2(RP.punhoPior)}°) em ${RP.maoPeleN} quadros`, '0; 0', RP.palma === 0 && RP.punho === 0 && RP.maoPeleN > 0);
+    {
+      const c = RP.cont, f3c = a => a.map(x => x.toFixed(3)).join('/');
+      const okF = (d, r) => d.every((x, f) => x <= CONT_FATOR * r[f] + CONT_FOLGA);
+      reg('P6 continuidade: o pico da 2ª diferença da mão de apoio desenhada por fase (ar/queda/deslize/chão/levantar) ≤ 1,3 × o sem a mão de apoio + 2 mm',
+        `manequim ${f3c(c.man)} × ${f3c(c.manRef)}; corpo novo ${f3c(c.hum)} × ${f3c(c.humRef)} m/quadro² (${c.n} sequências)`,
+        '≤ 1,3 × + 0,002 em cada fase', c.n > 0 && okF(c.man, c.manRef) && okF(c.hum, c.humRef));
+    }
     reg(`P6 corpo novo: a seção da pele no cotovelo e no punho do braço de apoio ≥ ${SECAO_MIN * 100}% da do descanso (sem murchar na torção)`,
       `${RP.secao} quadros abaixo (pior: cotovelo ${f2(RP.secaoPior[0] * 100)}%, punho ${f2(RP.secaoPior[1] * 100)}%)`, '0', RP.secao === 0 && RP.maoPeleN > 0);
     reg('P3 O1 juntas do esqueleto ≤ 1 mm', `${RP.o1} (pior ${(RP.o1pior * 1000).toFixed(3)} mm)`, '0', RP.o1 === 0);
