@@ -284,11 +284,13 @@ async function secaoP8() {
     const passos = (L, j) => (j ? new Set(L.slice(j.i0, j.i1).map(l => l[1])).size - 1 : null);
     const tempos = (L, j) => (j ? L.slice(j.i0, j.i1).map(l => l[4]).filter(x => x != null) : []);
     const tA = tempos(LA, ja[0]), tB = tempos(LB, jb[0]);
+    // (o tempo da cena de A no quadro do pulo entra: depois do pulo o quadro já é anotado sem a cena)
+    if (a.V.pulou) tA.push(a.V.pulou.tempo);
     const maxA = tA.length ? Math.max(...tA) : null, maxB = tB.length ? Math.max(...tB) : null, totB = b.V.total;
     const distA = new Set(tA).size, distB = new Set(tB).size;
     meta('P8b cada aba segura só a SUA simulação (0 passos com a cena) e a cena anda: a de B até o fim, sozinha; a de A até o pulo; depois as duas seguem',
       `A: ${passos(LA, ja[0]) ?? '—'} passos com a cena, tempo até ${f2(maxA)} s (${distA} valores), pulou ${a.V.pulou ? `aos ${f2(a.V.pulou.tempo)} s` : 'não'} · B: ${passos(LB, jb[0]) ?? '—'} passos, tempo até ${f2(maxB)} de ${f2(totB)} s (${distB} valores), pulou ${b.V.pulou ? 'sim' : 'não'}; depois ${a.n}/${b.n} passos (cena no ${ca?.[5] ?? '—'})`,
-      !!ja[0] && !!jb[0] && passos(LA, ja[0]) === 0 && passos(LB, jb[0]) === 0 && !!a.V.pulou && maxA >= 0.9 && distA >= 3
+      !!ja[0] && !!jb[0] && passos(LA, ja[0]) === 0 && passos(LB, jb[0]) === 0 && !!a.V.pulou && maxA >= 1.0 && distA >= 3
       && !b.V.pulou && totB != null && maxB >= totB - 0.2 && distB >= 10 && r.ok.every(Boolean) && a.n >= ca[5] + 120 && b.n >= cb[5] + 120);
     // P8c: A pulou e espera a cena de B (do pulo ao fim da de B): parada no passo de B + D + 2 no máximo; o aviso diz que B
     // ainda está vendo a cena e nunca "A conexão parou" nem W.O.; o selo "Conexão instável" nunca aceso por ≥ 1 s
