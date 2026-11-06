@@ -22,7 +22,11 @@
 //     simulação por uma cena local) não se confunde com os bits do online.js nem com as fases da tela antes do jogo;
 //  O14 (item 30) o texto da espera (online-pagina.js textoEspera, puro): com os pacotes do outro chegando nunca "A conexão
 //     parou" — a cena dele ("ainda está vendo a cena"), antes do jogo, no pré-jogo ou "ainda não voltou ao jogo"; sem
-//     pacote há 5 s, "A conexão parou".
+//     pacote há 5 s, "A conexão parou";
+//  O15 (item 30, revisão) o fim da espera pela cena do outro sem piscar e a marca só com a cena andando
+//     (online-pagina.js marcaCena e conexaoNoQuadro, puras): a marca E_CENA vale do quadro da cena até o 1º passo rodado
+//     depois dela (o quadro em que ela acaba sai sem passo); com a entrada do outro já chegada o aviso de espera sai no
+//     mesmo quadro (o `paradoDesde` só zera depois do passo).
 //   node tools/teste-online.mjs [--passos 3600]
 import { tabelaTexto } from './lib/medidas.mjs';
 import { criarRede } from './lib/rede-memoria.mjs';
@@ -329,6 +333,40 @@ for (const x of res) {
   linha('O14 o texto da espera: com os pacotes do outro chegando nunca "A conexão parou" (a cena dele, antes do jogo, pré-jogo, "não voltou"); sem pacote há 5 s, "A conexão parou"',
     `${casosT.length - (typeof t === 'function' ? errT.length : casosT.length)}/${casosT.length} casos certos${errT.length ? ` (erradas: ${errT.slice(0, 3).join(', ')})` : ''}; "conexão parou" com pacotes ${comPacote < 0 ? '—' : comPacote}`,
     `${casosT.length}/${casosT.length}; 0`, typeof t === 'function' && !errT.length && comPacote === 0);
+
+  // O15 (revisão do item 30): a marca pela sequência de quadros de quem vê a cena [cena no quadro (começo ou fim), passos
+  // rodados] e o aviso de quem espera no quadro em que a entrada chega
+  const mc = OP.marcaCena, cq = OP.conexaoNoQuadro;
+  let errM = ['sem a função'];
+  if (typeof mc === 'function') {
+    // a cena por 3 quadros; o quadro em que ela acaba (cena no começo dele, 0 passo); 1 quadro sem passo; o 1º com passo; depois
+    const seq = [[false, 2, false], [true, 0, true], [true, 0, true], [true, 0, true], [false, 0, true], [false, 2, false], [false, 1, false],
+      // uma cena que começa depois de um passo no mesmo quadro (o evento do passo abre a cena: cena no fim)
+      [true, 1, true], [false, 0, true], [false, 3, false]];
+    let pend = false;
+    errM = [];
+    seq.forEach(([cena, rodou, ok], i) => { pend = mc(pend, cena, rodou); if (pend !== ok) errM.push(`q${i}`); });
+  }
+  let errC = ['sem a função'];
+  if (typeof cq === 'function') {
+    const A = O.AGUARDANDO_MS, I = O.INSTAVEL_MS;
+    // [c, pode, estado esperado, parado esperado]
+    const cc = [
+      [{ estado: 'aguardando', paradoMs: A + 4000, semPacoteMs: 120 }, true, 'ok', 0],
+      [{ estado: 'aguardando', paradoMs: A + 4000, semPacoteMs: I + 10 }, true, 'instavel', 0],
+      [{ estado: 'aguardando', paradoMs: A + 4000, semPacoteMs: A + 10 }, true, 'aguardando', 0],
+      [{ estado: 'aguardando', paradoMs: A + 4000, semPacoteMs: 120 }, false, 'aguardando', A + 4000],
+      [{ estado: 'ok', paradoMs: 1200, semPacoteMs: 120 }, false, 'ok', 1200],
+      [{ estado: 'ok', paradoMs: 0, semPacoteMs: 120 }, true, 'ok', 0],
+    ];
+    errC = cc.filter(([c, pode, e, p]) => { const r = cq(c, pode); return r.estado !== e || r.paradoMs !== p; }).map((_, i) => `c${i}`);
+    // e o texto: a espera da cena acabando — o pacote novo SEM a marca e a entrada já aqui — não mostra aviso nenhum
+    const r = cq({ estado: 'aguardando', paradoMs: A + 4000, semPacoteMs: 80 }, true);
+    if (r.estado === 'aguardando' || r.paradoMs >= 900) errC.push('aviso');
+  }
+  linha('O15 a marca E_CENA até o 1º passo depois da cena; com a entrada do outro já chegada a espera acaba no mesmo quadro (sem piscar "ainda não voltou ao jogo")',
+    `marca ${errM.length ? `errada (${errM.join(', ')})` : 'certa nos 10 quadros'}; espera ${errC.length ? `errada (${errC.join(', ')})` : 'certa nos 6 casos + o fim'}`,
+    '0 errados', !errM.length && !errC.length);
 }
 
 console.log(tabelaTexto([['item', 'medido', 'meta', 'resultado'], ...linhas]));

@@ -26,7 +26,17 @@
 //          com "{B} ainda está vendo a cena" e nunca "A conexão parou", W.O. nem o selo "Conexão instável" aceso por ≥ 1 s;
 //      P8d os hashes a cada 60 passos iguais (nenhuma dessincronia);
 //      P8e com a opção desligada no anfitrião (A ?substituicao=0, B ?substituicao=1): nenhuma das duas abre a cena, as duas
-//          mostram só a faixa ENTRA/SAI no mesmo tick e o jogo não para; hashes iguais.
+//          mostram só a faixa ENTRA/SAI no mesmo tick e o jogo não para; hashes iguais;
+//      (revisão do item 30, na sessão do P8a–P8d)
+//      P8f o menu de A aberto na cena dele (aos ≥ 0,6 s): a cena segue andando (o menu não a congela no online) e nem um botão
+//          do jogo (J = PASSE, segurado) nem o H a pulam — o H abre a Ajuda; Esc fecha a Ajuda e o menu, a cena continua;
+//      P8g B em pé (320×568) por 6 s logo depois do fim da cena de A (o pulo), com a de B andando: a de B congela e A, esperando,
+//          NÃO lê "Lado 1 ainda está vendo a cena" (B não a está vendo; a marca sai com o celular em pé);
+//      P8h o fim da espera de A pela cena de B sem piscar: do último quadro da cena de B até o aviso de A sumir, nenhum
+//          "ainda não voltou ao jogo" (a marca vai até o 1º passo de B depois da cena; com a entrada de B chegada o aviso sai
+//          no mesmo quadro); e o aviso some;
+//      P8i o selo "Conexão instável" escondido com a cena (html.em-substituicao): aceso à força dentro da cena, nas duas
+//          abas, o estilo calculado dele é display: none.
 //   node tools/teste-online-tela.mjs [--so principal|p8]
 import { servidor, abrir } from './lib/navegador.mjs';
 
@@ -205,10 +215,11 @@ async function sementeSubst(min) {
  * tempo da cena, tick da cena, pares, aviso, selo aceso, faixa ENTRA/SAI (pares na faixa)]; em A, com `pularA`, pula a
  * própria cena pela API (o pularSubst do "Pular") quando o tempo dela passa de pularA s.
  */
-async function sessaoSubst({ semente, min, substA, substB, pularA = null, tick }) {
+async function sessaoSubst({ semente, min, substA, substB, pularA = null, tick, roteiro = null }) {
   const s = await abrir({ largura: 568, altura: 320, dpr: 1, toque: true });
   await s.contexto.addInitScript(cfg => {
-    const V = window.__vigia = { log: [], pediu: null, pulou: null, total: null };
+    const V = window.__vigia = { log: [], pediu: null, pulou: null, total: null, sonda: null };
+    const emPe = window.matchMedia('(orientation: portrait)');
     const lado = new URLSearchParams(location.search).get('lado');
     const volta = () => {
       requestAnimationFrame(volta);
@@ -218,13 +229,17 @@ async function sessaoSubst({ semente, min, substA, substB, pularA = null, tick }
       if (V.pediu == null) V.pediu = { n: o.n, r: g.substituicaoDeTeste({ parada: null, pares: lado === '0' ? [{ sai: 9, entra: 22, time: 0 }] : [{ sai: 109, entra: 122, time: 1 }] }) };
       let e = cs.estado;
       if (e && V.total == null) V.total = e.total;
-      if (lado === '0' && cfg.pularA != null && e && V.pulou == null && e.tempo >= cfg.pularA) { V.pulou = { t: Date.now(), tempo: e.tempo, n: o.n }; cs.pular(); e = cs.estado; }
+      // (com o roteiro, A só pula depois dele: window.__roteiroA)
+      if (lado === '0' && cfg.pularA != null && e && V.pulou == null && e.tempo >= cfg.pularA && (!cfg.roteiro || window.__roteiroA)) { V.pulou = { t: Date.now(), tempo: e.tempo, n: o.n }; cs.pular(); e = cs.estado; }
       const av = document.getElementById('online-aviso'), sel = document.getElementById('online-selo'), fx = cs.faixa();
+      // P8i: na cena, o selo aceso à força (no mesmo quadro, sem desenhar): o estilo calculado dele
+      if (cs.ativo && sel && V.sonda == null) { const h = sel.hidden; sel.hidden = false; V.sonda = getComputedStyle(sel).display; sel.hidden = h; }
       V.log.push([Date.now(), o.n, o.tick, cs.ativo ? 1 : 0, e ? e.tempo : null, e ? e.tick : null, e ? e.pares.length : 0,
-        av && !av.hidden ? av.textContent.trim().slice(0, 120) : '', sel && !sel.hidden ? 1 : 0, fx.visivel ? fx.n : 0]);
+        av && !av.hidden ? av.textContent.trim().slice(0, 120) : '', sel && !sel.hidden ? 1 : 0, fx.visivel ? fx.n : 0,
+        emPe.matches && document.documentElement.classList.contains('com-toque') ? 1 : 0]);
     };
     requestAnimationFrame(volta);
-  }, { pularA });
+  }, { pularA, roteiro: !!roteiro });
   const sala = 'subst' + Date.now();
   const url = (lado, sub) => `${srv.url}index.html?online=${sala}&transporte=bc&lado=${lado}&ia=1&semente=${semente}&min=${min}&q=baixa&replay=0&comemoracao=0&prejogo=0&D=4&substituicao=${sub ? 1 : 0}`;
   const pA = s.pagina, pB = await s.contexto.newPage();
@@ -245,10 +260,61 @@ async function sessaoSubst({ semente, min, substA, substB, pularA = null, tick }
       const g = window.__golaco, o = g.online;
       return !g.cenaSubst.ativo && (o?.n ?? 0) >= k;
     }, (tick ?? 1500) + 120, { timeout: 420000, polling: 250 }).then(() => true, () => false);
+    // (o roteiro anda junto: ele age durante a cena, antes do `depois`)
+    const rot = roteiro ? roteiro(pA, pB).catch(e => ({ erro: String(e?.message ?? e).slice(0, 200) })) : null;
     const ok = await Promise.all([depois(pA), depois(pB)]);
+    const R = rot ? await rot : null;
     const [a, b] = await Promise.all([ler(pA), ler(pB)]);
-    return { ok, a, b };
+    return { ok, a, b, R };
   } finally { await s.navegador.close(); }
+}
+
+/**
+ * (revisão do item 30) O roteiro da sessão P8a–P8d, junto com ela: o menu de A aberto na cena dele (P8f: Esc, J segurado, H,
+ * Esc até fechar; só depois A pula — window.__roteiroA) e, logo depois do pulo de A, B em pé por 6 s (P8g: 320×568, com toque =
+ * o celular em pé). {menu: {antes, aberto, botao, ajuda, fechou}, retrato: {cenaIni, t0, t1, cenaFim}, erro}.
+ */
+async function roteiroP8(pA, pB) {
+  const R = { menu: null, retrato: null, erro: null };
+  const quadros = async (p, k) => {
+    const n0 = await p.evaluate(() => window.__vigia.log.length);
+    await p.waitForFunction(([n0, k]) => window.__vigia.log.length >= n0 + k, [n0, k], { timeout: 120000, polling: 'raf' });
+  };
+  const st = () => pA.evaluate(() => {
+    const g = window.__golaco, e = g.cenaSubst.estado;
+    return { cena: g.cenaSubst.ativo, tempo: e ? e.tempo : null, menu: !document.getElementById('menu').hidden, ajuda: !document.getElementById('ajuda').hidden };
+  });
+  try {
+    await pA.waitForFunction(() => { const e = window.__golaco?.cenaSubst?.estado; return !!e && e.tempo >= 0.6; }, null, { timeout: 420000, polling: 'raf' });
+    const M = R.menu = { antes: await st() };
+    await pA.keyboard.press('Escape');
+    await pA.waitForFunction(() => !document.getElementById('menu').hidden, null, { timeout: 60000, polling: 'raf' });
+    M.aberto = await st();
+    // um botão do jogo (J = PASSE) segurado com o menu aberto
+    await pA.keyboard.down('KeyJ'); await quadros(pA, 3); await pA.keyboard.up('KeyJ'); await quadros(pA, 2);
+    M.botao = await st();
+    // H com o menu aberto = a Ajuda
+    await pA.keyboard.press('KeyH'); await quadros(pA, 3);
+    M.ajuda = await st();
+    // Esc (voltar) até a Ajuda e o menu fecharem
+    for (let k = 0; k < 4; k++) { const x = await st(); if (!x.menu && !x.ajuda) break; await pA.keyboard.press('Escape'); await quadros(pA, 2); }
+    M.fechou = await st();
+  } catch (e) { R.erro = `menu: ${String(e?.message ?? e).slice(0, 120)}`; }
+  finally { await pA.evaluate(() => { window.__roteiroA = true; }).catch(() => {}); }
+  try {
+    // (a cena de A acabou — pelo pulo; numa versão em que o menu a pulasse, por ele — e A espera a de B)
+    await pA.waitForFunction(() => !window.__golaco.cenaSubst.ativo && window.__vigia.log.some(l => l[3] === 1), null, { timeout: 120000, polling: 250 });
+    const cenaB = () => pB.evaluate(() => window.__golaco.cenaSubst.ativo);
+    const G = R.retrato = { cenaIni: await cenaB(), t00: Date.now() };
+    await pB.setViewportSize({ width: 320, height: 568 });
+    G.t0 = Date.now();
+    await esperar(6000);
+    G.cenaFim = await cenaB();
+    G.t1 = Date.now();
+    await pB.setViewportSize({ width: 568, height: 320 });
+    G.t11 = Date.now();
+  } catch (e) { R.erro = (R.erro ? `${R.erro} | ` : '') + `retrato: ${String(e?.message ?? e).slice(0, 120)}`; }
+  return R;
 }
 
 /** As janelas (Date.now()) em que a cena esteve ativa no log de uma aba: [{i0, i1, t0, t1}] (i1 = o 1º quadro sem ela). */
@@ -271,8 +337,8 @@ async function secaoP8() {
   if (!SS) { meta('P8 a semente com as duas trocas cedo (Node)', 'nenhuma das 60 sementes até o tick 1500', false); return; }
   // ---- P8a–P8d: a cena ligada no anfitrião
   try {
-    const r = await sessaoSubst({ semente: SS.semente, min: MIN, substA: true, substB: false, pularA: 1.0, tick: SS.tick });
-    const { a, b } = r, LA = a.V.log, LB = b.V.log;
+    const r = await sessaoSubst({ semente: SS.semente, min: MIN, substA: true, substB: false, pularA: 1.0, tick: SS.tick, roteiro: roteiroP8 });
+    const { a, b, R } = r, LA = a.V.log, LB = b.V.log;
     const ja = janelasCena(LA), jb = janelasCena(LB);
     const ca = ja[0] ? LA[ja[0].i0] : null, cb = jb[0] ? LB[jb[0].i0] : null;
     // P8a: o mesmo tick nas duas (= Node), os 2 pares, a faixa na cena; B com ?substituicao=0 segue o anfitrião
@@ -303,13 +369,20 @@ async function secaoP8() {
       const avisos = [...new Set(janA.map(l => l[7]).filter(Boolean))];
       const ruins = avisos.filter(t => /conexão parou|W\.O\./i.test(t));
       const cena = avisos.some(t => /Lado 1 ainda está vendo a cena/.test(t));
-      // o selo aceso por mais tempo seguido (ms)
-      let seloMax = 0, seloIni = null;
-      for (const l of janA) { if (l[8]) { if (seloIni == null) seloIni = l[0]; seloMax = Math.max(seloMax, l[0] - seloIni); } else seloIni = null; }
-      const seloQ = janA.filter(l => l[8]).length;
+      // o selo aceso por mais tempo seguido (ms) — fora do giro de B (P8g: o redimensionamento do Chromium sem GPU segura os
+      // quadros de B por segundos — sem pacote; o giro é perturbação do teste, não a espera pela cena), que fica informativo
+      const G = R?.retrato, noGiro = l => !!G && G.t00 != null && l[0] >= G.t00 - 500 && l[0] <= (G.t11 ?? G.t1 ?? G.t00) + 3000;
+      const seloRun = L => {
+        let max = 0, ini = null;
+        for (const l of L) { if (l[8]) { if (ini == null) ini = l[0]; max = Math.max(max, l[0] - ini); } else ini = null; }
+        return max;
+      };
+      const fora = janA.filter(l => !noGiro(l)), giro = janA.filter(noGiro);
+      const seloMax = seloRun(fora), seloGiro = seloRun(giro);
+      const seloQ = fora.filter(l => l[8]).length;
       p8c = {
         ok: maxNA != null && maxNA <= nB + Dmax + 2 && !ruins.length && cena && seloMax < 1000 && (tFim - tIni) >= 2000,
-        txt: `espera de A ${f1((tFim - tIni) / 1000)} s: passo de A até ${maxNA ?? '—'} (B parado no ${nB}, D ${a.D}/${b.D}); avisos ${avisos.map(t => `"${t}"`).join(' · ') || 'nenhum'}; selo aceso em ${seloQ} quadros (o maior trecho ${f1(seloMax / 1000)} s)`,
+        txt: `espera de A ${f1((tFim - tIni) / 1000)} s: passo de A até ${maxNA ?? '—'} (B parado no ${nB}, D ${a.D}/${b.D}); avisos ${avisos.map(t => `"${t}"`).join(' · ') || 'nenhum'}; selo aceso em ${seloQ} quadros fora do giro de B (o maior trecho ${f1(seloMax / 1000)} s; no giro, informativo, ${f1(seloGiro / 1000)} s em ${giro.filter(l => l[8]).length} quadros)`,
       };
     }
     meta('P8c o "Pular" de A só pula a dele: A espera a cena de B parada (≤ o passo de B + D + 2), com "Lado 1 ainda está vendo a cena", nunca "A conexão parou" nem W.O., e sem o selo "Conexão instável" por ≥ 1 s', p8c.txt, p8c.ok);
@@ -317,6 +390,48 @@ async function secaoP8() {
     const c = comparar(a, b);
     meta('P8d o mesmo jogo nas duas com a cena (hashes a cada 60 passos)', `${c.difs} diferentes de ${c.comuns} em comum (até o passo ${c.ultimo ?? '—'}); dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}`,
       c.comuns >= 5 && c.difs === 0 && c.ultimo != null && c.ultimo > SS.tick && !a.dessinc && !b.dessinc);
+    // P8f: o menu de A aberto na cena dele
+    {
+      const M = R?.menu, tx = x => (x ? `${x.cena ? 'cena' : 'SEM cena'} ${f2(x.tempo)} s${x.menu ? ', menu' : ''}${x.ajuda ? ', Ajuda' : ''}` : '—');
+      const ok = !!M && !!M.aberto && !!M.botao && !!M.ajuda && !!M.fechou && M.aberto.menu && M.aberto.cena && M.botao.cena && M.ajuda.cena
+        && M.ajuda.ajuda && M.fechou.cena && !M.fechou.menu && !M.fechou.ajuda && M.ajuda.tempo > M.aberto.tempo && M.fechou.tempo > M.ajuda.tempo;
+      meta('P8f o menu de A aberto na cena dele: a cena segue andando e nem o J (PASSE, segurado) nem o H a pulam — o H abre a Ajuda; o Esc fecha a Ajuda e o menu com a cena ainda andando',
+        M ? `antes: ${tx(M.antes)} · menu aberto: ${tx(M.aberto)} · depois do J: ${tx(M.botao)} · depois do H: ${tx(M.ajuda)} · fechado: ${tx(M.fechou)}${R?.erro ? ` (${R.erro})` : ''}` : `sem o roteiro${R?.erro ? ` (${R.erro})` : ''}`, ok);
+    }
+    // P8g: B em pé com a cena andando — a de B congela e A não lê "vendo a cena" (folga de 1,5 s para o pacote)
+    {
+      const G = R?.retrato;
+      let txt = `sem o roteiro${R?.erro ? ` (${R.erro})` : ''}`, ok = false;
+      if (G && G.t0 != null && G.t1 != null) {
+        const janB = LB.filter(l => l[0] >= G.t0 + 1000 && l[0] <= G.t1);
+        const tB = janB.filter(l => l[3]).map(l => l[4]);
+        const janA = LA.filter(l => l[0] >= G.t0 + 1500 && l[0] <= G.t1);
+        const avisos = [...new Set(janA.map(l => l[7]).filter(Boolean))];
+        const vendo = janA.filter(l => /vendo a cena/.test(l[7])).length;
+        const congelou = tB.length >= 2 && Math.max(...tB) - Math.min(...tB) <= 0.05;
+        ok = G.cenaIni === true && G.cenaFim === true && janB.length >= 2 && janB.every(l => l[10] === 1 && l[3] === 1) && congelou && janA.length >= 3 && vendo === 0;
+        txt = `B em pé ${f1((G.t1 - G.t0) / 1000)} s com a cena ${G.cenaIni && G.cenaFim ? 'ativa' : 'NÃO ativa'} (${janB.filter(l => l[10] === 1).length}/${janB.length} quadros em pé; tempo da cena ${tB.length ? `${f2(Math.min(...tB))}–${f2(Math.max(...tB))} s` : '—'}); A em ${janA.length} quadros: avisos ${avisos.map(t => `"${t}"`).join(' · ') || 'nenhum'} ("vendo a cena" em ${vendo})`;
+      }
+      meta('P8g B em pé na cena dele: a cena de B congela e A, esperando, não lê "Lado 1 ainda está vendo a cena"', txt, ok);
+    }
+    // P8h: do último quadro da cena de B até o aviso de A sumir, nenhum "não voltou ao jogo"; e o aviso some
+    {
+      let txt = 'sem a cena de B', ok = false;
+      if (jb[0]) {
+        const tUlt = LB[jb[0].i1 - 1][0], tFim = jb[0].t1, G = R?.retrato;
+        const ini = Math.max(tUlt, G?.t1 != null ? G.t1 + 2000 : 0);
+        const depoisA = LA.filter(l => l[0] >= ini);
+        const k = depoisA.findIndex(l => l[0] >= tFim && !l[7]);
+        const jan = k >= 0 ? depoisA.slice(0, k) : depoisA;
+        const nao = jan.filter(l => /não voltou/.test(l[7])).length;
+        const avisos = [...new Set(jan.map(l => l[7]).filter(Boolean))];
+        ok = k >= 0 && nao === 0 && ini < tFim;
+        txt = `A de ${f1((tUlt - (a.V.pulou?.t ?? tUlt)) / 1000)} s depois do pulo até o aviso sumir (${k >= 0 ? `${f1((depoisA[k][0] - tFim) / 1000)} s depois do fim da cena de B` : 'NÃO sumiu'}): ${jan.length} quadros, avisos ${avisos.map(t => `"${t}"`).join(' · ') || 'nenhum'} ("não voltou" em ${nao})`;
+      }
+      meta('P8h o fim da espera de A pela cena de B: nenhum "ainda não voltou ao jogo" do último quadro da cena de B até o aviso sumir, e o aviso some', txt, ok);
+    }
+    // P8i: o selo escondido na cena (nas duas abas)
+    meta('P8i o selo "Conexão instável" aceso à força dentro da cena: display none nas duas abas (html.em-substituicao)', `A ${a.V.sonda ?? '—'} · B ${b.V.sonda ?? '—'}`, a.V.sonda === 'none' && b.V.sonda === 'none');
   } catch (e) { meta('P8a–P8d execução', String(e?.message ?? e).slice(0, 200), false); }
   // ---- P8e: a cena desligada no anfitrião
   try {
