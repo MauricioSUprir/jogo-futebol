@@ -455,7 +455,7 @@ const SOB = {
   },
   editor: {
     carga: null, ok: false,
-    baixar: () => Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md),
+    baixar: () => { pedirFontesDisp(); return Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md); },
     criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() }); },
   },
   // as cenas das paradas (o cartão e o intervalo): as cenas puras, as constantes delas (js/cenas-config.js chega junto, pelo
@@ -481,8 +481,8 @@ const SOB = {
   },
   cenas: {
     carga: null, ok: false,
-    baixar: () => Promise.all([import('./cena-cartao.js'), import('./cenas-config.js'), import('./render/cartao3d.js'), import('./cenas-tela.js'),
-      import('./render/lances-guarda.js'), import('./cena-fim.js'), cssSobDemanda('css/cenas.css', 'css/prejogo.css')]).then(([cc, cfg, c3, tela, lg, cf]) => ({ cc, cfg, c3, tela, lg, cf })),
+    baixar: () => (pedirFontesDisp(), Promise.all([import('./cena-cartao.js'), import('./cenas-config.js'), import('./render/cartao3d.js'), import('./cenas-tela.js'),
+      import('./render/lances-guarda.js'), import('./cena-fim.js'), cssSobDemanda('css/cenas.css', 'css/prejogo.css')]).then(([cc, cfg, c3, tela, lg, cf]) => ({ cc, cfg, c3, tela, lg, cf }))),
     criar(md) {
       MOD_CEN = md;
       planoCamCartao = md.cc.criarPlanoCameraCartao();
@@ -506,10 +506,21 @@ function cssSobDemanda(href, antes) {
     if (ref) ref.before(l); else document.head.append(l);
   });
 }
-/** A Inter TM nos 3 pesos da pausa (400, 600 e 800): baixa junto com o módulo dela; resolve sempre (sem a fonte, a do sistema). */
+/** A Inter TM nos 3 pesos da pausa (400, 600 e 800) e a TM Cond nos 2 do sistema tipográfico (600 e 800; item 125: a letra
+ * esportiva da pausa, das cenas, das faixas e do cartão do autor): baixam junto com o módulo da pausa (a pré-carga ociosa ~8 s depois
+ * do 1º quadro, o 1º gesto ou a pausa aberta) — sem ?tm fora do download inicial (teste-carga); resolve sempre (sem a fonte, a
+ * reserva). Só o latin (o texto padrão do load é o espaço): o latin-ext vem com o 1º nome que pedir. */
 function fontesPausa() {
   if (!document.fonts?.load) return Promise.resolve();
-  return Promise.all(['400', '600', '800'].map(p => document.fonts.load(`${p} 15px "Inter TM"`).catch(() => null))).then(() => undefined, () => undefined);
+  return Promise.all([...['400', '600', '800'].map(p => `${p} 15px "Inter TM"`), ...FONTES_DISP].map(f => document.fonts.load(f).catch(() => null)))
+    .then(() => undefined, () => undefined);
+}
+/** Os 2 pesos da TM Cond (o --f-disp do estilo.css; item 125). */
+const FONTES_DISP = ['600 15px "TM Cond"', '800 15px "TM Cond"'];
+/** Pede a TM Cond (sem esperar): as telas sob demanda que a usam (cenas, Editar time) e a cena do gol (o cartão do autor). */
+function pedirFontesDisp(texto) {
+  if (!document.fonts?.load) return;
+  for (const f of FONTES_DISP) document.fonts.load(f, texto || undefined).catch(() => null);
 }
 /** Carrega (uma vez) o módulo sob demanda `nome`, ou todos sem nome. Promise; falha de rede: tenta de novo no próximo pedido. */
 function carregarSobDemanda(nome) {
@@ -3375,7 +3386,7 @@ function carregarPrepartida() {
       MOD_PP = md; PP_PURO = puro;
       // a Inter TM (a da pausa) e a TM Cond: pedidas já; o layout não depende delas (a info refaz a conta quando chegam)
       if (document.fonts?.load) {
-        Promise.all(['600 15px "Inter TM"', '800 15px "Inter TM"', '800 15px "TM Cond"'].map(f => document.fonts.load(f).catch(() => null)))
+        Promise.all(['600 15px "Inter TM"', '800 15px "Inter TM"', ...FONTES_DISP].map(f => document.fonts.load(f).catch(() => null)))
           .then(() => { if (pp?.aberta) pp.layout(); }, () => {});
       }
       return md;

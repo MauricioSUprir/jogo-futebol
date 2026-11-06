@@ -3,8 +3,8 @@
    nota e o nome em TM Cond — Barlow Condensed ExtraBold, OFL), ícones em SVG. As medidas (px) vêm do js/prepartida.js
    (layoutPrepartida): aqui só o desenho. Por cima do 3D (o fundo da abertura ou o jogo parado no tick 0) com o véu; abaixo da
    pausa (40) e do Editar time, acima do pré-jogo (30). Com a tela aberta o HUD e os controles de toque saem (html.prepartida). */
-/* (a TM Cond — o @font-face das duas faixas, latin e latin-ext — mora no css/prejogo.css, do download inicial: a escalação do
-   pré-jogo usa a mesma letra nos nomes de camisa, item 29; a fonte só baixa quando um texto com ela aparece) */
+/* (a TM Cond — o @font-face dos dois pesos, 600 e 800, e das duas faixas, latin e latin-ext — mora no css/estilo.css, do download
+   inicial, com o sistema tipográfico do item 125; a fonte só baixa quando um texto com ela aparece ou pela pré-carga da pausa) */
 
 html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepartida .vinheta, html.prepartida #prejogo { visibility: hidden !important; }
 

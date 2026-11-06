@@ -1,17 +1,8 @@
 /* GOLAÇO — pré-jogo (js/prejogo-tela.js, js/escalacao-tela.js): abertura, faixas de cinema, preto das transições,
    botão Pular e a escalação de cada time no campinho. Enquanto html.prejogo: nada do HUD nem dos controles de toque
    (sem narração: o pré-jogo só tem o nome do jogo na abertura e os dados da escalação). Margens seguras em tudo. */
-/* a TM Cond (Barlow Condensed ExtraBold, OFL; a letra da carta do TM): os nomes de camisa da escalação (item 29) e as fichas da
-   tela antes do jogo (css/prepartida.css, item 64). Só baixa quando um texto com ela aparece (com webdriver o pré-jogo e a tela
-   ficam desligados: nunca baixa — tools/teste-carga.mjs) */
-@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin.woff2') format('woff2'); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: 'TM Cond'; font-style: normal; font-weight: 800; font-display: swap; src: url('../assets/tm/fontes/tmcond-800-latin-ext.woff2') format('woff2'); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
-/* a RESERVA da TM Cond na escalação, enquanto ela não chega (ou se não chegar): a letra do sistema ENCOLHIDA (size-adjust) para
-   nunca passar da largura da TM Cond — a conta das cartas é da TM Cond, e a reserva larga sem ajuste punha "…" nos nomes (revisão
-   V5). A razão TM Cond ÷ reserva medida no Chromium nos nomes do elenco e do TM: Arial/Liberation/FreeSans 0,72–0,82 (média 0,77),
-   DejaVu 0,63–0,74; o ajuste fica no mínimo de cada uma */
-@font-face { font-family: 'TM Cond reserva'; font-style: normal; font-weight: 800; src: local('Arial Bold'), local('Arial-BoldMT'), local('Liberation Sans Bold'), local('LiberationSans-Bold'), local('Helvetica Bold'), local('Helvetica-Bold'), local('Roboto Bold'), local('Roboto-Bold'), local('FreeSans Bold'), local('FreeSansBold'); size-adjust: 71%; }
-@font-face { font-family: 'TM Cond reserva larga'; font-style: normal; font-weight: 800; src: local('DejaVu Sans Bold'), local('DejaVuSans-Bold'); size-adjust: 62%; }
+/* a TM Cond (os nomes de camisa da escalação, item 29, e as fichas da tela antes do jogo, item 64) e as reservas dela moram no
+   css/estilo.css desde o item 125 (o sistema tipográfico: --f-disp) */
 html.prejogo .hud, html.prejogo .toque, html.prejogo .dica, html.prejogo .vinheta { display: none !important; }
 
 .prejogo { position: fixed; inset: 0; z-index: 30; overflow: hidden; touch-action: none; cursor: pointer; color: var(--texto); font-family: var(--fonte); }
