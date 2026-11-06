@@ -42,6 +42,12 @@ const SOB_DEMANDA_ARQ = ['js/render/replay.js', 'js/render/replay-roteiro.js', '
 // a fonte da cara do TM na pausa sem ?tm (item 58): só com a pausa na tela ou pela pré-carga dela (main.js SOB.pausa) — nunca no
 // download inicial sem ?tm (com ?tm o tm.css a usa desde o 1º quadro)
 const FONTES_PAUSA = ['assets/tm/fontes/inter-400.woff2', 'assets/tm/fontes/inter-600.woff2', 'assets/tm/fontes/inter-800.woff2'];
+// a TM Cond do sistema tipográfico (item 125; o --f-disp do estilo.css: títulos, itens, nomes, números) — sem ?tm, como a da pausa:
+// só pela pré-carga ociosa (main.js fontesPausa) ou com uma tela que a use; nunca no download inicial. MUDOU DE PROPÓSITO no item
+// 125: antes ela estava no SO_COM_TELA ("nunca com webdriver, nem na pré-carga") — agora a pausa, as cenas e o cartão do autor
+// também a usam e a pré-carga a traz. O latin-ext só com um nome em č/ł/ğ: nunca no inicial nem na pré-carga
+const FONTES_DISP = ['assets/tm/fontes/tmcond-600-latin.woff2', 'assets/tm/fontes/tmcond-800-latin.woff2'];
+const FONTES_DISP_EXT = ['assets/tm/fontes/tmcond-600-latin-ext.woff2', 'assets/tm/fontes/tmcond-800-latin-ext.woff2'];
 // o que é baixado só DEPOIS de um módulo sob demanda chegar (nunca no download inicial; pedido depois da pré-carga)
 const SOB_DEMANDA_DEPOIS = ['assets/torcedor/torcedor.bin'];
 // só do estádio real da edição pro do Total Match (render/identidade-pagina.js por import()): nunca no download inicial
@@ -54,8 +60,8 @@ const SO_TM_ARQ = ['js/tm-fotos.js'];
 // 1ª bola parada da partida (main.js carregarBP), sem pré-carga — nunca no download inicial
 const SO_BOLA_PARADA_ARQ = ['js/render/bola-parada.js', 'js/render/plano-bola-parada.js'];
 // a tela antes do jogo (item 64): só com ela ligada (import() no topo do iniciar(); nunca com webdriver — este teste —, nem na
-// pré-carga ociosa): o módulo DOM, as contas, o CSS, a TM Cond e o padrão das abas
-const SO_COM_TELA = ['js/prepartida.js', 'js/prepartida-tela.js', 'css/prepartida.css', 'assets/tm/fontes/tmcond-800-latin.woff2', 'assets/tm/fontes/tmcond-800-latin-ext.woff2', 'assets/tm/cartas-triangulos.svg'];
+// pré-carga ociosa): o módulo DOM, as contas, o CSS e o padrão das abas (a TM Cond saiu daqui no item 125: FONTES_DISP)
+const SO_COM_TELA = ['js/prepartida.js', 'js/prepartida-tela.js', 'css/prepartida.css', 'assets/tm/cartas-triangulos.svg'];
 const N_PASSOS = 600;
 const args = process.argv.slice(2);
 const urlExterna = args.includes('--url') ? args[args.indexOf('--url') + 1] : null;
@@ -234,8 +240,9 @@ try {
   const total = bytesSrv + bytesCdn;
   meta('Download inicial', `${(total / 1048576).toFixed(2)} MB (nosso ${(bytesSrv / 1024).toFixed(0)} KB + CDN ${(bytesCdn / 1024).toFixed(0)} KB)`, '≤ 4 MB', total <= LIMITE_BYTES && (srv ? bytesSrv > 0 : true));
   meta('Folga no download inicial (até os 4 MB)', `${((LIMITE_BYTES - total) / 1024).toFixed(1)} KB (medido ${tMedida.toFixed(1)} s depois do 1º quadro)`, `≥ ${FOLGA_MIN / 1024} KB`, LIMITE_BYTES - total >= FOLGA_MIN);
-  const noInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ, ...SO_TM_ARQ, ...SOB_DEMANDA_DEPOIS, ...SO_BOLA_PARADA_ARQ, ...FONTES_PAUSA, ...SO_COM_TELA].filter(a => pedidosIniciais.includes(a));
-  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas, cadeiras e torcedor 3D, o estádio real do TM, as fotos do TM, a bola parada, a pausa e a fonte dela sem ?tm, a tela antes do jogo)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${SOB_DEMANDA_ARQ.length + SO_TM_PRO_ARQ.length + SO_TM_ARQ.length + SOB_DEMANDA_DEPOIS.length + SO_BOLA_PARADA_ARQ.length + FONTES_PAUSA.length + SO_COM_TELA.length}`, 'nenhum', noInicial.length === 0);
+  const naoInicial = [...SOB_DEMANDA_ARQ, ...SO_TM_PRO_ARQ, ...SO_TM_ARQ, ...SOB_DEMANDA_DEPOIS, ...SO_BOLA_PARADA_ARQ, ...FONTES_PAUSA, ...FONTES_DISP, ...FONTES_DISP_EXT, ...SO_COM_TELA];
+  const noInicial = naoInicial.filter(a => pedidosIniciais.includes(a));
+  meta('Sob demanda fora do download inicial (replay, Editar time, cenas das paradas, cadeiras e torcedor 3D, o estádio real do TM, as fotos do TM, a bola parada, a pausa e as fontes dela sem ?tm — a Inter TM e a TM Cond —, a tela antes do jogo)', noInicial.length ? `baixados: ${noInicial.join(', ')}` : `nenhum dos ${naoInicial.length}`, 'nenhum', noInicial.length === 0);
 
   // 4) passo fixo a 60/120/144 Hz com relógio manual
   const laco = await pagina.evaluate(() => {
@@ -413,12 +420,12 @@ try {
   // automática pode ter descido numa máquina lenta: na Baixa ele não é pedido)
   const qTorcida = await pagina.evaluate(() => window.__golaco.estadio?.torcida?.qualidade ?? null);
   if (chegou && qTorcida !== 'baixa') await pagina.waitForFunction(() => window.__golaco.estadio?.cadeiras?.torcedores?.carregado, null, { timeout: 5000 }).catch(() => {});
-  const faltam = [...SOB_DEMANDA_ARQ, ...FONTES_PAUSA, ...(qTorcida === 'baixa' ? [] : SOB_DEMANDA_DEPOIS)].filter(a => !pedidos.includes(a));
+  const faltam = [...SOB_DEMANDA_ARQ, ...FONTES_PAUSA, ...FONTES_DISP, ...(qTorcida === 'baixa' ? [] : SOB_DEMANDA_DEPOIS)].filter(a => !pedidos.includes(a));
   const estSob = await pagina.evaluate(() => window.__golaco.sobDemanda?.estado ?? null);
   meta('Pré-carga ociosa: o replay, o Editar time e as cenas chegaram sem gesto', chegou && !faltam.length ? `sim (até ${tChegou.toFixed(1)} s depois do 1º quadro)` : `não (${JSON.stringify(estSob)}; faltam ${faltam.join(', ') || '—'})`, 'sim, sem erro', chegou && !faltam.length && erros.length === 0);
   // a tela antes do jogo nunca vem com webdriver (desligada): nem no inicial nem na pré-carga ociosa
   const telaBaixou = SO_COM_TELA.filter(a => pedidos.includes(a));
-  meta('A tela antes do jogo desligada com webdriver: o código, o CSS e a TM Cond nunca baixados (nem na pré-carga)', telaBaixou.length ? `baixados: ${telaBaixou.join(', ')}` : `nenhum dos ${SO_COM_TELA.length}`, 'nenhum', telaBaixou.length === 0);
+  meta('A tela antes do jogo desligada com webdriver: o código e o CSS dela nunca baixados (nem na pré-carga); a TM Cond só pela pré-carga, nunca no inicial, e o latin-ext nunca', telaBaixou.length || FONTES_DISP_EXT.some(a => pedidos.includes(a)) ? `baixados: ${[...telaBaixou, ...FONTES_DISP_EXT.filter(a => pedidos.includes(a))].join(', ')}` : `nenhum dos ${SO_COM_TELA.length + FONTES_DISP_EXT.length}`, 'nenhum', telaBaixou.length === 0 && !FONTES_DISP_EXT.some(a => pedidos.includes(a)));
   // (item 31) as fotos do TM: só com ?tm na edição pro — sem ?tm nunca (nem na pré-carga), e nenhuma foto pedida
   const tmBaixou = [...SO_TM_ARQ, ...SO_TM_PRO_ARQ].filter(a => pedidos.includes(a)), fotosPedidas = pedidos.filter(a => /assets\/jogadores\/|__fotos\//.test(a));
   meta('Sem ?tm: o que é só do TM (as fotos da edição pro, o estádio real) nunca baixado, nem na pré-carga; nenhuma foto de jogador', tmBaixou.length || fotosPedidas.length ? `baixados: ${[...tmBaixou, ...fotosPedidas].join(', ')}` : `nenhum dos ${SO_TM_ARQ.length + SO_TM_PRO_ARQ.length}; 0 fotos`, 'nenhum', !tmBaixou.length && !fotosPedidas.length);

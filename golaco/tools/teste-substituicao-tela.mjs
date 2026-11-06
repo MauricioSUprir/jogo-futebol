@@ -153,7 +153,9 @@ if (roda('A')) try {
       const fx = A.r.faixa;
       const palavras = ['ENTRA', '22', 'Wallace Pimenta', 'SAI', '9', 'Diego Albuquerque', 'GLÇ'];
       meta('T3 a faixa com o texto exato em ≤ 3 quadros do começo da cena', fx ? `quadro ${A.r.faixaQ}: "${fx.texto}" / visível "${fx.visivel}" (${fx.modo})` : 'nenhuma faixa',
-        `${TEXTO}; ${palavras.join(', ')}`, !!fx && A.r.faixaQ <= 3 && fx.texto === TEXTO && palavras.every(p => fx.visivel.includes(p)));
+        `${TEXTO}; ${palavras.join(', ')}`, !!fx && A.r.faixaQ <= 3 && fx.texto === TEXTO
+          // o nome é desenhado em CAIXA ALTA (item 125: text-transform no .fs-nome) — o innerText volta como se vê
+          && palavras.every(p => fx.visivel.toLocaleUpperCase('pt-BR').includes(p.toLocaleUpperCase('pt-BR'))));
 
       // T4 + T3 (pulada aos 0,6 s): a 2ª troca (7 → 19)
       await trocar(pg, { reiniciar: false, antes: 120, pares: [{ sai: 7, entra: 19 }] });

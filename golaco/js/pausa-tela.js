@@ -34,22 +34,24 @@ function lum(hex) {
 export const textoSobre = hex => ((lum(hex) + 0.05) / 0.05 >= 1.05 / (lum(hex) + 0.05) ? '#050807' : '#ffffff');
 
 /**
- * Os tamanhos do campinho do cartão numa área W × H (px; W = a largura do campo, H = a altura que sobra): o campo na proporção do
- * meio campo (68:54,5), esticado até 15% quando as filas pedem; o disco, o número e o nome das fichas pela largura (o celular
- * 18–22 px, o PC até 34) e a largura máxima do nome (⌊(W − 24)/5⌋: o passo entre colunas fica ≥ o nome + 3). Se mesmo assim o
- * passo entre filas não couber (ficha + 2), o disco desce a 16 e a letra a 10. Pura (o teste chama).
+ * Os tamanhos do campinho do cartão numa área W × H (px; W = a largura do campo, H = a altura que sobra) — item 125 (dono, 05/11:
+ * "o campinho um pouco maior"): o campo na proporção do meio campo (68:54,5) com 6% a mais de altura (as 5 filas e os nomes); o
+ * disco pela largura (18–40 px: ~8 + 6,2% de W), limitado pelo passo das filas (5 fichas na altura, com a linha do nome); a largura
+ * máxima do nome ⌊(W − 24)/5⌋ (o passo de 4 colunas encostadas); a letra do nome — a TM Cond 800 em caixa alta, ~0,47 em por letra
+ * de camisa — pelo disco e pelo que cabe ("ALBUQUERQU", 10 letras, + os 6 px da plaquinha): 11–18 px, 10 só se o passo das filas
+ * não couber com 11 (o 568×320); o número no disco a 0,56 do disco. Pura (o teste chama).
  */
 export function tamanhoCampinhoPausa(W, H) {
-  const nat = W * PROPORCAO;
-  let disco = Math.max(16, Math.min(34, Math.round(6 + W * 0.056)));
-  let letra = disco >= 26 ? Math.max(11, Math.min(18, Math.round(disco * 0.5))) : disco >= 20 ? 11 : 10.5;
+  const h = Math.min(H, W * PROPORCAO * 1.06);
+  let disco = Math.max(18, Math.min(40, Math.round(8 + W * 0.062)));
   const cw = Math.max(30, Math.floor((W - 24) / 5));
-  const altFicha = () => disco + 2 + Math.ceil(letra * 1.25);
-  // a altura que o passo das filas pede (5 fichas + 4 folgas de 2 px na grade de 5 da posicaoNaTela, mais as margens de 6)
-  const pede = c => 5 * c + 8 + 12;
-  let h = Math.min(H, Math.max(nat, Math.min(nat * 1.15, pede(altFicha()))));
-  if ((h - 12 - altFicha()) / 4 < altFicha() + 2) { disco = 16; letra = 10; h = Math.min(H, Math.max(nat, Math.min(nat * 1.15, pede(altFicha())))); }
-  return { campo: { w: Math.round(W), h: Math.round(h) }, disco, num: letra, nome: letra, cw, ch: altFicha() };
+  let letra = Math.max(11, Math.min(18, Math.round(disco * 0.44), Math.floor((cw - 6) / 4.8)));
+  const linhaNome = () => Math.ceil(letra * 1.15) + 2;
+  // o passo das filas (a grade de 5 da posicaoNaTela, com as margens): o disco + o nome + 4 px de folga cabem nele
+  const passo = (h - 20) / 5;
+  if (disco + 2 + linhaNome() + 2 > passo) disco = Math.max(18, Math.floor(passo - 4 - linhaNome()));
+  if (disco + 2 + linhaNome() + 2 > passo) { letra = 10; disco = Math.max(16, Math.min(disco, Math.floor(passo - 4 - linhaNome()))); }
+  return { campo: { w: Math.round(W), h: Math.round(h) }, disco, num: Math.max(10, Math.round(disco * 0.56)), nome: letra, cw, ch: disco + 2 + linhaNome() };
 }
 
 /**
@@ -66,7 +68,9 @@ export function criarPausaTela({ cartao, est }) {
     cartao.innerHTML = `<header class="pt-topo" id="pt-topo"><svg class="pt-escudo" viewBox="0 0 20 22" aria-hidden="true"><use/></svg>`
       + `<b class="pt-nome"></b><span class="pt-forma"></span><span class="pt-ment"></span></header>`
       + `<p class="pt-sr pt-resumo"></p>`
-      + `<div class="pt-campo" aria-hidden="true"><svg class="pt-linhas" viewBox="${VIEWBOX_MEIO}" preserveAspectRatio="none">${svgCampinho(true).html}</svg></div>`;
+      + `<div class="pt-campo" aria-hidden="true"><svg class="pt-linhas" viewBox="${VIEWBOX_MEIO}" preserveAspectRatio="none">${svgCampinho(true).html}</svg>`
+      // (item 125) a formação e a mentalidade grandes DENTRO do campo, no canto de baixo à esquerda
+      + `<div class="pt-formacao"><b></b><span></span></div></div>`;
     cartao.setAttribute('role', 'region');
     cartao.setAttribute('aria-labelledby', 'pt-topo');
     cartao.tabIndex = -1;
@@ -106,6 +110,8 @@ export function criarPausaTela({ cartao, est }) {
     q('.pt-nome').textContent = d.nome ?? '';
     q('.pt-forma').textContent = d.texto ?? d.formacao ?? '';
     q('.pt-ment').textContent = d.mentalidade ? `· ${d.mentalidade}` : '';
+    q('.pt-formacao b').textContent = d.texto ?? d.formacao ?? '';
+    q('.pt-formacao span').textContent = d.mentalidade ?? '';
     resumo.textContent = textoResumo(d);
     cartao.dataset.editavel = d.editavel ? '1' : '0';
     cartao.classList.toggle('editavel', !!d.editavel);
@@ -126,33 +132,70 @@ export function criarPausaTela({ cartao, est }) {
   /** Mede o cartão e põe o campo e as fichas (o ResizeObserver chama sozinho; a tela muda de tamanho). */
   function layout() {
     if (!cartao || cartao.hidden || !dados) return;
+    // (revisão R2) fora de cena (num submenu a lista e o cartão saem: display none) não mexe na largura: zerada aqui, o cartão
+    // voltava do submenu 2 quadros na largura do CSS e o próprio ResizeObserver o encolhia dentro do callback (o erro de laço)
+    if (!cartao.getClientRects().length) return;
+    // (item 125) a largura do CSS (o ajuste ao campo da vez anterior sai: a conta parte da largura de verdade)
+    cartao.style.width = '';
     const cs = getComputedStyle(cartao);
     const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight), padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
     const W = cartao.clientWidth - padX;
     if (!(W > 0)) return;
-    // a altura que sobra para o campo: o máximo do cartão (CSS) menos o cabeçalho, as margens e as bordas
-    const max = parseFloat(cs.maxHeight);
+    // a altura que sobra para o campo: o máximo do cartão (CSS) menos o cabeçalho, as margens e as bordas. O max-height é um calc()
+    // com % ("calc(100% - 99px)": o parseFloat dava NaN e a conta caía no innerHeight — o campo vazava 8 px do cartão em 568×320):
+    // resolvido por uma sonda no mesmo pai
+    let max = parseFloat(cs.maxHeight);
+    if (!/px$/.test(cs.maxHeight) && cartao.parentElement) {
+      const sonda = document.createElement('div');
+      sonda.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;top:0;left:0;width:1px;height:${cs.maxHeight}`;
+      cartao.parentElement.appendChild(sonda);
+      max = sonda.offsetHeight;
+      sonda.remove();
+    }
     const bordas = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
     const gap = parseFloat(getComputedStyle(campo).marginTop) || 0;
-    const H = (Number.isFinite(max) ? max : innerHeight) - bordas - padY - topo.offsetHeight - gap;
-    sz = tamanhoCampinhoPausa(W, Math.max(40, H));
+    const H = Math.max(40, (Number.isFinite(max) && max > 0 ? max : innerHeight) - bordas - padY - topo.offsetHeight - gap);
+    // o cartão AJUSTADO ao campo quando a altura é o limite (o celular): sem isso o campo ficava esticado na largura
+    const Wfit = Math.min(W, Math.floor(H / PROPORCAO / 1.06));
+    sz = tamanhoCampinhoPausa(Wfit, H);
+    if (Wfit < W) cartao.style.width = `${Wfit + padX + parseFloat(cs.borderLeftWidth) + parseFloat(cs.borderRightWidth)}px`;
     campo.style.width = `${sz.campo.w}px`;
     campo.style.height = `${sz.campo.h}px`;
     cartao.style.setProperty('--pt-disco', `${sz.disco}px`);
-    cartao.style.setProperty('--pt-letra', `${sz.num}px`);
+    cartao.style.setProperty('--pt-letra', `${sz.nome}px`);
+    cartao.style.setProperty('--pt-num', `${sz.num}px`);
     cartao.style.setProperty('--pt-nome-w', `${sz.cw}px`);
+    cartao.style.setProperty('--pt-forma-f', `${Math.round(Math.max(18, Math.min(40, sz.campo.w * 0.062)))}px`);
+    cartao.style.setProperty('--pt-ment-f', `${Math.round(Math.max(11, Math.min(15, sz.campo.w * 0.03)))}px`);
     // a mentalidade só com lugar (mais de 300 px: o 844×390 e o PC)
     cartao.classList.toggle('largo', cartao.clientWidth > 300);
+    const pos = dados.fichas.map(f => posicaoNaTela(f, sz.campo.w, sz.campo.h, sz.cw, sz.ch, true));
+    // (revisão V8) a plaquinha do nome passa da largura da coluna (sz.cw) quando há lugar: até 4 px do vizinho mais perto que está
+    // na mesma altura (as caixas das fichas se cruzam na vertical), da borda do campo e do bloco da formação no canto de baixo à
+    // esquerda — no 667×375 e no 568×320 os nomes de 10 letras ("CAVALCANTI") saíam com "…" com o lado vazio. Nunca menor que sz.cw
+    const fo = q('.pt-formacao'), fw = fo ? fo.offsetWidth : 0, fh = fo ? fo.offsetHeight : 0;
+    const foTopo = sz.campo.h - (fo ? parseFloat(getComputedStyle(fo).bottom) || 0 : 0) - fh, foDir = (fo ? fo.offsetLeft : 0) + fw;
     dados.fichas.forEach((f, i) => {
       const e = fichasEl[i];
       if (!e) return;
-      const p = posicaoNaTela(f, sz.campo.w, sz.campo.h, sz.cw, sz.ch, true);
+      const p = pos[i];
       e.style.left = `${Math.round(p.x)}px`;
       e.style.top = `${Math.round(p.y - sz.ch / 2)}px`;
+      let lim = 2 * Math.min(p.x, sz.campo.w - p.x) - 4;
+      pos.forEach((o, k) => { if (k !== i && Math.abs(o.y - p.y) < sz.ch) lim = Math.min(lim, Math.abs(o.x - p.x) - 4); });
+      if (fw && p.y + sz.ch / 2 > foTopo - 2) lim = Math.min(lim, 2 * (p.x - foDir - 4));
+      e.style.setProperty('--pt-nm-max', `${Math.max(sz.cw, Math.floor(lim))}px`);
     });
+    // ainda sem lugar para algum nome (as 4 da defesa no celular pequeno): os nomes do cartão TODO na TM Cond 600, ~5% mais estreita
+    // (a mesma letra em todas as fichas; o "…" fica só para o que nem assim cabe)
+    cartao.classList.remove('nomes-estreitos');
+    if (fichasEl.some(e => { const n = e.querySelector('.pt-nm'); return !!n && n.scrollWidth > n.clientWidth + 0.5; })) cartao.classList.add('nomes-estreitos');
   }
   const ro = typeof ResizeObserver === 'function' && cartao ? new ResizeObserver(() => layout()) : null;
   ro?.observe(cartao);
+  // (revisão R2) com a largura ajustada ao campo o cartão não muda de tamanho quando a janela muda (o observador não vê): a janela
+  // também refaz a conta (layout() não faz nada com a pausa fechada)
+  if (cartao && typeof addEventListener === 'function') addEventListener('resize', () => layout());
 
   // ---- as estatísticas: uma tabela (o leitor de tela lê "Posse de bola, GLÇ 55%"); a posse com a barrinha dividida
   function valor(itm, v, t) {
@@ -178,7 +221,8 @@ export function criarPausaTela({ cartao, est }) {
     chaveEst = chave;
     const itens = (d.itens ?? []).filter(i => i in ROTULOS_EST);
     const linhas = itens.map(itm => {
-      const barra = itm === 'posse' ? `<span class="pe-barra" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, d.valores.posse?.[0] ?? 50))}%"></i></span>` : '';
+      // (item 125) a barrinha da posse na cor de CADA time (a do time da esquerda cresce da esquerda)
+      const barra = itm === 'posse' ? `<span class="pe-barra" aria-hidden="true" style="--pe-c0:${esc(d.times?.[0]?.cor1 ?? '#22c55e')};--pe-c1:${esc(d.times?.[1]?.cor1 ?? '#8a9d90')}"><i style="width:${Math.max(0, Math.min(100, d.valores.posse?.[0] ?? 50))}%"></i></span>` : '';
       return `<tr class="pe-${itm}"><td class="pe-a">${valor(itm, d.valores, 0)}</td><th scope="row">${ROTULOS_EST[itm]}${barra}</th><td class="pe-b">${valor(itm, d.valores, 1)}</td></tr>`;
     });
     est.innerHTML = `<caption>${esc(d.titulo ?? 'Estatísticas da partida')}</caption>`

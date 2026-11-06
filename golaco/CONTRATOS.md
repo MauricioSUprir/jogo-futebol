@@ -803,19 +803,45 @@ Constantes em `config.js COMEMORACAO`.
 - **HUD (`hud.js`, `index.html`, `css/estilo.css`)**: `hud.comemoracao(ativo)` (classe `em-comemoracao`: minimapa, menu,
   avisos, barra de força, cartão, dica, painel, faixa e botões de toque somem — só o placar e o "GOL!" até o 1º corte;
   camada `#comemoracao` com o "Pular" só com toque, ≥ 48 px no canto de baixo à direita), `hud.cortina()` (a faixa verde).
-- **Cartão do autor (item 31, PR #615; dono, 17/10: "a FOTO do autor com o número e o nome"; `PESQUISA-ESTADIO.md` §10.1)**:
-  `#autor-gol` DENTRO da camada `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à DIREITA na linha do
-  placar (o único lugar medido livre do autor, dos outros e do HUD em todos os planos, PC e celular). Mostra a foto (só a da
-  edição pro do TM, abaixo) e a coluna [pílula do time: escudo + sigla | número / NOME]: o nome COMPLETO da ficha é a linha
-  principal (peso 800), também no celular (o de camisa do `tm-times` corta o último nome em 10 letras sem reticências —
-  revisão V1), o número vai na pílula depois de um filete (1,3 × a sigla — revisão V3) e a coluna fica centrada na altura da
+- **Cartão do autor (item 31, PR #615 → item 126, PR #621; dono, 17/10: "a FOTO do autor com o número e o nome"; 05/11: "a
+  foto com o nome tem que ser mais embaixo e menor, tem que ser no canto inferior"; `PESQUISA-ESTADIO.md` §10.1 e §7.6)**:
+  `#autor-gol` DENTRO da camada `#comemoracao` (fora do `#hud`; some com a cena), desde o item 126 no canto de BAIXO à DIREITA,
+  no PC e no celular (até o item 126: no canto de cima à direita, na linha do placar, ~4× maior no PC). **Por que esse canto**
+  (6 gols × 5 telas, quadro a quadro, no protótipo e no `teste-comemoracao-tela` H15): é o único canto de BAIXO livre do autor
+  e dos outros atores em todos os planos da cena — o autor vai no máximo a 59,5% da largura no PC e a 44% no celular (o
+  `ajustarCelular` o põe no terço esquerdo); o de baixo à ESQUERDA (o "lower third" da TV) cobria o autor em 73–78% dos
+  quadros no celular, e mudar o terço do enquadramento mexeria no `comemoracao.js` (fecho). Com o placar em cima à esquerda, os
+  dois ficam em diagonal. **Com toque** o "Pular" da comemoração fica no MESMO lugar dos "Pular" do replay, da substituição e da
+  cena do cartão (o `.btn-replay-pular`: `--pular-vao` 6 px do canto, `--pular-h` 52 px no `:root`; o botão não muda de lugar de
+  uma cena para a outra — revisão R3: subindo para cima do cartão ele ficava solto no meio da lateral antes e depois dele e
+  pulava ~61 px na passagem para o replay) e o CARTÃO sobe para logo acima dele: `--ag-sobe` = `--pular-vao + --pular-h + 10px`
+  (o pé do cartão 10 px acima do topo do botão, com e sem foto; no 844×390 com o entalhe o cartão ocupa y 230–287 de 390); sem
+  toque (PC) `--ag-sobe` 0 e o pé do cartão na margem (`bottom: --sa-b + --m`). Mostra a foto (só a da edição pro do TM, abaixo)
+  e a coluna [pílula do time: escudo + sigla | número / NOME]: o nome COMPLETO da ficha é a linha principal, também no celular
+  (o de camisa do `tm-times` corta o último nome em 10 letras sem reticências — revisão V1), desde o item 125/126 em CAIXA ALTA
+  na TM Cond 800 (o `--f-disp`; cabe inteiro também em 568×320 pro, onde a Inter de antes cortava "Eduardo Pa…"), o número vai
+  na pílula depois de um filete (1,3 × a sigla, TM Cond 800 `tabular-nums` — revisão V3) e a coluna fica centrada na altura da
   foto; o pé da foto escurece até a cor do fundo do cartão (42% de baixo: some a maior parte da camisa de outro clube, mas as
   listras logo abaixo do queixo continuam — revisão V2; o enquadramento foto a foto é o item 112). Sem minuto nem "GOL"; sem
-  foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`; os topos e os pés alinhados, as letras 0,6/0,55 × a altura —
-  revisão V4) — nada desenhado no lugar. Medidas pela altura da janela: foto
-  `clamp(96px, 18vh, 196px)` no PC e `clamp(64px, 23.5vh, 96px)` no celular deitado, nome `clamp(22px, 4vh, 40px)` /
-  `clamp(18px, 5.4vh, 20px)`, sigla 13–20 / 12 px; `max-width` até a direita do placar + 12 px (o hud mede: `--ag-esq`; o nome
-  que não couber corta com reticências). Quando: `js/autor-cartao.js`
+  foto, só o texto numa linha da ALTURA DO PLACAR (`--placar-h`, agora no pé da tela; as letras 0,6/0,55 × a altura — revisão
+  V4) — nada desenhado no lugar. **Medidas** (item 126; as variáveis no PAI, `.comemoracao`, porque o "Pular" também as usa):
+  foto `--ag-foto: clamp(56px, 7.2vh, 76px)` e `--ag-pad: clamp(7px, 0.9vh, 9px)` no PC, `clamp(40px, 12vh, 48px)` e 5 px no
+  celular deitado (`max-height: 519px`, o corte do `pequena` da câmera); a altura do cartão com foto FIXA, `--ag-alt` = foto +
+  2 × pad (`box-sizing: border-box`: o vão de 10 px até o "Pular" é certo; com a altura pelo conteúdo, a 1ª rodada do protótipo
+  deu 6 px); nome `clamp(20px, 2.6vh, 28px)` / 18 px, sigla `clamp(12px, 1.35vh, 14px)` / 11 px; `max-width: min(38vw, 480px)`
+  no PC e `52vw − sa.r − m` no celular (a borda esquerda do cartão sempre além de 62% e de 48% da largura: à direita do máximo
+  do autor); o nome que não couber corta com reticências. Saiu o `--ag-esq` (o `medirAutorGol` do `hud.js` que media a direita
+  do placar). Antes → depois (pro, com foto, o nome "Eduardo Pacheco", medido no protótipo da especificação com o cartão de
+  verdade; cartão / foto / % da altura da janela): 1920×1010 585×208 / 182 / 20,6% → 300×91 /
+  73 / 9,0%; 1280×720 417×149 / 130 / 20,7% → 235×70 / 56 / 9,7%; 844×390 295×106 / 92 / 27,2% → 204×57 / 47 / 14,6%; 667×375
+  291×102 / 88 → 202×55 / 45; 568×320 232×89 / 75 / 27,8% ("Eduardo Pa…") → 197×50 / 40 / 15,6% (o nome inteiro) — área 22–48% da
+  de antes (com o nome de 19 letras do teste, 23% em 1920, 38% em 844 e 56,7% em 568). Sem foto: 212×28 (844), 201×26 (568).
+  **Entrada** de 280 ms `cubic-bezier(0.05, 0.7, 0.1, 1)` (Material 3, "emphasized decelerate"): de `translateX(24px)` +
+  `clip-path: inset(0 0 0 100%)` + opacidade 0 ao lugar — o cartão "corre" da borda da direita, como um lower third; o recorte
+  final é `inset(-40px)` (revisão C-R6: com `inset(0)` mantido pelo `both` a sombra `0 8px 24px` nunca aparecia); saída em 200 ms
+  para `translateX(12px)`; "reduzir movimento": só a opacidade em 150 ms. A fonte é pedida no começo da cena
+  (`iniciarComemoracao` → `pedirFontesDisp(nome)`, contrato "Sistema tipográfico"): o cartão só entra ~1,6 s depois. Quando:
+  `js/autor-cartao.js` (NADA mudou nele no item 126)
   (puro, estático, fora do fecho; as constantes `AUTOR_GOL` moram nele): `autorDoCartao(plano, gol)` = o autor só se ele é
   quem comemora (gol contra e sem autor = nada); `janelaCartao({rede, duracao, curta})` = entra `rede + 0,4` s (1,6 s), sai
   em `min(entra + 3,5 (curta 2,6), duracao − 0,5)`, null com menos de 1,5 s; `faseCartao(janela, t, duracao)` relê a duração
@@ -831,8 +857,10 @@ Constantes em `config.js COMEMORACAO`.
   ele (padrão ligado, também com webdriver: os testes de outros assuntos abrem com `?comemoracao=0`). No online, cada
   aparelho na sua cena (só desenho). Exceção escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa
   ENTRA/SAI, o nome do condutor e as tarjas das cenas): só dentro da cena, nunca com a bola rolando. Com `?tm`, a cara do TM
-  (`css/tm.css`); sem, o molde das tarjas (`css/estilo.css`). `hud.autorGol(spec | null)`, `hud.autorGolSai()`,
-  `hud.autorGolEstado` (as caixas do LAYOUT, sem o translateX da animação).
+  (`css/tm.css`: o painel, a borda fina e a borda esquerda de 3 px na cor do time; as letras são as do sistema tipográfico);
+  sem, o molde das tarjas (`css/estilo.css`). `hud.autorGol(spec | null)`, `hud.autorGolSai()`, `hud.autorGolEstado` (as
+  caixas do LAYOUT, sem o translateX da animação: funciona com `bottom`/`right`). O selo "Conexão instável" do online continua
+  escondido na comemoração pela tela limpa da cena (o cartão já não divide o canto de cima com ele).
 - **Fotos da edição pro (item 31)**: `js/tm-fotos.js` (puro, fora do fecho, só por `import()` com `?tm` e `edicao: 'pro'`,
   depois do `pronto`: `main.js agendarFotosTM`, `requestIdleCallback` com 1,5 s de teto) — `fotosDoPedido(pedido, TM.mapa,
   location.origin)` lê o campo `foto` do PRÓPRIO pedido pelo lado + `tmId` (o `tm-times.js` não o vê: hash igual) e
@@ -864,8 +892,23 @@ Constantes em `config.js COMEMORACAO`.
   gol natural; H3 a foto do tmId do autor no 1º quadro (`?tm` pro, a rota `/__fotos/` com JPGs do TM) e nada no gol contra
   (`golRoteirizado({contra: true})`); H4 o TM público sem foto e sem pedido; H5 a curta; H6 pular = some no quadro; H7 as
   fotos em 404; H8 `?autorGol=0`; H9 o "Replay" da pausa com o cartão na tela (0 quadros juntos); H10 o nome completo no celular
-  (o último nome de 11 letras); H11 o nome maior que o número e a coluna no meio da foto; H12 sem foto na altura do placar.
-  `teste-comemoracao` 15 (a janela, puro). Os testes de navegador que não são da comemoração
+  (o último nome de 11 letras; desde o item 126 também em 568×320 pro); H11 o nome maior que o número e a coluna no meio da foto;
+  H12 sem foto na altura do placar (± 1 px) com o pé no lugar (± 1 px: a margem de baixo; com toque, 10 px acima do "Pular").
+  **Item 126** (páginas novas 1920×1010 pro e 568×320 pro com as fotos): H3 passa a pedir a foto de 44–48 px no 844×390 (antes
+  88–96) e o nome ≥ 16 px na TM Cond 800 CARREGADA (o `document.fonts.check` lido antes de qualquer `load` do próprio teste:
+  revisão C-R7), número ≥ 12; H13 o cartão no canto de BAIXO à direita (± 1 px; com toque, o pé 10 px acima do topo do
+  "Pular"); H14 menor — altura ≤ 10,5% da janela no PC e ≤ 17% no celular, foto 56–76 px no PC e 40–48 no celular, área ≤ 45%
+  da medida pelo próprio teste na base 29d67bad (≤ 60% em 568×320 pro, onde a base cortava o nome de 19 letras); H15 nunca
+  sobre os OUTROS atores da cena (as poses desenhadas) nos gols roteirizados (0 quadros; a base, no celular, 56–79 quadros em 2 de
+  6 gols) e ≤ 30 quadros (0,5 s) no gol natural (na semente 5 um colega passa COLADO na lente no contraplano do abraço e cruza o
+  canto de baixo em 20 quadros: qualquer cartão num canto de baixo, o pedido, é cruzado); H16 com toque, o "Pular" PARADO no
+  canto dos "Pular" do replay (± 1 px) a cena toda, ABAIXO do cartão (≥ 8 px) e, depois do 1º corte, sem cobrir o autor; H17
+  (item 125) o cartão na tela sem família sem `@font-face` e sem letra < 11 px (`tools/lib/tipografia.mjs`, contando o 1º quadro
+  da animação de entrada). Na base do item 126 (29d67bad) reprovam H3, H10 (568 pro), H12, H13, H14, H15 (no celular) e H16; na
+  1ª versão do item (e60e2c7c, o "Pular" em cima do cartão) H12, H13 e H16. Medido (fix final): H13 0,00 px do lugar em todas as
+  telas; H14 9,0% (1920), 14,6% (844), 15,6% (568 pro); H15 0 nos roteirizados e 20/222 no natural; H16 0/352 e 0/449 quadros
+  fora do canto, 0 acima ou encostado no cartão; H17 3 textos na TM Cond, mínimo 11 px.
+  `teste-comemoracao` 15 (a janela, puro; não mudou). Os testes de navegador que não são da comemoração
   e atravessam um gol esperando a saída abrem com `?comemoracao=0` (`teste-estadio`, `teste-desempenho-celular` — que
   mede a cena à parte com a CPU 4× —, `prints.mjs` fora das cenas dela e das do replay).
 
@@ -943,7 +986,9 @@ faixa ENTRA/SAI (a simulação não muda).
   dos cantos de baixo, itens 59 e 60: `teste-substituicao-tela` T8); celular na cena embaixo à
   esquerda (área segura + 14 px, ≤ 64 px de altura, sem chegar no "Pular"); celular no jogo, uma linha compacta no lugar
   do aviso (topo + 74 px, ≤ 360 px, nomes da camisa) com o aviso descendo 42 px (`html.faixa-subst-topo`). Sem aviso de
-  texto da substituição (`TEXTO_EVENTO` sem `substituicao`).
+  texto da substituição (`TEXTO_EVENTO` sem `substituicao`). Letras desde o item 125 (contrato "Sistema tipográfico"): a sigla,
+  o número e "ENTRA"/"SAI" na TM Cond 800 e o NOME na 800 em CAIXA ALTA (`text-transform`: o `innerText` volta em caixa alta e o
+  `teste-substituicao-tela` T3 compara sem diferenciar a caixa); a menor letra 10 → 11 px.
 - **API (`window.__golaco`)**: `cenaSubst` {`ativo`, `estado` ({plano, tempo, total, k, tick, pares, planos, camera}),
   `atores()`, `camera`, `naTela(id?)`, `placa` {`estado`, `naTela()`}, `pular()`, `ligada(v?)` (sem salvar), `custo`,
   `zerarCusto()`, `fila`, `faixa()`}; `substituicaoDeTeste({pares, time, parada})` (a edição na fila e a parada forçada
@@ -1046,7 +1091,8 @@ mudou.
   leitura; também `prejogo.escalacao.campo(t)`) → `{x, y, w, h, viewBox, largura, cw, ch, fonteNome, fontePos, comPos, inset,
   fora, teto}`. O nome do time acima de `ESCALACAO.nomeTimeLongo` (22) letras ganha `.longo` (menor, em até 3 linhas; revisão V6).
   As linhas do campo recortadas pelo canto arredondado (`clip-path` só no SVG; as cartas podem passar da lateral); a posição na
-  TM Cond, mais leve que o nome; a reserva da TM Cond = faces `local()` com `size-adjust` (`css/prejogo.css`, revisão V5). O
+  TM Cond, mais leve que o nome; a reserva da TM Cond = faces `local()` com `size-adjust` (revisão V5; no `css/prejogo.css` até
+  o item 125, desde ele no `css/estilo.css` com o 600: contrato "Sistema tipográfico"). O
   layout refaz a conta SEM os tamanhos de antes (o campo velho seguraria a linha da grade e o grupo largo
   espremeria a coluna do time) quando a folha, a área, a coluna ou a altura da tela mudam; o `montar` pede a TM Cond com o
   texto dos nomes (`document.fonts.load`). O movimento sai do relógio do roteiro (nada de transição do CSS: o relógio manual
@@ -1059,8 +1105,10 @@ mudou.
 - **`js/letra-cond.js`** (puro, item 29): `AVANCO` (os avanços da TM Cond 800 em 1/1000 em, latin-1), `larguraCond(texto, px,
   caixaAlta = true)` (a conta do nome que não espera a fonte; o `prepartida.js` reexporta — a mesma função) e
   `larguraCondInteira(...)` (cada avanço arredondado ao px: o Chromium sem posição subpixel do texto — Linux, o CI — dá até
-  +0,5 px por letra). O `@font-face` da TM Cond mora no `css/prejogo.css` (do download inicial; a fonte só baixa quando um
-  texto com ela aparece — com webdriver, nunca: `teste-carga`); o `css/prepartida.css` usa o mesmo.
+  +0,5 px por letra). O `@font-face` da TM Cond mora no `css/estilo.css` desde o item 125 (antes no `css/prejogo.css`; os dois
+  são do download inicial; a fonte só baixa quando um texto com ela aparece ou pela pré-carga ociosa da pausa — antes do item
+  125, com webdriver, nunca: `teste-carga`); o `css/prepartida.css` usa o mesmo. A tabela continua a da 800 (os nomes de camisa
+  da escalação seguem na 800, em caixa normal).
 - **`som.js`**: `cena({ganho, filtro})` / `cena(null)` (substitui o alvo do barramento e do passa-baixas da pausa);
   `cenaPre`. **`jogador3d.js`**: `KITS.arbitro`.
 - **`main.js`** (ganchos): `modoPrejogo()` (`?prejogo=` força; webdriver/`?prints`/`?demo` desligam; senão
@@ -1841,7 +1889,8 @@ tapando e atrapalhando o jogo" (60). Pesquisa e medidas em `PESQUISA-ESTADIO.md`
   da borda e 3 px da base, até 88 px (≤ 600 px de largura) / 120 px e nunca além da largura livre do canto (`ajustarBaixo` →
   `--nome-livre-esq/dir`, a ≥ 4 px de todo círculo e ≥ 8 do minimapa ligado; < 56 px → `html.nome-sem-lugar-esq/dir`, some);
   PC 18 px, letra de 12, a 14 px dos cantos, até 200 px (e sem chegar ao minimapa do meio). `pointer-events: none`. Escreve no
-  DOM só quando muda (`textContent`, nunca HTML). Cara do TM: `html.tm .nome-condutor` (Inter TM, o cartão do TM).
+  DOM só quando muda (`textContent`, nunca HTML). Cara do TM: `html.tm .nome-condutor` (Inter TM, o cartão do TM; desde o item
+  125 o número na TM Cond 800, `teste-tm-tela` 5b).
 - **Quando** (`main.js marcarCondutor(agoraMs)`, sem projetar nada): com `mundo.posse` (`NOME_SEGURA_MS` 800, `NOME_VOO_MS`
   3000) na partida e no Modo Livre (`mundo.times`), fora da disputa (`mundo.disputa`), dos prints, das cenas (gol, cartão,
   substituição, intervalo/pós-jogo), do replay, do pré-jogo e do `partida.estado` 'intervalo'/'fim'; nos treinos não aparece
@@ -1894,9 +1943,15 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   `small.estado`) e a `.linha-par` "Recomeçar" (Recomeçar | Bola no meu pé). Online (`online-pagina.js`): Pausar depois do
   Voltar e Sair por último, os dois por `aoTocar`. Lista de TEXTO, sem caixas: a linha na largura toda da faixa (28–44 px no
   celular, `--item-h` no PC), o item com o foco (`.selecionado`, que segue o `focusin`; o mouse dá o foco no `pointerover`; o mousedown de compatibilidade de um TOQUE só dá o foco se o nível não mudou — o ≡ deixa o foco em Voltar ao jogo, não no X que mora no lugar dele; revisão F4) em
-  800 com a barra verde de 3 px e o brilho verde para a direita, 1,13× a partir de 640 px de largura e 1,36× no PC
-  (`--item-f`/`--item-f-foco`; no PC limitada ao que a faixa comporta — `(faixa − 32 px) / 10,6` no foco e `/ 14,4` sem: o item
-  mais longo, "Voltar ao Total Match" em 800, mede ~10,5 letras —, revisão F1); o texto de cada item num `<span
+  800 com a barra verde e o brilho verde para a direita (`--item-f`/`--item-f-foco`). **Desde o item 125** a lista é a TM Cond
+  (600; o foco na 800, caixa normal, sem espaçamento extra): 18/20 px no celular (foco 19 com ≤ 660 px de largura; 17/18 com ≤
+  600), no PC `min(3,1vh, (faixa − 32 px) / 11,5)` e `min(3,9vh, (faixa − 38 px) / 8,1)` no foco (o item mais longo, "Voltar ao
+  Total Match" na TM Cond 800, mede 7,9 em e o foco anda 6 px); a barra de 4 px cresce de `scaleY(0.2)` a 1 com sombra verde e o
+  `.item-txt` anda `translateX(6px)`, 160 ms `cubic-bezier(0.05, 0.7, 0.1, 1)` (Material 3, "short3" e "emphasized
+  decelerate"); ao abrir, a lista entra em cascata (20 ms por item, ≤ 200 ms; `animation-fill-mode: backwards` — com `both` o
+  "to { opacity: 1 }" passava por cima do apagado do item desabilitado, revisão C-R1; o desabilitado entra até 0,45); "reduzir
+  movimento": só a troca de estado. Até o item 125: Inter TM 500/800, a barra de 3 px parada, 15/17 px no celular e 1,13×/1,36×
+  com `(faixa − 32 px) / 10,6` e `/ 14,4` no PC (revisão F1); o texto de cada item num `<span
   class="item-txt">` com "…" de SEGURANÇA (o estado à direita cede o lugar primeiro; o `teste-pausa-tela` P1 reprova qualquer
   corte, com o foco em cada item); o primário sem foco em verde-claro. A descrição de antes (`small.desc`) só para o leitor de
   tela (`aria-describedby`); o estado (`small.estado`) à direita, o único que ganha "…".
@@ -1911,11 +1966,13 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   Treinos, a linha das cenas).
 - **Layout** (`css/estilo.css`, bloco "Pausa (item 58)"; nada depende de JS para caber): o jogo congelado à vista, sem véu; a
   faixa escura (`#050807` a 0,9) do x 0 até o fim da lista + 16 px e o degradê depois (`--fx-cheia`, `--fx-fade` 12vw no
-  celular, 22vw no PC); dois regimes pela ALTURA — celular deitado (≤ 480 px; a lista em px a `--sa-l + --pm`, `--pm` 16/14/12
-  px por largura, a faixa de `clamp(196px, 18vw + 100px, 260px)`, os itens em `flex: 1 1 0` de 28 a 44 px) e PC/tablet
+  celular, 18vw no PC — 22vw até o item 125); dois regimes pela ALTURA — celular deitado (≤ 480 px; a lista em px a `--sa-l +
+  --pm`, `--pm` 16/14/12 px por largura, a faixa de `clamp(176px, 18vw + 80px, 236px)` — `clamp(196px, 18vw + 100px, 260px)`
+  até o item 125: a TM Cond é ~25% mais estreita que a Inter —, os itens em `flex: 1 1 0` de 28 a 44 px) e PC/tablet
   (≥ 481 px; as proporções do FC 24 medidas em 1280×720: o texto em 5,2vw, a marca em 4,3vh, o 1º item em 19,3vh, o passo
-  6,67vh, a letra 2,65vh e 3,6vh no foco, a lista em `max(24vw, min(42,66vh, 30vw))` — 24vw no 16:9; fora dele (4:3, 5:4, 16:10)
-  cresce pela altura até 30vw —, `max(24vw, min(380px, a tela útil))` nas Opções, Estatísticas, Modo de jogo e nos submenus do
+  6,67vh, a letra (item 125) 3,1vh e 3,9vh no foco — antes 2,65vh e 3,6vh —, a lista em `max(21vw, min(38vh, 27vw))` — antes
+  `max(24vw, min(42,66vh, 30vw))`; ~21,4vw no 16:9 (38vh), fora dele (4:3, 5:4, 16:10) cresce pela altura até 27vw —, `max(24vw,
+  min(380px, a tela útil))` nas Opções, Estatísticas, Modo de jogo e nos submenus do
   Livre, a linha dos comandos em 93vh). PC baixo (481–640 px de altura: o notebook fora da tela cheia): as Opções em 2 colunas
   na faixa de até 540 px, sem o cartão nesse submenu abaixo de 860 px de largura (revisão F2/F3). Nos submenus do celular (`data-nivel="sub"` na `.janela-menu`, posto pelo `hud.js marcarNivel`; o
   `data-sub` = o id) a faixa vira a tela inteira, a competição sai (a linha do Voltar fica na altura do X), o cartão e a pílula
@@ -1928,16 +1985,39 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
 - **O canto direito**: a pílula do placar (`hud.js espelharPlacar`: o espelho do placar do HUD — siglas, gols, escudos e o
   relógio —, escrita ao abrir e, com ela aberta, nas mesmas funções que escrevem o placar; nos treinos não aparece; sem lugar
   entre o topo da faixa e o X perde o relógio e depois os escudos, `ajustarPilula`), o X no lugar do ≡ (44×44, fecha) e o
-  CARTÃO do meu time em `--card-y` (66 px no celular, 72 no PC) com `--card-w` (até 300 px no celular; `max(30vw, 270px)` no PC:
-  abaixo de 270 px o campinho dava a letra de 10,5).
+  CARTÃO do meu time em `--card-y` (66 px no celular, 72 no PC) com `--card-w` — desde o item 125 até 400 px no celular e
+  `max(36vw, 300px)` no PC (o campo de dentro ≥ 280 px dá o disco de 25 px e a letra de 11); até o item 125, 300 px e
+  `max(30vw, 270px)`. Quando a ALTURA é o limite (o celular) o `layout()` ajusta a largura do cartão ao campo (`Wfit =
+  min(W, ⌊Hlivre / 0,8015 / 1,06⌋)` + padding e bordas; sem isso o campo ficava esticado na largura). A altura livre sai de uma
+  SONDA no mesmo pai com o `max-height` computado (era `calc(100% − 99px)` e o `parseFloat` dava NaN: a conta caía no
+  `innerHeight` e o campo vazava 8–9 px do cartão em 568×320, nas duas edições). Fora de cena (num submenu o cartão sai:
+  `display: none`) o `layout()` sai ANTES de mexer na largura e a janela que muda de tamanho também refaz a conta (revisão C-R2:
+  zerada fora de cena, o cartão voltava 2 quadros na largura do CSS e o ResizeObserver o encolhia dentro do callback — o erro
+  "ResizeObserver loop completed", 2–3 por tela).
 - **O cartão** (`js/pausa-tela.js` + `css/pausa.css`, sob demanda; `criarPausaTela({cartao, est})` → `{time(d), estatisticas(d),
-  layout(), estado}`): o cabeçalho (escudo, nome com "…", a formação em verde-claro e a mentalidade quando cabe), o MEU MEIO
-  CAMPO EM PÉ (o `campinho.js svgCampinho(true)` com `viewBox "0 51 68 54.5"` e `posicaoNaTela(…, true)`, como o FIFA 23) e uma
-  ficha por vaga: o disco na cor do uniforme (o goleiro com a dele) com o número e o nome de camisa embaixo ("…" quando não
-  cabe), o cartãozinho amarelo, o ↑ de quem entra na próxima parada, o anel verde-claro de "você" (o controlado ou o travado do
-  Rumo ao Estrelato) e o expulso como a vaga VAZIA (disco tracejado e o cartão vermelho). `tamanhoCampinhoPausa(W, H)`: disco
-  `clamp(16, round(6 + W·0,056), 34)`, letra 11 (10,5 com o disco abaixo de 20, abaixo de ~250 px de largura; a metade do disco,
-  11–18, a partir de 26), o campo esticado até +15% para as 5 linhas caberem; sem lugar, disco 16 e letra 10. Um resumo `.pt-sr` para o leitor de tela
+  layout(), estado}`): o cabeçalho (escudo + NOME DO TIME com "…", na TM Cond 800 em caixa alta, `clamp(15px, 1.7vh, 20px)` no
+  PC; desde o item 125 ele SAI no celular deitado — a pílula do placar ao lado já tem os escudos e as siglas — e o campo ganha a
+  altura dele; o `aria-labelledby` continua apontando para ele), o MEU MEIO CAMPO EM PÉ (o `campinho.js svgCampinho(true)` com
+  `viewBox "0 51 68 54.5"` e `posicaoNaTela(…, true)`, como o FIFA 23) e uma ficha por vaga: o disco na cor do uniforme (o
+  goleiro com a dele) com o número e o nome de camisa embaixo ("…" quando não cabe), o cartãozinho amarelo, o ↑ de quem entra na
+  próxima parada, o anel verde-claro de "você" (o controlado ou o travado do Rumo ao Estrelato) e o expulso como a vaga VAZIA
+  (disco tracejado e o cartão vermelho). **Item 125**: a formação (TM Cond 800 branca, `--pt-forma-f` = 6,2% do campo, 18–40 px)
+  e a mentalidade (TM Cond 600 em caixa alta, verde-claro, `--pt-ment-f` 11–15 px) GRANDES DENTRO do campo, no canto de baixo à
+  esquerda (`.pt-formacao`, livre em toda formação: a fila do goleiro só tem o goleiro) numa plaquinha escura como a dos nomes
+  (revisão V-R5: no celular a mentalidade passava por cima da linha da área) — o `.pt-forma`/`.pt-ment` do cabeçalho ficam no
+  DOM só para o estado (escondidos); o cartão com o fundo em degradê e a borda de cima de 3 px na cor do time (`--pt-cor`); o
+  campo com 11 faixas de corte sutis e as linhas a 26% (antes 20%); o disco com borda branca de 2 px, sombra e um brilho radial,
+  o número na TM Cond 800 a 0,56 × o disco (`--pt-num`); o nome numa plaquinha escura (`rgba(5,8,7,.72)`) na TM Cond 800 em
+  CAIXA ALTA, sem a sombra de texto; "você" com a plaquinha BRANCA e letra preta e o anel com brilho (o "selecionado" do Team
+  Management do FC); o amarelo e o ↑ proporcionais ao disco. `tamanhoCampinhoPausa(W, H)` (item 125): o campo na proporção do
+  meio campo com 6% a mais de altura (`h = min(H, W·0,8015·1,06)`), o disco `clamp(18, round(8 + 0,062·W), 40)` limitado pelo
+  passo das 5 filas (disco + 2 + a linha do nome + 2 ≤ (h − 20)/5), a largura da coluna `⌊(W − 24)/5⌋`, a letra do nome
+  `clamp(11, min(round(0,44·disco), ⌊(cw − 6)/4,8⌋), 18)` ("ALBUQUERQU", 10 letras de ~0,47 em + os 6 px da plaquinha) e 10 só
+  quando o passo das filas não cabe com 11 (568×320). A plaquinha do nome passa da coluna quando há lugar (`--pt-nm-max`: até 4
+  px do vizinho mais perto na mesma altura, da borda do campo e da plaquinha da formação; nunca menor que a coluna) e, ainda sem
+  lugar para algum nome, os nomes do cartão TODO vão para a TM Cond 600, ~5% mais estreita (`.nomes-estreitos`; revisão V-R8).
+  Até o item 125: disco `clamp(16, round(6 + W·0,056), 34)`, letra 11 (10,5 abaixo de ~250 px; a metade do disco a partir de 26),
+  o campo esticado até +15%, a formação e a mentalidade no cabeçalho. Um resumo `.pt-sr` para o leitor de tela
   ("4-3-3, Equilibrada. Goleiro: …"), a região `aria-labelledby` o cabeçalho. Os dados (`main.js dadosPausaTime`): o
   `escalacao.js rascunhoDe` (o time que VAI valer, com a edição na fila), `fichaDe`, `m.partida.cartoes`, `TRAVA_TM` ou
   `m.controlado`, a cor do `IDENT.hud.placar` ou do `COR_UNIFORME` (agora exportado pelo `escalacao-tela.js`), a do goleiro pelos
@@ -1950,6 +2030,8 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   3 pesos (`fontesPausa`, `@font-face 'Inter TM'` 400/600/800 no `estilo.css`, ~72 KB) — fora do download inicial; a pré-carga
   ociosa de sempre traz tudo; abrir a pausa antes mostra a lista na hora (com a fonte do sistema até a Inter chegar) e o cartão
   quando chega (`teste-carga`: os 2 arquivos na lista do sob demanda e as 3 fontes nunca no inicial e pedidas depois da pré-carga).
+  Desde o item 125 o `fontesPausa` pede também a TM Cond 600 e 800 latin (`FONTES_DISP`, ~44 KB; antes da fonte chegar, a
+  reserva de mesma largura máxima): contrato "Sistema tipográfico".
 - **Navegação** (`hud.js`): os níveis (`submenu('modos' | 'opcoes' | 'estatisticas' | null)`: abrindo, o foco vai ao escolhido
   — `aria-pressed` — ou ao 1º controle; voltando, ao item que abriu); `voltarNivel` (o B do controle e o Esc: a Ajuda fecha e
   volta à pausa se veio dela, o submenu — também os do Livre — volta ao 1º nível, o 1º fecha; P e Start fecham tudo);
@@ -1969,9 +2051,20 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   teste: `__golaco.pausa` ({aberta, nivel, sub(nome), tela, pronta, carregar(), dados(), competicao()}), `__golaco.
   comandosVistos` / `limparComandosVistos()` / `secarComandos(lista)` (os comandos que chegam ao `comando()`; os "secos" só
   registrados), `sobDemanda.estado.pausa`.
-- **Cara do TM com e sem `?tm`**: as variáveis `--p-*` do `#menu` (#050807, #22c55e, #4ade80, a Inter TM) no `estilo.css`;
-  o `tm.css` só troca a marca (`--tm-simbolo` no `::before` do topo) e guarda a Ajuda. Contraste medido (P8): texto 11,2:1, a
-  barra do foco 7,1:1.
+- **Cara do TM com e sem `?tm`**: as variáveis `--p-*` do `#menu` (#050807, #22c55e, #4ade80, a Inter TM) no `estilo.css`, e
+  desde o item 125 a TM Cond (o `--f-disp`) na lista, no estado à direita (caixa alta, 0,04 em, `max(12px, 1,7vh)`; 11 px em
+  568×320), na competição (800 caixa alta), nos títulos dos submenus (800 caixa alta), nas pílulas e nos segmentados (o nome na
+  800, o `small` na 600 caixa alta), no Voltar e na pílula do placar (siglas 14 px, gols 18, relógio 14); o texto das Opções e
+  das Estatísticas (rótulos) continua na Inter TM. O `tm.css` só troca a marca (`--tm-simbolo` no `::before` do topo) e guarda a
+  Ajuda. Contraste medido (P8): texto 11,2:1, a barra do foco 7,1:1.
+- **Item 125 nos submenus** (só no PC, ≥ 481 px de altura; o celular fica nos px de antes): o título `clamp(16px, 2.4vh, 26px)`
+  (24 px em 1920×1010; antes 15), o Voltar `clamp(36px, 4.4vh, 46px)` de altura com letra `clamp(14px, 1.6vh, 18px)`, as linhas
+  dos submenus `clamp(44px, 5.4vh, 56px)` com o nome `clamp(15px, 1.8vh, 19px)` e o `small` `clamp(11px, 1.3vh, 14px)`, os
+  rótulos das Opções `clamp(14px, 1.7vh, 18px)`, os segmentados `clamp(14px, 1.6vh, 17px)`; as Estatísticas com a linha
+  `clamp(32px, 5.4vh, 56px)`, o valor na TM Cond 800 `clamp(16px, 2.4vh, 26px)` `tabular-nums`, as siglas na 800 e a barrinha da
+  POSSE de 6 px dividida na cor de CADA time (`--pe-c0`/`--pe-c1` pelo `cor1` dos dois; antes verde contra cinza). A Ajuda: só a
+  tipografia (título e `h3` na TM Cond 800 caixa alta, `kbd` na 800; o layout é o item 94). Livre: o rótulo na 800 caixa alta e o
+  N de 22 px; online: o aviso no `--p-fonte` (saiu o `"Inter,system-ui"` sem face) e o selo na 800 caixa alta.
 - **Testes**: `teste-pausa-tela` (navegador, CI e deploy; `tools/lib/pausa-medidas.mjs` com a ORDEM por modo, os 31 COMANDOS
   e as medidas na página; `--so cel|pc|tm|online`, `--raiz` mede outra cópia): P1 a lista à esquerda na ordem por modo e o
   cartão à direita (folgas, nada cortado nem fora da área segura; CADA item do 1º nível com o foco cabe na linha —
@@ -1988,6 +2081,14 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   fecha, a faixa não; o toque que troca de nível deixa o foco no que o nível escolhe); P10 todo comando pelos 3 meios (toque; teclado só com setas + Enter; controle pelas ações `menu-*`) chega
   ao `comando()`, com Voltar ao jogo ≤ 2 e Editar time ≤ 2 toques e ≤ 3 teclas/apertos; S1 o mundo parado (0/60 passos com a
   pausa aberta; no online anda ≥ 40% da janela fechada); S2 0 erros; S5 a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320).
+  **Item 125**: as medidas com as transições e animações da pausa DESLIGADAS (o estado final: o foco anda 6 px e a cascata
+  mexe nas caixas — a lição do relógio das animações sem GPU); P4 ganha a área do campo ≥ 1,30 × a da base no PC (3 telas) e em
+  844×390, ≥ 1,15 em 667×375 e ≥ 1,10 sobre o campo CERTO da base em 568×320 (220×173), e o campo DENTRO do cartão em todas as
+  telas; P8 a TM Cond 600/800 CARREGADA nos itens (o `document.fonts.check` lido antes de qualquer `load` do teste: revisão
+  C-R7) e nenhuma família sem `@font-face` (`tools/lib/tipografia.mjs`); P12 (novo) nomes com "…" no campinho: PC 0, 844 0,
+  667 ≤ 1, 568 ≤ 5; P13 (novo) em 1920×1010 a menor letra dos submenus: rótulos ≥ 14, títulos ≥ 20, valores ≥ 20. Na base
+  (29d67bad) reprovam P4 (área 1,00× e o campo vazando 9 px em 568×320), P8 (a lista na Inter TM), P12 (1 nome cortado em
+  844×390) e P13 (títulos de 15 px e valores de 17 px).
   Adaptados: `teste-hud-minimo` H7 (o topo novo; Minimapa e Nomes nas Opções), `teste-livre-tela` (D1, D3, E1, F: a ordem do
   Livre, o topo novo, a meta viewport no quadro do TM), `teste-replay` D4 e `teste-replay-paradas-tela` (a opção "Replays" nas
   Opções), `teste-penaltis-tela` 8 (o Minimapa escondido nas Opções), `teste-online-tela` P9 (Pausar e Sair pelo toque, o Sair
@@ -2002,6 +2103,17 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   controle 4 → 3 apertos; o toque: 2 toques no 1º nível e 3 nas Opções (antes 2, na própria janela). Custos que subiram (o plano
   da FILA: as opções num submenu e a ordem do FC): no teclado e no controle as opções custam 9–16 (Qualidade → Alta 9,
   Transparência 16), o Replay 5 (antes 3 no controle) e o Modo de jogo 7 (antes 6).
+- **Medidas do item 125** (29d67bad → PR #621, `teste-pausa-tela`; elenco fictício): o campo do campinho 1920×1010 554×444 →
+  669×568 (1,54×), 1280×720 362×290 → 439×373 (1,56×), 1024×768 285×228 → 347×295 (1,58×), 844×390 282×226 → 314×267 (1,32×),
+  667×375 282×226 → 298×253 (1,18×), 568×320 220×190 VAZANDO → 236×200 dentro (1,24× sobre o certo, 220×173); disco/letra do
+  nome 34/17 → 40/18, 26/13 → 35/15, 22/11 → 30/12, 22/11 → 27/11, 22/11 → 26/11, 18/10,5 → 18/10; nomes com "…" no campinho:
+  na base, com o pedido da especificação (medido no protótipo), 0/1/3 (PC 1920/1280/1024) e 4/4/8 (844/667/568); no P12 final 0
+  no PC e 0/0/1 no celular (a base reprova com 1 em 844×390); com os nomes longos do TM (a sonda da revisão), da 1ª versão do
+  item para a revisão, 844 0 → 0, 667 2 → 0 e 568 4 → 3 (a linha de 4 da defesa a ~46 px por ficha); o jogo à vista (P3) 1280×720 44,6 → 42,9%, 844×390 30,2 → 30,0%, 667×375 20,7 → 23,8%, 640×360
+  21,1 → 23,4%, 568×320 21,6 → 24,8% (a faixa mais estreita paga o cartão maior; metas 40/25/17/17/14); a letra dos itens no
+  celular 15/17 → 18/20 px (568×320: 15 → 17/18); os submenus em 1920×1010 títulos 15 → 24 px, valores 17 → 24, rótulos 16–17;
+  um item desabilitado (o "Pausar a partida" do online sem pausas) com a cascata ligada: opacidade 0,45 (na 1ª versão do item, 1);
+  a volta de um submenu no celular: a largura do cartão [400, 400, 332…] → [332…] e 2–3 → 0 erros de laço do ResizeObserver.
 - **Fica** (fora da v1, anotado; FILA itens 93–99): o tempo do `teste-pausa-tela` no `tempos-ci.mjs` (330 s, estimado aqui:
   acertar pelo log do CI; item 93); a Ajuda no estilo novo (continua janela e rola no celular como antes; item 94); a câmera de
   bastidores (o close do controlado, como os "Matchday Menus" do FC 24; render; item 95); desenhar o 3D só na mudança com a
@@ -2009,8 +2121,9 @@ fica parado como antes (no online o jogo anda, de propósito: a IA joga pelo meu
   fila do pré-jogo, `cortejo.js`; item 97); no online, o contador da pausa combinada dentro da pausa, o "Toque de novo: sair"
   que diz "Toque" também com o mouse e o teclado, e o online nas telas 16:10 e 5:4 do PC no teste (item 98); os alvos de toque
   de 28–44 px no celular, abaixo dos 44 da Apple (revisão F7: decisão do dono, "Depende do dono" 18; item 99).
-- **Limite**: 568×320 está no limite — 8 linhas de 28,6 px no 1º nível e um cartão de ~236×217. Item novo no 1º nível (ou modo
-  novo com mais itens) pede rever a conta, ou entrar num submenu.
+- **Limite**: 568×320 está no limite — 8 linhas de 28,6 px no 1º nível e um cartão de ~236×217 (desde o item 125 sem o
+  cabeçalho: o campo 236×200, a letra das fichas 10 px e, com os nomes longos do TM, 3 nomes de 10 letras ainda com "…"). Item
+  novo no 1º nível (ou modo novo com mais itens) pede rever a conta, ou entrar num submenu.
 - **Modo "antes do jogo"** (item 64; o ≡ da tela antes do jogo): `hud.definirAntes(true)` → `#menu[data-antes]`, "Voltar" no
   lugar de "Voltar ao jogo" (também no `aria-label` do X) e, pelo `css/prepartida.css`, sem Editar time (a tela tem o
   Personalizar), Estatísticas, Replay, Reiniciar, Simular o resto, Pausar do online, o cartão e a pílula; a tela some atrás da
@@ -2025,7 +2138,8 @@ antes. **Só
 DOM, CSS e página**: os novos `js/prepartida.js` (puro, FORA do fecho: nenhuma constante no `config.js`), `js/prepartida-tela.js`
 + `css/prepartida.css` + `assets/tm/fontes/tmcond-800-latin(-ext).woff2` (a TM Cond 800 = Barlow Condensed ExtraBold, OFL, a
 letra da carta do TM; desde o item 29 o `@font-face` dela e a tabela de avanços — `js/letra-cond.js` — são comuns com a escalação
-do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
+do pré-jogo: o `@font-face` no `css/prejogo.css` — desde o item 125 no `css/estilo.css`, com o 600: contrato "Sistema
+tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/tm/cartas-triangulos.svg`, e `main.js`, `hud.js`, `prejogo-tela.js`, `render/prejogo.js`,
 `editor-time.js`, `online-pagina.js`. `fecho-hash --diff` 0; `hash-igual` e `hash-partida` IGUAIS: a tela segura o laço no tick 0
 (nenhum passo) e nada dela vai ao passo.
 - **Quando aparece** (`main.js prepartidaLigada`): em todo JOGO — partida, TM (também o Rumo ao Estrelato), Livre, Pênaltis e
@@ -2041,7 +2155,8 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   até 1,5 s depois do 3D pronto (`esperarPrepartida`), a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
   partida — no TM (partida e Rumo ao Estrelato) com o botão "Simular partida" no canto de baixo à direita (item 124, revisão A6:
   sem ele a única saída era começar o jogo e usar o "Simular o resto"; contrato "Ponte com o Total Match", parte "A tela no lugar
-  da janela"). Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`).
+  da janela"). Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`) — menos a TM
+  Cond, que desde o item 125 a pré-carga da pausa traz (nunca no download inicial: lista `FONTES_DISP`; mudou de propósito).
 - **O fundo**: partida com o pré-jogo ligado → a fase `abertura` do diretor do pré-jogo de hoje (o aéreo de fora, o som abafado)
   CALADA (`prejogo.iniciar(modo, {abertura, muda})` → `prejogo-tela.mudo(true)`: os três ouvintes dela — o toque da camada, o
   Enter/Espaço na captura e o Ⓐ — não agem) e o fundo `'abertura'`; o resto (pré-jogo desligado, Livre, Pênaltis) → o JOGO PARADO
@@ -2194,6 +2309,154 @@ do pré-jogo: o `@font-face` no `css/prejogo.css`, a `larguraCond` reexportada p
   medida (L1 do `teste-prepartida` intocado). As fotos chegam depois do `pronto` e trocam o busto ficha a ficha (fade de 0,2 s),
   sem refazer a tela. As cartas da escalação do pré-jogo (item 29) ficam sem foto (não cabem no celular: item 110); as fichas
   não têm o degradê do pé da foto do cartão do autor (item 112). Teste: `teste-prepartida-tela` E22 (`--so fotos`).
+- **Item 125 (05/11, PR #621; contrato "Sistema tipográfico")**: a competição, os nomes dos times (CAIXA ALTA, 0,03 em), o
+  horário (`tabular-nums`) e as abas/botões de baixo (o texto a 1,12 em do de antes, a caixa da aba igual; caixa normal SEM
+  espaçamento extra — com 0,01–0,04 em os pequenos saíam "Per sonalizar", "Simul ar": revisão V-R6) na TM Cond 800; a
+  mentalidade do topo E a do canto do campinho (`.pp-selo`, antes na Inter: revisão V-R7 — a mesma informação saía duas vezes
+  com letras diferentes) na TM Cond 600 em caixa alta, 0,06 em; a linha de informação (estádio, data, árbitro, duração) fica na
+  Inter. A conta que escolhe o rótulo e o ícone de cada aba (`prepartida-tela.js cabeAba`) mede na MESMA letra do desenho, a
+  pilha do `--f-disp` 800 a 1,12 em (revisão C-R5: medida na Inter 800 a 1 em ela saía 12–18% mais larga e as abas de 667×375
+  perdiam o ícone à toa); antes de a fonte chegar a medida cai na reserva (erra para o lado de encurtar, sem "…") e a tela refaz
+  o layout quando ela chega (`main.js carregarPrepartida`, que pede as duas faces da TM Cond). O campo, as fichas, a
+  `layoutPrepartida` e a `letra-cond.js` não mudam; o tamanho do horário ficou o de antes (vem da conta do layout: a
+  especificação pedia ×1,15 e mexer nela arriscava as metas de encaixe). Testes: `teste-prepartida-tela` 83/83 (E3/E4 sem rolar
+  e nada encosta em 10 telas, também com as fontes BLOQUEADAS; E5 as letras; E20 as proporções do FC 24), 0 rótulo com "…" em
+  568, 667, 844 e 1280; `teste-prepartida` (Node) sem mudança.
+
+## Sistema tipográfico — a letra esportiva do 3D (item 125; 05/11; contrato)
+Pedido do dono (05/11, com o print da pausa no PC 1917×1010 com `?tm`, West Ham × Preston): "fontes tem que ser mais legais, o
+campinho um pouco maior, tem que ser mais legal, e não é só aí". FILA item 125, PR #621 (branch `golaco/f125-visual-telas`,
+base 29d67bad — o #618); as escolhas no "Depende do dono" 25; pesquisa em `PESQUISA-ESTADIO.md` §7.6. O campinho maior e a pausa
+estão no contrato "Pausa (item 58)" (os blocos "item 125"); o cartão do autor (item 126, o mesmo PR) em "Comemoração do gol".
+**Só DOM, CSS e página**: `css/estilo.css`, `css/tm.css`, `css/pausa.css`, `css/prepartida.css`, `css/prejogo.css`,
+`css/editor.css`, `css/cenas.css`, `index.html`, `js/main.js`, `js/hud.js`, `js/tm-cara.js`, `js/pausa-tela.js`,
+`js/editor-time.js`, `js/prepartida-tela.js`, `js/disputa-tela.js`, `js/livre-pagina.js`, `js/online-pagina.js`, os 2 arquivos
+novos de fonte e o `assets/tm/CREDITOS.md`; nenhum módulo do fecho (`fecho-hash --diff 29d67bad` 0; `hash-igual --ref 29d67bad
+--rapido` IGUAL; `hash-partida --ref 29d67bad --sementes 2 --min 1 --par 2` IGUAL, 104 hashes). O `legacy-total-match/` não
+mudou (os menus do TM continuam na Inter).
+- **As famílias e os arquivos** (todos self-hosted em `golaco/assets/tm/fontes/`, WOFF2 da API css2 do Google Fonts sem mudança,
+  `font-display: swap`):
+
+  | Família CSS | Fonte (licença) | Pesos | Arquivos (bytes latin / latin-ext) | Papel |
+  |---|---|---|---|---|
+  | `'TM Cond'` | Barlow Condensed, de Jeremy Tribby (SIL OFL 1.1, `OFL-barlow-condensed.txt`; a letra da carta do TM) | **600** (novo) e 800 (do item 29) | `tmcond-600-latin.woff2` 22.308 / `tmcond-600-latin-ext.woff2` 14.516; `tmcond-800-latin.woff2` 22.464 / `-latin-ext` 14.548 (byte a byte o `legacy-total-match/assets/fontes/barlow-condensed-*` do TM) | `--f-disp`: títulos, itens de menu, números, nomes, siglas, rótulos curtos em caixa alta |
+  | `'Inter TM'` | Inter, de Rasmus Andersson (SIL OFL 1.1, `LICENCA-Inter-OFL.txt`) | 400/600/800 sem `?tm` (a pausa); 400–900 com `?tm` | os de antes (23,7–24,5 KB cada, só latin) | o texto corrido com `?tm` (o `--fonte` do `html.tm`) e o `--p-fonte` da pausa |
+  | `'TM Cond reserva'` / `'TM Cond reserva larga'` | `local()` da Arial/Liberation/Helvetica/Roboto/FreeSans e da DejaVu, com `size-adjust` 71% / 62% | 600 e 800 | 0 B | a reserva enquanto a TM Cond não chega: nunca passa da largura dela (as contas das cartas da escalação são da TM Cond; revisão V5 do item 29) |
+
+  As faces da TM Cond (600 e 800 × latin e latin-ext por `unicode-range`; a latin SEM U+2191/U+2193, que a fonte não tem —
+  revisão V-R4: o "→" do "ATAQUE" saía um tracinho da reserva e virou SVG) e as reservas moram no `css/estilo.css` desde o item
+  125 (antes só o 800, no `css/prejogo.css`). Declarar não baixa nada: o arquivo só vem com um texto que use a face, ou pela
+  pré-carga; o latin-ext só com um nome em č/ł/ğ. Crédito e origem no `assets/tm/CREDITOS.md`. Sem 700, sem itálico, sem
+  `pyftsubset` (corta 15–33%, pouco em bytes: fica para quando a folga do `teste-carga` apertar).
+- **Os tokens** (`estilo.css :root`): `--f-texto: var(--fonte)` (com `?tm` o `tm.css` troca o `--fonte` pela Inter TM) e
+  `--f-disp: 'TM Cond', 'TM Cond reserva', 'TM Cond reserva larga', 'Arial Narrow', sans-serif`. Peça nova de interface usa um
+  dos dois, nunca uma família solta: saiu a família `"Inter"` SEM `@font-face` que as tarjas das cenas (`cenas.css`), o cartão do
+  autor, a faixa ENTRA/SAI e o online (`"Inter,system-ui"`) pediam — caía na letra do aparelho (com a Inter instalada uma, sem
+  ela outra).
+- **Os papéis**: **D1** título grande (a formação no campinho, o horário, o "GOL!", os gols das tarjas) TM Cond 800; **D2** item de
+  menu (a lista da pausa, as abas, os botões dos submenus, do editor e da faixa do fim) TM Cond 600 — o foco/escolhido na 800 —,
+  caixa NORMAL e SEM espaçamento extra (revisão V-R6); **D3** nome de jogador (as fichas da pausa, o cartão do autor, as tarjas, a
+  faixa ENTRA/SAI, as cartas do Editar time) TM Cond 800 em CAIXA ALTA (sem lugar, a 600, ~5% mais estreita); **D4** rótulo curto
+  (o estado do item, a mentalidade, os títulos de seção, os grupos, as siglas) TM Cond 600 em caixa alta, 0,04–0,16 em (as siglas
+  na 800); **N** número (o placar com `?tm`, notas, valores, o número da camisa, o relógio) TM Cond 800 `tabular-nums`; **T**
+  texto (a Ajuda, as descrições, os rótulos das Opções e das Estatísticas, a informação da tela antes do jogo, os avisos, o nome
+  do condutor) no `--f-texto`. Regras: condensada a partir de ~14 px; abaixo disso só em caixa alta (nomes das fichas, siglas,
+  rótulos de 11–13 px); texto de 11–13 px em caixa normal fica no `--f-texto`; nada itálico nem inclinado; nenhuma letra < 11 px
+  (≥ 10 só nas fichas da pausa em 568×320); contraste AA (texto ≥ 4,5:1, grande ≥ 3:1).
+- **A regra antiga muda**: a cara do TM dizia "nada itálico, inclinado ou condensado" (`css/tm.css` e o CLAUDE.md, na seção do
+  `futebol3d`). Desde o item 125: "nada itálico nem inclinado; condensada (a TM Cond) nos títulos, itens de menu, números, nomes e
+  siglas; o texto corrido continua na Inter" — o pedido de 05/11 ("fontes tem que ser mais legais") vale mais. Registrado no
+  cabeçalho do `css/tm.css`; as sobreposições do `tm.css` que desfaziam a caixa alta/o espaçamento novos saíram (`.faixa-titulo`,
+  `#ajuda h2/h3`, `.ed-titulo`, `.ag-sigla`/`.ag-num`, `.pj-esc-nome`…).
+- **O carregamento** (sem piscar e sem crescer o download sem `?tm`; a reserva de mesma largura máxima desenha na hora):
+  - **Sem `?tm`**: o HUD do 1º quadro (placar, nome do condutor, avisos, botões de toque) fica no `--fonte` (o sistema). A
+    pré-carga ociosa da pausa (`main.js fontesPausa`, ~8 s depois do 1º quadro, no 1º gesto ou com a pausa aberta) traz a TM Cond
+    600 e 800 latin (`FONTES_DISP`) além da Inter TM; `pedirFontesDisp(texto?)` (sem esperar) no `baixar` do `SOB.editor` e do
+    `SOB.cenas`, no `carregarPrepartida` e no COMEÇO da cena do gol (`iniciarComemoracao`, com o nome do autor como texto: o
+    latin-ext vem junto se ele tiver č/ł/ğ — o cartão entra ~1,6 s depois). O "GOL!" só pede a família com a camada `.visivel`
+    (no layout escondida ela baixaria no 1º quadro). Download inicial: +0 B de fonte (`teste-carga`).
+  - **Exceção — o modo Pênaltis sem `?tm`**: o painel da disputa aparece no 1º quadro, então o `disputa-tela.js` pede a 800 e a
+    600 na IMPORTAÇÃO (revisão C-R4: pedida quando o painel pintava, aos 4,8 s, o texto já na tela trocava de letra; agora aos
+    0,4 s e carregada antes do painel) — ~44 KB a mais só nesse modo (o `teste-carga` mede a partida padrão).
+  - **Com `?tm`**: o `<script>` do `<head>` escreve, antes do `tm.css`, `<link rel="preload"
+    href="assets/tm/fontes/tmcond-800-latin.woff2" as="font" type="font/woff2" crossorigin>` (o placar usa o 800 no 1º quadro; o
+    preload ignora o `unicode-range`: só o latin; é o mesmo arquivo do `@font-face`, então o preload é reaproveitado); o
+    `tm-cara.js carregarFontes` pede os 5 pesos da Inter TM e os 2 da TM Cond (`FONTE_DISP`, `PESOS_DISP` [600, 800]) e só põe
+    `data-fontes-tm="ok"` com todos; o `tm:fontes` faz a página medir de novo (o topo do HUD). +44.772 B no começo (não medido
+    pelo `teste-carga`, que roda sem `?tm`).
+- **A escala** (px, medida; PC 1920×1010 · 1280×720 · celular 844×390 · 667×375 · 568×320):
+  item da pausa / foco 31/39 · 21/28 · 18/20 · 18/19 · 17/18; título dos submenus 24 · 17 · 16 · 16 · 15; valor das Estatísticas
+  24 · 18 · 16 · 16 · 15; nome nas fichas do campinho 18 · 15 · 11 · 11 · 10; formação no campo 18–40 (6,2% do campo); placar
+  com `?tm` siglas/gols/relógio 15/23/20 no PC, 14/21/19 no celular e 13/20/18 em 568×320 e 640×360 (antes 13/20/17, 12/18/16 e
+  11/18/16); cartão do autor nome/número 26,3/17,7 · 20/15,6 · 18/14,3 · 18/14,3 · 18/14,3 (sem foto, o nome ≥ 15,6).
+- **As outras telas** ("e não é só aí"; o que mudou em cada uma):
+  - **Placar** (só com `?tm`, `css/tm.css`): siglas, gols e relógio na TM Cond 800 — letras maiores na MESMA altura (28/26/30) e a
+    barra igual ou mais estreita (H10, jogo / "+10" / intervalo; o "antes" é a medida do item 32 com a DejaVu Sans do CI:
+    844×390 234/258/249 → 230/253/239 px; 667×375 210/234/225 →
+    206/229/215; 568×320 202/226/217 → 194/217/207; em 568×320 as siglas de 13 px para não passar da largura de antes); o H1 com o
+    TM no pior caso 8,82 → 8,79% (844), 10,79 → 10,74% (667), 11,62 → 11,51% (568). Sem `?tm`, o de sempre.
+  - **Nome do condutor** (só com `?tm`): o número na TM Cond 800 (14 px; 13 com toque); o nome continua na Inter TM 700 (caixa
+    normal a 11–12 px: cabe e lê melhor).
+  - **"GOL!"** (`#gol-tela`): TM Cond 800 RETA, caixa alta, 0,02 em, ×1,1 do tamanho (`clamp(70px, 18.7vmin, 185px)`; com toque
+    `clamp(44px, 13.75vmin, 106px)`); só com a camada `.visivel`.
+  - **Faixa do intervalo e do fim** (`#faixa`): o título na 800 (26 px, 0,08 em), o placar na 800 (18 px) e os botões na 800
+    (17 px; o principal em caixa alta — revisão V-R7: antes os botões ficavam na Inter).
+  - **REPLAY e "Pular"**: a marca na 800 (14 px, 0,16 em); o "Pular" na 800 caixa alta (17 px, 0,06 em; ≥ 112 × 52).
+  - **Selo IMPEDIMENTO / POSIÇÃO LEGAL** (`#terco`): 800 caixa alta, 0,12 em, 17/15 px.
+  - **Faixa ENTRA/SAI** (`.faixa-subst`): a sigla, o número e "ENTRA"/"SAI" na 800; o NOME na 800 em CAIXA ALTA (22 px; 16 com
+    toque; a menor letra 10 → 11).
+  - **Cenas** (`css/cenas.css`): a tarja do cartão (sigla 15, número 24/18, nome caixa alta 22/16), a tarja do placar (gols 28/20;
+    os autores na Inter, 12 com toque), o painel (título 16/13 caixa alta, valores 20/16 `tabular-nums`, rótulos na Inter) e o
+    melhor em campo (rótulo na 600 caixa alta 13/11, nota na 800 24/18); a família `"Inter"` sem face → `--f-texto`.
+  - **Editar time** (`css/editor.css`, `js/editor-time.js`): o título "EDITAR TIME" (16/20), as abas (15/17), a nota, a posição
+    (10 → 11, caixa alta), o NOME (caixa alta), o número (10 → 11), os grupos (10 → 12), o selo (10 → 11 num círculo de 16) e os
+    botões na TM Cond; nenhuma letra < 11 px (o nome encolhia até 8,5 px: agora encolhe até 11 e, sem lugar, vai para a 600 e
+    ganha "…"; as cartas estreitas do celular com 4 px dos lados — revisão C-R3); o recorte do nome sobe e desce 0,2 em além da
+    linha (padding com a margem negativa do mesmo tanto: a caixa não muda — revisão V-R1, o til, o agudo e o cedilha das
+    maiúsculas eram comidos: "GUIMARAES", "AVILA"); a seta do "ATAQUE" em SVG (V-R4). **No PC a janela cresce com a tela**:
+    `min(max(1120px, 74vw), 1400px, 100%)` × `min(max(640px, 82vh), 860px, 100%)` (em 1280×720 a de antes) e `--ed-k` (1 a 1,3,
+    a janela ÷ 1120×640, `escalaPC`) escala as cartas do campo, as reservas e as letras delas (revisão V-R2: a janela crescia e as
+    cartas ficavam 104×64). `:where(.editor) button` (a família do `--fonte` sem passar por cima das classes com a TM Cond).
+  - **Tela antes do jogo** e **escalação do pré-jogo**: contratos "Tela antes do jogo (item 64)" (o bloco do item 125) e
+    "Pré-jogo" — na escalação o rótulo "ESCALAÇÃO" (600, 0,16 em), o nome do time (800 caixa alta), a formação e o número da carta
+    na TM Cond; os nomes de camisa continuam na 800 em caixa NORMAL (a conta das cartas do item 29, `letra-cond.js`, e as metas N
+    do `teste-escalacao-campo` são em caixa normal; caixa alta é decisão do dono).
+  - **Ajuda, Livre, online e disputa**: no contrato da pausa (o bloco "Item 125 nos submenus"); a disputa de pênaltis na 800 de
+    13 px (14 no PC; antes 800 de 11 px na fonte do sistema) e a vez na 600.
+  - **Não mudam**: os botões de toque (o `entrada.js rotuloQueCabe` mede o nome no canvas com o `--fonte`: trocar a fonte mexeria
+    no H9 e no `teste-controles`), "Gire o celular", o carregamento, a dica do PC e os textos do 3D (faixas, bandeirões, fachada).
+- **O que os testes conferem**: `tools/lib/tipografia.mjs` (as funções que rodam NA PÁGINA): **T1** toda família PEDIDA (a 1ª do
+  `font-family` computado do texto visível) tem `@font-face` ou é do sistema; **T2** a letra mínima ≥ 11 px (`mesmoTransparente`
+  conta o 1º quadro de uma animação de entrada) — chamadas pelo `teste-pausa-tela` P8, o `teste-comemoracao-tela` H17 e o
+  `teste-editor-tela` 15 (6 telas; reprova as 6 na base: letras de 10 px em 4 lugares e nomes encolhendo até 8,5 px). Também:
+  `teste-editor-tela` 16 (com `?tm` e nomes longos e acentuados em 1920×1010, 568×320 e 375×667: a tinta dos acentos e do
+  cedilha dentro do recorte do nome — +2,15 → −0,7/−1,86 px —, letras ≥ 11, cortado só com "…" — 0, ≤ 4, 0 —, a seta em SVG e,
+  no PC, as cartas ≥ 124 × 76 com a nota ≥ 26 px; reprova as 4 coisas em e60e2c7c); `teste-pausa-tela` P4/P8/P12/P13 (contrato
+  da pausa); `teste-comemoracao-tela` H3/H17 (contrato da comemoração); `teste-hud-minimo` H10/H10a (com `?tm` o relógio e os gols
+  na TM Cond carregada, as letras e as larguras acima) e H1/H1b; `teste-tm-tela` 1c (o relógio na TM Cond 800 carregada) e 5b
+  (o nome do condutor na Inter TM e o número na TM Cond) — mudanças DE PROPÓSITO; `teste-penaltis-tela` 1c (sem `?tm`, a TM Cond
+  800 e 600 já carregadas no 1º instante do painel; reprova em e60e2c7c); `teste-carga` — a TM Cond saiu do `SO_COM_TELA`
+  ("nunca com webdriver, nem na pré-carga": MUDOU DE PROPÓSITO, a pausa, as cenas e o cartão do autor a usam) e entrou em
+  `FONTES_DISP` (nunca no download inicial, pedida pela pré-carga) e `FONTES_DISP_EXT` (o latin-ext nunca); `teste-prejogo` (o
+  caso "a TM Cond sem carregar" da escalação em 568×320 olha a face 800, a bloqueada: a pré-carga traz a 600); `teste-substituicao-
+  tela` T3 (o nome da faixa ENTRA/SAI desenhado em caixa alta: o `innerText` volta "WALLACE PIMENTA" e o teste compara pelo
+  `toLocaleUpperCase('pt-BR')`); `teste-prepartida-tela` (sem mudança de meta: 83/83). `tools/lib/tempos-ci.mjs`: o
+  `teste-comemoracao-tela` 85 → 115 s e o `teste-editor-tela` 51 → 70 s (estimados aqui: acertar pelo log do CI).
+- **Medidas** (29d67bad → PR): download inicial sem `?tm` 2773 → 2784 KB nossos (+11 KB de CSS/JS, nenhuma fonte; folga até os 4
+  MB 647,4 → 636,6 KB); a pré-carga ociosa +44.772 B (a TM Cond 600 e 800 latin); com `?tm` +44.772 B no começo; famílias sem
+  `@font-face` pedidas pelo texto visível 4 lugares → 0; a menor letra do Editar time 10 px (nomes até 8,5) → 11; a pausa, o
+  placar e o cartão do autor nos contratos deles.
+- **Fica** (FILA itens 125 e 126 e "Depende do dono" 25): os números das camisas no canvas (`render/humano3d.js`) pedem
+  "Barlow Condensed", família sem `@font-face` (desenho 3D, fora deste item); sem `?tm`, um gol nos primeiros ~8 s (antes da
+  pré-carga) pode trocar a letra do "GOL!" no meio (o cartão do autor não: a fonte é pedida 1,6 s antes); 568×320 com os nomes
+  longos do TM ainda corta 3 nomes de 10 letras na pausa e 2 no Editar time (o limite físico de ~46 px por ficha); a TM Cond em
+  caixa normal pequena (≤ 16 px) com o espaçamento conferido só no Chromium daqui ("Per sonalizar", revisão V-R6 não
+  confirmada em aparelho); o download com `?tm` fora do `teste-carga`; a régua T1/T2 fora do `teste-cenas-tela` e do
+  `teste-prepartida-tela` (rodados só para ver se não quebravam); a cara do 3D se afasta um pouco dos menus do TM, que continuam
+  na Inter. Não rodados aqui (modo enxuto; o CI decide): `teste-estadio` (o "GOL!"), `teste-livre-tela`, `teste-controles` e o
+  `teste-cenas-tela` inteiro depois da revisão (antes dela, 122 itens; depois, `--so F`). Instáveis com a máquina carregada (a
+  base também): o T9 do `teste-substituicao-tela` (36 → 37 programas de shader numa rodada), o S1 online do `teste-pausa-tela` e o
+  E7* do `teste-prepartida-tela`.
 
 ## Pedidos de 11/10 — regras e controles (contrato)
 
@@ -2616,7 +2879,11 @@ IGUAIS.
   cada dígito a mais que o placar de todo dia (gols de 1 dígito e "97:13 +10") liga os mesmos passos mesmo sem encostar.
   `digitosExtra` conta os gols ≥ 10 e o relógio ≥ 100:00, que só aparece na pausa de um gol depois dos +10. Com um dígito a
   mais liga o `topo-c4` (~15 px); com dois ou mais, também o `topo-c3` (sai o "+N"). As fontes não mudam.
-- **`css/tm.css`** (só com `?tm`): a Inter TM (a `--fonte` de `html.tm`; a Inter continua sem baixar sem `?tm`), o fundo no
+- **`css/tm.css`** (só com `?tm`): a Inter TM (a `--fonte` de `html.tm`; a Inter continua sem baixar sem `?tm`) — desde o
+  item 125 as siglas, os gols e o relógio na TM Cond 800 (o `--f-disp`; o 800 latin com `preload` no `<head>`): siglas 14 px
+  (15 no PC, 13 nas telas baixas), gols 21 (23, 20), relógio 19 (20, 18), parado 15 (16), `tabular-nums`, as alturas
+  28/26/30 iguais e a barra igual ou mais estreita (contrato "Sistema tipográfico"; `teste-hud-minimo` H10a e `teste-tm-tela` 1c
+  mudaram de propósito) —, o fundo no
   degradê do cartão do TM, borda `rgba(34,197,94,.3)`, gols em `--tm-verde-cl`, o relógio no `--tm-botao` com `--tm-tinta`,
   parado no `--tm-verde-fundo` com `--tm-texto` (contraste ≈ 5:1), a marca com o `--tm-simbolo` (24 px a 18; PC 30 a 22).
 - **Medidas** (b3041818 → item 32; DejaVu Sans, a fonte do CI; caixa no jogo / "+10" / intervalo, px): 844×390 202×24 /
@@ -2954,7 +3221,8 @@ os de `config.js`. Sem `?tm` pro nada disso é baixado (o download inicial não 
 Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DOM/CSS (hash igual); sem `?tm` nada é baixado.
 - **`index.html`**: um `<script>` antes do CSS põe `html.tm` (só com `?tm=<id>` não vazio); outro DEPOIS do importmap escreve
   `<link rel="stylesheet" href="css/tm.css">` pelo parser (última folha, bloqueia o desenho: nada pisca com a cara do
-  GOLAÇO) e importa `js/tm-cara.js` (módulo antes do importmap faria o navegador ignorar o mapa).
+  GOLAÇO) e importa `js/tm-cara.js` (módulo antes do importmap faria o navegador ignorar o mapa). Desde o item 125 o mesmo
+  `<script>` escreve, antes do `tm.css`, o `<link rel="preload">` da TM Cond 800 latin (o placar a usa no 1º quadro).
 - **`css/tm.css`**: TUDO sob `html.tm`; a cara sai do `legacy-total-match/css/styles.css` (preto #050807, painel #0f1612, verde
   #22c55e/#4ade80, texto #eef5f0, fraco #8a9d90, botão principal em pílula com `linear-gradient(120deg,#34d572,#1fae55)`,
   cartões com raio 14–18 px e borda fina, segmentados separados). Variáveis `--tm-*` para peças novas; as do GOLAÇO
@@ -2962,11 +3230,15 @@ Pedido do dono: "deixa os botões, menu, tudo com a cara do total match". Só DO
   não baixa nada sem `?tm`), em `assets/tm/fontes` (OFL). Logo do TM no placar (`assets/tm/simbolo.png`), no carregamento,
   na abertura do pré-jogo, na tela "Gire o celular" (`assets/tm/logo.png`), no título da pausa/ajuda/editor e ao lado de
   "Escalação". Sem itálico nem inclinação: o GOL! e a vinheta do replay têm `@keyframes tm-*` retos, ligados só em
-  `prefers-reduced-motion: no-preference`. O que o jogo MEDE fica igual: peso/espaçamento dos nomes dos botões de toque,
+  `prefers-reduced-motion: no-preference`. **Item 125 (05/11)**: a regra antiga "nada condensado" mudou — a TM Cond (Barlow
+  Condensed, a letra da carta do TM; o `--f-disp`) nos títulos, itens de menu, números, nomes e siglas, com e sem `?tm`; o texto
+  corrido continua na Inter TM; nada itálico nem inclinado (contrato "Sistema tipográfico"; registrado no cabeçalho do `tm.css`).
+  O que o jogo MEDE fica igual: peso/espaçamento dos nomes dos botões de toque,
   alturas de 48 px. Celular deitado (360–480 px de altura): a faixa do intervalo/fim desce para baixo do lugar do aviso
   (ancorada pelo topo; com a linha ENTRA/SAI no topo, mais 42 px).
 - **`js/tm-cara.js`** (página): título, `theme-color`, ícone, "Total Match" na marca do carregamento (o texto fica para o
-  leitor de tela; na tela a logo), o texto do `#girar`; pede os 5 pesos da Inter e, quando chegam (ou falham), põe
+  leitor de tela; na tela a logo), o texto do `#girar`; pede os 5 pesos da Inter e (item 125) os 2 da TM Cond, 600 e 800, e,
+  quando chegam (ou falham), põe
   `<html data-fontes-tm="ok|falhou">` e manda `tm:fontes` na window → main.js `entrada.reposicionar()` + `hud.ajustarTopo()`
   (os nomes dos botões são medidos pelo canvas). `prejogo-tela.js`: a marca da abertura vira "Total Match" com `html.tm`.
 

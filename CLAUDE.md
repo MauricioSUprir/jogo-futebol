@@ -130,6 +130,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
   mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
   p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
+- **Pedidos do dono de 05/11 (print da pausa no PC)** — ENTREGUES no PR #621 (FILA 125 e 126; escolhas no "Depende do dono"
+  25): (125) "fontes tem que ser mais legais, o campinho um pouco maior, tem que ser mais legal, e não é só aí" — o sistema
+  tipográfico do 3D (ver "Sistema tipográfico" abaixo), a pausa com o campinho ~1,5× maior no PC e as outras telas; (126) "a foto
+  com o nome tem que ser mais embaixo e menor, no canto inferior" — o cartão do autor embaixo à DIREITA (no celular, logo acima
+  do "Pular"), ~4× menor no PC e ~2× no celular.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -461,9 +466,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
   **Cartão do autor** (item 31, #615, dono 17/10: "a FOTO do autor com o número e o nome"; contrato "Comemoração do gol",
-  `PESQUISA-ESTADIO.md` §10.1): `#autor-gol` dentro do `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à
-  DIREITA na linha do placar (o único lugar livre do autor em todos os planos; no celular a steadicam põe o autor no terço
-  esquerdo); foto (só a da edição pro do TM: o `tm3d.js` põe `foto` no pedido — TM v376 —, lida pelo lado + `tmId` em
+  `PESQUISA-ESTADIO.md` §10.1): `#autor-gol` dentro do `#comemoracao` (fora do `#hud`; some com a cena), no canto de BAIXO à
+  DIREITA desde o item 126 (PR #621; dono, 05/11: "mais embaixo e menor, no canto inferior": o de baixo à esquerda tapa o autor
+  em 73–78% dos quadros no celular, que o põe no terço esquerdo; com toque o "Pular" fica no canto do replay e o cartão logo
+  acima dele; a foto 73 px no PC 1920×1010 e 47 no 844×390, antes 182 e 92; o nome em caixa alta na TM Cond 800; testes
+  H13–H17); foto (só a da edição pro do TM: o `tm3d.js` põe `foto` no pedido — TM v376 —, lida pelo lado + `tmId` em
   `js/tm-fotos.js`, por `import()` depois do pronto, fora do hash; o pé dela escurece até o fundo do cartão), a pílula com escudo,
   sigla e número, e o NOME completo como a linha principal (também no celular: a camisa do `tm-times` corta em 10 letras); sem
   foto, uma linha só da altura do placar, nada desenhado no lugar. Entra 0,4 s depois do 1º corte, fica 3,5 s (curta 2,6), sai
@@ -610,6 +617,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
   texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
   dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
+- **Sistema tipográfico** (item 125, PR #621; contrato "Sistema tipográfico (item 125)", `PESQUISA-ESTADIO.md` §7.6): dois
+  papéis no `estilo.css :root` — `--f-disp` = a TM Cond (Barlow Condensed 600 e 800, OFL, a letra da carta do TM;
+  `assets/tm/fontes/tmcond-{600,800}-latin(-ext).woff2`, faces e reservas com `size-adjust` no `estilo.css`) nos títulos, itens
+  de menu, números, nomes e siglas, e `--f-texto` = o `--fonte` (a Inter TM com `?tm`) no texto corrido. Peça nova de
+  interface usa um dos dois, nunca uma família solta. Regras: itens de menu em caixa normal sem espaçamento extra; nomes,
+  siglas e rótulos curtos em caixa alta; condensada a partir de ~14 px (abaixo só em caixa alta); nada itálico; nenhuma letra
+  < 11 px (≥ 10 só nas fichas da pausa em 568×320). Sem `?tm` o download inicial NÃO cresce: a TM Cond vem pela pré-carga
+  ociosa da pausa (`main.js fontesPausa`/`pedirFontesDisp`; exceção: o modo Pênaltis, ~44 KB); com `?tm` o `tm-cara.js`
+  carrega os 2 pesos e o `index.html` faz o `preload` do 800. Régua: `tools/lib/tipografia.mjs` (família pedida sem face, letra
+  mínima) no `teste-pausa-tela` P8, `teste-comemoracao-tela` H17 e `teste-editor-tela` 15; `teste-carga` (`FONTES_DISP`). Fica:
+  os números das camisas no canvas pedem "Barlow Condensed", sem face.
 - **Tela antes do jogo** (item 64, PR #613; dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o
   Total Match com cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do
   dono" 19; o que ficou nos itens 100–107): a pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo
@@ -1017,8 +1035,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - **Visual = a cara do Total Match** (dono, 09/10: "deixa os botões, menu, tudo com a cara do total match"):
   `css/tm.css`, carregado por ÚLTIMO, troca a aparência de menus/pausa/configurações, HUD (placar com o logo TM,
   faixas, gol, cartão, escalação), controles de toque e carregamento — Inter, preto #050807 + verde #22c55e, botão
-  principal em pílula com degradê verde, cartões arredondados com borda fina; nada itálico/inclinado/condensado e
-  nada de emoji como ícone. Fontes locais em `assets/fontes` (Inter; Barlow Condensed só nos números das camisas e
+  principal em pílula com degradê verde, cartões arredondados com borda fina; nada itálico nem inclinado e
+  nada de emoji como ícone (o "nada condensado" mudou no item 125, dono 05/11: "fontes tem que ser mais legais" — no 3D do
+  TM, o `golaco/`, a TM Cond vale nos títulos, números, nomes e siglas; o texto corrido e os menus do próprio TM, na Inter). Fontes locais em `assets/fontes` (Inter; Barlow Condensed só nos números das camisas e
   letras dos escudos), logo em `assets/tm-logo.png`. Peça nova de interface: usar as variáveis `--tm-*` desse arquivo.
 
 - Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
