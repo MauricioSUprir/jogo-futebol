@@ -59,7 +59,16 @@ h2 .ac{color:var(--azul)}
 .bloco ul{list-style:none;margin-top:12px}
 .bloco li{font-size:19px;line-height:1.4;color:var(--creme);padding:6px 0;border-bottom:1px solid var(--linha)}
 .bloco li:last-child{border-bottom:0}
-.fonte{position:absolute;left:110px;bottom:52px;font-size:16px;color:var(--tinta2)}
+.claro .bloco li{color:var(--tinta);border-bottom-color:var(--borda)}
+.fonte{position:absolute;left:110px;bottom:52px;font-size:16px;color:var(--cinza)}
+.claro .fonte{color:var(--tinta2)}
+
+/* lista numerada (objetivo) */
+.lista{list-style:none;margin-top:44px;counter-reset:n;max-width:1180px}
+.lista li{counter-increment:n;display:grid;grid-template-columns:70px 1fr;align-items:baseline;font-size:28px;line-height:1.35;padding:16px 0;border-top:1px solid var(--borda)}
+.lista li::before{content:counter(n);font-size:22px;font-weight:800;color:var(--azul2)}
+.c5{grid-template-columns:repeat(5,1fr);gap:30px}
+.c5 .bloco h3{font-size:24px}.c5 .bloco p{font-size:19px}
 
 /* demonstração */
 .demo{display:grid;grid-template-columns:auto 1fr;gap:60px;margin-top:40px;align-items:start}
@@ -133,7 +142,7 @@ h2 .ac{color:var(--azul)}
 <body>
 <div class="palco"><div class="deck" id="deck">
 
-<!-- 1 CAPA -->
+<!-- CAPA -->
 <section class="slide escuro" aria-label="Capa">
   <div class="capa-logo"><img src="../assets/logo.svg" alt="" />MindTrack AI</div>
   <div class="capa-meio">
@@ -147,8 +156,20 @@ h2 .ac{color:var(--azul)}
   </div>
 </section>
 
-<!-- 2 PROBLEMA -->
-<section class="slide claro" aria-label="O problema">
+<!-- QUEM SOMOS -->
+<section class="slide claro" aria-label="Quem somos">
+  <h2>Quem somos</h2>
+  <p class="lead">A MindTrack AI é uma startup de tecnologia educacional que usa inteligência artificial para ajudar cada aluno a estudar do jeito certo.</p>
+  <div class="colunas c3">
+    <div class="bloco"><div class="n">O que é</div><h3>Uma plataforma de estudo</h3><p>Conteúdos didáticos, exercícios personalizados e acompanhamento da aprendizagem num lugar só.</p></div>
+    <div class="bloco"><div class="n">Para quem</div><h3>Escolas e reforço escolar</h3><p>Feita para as escolas e também para o aluno que precisa de reforço fora da sala de aula.</p></div>
+    <div class="bloco"><div class="n">Missão</div><h3>Ensino para cada aluno</h3><p>Tornar o ensino mais acessível, eficiente e adaptado às necessidades de cada aluno.</p></div>
+  </div>
+  <span class="pg">2</span>
+</section>
+
+<!-- O PROBLEMA -->
+<section class="slide escuro" aria-label="O problema">
   <h2>O problema</h2>
   <p class="lead">Cada aluno aprende de um jeito, mas a escola ainda ensina todo mundo igual. No dia a dia, isso aparece assim:</p>
   <div class="colunas c3">
@@ -157,11 +178,39 @@ h2 .ac{color:var(--azul)}
     <div class="bloco"><div class="n">3</div><h3>Reforço caro</h3><p>Aula particular não cabe no bolso da maioria das famílias, principalmente na escola pública.</p></div>
   </div>
   <p class="fonte">46 milhões de estudantes na educação básica no Brasil (Censo Escolar, Inep).</p>
-  <span class="pg">2</span>
+  <span class="pg">3</span>
 </section>
 
-<!-- 3 COMO FUNCIONA -->
-<section class="slide escuro" aria-label="Como funciona">
+<!-- NOSSO OBJETIVO -->
+<section class="slide claro" aria-label="Nosso objetivo">
+  <h2>Nosso objetivo</h2>
+  <p class="lead" style="color:var(--tinta);font-size:32px;font-weight:600">Personalizar o ensino e ajudar cada aluno a alcançar o seu potencial.</p>
+  <ol class="lista">
+    <li>Identificar as dificuldades em cada matéria</li>
+    <li>Criar cronogramas de estudo personalizados</li>
+    <li>Disponibilizar materiais didáticos digitais</li>
+    <li>Acompanhar o progresso dos alunos</li>
+    <li>Ajudar os professores a acompanhar a aprendizagem</li>
+  </ol>
+  <span class="pg">4</span>
+</section>
+
+<!-- O QUE TORNA ESPECIAL -->
+<section class="slide escuro" aria-label="O que torna a MindTrack AI especial">
+  <h2>O que torna a <span class="ac">MindTrack AI</span> especial</h2>
+  <p class="lead">Muito além de uma plataforma digital: uma IA que entende as necessidades do aluno. Diferente do método tradicional, o aprendizado se adapta a cada um.</p>
+  <div class="colunas c5">
+    <div class="bloco"><div class="n">1</div><h3>IA personalizada</h3><p>Identifica as dificuldades e recomenda atividades.</p></div>
+    <div class="bloco"><div class="n">2</div><h3>Cronograma inteligente</h3><p>Organiza os estudos pelas provas e tarefas.</p></div>
+    <div class="bloco"><div class="n">3</div><h3>Materiais integrados</h3><p>Reúne os conteúdos numa plataforma só.</p></div>
+    <div class="bloco"><div class="n">4</div><h3>Acompanhamento contínuo</h3><p>Monitora a evolução e as notas do ano.</p></div>
+    <div class="bloco"><div class="n">5</div><h3>Integração escolar</h3><p>Conecta alunos, professores e tecnologia.</p></div>
+  </div>
+  <span class="pg">5</span>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="slide claro" aria-label="Como funciona">
   <h2>Como o <span class="ac">MindTrack</span> funciona</h2>
   <p class="lead">Quatro etapas para transformar dificuldades em evolução.</p>
   <div class="colunas c4">
@@ -174,10 +223,10 @@ h2 .ac{color:var(--azul)}
     <div class="bloco"><div class="n">4</div><h3>Continuidade</h3><p>Acompanha a evolução e ajusta os estudos conforme o progresso.</p>
       <ul><li>Sequência de estudo</li><li>Duelos de quiz com amigos</li></ul></div>
   </div>
-  <span class="pg">3</span>
+  <span class="pg">6</span>
 </section>
 
-<!-- 4 DEMONSTRAÇÃO -->
+<!-- DEMONSTRAÇÃO -->
 <section class="slide claro" aria-label="Demonstração">
   <h2>O app funcionando</h2>
   <div class="demo">
@@ -193,7 +242,7 @@ h2 .ac{color:var(--azul)}
       <div class="acesso"><img src="img/qr.svg" alt="QR code do app" /><div><b>Teste no celular</b><a href="https://mindtrack-ai-ws6c.onrender.com/">mindtrack-ai-ws6c.onrender.com</a></div></div>
     </div>
   </div>
-  <span class="pg">4</span>
+  <span class="pg">7</span>
 </section>
 
 <!-- 5 MODELO DE NEGÓCIOS -->
@@ -226,10 +275,10 @@ h2 .ac{color:var(--azul)}
     </div>
   </div>
   <p class="exemplo">Estratégia: vender pacotes às escolas particulares e atender as redes públicas por contratos com o governo. <b>Exemplo: uma escola com 300 alunos no pacote de R$ 1.500 = R$ 450 mil por ano.</b></p>
-  <span class="pg">5</span>
+  <span class="pg">8</span>
 </section>
 
-<!-- 6 INVESTIMENTO -->
+<!-- INVESTIMENTO -->
 <section class="slide claro" aria-label="Investimento inicial e custos">
   <h2>Investimento inicial e custos</h2>
   <div class="invest">
@@ -249,10 +298,10 @@ h2 .ac{color:var(--azul)}
       <p class="nota" style="margin-top:34px;font-size:22px">O investimento permite desenvolver a plataforma, garantir a infraestrutura e começar a divulgação nas escolas.</p>
     </div>
   </div>
-  <span class="pg">6</span>
+  <span class="pg">9</span>
 </section>
 
-<!-- 7 OBRIGADO -->
+<!-- OBRIGADO -->
 <section class="slide escuro" aria-label="Obrigado">
   <div class="fim">
     <h1>Obrigado!</h1>
@@ -266,7 +315,7 @@ h2 .ac{color:var(--azul)}
 
 <nav class="nav" id="nav" aria-label="Slides">
   <button id="ant" aria-label="Slide anterior">‹</button>
-  <span class="pos" id="pos">1 / 7</span>
+  <span class="pos" id="pos">1 / 10</span>
   <button id="prox" aria-label="Próximo slide">›</button>
   <button id="tela" aria-label="Tela cheia">Tela cheia</button>
   <a href="MindTrack-AI-Apresentacao.pdf" download>PDF</a>
