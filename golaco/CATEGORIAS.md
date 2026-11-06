@@ -4,7 +4,7 @@
 > **Como funciona:** o dono escolhe a categoria; nada começa sem o aval dele. Cada item vira um PR.
 > Atualizado em 06/11.
 
-**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) ou da escalação em pé, da foto do autor e do tempo de jogo e da dificuldade (05/11) ou do clássico (06/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
+**Legenda:** 🆕 pedido novo (23/10 ou 29/10) · 🔎 achado na entrega do carrinho, da faixa de baixo, do placar, da câmera, da mira (02/11) ou da pausa e da tela antes do jogo (04/11) ou da escalação em pé, da foto do autor e do tempo de jogo e da dificuldade (05/11) ou do clássico e do CI do #621 (06/11) · ⏳ espera o seu aval para começar · ⭐ prioridade pedida pelo dono · ⚙️ muda as partidas (os lances do jogo) · ✅ entregue
 
 ---
 
@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ B. Correções e regras — ~32 h
+## 🛠️ B. Correções e regras — ~34 h
 
 | nº | o que é | horas |
 |---|---|---|
@@ -43,6 +43,7 @@
 | 114 | ✅ Os tempos do teste da dificuldade (792 s), do teste da pausa (250 s) e do teste da tela antes do jogo (430 s) na divisão do CI, do log do 1º CI do #618 (#619) | 0,25 |
 | 115 | 🔎 Conferir rodando o que o tempo de jogo e a dificuldade não rodaram depois da revisão: o online do TM, o TM na edição pública, os Pênaltis e o Modo Livre do TM, o Viverde e o ‹ › da pausa num celular de verdade | 1,5 |
 | 127 | 🔎 A falta tática dentro da própria área (o zagueiro batido puxa a camisa e é pênalti com amarelo): tirar, como já é no "segurar" | 1 |
+| 128 | 🔎 Um teste de desempenho no celular (informativo) acusa sobra de memória depois de 10 substituições (geometrias 33 → 37) e a CPU da comemoração acima do jogo; já acontecia antes dos itens 124–126 | 2 |
 
 ---
 
@@ -169,15 +170,15 @@
 
 ---
 
-## 🎨 I. Visual, corpo e estádios — ~132 h + lotes
+## 🎨 I. Visual, corpo e estádios — ~74 h a fazer + lotes
 
 | nº | o que é | horas |
 |---|---|---|
 | 69 | ✅ **Cadeiras e torcida em 3D**, parecidas com as reais, em todos os estádios (4 PRs: a cadeira e o degrau (#586); o torcedor 3D sentado nas cadeiras de perto, com as poses do quadro (#593); o impostor octaédrico assado na carga, a escolha por bloco e a densidade real perto (#595); os 523 estádios calibrados — fileiras de 0,8 m por metro, caimento ≤ 34°, escada de ~1,2 m, nenhuma cadeira sobreposta ou dentro de um sólido, o torcedor no tamanho de gente, a lotação dos sem forma e as cores da base = as desenhadas (#596)) | 52 |
 | 61 | 🆕 **Passada natural** (no túnel e na fila parecem marchar) | 5 |
-| 62 | 🆕 Linha escura na nuca (costura da textura da cabeça) | 2 |
-| 63 | 🆕 Bordas tracejadas em volta dos números e patrocínios das camisas | 2 |
-| 77 | 🔎 Carrinho: a mão de apoio do boneco simples encostar no chão | 2 |
+| 62 | ✅ **Linha escura na nuca**: era o relevo do pano do corpo desenhado na cabeça; a cabeça ficou lisa, sem a linha de costas e sem as rugas no rosto (#631) | 2 |
+| 63 | ✅ **Bordas tracejadas em volta dos números e patrocínios das camisas**: a camisa lê os logos e os números sem o erro que pegava a borda da caixa, e as máscaras dos logos com margem e sem névoa (o logo do mesmo tamanho na camisa) (#631) | 2 |
+| 77 | ✅ **Carrinho: a mão de apoio no chão**, no boneco simples e no corpo novo (a palma virada para o chão), acompanhando a queda e o levantar; a manga comprida do goleiro cobre o braço inteiro (#631) | 2 |
 | F1 | Rostos do Brasileirão com o processo novo (a versão de teste) | 6 |
 | 45 | Gráficos melhores no celular (Baixa e Média) | 12 |
 | 46 | Sombra do estádio no gramado de dia | 6 |
@@ -217,12 +218,14 @@
 23. 🏟️ Item 124 (a tela antes do jogo no lugar da janela "Jogar em 3D / Simular", #620): feito com as escolhas recomendadas — a janela saiu de todo modo com o seu time (dá para deixá-la como 3ª opção na Config, "Perguntar"); "Simular partida" é o simulador do TM, lance a lance, com os titulares da tela (dá para simular pelo jogo 3D, como no item 64: aí a formação e a tática do Personalizar também valeriam); na Config, "Tela antes do jogo" ou "Sempre simular", e toda escolha antiga virou a tela uma vez (dá para respeitar o "Sempre simular" antigo); ficam fora do 3D o Online de salas e o Duelo ao vivo (o resultado é dividido com a outra pessoa), os pênaltis e a prorrogação do TM, o Rumo ao Estrelato no banco, o Palpite e a Base com menos de 11; o X do carregamento simula calado (a confirmação "Sair do 3D?" agora aparece por cima do 3D; antes ficava atrás e o X não fazia nada). Da revisão: o "Simular direto" da Partida rápida simula sem o 3D; em pé, o "Gire o celular" tem o "Simular partida"; só o "Jogar partida" liga o som. **A decidir:** o "Enfrentar" do Ultimate Online e a Copa Online continuam no 3D, como já estavam pela janela — (a) manter (recomendado: o adversário é a IA com o elenco da outra pessoa, como nas Rivais) ou (b) só simulados, ~0,5 h; a tela aparecer enquanto o jogo carrega (item 106) sobe de prioridade (recomendado): agora toda partida passa pelo carregamento do 3D, 5 a 13 s até a tela no Chromium sem GPU, também para quem só quer simular (o "Sempre simular" resolve para quem simula muito). Para conferir no seu celular: o tempo até a tela, o "Gire o celular" com o botão no app instalado e a confirmação do X no meio da tela. Detalhes na FILA ("Depende do dono" 24).
 24. 🔤 Itens 125 e 126 (a letra nova, o campinho e o cartão do autor, #621): feitos com as escolhas recomendadas — a letra da carta do TM (a Barlow Condensed) nos títulos, números e nomes e a Inter no texto (dá para usar uma letra mais "videogame", a Saira, ou mais "editorial", a Sofia Sans); dois pesos (dá para pôr um 3º); tudo reto, sem itálico (dá para pôr o "GOL!" itálico); a lista da pausa em letra normal, como no FC 24 (dá para pôr tudo em MAIÚSCULAS); o campinho da pausa com 36% da largura no PC (dá 34% ou 37%); no celular, sem o nome do time em cima do campinho (+32% de campo); o placar do TM na letra nova (dá para voltar à Inter do item 32); o Editar time maior no PC (dá para manter o tamanho); os nomes da escalação do pré-jogo continuam em letra normal (em MAIÚSCULAS alguns nomes longos sairiam com "…" no celular pequeno). O cartão do autor: embaixo à direita no PC e no celular (dá para pôr embaixo à esquerda no PC, como a TV; no celular a esquerda tapa o autor em ~3 de cada 4 quadros); no celular, logo acima do "Pular", que fica no mesmo lugar do replay (dá para colar o cartão no canto e subir o "Pular", ou pôr o "Pular" em cima); a foto de 73 px no PC grande e de 47 no celular. Dá para fazer ainda: a letra nova nos números das camisas do 3D, os nomes da pausa sem "…" no celular pequeno e fontes mais leves. Para conferir no seu celular: a letra chegando pela rede, as letras pequenas e o cartão com o entalhe. Detalhes na FILA ("Depende do dono" 25).
 25. 🔁 Item 30 (a cena de substituição no online, #622): feito com as escolhas recomendadas — vale a opção de quem criou a sala, nos dois aparelhos (dá para cada um usar a sua, ou levar a escolha pelo pedido do TM); cada um vê e pula só a sua cena e quem acaba antes espera o outro, com "ainda está vendo a cena" no aviso, sem o "Conexão instável" e sem W.O. (dá para o "Pular" valer só quando os dois pulam, ou o pulo de um pular para os dois); a troca que o outro faz abre a mesma cena no mesmo tick nos dois (dá para a cena aparecer só para quem trocou: o outro vê só a faixa e espera); o menu aberto não congela a cena nem a pula. **Decidido** (06/11, você: "corrige"): com o menu aberto no online a tecla também não pula mais o REPLAY nem a COMEMORAÇÃO — o mesmo tratamento da substituição (item 129, #630). Para conferir com duas pessoas: a espera quando um pula e o outro não. Detalhes na FILA ("Depende do dono" 26).
+26. 🧍 Itens 62, 63 e 77 (a nuca, as bordas dos decalques e a mão do carrinho, #631): feitos com as escolhas recomendadas — a cabeça lisa, sem relevo (dá para fazer um relevo próprio da cabeça, com poros e cabelo, junto com o acabamento dos closes, item 49); a costura do meio da cabeça (uma linha de tom de leve, do alto do cabelo à gola, só no close de costas; já existia) fica para junto dos rostos novos (F1, ~2 h; dá para fazer um PR só para ela agora); os logos não encostam mais na borda: ficam do mesmo tamanho na camisa, mas 29 dos 161 perdem um pouco de nitidez de perto (o LUBRAX do Flamengo ~15% no close; de longe, igual) — dá para pôr máscaras maiores só nesses (o download da versão de teste cresce) ou refazer a partir dos logos originais; a mão de apoio no chão vale pela pose, também em quem cai sentado depois de um cabeceio (dá para deixar só no carrinho). Para conferir no seu celular (a prova que faltou): o túnel e a fila do pré-jogo na versão de teste sem os retângulos tracejados, a nuca de costas e se o jogo continua leve. Detalhes na FILA ("Depende do dono" 27).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
 - 🔁 O menu aberto no online não pula mais o replay nem a comemoração: a cena segue andando, as teclas são do menu (P e Esc fecham, H abre a Ajuda, Enter e o A do controle apertam o botão) e, com o menu fechado, um aperto novo pula como antes (item 129, #630)
+- 🧍 O acabamento do corpo: a nuca sem a linha escura (e o rosto sem as rugas), os números e patrocínios das camisas sem os retângulos tracejados em volta e a mão de apoio do carrinho no chão, no boneco simples e no corpo novo; só desenho, o jogo continua igual (itens 62, 63 e 77, #631)
 - 🔁 A cena de substituição no online: a opção de quem criou a sala vale nos dois aparelhos, cada um vê e pula a sua cena e quem acaba antes espera o outro com "ainda está vendo a cena" no aviso, nunca "A conexão parou"; o jogo continua igual nos dois (item 30, #622)
 - 🔤 A letra esportiva da carta do TM nos títulos, números e nomes de todas as telas do 3D, o campinho da pausa ~1,5× maior e mais caprichado (a formação dentro do campo, os nomes em maiúsculas, "você" em destaque) e o Editar time maior no PC, sem crescer o download do começo (item 125, #621)
 - 📸 O cartão do autor do gol menor e no canto de baixo à direita: ~4× menor no PC e ~2× no celular, o nome inteiro também no celular pequeno, nunca em cima do autor (item 126, #621)

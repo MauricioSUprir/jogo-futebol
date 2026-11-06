@@ -166,7 +166,7 @@ export const TEMPOS_NAVEGADOR = {
   // com as outras frentes rodando; o teste inteiro 776 s com a carga ~14 — o P5 estourou os 240 s nele e na base — e a parte
   // principal 305 s com a carga ~5; estimado ~+130 s; acertar pelo log do CI)
   'teste-online-tela.mjs': 460,
-  'teste-corpo-tela.mjs': 150,
+  'teste-corpo-tela.mjs': 240, // +C9 (os closes da nuca) e C10 (as 161 máscaras lidas): ~+40 s (itens 62/63; 258 s aqui com carga 9–11); +C9b e C11 (16 quadros a mais, 4 variantes do shader): 221 s aqui com carga ~3
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
   'teste-mira-tela.mjs': 60,
   // (item 66: medido aqui com a máquina sozinha, J 75 s + A/E/F/N 130 s; acertar pelo log do CI)

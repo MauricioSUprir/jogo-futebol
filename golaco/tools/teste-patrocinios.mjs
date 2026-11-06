@@ -8,7 +8,18 @@
 //      URL do logo; sem ela (edição pública: a página nem baixa), os kits ficam como eram (sem `decais`);
 //   P5 a máscara não é uma mancha: em cada logo, ≤ 82% da caixa do desenho é cheia (logo com forma cheia tem o texto
 //      vazado — gerar.mjs).
-// Na versão sem os patrocínios reprova (P1: o índice não existe).
+//   P6 o shader do corpo (js/render/humano3d.js, DECL_F + COR_F) sem derivada implícita dentro de desvio (item 63:
+//      "retângulos tracejados brancos em volta dos números e patrocínios"; GLSL ES 3.00 §8.9 — indefinida em fluxo não
+//      uniforme; a GPU de verdade pega um mip qualquer na borda da caixa): nenhum texture() nas texturas com mipmap (logos,
+//      dígitos, rostos, cabeça) — só textureGrad ou textureLod —, nenhum dFdx/dFdy/fwidth nas funções do DECL_F e, no COR_F,
+//      só antes do 1º desvio (no topo). É a REGRA no texto; o comportamento se mede no navegador (teste-corpo-tela C11: o
+//      SwiftShader do CI mostra uma parte do defeito — o ponto no canto da caixa, a linha pontilhada na manga e o decalque de
+//      cima apagando o de baixo em quads — e o C11 compara o shader com a variante de derivada implícita).
+//   P7 a borda das máscaras feita (item 63; tools/patrocinios/borda.mjs + refazer-bordas.mjs — sem a névoa, o desenho a ≥ 8
+//      px da caixa do shader, encolhido pela `escala`): cada logo no registro `bordas` do índice e a `escala` de cada
+//      decalque = a do registro (ausente quando 1), entre 0,7 e 1 (o logo não perde mais de 30% da resolução). A máscara em
+//      si (margem, névoa, nada fora da caixa) se mede no navegador: teste-corpo-tela C10.
+// Na versão sem os patrocínios reprova (P1: o índice não existe); na base do item 63 (7cb052ad) reprovam o P6 e o P7.
 //   node tools/teste-patrocinios.mjs
 import fs from 'node:fs';
 import path from 'node:path';
@@ -74,6 +85,43 @@ let manchas = [];
 const cheio = idx.cheio ?? null;
 if (cheio) manchas = Object.entries(cheio).filter(([, v]) => v > 0.82).map(([k]) => k);
 reg('P5 a máscara não é uma mancha (≤ 82% da caixa cheia)', cheio ? `${manchas.length} manchas${manchas.length ? ' (ex.: ' + manchas[0] + ')' : ''} em ${Object.keys(cheio).length}` : 'sem a medida no índice', '≤ 3', !!cheio && manchas.length <= 3);
+
+// P7: a borda das máscaras feita (o registro e a escala de cada decalque)
+{
+  const bordas = idx.bordas ?? null;
+  const erros = [];
+  let nEsc = 0;
+  for (const [clube, kits] of Object.entries(idx.clubes ?? {})) for (const [k, lista] of Object.entries(kits)) for (const d of lista) {
+    const e = bordas?.[d.logo];
+    if (e === undefined) { erros.push(`${clube}/${k}/${d.logo}: fora do registro`); continue; }
+    if (!(e >= 0.7 && e <= 1)) erros.push(`${d.logo}: escala ${e}`);
+    if ((d.escala ?? 1) !== e) erros.push(`${clube}/${k}/${d.logo}: escala ${d.escala} ≠ ${e}`);
+    if (d.escala !== undefined) nEsc++;
+  }
+  reg('P7 a borda das máscaras feita: cada logo no registro, a escala do decalque = a dele (0,7–1)',
+    bordas ? `${Object.keys(bordas).length} no registro; ${nEsc} decalques com escala; ${erros.length} erros${erros.length ? ' (ex.: ' + erros[0] + ')' : ''}` : 'sem o registro `bordas` no índice',
+    'todos; 0 erros', !!bordas && erros.length === 0 && usados.size > 0 && [...usados].every(l => l in bordas));
+}
+
+// P6: o shader do corpo sem derivada implícita dentro de desvio
+{
+  const fonte = fs.readFileSync(path.join(RAIZ, 'js/render/humano3d.js'), 'utf8');
+  const bloco = nome => (fonte.match(new RegExp('const ' + nome + ' = `([\\s\\S]*?)`;')) ?? [])[1] ?? null;
+  const semComentario = t => t.replace(/\/\/[^\n]*/g, '');
+  const decl = bloco('DECL_F'), cor = bloco('COR_F');
+  if (!decl || !cor) reg('P6 o shader do corpo sem derivada implícita dentro de desvio', 'DECL_F/COR_F não achados em humano3d.js', 'achados', false);
+  else {
+    const d = semComentario(decl), c = semComentario(cor);
+    const DER = /\b(dFdx|dFdy|fwidth)\s*\(/g, TEX = /\btexture\s*\(\s*(tLogos|tDigitos|tRostos|tCabeca)\b/g;
+    const tex = [...(d + c).matchAll(TEX)].map(m => m[1]);
+    const derDecl = [...d.matchAll(DER)].length;
+    const i1 = c.search(/\bif\s*\(/);
+    const derDesvio = [...c.matchAll(DER)].filter(m => i1 >= 0 && m.index > i1).length;
+    reg('P6 o shader do corpo sem derivada implícita dentro de desvio (texture com mipmap; dFdx/dFdy/fwidth fora do topo)',
+      `texture(): ${tex.length}${tex.length ? ' (' + tex.join(', ') + ')' : ''}; derivadas nas funções: ${derDecl}; no COR_F depois do 1º desvio: ${derDesvio}`,
+      '0; 0; 0', tex.length === 0 && derDecl === 0 && derDesvio === 0);
+  }
+}
 
 console.log(tabelaTexto(linhas));
 process.exit(falhas ? 1 : 0);

@@ -103,6 +103,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   tiro de meta) e os jeitos de bater o pênalti (pulinho, paradinha e outros), os dois na C; item 69, cadeiras e torcida em 3D
   em todos os estádios, na I. Status, plano, fontes e as decisões dele em `golaco/FILA.md` ("Depende do dono" 11 e 12);
   resumo em `golaco/CATEGORIAS.md`.
+  **Categoria I (visual, corpo e estádios; aprovada pelo dono)**: I-1 (itens 62 nuca, 63 bordas dos decalques e 77 mão
+  de apoio do carrinho) ENTREGUE no PR #631 (06/11); as escolhas em `golaco/FILA.md` "Depende do dono" 27.
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
   `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
@@ -1011,6 +1013,28 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `assets/tm/patrocinios.json`, gerados por `tools/patrocinios/gerar.mjs` a partir da pesquisa com as fontes), decalques
   planos no espaço de repouso no shader (`render/humano3d.js`; peito, ombro, manga, barra, número, calção, fornecedor).
   Para TIRAR: apagar o índice e a pasta. Testes: `teste-patrocinios` (Node) e `teste-corpo-tela` C6/C7.
+  **Acabamento do corpo** (itens 62, 63 e 77, categoria I, 06/11, PR #631; contratos "Corpo humano realista", "Rostos
+  reais — Etapa 5.2", "Patrocínios nas camisas reais" e "Carrinho (item 34)"; só desenho, hash igual):
+  - **A linha escura na nuca NÃO era a costura da textura.** Era o mapa de normais do PANO do corpo lido pela UV da
+    cabeça. A troca do `normalScale` no `onBeforeCompile` não achava o trecho, porque ali os `#include` ainda estão
+    fechados. A cabeça usa a normal da malha, e toda troca no texto do shader passa por `trocar()`, que avisa no console.
+  - **Os retângulos tracejados em volta dos números e logos** vinham da derivada implícita dentro de desvio (GLSL ES 3.00
+    §8.9: indefinida; a GPU de verdade pega um mip qualquer na borda da caixa). As derivadas saem no topo do `COR_F`;
+    logos e dígitos leem por `textureGrad` e a cabeça por `textureLod` (o `textureGrad` pesa no celular).
+  - **As máscaras dos patrocínios** ficam sem névoa e com margem de 8 px (`tools/patrocinios/borda.mjs`): o logo encolhe
+    dentro da máscara pela `escala` e a caixa cresce, então fica do mesmo tamanho na camisa. A rampa da névoa NÃO é
+    idempotente: o registro `bordas` do índice diz quem já passou.
+  - **A mão de apoio do carrinho no chão**, só no desenho (`render/apoio-mao.js`, peso pela pose): a mão desce no máximo
+    0,1 m além da do jogo (levar "até o chão pelo peso" dava estalo na queda). Manequim 0,073 → 0,003 m; corpo novo
+    0,063 → 0,001 m, com a palma no chão. A manga comprida do goleiro cobre o braço inteiro.
+  - Testes: `teste-corpo-tela` C9/C9b/C10/C11, `teste-patrocinios` P6/P7, `teste-carrinho` P6 e `teste-ossos` O8/O9.
+  Lições:
+  - **Troca de texto em shader que não acha o trecho passa calada**: sempre por uma função que avisa.
+  - **O SwiftShader do CI mostra só parte de um defeito de derivada**: a prova de shader pede a regra estática, uma
+    variante do shader no mesmo quadro e um print num aparelho de verdade.
+  - **Teste que passa com a guarda desligada não protege nada**: provar por mutação (o O8 passava sem exposição).
+  Pendente ("Depende do dono" 27): a costura do meio da cabeça (~2–3 L* no close, já existia; junto com o F1), o print
+  do túnel no aparelho do dono e o custo do `textureGrad` numa GPU de celular.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =
