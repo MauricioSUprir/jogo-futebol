@@ -50,7 +50,7 @@ import { JOGADOR, PASSO } from './config.js';
 export const MARCHA = {
   ligada: true,             // (os testes desligam para comparar a mesma locomoção com e sem a camada)
   ritmo: [1.0, 1.07],       // × a cadência da tabela (PASSADA.tabela: 1,96 passos/s a 1,47 m/s), uniforme — só sobe: passo
-                            // mais curto (o walk ratio de cada um fica em 0,0059–0,0063, dentro da média ± 1 desvio real)
+                            // mais curto (o walk ratio de cada um fica em 0,0055–0,0063, até ~1,5 desvio abaixo da média real)
   vRitmo: 1.9,              // m/s — o ritmo próprio só abaixo disto (andando há sempre um pé no chão: carga ≥ 0,5)
   rampa: 0.6,               // s — no começo de uma cena a camada entra devagar (o 1º quadro é a pose do jogo)
   vSai: [2.6, 3.2],         // m/s — de um ao outro, a camada vira a pose do jogo (a fase e a amplitude do braço, a dobra, o
