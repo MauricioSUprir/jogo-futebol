@@ -53,6 +53,29 @@ export function textoEspera(o, longa) {
   return longa ? `${o.nomeOutro} ainda não voltou ao jogo.` : '';
 }
 
+/**
+ * A marca E_CENA do pacote deste quadro (pura; item 30). pend = a do quadro anterior; cena = segurei a MINHA simulação por uma
+ * cena neste quadro (no começo dele ou no fim); rodou = os passos rodados neste quadro. A marca vale do quadro da cena até o 1º
+ * passo rodado DEPOIS dela: o quadro em que a cena acaba (e um seguinte sem passo) manda o pacote sem entrada nova — sem a marca,
+ * o outro, esperando, piscava "ainda não voltou ao jogo" entre "ainda está vendo a cena" e o aviso sumir. (A página tira a marca
+ * com a minha pausa e o celular em pé: a cena congela e eu não a estou vendo.)
+ */
+export function marcaCena(pend, cena, rodou) {
+  return !!cena || (!!pend && !(rodou > 0));
+}
+
+/**
+ * O estado da conexão para o aviso deste quadro (puro; item 30). c = o do online.js estadoConexao; pode = a entrada do outro para
+ * o meu próximo passo já chegou (online.js podePassar). O `paradoDesde` só zera no fim do quadro, depois do passo: com a entrada
+ * já aqui a espera acabou — sem isto o aviso ficava mais um quadro, com o texto do pacote novo (o que chega depois da cena do
+ * outro já não tem a marca dela: "ainda não voltou ao jogo" piscava). Sem pacote há AGUARDANDO_MS continua 'aguardando'.
+ */
+export function conexaoNoQuadro(c, pode) {
+  if (!pode || !(c.paradoMs > 0)) return c;
+  const sp = c.semPacoteMs;
+  return { estado: sp >= O.AGUARDANDO_MS ? 'aguardando' : sp >= O.INSTAVEL_MS ? 'instavel' : 'ok', paradoMs: 0, semPacoteMs: sp };
+}
+
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
   background:rgba(5,8,7,.92);color:#fff;border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:14px 18px;text-align:center;
@@ -69,6 +92,9 @@ const CSS = `
 html.pausa-aberta #online-selo{display:none}
 /* (a comemoração do gol: o cartão do autor mora no mesmo canto — item 31, revisão R3; como os avisos do jogo, o selo espera a cena) */
 html.em-comemoracao #online-selo{display:none}
+/* (a cena de substituição, item 30: do HUD fica só o placar e a faixa ENTRA/SAI; com a minha simulação segurada, o atraso do
+   outro não me atrasa — o selo enganava) */
+html.em-substituicao #online-selo{display:none}
 `;
 
 function el(tag, attrs = {}, filhos = []) {
@@ -223,7 +249,8 @@ export function criarPaginaOnline(opc) {
       return true;
     }
     if (encerrado || ctx.fim) { esconder(); selo.hidden = true; return false; }
-    const c = O.estadoConexao(s, agora);
+    // (item 30) a entrada do outro para o meu próximo passo já chegou: a espera acabou neste quadro
+    const c = conexaoNoQuadro(O.estadoConexao(s, agora), O.podePassar(s));
     if (pausa) {
       const falta = pausa.volta != null ? `Voltando em ${seg(pausa.volta - agora)}…` : `Você pausou · ${mmss(PAUSA_MS - (agora - pausa.desde))}`;
       mostrar('pausa', falta, pausa.volta != null ? '' : `${pausasRestam} ${pausasRestam === 1 ? 'pausa restante' : 'pausas restantes'}`,

@@ -1823,10 +1823,14 @@ function infoFaixaCena() {
   return _faixaCena;
 }
 
-/** Um quadro da cena (fora da pausa): o pulo, o relógio dela, as palmas de quem cruzou a linha e a faixa. */
-function quadroSubst(dt, ent) {
+/**
+ * Um quadro da cena (fora da pausa): o pulo, o relógio dela, as palmas de quem cruzou a linha e a faixa. semPulo (só no online,
+ * com o menu, a Ajuda ou o editor abertos: lá eles não congelam a cena): a cena anda, mas nenhum botão a pula — o que for
+ * apertado no menu conta como já segurado (só pula depois de solto e apertado de novo, com o menu fechado).
+ */
+function quadroSubst(dt, ent, semPulo = false) {
   const c = cenaSub;
-  if (tempoCenaSubst(c) < SUBC.pularDepois) subBotoes |= ent.botoes;
+  if (semPulo || tempoCenaSubst(c) < SUBC.pularDepois) subBotoes |= ent.botoes;
   else {
     const novos = ent.botoes & ~subBotoes;
     subBotoes &= ent.botoes;
@@ -2968,6 +2972,11 @@ function quadro(agoraMs, desenhar = true) {
  * pacote por quadro; o hash do mundo a cada 60 passos (dessincronia).
  */
 let dtMedioOn = PASSO;
+// (item 30) a marca E_CENA do pacote (online-pagina.js marcaCena): segurei a MINHA simulação por uma cena e ainda não rodei um
+// passo depois dela
+let cenaPendOn = false;
+/** Agora seguro a MINHA simulação por uma cena: a substituição, um replay, a comemoração no gol + 149. */
+const emCenaLocal = () => !!cenaSub || !!(diretor && diretor.ativo) || seguraSimulacao();
 // testes do online sem pessoa (?online=…&ia=1): a IA joga pelo meu controlado o tempo todo (o bit IA)
 const IA_ONLINE_TESTE = ONLINE_BC && params.get('ia') === '1';
 const trintaQps = () => dtMedioOn > 0.025;
@@ -2976,12 +2985,15 @@ function quadroOnline(dt, ent, agoraMs) {
   dtMedioOn += (dt - dtMedioOn) * 0.05;
   const segPausa = PAG_ONLINE.quadro(agoraMs, { fim: mundo.partida?.estado === 'fim' });
   let segura = segPausa || retratoBloqueado() || PAG_ONLINE.encerrado;
+  const cenaIni = emCenaLocal();
+  const menuOn = hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
   if (cenaSub) {
     // a cena de substituição (item 30): segura só a MINHA simulação, como fora do online (o outro espera sozinho: o lockstep);
     // a minha pausa combinada, o celular em pé e a aba escondida congelam a cena (ela volta de onde parou); o menu e o editor
-    // não (no online eles não param o jogo, como na comemoração); o "Pular" pula só a minha
+    // não (no online eles não param o jogo, como na comemoração), mas com eles abertos nenhum botão a pula (os apertos são do
+    // menu); o "Pular" pula só a minha
     segura = true;
-    if (!pausado() && !pausaTeste && !document.hidden) quadroSubst(dt, ent);
+    if (!pausado() && !pausaTeste && !document.hidden) quadroSubst(dt, ent, menuOn);
   } else if (diretor && diretor.ativo) {
     segura = true;
     if (botaoPula(ent.botoes)) fimReplay(true);
@@ -2995,7 +3007,7 @@ function quadroOnline(dt, ent, agoraMs) {
     quer = MOD_ON.passosDoQuadro(s, r.passos, agoraMs);
     alfa = r.alfa;
   } else laco.ultimo = agoraMs;
-  const ia = IA_ONLINE_TESTE || hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
+  const ia = IA_ONLINE_TESTE || menuOn;
   for (let i = 0; i < quer; i++) {
     // a comemoração rodando segura a montagem da saída (como fora do online: só a MINHA simulação espera)
     if (seguraSimulacao()) { segurou = true; break; }
@@ -3027,8 +3039,12 @@ function quadroOnline(dt, ent, agoraMs) {
   if (parado || segurou) { laco.acum = Math.min(laco.acum, laco.passo / 2); if (segurou) alfa = 1; }
   // (item 30) segurando a MINHA simulação por uma cena — a substituição, o replay, a comemoração no gol + 149 — o pacote diz
   // isso (E_CENA): o outro, esperando, mostra "{nome} ainda está vendo a cena", não "A conexão parou". Pelo estado, não pelo
-  // `segurou` do laço (num quadro sem passo a marca piscaria)
-  const emCena = !!cenaSub || !!(diretor && diretor.ativo) || seguraSimulacao();
+  // `segurou` do laço (num quadro sem passo a marca piscaria), do começo e do fim do quadro, e até o 1º passo rodado depois da
+  // cena (o quadro em que ela acaba sai sem passo e sem entrada nova: sem a marca o outro piscava "ainda não voltou ao jogo");
+  // com a minha pausa ou o celular em pé a cena congela e eu não a estou vendo: sem a marca (o outro lê "Pausado por…" ou
+  // "ainda não voltou ao jogo")
+  cenaPendOn = MOD_PAG_ON.marcaCena(cenaPendOn, cenaIni || emCenaLocal(), rodou);
+  const emCena = cenaPendOn && !pausado();
   PAG_ONLINE.enviarPacote(agoraMs, (trintaQps() ? MOD_ON.E_30QPS : 0) | (ia ? MOD_ON.E_MENU : 0) | (emCena ? MOD_PAG_ON.E_CENA : 0));
 }
 
@@ -3107,8 +3123,10 @@ function tratarAcao(a) {
   if (diretor && diretor.ativo && !pausado() && a !== 'qps') { fimReplay(true); return; }
   // comemoração: qualquer ação (Esc, Enter, R, C, H...) só pula a cena (depois de 0,5 s) — não abre a pausa nem chega ao jogo
   if (cenaGol && cenaEstado === 'rodando' && !pausado() && a !== 'qps') { pularComemoracao(); return; }
-  // substituição: qualquer ação MENOS a pausa (Esc, P, Start: a pausa congela a cena) só pula a cena (depois de 0,5 s)
-  if (cenaSub && !pausado() && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
+  // substituição: qualquer ação MENOS a pausa (Esc, P, Start: a pausa congela a cena) só pula a cena (depois de 0,5 s); no
+  // online com o menu ou a Ajuda abertos (lá eles não congelam a cena) a ação é do menu — H abre a Ajuda, Enter aperta o botão
+  // em foco — e a cena segue
+  if (cenaSub && !pausado() && !(mundo.online && (hud.menuAberto || hud.ajudaAberta)) && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
   // cartão: o mesmo (a pausa congela a cena)
   if (cenaCartao && !pausado() && a !== 'qps' && a !== 'pausa') { pularCartao(); return; }
   // intervalo e pós-jogo: qualquer ação MENOS a pausa (a pausa congela a cena e tem o "Editar time" / o "Voltar ao Total
