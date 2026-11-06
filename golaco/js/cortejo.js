@@ -20,8 +20,10 @@
 // pé, os 3 árbitros juntos), anda com o SEU ritmo (×1–1,12 da cadência: passos um pouco mais curtos ou mais longos) e sai
 // do parado devagar: o ponto do caminho acelera como 1 − e^(−t/τ) (3–5 passos até o regime; antes ia de 0 a 1,45 m/s em
 // ~0,6 s e o corpo agachava 27 cm no 1º passo), começando τ antes — no regime cada um está no MESMO ponto do caminho de
-// antes (as chegadas na fila e o plano alto do roteiro não mudam). Os árbitros saem até 0,35 s um depois do outro. O
-// desenho de cada um é a pose do jogo + a camada do braço e do tronco (poseAndante; render/prejogo.js desenha por ela).
+// antes (as chegadas dos times na fila não mudam). Os árbitros (que saíam juntos no tick 0, já a 1,15 m/s) saem do parado
+// pela mesma rampa e até 0,35 s um depois do outro: chegam na fila 0,7–1,05 s depois (29,3 → ~30,1 s; o plano alto do
+// roteiro é aos 31 s). O desenho de cada um é a pose do jogo + a camada do braço e do tronco (poseAndante;
+// render/prejogo.js desenha por ela).
 //
 // Contrato: criarCortejo(times) → c; passoCortejo(c) (1/60 s); tempoCortejo(c); fotoCortejo(c) / restaurarCortejo(c, f)
 // (os planos de câmera cortam e pulam no tempo do cortejo); filaFinal(c) monta a fila já parada sem simular;
