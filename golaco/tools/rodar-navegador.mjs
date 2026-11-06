@@ -38,7 +38,7 @@ const LISTA = [
   // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente")
   ['câmera de TV na tela (a projeção e a câmera = Node, a bola fora do HUD, a torcida, o controlado, o custo, a área inteira, o escanteio da pessoa alto e o da IA na TV, de noite; PC e celular)', 'teste-camera-tela.mjs'],
   ['Modo Livre (pausa sem rolar, as 6 câmeras pela pausa, C/R3, rumo do ataque, Altura/Distância salvas, celular, ?tm)', 'teste-livre-tela.mjs', { deploy: true }],
-  ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular; a cena de substituição com a escolha do anfitrião, cada lado segurando só a sua — item 30)', 'teste-online-tela.mjs', { deploy: true }],
+  ['Online 1×1 na tela (duas abas pelo BroadcastChannel: o mesmo jogo, pausa combinada, menu sem parar, a partida inteira, a pausa no celular; a cena de substituição com a escolha do anfitrião, cada lado segurando só a sua — item 30; o menu aberto não pula a comemoração nem o replay — item 129)', 'teste-online-tela.mjs', { deploy: true }],
   // Item 58 (dono, 23/10: "quero ele igual ao do FIFA ... o campinho do time no canto direito")
   ['pausa do FC 24 com o campinho (lista à esquerda, cartão do time à direita, sem rolar em 4 telas do celular e no PC, o jogo à vista, teclado/controle/toque, leitor de tela, ?tm e online)', 'teste-pausa-tela.mjs', { deploy: true }],
   ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele, a nuca até a gola, as máscaras e as bordas dos patrocínios)', 'teste-corpo-tela.mjs'],

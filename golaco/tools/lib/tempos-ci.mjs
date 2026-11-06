@@ -162,7 +162,10 @@ export const TEMPOS_NAVEGADOR = {
   // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
   // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro
   // teste de navegador junto, ~+50 s; estimado)
-  'teste-online-tela.mjs': 330,
+  // (item 129: + o P10, uma sessão de duas abas até o gol da semente 62 com a comemoração e o replay — 115–133 s aqui sozinho
+  // com as outras frentes rodando; o teste inteiro 776 s com a carga ~14 — o P5 estourou os 240 s nele e na base — e a parte
+  // principal 305 s com a carga ~5; estimado ~+130 s; acertar pelo log do CI)
+  'teste-online-tela.mjs': 460,
   'teste-corpo-tela.mjs': 240, // +C9 (os closes da nuca) e C10 (as 161 máscaras lidas): ~+40 s (itens 62/63; 258 s aqui com carga 9–11); +C9b e C11 (16 quadros a mais, 4 variantes do shader): 221 s aqui com carga ~3
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
   'teste-mira-tela.mjs': 60,
