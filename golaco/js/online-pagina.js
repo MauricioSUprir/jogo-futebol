@@ -35,7 +35,8 @@ const CSS = `
   z-index:40;font:800 13px var(--f-disp,var(--fonte));letter-spacing:.06em;text-transform:uppercase;color:#fff;background:rgba(5,8,7,.75);border-radius:999px;padding:4px 10px;pointer-events:none}
 #online-selo[hidden]{display:none}
 html.pausa-aberta #online-selo{display:none}
-/* (a comemoração do gol: o cartão do autor mora no mesmo canto — item 31, revisão R3; como os avisos do jogo, o selo espera a cena) */
+/* (a comemoração do gol: como os avisos do jogo, o selo espera a cena — item 31, revisão R3; desde o item 126 o cartão do autor fica
+   no canto de BAIXO à direita, então o canto de cima não é mais disputado: a regra fica pela tela limpa da cena, não pelo cartão) */
 html.em-comemoracao #online-selo{display:none}
 `;
 

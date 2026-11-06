@@ -44,10 +44,11 @@
 //         letras: o de camisa do tm-times o corta em 10 — "Albuquerqu");
 //      H11 (revisão V3) o nome é a linha principal (letra maior que a do número, que vai na pílula com a sigla) e, com foto, a
 //         coluna centrada na altura dela (± 3 px);
-//      H12 (revisão V4 → item 126) sem foto, o cartão de uma linha da ALTURA do placar (± 1 px) e o pé na margem de baixo (± 1 px)
-//         — 568×320 e PC (antes: na linha do placar, em cima);
+//      H12 (revisão V4 → item 126) sem foto, o cartão de uma linha da ALTURA do placar (± 1 px) e o pé no lugar (± 1 px): na margem
+//         de baixo no PC; com toque, 10 px acima do "Pular" (revisão R3) — 568×320 e PC (antes: na linha do placar, em cima);
 //   (item 126, dono 05/11: "a foto com o nome tem que ser mais embaixo e menor, tem que ser no canto inferior")
-//      H13 o cartão no canto de BAIXO à direita: x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px) — no A (PC 1280×720), no H3 (844 pro),
+//      H13 o cartão no canto de BAIXO à direita: x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px; com toque, y1 = o topo do "Pular" − 10:
+//         revisão R3) — no A (PC 1280×720), no H3 (844 pro),
 //         no H4 (568 pública) e nas páginas novas (1920×1010 pro e 568×320 pro, com as fotos);
 //      H14 menor: a altura do cartão ≤ 10,5% da janela no PC e ≤ 17% no celular; a foto 56–76 px no PC e 40–48 no celular; a área
 //         ≤ 45% da da base (PC, 844) e ≤ 60% em 568 (onde a base cortava o nome em 232 px; com o nome de 19 letras inteiro o
@@ -55,7 +56,9 @@
 //      H15 o cartão não cobre os OUTROS atores da cena (as poses desenhadas: comemoracao.atores/naTela) em nenhum quadro — no A,
 //         no H3, no H4 e nas páginas novas (na base, no celular, 56–79 quadros em 2 de 6 gols); no D (gol natural) ≤ 30 quadros: um
 //         colega passa colado na lente no contraplano e cruza o canto de baixo em 20 quadros (0,33 s);
-//      H16 com toque: o "Pular" da comemoração ACIMA do cartão (y1 ≤ cartão.y0 − 8) e, depois do 1º corte, sem cobrir o autor;
+//      H16 com toque: o "Pular" da comemoração PARADO no canto dos "Pular" do replay (± 1 px) a cena toda, ABAIXO do cartão
+//         (y0 ≥ cartão.y1 + 8) e, depois do 1º corte, sem cobrir o autor (revisão R3: antes ele subia para cima do cartão, ficava
+//         solto no meio da lateral antes e depois dele e pulava ~61 px na passagem para o replay — reprova nos commits 2eb96fa6–e60e2c7c);
 //      e o H3 passa a pedir a foto de 44–48 px (antes 88–96) e o nome na TM Cond 800 carregada (≥ 16 px; o número ≥ 12); o H10 ganha
 //      o 568×320 pro (o nome inteiro também lá); H17 (item 125) as famílias do cartão com @font-face e as letras ≥ 11 px.
 // Na versão sem a cena (--raiz <cópia da main>) reprova: A2 (o autor fica fora do quadro) e o resto que pede a cena. Na versão
@@ -201,24 +204,29 @@ function avaliarCartao(r) {
     noReplay: vis.filter(x => x.rp).length + (r.cartaoReplay ?? 0), depois: r.cartaoDepois ?? 0,
     folga: ultimo != null && r.replay ? (r.replay.n - ultimo) / 60 : null, cobre: vis.filter(x => cruza(x.ag.caixa, x.ab)).length,
     cobreOutros: vis.filter(x => x.ou).length, pularAutor: q.filter(x => x.pa).length,
-    // o "Pular" ACIMA do cartão (y1 ≤ cartão.y0 − 8) em todos os quadros com os dois
-    pularAbaixo: vis.filter(x => x.pu && x.pu.y1 > x.ag.caixa.y0 - 8 && x.pu.x0 < x.ag.caixa.x1 && x.ag.caixa.x0 < x.pu.x1).length, comPular: vis.filter(x => x.pu).length,
+    // (revisão R3) o "Pular" ABAIXO do cartão (y0 ≥ cartão.y1 + 8) em todos os quadros com os dois; e o "Pular" PARADO no canto do
+    // replay (x1 = W − sa.r − m − 6, y1 = H − sa.b − m − 6, ± 1 px) em todos os quadros da cena — antes da entrada do cartão e depois dela
+    pularAcima: vis.filter(x => x.pu && x.pu.y0 < x.ag.caixa.y1 + 8 && x.pu.x0 < x.ag.caixa.x1 && x.ag.caixa.x0 < x.pu.x1).length, comPular: vis.filter(x => x.pu).length,
+    pularFora: r.geo ? q.filter(x => x.pu && (Math.abs(x.pu.x1 - (r.geo.W - r.geo.sa.r - r.geo.m - 6)) > 1 || Math.abs(x.pu.y1 - (r.geo.H - r.geo.sa.b - r.geo.m - 6)) > 1)).length : 0,
+    comPularTodos: q.filter(x => x.pu).length,
     a: i0 >= 0 ? q[i0].ag : null, ca: q.find(x => x.ca)?.ca ?? null, semEstado: q.every(x => x.ca == null),
   };
 }
-/** (revisão V4 → item 126) H12: o cartão sem foto da ALTURA do placar (± 1 px), agora no pé da tela (o pé na margem de baixo, ± 1). */
+/** O pé esperado do cartão: a margem de baixo (H − sa.b − m) sem toque; com toque (o "Pular" na tela), 10 px acima do "Pular" (revisão R3). */
+const peEsperado = g => g.pular ? g.pular.y0 - 10 : g.H - g.sa.b - g.m;
+/** (revisão V4 → item 126) H12: o cartão sem foto da ALTURA do placar (± 1 px), agora no pé da tela (o pé no lugar dele, ± 1). */
 function alinhadoAoPlacar(r, c) {
   const p = r.geo?.placar, cx = c.a?.caixa, g = r.geo;
   if (!p || !cx) return { ok: false, texto: 'sem cartão ou sem placar' };
-  const dAlt = (cx.y1 - cx.y0) - (p.y1 - p.y0), pe = g.H - g.sa.b - g.m, dPe = cx.y1 - pe;
-  return { ok: Math.abs(dAlt) <= 1 && Math.abs(dPe) <= 1, texto: `cartão ${Math.round(cx.y0)}–${Math.round(cx.y1)} (altura ${f2(cx.y1 - cx.y0)}) × placar ${f2(p.y1 - p.y0)} px; o pé a ${f2(dPe)} px da margem de baixo (${f2(pe)})` };
+  const dAlt = (cx.y1 - cx.y0) - (p.y1 - p.y0), pe = peEsperado(g), dPe = cx.y1 - pe;
+  return { ok: Math.abs(dAlt) <= 1 && Math.abs(dPe) <= 1, texto: `cartão ${Math.round(cx.y0)}–${Math.round(cx.y1)} (altura ${f2(cx.y1 - cx.y0)}) × placar ${f2(p.y1 - p.y0)} px; o pé a ${f2(dPe)} px do lugar (${f2(pe)}: ${g.pular ? '10 px acima do "Pular"' : 'a margem de baixo'})` };
 }
-/** (item 126) H13: o cartão no canto de BAIXO à direita — x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px). */
+/** (item 126) H13: o cartão no canto de BAIXO à direita — x1 = W − sa.r − m e y1 = H − sa.b − m (± 1 px); com toque, y1 = o topo do "Pular" − 10. */
 function noCanto(r, c) {
   const g = r.geo, cx = c.a?.caixa;
   if (!g || !cx) return { ok: false, texto: 'sem cartão' };
-  const dx = cx.x1 - (g.W - g.sa.r - g.m), dy = cx.y1 - (g.H - g.sa.b - g.m);
-  return { ok: Math.abs(dx) <= 1 && Math.abs(dy) <= 1, texto: `caixa ${Math.round(cx.x0)}–${Math.round(cx.x1)} × ${Math.round(cx.y0)}–${Math.round(cx.y1)} em ${g.W}×${g.H} (m ${g.m}, sa ${g.sa.r}/${g.sa.b}): direita ${f2(dx)}, pé ${f2(dy)} px do canto` };
+  const dx = cx.x1 - (g.W - g.sa.r - g.m), dy = cx.y1 - peEsperado(g);
+  return { ok: Math.abs(dx) <= 1 && Math.abs(dy) <= 1, texto: `caixa ${Math.round(cx.x0)}–${Math.round(cx.x1)} × ${Math.round(cx.y0)}–${Math.round(cx.y1)} em ${g.W}×${g.H} (m ${g.m}, sa ${g.sa.r}/${g.sa.b}${g.pular ? `, "Pular" ${Math.round(g.pular.y0)}–${Math.round(g.pular.y1)}` : ''}): direita ${f2(dx)}, pé ${f2(dy)} px do lugar` };
 }
 /**
  * (item 126) H14: o tamanho — a altura do cartão / a da janela, a foto e a área contra a da BASE (29d67bad, o cartão do item 31 no
@@ -246,14 +254,14 @@ function metasCanto(r, c, tela, { cel, foto, limiteArea }) {
     meta(`H14 ${tela}: o cartão menor — altura ≤ ${cel ? 17 : 10.5}% da janela, foto ${cel ? '40–48' : '56–76'} px, área ≤ ${Math.round(100 * limiteArea)}% da da base`, t.texto, `≤ ${cel ? 17 : 10.5}%; ${cel ? '40–48' : '56–76'}; ≤ ${Math.round(100 * limiteArea)}%`, t.ok);
   }
   meta(`H15 ${tela}: o cartão não cobre os OUTROS atores da cena em nenhum quadro`, `cobre os outros em ${c.cobreOutros}/${c.n} quadros`, '0', c.n > 0 && c.cobreOutros === 0);
-  if (cel) meta(`H16 ${tela}: o "Pular" ACIMA do cartão (≥ 8 px) e, depois do 1º corte, sem cobrir o autor`, `"Pular" abaixo/encostado em ${c.pularAbaixo}/${c.comPular} quadros com os dois; cobre o autor depois do corte em ${c.pularAutor} quadros`, '0; 0', c.comPular > 0 && c.pularAbaixo === 0 && c.pularAutor === 0);
+  if (cel) meta(`H16 ${tela}: o "Pular" parado no canto do replay a cena toda, ABAIXO do cartão (≥ 8 px) e, depois do 1º corte, sem cobrir o autor`, `"Pular" fora do canto em ${c.pularFora}/${c.comPularTodos} quadros; acima/encostado no cartão em ${c.pularAcima}/${c.comPular} quadros com os dois; cobre o autor depois do corte em ${c.pularAutor} quadros`, '0; 0; 0', c.comPular > 0 && c.pularFora === 0 && c.pularAcima === 0 && c.pularAutor === 0);
 }
-/** (item 126) A família e o peso CARREGADOS do nome do cartão (a TM Cond 800: o --f-disp). */
+/** (item 126) A família e o peso CARREGADOS do nome do cartão (a TM Cond 800: o --f-disp) — carregada PELO JOGO: o check sem nenhum
+ * pedido do teste antes (revisão R7: com o load do teste antes do check a meta passava por construção). */
 const letraDoNome = pg => pg.evaluate(async () => {
   const n = document.querySelector('#autor-gol .ag-nome');
   if (!n) return null;
   const cs = getComputedStyle(n);
-  try { await document.fonts.load(`800 ${cs.fontSize} "TM Cond"`, n.textContent || 'A'); } catch (_) { /* */ }
   return { fam: cs.fontFamily.split(',')[0].trim().replace(/^["']|["']$/g, ''), peso: cs.fontWeight, px: parseFloat(cs.fontSize), carregada: document.fonts.check(`800 ${cs.fontSize} "TM Cond"`, n.textContent || 'A'), caixa: cs.textTransform };
 });
 /** (item 31) H2: o cartão a ≥ 8 px do placar e do "Pular", dentro da janela e da área segura (a 1ª amostra visível e a geometria). */
@@ -636,7 +644,7 @@ if (faz('H')) {
       meta('H10 celular 568×320 (sem foto): o nome COMPLETO da ficha, sem cortar', a ? `"${a.nome}"${a.cortado ? ' CORTADO' : ''} (ficha "${fi?.nome}", camisa "${fi?.camisa}")` : 'nenhum cartão',
         'o completo; sem reticências', !!a && !!fi && a.nome === fi.nome && fi.nome !== fi.camisa && !a.cortado);
       const al = alinhadoAoPlacar(r, c);
-      meta('H12 celular 568×320 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé na margem de baixo (± 1 px)', al.texto, '± 1 px', al.ok);
+      meta('H12 celular 568×320 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé no lugar (± 1 px: a margem de baixo; com toque, 10 px acima do "Pular")', al.texto, '± 1 px', al.ok);
     } finally { await P.fechar(); }
   } catch (e) { meta('H4 execução', e.message.split('\n')[0], 'sem exceção', false); }
   // H5 a cena curta e H6 pular com o cartão na tela (PC, sem ?tm)
@@ -652,7 +660,7 @@ if (faz('H')) {
         '≥ 2,2 s; folga > 0; 0', curta && c1.n > 0 && c1.fica >= 2.2 && c1.folga != null && c1.folga > 0 && c1.noReplay === 0 && c1.depois === 0);
       meta('H11 PC 1280×720 (sem foto): o nome é a linha principal (letra maior que a do número)', c1.a ? `nome ${c1.a.letraNome} px × número ${c1.a.letraNum} px` : 'nenhum cartão', 'nome > número', !!c1.a && c1.a.letraNome > c1.a.letraNum);
       const al1 = alinhadoAoPlacar(r1, c1);
-      meta('H12 PC 1280×720 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé na margem de baixo (± 1 px)', al1.texto, '± 1 px', al1.ok);
+      meta('H12 PC 1280×720 (sem foto): o cartão de uma linha da altura do placar (± 1 px), o pé no lugar (± 1 px: a margem de baixo; com toque, 10 px acima do "Pular")', al1.texto, '± 1 px', al1.ok);
       const g0 = await golRoteirizado(pg, { semente: 5, time: 0 });
       const ate = await pg.evaluate(() => { const g = window.__golaco; let n = 0; while (n < 400 && g.comemoracao.ativa && !(g.comemoracao.estado.t >= 2.2 && g.comemoracao.cartaoTela?.visivel)) { g.relogio.avancar(1000 / 60, { desenhar: false }); n++; } return { t: g.comemoracao.estado?.t ?? null, vis: !!g.comemoracao.cartaoTela?.visivel }; });
       await pg.keyboard.down('KeyK');

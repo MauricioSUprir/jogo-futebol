@@ -1422,8 +1422,8 @@ export function criarHud(opc) {
     /** O tipo do terço de baixo na tela (testes): null, 'impedimento' ou 'legal'. */
     get tercoTipo() { return tercoTipo; },
     /**
-     * O CARTÃO DO AUTOR do gol na comemoração (item 31; o canto de cima à direita, na linha do placar, dentro da camada
-     * #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, foto}
+     * O CARTÃO DO AUTOR do gol na comemoração (item 31 → 126; o canto de BAIXO à direita — com toque, logo acima do "Pular",
+     * que fica no canto como no replay —, dentro da camada #comemoracao — some com ela): spec = null (some na hora) | {sigla, nomeTime, cor1, cor2, escudo, num, nome, foto}
      * — a foto (só a da edição pro do TM, já decodificada: main.js fotoPronta) ou null = só o texto, numa linha. Exceção
      * escrita à "sem narração" (como o selo IMPEDIMENTO/POSIÇÃO LEGAL, a faixa ENTRA/SAI e as tarjas das cenas): só dentro da
      * cena, nunca com a bola rolando; sem minuto nem "GOL". Não pega toque (o toque na camada pula a cena). spec.fotoEl: a

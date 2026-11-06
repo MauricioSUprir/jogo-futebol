@@ -22,6 +22,8 @@
   --sa-b: env(safe-area-inset-bottom, 0px);
   --sa-l: env(safe-area-inset-left, 0px);
   --m: 14px;
+  /* o "Pular" das cenas com toque (.btn-replay-pular): a distância do canto e a altura — o cartão do autor sobe por elas */
+  --pular-vao: 6px; --pular-h: 52px;
   --toque-escala: 0.8;
   --analogico-escala: 1;      /* entrada.js escalaAnalogico: no tamanho padrão (80%) o analógico é o de antes */
   --toque-opacidade: 0.55;
@@ -968,8 +970,8 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 .replay-marca svg { width: 15px; height: 15px; fill: none; stroke: var(--verde); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .replay-marca svg path + path { fill: var(--verde); stroke: none; }
 .btn-replay-pular {
-  display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + 6px); bottom: calc(var(--sa-b) + var(--m) + 6px);
-  align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: 52px; padding: 0 18px; cursor: pointer;
+  display: none; position: absolute; right: calc(var(--sa-r) + var(--m) + var(--pular-vao)); bottom: calc(var(--sa-b) + var(--m) + var(--pular-vao));
+  align-items: center; justify-content: center; gap: 6px; min-width: 112px; height: var(--pular-h); padding: 0 18px; cursor: pointer;
   font: 800 17px / 1 var(--f-disp); letter-spacing: 0.06em; text-transform: uppercase; color: var(--texto);
   background: rgba(7, 9, 10, 0.78); border: 2px solid var(--verde); border-radius: 26px; opacity: 0.92;
 }
@@ -1110,18 +1112,21 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
    DIREITA, no PC e no celular — o único canto de baixo medido livre do autor e dos outros atores em todos os planos da cena (6 gols
    × 5 telas, quadro a quadro: 0 e 0; o de baixo à esquerda, o "lower third" da TV, cobria o autor em 73–78% dos quadros no celular,
    que põe o autor no terço esquerdo — comemoracao.js ajustarCelular); ~4× menor no PC e ~2,6× no celular (a altura 20,6 → 9–10% da
-   janela no PC e 27 → 15% no celular). Com toque o "Pular" da comemoração sobe para cima dele (abaixo). [foto | pílula escudo, sigla e
+   janela no PC e 27 → 15% no celular). Com toque o cartão fica logo ACIMA do "Pular" (abaixo), que mora no canto de baixo à direita
+   como em todas as cenas (replay, substituição, cartão) — o botão não muda de lugar de uma cena para a outra. [foto | pílula escudo, sigla e
    número / NOME]: o nome em caixa alta na TM Cond 800 (o --f-disp do item 125: cabe inteiro também em 568×320, onde o de antes cortava
    "Eduardo Pa…"); a coluna centrada na altura da foto. Sem foto, uma linha [escudo, sigla e número | NOME] da altura do placar, no pé
    da tela. As medidas pela ALTURA da janela (celular deitado = menos de 520 px de altura, o corte do `pequena` da câmera) e a altura
-   do cartão com foto FIXA (--ag-alt, no pai: o "Pular" fica a 10 px certos dele). A fase é do relógio da cena (main.js): a animação
+   do cartão com foto FIXA (--ag-alt). A fase é do relógio da cena (main.js): a animação
    só enfeita. Não pega toque. */
-.comemoracao { --ag-foto: clamp(56px, 7.2vh, 76px); --ag-pad: clamp(7px, 0.9vh, 9px); --ag-alt: calc(var(--ag-foto) + 2 * var(--ag-pad)); }
+.comemoracao { --ag-foto: clamp(56px, 7.2vh, 76px); --ag-pad: clamp(7px, 0.9vh, 9px); --ag-alt: calc(var(--ag-foto) + 2 * var(--ag-pad)); --ag-sobe: 0px; }
+/* com toque: o pé do cartão a 10 px do topo do "Pular" (o .btn-replay-pular: --pular-vao do canto + --pular-h de altura), com e sem foto */
+html.com-toque .comemoracao { --ag-sobe: calc(var(--pular-vao) + var(--pular-h) + 10px); }
 @media (max-height: 519px) { .comemoracao { --ag-foto: clamp(40px, 12vh, 48px); --ag-pad: 5px; } }
 .autor-gol {
   --ag-nome: clamp(20px, 2.6vh, 28px); --ag-sigla: clamp(12px, 1.35vh, 14px); --ag-num: calc(var(--ag-sigla) * 1.3); --ag-vao: clamp(10px, 1.2vh, 12px);
   --ag-fundo: 7, 9, 10;
-  position: absolute; top: auto; bottom: calc(var(--sa-b) + var(--m)); right: calc(var(--sa-r) + var(--m));
+  position: absolute; top: auto; bottom: calc(var(--sa-b) + var(--m) + var(--ag-sobe)); right: calc(var(--sa-r) + var(--m));
   /* (a borda esquerda sempre além de 62% da largura no PC e de 48% no celular: à direita do máximo do autor — 59,5% e 44% medidos) */
   max-width: min(38vw, 480px);
   display: flex; align-items: center; gap: var(--ag-vao); min-width: 0; box-sizing: border-box;
@@ -1169,10 +1174,11 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
   display: block; max-width: 100%; min-width: 0; font: 800 var(--ag-nome) / 1.05 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em;
   color: #fff; overflow: hidden; text-overflow: ellipsis;
 }
-/* a entrada "corre" da borda da direita, como um lower third (Material 3: emphasized decelerate, 280 ms); a saída em 200 ms */
+/* a entrada "corre" da borda da direita, como um lower third (Material 3: emphasized decelerate, 280 ms); a saída em 200 ms. O recorte
+   final passa da sombra (0 8px 24px: ~32 px além da caixa) — com inset(0) mantido pelo `both`, a sombra nunca aparecia */
 .autor-gol.visivel { animation: autor-gol-entra 0.28s cubic-bezier(0.05, 0.7, 0.1, 1) both; }
 .autor-gol.saindo { animation: autor-gol-sai 0.2s ease-in both; }
-@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(24px); clip-path: inset(0 0 0 100%); } to { opacity: 1; transform: none; clip-path: inset(0 0 0 0); } }
+@keyframes autor-gol-entra { from { opacity: 0; transform: translateX(24px); clip-path: inset(0 0 0 100%); } to { opacity: 1; transform: none; clip-path: inset(-40px); } }
 @keyframes autor-gol-sai { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(12px); } }
 @media (prefers-reduced-motion: reduce) {
   .autor-gol.visivel { animation: autor-gol-aparece 0.15s linear both; }
@@ -1180,10 +1186,10 @@ html.em-replay .faixa-subst, html.em-comemoracao .faixa-subst { display: none; }
 }
 @keyframes autor-gol-aparece { from { opacity: 0; } to { opacity: 1; } }
 @keyframes autor-gol-some { from { opacity: 1; } to { opacity: 0; } }
-/* (item 126) com toque, o "Pular" da comemoração SOBE para cima do cartão, na mesma coluna da direita, desde o começo da cena (o
-   mesmo lugar com e sem cartão: gol contra, ?autorGol=0). A camada inteira já pula a cena com um toque; o botão é a indicação. Os
-   "Pular" do replay, da substituição e da cena do cartão ficam embaixo à direita (o cartão do autor sai ≥ 0,4 s antes do replay) */
-html.com-toque #comemoracao-pular { right: calc(var(--sa-r) + var(--m)); bottom: calc(var(--sa-b) + var(--m) + var(--ag-alt) + 10px); }
+/* (item 126, revisão R3) com toque, o "Pular" da comemoração fica no MESMO lugar dos "Pular" do replay, da substituição e da cena do
+   cartão (o canto de baixo à direita): antes ele subia para cima do cartão e ficava solto no meio da lateral antes e depois dele e
+   pulava ~61 px na passagem para o replay. O cartão é que sobe para cima dele (--ag-sobe). A camada inteira já pula a cena com um
+   toque; o botão é a indicação. */
 /* a pausa aberta no meio da cena: o cartão do meu time da pausa mora no mesmo canto — o do autor espera atrás dela, escondido; e o
    "Replay" da pausa pedido no meio da cena (a jogada com a bola rolando, a marca REPLAY no mesmo canto): escondido o replay inteiro
    (a fase dele é do relógio da cena, parado no replay — volta onde estava se a cena continuar depois) */
