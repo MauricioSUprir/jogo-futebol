@@ -33,6 +33,16 @@ export function ajustesDoPedido(pedido) {
   };
 }
 
+/**
+ * O pedido do Total Match marca a partida como clássico (partida.classico === true; item 35 — a partida pegada, config.js
+ * CLASSICO)? Vale também no online: o pedido do anfitrião, o mesmo objeto nos dois aparelhos. Fora do ajustesDoPedido de
+ * propósito (o objeto dele é comparado inteiro no teste-ponte-tm P12).
+ */
+export function classicoDoPedido(pedido) {
+  const p = pedido && typeof pedido === 'object' ? pedido.partida : null;
+  return !!(p && typeof p === 'object' && p.classico === true);
+}
+
 /** O ciclo da pausa: 3 → 4 → 5 → 6 → 8 → 10 → 3. Um valor fora da lista (o ?min dos testes) vai à menor opção maior que ele. */
 export function proximaDuracao(min) {
   const k = DURACOES.indexOf(min);

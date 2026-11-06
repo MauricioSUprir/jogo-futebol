@@ -12,9 +12,10 @@
 //
 // Total Match (?tm=<id>; ponte-tm.js, tm-times.js, sumula.js; contrato "Ponte com o Total Match" no CONTRATOS.md): os
 // times do pedido (o time 0 é o mandante do TM), o humano no lado do usuário, a trava "só o meu jogador" (TROCAR e GOLEIRO
-// mascarados e escondidos), a súmula alimentada a cada passo, 'tm3d:pronto' no api.pronto, 'tm3d:sair' sem WebGL 2, a
-// pausa sem Reiniciar/Modo de jogo e com "Simular o resto" (os passos em pedaços sem desenhar) e a faixa do fim com
-// "Voltar ao Total Match" ('tm3d:fim'; o resultado é gravado já no apito). Sem ?tm nada disso existe (TM = null).
+// mascarados e escondidos), a súmula alimentada a cada passo, 'tm3d:pronto' no api.pronto, 'tm3d:sair' {motivo: 'erro'} sem
+// WebGL 2 (o TM avisa e simula) e {motivo: 'simular'} no "Simular partida" da tela antes do jogo (item 124: o TM simula lance a
+// lance, calado), a pausa sem Reiniciar/Modo de jogo e com "Simular o resto" (os passos em pedaços sem desenhar) e a faixa do
+// fim com "Voltar ao Total Match" ('tm3d:fim'; o resultado é gravado já no apito). Sem ?tm nada disso existe (TM = null).
 //
 // Partida (Etapa 3): criarPartida/passoPartida (partida.js) — o mesmo que sessao.js usa para o modo
 // 'partida', chamado direto aqui. A pausa ganha "Editar time" (js/editor-time.js): a tela entrega
@@ -163,7 +164,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, classicoDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -308,6 +309,11 @@ const prefs = lerPrefs();
 // Ultimate: a linha fica travada na pausa, com o cadeado).
 const AJ_PEDIDO = TM ? ajustesDoPedido(PEDIDO_TM) : { minutosPorTempo: null, dificuldade: null, fixos: false };
 const DIF_PARAM = nivelValido(params.get('dif'));
+// O clássico (item 35; config.js CLASSICO): a partida pegada — não é escolha da pessoa (sem prefs, sem botão na pausa), é quem joga
+// contra quem. De onde vem: ?classico=1|0 (testes, demo, prints; por cima do pedido) > o pedido do TM (partida.classico; no online, o
+// do anfitrião, o mesmo nos dois aparelhos) > desligado. Só no modo 'partida' (o Livre e os Pênaltis nunca: criarMundoTreino).
+const CLASSICO_PARAM = params.get('classico') === '1' ? true : params.get('classico') === '0' ? false : null;
+const CLASSICO_PAG = CLASSICO_PARAM ?? (TM ? classicoDoPedido(PEDIDO_TM) : false);
 const ajustes = {
   minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
     : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
@@ -393,6 +399,8 @@ function criarMundoTreino(opc = {}) {
       semente: o.semente, minutosPorTempo: o.minutosPorTempo ?? ajustes.minutosPorTempo, saida: o.saida, times: o.times ?? timesAntes ?? TM?.times,
       elencos: o.elencos ?? (TM ? ELENCOS_TM : undefined), humano: o.humano ?? TIME_HUMANO, trava: o.trava !== undefined ? o.trava : TRAVA_TM,
       humanos: ONLINE ? [0, 1] : undefined, ...(dif && dif !== 'normal' ? { dificuldade: dif } : {}),
+      // (o clássico, item 35: só ligado — sem a opção o campo nem existe)
+      ...(CLASSICO_PAG ? { classico: true } : {}),
     });
     ajustes.maisFacil = null;
     if (ONLINE) m.online = true; // (fora do hash: o passo é o passoOnline com as duas entradas)
@@ -2835,6 +2843,8 @@ let pausaAntes = false; // pausado() no quadro anterior (a volta da pausa solta 
 function quadro(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
+  // (TM: o "Simular partida" na tela "Gire o celular" e na abertura de texto, antes do jogo — item 124, revisões A1/A6)
+  atualizarSimularTM();
   // a tela antes do jogo (item 64): o laço fica no tick 0 e o 3D atrás dela (a abertura calada ou o jogo parado) a 30 qps
   if (pp && pp.aberta) { quadroPrepartida(dtReal, agoraMs, desenhar); return; }
   // pré-jogo: o laço da partida fica parado (tick 0) e o diretor desenha; em pé no celular ou escondida, para
@@ -3457,8 +3467,8 @@ function dadosPrepartida() {
   const pt = PEDIDO_TM?.partida ?? null;
   return PP_PURO.dadosDaPartida(m, {
     humano: TIME_HUMANO, humanos: m.online ? [0, 1] : [TIME_HUMANO], modo: modoTela(), competicao: textoCompeticao(),
-    // (o clássico do TM: partida.classico + o nome dele, se vier)
-    classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : null,
+    // (o clássico do TM: partida.classico + o nome dele, se vier; fora do TM, o da partida pegada pelo ?classico=1 — item 35)
+    classico: TM && pt?.classico ? String(pt.nomeClassico || 'Clássico') : mundo?.modo === 'partida' && mundo.classico ? 'Clássico' : null,
     hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
     // (a dificuldade da IA contra a pessoa, item 33: o "Beginner, 6 minutes" do FC; sem ela no online, no Livre e nos Pênaltis)
     dificuldade: dificuldadeNaTela(),
@@ -3548,6 +3558,68 @@ function jogarPrepartida() {
   // o controle pode não contar como gesto (o som fica sem contexto): o aviso discreto
   if (entrada?.ultimoMeio === 'pad' && som && som.estado !== 'rodando') setTimeout(() => { if (som && som.estado !== 'rodando') hud.evento('somGesto'); }, 300);
 }
+/**
+ * Os titulares em campo agora (o tick 0 da tela antes do jogo), pelo tmId do TM: {home: [11], away: [11]} na ordem das vagas
+ * (time 0 = o mandante). O "Simular partida" os leva ao TM (item 124, revisão A2): a escalação que a pessoa viu na tela — a montada
+ * pelo tm3d.js quando o time não vem pronto e a do Personalizar — é a que o TM simula. null fora do TM.
+ */
+function titularesTM() {
+  if (!TM?.mapa || !mundo.times) return null;
+  const lado = t => Object.values(mundo.times[t]?.vagas ?? {}).map(id => TM.mapa[id]?.tmId).filter(v => v != null);
+  return { home: lado(0), away: lado(1) };
+}
+/**
+ * O gesto que liga o som (som.js gestoVale; item 124, revisão A4): no TM (a partida e o Rumo ao Estrelato) com a tela antes do jogo
+ * aberta, só o "Jogar partida" — quem toca em "Simular partida" (o TM simula lance a lance), na Visão tática, no Personalizar ou no
+ * ≡ não cria o contexto nem baixa os ~1,35 MB da torcida; o "Simular partida" fora da tela também não. Fora disso, todo gesto.
+ */
+function gestoDoSom(e) {
+  const alvo = e?.target;
+  if (alvo?.closest?.('.tm-simular')) return false;
+  if (!simTM || !pp?.aberta) return true;
+  return !!alvo?.closest?.('#prepartida [data-aba="jogar"]');
+}
+/** O "Simular partida" do TM (o da tela, o da tela "Gire o celular" e o da abertura de texto): o 3D fecha sem resultado. */
+function simularNoTM() { sairTM({ motivo: 'simular', titulares: titularesTM() }); }
+// ------------------------------------------------------------------ "Simular partida" fora da tela (item 124, revisões A1 e A6)
+// No TM (a partida e o Rumo ao Estrelato), antes do jogo a saída para simular nunca some: com o celular EM PÉ a tela "Gire o
+// celular" (#girar, por cima de tudo) cobre a tela antes do jogo e o X do TM já sumiu no 'tm3d:pronto' — o botão vai DENTRO dela
+// (o PWA do TM é travado em pé: girar pode nem ser possível); na RESERVA da tela (o módulo dela não chegou em 1,5 s: a abertura de
+// texto, sem abas) ele fica no canto de baixo à direita (o do Pular, que a abertura não mostra). Um toque: é um botão só disso,
+// como o "Simular" da janela antiga. Só na página do TM (criados na carga; fora do TM nada existe)
+let simTM = null;
+function criarSimularTM() {
+  if (!TM || ONLINE_TM || PENALTIS_TM || LIVRE_TM) return;
+  const botao = (cls, pai) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn tm-simular ${cls}`;
+    b.textContent = 'Simular partida';
+    b.hidden = true;
+    // (o toque não chega ao pré-jogo atrás dele — a abertura começa no pointerdown da camada dela)
+    b.addEventListener('pointerdown', e => e.stopPropagation());
+    b.addEventListener('click', e => { e.stopPropagation(); if (antesDoJogoTM()) simularNoTM(); });
+    pai.appendChild(b);
+    return b;
+  };
+  const girar = document.getElementById('girar');
+  simTM = { girar: girar ? botao('girar-botao girar-simular', girar) : null, abertura: botao('tm-simular-abertura', document.body), vis: null };
+}
+/** Ainda antes do jogo no TM: a tela aberta ou a abertura do pré-jogo (a reserva da tela, ou o fundo calado dela). */
+function antesDoJogoTM() {
+  if (!simTM || mundo.modo !== 'partida' || mundo.tick !== 0) return false;
+  return !!pp?.aberta || !!(prejogo?.ativo && prejogo.naAbertura);
+}
+/** Uma vez por quadro: os botões à vista só quando valem (só escreve no DOM quando muda). */
+function atualizarSimularTM() {
+  if (!simTM) return;
+  const antes = antesDoJogoTM();
+  const v = (antes ? 1 : 0) | (antes && !pp?.aberta && !hud.menuAberto && !hud.ajudaAberta ? 2 : 0);
+  if (v === simTM.vis) return;
+  simTM.vis = v;
+  if (simTM.girar) simTM.girar.hidden = !(v & 1);
+  simTM.abertura.hidden = !(v & 2);
+}
 /** As ações da tela (o que é da página). */
 function acaoPrepartida(id) {
   switch (id) {
@@ -3560,9 +3632,13 @@ function acaoPrepartida(id) {
       break;
     // (o "Voltar" da pausa devolve o foco ao ≡)
     case 'opcoes': ppVolta = 'menu'; abrirMenuDaTela(() => hud.abrirMenu(true)); break;
-    // TM: "Simular partida" (2º toque) = o "Voltar ao Total Match" da pausa: o motor 3D simula do tick 0 (simularResto) e manda
-    // o resultado
-    case 'simular': fecharPrepartida(true); voltarAoTM(); break;
+    // TM e Rumo ao Estrelato: "Simular partida" (2º toque) = o "Simular" da janela que ela substituiu (item 124; dono, 05/11: "essa
+    // tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular"): o 3D fecha SEM resultado ('tm3d:sair' {motivo:
+    // 'simular'}) e o TM simula lance a lance, como sempre — antes o motor 3D simulava do tick 0 (~11 s) e mandava 'tm3d:fim'. O
+    // "Simular o resto" da pausa, com a partida já começada, continua pelo motor 3D. A tela fica (o mundo parado no tick 0) até o
+    // TM fechar o quadro: fechada aqui, o jogo andava e aparecia nesse meio-tempo. Vão junto os titulares que a tela mostra (os do
+    // Personalizar; revisão A2): o TM simula com eles
+    case 'simular': simularNoTM(); break;
     case 'canto':
       if (mundo.online) { acaoPrepartidaOnline('sair'); break; }
       // os Pênaltis 3D do TM antes do Bater: volta SEM resultado ('tm3d:sair' → a escolha dos times; o X do TM nos Pênaltis diz
@@ -4065,14 +4141,14 @@ async function iniciar() {
   // Total Match: ?tm sem o pedido (sumiu do armazenamento) — o TM simula a partida
   if (ID_TM && !TM) {
     hud.erro('A partida do Total Match não foi encontrada. Ela será simulada.');
-    sairTM();
+    sairTM({ motivo: 'erro' });
     return;
   }
   if (!temWebGL2()) {
     hud.erro(ID_TM ? 'Este navegador não tem WebGL 2, que a partida em 3D precisa. A partida será simulada.'
       : 'Este navegador não tem WebGL 2, que o GOLAÇO precisa para o 3D. Atualize o navegador ou ative a aceleração de hardware.');
-    // Total Match: o 3D não roda aqui — o TM simula a partida (sem esperar os 30 s do aviso dele)
-    if (ID_TM) sairTM();
+    // Total Match: o 3D não roda aqui — o TM avisa e simula a partida (sem esperar os 30 s do aviso dele)
+    if (ID_TM) sairTM({ motivo: 'erro' });
     return;
   }
   // a tela antes do jogo (item 64): o código, o CSS e a fonte pedidos já, em paralelo com o 3D (só com a tela ligada)
@@ -4172,7 +4248,7 @@ async function iniciar() {
   // som: liga no primeiro gesto (política de reprodução automática); nada nos prints
   const somLigado = prefs.som !== false, volume = Number.isFinite(prefs.volume) ? prefs.volume : undefined;
   if (!PRINTS) {
-    som = criarSom({ base: 'assets/sons/', ligado: somLigado, volume, aoMudar: e => hud.definirEstado({ somEstado: e }) });
+    som = criarSom({ base: 'assets/sons/', ligado: somLigado, volume, aoMudar: e => hud.definirEstado({ somEstado: e }), gestoVale: gestoDoSom });
     som.iniciar();
   }
   hud.definirEstado({ som: somLigado, volume: som ? som.volume : (volume ?? 0.8), somEstado: som ? som.estado : 'sem-contexto' });
@@ -4196,6 +4272,8 @@ async function iniciar() {
   marcarAjustes();
   // a tela antes do jogo (item 64) ANTES do pré-jogo: ela segura o tick 0 e o "Jogar partida" começa o pré-jogo (ou o apito). A
   // reserva: sem o módulo até PREPARTIDA.reservaMs (1,5 s), a abertura de texto de hoje
+  // (TM: o "Simular partida" da tela "Gire o celular" e da abertura de texto — item 124, revisões A1/A6)
+  criarSimularTM();
   const comTela = prepartidaLigada() && await esperarPrepartida(1500) && abrirPrepartida();
   if (!comTela && !comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
@@ -5272,6 +5350,6 @@ window.__golaco = api;
 iniciar().catch(err => {
   console.error(err);
   hud.erro('Não foi possível iniciar o 3D: ' + (err && err.message ? err.message : String(err)));
-  // Total Match: o 3D não subiu — o TM simula a partida
-  if (ID_TM && !api.pronto) sairTM();
+  // Total Match: o 3D não subiu — o TM avisa e simula a partida
+  if (ID_TM && !api.pronto) sairTM({ motivo: 'erro' });
 });

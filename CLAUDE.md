@@ -130,6 +130,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   caiu nas duas (real; achado desligando uma peça por vez com `--set`). As amostras pequenas dos testes que reprovam depois da
   mudança: medir base × PR com 4× a amostra; se empatam, a meta passa a reprovar quando a contagem prova (binomial/Poisson,
   p < 5%) e a amostra cresce o que o CI aguenta; as cenas de estados novos (cartão, substituição) são defeitos de verdade.
+- **Pedidos do dono de 05/11 (print da pausa no PC)** — ENTREGUES no PR #621 (FILA 125 e 126; escolhas no "Depende do dono"
+  25): (125) "fontes tem que ser mais legais, o campinho um pouco maior, tem que ser mais legal, e não é só aí" — o sistema
+  tipográfico do 3D (ver "Sistema tipográfico" abaixo), a pausa com o campinho ~1,5× maior no PC e as outras telas; (126) "a foto
+  com o nome tem que ser mais embaixo e menor, no canto inferior" — o cartão do autor embaixo à DIREITA (no celular, logo acima
+  do "Pular"), ~4× menor no PC e ~2× no celular.
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -461,9 +466,11 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   desliga (sem opção na pausa: não cabe em 844×390). Testes: `teste-comemoracao` (Node, padrão) e
   `teste-comemoracao-tela` (navegador, CI e deploy); os de navegador que não são dela abrem com `?comemoracao=0`.
   **Cartão do autor** (item 31, #615, dono 17/10: "a FOTO do autor com o número e o nome"; contrato "Comemoração do gol",
-  `PESQUISA-ESTADIO.md` §10.1): `#autor-gol` dentro do `#comemoracao` (fora do `#hud`; some com a cena), no canto de cima à
-  DIREITA na linha do placar (o único lugar livre do autor em todos os planos; no celular a steadicam põe o autor no terço
-  esquerdo); foto (só a da edição pro do TM: o `tm3d.js` põe `foto` no pedido — TM v376 —, lida pelo lado + `tmId` em
+  `PESQUISA-ESTADIO.md` §10.1): `#autor-gol` dentro do `#comemoracao` (fora do `#hud`; some com a cena), no canto de BAIXO à
+  DIREITA desde o item 126 (PR #621; dono, 05/11: "mais embaixo e menor, no canto inferior": o de baixo à esquerda tapa o autor
+  em 73–78% dos quadros no celular, que o põe no terço esquerdo; com toque o "Pular" fica no canto do replay e o cartão logo
+  acima dele; a foto 73 px no PC 1920×1010 e 47 no 844×390, antes 182 e 92; o nome em caixa alta na TM Cond 800; testes
+  H13–H17); foto (só a da edição pro do TM: o `tm3d.js` põe `foto` no pedido — TM v376 —, lida pelo lado + `tmId` em
   `js/tm-fotos.js`, por `import()` depois do pronto, fora do hash; o pé dela escurece até o fundo do cartão), a pílula com escudo,
   sigla e número, e o NOME completo como a linha principal (também no celular: a camisa do `tm-times` corta em 10 letras); sem
   foto, uma linha só da altura do placar, nada desenhado no lugar. Entra 0,4 s depois do 1º corte, fica 3,5 s (curta 2,6), sai
@@ -610,6 +617,17 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `teste-pausa-tela` (navegador, CI e deploy). Lições: proporção medida só no 16:9 corta
   texto no 4:3/5:4 — medir o PC fora do 16:9 e baixo; o mousedown de compatibilidade de um toque dá o foco ao que ficou sob o
   dedo depois de o nível mudar; `inert` no pai cala o `role="status"` dos filhos para o leitor de tela.
+- **Sistema tipográfico** (item 125, PR #621; contrato "Sistema tipográfico (item 125)", `PESQUISA-ESTADIO.md` §7.6): dois
+  papéis no `estilo.css :root` — `--f-disp` = a TM Cond (Barlow Condensed 600 e 800, OFL, a letra da carta do TM;
+  `assets/tm/fontes/tmcond-{600,800}-latin(-ext).woff2`, faces e reservas com `size-adjust` no `estilo.css`) nos títulos, itens
+  de menu, números, nomes e siglas, e `--f-texto` = o `--fonte` (a Inter TM com `?tm`) no texto corrido. Peça nova de
+  interface usa um dos dois, nunca uma família solta. Regras: itens de menu em caixa normal sem espaçamento extra; nomes,
+  siglas e rótulos curtos em caixa alta; condensada a partir de ~14 px (abaixo só em caixa alta); nada itálico; nenhuma letra
+  < 11 px (≥ 10 só nas fichas da pausa em 568×320). Sem `?tm` o download inicial NÃO cresce: a TM Cond vem pela pré-carga
+  ociosa da pausa (`main.js fontesPausa`/`pedirFontesDisp`; exceção: o modo Pênaltis, ~44 KB); com `?tm` o `tm-cara.js`
+  carrega os 2 pesos e o `index.html` faz o `preload` do 800. Régua: `tools/lib/tipografia.mjs` (família pedida sem face, letra
+  mínima) no `teste-pausa-tela` P8, `teste-comemoracao-tela` H17 e `teste-editor-tela` 15; `teste-carga` (`FONTES_DISP`). Fica:
+  os números das camisas no canvas pedem "Barlow Condensed", sem face.
 - **Tela antes do jogo** (item 64, PR #613; dono 23/10, com o print do FC: "quero que fique NESSE NÍVEL; só altere para o
   Total Match com cores e etc"; contrato "Tela antes do jogo (item 64)", `PESQUISA-ESTADIO.md` §7.5; escolhas na FILA "Depende do
   dono" 19; o que ficou nos itens 100–107): a pré-partida da carreira do FC 24 com a cara do TM, em todo JOGO (partida, TM e Rumo
@@ -940,6 +958,22 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Lições: dificuldade se calibra pelo RESULTADO (gols, xG, saldo), não pelos substitutos — subir a vontade de chutar de longe
   dava mais chutes e menos gols; meta de ponto calibrada nas sementes do CI reprova em outras sementes: a meta só reprova quando
   a amostra PROVA (p5/p95).
+- **Clássico pegado (item 35)** (dono, 17/10: "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores ... não pelo
+  árbitro"; contrato "Clássico pegado (item 35)", `PESQUISA-CLASSICO.md`): `m.classico` só com `criarPartida({classico: true})`
+  (AUSENTE no resto, fora do hash; o pedido do TM `partida.classico` pelo `ajustes-partida.js classicoDoPedido` — no online, o do
+  anfitrião —, `?classico=1|0`; nunca no Livre nem nos Pênaltis; o TM não mudou). `config.js CLASSICO` {vontade 2,2 (IA × IA),
+  vontadePessoa 1,6 (o jogo com uma pessoa: a IA contra ela, com o nível por baixo, e os companheiros), descansoMin 16, boteTeto
+  0,26, segura 1,5 (IA × IA), seguraPessoa 2 (só a IA contra a pessoa)}: a vontade do bote como TAXA por cima do nível da
+  dificuldade (`sim.js cfgBote`, objetos novos na carga) e o batido que segura mais fora da própria área (`faltas.js
+  faltaTatica(…, segura)` pelo `sim.js seguraClassico(m, t)`, a decisão do jogador) — os DOIS times (todo `guiadoPelaIA`; os
+  companheiros da pessoa sem o segura), nunca o controlado; o árbitro IGUAL. IA × IA: botes +47%, faltas +34–38%; contra a pessoa:
+  faltas da IA +23–31%, botes +12%, chutes da pessoa −12%; a chance por contato 1,00. Testes: `teste-classico` (CI: K0–K5 e KI
+  estruturais, C1–C12 pareados e POR MODO que reprovam só quando provam; o K4 prova o árbitro igual em 1 440 cenas),
+  `teste-ponte-tm` P13, `teste-prepartida-tela` E25, `teste-faltas-sentido --classico`, `painel-equilibrio --classico`. Lições:
+  a vontade do bote SATURA (o bote mais cedo fecha a janela) e SUBSTITUI a falta do batido (sozinha, faltas +3–6%); o 1º homem
+  mais perto deu MENOS botes e mais falta por contato; a demo e os roteiros respondem diferente à mesma alavanca (medir POR MODO:
+  juntos, um escondia o outro) e no jogo com a pessoa olhar o lado DELA (chutes, gols, cartões) — a 1ª versão virava a
+  dificuldade de cima; a demo de 32 partidas varia ±0,2 entre conjuntos de sementes (decidir com 3–4 conjuntos).
 - **Etapa 5 — corpo humano realista** (dono, 22/10: "vamos trabalhar intensivamente no corpo e face dos jogadores"; plano e
   pesquisa em `golaco/PESQUISA-ETAPA5.md`, contrato "Corpo humano realista — Etapa 5.1" no `CONTRATOS.md`): o Rocketbox
   `Sports_Male_02` (MIT) encaixado nas medidas do jogo (`tools/humano/`, README), 25 ossos do desenho pelas juntas
@@ -1001,8 +1035,9 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
 - **Visual = a cara do Total Match** (dono, 09/10: "deixa os botões, menu, tudo com a cara do total match"):
   `css/tm.css`, carregado por ÚLTIMO, troca a aparência de menus/pausa/configurações, HUD (placar com o logo TM,
   faixas, gol, cartão, escalação), controles de toque e carregamento — Inter, preto #050807 + verde #22c55e, botão
-  principal em pílula com degradê verde, cartões arredondados com borda fina; nada itálico/inclinado/condensado e
-  nada de emoji como ícone. Fontes locais em `assets/fontes` (Inter; Barlow Condensed só nos números das camisas e
+  principal em pílula com degradê verde, cartões arredondados com borda fina; nada itálico nem inclinado e
+  nada de emoji como ícone (o "nada condensado" mudou no item 125, dono 05/11: "fontes tem que ser mais legais" — no 3D do
+  TM, o `golaco/`, a TM Cond vale nos títulos, números, nomes e siglas; o texto corrido e os menus do próprio TM, na Inter). Fontes locais em `assets/fontes` (Inter; Barlow Condensed só nos números das camisas e
   letras dos escudos), logo em `assets/tm-logo.png`. Peça nova de interface: usar as variáveis `--tm-*` desse arquivo.
 
 - Rostos: fotos de pessoas que não existem (`assets/rostos/`, montado por `tools/rostos/processar.py`;
@@ -1168,8 +1203,16 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   lembra). O clube do jogo rápido fica fora das ligas, do mercado e das convocações (`especial`). Escudo provisório em
   `assets/viverde/escudo.svg` até a logo do dono chegar.
 - **Partidas em 3D** (`js/tm3d.js`; dono, 09/10: o GOLAÇO vira o motor 3D do TM, tudo num jogo só; 15/10: o motor passa a
-  ser o GOLAÇO NOVO, `golaco/`): antes de toda partida do seu time (matchview com `pauseSide`) aparece Jogar em 3D / Simular
-  (Config → "Partidas do seu time": Perguntar / Sempre 3D / Sempre simular; só com WebGL 2). O 3D (`golaco/index.html?tm=<id>`,
+  ser o GOLAÇO NOVO, `golaco/`): o "Jogar" de toda partida do seu time (matchview com `pauseSide`;
+  também a Partida de Base com ≥ 11 e o Rumo ao Estrelato titular) abre o 3D direto na TELA ANTES DO JOGO — Jogar partida ou
+  Simular partida (o 3D fecha com `tm3d:sair {motivo: 'simular', titulares}` e o TM simula lance a lance com os titulares da
+  tela); a janela "Jogar em 3D / Simular" saiu no item 124 (dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de
+  jogar 3d ou simular; quando clica em jogar, já entra essa tela, e é em todos os modos"). Config → "Partidas do seu time": Tela
+  antes do jogo / Sempre simular (`settings.partidasTela`; o `partidas3d` antigo é ignorado: a migração foi única). Sem WebGL 2,
+  simula com um aviso por sessão. Fora do 3D: o Online de salas e o Duelo ao vivo (resultado dividido), os pênaltis e a
+  prorrogação do TM, o Estrelato no banco, o Palpite e a Base com < 11 (contrato "Ponte com o Total Match", parte "A tela no
+  lugar da janela"); para ficar fora do 3D, `sem3d: true` (como o "Simular direto" da Partida rápida); mexeu no fluxo?
+  `testar-3d` (e `--publica`). O 3D (`golaco/index.html?tm=<id>`,
   mesmo site e mesmo localStorage) recebe o pedido v2: os dois times com 18 jogadores, a vaga de cada titular na prancheta,
   os uniformes do TM (inclusive o do pré-jogo da carreira) e a identidade de cada time (`identidade`: o MESMO escudo do
   `TM.img.clubImg/nationImg` em endereço absoluto — Ultimate: `TM.ut._i.escudoSvg`, o escudo desenhado —, bandeira, liga,

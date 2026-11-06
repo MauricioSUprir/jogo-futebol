@@ -141,15 +141,16 @@ function contexto(L, m, f0, e, sem, modelo, anel) {
 
 /**
  * Roda as partidas e devolve {faltas: [...], partidas: [{sem, modelo, faltas, amarelos, vermelhos, penaltis, botes,
- * divididas, ticksJogo}]}. opc: {sementes, modelos (um por partida, em rodízio), min (minutos por tempo)}.
+ * divididas, ticksJogo}]}. opc: {sementes, modelos (um por partida, em rodízio), min (minutos por tempo), classico (item 35:
+ * {classico: true} no criarPartida — a partida pegada)}.
  */
-export async function registrarFaltas(JS, { sementes, modelos = ['demo'], min = 4, botesLimpos = false } = {}) {
+export async function registrarFaltas(JS, { sementes, modelos = ['demo'], min = 4, botesLimpos = false, classico = false } = {}) {
   const L = await carregarLogica(JS);
   const { P } = L;
   const faltas = [], partidas = [], limpos = botesLimpos ? [] : null;
   sementes.forEach((sem, k) => {
     const modelo = modelos[k % modelos.length];
-    const m = P.criarPartida({ semente: sem, minutosPorTempo: min });
+    const m = P.criarPartida({ semente: sem, minutosPorTempo: min, ...(classico ? { classico: true } : {}) });
     const st = {};
     const R = { sem, modelo, ctrl: -1, faltas: 0, amarelos: 0, vermelhos: 0, penaltis: 0, roubadas: 0, divididas: 0, ticksJogo: 0 };
     const N = Math.round(2 * min * 60 * 60) + 6000;

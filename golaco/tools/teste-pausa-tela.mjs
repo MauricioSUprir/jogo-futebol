@@ -962,18 +962,27 @@ async function sessaoOnline() {
       await B.evaluate(() => window.__golaco.fecharMenu());
     }
     // a vazão do lockstep entre duas abas varia com a carga da máquina (45 passos em 3 s sozinho, 10–26 com outro teste rodando):
-    // a meta compara a mesma janela com a pausa fechada logo antes — com ela aberta o jogo anda (≥ 40% e ≥ 1 passo)
-    const nF0 = await B.evaluate(() => window.__golaco.online.n);
-    await B.waitForTimeout(3000);
-    const n0 = await B.evaluate(() => window.__golaco.online.n);
-    await B.evaluate(() => window.__golaco.abrirMenu());
-    await B.waitForTimeout(3000);
-    const n1 = await B.evaluate(() => window.__golaco.online.n);
-    await B.evaluate(() => window.__golaco.fecharMenu());
-    const fechada = n0 - nF0, aberta = n1 - n0;
-    P.s1.push(`online: ${aberta} passos em 3 s com a pausa aberta (${fechada} fechada)`);
+    // a meta compara a mesma janela com a pausa fechada logo antes — com ela aberta o jogo anda (≥ 40% e ≥ 1 passo). Com a máquina
+    // cheia a vazão oscila DENTRO dos 6 s (o deploy do #620: 15 aberta × 50 fechada; passou na nova rodada; a revisão do item 125:
+    // 15 × 57 com outro teste junto, 35 × 20 sozinho): até 3 medidas, vale a 1ª que passar — o defeito que o S1 guarda (a pausa
+    // parando o online) dá 0 passos nas três
+    const medidas = [];
+    let andou = false;
+    for (let k = 0; k < 3 && !andou; k++) {
+      const nF0 = await B.evaluate(() => window.__golaco.online.n);
+      await B.waitForTimeout(3000);
+      const n0 = await B.evaluate(() => window.__golaco.online.n);
+      await B.evaluate(() => window.__golaco.abrirMenu());
+      await B.waitForTimeout(3000);
+      const n1 = await B.evaluate(() => window.__golaco.online.n);
+      await B.evaluate(() => window.__golaco.fecharMenu());
+      const fechada = n0 - nF0, aberta = n1 - n0;
+      medidas.push(`${aberta}/${fechada}`);
+      andou = aberta >= 1 && aberta >= 0.4 * fechada;
+    }
+    P.s1.push(`online: passos em 3 s com a pausa aberta/fechada ${medidas.join(', ')}`);
     // (de propósito: no online a IA joga pelo meu controlado e o outro lado não espera)
-    if (aberta < 1 || aberta < 0.4 * fechada) P.s1.push('FALHA online (o jogo devia andar)');
+    if (!andou) P.s1.push('FALHA online (o jogo devia andar)');
   } catch (e) { erros.push(`online: ${e.stack ?? e}`); }
   finally { erros.push(...s.erros.map(x => `online: ${x}`)); await s.navegador.close(); }
 }

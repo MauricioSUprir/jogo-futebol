@@ -28,17 +28,21 @@ async function print(nome) { await p.screenshot({ path: path.join(PASTA, nome + 
 async function clica(rx) {
   return p.evaluate((rx) => { const b = [...document.querySelectorAll("button")].find(x => new RegExp(rx).test(x.textContent.trim())); if (b) { b.click(); return true; } return false; }, rx);
 }
+// (com "Sempre simular" o quadro do 3D nunca abre: se abrir, o teste anota)
+let abriu3d = 0;
 async function ateResultado() {
   for (let i = 0; i < 40; i++) {
     await p.waitForTimeout(250);
+    if (await p.evaluate(() => !!document.querySelector(".tm3d-tela"))) { abriu3d++; await p.evaluate(() => TM.tm3d && TM.tm3d.fechar && TM.tm3d.fechar()); }
     if (await p.evaluate(() => !!document.querySelector(".utm-res"))) return true;
     await clica("^(Pular|Ver resultado|Continuar)");
   }
   return false;
 }
 
-// 1) clube novo com elenco inicial da liga escolhida (partidas simuladas: o 3D tem teste próprio, testar-3d.mjs)
-await p.evaluate(() => { TM.storage.saveSettings(Object.assign(TM.storage.settings(), { matchSpeed: "instantaneo", partidas3d: "simular" })); localStorage.removeItem("totalmatch:ultimate"); TM.ut.reset(); TM.ui.go("ut"); });
+// 1) clube novo com elenco inicial da liga escolhida (partidas simuladas: o 3D tem teste próprio, testar-3d.mjs; item 124: a Config
+// "Sempre simular" mora em partidasTela — o partidas3d antigo não conta mais e, com ele, o 3D abriria no meio das Rivais)
+await p.evaluate(() => { TM.storage.saveSettings(Object.assign(TM.storage.settings(), { matchSpeed: "instantaneo", partidasTela: "simular" })); localStorage.removeItem("totalmatch:ultimate"); TM.ut.reset(); TM.ui.go("ut"); });
 await p.waitForTimeout(700);
 await p.evaluate(() => { document.querySelector(".ut-input").value = "Teste FC"; });
 await clica("^Criar meu clube$");
@@ -63,6 +67,7 @@ await p.evaluate(() => { TM.utModos.rivSemana(TM.ut.state()).v = 4; TM.ut.save()
 await p.waitForTimeout(700);
 await clica("^Jogar eliminatória");
 confere("partida da Champions chega ao resultado", await ateResultado());
+confere("com \"Sempre simular\" (partidasTela) nenhuma partida abre o 3D", abriu3d === 0, abriu3d);
 const modos = await p.evaluate(() => { const s = TM.ut.state(); return { riv: s.riv.pl, bat: s.bat.j, ch: s.champ.ej.length, xp: s.temp.xp, jogos: s.stats.jogos }; });
 confere("modos registram as partidas e dão XP", modos.riv === 1 && modos.bat === 1 && modos.ch === 1 && modos.xp > 0 && modos.jogos === 3, modos);
 

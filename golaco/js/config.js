@@ -1729,6 +1729,28 @@ export const DIFICULDADE = {
     contrapressao: { s: [0, 5, 7], max: [0, 3, 3] }, utilidade: { chute: 4.2, passeAntecipa: 0.7 } },
 };
 
+// O clássico (item 35; dono, 17/10: "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais
+// contato), não pelo árbitro"; contrato "Clássico pegado (item 35)" no CONTRATOS.md, pesquisa e calibração em PESQUISA-CLASSICO.md).
+// Vale com m.classico (o pedido do TM, partida.classico; ?classico=1) para TODO jogador guiado pela IA dos DOIS times — a IA × IA,
+// a IA contra a pessoa e os companheiros da pessoa —, nunca o controlado (o bote dele é o botão). Só a VONTADE e o contato perto da
+// bola; nada de volume de pressão, física, alcance nem árbitro (FALTAS e a régua do faltas.js iguais: as faltas sobem porque há
+// mais contato). Cada chave cobre UMA constante de hoje e nunca repete o nome dela (teste-classico K0):
+//   vontade (a IA × IA: a demo, o Simular o resto) e vontadePessoa (o jogo COM uma pessoa: a IA contra ela, com o nível da
+//   DIFICULDADE por baixo, e os companheiros dela; também o online): ACOES.boteIA.chancePorPasso como TAXA, 1 − (1 − p)^vontade
+//   (≤ boteTeto, nunca abaixo do p do nível), e o descanso ÷ vontade (≥ descansoMin, nunca acima do do nível) — sim.js cfgBote ·
+//   segura (a IA × IA, os dois times) e seguraPessoa (só a IA contra a pessoa; os companheiros dela 1: a falta tática deles é
+//   amarelo e suspensão que ela não escolheu): × a decisão do batido de segurar (FALTAS.tatica.chancePorPasso/semSPA no faltas.js
+//   faltaTatica, fora da própria área; o apito e o cartão iguais) — sim.js seguraClassico
+// O teto e o piso do bote são o envelope já jogado no item 33 (a rodada 7 da calibração da dificuldade: 0,26/16). A vontade satura
+// (o bote mais cedo fecha a janela: com 2,6 as oportunidades caem ~40% e os botes sobem ~27%) e substitui a falta do batido — por
+// isso o `segura`. Revisão (PESQUISA-CLASSICO.md §7): contra a pessoa a vontade alta virava a dificuldade de cima (com 2,6 ela
+// chutava 34% menos e perdia mais no bote) e batia o Difícil e o Lenda no mesmo teto — lá a vontade é menor (1,6: Difícil+C
+// 0,185/21 < Lenda+C 0,26/16) e as faltas vêm mais do segurar; na IA × IA, 2,2 e o segura 1,5 (com 2,6/2 os botes iam a +62% e
+// as faltas a +74% em outras sementes). Ficaram fora (a triagem, §6): o 1º homem contendo e apertando mais perto (menos botes e a
+// chance por contato +16%) e a bola encostada disputada com mais diferença de velocidade (+2% de botes, a chance por contato mais
+// alta); o volume de pressão, a carga e as regras de responsabilidade (desvio, semAtropelar) de propósito.
+export const CLASSICO = { vontade: 2.2, vontadePessoa: 1.6, descansoMin: 16, boteTeto: 0.26, segura: 1.5, seguraPessoa: 2 };
+
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
 // Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
 // `carrinho` abaixo, carrinho.js).

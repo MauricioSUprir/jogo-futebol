@@ -74,10 +74,10 @@
       ]),
       el("div", { class: "setting-hint", text: "Em 3D, a dificuldade muda só a IA adversária (marcação, botes, vontade de chutar e tempo de reação). Na simulação, muda a força do seu time." }),
       slider("Realismo", "realism", 1, 5, ["Arcade", "Casual", "Equilibrado", "Realista", "Simulação"]),
-      segmented("Partidas do seu time", "partidas3d", [
-        { label: "Perguntar", value: "perguntar" }, { label: "Sempre 3D", value: "3d" }, { label: "Sempre simular", value: "simular" }
+      segmented("Partidas do seu time", "partidasTela", [
+        { label: "Tela antes do jogo", value: "tela" }, { label: "Sempre simular", value: "simular" }
       ]),
-      el("div", { class: "setting-hint", text: "Em 3D você joga no estádio (motor 3D do Total Match); simulando, acompanha lance a lance. Partidas online contra outra pessoa são sempre simuladas." }),
+      el("div", { class: "setting-hint", text: "Toda partida do seu time abre no estádio 3D, na tela antes do jogo: Jogar partida (você joga no 3D) ou Simular partida (lance a lance, como sempre). Sempre simular pula o 3D (celular mais fraco, carreira rápida). O Online de salas e o Duelo ao vivo do Ultimate, que dividem o resultado com a outra pessoa, são sempre simulados; a disputa de pênaltis e a prorrogação seguem no Total Match." }),
       segmented("Duração em 3D (cada tempo)", "tempo3d", [3, 4, 5, 6, 8, 10].map(function (v) { return { label: v + " min", value: v }; })),
       el("div", { class: "setting-hint", text: "Minutos reais de cada tempo quando você joga em 3D; o placar mostra os 90 minutos." }),
       segmented("Tempo de jogo (velocidade)", "matchSpeed", [

@@ -757,9 +757,12 @@
       var prep = preparaPartida(c, esc);
       function simula() { TM.ui.go("rae-resultado", { out: jogaPartida(c, prep) }); }
       var t3 = TM.tm3d;
-      // titular: dá para jogar em 3D controlando só o seu jogador
-      if (!t3 || !t3.disponivel() || esc.joga !== "titular") { simula(); return; }
-      function em3d() {
+      // titular: o 3D abre direto na tela antes do jogo, controlando só o seu jogador — "Jogar partida" ou "Simular partida" (a
+      // simulação daqui; item 124: a janela "Jogar em 3D / Simular" saiu). No banco ou fora dos relacionados, a simulação; com
+      // "Sempre simular" na Config, também; sem WebGL 2, a simulação com o aviso (uma vez por sessão)
+      if (!t3 || esc.joga !== "titular" || t3.preferencia() === "simular") { simula(); return; }
+      if (!t3.disponivel()) { if (t3.avisaSemWebgl) t3.avisaSemWebgl(); simula(); return; }
+      (function em3d() {
         var tm = timesDaPartida(c, prep);
         t3.jogar3d({
           teamA: prep.casa ? tm.meu : tm.adv, teamB: prep.casa ? tm.adv : tm.meu,
@@ -771,12 +774,7 @@
           fim: function (r3) { TM.ui.go("rae-resultado", { out: jogaPartida(c, prep, r3) }); },
           sair: simula
         });
-      }
-      var pref = t3.preferencia();
-      if (pref === "simular") simula();
-      else if (pref === "3d") em3d();
-      else t3.escolha({ title: "Rumo ao Estrelato", teamA: { name: prep.casa ? c.clubName : prep.adv.name }, teamB: { name: prep.casa ? prep.adv.name : c.clubName },
-        controle: { tmId: "rae-me" } }, simula, em3d);
+      })();
     }, "btn primary"));
   });
 

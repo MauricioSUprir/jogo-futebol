@@ -308,6 +308,17 @@ html.tm .girar::before {
 }
 html.tm .girar-titulo { font-weight: 800; letter-spacing: -0.01em; }
 html.tm .girar-texto { color: var(--tm-fraco); }
+/* o "Simular partida" antes do jogo (item 124, revisões A1/A6; main.js criarSimularTM): na tela "Gire o celular" (em pé não dá para
+   jogar — o X do TM já sumiu — e o PWA do TM é travado em pé) e na abertura de texto (a reserva da tela, sem abas), no canto de
+   baixo à direita (o do Pular, que a abertura esconde). Pílula escura com a borda verde: a ação secundária (a principal é girar /
+   começar) */
+html.tm .tm-simular {
+  justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 700 15px/1 var(--fonte);
+  color: var(--tm-texto); background: rgba(5, 8, 7, 0.72); border: 1px solid rgba(34, 197, 94, 0.62);
+}
+html.tm .tm-simular:hover, html.tm .tm-simular:focus-visible { border-color: var(--tm-verde-cl); color: var(--tm-verde-cl); outline: none; }
+html.tm .tm-simular[hidden] { display: none; }
+html.tm .tm-simular-abertura { position: fixed; z-index: 31; right: calc(var(--sa-r) + 16px); bottom: calc(var(--sa-b) + 14px); }
 
 /* ------------------------------------------------------------------ pré-jogo: abertura com a logo, escalação */
 html.tm .pj-abertura { background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(5, 8, 7, 0.42) 0%, rgba(5, 8, 7, 0.84) 100%); }
