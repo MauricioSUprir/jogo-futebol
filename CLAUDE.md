@@ -140,7 +140,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
   notaExibida`: a ficha do TM leva `ovrTM`; o jogo continua com o nível comprimido e os atributos). **FILA (dono: "o 3 e 4
   fica pra dps"):** (3) o campinho da escalação do jogo EM PÉ (retrato), não deitado (`escalacao-tela.js`); (4) a cena de
-  substituição no online (hoje desligada no online porque seguraria a simulação de um lado só). Também a escalação
+  substituição no online — ENTREGUE (item 30, PR #622; contrato "Online 1×1"): vale a opção do ANFITRIÃO nos dois aparelhos
+  (pelo controle 'opcoes', não pelo pedido: o TM não mudou), cada aparelho segura só a SUA simulação na cena e o "Pular"
+  pula só a sua; quem acaba antes espera com "{nome} ainda está vendo a cena" (sem o selo e sem W.O.); a troca do outro abre
+  a cena no mesmo tick nos dois (escolhas: FILA "Depende do dono" 26). Também a escalação
   editada no TM antes do jogo agora vale no 3D (v374: formação do lado certo jogando fora, posições arrastadas pelo
   `TM.comp.fieldSlot`, sem o montador automático por cima da do usuário).
   **Mais para a fila (dono, 17/10: "coloca na lista para depois com limite"):** (5) o goleiro ESPALMA bola alta (hoje
@@ -906,7 +909,10 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `salas3d/{código}` no Firebase do TM, WebRTC com STUN e sem TURN, a ligação mora na página do TM e passa ao quadro por
   uma MessagePort — protocolo no topo do arquivo; `TM.tm3d.jogarOnline`). Testes do TM: `ferramentas/testar-online3d.mjs`
   (banco falso, WebRTC de verdade no loopback; `--golaco` = com o GOLAÇO de verdade). Sem o online, `hash-partida`/
-  `hash-igual` IGUAIS. Pendente (fora da v1): convite pela lista de amigos, indicador de sinal no HUD, reconexão depois de
+  `hash-igual` IGUAIS. Cena de substituição (item 30, PR #622): a opção do anfitrião nos dois (`{tipo: 'opcoes', subst}`; sem a
+  mensagem, "só a faixa": a cena é desenho e nunca dessincroniza); o `quadroOnline` segura só o meu lado e o pacote leva a
+  marca E_CENA (bit 64 do byte 19; `online-pagina.js marcaCena`/`textoEspera`/`conexaoNoQuadro`, puros); W.O. e selo só pela
+  falta de pacote; com o menu aberto nada pula a cena; `teste-online-tela` P8a–P8i e `teste-online` O13–O15. Pendente (fora da v1): convite pela lista de amigos, indicador de sinal no HUD, reconexão depois de
   recarregar, TURN (precisa de conta de adulto), rollback.
 - **Bolas paradas no estilo FIFA** (pedido de 16/10; item 65, PR #601; `mira.js` na lógica; `render/bola-parada.js` +
   `mira-linha.js` SOB DEMANDA; PESQUISA-ETAPA4.md §12/§12.1, contrato "Cobrança mirada" no CONTRATOS.md): câmera atrás do

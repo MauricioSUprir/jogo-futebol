@@ -6,7 +6,7 @@
    transação, ouvintes e onDisconnect (rodam quando a página recarrega ou fecha). O quadro do 3D é uma página de ensaio
    (__eco3d.html, servida aqui) que lê o pedido, recebe a porta e ecoa. Com --golaco, o GOLAÇO de verdade no lugar dele: a
    partida online entre os dois aparelhos (a IA joga pelos dois pelo bit IA do menu aberto) com o mesmo jogo nos dois —
-   itens G1–G3, e o teste acaba ali.
+   itens G1–G3 (G1c: a cena de substituição do ANFITRIÃO vale nos dois — item 30), e o teste acaba ali.
    O site precisa estar montado como no GitHub Pages: o TM na raiz e o 3D em /golaco/. Ex.:
      mkdir -p /tmp/site && for f in legacy-total-match/*; do ln -sfn "$PWD/$f" /tmp/site/; done && ln -sfn "$PWD/golaco" /tmp/site/golaco
      (cd /tmp/site && python3 -m http.server 8283)
@@ -489,6 +489,12 @@ try {
   // (item 33: a duração do online é a do ANFITRIÃO — a Ana com 5 min, o Bruno com 8 e o Lenda — e nunca vai a dificuldade)
   await A.p.evaluate(() => TM.storage.saveSettings(Object.assign(TM.storage.settings(), { tempo3d: 5, difficulty: "facil" })));
   await B.p.evaluate(() => TM.storage.saveSettings(Object.assign(TM.storage.settings(), { tempo3d: 8, difficulty: "lenda" })));
+  // (item 30: a "Cena de substituição" do GOLAÇO — golaco.prefs.v1, mesma origem — ligada na Ana e desligada no Bruno: no online
+  // vale a do anfitrião nos dois, pelo controle que passa pela porta do TM)
+  if (GOLACO) {
+    await A.p.evaluate(() => { const k = "golaco.prefs.v1", p = JSON.parse(localStorage.getItem(k) || "{}"); p.substituicao = true; localStorage.setItem(k, JSON.stringify(p)); });
+    await B.p.evaluate(() => { const k = "golaco.prefs.v1", p = JSON.parse(localStorage.getItem(k) || "{}"); p.substituicao = false; localStorage.setItem(k, JSON.stringify(p)); });
+  }
   await clica(B, "^Pronto$");
   const aViu = await ate(A, () => /Bruno está pronto/.test(document.body.innerText), null, 6000);
   await clica(A, "^Pronto$");
@@ -515,6 +521,9 @@ try {
       // (item 33: os dois mundos com a duração da Ana — 5 min = 18 000 ticks — e sem dificuldade)
       const aj = await Promise.all([gA, gB].map(g => g.evaluate(() => ({ ticks: window.__golaco.mundo.partida.ticksPorTempo, dif: window.__golaco.mundo.dificuldade ?? null, ped: window.__golaco.tm.pedido.partida.minutosPorTempo, pedDif: window.__golaco.tm.pedido.partida.dificuldade ?? null }))));
       confere("G1b a duração do anfitrião (5 min) nos dois mundos, sem dificuldade (item 33)", aj.every(x => x.ticks === 18000 && x.dif === null && x.ped === 5 && x.pedDif === null), aj);
+      // (item 30) a cena de substituição da Ana (ligada) também no Bruno (a dele desligada)
+      const subst = await Promise.all([gA, gB].map(g => g.evaluate(() => window.__golaco.cenaSubst.ligada())));
+      confere("G1c a cena de substituição do anfitrião (ligada na Ana) vale nos dois aparelhos (desligada no Bruno), pela porta do TM (item 30)", subst[0] === true && subst[1] === true, subst);
       confere("G2 a partida anda nos dois aparelhos (WebRTC de verdade pela porta do TM) com o mesmo jogo",
         ra && rb && com.length >= 5 && dif === 0 && oa.lado === 0 && ob.lado === 1,
         { n: [oa.n, ob.n], D: [oa.D, ob.D], rtt: [oa.rtt, ob.rtt], comuns: com.length, dif, conexao: [oa.conexao, ob.conexao], placar: [oa.placar, ob.placar] });

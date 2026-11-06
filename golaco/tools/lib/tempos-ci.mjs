@@ -158,7 +158,11 @@ export const TEMPOS_NAVEGADOR = {
   // sozinho; acertar pelo log do CI)
   // (item 93: 242,8 s no log do CI do #613)
   'teste-pausa-tela.mjs': 250, // 249,5 s no log do 1º CI do #618 (item 114)
-  'teste-online-tela.mjs': 160,
+  // (item 30: + o P8, dois pares de abas a 568×320 com a cena de substituição — 96 s aqui com a máquina livre; 442 s o teste
+  // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
+  // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro
+  // teste de navegador junto, ~+50 s; estimado)
+  'teste-online-tela.mjs': 330,
   'teste-corpo-tela.mjs': 150,
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
   'teste-mira-tela.mjs': 60,
