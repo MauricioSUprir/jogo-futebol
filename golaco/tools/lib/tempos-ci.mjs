@@ -114,7 +114,7 @@ export const TEMPOS_NODE = {
 export const TEMPOS_NAVEGADOR = {
   'teste-carga.mjs': 36,
   'teste-controles.mjs': 64,
-  'teste-editor-tela.mjs': 51,
+  'teste-editor-tela.mjs': 70, // item 125, revisão: + o item 16 (3 páginas com ?tm, ~+20 s)
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
   // acertar pelo log do CI; a revisão somou 2 páginas no 15 — o pedido misto e a TM Cond bloqueada —, ~+40 s)
