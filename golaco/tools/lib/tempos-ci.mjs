@@ -75,6 +75,10 @@ export const TEMPOS_NODE = {
   'teste-ia-corre.mjs --sementes 8': 330,
   // (25/10, D3: 48 partidas de 4 min contra o espelho em 3 processos; localmente ~100 s)
   'teste-pressao.mjs --humano': 300, // (31/10: 96 sementes, eram 48)
+  // (item 33: 4 níveis × 4 roteiros × 8 sementes = 128 partidas de 2 × 4 min + ~30 cenas de hash de 2 × 1 min; localmente 732 s
+  // com 2 processos numa máquina de 4 vCPU; estimado com 3)
+  'teste-dificuldade.mjs': 792, // 791,9 s no log do 1º CI do #618 (item 114)
+  'teste-classico.mjs': 600, // item 35 (revisão): 160 partidas de 2 × 4 min + 21 cenas de hash em 3 processos (463 s aqui com 2 e a máquina livre; 390–690 s antes, com ela dividida; estimado — corrigir pelo log do 1º CI, FILA 123)
   'teste-goleiro-regras.mjs': 146,
   'teste-reposicao.mjs': 150, // C5: 12 partidas da demo (31/10: eram 6; o canhão de ~200 reposições) + 4 cenas do gesto; estimado
   'teste-goleiro-realista.mjs': 150, // (estimado: 8 sementes do canhão do goleiro em 4 processos, ~100 s na máquina de dev)
@@ -111,7 +115,7 @@ export const TEMPOS_NODE = {
 export const TEMPOS_NAVEGADOR = {
   'teste-carga.mjs': 36,
   'teste-controles.mjs': 64,
-  'teste-editor-tela.mjs': 51,
+  'teste-editor-tela.mjs': 70, // item 125, revisão: + o item 16 (3 páginas com ?tm, ~+20 s)
   'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
   // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
   // acertar pelo log do CI; a revisão somou 2 páginas no 15 — o pedido misto e a TM Cond bloqueada —, ~+40 s)
@@ -123,7 +127,9 @@ export const TEMPOS_NAVEGADOR = {
   // (item 109: 549,1 s no log do CI do #614, navegador, antes do item 31)
   // (item 31: + o E22, 4 páginas ?tm com as fotos — 844×390, 1280×720, a pública e a de 404 —; ~+50 s estimado; acertar pelo log
   // do CI — item 111)
-  'teste-prepartida-tela.mjs': 600,
+  // (item 124, revisão: + o E14r, 3 páginas ?tm num quadro — em pé com toque, o PC com o quadro preso 3,6 s e a reserva —; ~+60 s
+  // estimado sobre os 429,5 s do log do 1º CI do #618 (item 114); acertar pelo log do CI)
+  'teste-prepartida-tela.mjs': 490,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
@@ -138,7 +144,8 @@ export const TEMPOS_NAVEGADOR = {
   'teste-replay-paradas-tela.mjs': 400,
   // (item 31: + o H, 4 páginas novas — 844×390 ?tm pro, 568×320 ?tm pública, a cena curta e o pular no PC, 1366×600 com as fotos
   // em 404 — e 6 gols; 291 s aqui o teste inteiro com outra página junto; estimado ~+70 s no CI; acertar pelo log do CI)
-  'teste-comemoracao-tela.mjs': 150,
+  // (item 126: + 2 páginas com as fotos — 1920×1010 e 568×320 ?tm pro — e 2 gols; ~+30 s estimado; acertar pelo log do CI)
+  'teste-comemoracao-tela.mjs': 115,
   'teste-tecnicos-tela.mjs': 155,
   'teste-substituicao-tela.mjs': 164,
   // medido aqui (23/10, PR 4, máquina livre: 839 s — cartão 201 s, intervalo 68, pós-jogo 569) + o C12d, o I8b, o I13 e o I14
@@ -150,8 +157,12 @@ export const TEMPOS_NAVEGADOR = {
   // o online em 6 telas da revisão, 390 s aqui dividindo a máquina com outro teste de navegador (carga ~9) e 33–71 s por parte
   // sozinho; acertar pelo log do CI)
   // (item 93: 242,8 s no log do CI do #613)
-  'teste-pausa-tela.mjs': 243,
-  'teste-online-tela.mjs': 160,
+  'teste-pausa-tela.mjs': 250, // 249,5 s no log do 1º CI do #618 (item 114)
+  // (item 30: + o P8, dois pares de abas a 568×320 com a cena de substituição — 96 s aqui com a máquina livre; 442 s o teste
+  // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
+  // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro
+  // teste de navegador junto, ~+50 s; estimado)
+  'teste-online-tela.mjs': 330,
   'teste-corpo-tela.mjs': 150,
   // (31/10, C6: medido aqui com a máquina dividida, carga ~10 em 4 núcleos: 52 s; acertar pelo log do CI)
   'teste-mira-tela.mjs': 60,

@@ -579,6 +579,13 @@
     return MAPA[base] || null;
   }
   function temEmoji(v) { RE.lastIndex = 0; return RE.test(v); }
+  // o texto sem os emoji (o mesmo critério do SO_TIRA: © ® ™ ‼ ⁉ ★ ☆ ficam), sem espaço sobrando: para o que sai do TM — o título
+  // da partida no 3D (tm3d.js), que o conversor não alcança (outra página)
+  function semEmoji(v) {
+    if (typeof v !== "string" || !v) return v;
+    RE.lastIndex = 0;
+    return v.replace(RE, function (e) { return TEXTO[chave(e)] ? e : ""; }).replace(/\s{2,}/g, " ").trim();
+  }
 
   /* ---------- onde trocar, onde só tirar, onde deixar ---------- */
   // conteúdo escrito por alguém: o emoji fica
@@ -702,5 +709,5 @@
   else liga();
 
   TM.ic = ic;
-  TM.icones = { tem: function (n) { return !!ICONES[n]; }, doEmoji: achaIcone, converte: trataNo };
+  TM.icones = { tem: function (n) { return !!ICONES[n]; }, doEmoji: achaIcone, converte: trataNo, semEmoji: semEmoji };
 })(window);

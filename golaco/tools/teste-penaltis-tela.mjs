@@ -25,6 +25,9 @@
 //   9  A faixa do fim não encosta nas bolinhas nas telas baixas de celular (568×320, 667×375; antes cobria em 568×320).
 //  10  Sem ?semente: a disputa sorteia a semente (a 1ª, "Reiniciar disputa" e a volta pelo Modo de jogo, todas diferentes).
 //  11  ?tm: durante o "Simular o resto" o placar fica sem o relógio da partida (o "00:00" do relógio MM:SS; antes, o "0' 1º T").
+//  1c  (item 125, revisão R4) sem ?tm, no 1º instante em que o painel da disputa aparece a TM Cond 800 e a 600 já estão
+//      carregadas (o painel não troca de letra; em e60e2c7c a fonte só era pedida quando o painel pintava — aos 4,8 s, com ele já na
+//      tela —: reprovava; agora o disputa-tela.js a pede na importação, aos 0,4 s).
 //   node tools/teste-penaltis-tela.mjs
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -48,6 +51,17 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
 {
   const s = await abrir({ largura: 1280, altura: 720 });
   const pg = s.pagina;
+  // (1c) a letra no 1º instante em que o painel aparece (antes de qualquer pedido do teste)
+  await pg.addInitScript(() => {
+    window.__dispFonte = null;
+    const ver = () => {
+      if (window.__dispFonte) return;
+      const e = document.querySelector('.disputa');
+      if (!e || e.hidden || !e.textContent.trim()) return;
+      window.__dispFonte = { f800: document.fonts.check('800 13px "TM Cond"'), f600: document.fonts.check('600 13px "TM Cond"'), fam: getComputedStyle(e).fontFamily.split(',')[0] };
+    };
+    new MutationObserver(ver).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class'], characterData: true });
+  });
   await pg.goto(`${srv.url}?modo=penaltis&demo=1&semente=3&${Q}`, { waitUntil: 'load' });
   await pg.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
   await pg.evaluate(() => window.__golaco.relogio.usarManual(true));
@@ -59,6 +73,8 @@ const encosta = (a, b, folga = 2) => !!a && !!b && a.l < b.r + folga && b.l < a.
       relogio: !!rel && !rel.hidden && getComputedStyle(rel).display !== 'none', mapa: !!mm && getComputedStyle(mm).display !== 'none', tela: g.telaDisputa(),
       dica: (() => { const d = document.getElementById('dica'); return !!d && getComputedStyle(d).display !== 'none'; })() };
   });
+  const fonte1 = await pg.evaluate(() => window.__dispFonte);
+  meta('1c PC sem ?tm: no 1º instante do painel da disputa a TM Cond 800 e 600 já carregadas (não troca de letra)', JSON.stringify(fonte1), !!fonte1 && fonte1.f800 && fonte1.f600 && /TM Cond/.test(fonte1.fam));
   const cx = { disputa: await caixa(pg, '#disputa'), placar: await caixa(pg, '.placar'), menu: await caixa(pg, '#btn-menu') };
   meta('1 PC: a disputa abre (Golaço × Ventania), placar sem relógio, sem minimapa, bolinhas abaixo do placar sem encostar',
     `modo ${ini.modo}, ${ini.siglas.join(' × ')}, ${ini.d?.estado}; relógio ${ini.relogio ? 'VISÍVEL' : 'escondido'}; minimapa ${ini.mapa ? 'VISÍVEL' : 'escondido'}; bolinhas ${ini.tela?.linhas?.join(' / ')} em y ${cx.disputa ? cx.disputa.t.toFixed(0) : '-'} (placar até ${cx.placar ? cx.placar.b.toFixed(0) : '-'})`,

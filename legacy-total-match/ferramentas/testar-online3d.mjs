@@ -6,7 +6,7 @@
    transação, ouvintes e onDisconnect (rodam quando a página recarrega ou fecha). O quadro do 3D é uma página de ensaio
    (__eco3d.html, servida aqui) que lê o pedido, recebe a porta e ecoa. Com --golaco, o GOLAÇO de verdade no lugar dele: a
    partida online entre os dois aparelhos (a IA joga pelos dois pelo bit IA do menu aberto) com o mesmo jogo nos dois —
-   itens G1–G3, e o teste acaba ali.
+   itens G1–G3 (G1c: a cena de substituição do ANFITRIÃO vale nos dois — item 30), e o teste acaba ali.
    O site precisa estar montado como no GitHub Pages: o TM na raiz e o 3D em /golaco/. Ex.:
      mkdir -p /tmp/site && for f in legacy-total-match/*; do ln -sfn "$PWD/$f" /tmp/site/; done && ln -sfn "$PWD/golaco" /tmp/site/golaco
      (cd /tmp/site && python3 -m http.server 8283)
@@ -347,6 +347,8 @@ try {
   await nadaSobreNada(A, "entrada");
 
   /* 2) criar sala */
+  // (a versão do TM vem da página: o teste esperava "v373" escrito à mão e reprovava a cada versão nova — v376 do item 31, v377)
+  const VER = await A.p.evaluate(() => TM.versao());
   await clica(A, "^Criar sala$");
   await fase(A, "esperando");
   let eA = await est(A);
@@ -355,7 +357,7 @@ try {
   const no = banco.ler("salas3d/" + cod1);
   const temQr = await A.p.evaluate(() => !!document.querySelector(".o3d-qr svg"));
   confere("2 criar sala: código de 5 letras na tela, link ?online3d=, QR e o nó no banco (anfitrião, versão, esperando)",
-    /^[A-HJ-NP-Z2-9]{5}$/.test(cod1 || "") && t2.includes(cod1) && t2.includes("?online3d=" + cod1) && temQr && !!no && no.anfitriao === "uidAna" && no.versaoTM === "v373" && no.estado === "esperando" && no.partidaN === 1 && no.nomeA === "Ana",
+    /^[A-HJ-NP-Z2-9]{5}$/.test(cod1 || "") && t2.includes(cod1) && t2.includes("?online3d=" + cod1) && temQr && !!no && no.anfitriao === "uidAna" && no.versaoTM === VER && /^v\d+$/.test(VER) && no.estado === "esperando" && no.partidaN === 1 && no.nomeA === "Ana",
     { cod1, no });
   await print(A, "2-sala");
   await nadaSobreNada(A, "sala");
@@ -371,11 +373,11 @@ try {
     return cl.p.evaluate(() => document.querySelector(".o3d-erro")?.textContent || "");
   }
   const agora = Date.now();
-  banco.gravar("salas3d/CHEAA", { anfitriao: "uidX", nomeA: "Xavier", criada: agora, versaoTM: "v373", proto: 1, estado: "esperando", partidaN: 1, convidado: "uidY", nomeC: "Yara", naSalaC: 1 });
+  banco.gravar("salas3d/CHEAA", { anfitriao: "uidX", nomeA: "Xavier", criada: agora, versaoTM: VER, proto: 1, estado: "esperando", partidaN: 1, convidado: "uidY", nomeC: "Yara", naSalaC: 1 });
   banco.gravar("salas3d/VERSA", { anfitriao: "uidZ", nomeA: "Zeca", criada: agora, versaoTM: "v1", proto: 1, estado: "esperando", partidaN: 1 });
   const e1 = await tentaEntrar(B, "ZZZZZ"), e2 = await tentaEntrar(B, "cheaa"), e3 = await tentaEntrar(B, "VERSA");
   confere("3 código inexistente / sala cheia / versão diferente: as mensagens certas (minúscula vale)",
-    e1 === "Código não encontrado." && e2 === "Essa sala já tem dois jogadores." && e3 === "Versões diferentes do Total Match: atualizem a página nos dois aparelhos (v1 × v373).", [e1, e2, e3]);
+    e1 === "Código não encontrado." && e2 === "Essa sala já tem dois jogadores." && e3 === "Versões diferentes do Total Match: atualizem a página nos dois aparelhos (v1 × " + VER + ").", [e1, e2, e3]);
   await print(B, "3-erro");
   banco.gravar("salas3d/CHEAA", null); banco.gravar("salas3d/VERSA", null);
 
@@ -484,6 +486,15 @@ try {
   await nadaSobreNada(A, "times"); await nadaSobreNada(B, "times-pc");
 
   /* 9) pronto → os dois quadros abrem com o pedido e a porta */
+  // (item 33: a duração do online é a do ANFITRIÃO — a Ana com 5 min, o Bruno com 8 e o Lenda — e nunca vai a dificuldade)
+  await A.p.evaluate(() => TM.storage.saveSettings(Object.assign(TM.storage.settings(), { tempo3d: 5, difficulty: "facil" })));
+  await B.p.evaluate(() => TM.storage.saveSettings(Object.assign(TM.storage.settings(), { tempo3d: 8, difficulty: "lenda" })));
+  // (item 30: a "Cena de substituição" do GOLAÇO — golaco.prefs.v1, mesma origem — ligada na Ana e desligada no Bruno: no online
+  // vale a do anfitrião nos dois, pelo controle que passa pela porta do TM)
+  if (GOLACO) {
+    await A.p.evaluate(() => { const k = "golaco.prefs.v1", p = JSON.parse(localStorage.getItem(k) || "{}"); p.substituicao = true; localStorage.setItem(k, JSON.stringify(p)); });
+    await B.p.evaluate(() => { const k = "golaco.prefs.v1", p = JSON.parse(localStorage.getItem(k) || "{}"); p.substituicao = false; localStorage.setItem(k, JSON.stringify(p)); });
+  }
   await clica(B, "^Pronto$");
   const aViu = await ate(A, () => /Bruno está pronto/.test(document.body.innerText), null, 6000);
   await clica(A, "^Pronto$");
@@ -507,6 +518,12 @@ try {
       const ler = g => g.evaluate(() => { const o = window.__golaco.online; return { n: o.n, D: o.D, rtt: o.rtt, lado: o.lado, hashes: o.hashes, conexao: o.conexao, placar: o.placar }; });
       const oa = await ler(gA), ob = await ler(gB);
       const mh = new Map(oa.hashes), com = ob.hashes.filter(([n]) => mh.has(n)), dif = com.filter(([n, h]) => mh.get(n) !== h).length;
+      // (item 33: os dois mundos com a duração da Ana — 5 min = 18 000 ticks — e sem dificuldade)
+      const aj = await Promise.all([gA, gB].map(g => g.evaluate(() => ({ ticks: window.__golaco.mundo.partida.ticksPorTempo, dif: window.__golaco.mundo.dificuldade ?? null, ped: window.__golaco.tm.pedido.partida.minutosPorTempo, pedDif: window.__golaco.tm.pedido.partida.dificuldade ?? null }))));
+      confere("G1b a duração do anfitrião (5 min) nos dois mundos, sem dificuldade (item 33)", aj.every(x => x.ticks === 18000 && x.dif === null && x.ped === 5 && x.pedDif === null), aj);
+      // (item 30) a cena de substituição da Ana (ligada) também no Bruno (a dele desligada)
+      const subst = await Promise.all([gA, gB].map(g => g.evaluate(() => window.__golaco.cenaSubst.ligada())));
+      confere("G1c a cena de substituição do anfitrião (ligada na Ana) vale nos dois aparelhos (desligada no Bruno), pela porta do TM (item 30)", subst[0] === true && subst[1] === true, subst);
       confere("G2 a partida anda nos dois aparelhos (WebRTC de verdade pela porta do TM) com o mesmo jogo",
         ra && rb && com.length >= 5 && dif === 0 && oa.lado === 0 && ob.lado === 1,
         { n: [oa.n, ob.n], D: [oa.D, ob.D], rtt: [oa.rtt, ob.rtt], comuns: com.length, dif, conexao: [oa.conexao, ob.conexao], placar: [oa.placar, ob.placar] });
@@ -533,9 +550,11 @@ try {
     && pedA.controle == null && pedB.controle == null && pedA.home.name === nomeA && pedA.away.name === nomeB && pedB.home.name === nomeA && pedB.away.name === nomeB
     && JSON.stringify(pedA.home) === JSON.stringify(pedB.home) && JSON.stringify(pedA.away) === JSON.stringify(pedB.away)
     && [0, 1, 2].includes(pedA.home.kitEscolhido) && [0, 1, 2].includes(pedA.away.kitEscolhido) && pedA.home.players.length >= 11 && pedA.away.players.length >= 11
-    && JSON.stringify(pedA.partida) === JSON.stringify(pedB.partida) && pedA.edicao === "pro";
-  confere("9 Pronto nos dois: os dois quadros abrem com o MESMO pedido online (sala, semente u32, nomes, D0, proto 1, lado 0/1, userSide, times e uniformes)",
-    aViu && pedidoOk, { aViu, A: pedA && { id: pedA.id, online: oA, userSide: pedA.userSide, home: pedA.home.name, away: pedA.away.name, kits: [pedA.home.kitEscolhido, pedA.away.kitEscolhido], edicao: pedA.edicao }, B: pedB && { id: pedB.id, online: oB, userSide: pedB.userSide } });
+    && JSON.stringify(pedA.partida) === JSON.stringify(pedB.partida) && pedA.edicao === "pro"
+    // (item 33: a duração da Config do anfitrião — 5; a do Bruno é 8 — e nenhuma dificuldade no pedido do online)
+    && pedA.partida.minutosPorTempo === 5 && !("dificuldade" in pedA.partida);
+  confere("9 Pronto nos dois: os dois quadros abrem com o MESMO pedido online (sala, semente u32, nomes, D0, proto 1, lado 0/1, userSide, times e uniformes; a duração do anfitrião, sem dificuldade)",
+    aViu && pedidoOk, { aViu, A: pedA && { id: pedA.id, online: oA, userSide: pedA.userSide, home: pedA.home.name, away: pedA.away.name, kits: [pedA.home.kitEscolhido, pedA.away.kitEscolhido], edicao: pedA.edicao, partida: pedA.partida }, B: pedB && { id: pedB.id, online: oB, userSide: pedB.userSide } });
   confere("9 a porta chega nos dois quadros (tm3d:porta, e.ports[0], proto 1) com o estado 'aberto' e o nome do outro",
     !!portaA && !!portaB && portaA.portas >= 1 && portaB.portas >= 1 && portaA.viaPorts && portaB.viaPorts && portaA.proto === 1 && portaA.estados[0] === "aberto" && portaB.estados[0] === "aberto" && portaA.nome === "Bruno" && portaB.nome === "Ana", { portaA, portaB });
   await print(A, "9-quadro-ana");

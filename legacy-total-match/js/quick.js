@@ -83,7 +83,8 @@
       }, "btn primary big"),
       TM.ui.button("▶ Simular direto", function () {
         if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
-        TM.ui.go("quick-match", { a: teamObj(setup.teamA), b: teamObj(setup.teamB) });
+        // "Simular direto" simula SEM o 3D (item 124, revisão A3: o botão diz simular; a tela antes do jogo é do "Iniciar partida")
+        TM.ui.go("quick-match", { a: teamObj(setup.teamA), b: teamObj(setup.teamB), sem3d: true });
       }, "btn ghost")
     ]));
   });
@@ -252,7 +253,7 @@
     TM.matchview.play(screen, {
       teamA: params.a, teamB: params.b, result: result, settings: settings,
       // (o empate é o resultado: a disputa de pênaltis do resultado é opcional, por um botão)
-      pauseSide: 0, simOpts: simOpts, empateContinua: false,
+      pauseSide: 0, simOpts: simOpts, empateContinua: false, sem3d: !!params.sem3d,
       onBack: function () { TM.ui.go("quick"); },
       onDone: function () { TM.ui.go("quick-result", { a: params.a, b: params.b, result: result }); }
     });

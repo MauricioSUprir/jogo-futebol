@@ -286,6 +286,10 @@
     var teamA = cfg.time || U.utTeam(s), teamB = cfg.adv.team;
     var settings = TM.storage.settings();
     var simOpts = { realism: settings.realism, neutral: true };
+    // as Batalhas de Elenco jogadas em 3D (item 33): a dificuldade da Batalha vira a da IA adversária do 3D, travada na pausa
+    // (sem isso, escolher o Lendário — os pontos ×3,2 — e jogar no Fácil). O engine.simulate não lê essas chaves
+    var DIF3D = { amador: "facil", pro: "normal", mundial: "dificil", lenda: "lenda" };
+    if (cfg.modo === "batalha" && DIF3D[cfg.dif]) { simOpts.dificuldade3d = DIF3D[cfg.dif]; simOpts.ajustesFixos3d = true; }
     var result = TM.engine.simulate(teamA, teamB, simOpts);
     var acabou = false;
     screen.classList.add("utm-jogo");

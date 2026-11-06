@@ -11,7 +11,7 @@
   padding: 8px 16px 8px 10px; box-sizing: border-box;
   background: var(--painel); border-left: 2px solid var(--cor-time, var(--verde)); border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  font-family: var(--f-texto); color: var(--texto);
 }
 .tarja-cena[hidden] { display: none; }
 .tarja-cena.visivel { animation: tarja-cena-entra 0.25s ease-out both; }
@@ -30,9 +30,10 @@
   background: var(--cor-time, var(--verde)); color: var(--cor-time-texto, var(--preto));
 }
 .tc-escudo { width: 16px; height: 18px; flex: none; }
-.tc-sigla { font-size: 14px; font-weight: 900; letter-spacing: 0.08em; }
-.tc-num { flex: none; font-size: 22px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.tc-nome { font-size: 20px; font-weight: 700; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; line-height: 1.15; }
+/* (item 125: os papéis do sistema tipográfico — sigla, número e nome na TM Cond 800, o nome em caixa alta; o texto na Inter) */
+.tc-sigla { font: 800 15px / 1 var(--f-disp); letter-spacing: 0.06em; }
+.tc-num { flex: none; font: 800 24px / 1.1 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; }
+.tc-nome { font: 800 22px / 1.15 var(--f-disp); text-transform: uppercase; letter-spacing: 0.02em; color: var(--texto); overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .tc-nome-curto { display: none; }
 /* celular: embaixo à esquerda, sem chegar ao "Pular" (≥ 112 px + margens à direita: a mesma conta da faixa ENTRA/SAI);
    o nome da camisa no lugar do completo */
@@ -44,8 +45,8 @@ html.com-toque .tc-cartao { width: 14px; height: 20px; }
 html.com-toque .tc-sigla { font-size: 12px; }
 html.com-toque .tc-escudo { width: 13px; height: 15px; }
 html.com-toque .tc-time { padding: 3px 6px 3px 4px; }
-html.com-toque .tc-num { font-size: 17px; }
-html.com-toque .tc-nome { font-size: 15px; }
+html.com-toque .tc-num { font-size: 18px; }
+html.com-toque .tc-nome { font-size: 16px; }
 html.com-toque .tc-nome-completo { display: none; }
 html.com-toque .tc-nome-curto { display: inline; }
 /* no replay (que vem logo depois da cena) e na comemoração ela nunca fica */
@@ -65,13 +66,13 @@ html.em-replay .tarja-cena, html.em-comemoracao .tarja-cena, html.em-substituica
   padding: 8px 14px 9px; box-sizing: border-box;
   background: var(--painel); border-left: 2px solid var(--verde); border-radius: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  font-family: var(--f-texto); color: var(--texto);
 }
 .tarja-placar[hidden], .painel-est[hidden], .tp-autores[hidden] { display: none; }
 .tarja-placar.visivel, .painel-est.visivel { animation: tarja-cena-entra 0.25s ease-out both; }
 @media (prefers-reduced-motion: reduce) { .tarja-placar.visivel, .painel-est.visivel { animation: none; } }
 .tp-linha { display: flex; align-items: center; gap: 10px; }
-.tp-gols { flex: none; min-width: 64px; text-align: center; font-size: 24px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
+.tp-gols { flex: none; min-width: 64px; text-align: center; font: 800 28px / 1 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; letter-spacing: 0.04em; }
 .tp-autores { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; min-width: 0; }
 .tp-lado { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .tp-lado1 { text-align: right; }
@@ -86,16 +87,16 @@ html.em-replay .tarja-cena, html.em-comemoracao .tarja-cena, html.em-substituica
   padding: 10px 14px 12px; box-sizing: border-box;
   background: rgba(7, 9, 10, 0.88); border: 1px solid var(--linha); border-top: 3px solid var(--verde); border-radius: 10px;
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5); pointer-events: none; white-space: nowrap;
-  font-family: Inter, var(--fonte); color: var(--texto);
+  font-family: var(--f-texto); color: var(--texto);
 }
 .painel-est.visivel { animation-name: painel-est-entra; }
 @keyframes painel-est-entra { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
 .pe-topo { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--linha); }
-.pe-titulo { font-size: 14px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-2, var(--texto)); }
+.pe-titulo { font: 800 16px / 1.1 var(--f-disp); letter-spacing: 0.1em; text-transform: uppercase; color: var(--texto-2, var(--texto)); }
 .pe-linhas { display: flex; flex-direction: column; gap: 2px; }
 .pe-linha { display: grid; grid-template-columns: 64px 1fr 64px; align-items: center; min-height: 24px; }
 .pe-rotulo { text-align: center; font-size: 14px; font-weight: 600; color: var(--texto-2, var(--texto)); overflow: hidden; text-overflow: ellipsis; }
-.pe-valor { display: flex; align-items: center; gap: 3px; font-size: 18px; font-weight: 900; color: #fff; font-variant-numeric: tabular-nums; }
+.pe-valor { display: flex; align-items: center; gap: 3px; font: 800 20px / 1 var(--f-disp); color: #fff; font-variant-numeric: tabular-nums; }
 .pe-a { justify-content: flex-start; }
 .pe-b { justify-content: flex-end; }
 .pe-cartao { display: inline-block; width: 9px; height: 13px; border-radius: 2px; margin-left: 2px; }
@@ -109,14 +110,15 @@ html.com-toque .tarja-placar {
 /* no online com toque: ACIMA da faixa "Intervalo" (embaixo dela ficam os botões de toque à direita, visíveis no online —
    em 568×320 a tarja cobria o CORRER, o PASSE e a ENFIADA); a faixa tem ~88 px de altura no meio da tela */
 html.com-toque .tarja-placar.online { left: 0; right: 0; top: auto; bottom: calc(50% + 52px); max-width: calc(100vw - var(--sa-l) - var(--sa-r) - 32px); }
-html.com-toque .tp-gols { font-size: 18px; min-width: 48px; }
-html.com-toque .tp-autor { font-size: 11.5px; }
+html.com-toque .tp-gols { font-size: 20px; min-width: 48px; }
+html.com-toque .tp-autor { font-size: 12px; }
 html.com-toque .tp-autores { column-gap: 12px; }
 html.com-toque .tp-time { padding: 2px 6px 2px 4px; }
 html.com-toque .painel-est { width: min(380px, calc(100vw - var(--sa-l) - var(--sa-r) - 220px)); padding: 6px 10px 8px; gap: 3px; top: 45%; }
 html.com-toque .pe-linha { min-height: 19px; grid-template-columns: 52px 1fr 52px; }
-html.com-toque .pe-rotulo, html.com-toque .pe-titulo { font-size: 12px; }
-html.com-toque .pe-valor { font-size: 15px; }
+html.com-toque .pe-rotulo { font-size: 12px; }
+html.com-toque .pe-titulo { font-size: 13px; }
+html.com-toque .pe-valor { font-size: 16px; }
 html.com-toque .painel-est .tc-sigla { font-size: 12px; }
 /* no replay (os lances do intervalo) a tarja do placar e o painel somem; a pausa por cima também */
 html.em-replay .tarja-placar, html.em-replay .painel-est, html.em-comemoracao .tarja-placar, html.em-substituicao .tarja-placar,
@@ -139,11 +141,11 @@ html.em-replay .cena.fim-tempo .btn-replay-pular, html.em-replay .cena.fim-tempo
 .tarja-melhor { gap: 10px; }
 .tm-texto { display: flex; flex-direction: column; min-width: 0; line-height: 1.1; }
 .tm-texto .tc-nome { line-height: 1.12; }
-.tm-rotulo { font-size: 12px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--verde); }
+.tm-rotulo { font: 600 13px / 1.1 var(--f-disp); letter-spacing: 0.1em; text-transform: uppercase; color: var(--verde); }
 .tm-nota {
   flex: none; min-width: 44px; padding: 3px 8px; border-radius: 6px; text-align: center; box-sizing: border-box;
-  font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--preto, #07090a); background: var(--verde);
+  font: 800 24px / 1.1 var(--f-disp); font-variant-numeric: tabular-nums; color: var(--preto, #07090a); background: var(--verde);
 }
 html.com-toque .tarja-melhor { gap: 7px; }
-html.com-toque .tm-rotulo { font-size: 10px; letter-spacing: 0.1em; }
-html.com-toque .tm-nota { font-size: 16px; min-width: 36px; padding: 2px 6px; }
+html.com-toque .tm-rotulo { font-size: 11px; letter-spacing: 0.08em; }
+html.com-toque .tm-nota { font-size: 18px; min-width: 36px; padding: 2px 6px; }

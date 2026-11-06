@@ -3,7 +3,7 @@
 // não alcança:
 //   - os textos com o nome do jogo: título da aba, cor da barra do navegador, ícone, a marca do carregamento (na tela vira
 //     a logo pelo CSS; o texto fica para o leitor de tela) e o "Gire o celular";
-//   - a Inter do TM ('Inter TM', assets/tm/fontes): pedida já (o canvas que mede os nomes dos botões não pede fonte
+//   - a Inter do TM ('Inter TM', assets/tm/fontes) e a TM Cond 600/800 (o --f-disp, item 125): pedidas já (o canvas que mede os nomes dos botões não pede fonte
 //     nenhuma) e, quando chega, o aviso 'tm:fontes' na window — a página mede de novo os nomes dos botões de toque
 //     (entrada.js mede pelo canvas) e o topo do HUD (hud.js ajustarTopo). <html data-fontes-tm="ok|falhou"> para os testes.
 // Só é baixado com ?tm: o <script> do <head> do index.html põe html.tm e importa este arquivo. Sem ?tm nada daqui existe.
@@ -11,6 +11,9 @@
 
 export const FONTE_TM = 'Inter TM';
 const PESOS = [400, 600, 700, 800, 900];
+// a TM Cond (o --f-disp do estilo.css, item 125: o placar, os títulos, os nomes e os números): os 2 pesos, também no começo
+export const FONTE_DISP = 'TM Cond';
+const PESOS_DISP = [600, 800];
 const TEXTO_GIRAR = 'A partida do Total Match só roda com o celular deitado.';
 
 /** Os textos com o nome do jogo trocados pelo Total Match (só o que está no index.html; a abertura do pré-jogo é do prejogo-tela.js). */
@@ -42,7 +45,8 @@ export async function carregarFontes(doc = document, win = window) {
   try {
     await folhaPronta(doc);
     if (doc.fonts && typeof doc.fonts.load === 'function') {
-      const r = await Promise.all(PESOS.map(p => doc.fonts.load(`${p} 16px "${FONTE_TM}"`, 'Placar 0123 ÇÃÉ')));
+      const r = await Promise.all([...PESOS.map(p => doc.fonts.load(`${p} 16px "${FONTE_TM}"`, 'Placar 0123 ÇÃÉ')),
+        ...PESOS_DISP.map(p => doc.fonts.load(`${p} 16px "${FONTE_DISP}"`, 'Placar 0123 ÇÃÉ'))]);
       ok = r.every(lista => lista.length > 0);
     }
   } catch (_) { ok = false; }

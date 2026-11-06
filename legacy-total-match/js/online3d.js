@@ -68,7 +68,8 @@
    6. PEDIDO (o anfitrião monta e manda; cada aparelho grava com o próprio id e lado e abre por TM.tm3d.jogarOnline):
         { v: 2, id (de cada aparelho), titulo: "Online 3D", origem: "online3d", modo: "online", controle: null,
           home: time3d do anfitrião (time 0, mandante: o estádio é o dele), away: time3d do convidado,
-          partida: { neutro: false, publico, classico, nomeClassico, competicao: "Online 3D", estadio },
+          partida: { neutro: false, publico, classico, nomeClassico, competicao: "Online 3D", estadio,
+                     minutosPorTempo: a Config "Duração em 3D" DO ANFITRIÃO (item 33; nunca a dificuldade: são duas pessoas) },
           edicao: a do anfitrião, userSide: 'home' (anfitrião) | 'away' (convidado),
           online: { sala: CÓDIGO, semente: u32 (crypto.getRandomValues, no anfitrião), nomes: [anfitrião, convidado],
                     D0: 3–10 (dos 10 pings: ⌈(RTT_p95/2 + 16,7)/16,7⌉), proto: 1, lado: 0 (anfitrião) | 1 (convidado) } }
@@ -677,6 +678,12 @@
     }
     return [kc, melhor];
   }
+  /** Os minutos de cada tempo da Config "Duração em 3D" (item 33) deste aparelho (o anfitrião manda a dele). */
+  function duracao3d() {
+    var v = 4; try { v = +TM.storage.settings().tempo3d; } catch (e) {}
+    return [3, 4, 5, 6, 8, 10].indexOf(v) >= 0 ? v : 4;
+  }
+
   function montaPedido() {
     var home = clone(S.meu.meia), away = clone(S.dele.meia);
     var ku = escolheUniformes(home, away);
@@ -693,7 +700,9 @@
       v: 2, titulo: "Online 3D", origem: "online3d", modo: "online", controle: null,
       home: home, away: away,
       partida: { neutro: false, publico: 0.85, classico: classico, nomeClassico: nomeCl, competicao: "Online 3D",
-                 estadio: (home.identidade && home.identidade.estadio) || null },
+                 estadio: (home.identidade && home.identidade.estadio) || null,
+                 // (item 33: a duração do anfitrião — o mesmo pedido nos dois aparelhos; sem dificuldade: duas pessoas)
+                 minutosPorTempo: duracao3d() },
       edicao: edicao, userSide: "home",
       online: { sala: S.codigo, semente: u32() || 1, nomes: [S.eu.nome, S.outro ? S.outro.nome : "Convidado"],
                 D0: calcD0(S.rtts), proto: api.PROTO, lado: 0 }

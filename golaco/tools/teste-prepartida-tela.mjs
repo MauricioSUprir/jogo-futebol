@@ -26,9 +26,18 @@
 //   E13* Personalizar: abre o editor "antes do jogo" sem a tela atrás dele (V5); o PRONTO volta à tela no Personalizar; a escalação (9 → 22, 1 → 12, 4-4-2)
 //       sem substituição (feitas 0, saiu vazio), o reserva na ficha, o hash = Node criarPartida({times}); com o pré-jogo, o reserva
 //       no cortejo e o lado de fora NÃO remontado
-//   E14 por modo: TM "Simular partida" só no 2º toque → tm3d:fim com o resultado do motor 3D; Rumo ao Estrelato sem Personalizar,
-//       com "VOCÊ"; Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a fila e a disputa só anda depois do Bater;
+//   E14 por modo: TM "Simular partida" só no 2º toque → 'tm3d:sair' {motivo: 'simular'} em ≤ 2 s, nenhum tm3d:fim e o mundo
+//       parado no tick 0 (item 124, dono 05/11: a tela no lugar da janela "Jogar em 3D / Simular" — o Simular dela é o da janela: o
+//       TM simula lance a lance; na base o motor 3D simulava do tick 0 e mandava tm3d:fim); Rumo ao Estrelato sem Personalizar,
+//       com "VOCÊ", e o Simular dele igual (tm3d:sair 'simular'); Livre: Jogadores volta à tela e o N contra M aparece; Pênaltis: a
+//       fila e a disputa só anda depois do Bater;
 //       Pênaltis 3D do TM: o [<] "Voltar ao Total Match" antes do Bater volta SEM resultado (tm3d:sair; revisão A2)
+//   E14r (revisão do item 124, o TM num quadro): R1* em pé (390×844, toque) a tela "Gire o celular" cobre a tela antes do jogo e tem
+//       o "Simular partida" (o ponto do meio é dele) → tm3d:sair {motivo: 'simular'} com os 11 + 11 titulares, tick 0, e o toque nele
+//       não liga o som nem baixa os sons; R2* (PC) os toques na Visão tática e no 1º do Simular não ligam o som nem baixam os
+//       sons da torcida — o Jogar liga (≤ 1 s); R3* o 2º toque do Simular feito dentro dos 3 s vale pela HORA DO TOQUE com o
+//       quadro preso 3,6 s (na base ele armava de novo); R4* a reserva (o módulo da tela bloqueado: a abertura de texto) tem o
+//       "Simular partida" no canto de baixo, sem encostar no texto da abertura → tm3d:sair 'simular', tick 0. Na base reprovam
 //   E15 desenho (celular Média): ≤ 40 chamadas e ≤ 130 mil triângulos com a tela; ≤ 31 desenhos 3D por segundo
 //   E16 download: os bytes até +2,5 s com a tela ≤ os sem ela + 140 KB; a TM Cond só com a tela
 //   E17 contraste: a luminância (mediana) atrás da info e da barra ≤ 50/255, de dia e de noite, nos dois fundos
@@ -43,6 +52,15 @@
 //       (Q/E) igual; nada encosta (E4) com as fotos; E22b a 1ª foto pedida DEPOIS do pronto; E22c o mesmo pedido PÚBLICO: 0 fotos
 //       nas fichas e 0 pedidos às fotos; E22d as fotos em 404: todas com o busto, nenhuma <img> visível, nenhum erro de página
 //       além dos 404 delas. Na base E22a/b reprovam.
+//   E23 (item 33) a dificuldade na linha de informação: ?dif=dificil → "Difícil" no celular (844×390 e 568×320, com toque) e
+//       "Dificuldade: Difícil" no PC (1280×720), com a duração, sem a linha passar (o CSS não corta); o Livre e os Pênaltis sem nível
+//       (o online: no E1 online)
+//   E24 (item 33) ≡ → "Modo de jogo" → Duração até 6 e Dificuldade até Lenda → volta: a linha diz "2 × 6 min | … | Lenda"; o Jogar
+//       começa com ticksPorTempo 21 600 e m.dificuldade "lenda"; E24b o mesmo depois de um Personalizar (o mundo recriado leva os
+//       ajustes). Na base reprovam (sem o ciclo nem o nível)
+//   E25 (item 35) o clássico pelo ?classico=1 fora do TM: o selo "Clássico" no PC (1280×720, .pp-classico) e o prefixo
+//       "Clássico · " no estádio no celular (844×390 com toque), com m.classico true; sem o parâmetro, nem o selo nem o prefixo e
+//       o campo ausente (como antes). Na base reprova (o selo só vinha do pedido do TM)
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
 //   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
@@ -51,7 +69,7 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,online,fotos,carga] [--espera <s>]
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -714,6 +732,24 @@ if (faz('pad')) {
 }
 
 // ================================================================================================ TM: público (Simular partida) e o Rumo ao Estrelato
+/**
+ * (item 124) "Simular partida" da tela no TM (2 toques): o 1º arma (a tela fica, nenhuma mensagem de saída), o 2º manda
+ * 'tm3d:sair' {motivo: 'simular'} — o TM fecha o 3D e simula lance a lance — sem 'tm3d:fim' e sem andar o mundo.
+ */
+async function simularDaTela(pg) {
+  await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
+  const arm = await pg.evaluate(() => ({ armado: window.__golaco.prepartida.estado.armado, aberta: window.__golaco.prepartida.aberta, msgs: window.__golaco.tm.mensagens.map(m => m.tipo) }));
+  const t0 = Date.now();
+  await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
+  await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim' || m.tipo === 'tm3d:sair'), null, { timeout: 20000 }).catch(() => {});
+  const s = +((Date.now() - t0) / 1000).toFixed(2);
+  // (meio segundo a mais: um tm3d:fim atrasado — o motor 3D simulando — apareceria aqui)
+  await pg.waitForTimeout(500);
+  const r = await pg.evaluate(() => ({ msgs: window.__golaco.tm.mensagens.map(m => m.tipo + (m.motivo ? '/' + m.motivo : '')), tick: window.__golaco.mundo.tick, passos: window.__golaco.passos }));
+  const ok = arm.armado === 'simular' && arm.aberta && !arm.msgs.some(m => m === 'tm3d:fim' || m === 'tm3d:sair')
+    && r.msgs.includes('tm3d:sair/simular') && !r.msgs.some(m => m.startsWith('tm3d:fim')) && s <= 2 && r.tick === 0;
+  return { arm, s, ...r, ok };
+}
 if (faz('tm')) {
   const PED_PEN = { ...PED_A, id: 'tPenPP', modo: 'penaltis' };
   for (const [nome, ped] of [['TM pública', PED_A], ['Rumo ao Estrelato', PED_B], ['Pênaltis 3D do TM', PED_PEN]]) {
@@ -744,12 +780,10 @@ document.body.appendChild(f);
       const voce = await pg.evaluate(() => [...document.querySelectorAll('#prepartida .pp-ficha.voce')].length);
       if (ped === PED_A) {
         meta('E14 TM: 4 abas (Simular partida), o escudo do TM, o estádio "Estádio Total Match"', `abas ${e.pp.abas}; ${await pg.evaluate(() => { const d = window.__golaco.prepartida.dados(); return `${d.estadio}, escudo ${d.times[0].escudo?.url ? 'url' : d.times[0].escudo?.simbolo}`; })}`, 'jogar,visao,personalizar,simular; Estádio Total Match, url', e.pp.abas.join() === 'jogar,visao,personalizar,simular');
-        await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
-        const arm = await pg.evaluate(() => ({ armado: window.__golaco.prepartida.estado.armado, aberta: window.__golaco.prepartida.aberta, msgs: window.__golaco.tm.mensagens.map(m => m.tipo) }));
-        await pg.evaluate(() => document.querySelector('#prepartida [data-aba="simular"]').click());
-        await pg.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:fim'), null, { timeout: 120000 }).catch(() => {});
-        const fim = await pg.evaluate(() => { const m = window.__golaco.tm.mensagens.find(x => x.tipo === 'tm3d:fim'); return { tem: !!m, placar: m?.dados?.placar ?? m?.resultado?.placar ?? null, estado: window.__golaco.estado().relogio?.estado }; });
-        meta('E14 TM: "Simular partida" arma no 1º toque e simula pelo motor 3D no 2º → tm3d:fim com o resultado', `1º: armado ${arm.armado}, tela ${arm.aberta}, mensagens ${arm.msgs}; 2º: tm3d:fim ${fim.tem}, relógio ${fim.estado}`, 'simular, aberta, sem fim; fim, fim', arm.armado === 'simular' && arm.aberta && !arm.msgs.includes('tm3d:fim') && fim.tem && fim.estado === 'fim');
+        const sim = await simularDaTela(pg);
+        meta('E14 TM: "Simular partida" arma no 1º toque e no 2º volta ao TM SEM resultado do 3D → tm3d:sair {motivo: "simular"} em ≤ 2 s, nenhum tm3d:fim, o mundo no tick 0 (item 124: o TM simula lance a lance)',
+          `1º: armado ${sim.arm.armado}, tela ${sim.arm.aberta}, mensagens ${sim.arm.msgs}; 2º: ${sim.msgs.join(', ')} em ${sim.s} s, tick ${sim.tick}, passos ${sim.passos}`,
+          'simular, aberta, sem sair/fim; tm3d:sair/simular, ≤ 2 s, sem tm3d:fim, tick 0', sim.ok);
       } else if (ped === PED_PEN) {
         // o [<] "Voltar ao Total Match" (2 toques) antes do Bater: volta SEM resultado — 'tm3d:sair' (a escolha dos times), nunca a
         // disputa simulada com 'tm3d:fim' (revisão A2: o TM mostrava o vencedor de uma disputa que ninguém jogou)
@@ -762,13 +796,239 @@ document.body.appendChild(f);
           'jogar,adversario; tm3d:pronto, tm3d:sair', e.pp.abas.join() === 'jogar,adversario' && msgs.includes('tm3d:sair') && !msgs.some(m => m.startsWith('tm3d:fim')));
       } else {
         meta('E14 Rumo ao Estrelato: sem Personalizar (Jogar · Visão tática · Simular), a ficha "VOCÊ"', `abas ${e.pp.abas}; fichas VOCÊ ${voce}`, 'jogar,visao,simular; 1', e.pp.abas.join() === 'jogar,visao,simular' && voce === 1);
+        const sim = await simularDaTela(pg);
+        meta('E14 Rumo ao Estrelato: "Simular partida" (2 toques) → tm3d:sair {motivo: "simular"}, nenhum tm3d:fim, tick 0 (item 124: a simulação do Estrelato)',
+          `1º: armado ${sim.arm.armado}, tela ${sim.arm.aberta}; 2º: ${sim.msgs.join(', ')} em ${sim.s} s, tick ${sim.tick}`, 'simular, aberta; tm3d:sair/simular, sem tm3d:fim, tick 0', sim.ok);
       }
       meta(`S1 0 erros (${nome})`, erros.slice(0, 3).join(' | ') || '0', '0', erros.length === 0);
     } finally { await navegador.close(); }
   }
 }
 
+// ================================================================================================ o TM: a revisão do item 124
+if (faz('tm')) {
+  // o TM num quadro (como o de verdade: fora dele o sairTM navegaria de volta ao TM); o frame do jogo e a sessão
+  async function tmNoQuadro({ w, h, toque = false, bloquear = null, extra = '' }) {
+    const ped = { ...PED_A, id: 'tRev' + w + 'x' + h + (bloquear ? 'r' : '') };
+    const s = await abrir({ largura: w, altura: h, toque, dpr: toque ? 2 : 1 });
+    if (bloquear) await s.contexto.route(bloquear, r => r.abort());
+    const url = `index.html?tm=${ped.id}&${Q}&prepartida=1${toque ? '&toque=1' : ''}${extra}`;
+    const json = JSON.stringify(JSON.stringify(ped)).replace(/</g, '\\u003c');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TM</title></head><body style="margin:0;background:#000"><script>
+localStorage.setItem('tm3d:pedido:' + ${JSON.stringify(ped.id)}, ${json});
+const f = document.createElement('iframe'); f.id = 'q'; f.src = ${JSON.stringify(url)};
+f.allow = 'fullscreen; autoplay; gamepad'; f.style.cssText = 'border:0;width:100vw;height:100vh;display:block';
+document.body.appendChild(f);
+</script></body></html>`;
+    const u = `${srv.url}__quadro-rev-${ped.id}.html`;
+    await s.contexto.route(u, r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+    await s.pagina.goto(u, { waitUntil: 'load' });
+    let fr = null;
+    for (let i = 0; i < 400 && !fr; i++) { fr = s.pagina.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await s.pagina.waitForTimeout(50); }
+    if (!fr) throw new Error('o quadro do jogo não abriu');
+    await fr.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
+    await quadros(fr, 3);
+    return { s, fr };
+  }
+  const msgsTM = fr => fr.evaluate(() => window.__golaco.tm.mensagens.map(m => ({ tipo: m.tipo, motivo: m.motivo ?? null, nCasa: m.titulares?.home?.length ?? 0, nFora: m.titulares?.away?.length ?? 0 })));
+  const saiuSimular = ms => ms.some(m => m.tipo === 'tm3d:sair' && m.motivo === 'simular' && m.nCasa === 11 && m.nFora === 11) && !ms.some(m => m.tipo === 'tm3d:fim');
+  const somDoQuadro = fr => fr.evaluate(() => ({ ctx: window.__golaco.estadio?.som?.contexto ?? null, sons: performance.getEntriesByType('resource').filter(e => /\/assets\/sons\//.test(e.name)).length }));
+
+  // R1* em pé
+  {
+    const { s, fr } = await tmNoQuadro({ w: 390, h: 844, toque: true });
+    try {
+      const v = await fr.evaluate(() => {
+        const g = document.getElementById('girar'), b = g && g.querySelector('.tm-simular');
+        const r = b && !b.hidden ? b.getBoundingClientRect() : null;
+        const no = r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) : null;
+        return { girar: !!g && getComputedStyle(g).display !== 'none', botao: !!r && r.width > 0, texto: b ? b.textContent.trim() : null, meio: !!no && (no === b || b.contains(no)),
+          x: r ? r.left + r.width / 2 : 0, y: r ? r.top + r.height / 2 : 0, tela: !!window.__golaco.prepartida.aberta };
+      });
+      if (v.botao) await s.pagina.touchscreen.tap(v.x, v.y);
+      await fr.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:sair'), null, { timeout: 5000 }).catch(() => {});
+      await fr.waitForTimeout(300);
+      const ms = await msgsTM(fr), som = await somDoQuadro(fr), tick = await fr.evaluate(() => window.__golaco.mundo.tick);
+      meta('E14r R1* TM em pé (390×844): o "Gire o celular" cobre a tela antes do jogo e tem o "Simular partida" (revisão A1) → tm3d:sair "simular" com os titulares, tick 0, sem ligar o som',
+        `${JSON.stringify(v)}; ${ms.map(m => m.tipo + '/' + (m.motivo ?? '') + (m.nCasa ? `(${m.nCasa}+${m.nFora})` : '')).join(', ')}; tick ${tick}; som ${som.ctx}, ${som.sons} sons`,
+        'girar com o botão no meio; tm3d:sair/simular(11+11); tick 0; sem contexto, 0 sons', v.girar && v.botao && v.meio && v.tela && v.texto === 'Simular partida' && saiuSimular(ms) && tick === 0 && som.ctx == null && som.sons === 0);
+      meta('S1 0 erros (TM em pé)', s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // R2* e R3* (PC): o som só no Jogar; o 2º toque do Simular pela hora do toque com o quadro preso
+  {
+    const { s, fr } = await tmNoQuadro({ w: 1280, h: 720 });
+    try {
+      await fr.click('#prepartida [data-aba="visao"]');
+      await quadros(fr, 2);
+      await fr.click('#prepartida [data-aba="simular"]');
+      // (lido logo: com a máquina carregada, 2 quadros podiam passar dos 3 s e o rótulo voltava sozinho)
+      const arm = await fr.evaluate(() => window.__golaco.prepartida.estado.armado);
+      const som1 = await somDoQuadro(fr);
+      // o quadro preso 3,6 s (o laço do jogo pesado) e o 2º toque DURANTE: o clique sai pelo CDP 0,2 s depois (o navegador o carimba na
+      // hora) e o quadro só o processa quando solta — a hora do processamento passa dos 3 s do armado, a do toque não
+      await fr.evaluate(() => {
+        window.__tsToque = null;
+        document.addEventListener('click', e => { if (e.target.closest?.('[data-aba="simular"]')) window.__tsToque = { ts: e.timeStamp, proc: performance.now() }; }, { capture: true, once: true });
+        setTimeout(() => { const t = performance.now(); while (performance.now() - t < 3600); }, 20);
+      });
+      const r = await fr.evaluate(() => { const b = document.querySelector('#prepartida [data-aba="simular"]').getBoundingClientRect(); return { x: b.left + b.width / 2, y: b.top + b.height / 2 }; });
+      await s.pagina.waitForTimeout(200);
+      const cdp = await s.contexto.newCDPSession(s.pagina);
+      const t = Date.now() / 1000;
+      await Promise.all([
+        cdp.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: r.x, y: r.y, button: 'left', clickCount: 1, timestamp: t }),
+        cdp.send('Input.dispatchMouseEvent', { type: 'mouseReleased', x: r.x, y: r.y, button: 'left', clickCount: 1, timestamp: t + 0.05 }),
+      ]);
+      await fr.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:sair'), null, { timeout: 5000 }).catch(() => {});
+      const ms = await msgsTM(fr), ts = await fr.evaluate(() => window.__tsToque);
+      const tick = await fr.evaluate(() => window.__golaco.mundo.tick);
+      meta('E14r R2* TM (PC): a Visão tática e o 1º toque do Simular não ligam o som nem baixam os sons da torcida (revisão A4)', `armado ${arm}; som ${som1.ctx}, ${som1.sons} sons`, 'simular; sem contexto, 0 sons', arm === 'simular' && som1.ctx == null && som1.sons === 0);
+      meta('E14r R3* o 2º toque do Simular dentro dos 3 s vale pela hora do toque com o quadro preso 3,6 s (revisão A5)',
+        `toque ${ts ? `carimbado ${(ts.proc - ts.ts).toFixed(0)} ms antes de processado` : '—'}; ${ms.map(m => m.tipo + '/' + (m.motivo ?? '')).join(', ')}; tick ${tick}`,
+        'tm3d:sair/simular (11+11), tick 0', saiuSimular(ms) && tick === 0);
+      // o Jogar (depois do Simular o TM fecharia o quadro; aqui o quadro fica): é o gesto que liga o som
+      await fr.click('#prepartida [data-aba="jogar"]');
+      const t0 = Date.now();
+      await fr.waitForFunction(() => window.__golaco.estadio?.som?.contexto === 'running', null, { timeout: 3000 }).catch(() => {});
+      const som2 = await somDoQuadro(fr);
+      meta('E14r R2b o Jogar da tela no TM liga o som (≤ 1,5 s)', `${som2.ctx} em ${((Date.now() - t0) / 1000).toFixed(2)} s`, 'running ≤ 1,5 s', som2.ctx === 'running' && Date.now() - t0 <= 1500);
+      meta('S1 0 erros (TM, PC)', s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // R4* a reserva da tela (o módulo bloqueado): a abertura de texto com o "Simular partida"
+  {
+    const { s, fr } = await tmNoQuadro({ w: 1024, h: 600, bloquear: /prepartida-tela\.js/, extra: '&prejogo=1' });
+    try {
+      const v = await fr.evaluate(() => {
+        const b = document.querySelector('.tm-simular-abertura'), R = e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom }; };
+        const rb = b && !b.hidden ? R(b) : null;
+        const textos = ['.pj-ab-marca', '.pj-ab-jogo', '.pj-ab-estadio', '.pj-ab-chama'].map(sel => document.querySelector(sel)).filter(e => e && e.getClientRects().length).map(R);
+        const encosta = !!rb && textos.some(t => t.x < rb.r && rb.x < t.r && t.y < rb.b && rb.y < t.b);
+        const no = rb ? document.elementFromPoint((rb.x + rb.r) / 2, (rb.y + rb.b) / 2) : null;
+        return { tela: !!window.__golaco.prepartida?.aberta, fase: window.__golaco.prejogo?.fase, botao: !!rb, dentro: !!rb && rb.r <= innerWidth && rb.b <= innerHeight, encosta, meio: !!no && (no === b || b.contains(no)),
+          x: rb ? (rb.x + rb.r) / 2 : 0, y: rb ? (rb.y + rb.b) / 2 : 0 };
+      });
+      if (v.botao) await s.pagina.mouse.click(v.x, v.y);
+      await fr.waitForFunction(() => window.__golaco.tm.mensagens.some(m => m.tipo === 'tm3d:sair'), null, { timeout: 5000 }).catch(() => {});
+      const ms = await msgsTM(fr), est = await fr.evaluate(() => ({ tick: window.__golaco.mundo.tick, fase: window.__golaco.prejogo?.fase }));
+      meta('E14r R4* a reserva no TM (o módulo da tela bloqueado): a abertura de texto com o "Simular partida" no canto, sem encostar no texto (revisão A6) → tm3d:sair "simular", tick 0',
+        `${JSON.stringify(v)}; ${ms.map(m => m.tipo + '/' + (m.motivo ?? '')).join(', ')}; ${JSON.stringify(est)}`, 'sem tela, abertura, botão dentro e livre; tm3d:sair/simular (11+11); tick 0',
+        !v.tela && v.fase === 'abertura' && v.botao && v.dentro && !v.encosta && v.meio && saiuSimular(ms) && est.tick === 0);
+    } finally { await s.navegador.close(); }
+  }
+}
+
 // ================================================================================================ online: duas abas pelo BroadcastChannel
+// ================================================================================================ o tempo e a dificuldade (item 33)
+if (faz('ajustes')) {
+  /** As linhas da info (o texto de cada .pp-info-l) e se alguma passa do lugar dela (o CSS cortaria). */
+  const info = pg => pg.evaluate(() => {
+    const ls = [...document.querySelectorAll('#prepartida .pp-info-l')].filter(l => l.getClientRects().length);
+    return { linhas: ls.map(l => l.textContent.replace(/\s+/g, ' ').trim()), passa: ls.some(l => l.scrollWidth > l.clientWidth + 1) };
+  });
+  // E23: celular (curta) e PC (longa); o Livre e os Pênaltis sem nível
+  {
+    const out = [];
+    let ok = true;
+    for (const [w, h, toque, quer] of [[844, 390, true, 'Difícil'], [568, 320, true, 'Difícil'], [1280, 720, false, 'Dificuldade: Difícil']]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w, h, toque, q: `${Q}&prepartida=1&semente=3&dif=dificil` });
+      try {
+        await quadros(pg, 3);
+        const r = await info(pg);
+        const tudo = r.linhas.join(' / ');
+        const partes = tudo.split(/\s*[|/]\s*/);
+        const tem = partes.includes(quer) && (quer !== 'Difícil' || !tudo.includes('Dificuldade'));
+        const dur = toque ? tudo.includes('2 × 4 min') : tudo.includes('2 tempos de 4 min');
+        const mundo = await pg.evaluate(() => window.__golaco.mundo.dificuldade ?? null);
+        out.push(`${w}×${h}: "${tudo}"${r.passa ? ' (PASSA)' : ''}; mundo ${mundo}`);
+        if (!tem || !dur || r.passa || mundo !== 'dificil') ok = false;
+      } finally { await navegador.close(); }
+    }
+    for (const [nome, q] of [['Livre', `${Q}&prepartida=1&modo=livre&dif=dificil`], ['Pênaltis', `${Q}&prepartida=1&modo=penaltis&dif=dificil&semente=3`]]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w: 844, h: 390, toque: true, q });
+      try {
+        await quadros(pg, 3);
+        const r = await info(pg);
+        const tudo = r.linhas.join(' / ');
+        out.push(`${nome}: "${tudo}"`);
+        if (/Difícil|Normal|Fácil|Lenda|Dificuldade/.test(tudo)) ok = false;
+      } finally { await navegador.close(); }
+    }
+    meta('E23 a dificuldade na linha de informação (item 33): "Difícil" no celular, "Dificuldade: Difícil" no PC, com a duração e sem passar da linha; o Livre e os Pênaltis sem nível',
+      out.join(' · '), 'o nível certo em cada tela; nenhum nível no Livre e nos Pênaltis', ok);
+  }
+  // E25 (item 35): o selo do clássico com ?classico=1 (fora do TM); sem o parâmetro, nada
+  {
+    const out = [];
+    let ok = true;
+    for (const [w, h, toque, cl] of [[1280, 720, false, true], [844, 390, true, true], [1280, 720, false, false], [844, 390, true, false]]) {
+      const { navegador, pagina: pg } = await abrirPagina({ w, h, toque, q: `${Q}&prepartida=1&semente=3${cl ? '&classico=1' : ''}` });
+      try {
+        await quadros(pg, 3);
+        const r = await pg.evaluate(() => {
+          const sel = document.querySelector('#prepartida .pp-classico');
+          const linhas = [...document.querySelectorAll('#prepartida .pp-info-l')].filter(l => l.getClientRects().length).map(l => l.textContent.replace(/\s+/g, ' ').trim());
+          const m = window.__golaco.mundo;
+          return { selo: sel && sel.getClientRects().length ? sel.textContent.trim() : null, info: linhas.join(' / '), tem: 'classico' in m, v: m.classico ?? null };
+        });
+        const prefixo = /(^|\/ )Clássico · /.test(r.info);
+        out.push(`${w}×${h}${cl ? ' ?classico=1' : ''}: selo ${r.selo ?? '—'}, prefixo ${prefixo ? 'sim' : 'não'}, mundo ${r.tem ? r.v : 'sem o campo'}`);
+        if (cl) { if (!(r.v === true && (toque ? prefixo && !r.selo : r.selo === 'Clássico' && !prefixo))) ok = false; }
+        else if (r.tem || r.selo || prefixo) ok = false;
+      } finally { await navegador.close(); }
+    }
+    meta('E25 o clássico pelo ?classico=1 (item 35): o selo "Clássico" no PC e "Clássico · " no estádio no celular, com m.classico; sem o parâmetro nada',
+      out.join(' · '), 'o selo/prefixo e true com o parâmetro; nada sem', ok);
+  }
+  // E24 e E24b: pelo ≡ (a pausa "antes do jogo") → Modo de jogo → Duração 6 e Dificuldade Lenda
+  for (const personalizar of [false, true]) {
+    const { navegador, pagina: pg, erros } = await abrirPagina({ w: 844, h: 390, toque: true, q: `${Q}&prepartida=1&semente=3` });
+    let txt = '', ok = false;
+    try {
+      await quadros(pg, 3);
+      await tecla(pg, 'KeyP');
+      const ciclo = await pg.evaluate(async () => {
+        document.querySelector('#btn-modos')?.click();
+        await new Promise(r => setTimeout(r, 100));
+        const bd = document.getElementById('btn-duracao'), bf = document.getElementById('btn-dificuldade');
+        const d = () => document.getElementById('estado-duracao')?.textContent, f = () => document.getElementById('estado-dificuldade')?.textContent;
+        if (!bd || !bf) return { falta: true };
+        const out = [d() + '/' + f()];
+        for (let i = 0; i < 7 && d() !== '2 × 6 min'; i++) bd.click();
+        for (let i = 0; i < 5 && f() !== 'Lenda'; i++) bf.click();
+        out.push(d() + '/' + f());
+        return { out };
+      });
+      await tecla(pg, 'Escape'); await tecla(pg, 'Escape');
+      await quadros(pg, 3);
+      const r = await info(pg);
+      const tudo = r.linhas.join(' / ');
+      let antes = await pg.evaluate(() => ({ ticks: window.__golaco.mundo.partida.ticksPorTempo, dif: window.__golaco.mundo.dificuldade ?? null, tick: window.__golaco.mundo.tick, aberta: !!window.__golaco.prepartida.aberta }));
+      if (personalizar) {
+        // o Personalizar recria o mundo do tick 0 (a escalação mudada): a duração e a dificuldade da página vão junto
+        const ESC = await imp('escalacao.js');
+        const mx = criarPartida({ semente: 3 });
+        let ra = ESC.rascunhoDe(structuredClone(mx.times[0]), null, 0);
+        for (const id of [9, 22]) ra = ESC.tocar(ra, id).rasc;
+        const ed = ESC.edicaoDe(ra);
+        antes = { ...antes, ...(await pg.evaluate(ed => { const g = window.__golaco; const ok2 = g.prepartida.escalar(ed); return { escalou: ok2, ticks: g.mundo.partida.ticksPorTempo, dif: g.mundo.dificuldade ?? null, em22: g.mundo.jogadores.some(j => j.id === 22) }; }, ed)) };
+        await quadros(pg, 3);
+      }
+      await pg.evaluate(() => document.querySelector('#prepartida [data-aba="jogar"]').focus());
+      await tecla(pg, 'Enter');
+      await pg.waitForTimeout(800);
+      const dep = await pg.evaluate(() => { const g = window.__golaco; g.rodarPassos(60, 'demo'); return { aberta: !!g.prepartida.aberta, ticks: g.mundo.partida.ticksPorTempo, dif: g.mundo.dificuldade ?? null, tick: g.mundo.tick }; });
+      txt = `${ciclo.falta ? 'sem a linha' : ciclo.out.join(' → ')}; a info "${tudo}"; antes do Jogar ${JSON.stringify(antes)}; depois ${JSON.stringify(dep)}${erros.length ? `; erros ${erros.slice(0, 2).join(' | ')}` : ''}`;
+      ok = !ciclo.falta && ciclo.out[1] === '2 × 6 min/Lenda' && tudo.split(/\s*[|/]\s*/).includes('2 × 6 min') && tudo.split(/\s*[|/]\s*/).includes('Lenda') && !r.passa
+        && antes.ticks === 21600 && antes.dif === 'lenda' && antes.tick === 0 && antes.aberta && (!personalizar || (antes.escalou && antes.em22))
+        && !dep.aberta && dep.ticks === 21600 && dep.dif === 'lenda' && dep.tick > 0 && !erros.length;
+    } finally { await navegador.close(); }
+    meta(personalizar ? 'E24b depois de um Personalizar (o mundo recriado) a duração e a dificuldade escolhidas pelo ≡ continuam' : 'E24 ≡ → Modo de jogo → Duração 6 e Dificuldade Lenda: a linha diz "2 × 6 min | Lenda" e o Jogar começa com 21 600 ticks e o Lenda',
+      txt, '2 × 6 min/Lenda; a info com os dois; 21600 e lenda antes e depois do Jogar', ok);
+  }
+}
+
 if (faz('online')) {
   const ESPERA = Math.max(10, +arg('--espera', 10));
   const t0on = Date.now();
@@ -845,6 +1105,9 @@ if (faz('online')) {
       const telas = !!(a?.aberta && b?.aberta);
       meta('E1 online: a tela nos dois lados (Pronto e Visão tática; sem o Personalizar)', `A ${a?.aberta} ${JSON.stringify(a?.pp?.abas ?? null)} · B ${b?.aberta} ${JSON.stringify(b?.pp?.abas ?? null)}`, 'as duas abertas, [pronto, visao]',
         telas && a.pp.abas.join() === 'pronto,visao' && b.pp.abas.join() === 'pronto,visao' && a.pp.modo === 'online');
+      // E23 (item 33) no online: a linha de informação sem o nível (duas pessoas: não há dificuldade)
+      const infoOn = await A.evaluate(() => [...document.querySelectorAll('#prepartida .pp-info-l')].map(l => l.textContent.replace(/\s+/g, ' ').trim()).join(' / ')).catch(() => '');
+      meta('E23 online: a linha de informação sem a dificuldade (item 33)', `"${infoOn}"`, 'sem Fácil/Normal/Difícil/Lenda', !!infoOn && !/Difícil|Normal|Fácil|Lenda|Dificuldade/.test(infoOn));
       if (telas) {
         const avisos = new Set();
         const olhar = async () => { for (const [p, k] of [[A, 'A'], [B, 'B']]) { const t = await textoAviso(p); if (t) avisos.add(`${k}: ${t}`); } };

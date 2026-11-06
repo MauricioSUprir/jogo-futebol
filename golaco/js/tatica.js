@@ -162,6 +162,16 @@ export function contraPessoa(m, t) {
   return pessoaJoga(m, 1 - t) && !m.humanos.includes(t);
 }
 
+/**
+ * O nível da dificuldade (item 33; config.js DIFICULDADE) que vale para o time t: só no time da IA contra a pessoa
+ * (contraPessoa); null = o Normal, o jogo de hoje bit a bit — sem m.dificuldade (o Normal: o campo nem existe no mundo) nem
+ * chama o contraPessoa. Também null na IA × IA (demo, painel, Simular o resto), no online, com o travado expulso e no time
+ * DA pessoa (os companheiros dela: o portão é o time de quem age). m.dificuldade fica fora do hash (só o comportamento o muda).
+ */
+export function nivelContra(m, t) {
+  return m.dificuldade && contraPessoa(m, t) ? m.dificuldade : null;
+}
+
 /** O time t é jogado por uma pessoa de verdade (pessoaJoga)? */
 export function timeDaPessoa(m, t) {
   return pessoaJoga(m, t);

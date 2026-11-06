@@ -23,7 +23,9 @@
 //   V8 online com duas abas pelo BroadcastChannel (?replayParada=1 nas DUAS; rev. R26): as duas mostram o replay no mesmo
 //      tick, sem dessincronia, os hashes a cada 60 passos iguais e a partida segue; variante, na mesma partida, com os
 //      replays desligados numa aba (replay.automatico(false): o estado do ?replay=0 e do "Replays: Desligado"): só a outra
-//      segura, esta espera (para em ≤ o passo da outra + D + 2 durante o replay dela) e não há dessincronia;
+//      segura, esta espera (para em ≤ o passo da outra + D + 2 durante o replay dela, com "{A} ainda está vendo a cena" — a
+//      marca E_CENA do item 30 —, nunca "A conexão parou", e sem piscar "ainda não voltou ao jogo" quando o replay acaba) e
+//      não há dessincronia;
 //   V9 ?corpo=humano: o mesmo replay no mesmo tick, desenhado com o corpo novo (todos os bonecos do quadro), hash igual;
 //   V10 (rev. R2) no tick da espera o mundo não é escrito: o hash e o estado da IA (j.ia, j.iaAcao) de todos iguais antes e
 //      depois do quadro que começou o replay (a espera vem ANTES da entrada da demo, que escreve no mundo);
@@ -568,7 +570,7 @@ async function sessaoOnline(semente) {
         }
       }
       const av = document.getElementById('online-aviso');
-      V.log.push([Date.now(), g.online?.n ?? 0, e?.ativo && e.tipo === 'parada' ? 1 : 0, m.tick, av && !av.hidden ? av.textContent.trim().slice(0, 40) : '']);
+      V.log.push([Date.now(), g.online?.n ?? 0, e?.ativo && e.tipo === 'parada' ? 1 : 0, m.tick, av && !av.hidden ? av.textContent.trim().slice(0, 80) : '']);
     };
     requestAnimationFrame(volta);
   });
@@ -647,10 +649,18 @@ if (roda('O')) {
       const Dmax = Math.max(a.D ?? 0, b.D ?? 0);
       const nA0 = ja ? passoEm(a.log, ja.t0) : null, nB0 = ja ? passoEm(b.log, ja.t0) : null, nB1 = ja ? passoEm(b.log, ja.t1 - 300) : null;
       const espera = !!ja && b.log.some(l => l[0] >= ja.t0 && l[0] <= ja.t1 && /Aguardando/.test(l[4]));
+      // (revisão do item 30) o texto da espera de B: A está vendo a cena (a marca E_CENA no pacote: o replay), nunca "A conexão
+      // parou"; e do último quadro do replay de A até o aviso de B sumir, nenhum "ainda não voltou ao jogo" (sem piscar)
+      const janB = ja ? b.log.filter(l => l[0] >= ja.t0 && l[0] <= ja.t1) : [];
+      const vendo = janB.some(l => /ainda está vendo a cena/.test(l[4])), parou = janB.some(l => /conexão parou/i.test(l[4]));
+      const fimB = ja ? b.log.filter(l => l[0] >= ja.t1 - 300) : [];
+      const kFim = fimB.findIndex(l => l[0] >= ja?.t1 && !l[4]);
+      const pisca = (kFim >= 0 ? fimB.slice(0, kFim) : fimB).filter(l => /não voltou/.test(l[4])).length;
       meta('V8b online com os replays desligados numa aba ("Replays: Desligado" = ?replay=0): só a outra segura, esta espera (para no passo de A + D + 2 no máximo) e não há dessincronia',
-        a.semApi ? 'sem a API de replays de parada' : `forçado na bola morta ${fa?.inicio ?? '-'} (Node: ${SO.b}); B desligou os replays no tick ${b.desligou ?? '-'}; A: replay ${ha ? `tick ${ha.tick} (${ja?.quadros ?? 0} quadros, ${ja ? f2((ja.t1 - ja.t0) / 1000) : '-'} s)` : 'não'}; B (ligado ${b.ligado}): ${(b.hist ?? []).length} replays no total, passo ${nB0} → ${nB1} durante o de A (A parou no ${nA0}, D ${a.D}/${b.D})${espera ? ', "Aguardando…" na tela' : ''}; dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}; hashes ${c.difs} diferentes de ${c.comuns} (até o passo ${c.ultimo})`,
-        'A segura; B 1 replay (só o da fase 1) e para em ≤ o passo de A + D + 2; não; 0',
-        r.f2 && !!ha && ha.tick === fa.inicio + 59 && b.ligado === false && (b.hist ?? []).length === 1 && nA0 != null && nB1 != null && nB1 <= nA0 + Dmax + 2 && !a.dessinc && !b.dessinc && c.difs === 0 && c.comuns >= 5 && c.ultimo > ha.tick);
+        a.semApi ? 'sem a API de replays de parada' : `forçado na bola morta ${fa?.inicio ?? '-'} (Node: ${SO.b}); B desligou os replays no tick ${b.desligou ?? '-'}; A: replay ${ha ? `tick ${ha.tick} (${ja?.quadros ?? 0} quadros, ${ja ? f2((ja.t1 - ja.t0) / 1000) : '-'} s)` : 'não'}; B (ligado ${b.ligado}): ${(b.hist ?? []).length} replays no total, passo ${nB0} → ${nB1} durante o de A (A parou no ${nA0}, D ${a.D}/${b.D})${espera ? ', "Aguardando…" na tela' : ''}; avisos de B ${[...new Set(janB.map(l => l[4]).filter(Boolean))].map(t => `"${t}"`).join(' · ') || 'nenhum'} ("vendo a cena" ${vendo ? 'sim' : 'NÃO'}, "conexão parou" ${parou ? 'SIM' : 'não'}, "não voltou" no fim ${pisca}${kFim >= 0 ? '' : ', o aviso NÃO sumiu'}); dessincronia ${a.dessinc ? 'SIM' : 'não'}/${b.dessinc ? 'SIM' : 'não'}; hashes ${c.difs} diferentes de ${c.comuns} (até o passo ${c.ultimo})`,
+        'A segura; B 1 replay (só o da fase 1), para em ≤ o passo de A + D + 2 e espera com "vendo a cena" (nunca "conexão parou"; 0 "não voltou" no fim); não; 0',
+        r.f2 && !!ha && ha.tick === fa.inicio + 59 && b.ligado === false && (b.hist ?? []).length === 1 && nA0 != null && nB1 != null && nB1 <= nA0 + Dmax + 2
+        && espera && vendo && !parou && kFim >= 0 && pisca === 0 && !a.dessinc && !b.dessinc && c.difs === 0 && c.comuns >= 5 && c.ultimo > ha.tick);
     }
   } catch (e) { meta('V8 execução (online)', erroCurto(e), 'sem exceção', false); }
 }

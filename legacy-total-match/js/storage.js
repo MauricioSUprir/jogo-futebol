@@ -54,7 +54,11 @@
     rivalry: true,          // rivalidades: clássicos + transferências raras entre rivais
     evoRate: "media",       // taxa de evolução dos atletas: rapida | media | demorada
     theme: "dark",          // dark (preto+verde) | light (branco+verde)
-    partidas3d: "perguntar" // jogos do seu time: perguntar | 3d (sempre em 3D) | simular
+    // jogos do seu time (item 124): tela (o 3D abre na tela antes do jogo: Jogar partida | Simular partida) | simular (sem o 3D).
+    // A chave antiga partidas3d (perguntar | 3d | simular, da janela "Jogar em 3D / Simular" que saiu) é ignorada: com a chave
+    // nova, todo valor antigo vira a tela UMA vez (o "Sempre simular" escolhido depois mora aqui e vale)
+    partidasTela: "tela",
+    tempo3d: 4              // minutos reais de cada tempo nas partidas em 3D: 3 | 4 | 5 | 6 | 8 | 10 (o placar mostra os 90)
   };
 
   TM.storage = {

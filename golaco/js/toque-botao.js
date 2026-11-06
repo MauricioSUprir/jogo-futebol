@@ -75,7 +75,7 @@ export function aoTocar(el, fn) {
     // o sistema tomou o toque (rolagem, gesto da borda): não é um toque no botão
     if (e.type !== 'pointerup' || !a || !dentro(a, e.clientX, e.clientY)) return;
     engolirClique();
-    fn({ target: a, toque: true });
+    fn({ target: a, toque: true, x: e.clientX, y: e.clientY, timeStamp: e.timeStamp });
   };
   el.addEventListener('pointerup', solta);
   el.addEventListener('pointercancel', solta);

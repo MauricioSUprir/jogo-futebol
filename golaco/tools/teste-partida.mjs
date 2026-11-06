@@ -25,6 +25,21 @@
 //     (δ + folga)), o que a freada normal do corpo para antes do raio: ninguém entra no raio em nenhuma das 192 cenas.
 //     (Antes a parede só limitava o pedido e o corpo levava a velocidade da trombada para dentro: 1 entrada a cada
 //     ~30 tempos de 4 min IA × IA, e o C reprovava conforme o sorteio das sementes.)
+//  T. A duração (item 33; dono, 17/10: "editar o TEMPO de jogo"; contrato "Tempo de jogo e dificuldade"):
+//     T1 PARTIDA.duracoes = [3, 4, 5, 6, 8, 10] com o padrão (4) nela; ticksDoTempo(k) = k·3600; criarPartida({minutosPorTempo})
+//        usa a mesma conta.
+//     T2 mudarDuracao com estados montados à mão: 7 durações de origem (as do teste-relogio-placar, 0,25–45) × 7 de destino (as
+//        6 opções + 0,25) × ticks no 1º tempo, nos acréscimos do 1º, no intervalo, no 2º, nos acréscimos do 2º e no tick 0: o
+//        minutoDeJogo IGUAL em todos; o segundo do relogio-placar.segundoDeJogo IGUAL com T' ≥ 2700 ticks (as 6 opções) e, com T'
+//        menor (o tick vale mais de 1 s de jogo), a ≤ ⌈2700/T'⌉ s do de antes (o minuto ganha: o menor tick que alcança o segundo
+//        pode cair no minuto seguinte); acrescimoDeJogo e o "regular" (d ≥ T) iguais; o segundoNoTempo do partida.js igual ao
+//        segundoDeJogo do relogio-placar.js em todos os casos (a conta copiada: o partida.js não importa o relogio-placar.js).
+//     T3 partida de verdade (demo, 2 sementes × 1 min): mudarDuracao(m, 0,5) no minuto 20 e (m, 1,5) no minuto 60 — o relógio
+//        (segundoDeJogo) nunca volta dentro de cada tempo, do 1º ao último passo; o intervalo e o fim apitam no passo chamada + (T' − d') +
+//        ticksAcrescimo (±1); o minuto da súmula (minutoTM) em 1–45 / 46–90 e nunca volta.
+//     T4 recusas (false e o hash IGUAL): dois humanos, m.online, Livre, Pênaltis, treino, fim de jogo, min ≤ 0.
+//     T5 o hash: mudarDuracao(m, 4) numa partida de 4 min IGUAL; outro valor DIFERE; no tick 0, mudarDuracao(m, 6) = o MESMO
+//        hash de criarPartida({minutosPorTempo: 6}) (o Personalizar recria o mundo).
 //
 //   node tools/teste-partida.mjs                  (lógica do repositório, sementes 1..8)
 //   node tools/teste-partida.mjs --base 11        (sementes 11..18; as 5 rodadas usam 1, 11, 21, 31, 41)
@@ -484,5 +499,148 @@ const [resC, resD] = await Promise.all([
   reg('F. corpo embalado na borda (trombada correndo de lado): ninguém entra no raio (lateral, escanteio, tiro livre, pênalti)',
     `${entraram} de ${n} cenas entraram (${TIPOS.map(t => `${t} ${porTipo[t] ?? '—'}`).join(' · ')}); menor folga ${fmt(pior, 3)} m${naoMontou.length ? `; não montou: ${naoMontou.join(', ')}` : ''}`,
     '0 de 192', n === 192 && entraram === 0);
+}
+
+// ------------------------------------------------------------- T. a duração (item 33: mudarDuracao)
+{
+  const { PARTIDA } = await imp('config.js');
+  const RP = existe('relogio-placar.js') ? await imp('relogio-placar.js') : null;
+  const temT = typeof P.mudarDuracao === 'function' && typeof P.ticksDoTempo === 'function';
+  if (!temT) {
+    for (const k of ['T1', 'T2', 'T3', 'T4', 'T5']) reg(`${k}. a duração (item 33)`, 'sem ticksDoTempo/mudarDuracao nesta lógica', 'existe', false);
+  } else {
+    // T1
+    const dur = PARTIDA.duracoes;
+    const okLista = Array.isArray(dur) && dur.join(',') === '3,4,5,6,8,10' && dur.includes(PARTIDA.minutosPorTempo) && PARTIDA.minutosPorTempo === 4;
+    const okTicks = (dur ?? []).every(k => P.ticksDoTempo(k) === k * 3600 && P.criarPartida({ semente: 1, minutosPorTempo: k }).partida.ticksPorTempo === k * 3600);
+    reg('T1. PARTIDA.duracoes e ticksDoTempo(k) = k·3600 = o ticksPorTempo do criarPartida', `${JSON.stringify(dur)}; padrão ${PARTIDA.minutosPorTempo}; ticks ${okTicks ? 'iguais' : 'DIFERENTES'}`, '[3,4,5,6,8,10], padrão 4 nela; iguais', okLista && okTicks);
+
+    // T2: estados montados à mão
+    const ORIG = [0.25, 0.5, 1, 4, 6, 10, 45], DEST = [3, 4, 5, 6, 8, 10, 0.25];
+    let semente = 12345;
+    const rnd = () => { semente = (semente * 1103515245 + 12345) % 2147483648; return semente / 2147483648; };
+    let casos = 0, minDif = 0, segDif = 0, segLonge = 0, segVolta = 0, acrDif = 0, regDif = 0, contaDif = 0;
+    const exemplos = [];
+    const foto = m => ({ mi: P.minutoDeJogo(m), s: RP.segundoDeJogo(m), ac: JSON.stringify(P.acrescimoDeJogo(m)), reg: m.partida.estado !== 'intervalo' && m.tick - m.partida.tick0Tempo >= m.partida.ticksPorTempo });
+    const confereConta = m => {
+      const p = m.partida;
+      if (p.estado === 'intervalo' || typeof P.segundoNoTempo !== 'function') return;
+      const d = Math.max(0, m.tick - p.tick0Tempo);
+      if ((p.tempo - 1) * 2700 + P.segundoNoTempo(d, p.ticksPorTempo) !== RP.segundoDeJogo(m)) contaDif++;
+    };
+    for (const m0 of ORIG) {
+      const m = P.criarPartida({ semente: 3, minutosPorTempo: m0 });
+      const T = P.ticksDoTempo(m0);
+      // d no tempo regulamentar: as bordas de cada minuto (±1) e sorteados; nos acréscimos: até 10 min de jogo além
+      const ds = [0, 1, T - 1];
+      for (let k = 1; k < 45; k++) { const b = Math.round(k * T / 45); ds.push(b - 1, b, b + 1); }
+      for (let k = 0; k < 120; k++) ds.push(Math.floor(rnd() * T));
+      const dsAcr = [T, T + 1];
+      for (let k = 0; k < 40; k++) dsAcr.push(T + Math.floor(rnd() * T * 10 / 45));
+      const estados = [];
+      for (const tempo of [1, 2]) {
+        for (const d of ds) estados.push({ tempo, d, acr: null, est: 'jogo' });
+        for (const d of dsAcr) estados.push({ tempo, d, acr: 1 + Math.floor(rnd() * 10), est: rnd() < 0.2 ? 'parada' : 'jogo' });
+      }
+      estados.push({ tempo: 1, d: 0, acr: null, est: 'intervalo' });
+      for (const e of estados) {
+        for (const m1 of DEST) {
+          if (m1 === m0) continue;
+          const p = m.partida;
+          m.tick = 50000 + e.d + 7; p.tempo = e.tempo; p.tick0Tempo = m.tick - e.d; p.ticksPorTempo = T; p.estado = e.est; p.acrescimo = e.acr;
+          confereConta(m);
+          const a = foto(m);
+          const ok = P.mudarDuracao(m, m1);
+          confereConta(m);
+          const b = foto(m);
+          casos++;
+          const T2 = P.ticksDoTempo(m1);
+          if (!ok || a.mi !== b.mi) { minDif++; if (exemplos.length < 6) exemplos.push(`${m0}→${m1} t${e.tempo} d ${e.d}: minuto ${a.mi} → ${b.mi}${ok ? '' : ' (recusou)'}`); }
+          if (T2 >= 2700) { if (a.s !== b.s) { segDif++; if (exemplos.length < 6) exemplos.push(`${m0}→${m1} t${e.tempo} d ${e.d}: segundo ${a.s} → ${b.s}`); } }
+          else { if (Math.abs(b.s - a.s) > Math.ceil(2700 / T2)) segLonge++; if (b.s < a.s) segVolta++; }
+          if (a.ac !== b.ac) { acrDif++; if (exemplos.length < 6) exemplos.push(`${m0}→${m1} t${e.tempo} d ${e.d}: acréscimo ${a.ac} → ${b.ac}`); }
+          if (a.reg !== b.reg) regDif++;
+          if (e.est === 'intervalo' && (m.partida.ticksPorTempo !== T2 || m.partida.tick0Tempo !== m.tick - e.d)) regDif++;
+        }
+      }
+    }
+    if (exemplos.length) console.log('T2:\n  ' + exemplos.join('\n  '));
+    reg(`T2. mudarDuracao em ${casos} estados (7 origens × 7 destinos; 1º/2º tempo, acréscimos, intervalo, tick 0): minuto, acréscimo e "regular" iguais`,
+      `minuto diferente em ${minDif}; acréscimo em ${acrDif}; regular em ${regDif}`, '0; 0; 0', casos > 0 && minDif === 0 && acrDif === 0 && regDif === 0);
+    reg('T2. o segundo mostrado: IGUAL com T\' ≥ 2700 ticks (as 6 opções); com T\' menor, a ≤ ⌈2700/T\'⌉ s',
+      `diferente em ${segDif} (T' ≥ 2700); longe em ${segLonge} (T' < 2700; voltou ${segVolta}, informativo)`, '0; 0', segDif === 0 && segLonge === 0);
+    reg('T2. segundoNoTempo (partida.js) = segundoDeJogo (relogio-placar.js) em todos os casos', typeof P.segundoNoTempo === 'function' ? `${contaDif} diferentes` : 'sem segundoNoTempo', '0', typeof P.segundoNoTempo === 'function' && contaDif === 0);
+
+    // T3: partida de verdade (demo, 2 sementes × 1 min), 0,5 no minuto 20 e 1,5 no minuto 60
+    const SUM = existe('sumula.js') ? await imp('sumula.js') : null;
+    let volta = 0, apitoLonge = 0, sumFora = 0, sumVolta = 0, nApitos = 0;
+    const det3 = [];
+    for (const sem of [BASE + 300, BASE + 301]) {
+      const m = S.criar({ semente: sem, minutosPorTempo: 1 });
+      let ultS = -1, ultTM = 0, mud = null;
+      for (let i = 0; i < 40000 && m.partida.estado !== 'fim'; i++) {
+        const mi = P.minutoDeJogo(m);
+        if (!mud && m.partida.tempo === 1 && mi >= 20 && m.partida.estado !== 'intervalo') {
+          const d = m.tick - m.partida.tick0Tempo; P.mudarDuracao(m, 0.5); mud = { tick: m.tick, d2: m.tick - m.partida.tick0Tempo, T2: m.partida.ticksPorTempo, ev: 'intervalo', d };
+        } else if (mud && mud.ev === 'intervalo' && mud.feito && m.partida.tempo === 2 && mi >= 60) {
+          P.mudarDuracao(m, 1.5); mud = { tick: m.tick, d2: m.tick - m.partida.tick0Tempo, T2: m.partida.ticksPorTempo, ev: 'fimDeJogo' };
+        }
+        const ev = S.passo(m, S.demo(m));
+        // (o relógio de um tempo: no intervalo e no fim o placar mostra 45:00 e 90:00 — de 47:13 nos acréscimos para "Intervalo")
+        const est = m.partida.estado;
+        const s = est === 'intervalo' || est === 'fim' ? -1 : RP.segundoDeJogo(m);
+        if (s >= 0 && s < ultS) { volta++; if (det3.length < 4) det3.push(`sem ${sem} tick ${m.tick}: ${ultS} → ${s}`); }
+        ultS = s;
+        if (SUM) {
+          const tm = SUM.minutoTM(m), t = m.partida.tempo;
+          if (tm < ultTM) sumVolta++;
+          ultTM = tm;
+          if (ev.some(e => e.tipo === 'gol') && !(t === 1 ? tm >= 1 && tm <= 45 : tm >= 46 && tm <= 90)) sumFora++;
+        }
+        const ap = ev.find(e => e.tipo === mud?.ev);
+        if (ap) {
+          nApitos++;
+          const p = m.partida, acr = p.acrescimo ?? 0;
+          const esperado = mud.tick + (mud.T2 - mud.d2) + Math.round(acr * mud.T2 / 45);
+          if (Math.abs(m.tick - esperado) > 1) { apitoLonge++; if (det3.length < 4) det3.push(`sem ${sem}: ${mud.ev} no tick ${m.tick}, esperado ${esperado}`); }
+          mud.feito = true;
+          if (mud.ev === 'fimDeJogo') mud = { ev: 'nada', feito: true };
+        }
+      }
+      if (m.partida.estado !== 'fim') { apitoLonge++; det3.push(`sem ${sem}: não acabou`); }
+    }
+    if (det3.length) console.log('T3:\n  ' + det3.join('\n  '));
+    reg('T3. partida (demo, 2 × 1 min; 0,5 min no minuto 20 e 1,5 no 60): o relógio nunca volta; intervalo e fim no passo previsto (±1)',
+      `voltou ${volta}×; ${nApitos} apitos, ${apitoLonge} fora do previsto`, '0; 4 apitos, 0 fora', volta === 0 && nApitos === 4 && apitoLonge === 0);
+    reg('T3. o minuto da súmula (minutoTM): em 1–45 / 46–90 nos gols e nunca volta', SUM ? `${sumFora} gols fora; voltou ${sumVolta}×` : 'sem sumula.js', '0; 0', !!SUM && sumFora === 0 && sumVolta === 0);
+
+    // T4: recusas
+    const { hashMundo } = SIM;
+    const recusas = [];
+    const recusa = (nome, m, min = 6) => { const h0 = hashMundo(m); const r = P.mudarDuracao(m, min); recusas.push(`${nome} ${r === false && hashMundo(m) === h0 ? 'ok' : 'ACEITOU'}`); return r === false && hashMundo(m) === h0; };
+    let okT4 = true;
+    okT4 = recusa('dois humanos', P.criarPartida({ semente: 2, humanos: [0, 1] })) && okT4;
+    { const m = P.criarPartida({ semente: 2 }); m.online = true; okT4 = recusa('m.online', m) && okT4; }
+    if (existe('livre.js')) { const L = await imp('livre.js'); okT4 = recusa('Livre', L.criarLivre({ semente: 2 })) && okT4; }
+    if (existe('disputa.js')) { const D = await imp('disputa.js'); okT4 = recusa('Pênaltis', D.criarDisputa({ semente: 2 })) && okT4; }
+    { const SS = await imp('sessao.js'); const m = SS.criarTreino({ modo: 'ataque', semente: 2 }); const h0 = hashMundo(m); const r = P.mudarDuracao(m, 6); recusas.push(`treino ${r === false && hashMundo(m) === h0 ? 'ok' : 'ACEITOU'}`); okT4 = r === false && hashMundo(m) === h0 && okT4; }
+    { const m = P.criarPartida({ semente: 2 }); m.partida.estado = 'fim'; okT4 = recusa('fim', m) && okT4; }
+    { const m = P.criarPartida({ semente: 2 }); for (let i = 0; i < 300; i++) S.passo(m, S.demo(m)); okT4 = recusa('min 0', m, 0) && okT4; okT4 = recusa('min −1', m, -1) && okT4; okT4 = recusa('min NaN', m, NaN) && okT4; }
+    reg('T4. recusas (false e o hash IGUAL)', recusas.join('; '), 'todas ok', okT4);
+
+    // T5: o hash
+    const ma = P.criarPartida({ semente: 4 }), mb = P.criarPartida({ semente: 4 }), mc = P.criarPartida({ semente: 4 });
+    for (let i = 0; i < 1500; i++) { S.passo(ma, S.demo(ma)); S.passo(mb, S.demo(mb)); S.passo(mc, S.demo(mc)); }
+    P.mudarDuracao(mb, 4); P.mudarDuracao(mc, 6);
+    for (let i = 0; i < 600; i++) { S.passo(ma, S.demo(ma)); S.passo(mb, S.demo(mb)); S.passo(mc, S.demo(mc)); }
+    const igual4 = hashMundo(ma) === hashMundo(mb), difere6 = hashMundo(ma) !== hashMundo(mc);
+    const z = P.criarPartida({ semente: 5 }); P.mudarDuracao(z, 6);
+    const z6 = P.criarPartida({ semente: 5, minutosPorTempo: 6 });
+    let igualTick0 = hashMundo(z) === hashMundo(z6);
+    for (let i = 0; i < 600 && igualTick0; i++) { S.passo(z, S.demo(z)); S.passo(z6, S.demo(z6)); if (i % 100 === 0 && hashMundo(z) !== hashMundo(z6)) igualTick0 = false; }
+    igualTick0 = igualTick0 && hashMundo(z) === hashMundo(z6);
+    reg('T5. o hash: mudarDuracao(m, 4) numa de 4 min IGUAL; (m, 6) DIFERE; no tick 0, (m, 6) = criarPartida({minutosPorTempo: 6}) por 600 passos',
+      `${igual4 ? 'igual' : 'DIFERENTE'}; ${difere6 ? 'difere' : 'IGUAL'}; tick 0 ${igualTick0 ? 'igual' : 'DIFERENTE'}`, 'igual; difere; igual', igual4 && difere6 && igualTick0);
+  }
 }
 fim();

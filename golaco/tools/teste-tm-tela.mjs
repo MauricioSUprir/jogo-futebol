@@ -4,8 +4,10 @@
 //   1  PC 1280×720, pedido A (o usuário é o mandante, sem trava): 'tm3d:pronto' chega ao pai; as siglas do placar são as
 //      do pedido; o humano controla um jogador do time 0; o jogo anda uns segundos.
 //   1c PC, pedido A (item 32; dono, 17/10: "o placar com mais a cara do Total Match, um pouco MAIOR e o relógio com os
-//      SEGUNDOS"): o placar com 30 px, o #relogio em MM:SS na Inter TM (data-fontes-tm="ok") e o símbolo do TM na marca.
-//   2  A pausa do TM: com "Simular o resto", "Editar time" e "Cenas da partida" (pré-jogo e substituição), sem
+//      SEGUNDOS"): o placar com 30 px, o #relogio em MM:SS na TM Cond (item 125; antes a Inter TM — data-fontes-tm="ok") e o
+//      símbolo do TM na marca.
+//   2  A pausa do TM: com "Simular o resto", "Editar time" e "Partida e cenas" (a duração e a dificuldade — item 33 —, o pré-jogo e
+//      as cenas; era "Cenas da partida"), sem
 //      "Reiniciar partida" nem os treinos.
 //   3  "Simular o resto": a faixa "Simulando o resto da partida…" com minuto e placar, a partida chega ao apito, a faixa do
 //      fim tem "Voltar ao Total Match", o resultado já está em localStorage["tm3d:resultado:<id>"] (formato do contrato,
@@ -16,7 +18,7 @@
 //   4  "Voltar ao Total Match" (clique de verdade): o pai recebe 'tm3d:fim' com o MESMO resultado gravado.
 //   5  Celular 844×390 com toque, pedido B (Rumo ao Estrelato: o usuário é o visitante e controla SÓ o centroavante):
 //      humano 1, o controlado é o travado; TROCAR, GOLEIRO e o TROCAR da bola na mão escondidos; TROCAR/GOLEIRO apertados
-//      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Cenas da partida").
+//      não tiram o controle dele; a pausa sem "Editar time", "Reiniciar partida" e os treinos (o submenu vira "Partida e cenas").
 //   5b Celular (itens 59 e 60): o travado com a bola mostra o nome no canto de baixo à DIREITA (o humano é o visitante: o time
 //      da direita do placar), com a fonte do TM (Inter TM) e a faixa da cor do time 1 do placar — inteira: o recorte do raio
 //      do cartão deixa ≥ 85% da altura dela na coluna do meio (com o raio de 8 px, ~64%: a faixa virava um ")").
@@ -102,8 +104,11 @@ async function itensDaPausa(fr) {
   await esperar(fr, () => !document.getElementById('menu').hidden, null, 10000);
   const itens = {};
   for (const [k, sel] of Object.entries({ simular: '#btn-simular-resto', editar: '#menu [data-cmd="editar-time"]', reiniciar: '#btn-reiniciar-partida', modos: '#btn-modos', voltar: '#btn-voltar-tm', continuar: '#btn-continuar' })) itens[k] = await visivel(fr, sel);
-  // os treinos no submenu (no TM o submenu é "Cenas da partida": só o pré-jogo e a substituição)
+  // os treinos no submenu (no TM o submenu é "Partida e cenas": a duração e a dificuldade, o pré-jogo e as cenas)
   itens.treinos = await fr.evaluate(() => [...document.querySelectorAll('#menu-modos [data-cmd="modo"]')].some(b => !b.hidden));
+  // (item 33: o nome do submenu e a linha "Duração | Dificuldade" dentro dele, sem ajustesFixos no pedido)
+  const sub = await fr.evaluate(() => ({ nome: document.querySelector('#btn-modos .item-txt')?.textContent ?? '', linha: !document.getElementById('linha-ajustes')?.hidden }));
+  itens.partidaECenas = sub.nome === 'Partida e cenas' && sub.linha;
   return itens;
 }
 const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k).join(', ') || 'nada';
@@ -131,14 +136,15 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     const p = document.querySelector('#hud .placar'), r = document.getElementById('relogio'), m = p?.querySelector('.placar-marca');
     const q = p?.getBoundingClientRect();
     return { h: q?.height ?? 0, txt: r?.textContent.trim() ?? '', fonte: r ? getComputedStyle(r).fontFamily : '', fontes: document.documentElement.dataset.fontesTm ?? '-',
-      check: document.fonts.check('800 17px "Inter TM"'), marca: m && getComputedStyle(m).display !== 'none' ? getComputedStyle(m).backgroundImage : null };
+      check: document.fonts.check('800 17px "TM Cond"'), marca: m && getComputedStyle(m).display !== 'none' ? getComputedStyle(m).backgroundImage : null };
   });
-  meta('1c PC: o placar do item 32 com a cara do TM — 30 px, o relógio em MM:SS na Inter TM (fontes ok), o símbolo do TM na marca',
-    `${pl.h.toFixed(1)} px · "${pl.txt}" em ${pl.fonte} (fontes ${pl.fontes}, Inter TM 800 ${pl.check ? 'carregada' : 'NÃO'}) · marca ${pl.marca ?? 'ausente'}`,
-    Math.abs(pl.h - 30) <= 0.5 && /^\d{2}:\d{2}$/.test(pl.txt) && /^"?Inter TM/.test(pl.fonte) && pl.fontes === 'ok' && pl.check && /simbolo\.png/.test(pl.marca ?? ''));
+  // (item 125: o relógio na TM Cond 800, a letra esportiva do sistema tipográfico; antes a Inter TM)
+  meta('1c PC: o placar do item 32 com a cara do TM — 30 px, o relógio em MM:SS na TM Cond (fontes ok), o símbolo do TM na marca',
+    `${pl.h.toFixed(1)} px · "${pl.txt}" em ${pl.fonte} (fontes ${pl.fontes}, TM Cond 800 ${pl.check ? 'carregada' : 'NÃO'}) · marca ${pl.marca ?? 'ausente'}`,
+    Math.abs(pl.h - 30) <= 0.5 && /^\d{2}:\d{2}$/.test(pl.txt) && /^"?TM Cond/.test(pl.fonte) && pl.fontes === 'ok' && pl.check && /simbolo\.png/.test(pl.marca ?? ''));
   const it = await itensDaPausa(fr);
-  meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Cenas da partida; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
-    it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar);
+  meta(`2 PC: pausa do TM (Simular o resto${comTrava ? '' : ' e Editar time'}, Partida e cenas com a duração e a dificuldade; sem Reiniciar nem os treinos${comTrava ? ' nem Editar time' : ''})`, listaItens(it),
+    it.simular && it.editar === !comTrava && !it.reiniciar && it.modos && !it.treinos && !it.voltar && it.partidaECenas);
   const tickSim0 = await fr.evaluate(() => window.__golaco.mundo.tick);
   // 3b (item 32): a conta do texto do relógio (relogio-placar.js, a mesma do hud) carregada ANTES (as leituras do 3b ficam
   // síncronas: nenhum pedaço da simulação entra entre ler o #relogio e ler o mundo)
@@ -222,7 +228,9 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     const r = e?.getBoundingClientRect(), cor = e?.querySelector('.nc-cor'), pc = document.querySelector('#placar-time-1 .placar-cor');
     const s = document.createElement('div'); s.style.cssText = 'position:fixed;right:var(--sa-r);bottom:var(--sa-b);left:0;top:0;visibility:hidden'; document.body.append(s);
     const sa = s.getBoundingClientRect(); s.remove();
+    const numEl = e?.querySelector('.nc-num');
     const out = { vis, dir: !!e?.classList.contains('dir'), noHud: !!e?.closest('#hud'), fonte: cs?.fontFamily ?? '', fontes: document.documentElement.dataset.fontesTm ?? '-',
+      numFonte: numEl ? getComputedStyle(numEl).fontFamily : '',
       cor: cor ? getComputedStyle(cor).backgroundColor : null, corPlacar: pc ? getComputedStyle(pc).backgroundColor : null,
       borda: r ? sa.right - r.right : NaN, base: r ? sa.bottom - r.bottom : NaN, texto: e?.textContent ?? '' };
     // a faixa da cor inteira (revisão): o recorte do raio do cartão (overflow hidden) na coluna do MEIO da faixa, nas duas
@@ -239,9 +247,10 @@ const listaItens = it => Object.entries(it).filter(([, v]) => v).map(([k]) => k)
     g.mundo.posse = posse0; g.pausar(false); g.relogio.usarManual(false);
     return out;
   });
-  meta('5b celular, Estrelato: o travado com a bola — o nome no canto de baixo à direita (o time da direita do placar), fonte Inter TM, a cor do time 1 do placar',
-    `${nm.vis ? `"${nm.texto}" ${nm.dir ? 'à direita' : 'à ESQUERDA'}${nm.noHud ? '' : ' (fora do #hud)'}, a ${nm.borda.toFixed(0)} px da borda e ${nm.base.toFixed(0)} da base; fonte ${nm.fonte} (fontes ${nm.fontes}); cor ${nm.cor} × placar ${nm.corPlacar}; faixa inteira em ${((nm.faixaInteira ?? 0) * 100).toFixed(0)}% da altura (raio ${nm.raio ?? '-'} px)` : 'o nome não aparece'}`,
-    nm.vis && nm.dir && nm.noHud && nm.borda <= 16 && nm.base <= 6.5 && /Inter TM/.test(nm.fonte) && !!nm.cor && nm.cor === nm.corPlacar && nm.faixaInteira >= 0.85);
+  // (item 125: o nome continua na Inter TM; o número na TM Cond)
+  meta('5b celular, Estrelato: o travado com a bola — o nome no canto de baixo à direita (o time da direita do placar), fonte Inter TM (o número na TM Cond), a cor do time 1 do placar',
+    `${nm.vis ? `"${nm.texto}" ${nm.dir ? 'à direita' : 'à ESQUERDA'}${nm.noHud ? '' : ' (fora do #hud)'}, a ${nm.borda.toFixed(0)} px da borda e ${nm.base.toFixed(0)} da base; fonte ${nm.fonte}, número ${nm.numFonte.split(',')[0]} (fontes ${nm.fontes}); cor ${nm.cor} × placar ${nm.corPlacar}; faixa inteira em ${((nm.faixaInteira ?? 0) * 100).toFixed(0)}% da altura (raio ${nm.raio ?? '-'} px)` : 'o nome não aparece'}`,
+    nm.vis && nm.dir && nm.noHud && nm.borda <= 16 && nm.base <= 6.5 && /Inter TM/.test(nm.fonte) && /^"?TM Cond/.test(nm.numFonte) && !!nm.cor && nm.cor === nm.corPlacar && nm.faixaInteira >= 0.85);
   const it = await itensDaPausa(fr);
   meta('5 celular, Estrelato: humano 1, o controlado é o travado, sem TROCAR/GOLEIRO, a trava não solta, pausa sem Editar/Reiniciar/treinos',
     `humano ${info.humano} · travado ${info.trava} (${info.tmIdTrava}) · controlado ${info.ctrl} · escondidos ${escondidos.join(', ')} · controlados depois dos apertos [${depois.join(', ')}] · pausa: ${listaItens(it)}`,

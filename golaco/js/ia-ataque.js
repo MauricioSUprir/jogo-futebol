@@ -35,12 +35,12 @@
 //    virtuais (acaoIA) e fixa a mira no pedido (pedido.dir → miraAuto, o mesmo caminho da reposição do
 //    goleiro). Transição ofensiva: +20% nas opções à frente; corridas sem exigir o condutor de frente.
 
-import { IA_ATAQUE, IA_PESSOA, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE } from './config.js';
+import { IA_ATAQUE, IA_PESSOA, TATICA, CAMPO, PASSO, BOTAO, IA, PARTIDA, ACOES, LIVRE, DIFICULDADE } from './config.js';
 import { MD } from './matdet.js';
 import { clamp, lerp, difAng } from './mat.js';
 import { para, acaoIA } from './ia.js';
 import { zonasCruzamento } from './acoes.js';
-import { faseDoTime, contraPessoa } from './tatica.js';
+import { faseDoTime, contraPessoa, nivelContra } from './tatica.js';
 import { FORMACOES } from './formacoes.js';
 import { estadoIA, blocoDoTime, alvoCalmo, maoDoMeuGoleiro } from './ia-tatica.js';
 import { restricaoParada } from './partida.js';
@@ -62,6 +62,17 @@ const _r = { x: 0, z: 0 }, _ref = { u: 0, w: 0 }, _c = { x: 0, z: 0, mag: 1, mod
 // juntadas uma vez na carga (o --set das ferramentas troca o config.js antes de este módulo carregar)
 const UTIL_P = { ...IA_ATAQUE.utilidade, ...IA_PESSOA.utilidade };
 const CORR_P = { ...IA_ATAQUE.corridas, ...IA_PESSOA.corridas };
+// a dificuldade (item 33; config.js DIFICULDADE), só no time da IA contra a pessoa (tatica.js nivelContra): a utilidade do UTIL_P
+// com a do nível por cima (a vontade de chutar, a leitura da defesa no passe), juntada uma vez na carga — o Normal não está nela
+// (usa a de sempre)
+const UTIL_D = {};
+for (const n of DIFICULDADE.niveis) if (DIFICULDADE[n].utilidade) UTIL_D[n] = { ...UTIL_P, ...DIFICULDADE[n].utilidade };
+/** A utilidade do condutor do time t: a da partida, a de contra a pessoa (UTIL_P) e, com a dificuldade, a do nível. */
+function utilDe(m, t) {
+  if (!contraPessoa(m, t)) return IA_ATAQUE.utilidade;
+  const nv = nivelContra(m, t);
+  return (nv && UTIL_D[nv]) || UTIL_P;
+}
 
 // ------------------------------------------------------------------------------- ameaça esperada
 
@@ -776,7 +787,7 @@ export function condutorTatico(m, j) {
   }
   if (!ocupado && (nova || ia.op === '' || (m.tick + (j.vagaIdx ?? 0)) % IA_ATAQUE.condutor.avaliaTicks === 0)) decidir(m, j, A, ia, false);
   if (ia.op === 'protege') return { x: 0, z: 0, botoes: extra | BOTAO.MOD };
-  let mag = (contraPessoa(m, j.time) ? UTIL_P : IA_ATAQUE.utilidade).magConduz, botoes = extra;
+  let mag = utilDe(m, j.time).magConduz, botoes = extra;
   if (ia.correr) botoes |= BOTAO.CORRER;
   if (ia.curta) { mag = 0.6; botoes |= BOTAO.MOD; }
   return viradaComEmbalo(m, j, ia, ia.du * lado * mag, ia.dw * lado * mag, botoes);
@@ -866,7 +877,8 @@ function atualizarMira(m, j, ia) {
  */
 function decidir(m, j, A, ia, cobranca) {
   // (contra a pessoa, UTIL_P: a condução avaliada onde ele chega, mais peso e CORRER com menos campo — IA_PESSOA.utilidade)
-  const cfg = IA_ATAQUE.condutor, U = contraPessoa(m, j.time) ? UTIL_P : IA_ATAQUE.utilidade, lado = A.lado;
+  // (item 33: com a dificuldade, a do nível por cima — utilDe)
+  const cfg = IA_ATAQUE.condutor, U = utilDe(m, j.time), lado = A.lado;
   const u0 = j.x * lado, w0 = j.z * lado;
   const risco = IA_ATAQUE.riscoMentalidade[A.ment + 2];
   // valor de ter a bola (some quando ela é perdida): posse + posseMeuCampo no meu campo (cheio até

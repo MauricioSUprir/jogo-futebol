@@ -9,6 +9,9 @@
 //      número ≥ 10 px, o afastamento ≤ 4 px
 //   L3 info — a ordem do corte (período → "Árb. R. Salgado" → sem árbitro → sem data → o estádio com "…"); a duração nunca sai;
 //      só o estádio ganha "…"; os textos da duração de cada modo
+//   L3b a dificuldade (item 33) — {curta: "Difícil", longa: "Dificuldade: Difícil"} nos dados (nada no online, no Livre e nos
+//      Pênaltis); no celular a curta nunca sai (360–720 px); no PC a longa vira a curta logo depois do período (o corte novo
+//      dificuldadeCurta); depois de mudarDuracao(m, 6) a linha diz "2 × 6 min"
 //   L4 árbitro — o mesmo nome para a mesma semente e os mesmos elencos; o m.rng e o hashMundo iguais antes e depois de 100
 //      dadosDaPartida; ≤ 15% do nome mais comum em 1000 sementes; nenhum igual a um árbitro real (tools/dados/arbitros-reais.txt)
 //   L5 recriação — a edição (troca titular ↔ reserva, troca de goleiro, formação e tática) vira a escalação de criarPartida:
@@ -261,6 +264,50 @@ const letraMin = L => (L.pc ? (L.H >= 720 ? 13 : 11) : L.regime === 'normal' ? 1
   }
   const dt = PP.textoData(new Date(2026, 10, 4)), dt2 = PP.textoData('2026-03-01');
   reg('L3 a data', `${dt?.curta} / ${dt?.longa} · ${dt2?.curta}`, '4 nov. 2026 / 4 de novembro de 2026 · 1 mar. 2026', dt?.curta === '4 nov. 2026' && dt?.longa === '4 de novembro de 2026' && dt2?.curta === '1 mar. 2026');
+  // L3b (item 33): a dificuldade na linha de informação — o "Beginner, 6 minutes" do FC
+  {
+    const dDif = PP.dadosDaPartida(P.criarPartida({ semente: 3 }), { dificuldade: 'dificil' });
+    const dOn = PP.dadosDaPartida(P.criarPartida({ semente: 3, humanos: [0, 1] }), { dificuldade: 'dificil', humanos: [0, 1] });
+    const dLv = PP.dadosDaPartida(mL, { dificuldade: 'dificil' }), dPn = PP.dadosDaPartida(mD, { dificuldade: 'dificil' });
+    const dif = dDif.dificuldade;
+    const okDados = !!dif && dif.curta === 'Difícil' && dif.longa === 'Dificuldade: Difícil' && dOn.dificuldade == null && dLv.dificuldade == null && dPn.dificuldade == null;
+    reg('L3b a dificuldade nos dados: {curta, longa}; nada no online, no Livre e nos Pênaltis',
+      `partida ${JSON.stringify(dif ?? null)}; online ${JSON.stringify(dOn.dificuldade ?? null)}; Livre ${JSON.stringify(dLv.dificuldade ?? null)}; Pênaltis ${JSON.stringify(dPn.dificuldade ?? null)}`,
+      '{"curta":"Difícil","longa":"Dificuldade: Difícil"}; null; null; null', okDados);
+    // o celular (1 linha, a curta) de 360 a 720 px com o separador desenhado: a duração e a dificuldade nunca saem, nada passa
+    const letra = 11, med = t => PP.larguraInter(t, letra), sepW = med('|') + 0.9 * letra;
+    const real = l => l.reduce((s2, q) => s2 + med(q), 0) + Math.max(0, l.length - 1) * sepW;
+    const cel = { estadio: 'Estádio Municipal Doutor Paulo Machado de Carvalho', data: '4 nov. 2026', arbitro: 'Ricardo Salgado', duracao: '2 × 10 min', periodo: 'Noite', dificuldade: 'Difícil', dificuldadeCurta: 'Difícil' };
+    let passa = 0, total = 0, pior = '';
+    for (let w = 360; w <= 720; w += 4) {
+      const r = PP.linhaInfo(cel, w, med, 1, sepW);
+      const l = r.linhas[0];
+      total++;
+      if (real(l) <= w + 0.5 && l.includes('2 × 10 min') && l.includes('Difícil') && !r.cortes.includes('dificuldadeCurta')) passa++; else if (!pior) pior = `${w} px: ${l.join(' | ')}`;
+    }
+    reg('L3b celular (1 linha, 360–720 px, o separador desenhado): a duração e a dificuldade nunca saem e a linha cabe', `${passa}/${total}${pior ? `; 1º que falha: ${pior}` : ''}`, `${total}/${total}`, passa === total);
+    // o PC (2 linhas): a 2ª é "duração | dificuldade | período"; sem caber, sai o período e a longa vira a curta (antes do árbitro)
+    const pc = { ...cel, data: '4 de novembro de 2026', duracao: '2 tempos de 10 min', dificuldade: 'Dificuldade: Difícil' };
+    const ordemPc = ['periodo', 'dificuldadeCurta', 'arbitroCurto', 'arbitro', 'data', 'estadio'];
+    let okPc = true, viuCurta = false;
+    const detPc = [];
+    for (let w = 160; w <= 720; w += 4) {
+      const r = PP.linhaInfo(pc, w, med, 2, sepW);
+      const l2 = r.linhas[1] ?? [];
+      const sub = r.cortes.every((k, i) => ordemPc.indexOf(k) >= 0 && (i === 0 || ordemPc.indexOf(k) > ordemPc.indexOf(r.cortes[i - 1])));
+      const temDif = l2.includes('Dificuldade: Difícil') || l2.includes('Difícil');
+      if (r.cortes.includes('dificuldadeCurta')) { viuCurta = true; if (!r.cortes.includes('periodo')) okPc = false; }
+      if (!sub || !l2.includes('2 tempos de 10 min') || !temDif) { okPc = false; if (detPc.length < 2) detPc.push(`${w}: ${r.cortes.join('>')} / ${l2.join(' | ')}`); }
+    }
+    const r720 = PP.linhaInfo(pc, 720, med, 2, sepW);
+    reg('L3b PC (2 linhas): "Dificuldade: Difícil" ao lado da duração; o corte novo (a longa → a curta) logo depois do período; a duração e a dificuldade nunca saem',
+      `720 px: ${r720.linhas[1].join(' | ')}; ${viuCurta ? 'o corte aparece' : 'o corte NÃO aparece'}${detPc.length ? `; ${detPc.join(' · ')}` : ''}`,
+      'a 2ª linha com os dois; o corte depois do período', okPc && viuCurta && r720.linhas[1].includes('Dificuldade: Difícil'));
+    // a duração mudada no meio (mudarDuracao) aparece sozinha: a tela lê o ticksPorTempo
+    let txt6 = 'sem mudarDuracao';
+    if (typeof P.mudarDuracao === 'function') { const m6 = P.criarPartida({ semente: 3 }); P.mudarDuracao(m6, 6); txt6 = PP.dadosDaPartida(m6, {}).duracao.curta; }
+    reg('L3b depois de mudarDuracao(m, 6) a duração vira "2 × 6 min"', txt6, '2 × 6 min', txt6 === '2 × 6 min');
+  }
 }
 
 // ------------------------------------------------------------------------------------------------ L4

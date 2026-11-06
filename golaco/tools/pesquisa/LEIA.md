@@ -40,3 +40,11 @@ A pasta `tools/` não vai para o site.
   (o `visible_area` de cada evento, 22 jogos da Copa 2022 e da Euro 2024): a largura vista na profundidade da bola, onde a
   bola fica nela (u), a grande área e o gol no quadro, por zona e por lance (as réguas do `teste-camera`).
   `python3 -I sb_quadro.py <pasta com ev_*.json e 360_*.json>`.
+
+- `classico_*.py` — item 35 (o clássico pegado; `PESQUISA-CLASSICO.md` §1 e §4): clássicos × jogos comuns em dados abertos, só a
+  biblioteca padrão. `classico_resumo_partida.py` (um resumo por partida dos eventos da StatsBomb Open Data 2015/16: faltas,
+  cartões, desarmes, pressões, chutes, a bola rolando estimada pelos reinícios), `classico_analise_sb.py` (os grupos A/B/N e a
+  razão ajustada pelo estilo dos dois times, bootstrap), `classico_espn_coleta.py` (as estatísticas por partida na API pública
+  da ESPN: Brasil, Argentina, Inglaterra, Espanha, Itália), `classico_analise_espn.py` (a mesma conta por liga e temporada) e
+  `classico_junta.py` (os conjuntos juntos por variância inversa no log da razão: os 226 clássicos). Os comandos no §4 da
+  pesquisa; os dados brutos não ficam no repositório.

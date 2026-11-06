@@ -3,8 +3,10 @@
    classe com ?tm): sem ?tm nenhuma regra daqui vale — mesma tela, mesmos testes.
    A cara sai do próprio Total Match (legacy-total-match/css/styles.css :root e .btn/.seg-btn/.modal/.toast): Inter, preto
    #050807, painel #0f1612, verde #22c55e/#4ade80, texto #eef5f0, fraco #8a9d90; botão principal em pílula com degradê
-   verde; cartões arredondados com borda fina; nada itálico, inclinado ou condensado; nada de emoji como ícone (os ícones
-   continuam os SVG da página). Logo e fontes copiados para assets/tm/ (o jogo não depende da pasta do TM).
+   verde; cartões arredondados com borda fina; nada itálico nem inclinado; nada de emoji como ícone (os ícones continuam os
+   SVG da página). Item 125 (dono, 05/11: "fontes tem que ser mais legais ... e não é só aí"): a regra antiga "nada condensado"
+   muda — a TM Cond (Barlow Condensed, a letra da carta do TM) nos títulos, itens de menu, números, nomes e siglas (o --f-disp do
+   estilo.css), o texto corrido continua na Inter TM. Logo e fontes copiados para assets/tm/ (o jogo não depende da pasta do TM).
    O que muda TAMANHO de peça medida pelo jogo fica igual ao do GOLAÇO: o peso e o espaçamento das letras dos botões de
    toque (entrada.js mede o nome pelo canvas com 900 e o --ls dele) e as alturas mínimas de toque (48 px). A fonte nova
    chega depois do 1º layout: js/tm-cara.js avisa 'tm:fontes' e a página mede de novo (botões e topo do HUD).
@@ -94,7 +96,18 @@ html.tm .placar-marca {
   border-right: 1px solid var(--tm-linha2);
 }
 html.tm .marca-simbolo { display: none; }
-html.tm .placar-time { font-weight: 800; letter-spacing: 0.02em; }
+/* (item 125) siglas, gols e relógio na TM Cond 800 (letras maiores na MESMA altura e o placar igual ou mais estreito: −4% no PC,
+   −1,6% no 844; em 568×320 as siglas de 13 px para não passar da largura de antes — teste-hud-minimo H1/H10) */
+html.tm .placar-time { font: 800 14px / 1 var(--f-disp); letter-spacing: 0.05em; }
+html.tm .placar-gols { font-family: var(--f-disp); font-weight: 800; font-size: 21px; }
+html.tm .placar-relogio b { font-family: var(--f-disp); font-weight: 800; font-size: 19px; letter-spacing: 0.02em; }
+html.tm .placar-relogio small { font-family: var(--f-disp); font-weight: 800; font-size: 13px; }
+html.tm .placar-relogio.parado b { font-size: 15px; letter-spacing: 0.04em; }
+@media (max-width: 1000px) and (max-height: 340px), (max-width: 700px) and (max-height: 360px) {
+  html.tm .placar-time { font-size: 13px; }
+  html.tm .placar-gols { font-size: 20px; }
+  html.tm .placar-relogio b { font-size: 18px; }
+}
 html.tm .placar-resultado { background: rgba(34, 197, 94, 0.1); }
 html.tm .placar-gols { color: var(--tm-verde-cl); }
 html.tm .placar-x { background: var(--tm-fraco); }
@@ -104,6 +117,10 @@ html.tm .placar-relogio.parado { background: var(--tm-verde-fundo); color: var(-
 html.tm .placar-relogio.parado small { color: var(--tm-texto); }
 @media (min-width: 1001px) {
   html.tm .placar-marca { width: 30px; background-size: 22px auto; }
+  html.tm .placar-time { font-size: 15px; }
+  html.tm .placar-gols { font-size: 23px; }
+  html.tm .placar-relogio b { font-size: 20px; }
+  html.tm .placar-relogio.parado b { font-size: 16px; }
 }
 @media (prefers-reduced-motion: no-preference) {
   html.tm .placar.gol-pulso { animation-name: tm-placar-pulso; }
@@ -122,6 +139,9 @@ html.tm .minimapa { border-color: rgba(34, 197, 94, 0.3); border-radius: 8px; ba
 /* o nome do jogador com a bola nos cantos de baixo (itens 59 e 60): o cartão do TM, com a Inter do TM (a cor do time na faixa).
    Raio de 4 px: com 8 numa caixa de 15–18 px o recorte comia as pontas da faixa de 3 px e ela virava um ")" (revisão) */
 html.tm .nome-condutor { font-family: var(--fonte); background: rgba(11, 17, 14, 0.9); border: 1px solid var(--tm-linha2); border-radius: 4px; }
+/* (item 125) o número na TM Cond 800; o nome continua na Inter TM (caixa normal a 11–12 px: cabe e lê melhor) */
+html.tm .nc-num { font: 800 14px / 1 var(--f-disp); }
+html.tm.com-toque .nc-num { font-size: 13px; }
 html.tm .carga-barra { border-color: rgba(34, 197, 94, 0.55); background: rgba(5, 8, 7, 0.88); }
 html.tm .carga-barra i { background: linear-gradient(90deg, #12a150, #22c55e 60%, #86efac); }
 html.tm .carga.cheia .carga-barra { box-shadow: 0 0 8px rgba(34, 197, 94, 0.9); }
@@ -135,12 +155,12 @@ html.tm .aviso {
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   font-weight: 700; letter-spacing: 0; text-transform: none;
 }
-html.tm .aviso.gol { background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent; letter-spacing: 0.02em; }
+html.tm .aviso.gol { background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent; letter-spacing: 0.04em; font-family: var(--f-disp); font-weight: 800; }
 html.tm .aviso.forte { border-left-color: var(--tm-texto); }
 
 /* ------------------------------------------------------------------ GOL! (sem itálico e sem inclinar) */
 html.tm .gol-palavra {
-  font-style: normal; letter-spacing: -0.01em; color: var(--tm-verde-cl);
+  font-style: normal; color: var(--tm-verde-cl);
   -webkit-text-stroke: 3px var(--tm-preto); paint-order: stroke fill;
   text-shadow: 0 0 36px rgba(34, 197, 94, 0.55), 0 6px 0 rgba(0, 0, 0, 0.55);
 }
@@ -184,8 +204,7 @@ html.tm .faixa {
   html.tm.com-toque .faixa { top: calc(var(--sa-t) + var(--m) + 74px + 58px); transform: translateX(-50%); }
   html.tm.com-toque.faixa-subst-topo .faixa { top: calc(var(--sa-t) + var(--m) + 74px + 42px + 58px); }
 }
-html.tm .faixa-titulo { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; }
-html.tm .faixa-placar { font-size: 16px; font-weight: 700; letter-spacing: 0.02em; color: var(--tm-texto); }
+html.tm .faixa-placar { color: var(--tm-texto); }
 
 /* ------------------------------------------------------------------ botões de toque (só cor: tamanho, peso e espaçamento
    das letras são os que entrada.js mede) — a transparência da tela limpa continua */
@@ -212,7 +231,7 @@ html.tm #ajuda .janela {
 }
 html.tm #ajuda .janela::after { background: linear-gradient(rgba(11, 17, 14, 0), #0b110e 85%); }
 html.tm #ajuda .janela-topo { background: #0d1410; border-bottom-color: var(--tm-linha); }
-html.tm #ajuda .janela-topo h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; white-space: nowrap; }
+html.tm #ajuda .janela-topo h2 { white-space: nowrap; }
 /* a marca do TM no lugar da barrinha verde do título */
 html.tm #ajuda .janela-topo h2::before {
   width: 22px; height: 12px; margin-right: 9px; vertical-align: -0.5px; border-radius: 0;
@@ -240,18 +259,17 @@ html.tm .btn-primario {
 html.tm .btn-primario:hover, html.tm .btn-primario:focus-visible { background: var(--tm-botao); filter: brightness(1.07); box-shadow: 0 8px 22px rgba(34, 197, 94, 0.4); }
 html.tm .btn-primario:focus-visible { outline: 2px solid #86efac; outline-offset: 2px; }
 
-html.tm .ajuda-colunas h3 { letter-spacing: 0.1em; font-weight: 800; color: var(--tm-verde-cl); }
+html.tm .ajuda-colunas h3 { color: var(--tm-verde-cl); }
 html.tm .ajuda-colunas dd { color: var(--tm-fraco); }
 html.tm .nota { color: var(--tm-fraco); border-top-color: var(--tm-linha); }
 
 /* ------------------------------------------------------------------ replay, selo da análise, faixa ENTRA/SAI */
 html.tm .replay-marca {
   border-radius: 999px; border: 1px solid rgba(34, 197, 94, 0.45); border-left-width: 1px;
-  background: rgba(11, 17, 14, 0.86); padding: 0 14px 0 11px; letter-spacing: 0.14em; font-weight: 800;
+  background: rgba(11, 17, 14, 0.86); padding: 0 14px 0 11px;
 }
 html.tm .btn-replay-pular {
   border: 1px solid rgba(34, 197, 94, 0.55); background: rgba(11, 17, 14, 0.88);
-  font-weight: 800; letter-spacing: 0.01em; text-transform: none;
 }
 html.tm .replay-faixa {
   background: linear-gradient(90deg, rgba(34, 197, 94, 0), #22c55e 30%, #86efac 50%, #22c55e 70%, rgba(34, 197, 94, 0));
@@ -265,21 +283,20 @@ html.tm .terco-impedimento { --decisao: var(--tm-erro); }
 html.tm .terco-legal { --decisao: var(--tm-verde); }
 /* (só as bordas de cima, da direita e de baixo: a da esquerda é a cor da decisão) */
 html.tm .terco-selo {
-  border-radius: 14px; background: rgba(11, 17, 14, 0.9); letter-spacing: 0.1em; font-weight: 800;
+  border-radius: 14px; background: rgba(11, 17, 14, 0.9);
   border-top-color: var(--tm-linha2); border-right-color: var(--tm-linha2); border-bottom-color: var(--tm-linha2);
 }
 html.tm .terco-selo b { font-weight: 800; }
-html.tm .faixa-subst { font-family: var(--fonte); background: rgba(11, 17, 14, 0.9); border-radius: 12px; }
-/* o cartão do autor do gol (item 31): a Inter do TM, o painel e a borda fina do TM; a borda esquerda na cor do time */
+html.tm .faixa-subst { background: rgba(11, 17, 14, 0.9); border-radius: 12px; }
+/* o cartão do autor do gol (item 31 → 126): o painel e a borda fina do TM; a borda esquerda na cor do time; as letras são as do
+   sistema tipográfico (a TM Cond: estilo.css) */
 html.tm .autor-gol {
-  font-family: var(--fonte); background: rgba(11, 17, 14, 0.92); border: 1px solid var(--tm-linha2);
-  border-left: 2px solid var(--cor-time, var(--tm-verde)); border-radius: 12px;
+  background: rgba(11, 17, 14, 0.92); border: 1px solid var(--tm-linha2);
+  border-left: 3px solid var(--cor-time, var(--tm-verde)); border-radius: 8px;
 }
-html.tm .ag-foto { border-radius: 8px; }
+html.tm .ag-foto { border-radius: 5px; }
 html.tm .autor-gol { --ag-fundo: 11, 17, 14; }
-html.tm .ag-time { border-radius: 7px; }
-html.tm .ag-sigla { font-weight: 800; letter-spacing: 0.04em; }
-html.tm .ag-num { font-weight: 800; }
+html.tm .ag-time { border-radius: 5px; }
 html.tm .ag-nome { color: var(--tm-texto); }
 html.tm .fs-sigla { border-radius: 7px; }
 
@@ -291,6 +308,17 @@ html.tm .girar::before {
 }
 html.tm .girar-titulo { font-weight: 800; letter-spacing: -0.01em; }
 html.tm .girar-texto { color: var(--tm-fraco); }
+/* o "Simular partida" antes do jogo (item 124, revisões A1/A6; main.js criarSimularTM): na tela "Gire o celular" (em pé não dá para
+   jogar — o X do TM já sumiu — e o PWA do TM é travado em pé) e na abertura de texto (a reserva da tela, sem abas), no canto de
+   baixo à direita (o do Pular, que a abertura esconde). Pílula escura com a borda verde: a ação secundária (a principal é girar /
+   começar) */
+html.tm .tm-simular {
+  justify-content: center; min-height: 48px; padding: 0 22px; border-radius: 999px; font: 700 15px/1 var(--fonte);
+  color: var(--tm-texto); background: rgba(5, 8, 7, 0.72); border: 1px solid rgba(34, 197, 94, 0.62);
+}
+html.tm .tm-simular:hover, html.tm .tm-simular:focus-visible { border-color: var(--tm-verde-cl); color: var(--tm-verde-cl); outline: none; }
+html.tm .tm-simular[hidden] { display: none; }
+html.tm .tm-simular-abertura { position: fixed; z-index: 31; right: calc(var(--sa-r) + 16px); bottom: calc(var(--sa-b) + 14px); }
 
 /* ------------------------------------------------------------------ pré-jogo: abertura com a logo, escalação */
 html.tm .pj-abertura { background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(5, 8, 7, 0.42) 0%, rgba(5, 8, 7, 0.84) 100%); }
@@ -310,8 +338,7 @@ html.tm .pj-esc-fundo { background: linear-gradient(90deg, rgba(5, 8, 7, 0.9) 0%
 /* a marca do TM ao lado do rótulo "Escalação" (na mesma linha: a coluna não cresce) */
 html.tm .pj-esc-rotulo { display: flex; align-items: center; gap: 8px; letter-spacing: 0.12em; color: var(--tm-verde-cl); }
 html.tm .pj-esc-rotulo::before { content: ""; flex: none; width: 22px; height: 12px; background: var(--tm-simbolo) left center / contain no-repeat; }
-html.tm .pj-esc-nome { font-weight: 800; letter-spacing: -0.02em; }
-html.tm .pj-esc-forma { color: var(--tm-verde-cl); font-weight: 700; }
+html.tm .pj-esc-forma { color: var(--tm-verde-cl); }
 html.tm .pj-esc-campo { background: rgba(10, 29, 18, 0.82); border-color: rgba(34, 197, 94, 0.34); border-radius: 14px; }
 html.tm .pj-esc-linhas { clip-path: inset(0 round 13px); }
 html.tm .pj-esc-linhas * { stroke: rgba(34, 197, 94, 0.4); }
@@ -327,9 +354,9 @@ html.tm .ed-pc .ed-janela {
 }
 html.tm .ed-voltar { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); }
 html.tm .ed-voltar:hover { color: var(--tm-verde-cl); border-color: var(--tm-verde); }
-html.tm .ed-titulo { font-size: 15px; font-weight: 800; letter-spacing: -0.01em; text-transform: none; }
+html.tm .ed-titulo { font-weight: 800; }
 html.tm .ed-titulo::before { width: 20px; height: 11px; margin-right: 8px; vertical-align: -0.5px; border-radius: 0; background: var(--tm-simbolo) center / contain no-repeat; }
-html.tm .ed-aba { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); font-weight: 700; }
+html.tm .ed-aba { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
 html.tm .ed-aba:hover { color: var(--tm-texto); border-color: rgba(34, 197, 94, 0.45); }
 html.tm .ed-aba[aria-selected="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; font-weight: 800; }
 html.tm .ed-estrelas, html.tm .ed-estrela-cheia { color: var(--tm-verde-cl); }
@@ -358,10 +385,9 @@ html.tm .ed-pontos i.on { background: var(--tm-verde); }
 html.tm .ed-seg { border-radius: 999px; background: var(--tm-preto2); border-color: var(--tm-linha2); color: var(--tm-fraco); }
 html.tm .ed-seg[aria-pressed="true"] { background: var(--tm-ativo); color: var(--tm-preto); border-color: transparent; }
 html.tm .ed-canvas { background: #0a1d12; }
-html.tm .ed-btn { border-radius: 999px; background: var(--tm-painel); border-color: var(--tm-linha2); font-weight: 700; }
+html.tm .ed-btn { border-radius: 999px; background: var(--tm-painel); border-color: var(--tm-linha2); }
 html.tm .ed-btn:hover { border-color: var(--tm-verde); }
 html.tm .ed-primario {
-  background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent;
-  font-weight: 800; letter-spacing: 0.01em; text-transform: none; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.28);
+  background: var(--tm-botao); color: var(--tm-tinta); border-color: transparent; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.28);
 }
 html.tm .ed-primario:hover { background: var(--tm-botao); filter: brightness(1.07); }

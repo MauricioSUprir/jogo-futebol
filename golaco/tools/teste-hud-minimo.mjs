@@ -48,7 +48,7 @@
 //        AUSENTE), escudo + sigla da casa, placar, sigla + escudo do visitante (Golaço FC e Ventania FC) e o relógio
 //        fechando a barra; #relogio em MM:SS no jogo e nos acréscimos, o "+N" visível só nos acréscimos, "Intervalo"/"Fim"
 //        no lugar do relógio com .parado; bloco verde rolando e escuro parado, contraste ≥ 4,5:1 nos dois; com a cara do
-//        TM, a Inter TM no relógio e nos gols (document.fonts.check) e o símbolo do TM na marca;
+//        TM, a TM Cond no relógio e nos gols (item 125; antes a Inter TM — document.fonts.check) e o símbolo do TM na marca;
 //     b) maior, "um pouco": altura 28 ± 0,5 px nos celulares, 26 nos baixos (≤ 340 px de altura ou ≤ 700 × 360: 568×320 e
 //        640×360) e 30 no PC; maior que a de 12/10 (PLACAR_1210: 24/26 px, medido na b3041818 com --raiz); gols ≥ 18 px
 //        (PC ≥ 20) e relógio ≥ 16 px (PC ≥ 17) no jogo e nos acréscimos; "um pouco": ≤ 29 px no celular (a referência do
@@ -234,6 +234,8 @@ const CARA_TM = async liga => {
     const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'css/tm.css'; l.id = 'tm-teste';
     await new Promise(ok => { l.onload = ok; l.onerror = ok; document.head.append(l); });
     await Promise.all([800, 900].map(p => document.fonts.load(`${p} 16px "Inter TM"`, '0123456789:+').catch(() => null)));
+    // (item 125) a TM Cond 800: as siglas, os gols e o relógio do placar com ?tm
+    await document.fonts.load('800 16px "TM Cond"', '0123456789:+ABCÇ').catch(() => null);
     await document.fonts.ready;
   } else if (!liga && document.getElementById('tm-teste')) {
     raizEl.classList.remove('tm'); document.getElementById('tm-teste').remove();
@@ -280,7 +282,7 @@ const MEDIR_PLACAR = async (gols, rel) => {
     tempo: vis(tempo) && tempo.getBoundingClientRect().width > 0 ? { fs: parseFloat(getComputedStyle(tempo).fontSize), ...ret(tempo), txt: tempo.textContent.trim() } : null,
     relogio: { txt: relB.textContent.trim(), parado: rel0.classList.contains('parado'), cores, alfa, lum: Math.max(...cores.map(lum)), contraste, fs: parseFloat(getComputedStyle(relB).fontSize) },
     tm: document.documentElement.classList.contains('tm'),
-    fontes: { relogio: fam(relB), gols: fam(document.getElementById('gols-0')), interTM: document.fonts.check('800 16px "Inter TM"') && document.fonts.check('900 16px "Inter TM"') },
+    fontes: { relogio: fam(relB), gols: fam(document.getElementById('gols-0')), interTM: document.fonts.check('800 16px "Inter TM"') && document.fonts.check('900 16px "Inter TM"'), tmCond: document.fonts.check('800 16px "TM Cond"') },
     marcaFundo: marcaEl && vis(marcaEl) ? getComputedStyle(marcaEl).backgroundImage : null,
   };
 };
@@ -331,10 +333,10 @@ function conferirPlacar(tela, tipo, estado, r) {
   if (rolando && !(r.relogio.alfa > 0.9 && gg >= 170 && gg - rr >= 90 && gg - bb >= 50)) f.push(`relógio sem o bloco verde (${r.relogio.cores.map(x => x.join(',')).join(' → ')})`);
   if (!rolando && !(r.relogio.alfa > 0.9 && r.relogio.lum <= 0.2 && gg > rr && gg > bb)) f.push(`parado sem o bloco verde-escuro (${r.relogio.cores.map(x => x.join(',')).join(' → ')})`);
   if (r.relogio.contraste < 4.5) f.push(`contraste do relógio ${r.relogio.contraste.toFixed(1)}:1`);
-  // a) com a cara do TM: a Inter TM no relógio e nos gols e o símbolo do TM na marca
+  // a) com a cara do TM: a TM Cond no relógio e nos gols (item 125: a letra esportiva; antes a Inter TM) e o símbolo do TM na marca
   if (r.tm) {
-    if (!/^"?Inter TM"?/.test(r.fontes.relogio) || !/^"?Inter TM"?/.test(r.fontes.gols)) f.push(`fonte ${r.fontes.relogio} / ${r.fontes.gols}`);
-    if (!r.fontes.interTM) f.push('a Inter TM 800/900 não carregou');
+    if (!/^"?TM Cond"?/.test(r.fontes.relogio) || !/^"?TM Cond"?/.test(r.fontes.gols)) f.push(`fonte ${r.fontes.relogio} / ${r.fontes.gols}`);
+    if (!r.fontes.tmCond) f.push('a TM Cond 800 não carregou');
     if (comMarca && !/simbolo\.png/.test(r.marcaFundo ?? '')) f.push(`marca sem o símbolo do TM (${r.marcaFundo})`);
   }
   // b) maior, "um pouco"

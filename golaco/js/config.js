@@ -889,6 +889,9 @@ export const IA = {
 // simplificados (a regra IFAB completa é da Etapa 4) e substituições da Regra 3 (5 em 3 paradas).
 export const PARTIDA = {
   minutosPorTempo: 4,         // minutos REAIS por tempo (o relógio mostra 45' por tempo)
+  // as durações que a pessoa escolhe (item 33; dono, 17/10: "editar o TEMPO de jogo"): minutos REAIS por tempo, o padrão (4)
+  // entre elas. FC 25–27: 3–10, 15, 20 (o 15 e o 20 ficam de fora: o painel nunca foi medido nisso). partida.js mudarDuracao
+  duracoes: [3, 4, 5, 6, 8, 10],
   intervalo: 3,               // s de faixa "Intervalo" antes da saída do 2º tempo
   golPausa: 2.5,              // s entre o gol e a saída (os 150 ticks do treino)
   foraEspera: 1.0,            // s com a bola fora antes de montar o recomeço
@@ -1701,6 +1704,52 @@ export const IA_PESSOA = {
   // com os companheiros perto não a perde mais — e o apoio da IA andando passava do teto do D2, A6/A6b)
   companheiros: { cobertura: 5, freio: 5, engaja: [42, 72, 105] },
 };
+
+// Dificuldade (item 33; dono, 17/10: "editar ... a DIFICULDADE"; contrato "Tempo de jogo e dificuldade" no CONTRATOS.md, pesquisa e
+// calibração em PESQUISA-DIFICULDADE.md): os 4 níveis do Total Match (Fácil ≈ Amador/Semi-Pro do EA FC, Normal = o jogo de hoje BIT
+// A BIT — objeto vazio —, Difícil ≈ Lendário, Lenda ≈ Ultimate). Vale SÓ no time da IA contra a pessoa (tatica.js nivelContra). Cada
+// chave cobre UMA constante de hoje com o mesmo significado (teste-dificuldade D0): a vontade, a decisão e a reação da IA — nada de
+// atributo, física, alcance, chance da dividida nem árbitro.
+//   boteIA: ACOES.boteIA (sim.js) · engaja: m somados a IA_PESSOA.engaja (teto 105) · encurta: IA_PESSOA.encurta[2] ·
+//   contencao: m somados a IA_DEFESA.contencao (o 1º homem; ≥ 1,25) · contrapressao {s, max}: IA_DEFESA.contrapressao (ia-tatica.js)
+//   utilidade {chute, chuteLonge, passeAntecipa}: por cima do UTIL_P (ia-ataque.js; a execução do chute não muda)
+//   le: IA_DEFESA.livre.le (só mais lento) · erroChute: multiplica o erro do chute (só ≥ 1, só no Fácil; acoes.js)
+// Calibrada pelo RESULTADO (revisão do item 33; os gols da IA 0,64 / 0,89 / 1,08 / 1,22 por partida contra os 4 roteiros): a
+// vontade de chutar não passa de 4,2 e nos níveis de cima o peso relativo do chute de fora (chuteLonge) nunca passa o do Normal
+// (subir os dois trocava a chance boa pelo chute de longe: mais chutes, menos gols); no Fácil a IA perde a vontade de chutar de
+// DENTRO, chuta mais de longe, erra mais o chute e quase não faz contrapressão.
+export const DIFICULDADE = {
+  niveis: ['facil', 'normal', 'dificil', 'lenda'],
+  facil: { boteIA: { chancePorPasso: 0.025, descanso: 110 }, engaja: -8, encurta: 0.10, contencao: 1.0,
+    contrapressao: { s: [0, 1, 3], max: [0, 1, 2] }, utilidade: { chute: 2.0, chuteLonge: 0.6, passeAntecipa: 0.2 }, le: 0.35, erroChute: 1.5 },
+  normal: {},
+  dificil: { boteIA: { chancePorPasso: 0.12, descanso: 34 }, engaja: 3, encurta: 0.38, contencao: -0.4,
+    contrapressao: { s: [0, 4, 6], max: [0, 2, 3] }, utilidade: { chute: 3.6, passeAntecipa: 0.6 } },
+  lenda: { boteIA: { chancePorPasso: 0.22, descanso: 20 }, engaja: 6, encurta: 0.50, contencao: -0.6,
+    contrapressao: { s: [0, 5, 7], max: [0, 3, 3] }, utilidade: { chute: 4.2, passeAntecipa: 0.7 } },
+};
+
+// O clássico (item 35; dono, 17/10: "clássico mais PEGADO: mais faltas pela AGRESSIVIDADE dos jogadores (bote mais forte, mais
+// contato), não pelo árbitro"; contrato "Clássico pegado (item 35)" no CONTRATOS.md, pesquisa e calibração em PESQUISA-CLASSICO.md).
+// Vale com m.classico (o pedido do TM, partida.classico; ?classico=1) para TODO jogador guiado pela IA dos DOIS times — a IA × IA,
+// a IA contra a pessoa e os companheiros da pessoa —, nunca o controlado (o bote dele é o botão). Só a VONTADE e o contato perto da
+// bola; nada de volume de pressão, física, alcance nem árbitro (FALTAS e a régua do faltas.js iguais: as faltas sobem porque há
+// mais contato). Cada chave cobre UMA constante de hoje e nunca repete o nome dela (teste-classico K0):
+//   vontade (a IA × IA: a demo, o Simular o resto) e vontadePessoa (o jogo COM uma pessoa: a IA contra ela, com o nível da
+//   DIFICULDADE por baixo, e os companheiros dela; também o online): ACOES.boteIA.chancePorPasso como TAXA, 1 − (1 − p)^vontade
+//   (≤ boteTeto, nunca abaixo do p do nível), e o descanso ÷ vontade (≥ descansoMin, nunca acima do do nível) — sim.js cfgBote ·
+//   segura (a IA × IA, os dois times) e seguraPessoa (só a IA contra a pessoa; os companheiros dela 1: a falta tática deles é
+//   amarelo e suspensão que ela não escolheu): × a decisão do batido de segurar (FALTAS.tatica.chancePorPasso/semSPA no faltas.js
+//   faltaTatica, fora da própria área; o apito e o cartão iguais) — sim.js seguraClassico
+// O teto e o piso do bote são o envelope já jogado no item 33 (a rodada 7 da calibração da dificuldade: 0,26/16). A vontade satura
+// (o bote mais cedo fecha a janela: com 2,6 as oportunidades caem ~40% e os botes sobem ~27%) e substitui a falta do batido — por
+// isso o `segura`. Revisão (PESQUISA-CLASSICO.md §7): contra a pessoa a vontade alta virava a dificuldade de cima (com 2,6 ela
+// chutava 34% menos e perdia mais no bote) e batia o Difícil e o Lenda no mesmo teto — lá a vontade é menor (1,6: Difícil+C
+// 0,185/21 < Lenda+C 0,26/16) e as faltas vêm mais do segurar; na IA × IA, 2,2 e o segura 1,5 (com 2,6/2 os botes iam a +62% e
+// as faltas a +74% em outras sementes). Ficaram fora (a triagem, §6): o 1º homem contendo e apertando mais perto (menos botes e a
+// chance por contato +16%) e a bola encostada disputada com mais diferença de velocidade (+2% de botes, a chance por contato mais
+// alta); o volume de pressão, a carga e as regras de responsabilidade (desvio, semAtropelar) de propósito.
+export const CLASSICO = { vontade: 2.2, vontadePessoa: 1.6, descansoMin: 16, boteTeto: 0.26, segura: 1.5, seguraPessoa: 2 };
 
 // -------------------------------------------------------------- Parte 4: humano na defesa e troca
 // Botões de defesa do humano (plano 2.8; defesa.js): CONTER, DIVIDIDA, PRESSÃO e CARRINHO (item 34 da FILA: o bloco
