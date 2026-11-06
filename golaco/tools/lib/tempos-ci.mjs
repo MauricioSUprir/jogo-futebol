@@ -126,7 +126,9 @@ export const TEMPOS_NAVEGADOR = {
   // (item 109: 549,1 s no log do CI do #614, navegador, antes do item 31)
   // (item 31: + o E22, 4 páginas ?tm com as fotos — 844×390, 1280×720, a pública e a de 404 —; ~+50 s estimado; acertar pelo log
   // do CI — item 111)
-  'teste-prepartida-tela.mjs': 600,
+  // (item 124, revisão: + o E14r, 3 páginas ?tm num quadro — em pé com toque, o PC com o quadro preso 3,6 s e a reserva —; ~+60 s
+  // estimado; acertar pelo log do CI)
+  'teste-prepartida-tela.mjs': 660,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o

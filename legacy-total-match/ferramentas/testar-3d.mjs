@@ -17,6 +17,12 @@
    pula o 3D; sem WebGL 2 simula com um aviso só; e, com uma página de ensaio no lugar do 3D (TM.tm3d.PASTA), um caso por modo
    (Partida rápida, Arena · Chefão, Batalha do Ultimate, Partida de Base com ≥ 11 — e < 11 no 2D —, Rumo ao Estrelato), o
    'tm3d:sair' {motivo: 'erro'} com o aviso de falha e o X "Voltar e simular" com a confirmação POR CIMA do quadro.
+   Revisão do item 124: o "Simular partida" leva os titulares da tela e o TM simula com eles (A2: o Personalizar com 7 trocas na
+   Partida rápida — o result simulado de novo, nenhum gol/cartão de quem foi para o banco sem entrar de volta, o elenco do TM.data
+   intacto; no Ultimate os titulares do TM = os da tela); o "Abrindo o estádio 3D…" some quando a tela de carregar do 3D aparece
+   (A7); o "Simular direto" da Partida rápida não abre o 3D (A3); o título vai ao 3D sem emoji (Chefão das Lendas; A3); o Rumo ao
+   Estrelato com "Sempre simular", sem WebGL 2 (o aviso da sessão) e com a falha do 3D (A2); a confirmação do TM fora do 3D no
+   meio da tela abaixo do PC (960×540; A8).
    Item 31 (a foto do autor na comemoração): na pro o pedido leva `foto` (as fotos reais do TM em endereço absoluto ou a importada
    em data:image) — a carreira com ≥ 9/11 titulares do meu clube com foto (o adversário depende do calendário: no Brasileirão,
    6–11), todas carregadas pelo 3D em ≤ 10 s (prontas = pedidas ≥ 12, 0 erros), o Ultimate com fotos, o "rae-me" sem foto e os
@@ -188,8 +194,13 @@ const ultimaPartida = () => p.evaluate(() => {
   return { msgs: window.__msgs3d.map(m => m.tipo + (m.motivo ? "/" + m.motivo : "")), toasts: window.__toasts.slice(),
     em3d: !!(c && c.cfg.result && c.cfg.result.em3d), placar: c && c.cfg.result ? c.cfg.result.score.slice() : null, antes: c ? c.placar : null, titulo: c ? c.cfg.title || null : null };
 });
-const simulouNoTM = (u) => !!u && u.msgs.includes("tm3d:sair/simular") && !u.msgs.some(m => m.indexOf("tm3d:fim") === 0) && !u.em3d && !!u.placar && !!u.antes && u.placar.join() === u.antes.join()
-  && !u.toasts.some(t => /Partida simulada/.test(t));
+// (resimulou: a tela mostrou outros titulares — o TM simula de novo com eles; revisão A2 — e o placar pode mudar)
+const simulouNoTM = (u, resimulou = false) => !!u && u.msgs.includes("tm3d:sair/simular") && !u.msgs.some(m => m.indexOf("tm3d:fim") === 0) && !u.em3d && !!u.placar && !!u.antes
+  && (resimulou || u.placar.join() === u.antes.join()) && !u.toasts.some(t => /Partida simulada/.test(t));
+// (revisão A2) os titulares que a tela do 3D mostra agora, por tmId ([casa, fora]), e os do TM (os 11 primeiros de cada time do cfg)
+const xiDaTela = (fr) => fr.evaluate(() => { const g = window.__golaco, M = g.tm.mapa; return [0, 1].map(t => Object.values(g.estadoTime(t).vagas).map(id => M[id] && M[id].tmId)); });
+const xiDoTM = () => p.evaluate(() => { const c = window.__cfgs[window.__cfgs.length - 1].cfg; return [c.teamA, c.teamB].map(t => t.players.slice(0, 11).map(x => x.id)); });
+const mesmos = (a, b) => !!a && !!b && a.length === b.length && a.every(x => b.map(String).includes(String(x)));
 
 // 0) item 124: a migração única e a Config nova (antes de abrir o 3D). O partidas3d antigo (perguntar, 3d, simular — a janela e o
 // "Lembrar minha escolha" que gravava "simular"), sem a chave nova, vira a tela; a Config mostra "Tela antes do jogo | Sempre
@@ -245,13 +256,67 @@ if (fr) {
   const aj = await fr.evaluate(() => { const g = window.__golaco, pt = g.tm.pedido.partida || {}; return { min: pt.minutosPorTempo, dif: pt.dificuldade, fixos: !!pt.ajustesFixos, ticks: g.mundo.partida.ticksPorTempo, mundo: g.ajustes ? g.ajustes.estado.dificuldadeMundo : null }; });
   confere("Ultimate: o pedido com a Config (4 min, Normal) e o 3D com eles (item 33)", aj.min === 4 && aj.dif === "normal" && !aj.fixos && aj.ticks === 14400 && aj.mundo === "normal", aj);
   const jogos0 = await p.evaluate(() => TM.ut.state().stats.jogos || 0);
+  const xiTela = await xiDaTela(fr), xiAntes = await xiDoTM();
+  const mudouXi = [0, 1].some(t => !mesmos(xiTela[t], xiAntes[t]));
   const sm = await simularNaTela(fr);
   confere("Ultimate: \"Simular partida\" arma no 1º toque (a tela e o quadro ficam, tick 0) e no 2º o tm3d:sair chega ao TM em ≤ 2 s e o quadro fecha (item 124)", sm.t1 && !!sm.arm && sm.arm.armado === "simular" && sm.arm.aberta && sm.arm.tick === 0 && sm.quadro1 && sm.fechou && sm.msg != null && sm.msg <= 2, sm);
   const chegou = await ate(() => !!document.querySelector(".utm-res") && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
   const u = await ultimaPartida();
   const jogos1 = await p.evaluate(() => TM.ut.state().stats.jogos || 0);
-  confere("Ultimate: o Simular volta ao TM SEM resultado 3D (tm3d:sair \"simular\", nenhum tm3d:fim) e o TM simula o result de sempre (o placar de antes, sem em3d, sem \"Partida simulada.\"), registrado", chegou && simulouNoTM(u) && jogos1 === jogos0 + 1, { chegou, ...u, jogos0, jogos1 });
+  confere("Ultimate: o Simular volta ao TM SEM resultado 3D (tm3d:sair \"simular\", nenhum tm3d:fim) e o TM simula o result de sempre (o placar de antes — ou simulado de novo se a tela mostrou outros titulares —, sem em3d, sem \"Partida simulada.\"), registrado", chegou && simulouNoTM(u, mudouXi) && jogos1 === jogos0 + 1, { chegou, mudouXi, ...u, jogos0, jogos1 });
+  const xiDepois = await xiDoTM();
+  confere("Ultimate: o TM simulou com os titulares que a tela mostrou (os 11 de cada time; revisão A2)", [0, 1].every(t => mesmos(xiDepois[t], xiTela[t])), { xiTela, xiDepois });
   await print("03-ultimate-resultado-simulado");
+}
+
+// 1b) revisão do item 124 (A2 e A7), com o golaco de verdade na Partida rápida: o Personalizar troca 7 titulares de linha por reservas e
+// o "Simular partida" (2 toques) leva a escalação nova ao TM — o result é simulado DE NOVO com ela (os titulares do TM = os da tela;
+// nenhum gol nem cartão de quem foi para o banco sem ter entrado de volta; o elenco do TM.data intacto). Na base o TM animava o result
+// calculado antes com o XI antigo. E o "Abrindo o estádio 3D…" do TM não fica escrito por cima da tela de carregar do 3D (amostras a
+// cada 50 ms com os dois à vista: ≤ 4; na base, o carregamento inteiro)
+{
+  await p.evaluate(() => {
+    window.__sobre = 0; window.__amostras = 0;
+    window.__olho = setInterval(() => {
+      const a = document.querySelector(".tm3d-aviso"), f = document.querySelector(".tm3d-quadro");
+      if (!a || !f) return;
+      let c = null; try { c = f.contentDocument && f.contentDocument.getElementById("carregando"); } catch (e) { c = null; }
+      window.__amostras++;
+      if (c && getComputedStyle(a).display !== "none" && getComputedStyle(c).display !== "none" && !c.hidden) window.__sobre++;
+    }, 50);
+    const ids = TM.data.world().leagues[0].clubIds;
+    window.__dadosAntes = TM.data.clubPlayers(ids[3]).slice(0, 11).map(x => x.id);
+    TM.ui.go("quick-match", { a: TM.engine.teamFromClub(ids[3]), b: TM.engine.teamFromClub(ids[4]) });
+  });
+  fr = await espera3d();
+  const sob = await p.evaluate(() => { clearInterval(window.__olho); return { sobre: window.__sobre, amostras: window.__amostras }; });
+  confere("revisão A7: o \"Abrindo o estádio 3D…\" do TM some quando a tela de carregar do 3D aparece (≤ 4 amostras de 50 ms com os dois à vista)", !!fr && sob.amostras >= 4 && sob.sobre <= 4, sob);
+  if (fr) {
+    const xiAntes = await xiDoTM();
+    const ed = await fr.evaluate(() => {
+      const g = window.__golaco, t = g.estadoTime(0), M = g.tm.mapa, vagas = { ...t.vagas };
+      const tit = new Set(Object.values(vagas));
+      const reservas = Object.keys(M).map(Number).filter(id => M[id].lado === 0 && !tit.has(id));
+      let k = 0; const saiu = [], entrou = [];
+      for (const v of Object.keys(vagas)) { if (v === "GOL" || k >= 7 || k >= reservas.length) continue; saiu.push(M[vagas[v]].tmId); vagas[v] = reservas[k]; entrou.push(M[reservas[k]].tmId); k++; }
+      const ok = g.prepartida.escalar({ formacao: t.formacao, vagas, tatica: t.tatica });
+      return { ok, saiu, entrou };
+    });
+    const xiTela = await xiDaTela(fr);
+    const sm = await simularNaTela(fr);
+    const chegou = await ate(() => TM.ui.current() === "quick-result" && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
+    const u = await ultimaPartida();
+    const xiDepois = await xiDoTM();
+    const ev = await p.evaluate(() => { const c = window.__cfgs[window.__cfgs.length - 1].cfg; return c.result.events.filter(e => e.team === 0).map(e => ({ t: e.type, id: e.playerId, entra: e.inId, m: e.minute })); });
+    const dados = await p.evaluate(() => { const ids = TM.data.world().leagues[0].clubIds; return TM.data.clubPlayers(ids[3]).slice(0, 11).map(x => x.id).join() === window.__dadosAntes.join(); });
+    const entrouDeNovo = new Set(ev.filter(e => e.t === "sub" && e.entra != null).map(e => String(e.entra)));
+    const deQuemSaiu = ev.filter(e => /^(goal|pengoal|yellow|red)$/.test(e.t) && e.id != null && ed.saiu.map(String).includes(String(e.id)) && !entrouDeNovo.has(String(e.id)));
+    confere("revisão A2: Personalizar (7 titulares → reservas) e \"Simular partida\" — o TM simula com os titulares da tela (o meu time e o adversário), o result simulado de novo sem em3d, nenhum gol/cartão de quem foi para o banco",
+      ed.ok && ed.saiu.length === 7 && sm.fechou && chegou && simulouNoTM(u, true) && mesmos(xiDepois[0], xiTela[0]) && mesmos(xiDepois[1], xiTela[1])
+        && ed.entrou.every(id => xiDepois[0].map(String).includes(String(id))) && !xiAntes[0].every(id => xiDepois[0].map(String).includes(String(id))) && deQuemSaiu.length === 0,
+      { ed, xiTela0: xiTela[0], xiDepois0: xiDepois[0], deQuemSaiu, msgs: u.msgs, em3d: u.em3d });
+    confere("revisão A2: o elenco do clube no TM.data não muda (o time da partida leva outro array)", dados, dados);
+  }
 }
 
 // 2) Carreira de técnico: o clube com o escudo e o estádio do TM, adversário escalado direito e resultado registrado
@@ -445,6 +510,7 @@ if (fr) {
   e = await modoEnsaio("Arena · Chefão", { inicia: (id) => TM.ui.go("arena-boss", { clubId: id }), arg: await p.evaluate(() => TM.data.world().leagues[0].clubIds[5]),
     final: () => [...document.querySelectorAll(".sheet-title")].some(x => /LENDAS|empate|Lendas venceram/i.test(x.textContent)) });
   confere("item 124 · Arena (Chefão das Lendas): o Jogar abre o 3D e o Simular volta ao TM, que simula o result de sempre", e.quadro && !e.janela && e.chegou && simulouNoTM(e), resumo(e));
+  confere("revisão A3: o título vai ao 3D sem o emoji do TM (\"👑 Chefão das Lendas\" → \"Chefão das Lendas\"; o conversor de ícones não alcança o quadro)", !!e.ped && e.ped.titulo === "Chefão das Lendas", e.ped && e.ped.titulo);
 
   e = await modoEnsaio("Ultimate · Batalha", {
     inicia: () => { const adv = TM.utModos.elencoCPU(777, 78, { reforco: 1 }); TM.utModos.jogar({ modo: "batalha", titulo: "Batalhas · ensaio", adv, voltar: "ut-batalhas", dif: "pro", onFim: () => ({}) }); },
@@ -472,6 +538,48 @@ if (fr) {
   confere("item 124 · Rumo ao Estrelato titular: o Jogar a partida abre o 3D (o meu jogador no pedido) e o Simular volta à simulação do Estrelato (sem \"Partida jogada em 3D\")",
     e.quadro && !e.janela && e.chegou && e.msgs.includes("tm3d:sair/simular") && !e.msgs.some(m => m.indexOf("tm3d:fim") === 0) && !!e.ped && !!e.ped.controle && e.ped.controle.tmId === "rae-me"
       && !raeSub.includes("Partida jogada em 3D") && !e.toasts.some(t => /Partida simulada/.test(t)), { ...resumo(e), controle: e.ped && e.ped.controle, raeSub });
+
+  // revisão A2: o Rumo ao Estrelato titular com a falha do 3D ('erro': o aviso e a simulação dele, sem "Partida jogada em 3D"; o quadro
+  // pelo tm3d:pronto — a página de ensaio responde em 250 ms e a sondagem do quadro a cada 150 ms às vezes não o via) e com
+  // "Sempre simular" na Config (sem quadro). O sem WebGL 2 dele vem logo antes dos da Partida rápida (o aviso é UM por sessão)
+  const estrelato = () => {
+    const c = TM.rae.carreira(); c.status = "intocavel";
+    if (c.semana) c.semana.plano = new Array(c.semana.dias).fill("descanso");
+    TM.rae.salva(c); TM.ui.go("rae-jogo");
+    const b = [...document.querySelectorAll("button")].find(x => /Jogar a partida/.test(x.textContent)); if (b) b.click();
+  };
+  const raeRes = () => !!document.querySelector(".rae-res");
+  const subRae = () => p.evaluate(() => [...document.querySelectorAll(".rae-res-s")].map(x => x.textContent));
+  e = await modoEnsaio("Rumo ao Estrelato (falha)", { inicia: estrelato, final: raeRes, modo: "erro", clica: "^(Ver resultado|Pular)" });
+  const subErro = await subRae();
+  confere("revisão A2 · Rumo ao Estrelato: a falha do 3D (tm3d:sair \"erro\") avisa \"O 3D não abriu: partida simulada.\" e o Estrelato simula (sem \"Partida jogada em 3D\")",
+    e.msgs.includes("tm3d:pronto") && e.chegou && e.msgs.includes("tm3d:sair/erro") && e.toasts.some(t => /O 3D não abriu/.test(t)) && !subErro.includes("Partida jogada em 3D"), { ...resumo(e), subErro });
+  await p.evaluate(() => { const s = TM.storage.settings(); s.partidasTela = "simular"; TM.storage.saveSettings(s); });
+  e = await modoEnsaio("Rumo ao Estrelato (Sempre simular)", { inicia: estrelato, final: raeRes, clica: "^(Ver resultado|Pular)" });
+  await p.evaluate(() => { const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s); });
+  confere("revisão A2 · Rumo ao Estrelato: com \"Sempre simular\" o titular não abre o 3D (a simulação dele)", !e.quadro && !e.janela && e.chegou && !e.msgs.length, resumo(e));
+
+  // revisão A3: o "Simular direto" da Partida rápida simula SEM o 3D (o "Iniciar partida" da escalação e o "Jogar de novo" abrem a tela)
+  await limpa();
+  await p.evaluate(() => {
+    window.__msgs3d.length = 0;
+    const ids = TM.data.world().leagues[0].clubIds, fila = [ids[6], ids[7]];
+    window.__pickOrig = TM.ui.pickTeam;
+    TM.ui.pickTeam = (o) => o.onPick(fila.shift());
+    TM.ui.go("quick");
+  });
+  await p.waitForTimeout(400);
+  await p.evaluate(() => { const c = document.querySelector(".chosen-team"); if (c) c.click(); });
+  await p.waitForTimeout(300);
+  await p.evaluate(() => { const c = [...document.querySelectorAll(".chosen-team")][1]; if (c) c.click(); });
+  await p.waitForTimeout(300);
+  const nCfg0 = await p.evaluate(() => window.__cfgs.length);
+  await p.evaluate(() => { TM.ui.pickTeam = window.__pickOrig; const b = [...document.querySelectorAll("button")].find(x => /Simular direto/.test(x.textContent)); if (b) b.click(); });
+  let quadroSD = false;
+  for (let i = 0; i < 10 && !quadroSD; i++) { await p.waitForTimeout(150); quadroSD = (await janelaOuQuadro()).quadro; }
+  const chegouSD = await ate(naRapida, "^(Ver resultado|Pular|Avançar)", 80);
+  const sd = await p.evaluate((n0) => ({ partidas: window.__cfgs.length - n0, sem3d: !!(window.__cfgs[window.__cfgs.length - 1] || {}).cfg.sem3d, msgs: window.__msgs3d.length }), nCfg0);
+  confere("revisão A3: o \"Simular direto\" da Partida rápida simula sem abrir o 3D (o botão diz simular)", !quadroSD && chegouSD && sd.partidas === 1 && sd.sem3d && sd.msgs === 0, { quadro: quadroSD, chegou: chegouSD, ...sd });
 
   // a falha do 3D ('tm3d:sair' {motivo: 'erro'}): o aviso e a simulação de sempre; o "Simular" da tela fica calado (acima)
   e = await modoEnsaio("Falha do 3D", { inicia: rapida, arg: 5, final: naRapida, modo: "erro" });
@@ -519,11 +627,31 @@ if (fr) {
 
   // sem WebGL 2: simula como hoje, com UM aviso por sessão
   await p.evaluate(() => { window.__gc = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (t) { if (t === "webgl2") return null; return window.__gc.apply(this, arguments); }; });
+  const w0 = await modoEnsaio("Sem WebGL 2 (Estrelato)", { inicia: estrelato, final: raeRes, clica: "^(Ver resultado|Pular)" });
   const w1 = await modoEnsaio("Sem WebGL 2", { inicia: rapida, arg: 11, final: naRapida });
   const w2 = await modoEnsaio("Sem WebGL 2 (2ª)", { inicia: rapida, arg: 13, final: naRapida });
   await p.evaluate(() => { HTMLCanvasElement.prototype.getContext = window.__gc; });
-  const av = [w1, w2].map(w => w.toasts.filter(t => /WebGL 2/.test(t)));
-  confere("item 124: sem WebGL 2 o Jogar simula (sem quadro nem janela) e avisa uma vez só", !w1.quadro && !w2.quadro && !w1.janela && !w2.janela && w1.chegou && w2.chegou && !w1.em3d && !w2.em3d && av[0].length === 1 && av[1].length === 0, { av, w1: resumo(w1), w2: resumo(w2) });
+  const av = [w0, w1, w2].map(w => w.toasts.filter(t => /WebGL 2/.test(t)));
+  confere("item 124: sem WebGL 2 o Jogar simula (sem quadro nem janela) e avisa uma vez só por sessão — o Estrelato titular também passa pelo aviso (revisão A2)",
+    [w0, w1, w2].every(w => !w.quadro && !w.janela && w.chegou && !w.em3d) && av[0].length === 1 && av[1].length === 0 && av[2].length === 0, { av, w0: resumo(w0), w1: resumo(w1), w2: resumo(w2) });
+
+  // revisão A8: a confirmação do TM FORA do 3D abaixo do PC (960×540, deitado): o fundo na tela toda e a folha no meio — a regra .modal
+  // (o cartão de 380 px) a prendia no canto esquerdo
+  await limpa();
+  await p.evaluate(() => TM.ui.confirm("Confirmação de teste", "Texto da confirmação.", "Ok", () => {}));
+  await p.waitForTimeout(300);
+  const cf = await p.evaluate(() => {
+    const o = document.querySelector(".sheet-overlay.modal"), sh = o && o.querySelector(".sheet");
+    if (!o || !sh) return null;
+    // (a entrada dela é animada — sheetUp, 30 px —: mede o lugar final; o relógio das animações do Chromium sem GPU atrasa com a máquina carregada)
+    for (const a of document.getAnimations ? document.getAnimations() : []) { try { if (o.contains(a.effect && a.effect.target)) a.finish(); } catch (e) { /* infinita */ } }
+    const ro = o.getBoundingClientRect(), rs = sh.getBoundingClientRect();
+    const r = { w: innerWidth, h: innerHeight, fundo: [Math.round(ro.left), Math.round(ro.width)], folha: [Math.round(rs.left), Math.round(rs.top), Math.round(rs.width), Math.round(rs.height)] };
+    o.remove();
+    return r;
+  });
+  confere("revisão A8: a confirmação fora do 3D em 960×540 — o fundo na largura toda e a folha no meio (± 2 px)", !!cf && cf.fundo[0] === 0 && cf.fundo[1] === cf.w
+    && Math.abs(cf.folha[0] + cf.folha[2] / 2 - cf.w / 2) <= 2 && Math.abs(cf.folha[1] + cf.folha[3] / 2 - cf.h / 2) <= 2, cf);
 
   await limpa();
   await p.evaluate((v) => { TM.tm3d.PASTA = v; localStorage.removeItem("ensaio3d:modo"); localStorage.removeItem("ensaio3d:ultimo"); }, pastaReal);
