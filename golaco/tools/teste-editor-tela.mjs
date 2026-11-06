@@ -26,6 +26,12 @@
 //      na pausa); o botão começa outra partida.
 //  15  (item 125, o sistema tipográfico) nas 6 telas × 3 abas do 10: nenhuma letra abaixo de 11 px (T2; na base 4 classes com 10 px:
 //      a posição, o número, o grupo e o selo da carta) e toda família pedida com @font-face ou do sistema (T1).
+//  16  (item 125, revisões V1/R3/V2/V4) com ?tm e os nomes de camisa do TM longos e acentuados (Albuquerqu, Guimarães, Gonçalves,
+//      Conceição, Ávila…) em 1920×1010 (PC), 568×320 (toque) e 375×667 (janela de PC em pé): a tinta dos acentos e do cedilha
+//      dentro do recorte do nome (≤ 0,3 px; antes o til e o agudo das maiúsculas sumiam: +2,15 px); letras ≥ 11 px; nome cortado só
+//      com "…" (0 em 1920 e 375, ≤ 4 em 568; antes 4 e 10 cortados no meio da letra); no PC 1920×1010 as cartas e as letras crescem com
+//      a janela (carta ≥ 124 × 76, nota ≥ 26 px; antes 104 × 64 e 22 px); o "ATAQUE" do campinho com a seta em SVG (a TM Cond não tem
+//      → nem ↑: saía um tracinho). Reprova os 4 em e60e2c7c.
 // Saída PASSOU/REPROVOU por item; código 1 se algum reprovar.
 //   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>] [--semente N]
 //   (--raiz: mede outra cópia, ex.: a base; --semente soma N a todas as sementes: outro conjunto)
@@ -561,6 +567,60 @@ for (const t of TELAS) {
   } catch (e) {
     meta(`10 ${t.nome}: execução`, e.message, false);
   } finally { await navegador.close(); }
+}
+
+// ====================================================================== 16) ?tm com nomes longos e acentuados
+{
+  const { PED_A } = await import('./lib/pedidos-tm.mjs');
+  const SOB = ['Albuquerque', 'Guimarães', 'Gonçalves', 'Cavalcanti', 'Ávila', 'Valadares', 'Conceição', 'Magalhães'];
+  const ped = JSON.parse(JSON.stringify({ ...PED_A, id: 'ed16' }));
+  for (const t of [ped.home, ped.away]) t.players.forEach((p, i) => { const sb = SOB[i % SOB.length]; p.nomeCompleto = `Eduardo ${sb}`; p.name = `E. ${sb}`; });
+  // a tinta (canvas measureText com a letra de verdade) × o recorte do nome, a letra, os cortados, a carta e a seta do rótulo
+  const MEDE = () => {
+    const els = [...document.querySelectorAll('#editar-time .c-nome')].filter(e => e.offsetParent !== null);
+    const c = document.createElement('canvas').getContext('2d');
+    let cima = -99, baixo = -99, qc = '', qb = '';
+    const cort = [], fs = [];
+    for (const e of els) {
+      const cs = getComputedStyle(e), px = parseFloat(cs.fontSize), fam = cs.fontFamily.split(',')[0].replace(/["']/g, '').trim();
+      fs.push(px);
+      if (e.scrollWidth > e.clientWidth + 0.5) cort.push({ t: e.textContent.trim(), reticencias: cs.textOverflow === 'ellipsis' });
+      const tx = cs.textTransform === 'uppercase' ? e.textContent.trim().toUpperCase() : e.textContent.trim();
+      c.font = `${cs.fontWeight} ${px}px "${fam}"`;
+      const m = c.measureText(tx), L = parseFloat(cs.lineHeight), r = e.getBoundingClientRect();
+      const base = r.top + parseFloat(cs.paddingTop) + (L - (m.fontBoundingBoxAscent + m.fontBoundingBoxDescent)) / 2 + m.fontBoundingBoxAscent;
+      const ci = r.top - (base - m.actualBoundingBoxAscent), ba = base + m.actualBoundingBoxDescent - r.bottom;
+      if (ci > cima) { cima = ci; qc = tx; }
+      if (ba > baixo) { baixo = ba; qb = tx; }
+    }
+    const carta = document.querySelector('#editar-time .carta.no-campo'), rc = carta?.getBoundingClientRect();
+    const rot = document.querySelector('#editar-time .campinho-rotulo');
+    return { n: els.length, cortados: cort, minFs: Math.min(...fs), cima: +cima.toFixed(2), qc, baixo: +baixo.toFixed(2), qb,
+      carta: rc ? [Math.round(rc.width), Math.round(rc.height)] : null, nota: carta ? parseFloat(getComputedStyle(carta.querySelector('.c-nota')).fontSize) : 0,
+      seta: rot ? { svg: !!rot.querySelector('svg'), setaTexto: /[\u2190-\u21ff]/.test(rot.textContent) } : null };
+  };
+  for (const t of [{ nome: '1920×1010', largura: 1920, altura: 1010, pc: true, maxCort: 0 }, { nome: '568×320 toque', largura: 568, altura: 320, toque: true, maxCort: 4 },
+    { nome: '375×667 janela de PC', largura: 375, altura: 667, maxCort: 0 }]) {
+    const s = await abrir({ largura: t.largura, altura: t.altura, dpr: 1, toque: !!t.toque });
+    try {
+      await s.contexto.addInitScript(([id, json]) => { try { localStorage.setItem('tm3d:pedido:' + id, json); } catch (_) { /* */ } }, [ped.id, JSON.stringify(ped)]);
+      await s.pagina.goto(`${srv.url}?q=baixa&replay=0&comemoracao=0&tm=${ped.id}`, { waitUntil: 'load' });
+      await s.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto && (window.__golaco.sobDemanda?.ja() ?? true), null, { timeout: 180000 });
+      await s.pagina.evaluate(() => window.__golaco.relogio.usarManual(true));
+      await s.pagina.evaluate(() => window.__golaco.editor.abrir());
+      await s.pagina.waitForFunction(() => !document.getElementById('editar-time')?.hidden, null, { timeout: 60000 });
+      await s.pagina.evaluate(() => document.fonts.ready);
+      await s.pagina.waitForTimeout(300);
+      const r = await s.pagina.evaluate(MEDE);
+      const semRet = r.cortados.filter(x => !x.reticencias).length;
+      meta(`16 ${t.nome} (?tm, nomes longos e acentuados): a tinta dos acentos e do cedilha dentro do nome; letras ≥ 11; cortado só com "…" (≤ ${t.maxCort}); a seta do "ATAQUE" em SVG${t.pc ? '; as cartas crescem com a janela (≥ 124 × 76, nota ≥ 26 px)' : ''}`,
+        `${r.n} nomes; tinta além do recorte: em cima ${r.cima} px (${r.qc}), embaixo ${r.baixo} px (${r.qb}); letra mínima ${r.minFs} px; cortados ${r.cortados.length}${r.cortados.length ? ` (${r.cortados.slice(0, 3).map(x => x.t + (x.reticencias ? '…' : ' sem "…"')).join(', ')})` : ''}; seta ${JSON.stringify(r.seta)}; carta ${r.carta?.join('×')}, nota ${r.nota} px; erros ${s.erros.length}`,
+        r.n >= 11 && r.cima <= 0.3 && r.baixo <= 0.3 && r.minFs >= 11 && semRet === 0 && r.cortados.length <= t.maxCort && r.seta?.svg && !r.seta.setaTexto && s.erros.length === 0
+          && (!t.pc || (r.carta && r.carta[0] >= 124 && r.carta[1] >= 76 && r.nota >= 26)));
+    } catch (e) {
+      meta(`16 ${t.nome}: execução`, e.message, false);
+    } finally { await s.navegador.close(); }
+  }
 }
 
 // ====================================================================== 12) treino sem Editar time

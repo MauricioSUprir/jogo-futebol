@@ -59,7 +59,7 @@
 .ed-pc .ed-abas, .ed-deitado .ed-abas { margin-left: 4px; }
 .ed-aba {
   flex: 1 1 auto; min-width: 48px; height: 48px; padding: 0 14px; cursor: pointer;
-  font: 800 15px / 1 var(--f-disp); letter-spacing: 0.01em; color: var(--texto-2); white-space: nowrap;
+  font: 800 15px / 1 var(--f-disp); letter-spacing: 0; color: var(--texto-2); white-space: nowrap;
   background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px;
 }
 .ed-pc .ed-aba { padding: 0 20px; font-size: 17px; }
@@ -107,6 +107,11 @@
   pointer-events: none; white-space: nowrap;
 }
 .ed-empe .campinho-rotulo { top: auto; bottom: 6px; }
+/* a seta do "ATAQUE" em SVG (revisão V4: a TM Cond não tem as setas) — → no deitado e no PC, ↑ em pé */
+.campinho-rotulo { display: inline-flex; align-items: center; }
+.campinho-seta { width: 1.1em; height: 1.1em; margin-left: 0.35em; flex: none; }
+.campinho-seta-cima { display: inline-flex; margin-right: 0.35em; }
+.campinho-seta-cima .campinho-seta { margin-left: 0; transform: rotate(-90deg); }
 .ed-aba-taticas .campinho { display: none; }
 
 /* ------------------------------------------------------------------ cartas */
@@ -117,6 +122,9 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35); line-height: 1;
 }
 .carta.no-campo { position: absolute; }
+/* (revisão R3) as cartas estreitas do celular com 4 px dos lados: o nome de camisa de 10 letras ("ALBUQUERQU") cabe a 11 px */
+.ed-deitado .carta, .ed-empe .carta { padding-left: 4px; padding-right: 4px; }
+.ed-deitado .carta[aria-pressed="true"], .ed-empe .carta[aria-pressed="true"] { padding-left: 3px; padding-right: 3px; }
 .carta:hover { border-color: rgba(25, 224, 122, 0.55); }
 .carta[aria-pressed="true"] { border: 2px solid var(--verde); padding: 3px 5px 4px; box-shadow: 0 0 0 3px rgba(25, 224, 122, 0.3), 0 2px 8px rgba(0, 0, 0, 0.4); background: #13261d; }
 .tem-escolha .carta:not([aria-pressed="true"]):not(.saiu) { outline: 1px dashed rgba(25, 224, 122, 0.35); outline-offset: -4px; }
@@ -131,13 +139,24 @@
 .enc-alternativa .c-pos { color: var(--texto); }
 .enc-fora .c-pos { color: var(--alerta); }
 .c-base { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; min-width: 0; }
-.c-nome { display: block; min-width: 0; flex: 1 1 auto; font: 800 12px / 1.05 var(--f-disp); text-transform: uppercase; letter-spacing: 0.01em; white-space: nowrap; overflow: hidden; }
+/* o nome: o recorte do overflow sobe 0,2 em e desce 0,2 em além da linha (padding com a margem negativa do mesmo tanto: a caixa
+   não muda) — com a linha de 1,05 o recorte comia o til e o acento das maiúsculas ("GUIMARAES", "AVILA"; revisão V1) e o
+   cedilha. Sem lugar nem a 11 px na 600 (editor-time.js ajustarNomes): "…" */
+.c-nome {
+  display: block; min-width: 0; flex: 1 1 auto; font: 800 12px / 1.05 var(--f-disp); text-transform: uppercase; letter-spacing: 0;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0.2em 0; margin: -0.2em 0;
+}
+.c-nome.estreito { font-weight: 600; }
 .c-num { display: none; font: 800 11px / 1 var(--f-disp); color: var(--texto-2); font-variant-numeric: tabular-nums; }
 .ed-pc .c-num { display: inline; }
-.ed-pc .carta.no-campo .c-nota { font-size: 22px; }
-.ed-pc .carta.no-campo .c-pos { font-size: 13px; }
-.ed-pc .carta.no-campo .c-nome { font-size: 14px; }
-.ed-pc .carta.no-campo .c-num { font-size: 12px; }
+/* no PC as letras das cartas crescem com a janela (--ed-k, editor-time.js escalaPC: 1 a 1,3; revisão V2) */
+.ed-pc .carta.no-campo .c-nota { font-size: calc(22px * var(--ed-k, 1)); }
+.ed-pc .carta.no-campo .c-pos { font-size: calc(13px * var(--ed-k, 1)); }
+.ed-pc .carta.no-campo .c-nome { font-size: calc(14px * var(--ed-k, 1)); }
+.ed-pc .carta.no-campo .c-num { font-size: calc(12px * var(--ed-k, 1)); }
+.ed-pc .ed-reservas .c-nota { font-size: calc(17px * var(--ed-k, 1)); }
+.ed-pc .ed-reservas .c-nome { font-size: calc(12px * var(--ed-k, 1)); }
+.ed-pc .ed-reservas .c-pos { font-size: calc(11px * var(--ed-k, 1)); }
 .c-selo { width: 16px; height: 16px; border-radius: 50%; display: inline-grid; place-items: center; flex: none; font: 800 11px / 1 var(--f-disp); }
 .c-selo svg { width: 10px; height: 10px; }
 .c-fora { color: var(--alerta); border: 1.5px solid var(--alerta); }
@@ -180,7 +199,7 @@
 .ed-pc.ed-aba-escalacao .ed-reservas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .ed-empe.ed-aba-escalacao .ed-reservas { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .ed-reservas .carta { height: 48px; }
-.ed-pc .ed-reservas .carta { height: 56px; }
+.ed-pc .ed-reservas .carta { height: calc(56px * var(--ed-k, 1)); }
 .ed-grupo { grid-column: 1 / -1; padding: 6px 2px 0; font: 600 12px / 1.1 var(--f-disp); letter-spacing: 0.12em; text-transform: uppercase; color: var(--texto-2); }
 .ed-grupo-sai { color: var(--sai); }
 
@@ -230,7 +249,7 @@
 .ed-empe.ed-aba-taticas .ed-previa { height: auto; }
 .ed-fases { flex: none; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .ed-seg {
-  min-height: 48px; padding: 0 8px; cursor: pointer; font: 800 15px / 1 var(--f-disp); letter-spacing: 0.02em; color: var(--texto-2);
+  min-height: 48px; padding: 0 8px; cursor: pointer; font: 800 15px / 1 var(--f-disp); letter-spacing: 0; color: var(--texto-2);
   background: var(--preto); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 9px; white-space: nowrap;
 }
 .ed-seg[aria-pressed="true"] { background: var(--verde); color: var(--preto); border-color: var(--verde); }
@@ -243,7 +262,7 @@
 .ed-acoes { grid-area: acoes; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px; }
 .ed-btn {
   /* folga para a fonte do aparelho: em 667×375 "Desfazer tudo" saía 2 px maior que o botão com a fonte do CI */
-  min-height: 48px; padding: 0 clamp(6px, 1.2vw, 12px); cursor: pointer; font: 800 clamp(14px, 2.1vw, 16px) / 1 var(--f-disp); letter-spacing: 0.02em; color: var(--texto); white-space: nowrap;
+  min-height: 48px; padding: 0 clamp(6px, 1.2vw, 12px); cursor: pointer; font: 800 clamp(14px, 2.1vw, 16px) / 1 var(--f-disp); letter-spacing: 0; color: var(--texto); white-space: nowrap;
   background: var(--preto-3); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 9px;
 }
 .ed-btn:hover { border-color: var(--verde); }
