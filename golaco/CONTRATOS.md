@@ -5068,7 +5068,8 @@ faltas +11% [+8; +14], os quentes +25–50%; dois terços de MAIS DISPUTAS; a fa
   dificuldade de cima (ela chutava 0,66× e fazia 0,60× dos gols, com os números da IA iguais) e o Difícil+C e o Lenda+C batiam no
   mesmo teto. Contra a pessoa as faltas vêm mais do segurar (o `seguraPessoa`); na IA × IA, mais do bote. Os companheiros da
   pessoa com a vontade dela e SEM o `segura` (a falta tática deles é amarelo e suspensão no TM que a pessoa não escolheu: com ele
-  os cartões do time dela iam de 6 a 18 em 128 partidas e os da IA de 68 a 81).
+  os cartões do time dela iam de 6 a 18 em 128 partidas e os da IA de 68 a 81). No online os dois times são de pessoas: os dois
+  com a `vontadePessoa` e sem o `segura` (simétrico; o mesmo nos dois aparelhos — o portão lê a entrada do lockstep).
 - **No código:** `boteClassico(b, v)` monta UMA vez na carga objetos NOVOS (`BOTE_C` da IA × IA, `BOTE_CP` do jogo com a pessoa,
   `BOTE_DC[nível]`) com o resto do `ACOES.boteIA` copiado (alcance, colada, encostada, `vParado` — o árbitro lê o
   `ACOES.boteIA.vParado` direto); `cfgBote(m, t)` escolhe (sem o clássico, a MESMA expressão de antes: o mesmo objeto, nenhum
