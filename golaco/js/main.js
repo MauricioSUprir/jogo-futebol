@@ -1667,11 +1667,15 @@ function dadosAutorGol(id, t) {
   };
 }
 
-/** Um quadro da comemoração (fora da pausa): o pulo e o relógio da cena. */
-function quadroComemoracao(dt, ent) {
+/**
+ * Um quadro da comemoração (fora da pausa): o pulo e o relógio da cena. semPulo (só no online, com o menu, a Ajuda ou o editor
+ * abertos: lá eles não congelam a cena — item 129): a cena anda, mas nenhum botão a pula — o que for apertado no menu conta como
+ * já segurado (só pula depois de solto e apertado de novo, com o menu fechado).
+ */
+function quadroComemoracao(dt, ent, semPulo = false) {
   const c = cenaGol;
   if (cenaEstado !== 'rodando') return;
-  if (tempoCena(c) < COMEM.pularDepois) cenaBotoes |= ent.botoes;
+  if (semPulo || tempoCena(c) < COMEM.pularDepois) cenaBotoes |= ent.botoes;
   else {
     const novos = ent.botoes & ~cenaBotoes;
     cenaBotoes &= ent.botoes;
@@ -2828,8 +2832,13 @@ function seguraParaReplayParada() {
   return true;
 }
 
-/** Durante o replay: um botão APERTADO agora (não o que já estava segurado no começo) pula. */
-function botaoPula(botoes) {
+/**
+ * Durante o replay: um botão APERTADO agora (não o que já estava segurado no começo) pula. semPulo (só no online, com o menu, a
+ * Ajuda ou o editor abertos: lá eles não congelam o replay — item 129): nada pula; o que for apertado no menu conta como já
+ * segurado (só pula depois de solto e apertado de novo, com o menu fechado).
+ */
+function botaoPula(botoes, semPulo = false) {
+  if (semPulo) { replayBotoes |= botoes; return false; }
   const novos = botoes & ~replayBotoes;
   replayBotoes &= botoes;
   return novos !== 0;
@@ -2984,7 +2993,8 @@ function quadro(agoraMs, desenhar = true) {
  * lida agora vale para o passo n + D. O que é local — o replay, a comemoração, a cena de substituição (item 30), a minha
  * pausa, o celular em pé — só segura a MINHA simulação (sem passo, sem entrada nova): o outro espera sozinho ("Aguardando…";
  * com a marca E_CENA no pacote, "{nome} ainda está vendo a cena"). Menu, Ajuda e o editor
- * abertos NÃO param o jogo: a minha entrada vai com o bit IA (a IA joga pelo meu controlado, nos dois aparelhos). Um
+ * abertos NÃO param o jogo: a minha entrada vai com o bit IA (a IA joga pelo meu controlado, nos dois aparelhos); nem congelam
+ * as cenas, mas nada apertado neles as pula (item 129: o replay, a comemoração e a substituição). Um
  * pacote por quadro; o hash do mundo a cada 60 passos (dessincronia).
  */
 let dtMedioOn = PASSO;
@@ -2993,6 +3003,8 @@ let dtMedioOn = PASSO;
 let cenaPendOn = false;
 /** Agora seguro a MINHA simulação por uma cena: a substituição, um replay, a comemoração no gol + 149. */
 const emCenaLocal = () => !!cenaSub || !!(diretor && diretor.ativo) || seguraSimulacao();
+// (item 129) o menu, a Ajuda ou o editor abertos no fim do quadro anterior: os apertos do quadro seguinte ainda são deles
+let menuAntOn = false;
 // testes do online sem pessoa (?online=…&ia=1): a IA joga pelo meu controlado o tempo todo (o bit IA)
 const IA_ONLINE_TESTE = ONLINE_BC && params.get('ia') === '1';
 const trintaQps = () => dtMedioOn > 0.025;
@@ -3003,18 +3015,25 @@ function quadroOnline(dt, ent, agoraMs) {
   let segura = segPausa || retratoBloqueado() || PAG_ONLINE.encerrado;
   const cenaIni = emCenaLocal();
   const menuOn = hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
+  // (item 129) o menu, a Ajuda e o editor abertos não congelam as cenas no online (lá não param o jogo), mas nada apertado neles
+  // as pula: os apertos do quadro são deles se estavam abertos agora OU no fim do quadro anterior (o A do controle que aperta
+  // "Voltar ao jogo" fecha o menu DENTRO do entrada.ler, antes daqui: sem o quadro anterior, o mesmo aperto pulava a cena)
+  const semPulo = menuOn || menuAntOn;
+  menuAntOn = menuOn;
+  const cenaMenu = semPulo && (!!cenaSub || !!(diretor && diretor.ativo) || !!cenaGol);
   if (cenaSub) {
     // a cena de substituição (item 30): segura só a MINHA simulação, como fora do online (o outro espera sozinho: o lockstep);
     // a minha pausa combinada, o celular em pé e a aba escondida congelam a cena (ela volta de onde parou); o menu e o editor
     // não (no online eles não param o jogo, como na comemoração), mas com eles abertos nenhum botão a pula (os apertos são do
     // menu); o "Pular" pula só a minha
     segura = true;
-    if (!pausado() && !pausaTeste && !document.hidden) quadroSubst(dt, ent, menuOn);
+    if (!pausado() && !pausaTeste && !document.hidden) quadroSubst(dt, ent, semPulo);
   } else if (diretor && diretor.ativo) {
+    // o replay: o mesmo (anda com o menu aberto; só um aperto novo com ele fechado pula)
     segura = true;
-    if (botaoPula(ent.botoes)) fimReplay(true);
+    if (botaoPula(ent.botoes, semPulo)) fimReplay(true);
     else if (!diretor.avancar(dt)) fimReplay(false);
-  } else if (cenaGol && !segura) quadroComemoracao(dt, ent);
+  } else if (cenaGol && !segura) quadroComemoracao(dt, ent, semPulo);
   // a cena do pós-jogo (no online NÃO segura: o lockstep segue andando o tick do 'fim'; a cena só usa cópias — R5)
   else if (cenaFim && !segura) quadroFim(dt, ent);
   let quer = 0, rodou = 0, segurou = false;
@@ -3049,6 +3068,10 @@ function quadroOnline(dt, ent, agoraMs) {
     rodou++;
     if ((diretor && diretor.ativo) || cenaSub || cenaCartao) break;
   }
+  // (item 129) os apertos que o menu segurou numa cena num quadro sem passo saem dos pulsos (como na cena do cartão: sem passo,
+  // ninguém mais limpa o aperto curto) — preso, o pulso do toque deixava o bit sempre "segurado" e o aperto novo do mesmo botão,
+  // já com o menu fechado, não pulava a cena
+  if (cenaMenu && rodou === 0) entrada.limparPulsos();
   const parado = quer > 0 && rodou === 0 && !segurou;
   MOD_ON.marcarParado(s, parado, agoraMs);
   // parado esperando o outro: o tempo parado não é recuperado depois (correr para alcançar gasta a folga do atraso D)
@@ -3135,14 +3158,16 @@ function tratarAcao(a) {
   if (prejogo && prejogo.ativo) { prejogo.acao(a); return; }
   // com o editor aberto nada chega ao jogo: só a pausa (Start do controle), que aplica e fecha
   if (editor?.aberto) { if (a === 'pausa') editor.voltar(); return; }
+  // no online com o menu ou a Ajuda abertos (lá eles não congelam as cenas) a ação é do menu — P/Start e o Esc fecham, H abre a
+  // Ajuda, Enter aperta o botão em foco — e a cena (o replay, a comemoração, a substituição) segue: não pula (item 129; a
+  // substituição desde o item 30)
+  const menuDoOnline = mundo.online && (hud.menuAberto || hud.ajudaAberta);
   // replay: qualquer ação (Esc, Start, R, C, H...) só pula o replay — não abre a pausa nem chega ao jogo
-  if (diretor && diretor.ativo && !pausado() && a !== 'qps') { fimReplay(true); return; }
+  if (diretor && diretor.ativo && !pausado() && !menuDoOnline && a !== 'qps') { fimReplay(true); return; }
   // comemoração: qualquer ação (Esc, Enter, R, C, H...) só pula a cena (depois de 0,5 s) — não abre a pausa nem chega ao jogo
-  if (cenaGol && cenaEstado === 'rodando' && !pausado() && a !== 'qps') { pularComemoracao(); return; }
-  // substituição: qualquer ação MENOS a pausa (Esc, P, Start: a pausa congela a cena) só pula a cena (depois de 0,5 s); no
-  // online com o menu ou a Ajuda abertos (lá eles não congelam a cena) a ação é do menu — H abre a Ajuda, Enter aperta o botão
-  // em foco — e a cena segue
-  if (cenaSub && !pausado() && !(mundo.online && (hud.menuAberto || hud.ajudaAberta)) && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
+  if (cenaGol && cenaEstado === 'rodando' && !pausado() && !menuDoOnline && a !== 'qps') { pularComemoracao(); return; }
+  // substituição: qualquer ação MENOS a pausa (Esc, P, Start: a pausa congela a cena) só pula a cena (depois de 0,5 s)
+  if (cenaSub && !pausado() && !menuDoOnline && a !== 'qps' && a !== 'pausa') { pularSubst(); return; }
   // cartão: o mesmo (a pausa congela a cena)
   if (cenaCartao && !pausado() && a !== 'qps' && a !== 'pausa') { pularCartao(); return; }
   // intervalo e pós-jogo: qualquer ação MENOS a pausa (a pausa congela a cena e tem o "Editar time" / o "Voltar ao Total
