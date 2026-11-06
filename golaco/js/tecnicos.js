@@ -38,6 +38,7 @@ import { hash01 } from './rng.js';
 import { maoEm, poseAgachado, G_SOCO, G_V, G_PUNHO, G_CINTURA, G_AVIAO } from './comemoracao.js';
 import { areaTecnica } from './estadio-forma.js';
 import { proxVelRolando, DT_BOLA } from './bola.js';
+import { parametrosMarcha, marchar } from './marcha.js';
 
 const MZ = CAMPO.meioZ, MX = CAMPO.meioX;
 const s60 = s => Math.round(s / PASSO);
@@ -900,6 +901,9 @@ function poseTec(T, tc, L) {
     tc.faseG = _pb.fase;
   }
   pose(j, mini, o);
+  // a passada natural (item 61, marcha.js): o braço e o tronco de quem anda, antes da postura e dos gestos (parado com a
+  // fase 0, como ele nasce, não muda nada)
+  marchar(o, j, tc.mp ?? (tc.mp = parametrosMarcha(tc.id)), 1);
   // agachar ou levantar devagar (o corpo inteiro desce 0,3 m; as mãos vão junto)
   // (comemorando, ele levanta mais depressa: TC.comemora.levanta s)
   const a = tc.snap;

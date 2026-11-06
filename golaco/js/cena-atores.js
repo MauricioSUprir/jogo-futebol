@@ -24,7 +24,7 @@
 // na rampa da comemoração (RAMPA_CARRINHO).
 import { PASSO, CAMPO, JOGADOR, COMEMORACAO } from './config.js';
 import { CENAS } from './cenas-config.js';
-import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado } from './jogador.js';
+import { criarJogador, passoCorpo, passoPassada, passoPeDesenhado, freqPassada } from './jogador.js';
 import { pose, alturaQuadril, ik, J, NJ, RAIO_CABECA, BRACO, ANTEBRACO } from './anim.js';
 import {
   criarAtor, maoEm, gesto, hashGol, limitarCamera, ajustarCelular, cabeca, poseAgachado, G_CEU, G_SOCO, G_CABECA,
@@ -33,6 +33,28 @@ import {
 import { mergulhoAtivo, passoMergulho, fixarMergulho, pesMergulho } from './goleiro.js';
 import { carrinhoAtivo, passoCarrinho, fixarCarrinho, pesCarrinho } from './carrinho.js';
 import { solidoEm } from './estadio-forma.js';
+import { parametrosMarcha, espalharFase, marchar, rampaMarcha, filtrarMarcha, MARCHA } from './marcha.js';
+
+// ------------------------------------------------------------------------------------------------ passada natural (item 61)
+// (marcha.js) Quem anda na cena: a camada do braço e do tronco por cima da pose da locomoção, antes dos gestos (entra na
+// rampa do começo da cena: o 1º quadro é a pose do jogo), o ritmo de cada um andando (×1–1,12 da cadência) e, na ELIPSE
+// (recriarAtor), a fase da passada de cada um — antes todos recriados com a fase 0 e a mesma pré-rolagem andavam no mesmo
+// pé (o funil do intervalo: 86% dos pares a ≤ 2,5 m em passo).
+const marchaDe = a => a.mp ?? (a.mp = parametrosMarcha(a.id));
+/** A camada na pose de agora do ator; `inicio` (a 1ª pose e a elipse): a velocidade filtrada recomeça da de agora. */
+function marcharAtor(c, a, inicio = false) {
+  filtrarMarcha(a.j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, inicio);
+  marchar(a.atu, a.j, marchaDe(a), rampaMarcha(c.k * PASSO), a.vm);
+}
+const _saidaMarcha = { ritmoVoo: 0 };
+/** A `saida` do passoPassada com o ritmo do ator — só andando (com os dois pés no chão e parado, a passada andaria no lugar;
+ * acima de MARCHA.vRitmo há voo e o ritmo do voo trocaria o da passada). */
+function ritmoAtor(a) {
+  const j = a.j, v = Math.hypot(j.vx, j.vz);
+  if (!(v > 0.5 && v < MARCHA.vRitmo)) return null;
+  _saidaMarcha.ritmoVoo = freqPassada(v, false) * marchaDe(a).ritmo;
+  return _saidaMarcha;
+}
 
 // ------------------------------------------------------------------------------------------------ cópias da comemoração
 // (comemoracao.js: moverJuntas, inclinarTronco, pernaIK, ponta e flexionar — as mesmas contas, sem exportar de lá)
@@ -209,6 +231,7 @@ export function passoSozinho(j, mF, dx, dz, vel, rumo) {
 export function poseInicial(c, a) {
   a.j.quadril = a.j.quadril ?? alturaQuadril(a.j, c.mF);
   pose(a.j, c.mF, a.atu);
+  marcharAtor(c, a, true);
   a.ant.set(a.atu);
   a.x0 = a.x1 = a.j.x; a.z0 = a.z1 = a.j.z; a.r0 = a.r1 = a.j.rumo;
 }
@@ -223,6 +246,8 @@ export function recriarAtor(c, a, x, z, rumo, anda = null) {
   const v = a.j;
   const j = criarJogador(a.id, x, z, rumo, {}, v.time);
   j.par = v.par; j.posicao = v.posicao === 'GOL' ? 'MEI' : v.posicao;
+  // a fase da passada de cada um (antes da pré-rolagem: quem entra andando junto não pisa junto)
+  espalharFase(j, marchaDe(a).fase);
   if (anda) {
     for (let t = 0; t < anda.ticks; t++) passoSozinho(j, c.mF, anda.dx, anda.dz, anda.vel, rumo);
     levar(j, x - j.x, z - j.z);
@@ -235,6 +260,7 @@ export function recriarAtor(c, a, x, z, rumo, anda = null) {
   c.recriados.push({ id: a.id, k: c.k });
   j.quadril = alturaQuadril(j, c.mF);
   pose(j, c.mF, a.atu);
+  marcharAtor(c, a, true);
   a.ant.set(a.atu);
   a.x0 = a.x1 = j.x; a.z0 = a.z1 = j.z; a.r0 = a.r1 = j.rumo;
   return a;
@@ -441,7 +467,7 @@ export function passoAtores(c, desejo, gestos) {
     if (a.mergulha) { fixarMergulho(mF, a.j); pesMergulho(mF, a.j); continue; }
     // (o carrinho: o centro e a velocidade de volta ao quadro depois da separação e os pés do quadro, no lugar da passada)
     if (a.noCarrinho) { fixarCarrinho(mF, a.j); pesCarrinho(mF, a.j); continue; }
-    passoPassada(a.j, false, PASSO, null, null);
+    passoPassada(a.j, false, PASSO, null, ritmoAtor(a));
   }
   for (let i = 0; i < at.length; i++) { const a = at[i]; if (a.ativo && !a.fixo && !a.mergulha && !a.noCarrinho) passoPeDesenhado(a.j, mF, PASSO); }
   mF.tick++;
@@ -463,6 +489,7 @@ export function passoAtores(c, desejo, gestos) {
       if (a.fixo) respirar(a, tk);
       else {
         pose(j, mF, a.atu);
+        marcharAtor(c, a);
         // parado e plantado: fica fixo (a pose da locomoção de agora é a base — sem os gestos, que vão por cima a cada tick,
         // como a respiração: quem parou antes de pôr as mãos na cintura põe depois)
         if (a.podeFixar && Math.hypot(j.vx, j.vz) < 0.02 && j.pes[0].apoio && j.pes[1].apoio && !j.pes[0].pendente && !j.pes[1].pendente) {
