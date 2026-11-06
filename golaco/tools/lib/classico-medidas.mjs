@@ -69,10 +69,10 @@ export async function carregarLogica(js, sets = []) {
   aplicarSets(C, sets);
   const P = await imp('partida.js'), S = await imp('sim.js'), F = await imp('faltas.js'), T = await imp('tatica.js');
   const IT = await imp('ia-tatica.js'), DF = await imp('defesa.js');
-  const LV = await imp('livre.js'), DP = await imp('disputa.js');
+  const LV = await imp('livre.js'), DP = await imp('disputa.js'), R = await imp('rng.js');
   const M = await import(pathToFileURL(path.join(AQUI, 'partida-medidas.mjs')).href);
   const H = await import(pathToFileURL(path.join(AQUI, 'humano-roteiro.mjs')).href);
-  return { C, P, S, F, T, IT, DF, LV, DP, M, H };
+  return { C, P, S, F, T, IT, DF, LV, DP, R, M, H };
 }
 
 const novoTime = () => ({

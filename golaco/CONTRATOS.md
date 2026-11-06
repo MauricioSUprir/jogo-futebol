@@ -5057,7 +5057,7 @@ faltas +11% [+8; +14], os quentes +25–50%; dois terços de MAIS DISPUTAS; a fa
 |---|---|---|---|
 | `vontade` | `ACOES.boteIA.chancePorPasso` como TAXA: `p' = max(p, min(boteTeto, 1 − (1 − p)^vontade))`; e o `descanso` ÷ vontade: `d' = min(d, max(descansoMin, round(d / vontade)))` | **2,6** (Normal 0,08/45 → 0,195/17) | `sim.js boteClassico` (na carga, `MD.pow`), `cfgBote` |
 | `boteTeto` / `descansoMin` | o envelope já jogado no item 33 (a rodada 7 da dificuldade) | 0,26 / 16 | idem |
-| `segura` | × a DECISÃO do batido colado atrás do condutor de segurar (`FALTAS.tatica.chancePorPasso` no ataque promissor, `semSPA` fora dele) | **2** | `faltas.js faltaTatica(m, d, c, segura = 1)`, passado pelo `sim.js boteIA` só com `m.classico` |
+| `segura` | × a DECISÃO do batido colado atrás do condutor de segurar (`FALTAS.tatica.chancePorPasso` no ataque promissor, `semSPA` fora dele), FORA da própria área (dentro dela a falta tática com SPA é pênalti: o `segura` não a dobra — `teste-classico` K5; a falta em si, da base, é o item 124 da FILA) | **2** | `faltas.js faltaTatica(m, d, c, segura = 1)`, passado pelo `sim.js boteIA` só com `m.classico` |
 
 - **Os dois times, nunca o controlado:** o `boteIA` só roda para `guiadoPelaIA` (a IA × IA, o Simular o resto, a IA contra a
   pessoa e os companheiros dela, inclusive o chamado da PRESSÃO); o controlado tem o botão (DIVIDIDA, CARRINHO, CONTER) e ele NÃO
@@ -5120,7 +5120,8 @@ cena de cartão a mais a cada 6 partidas e mais replays de falta perto da área 
 
 - **`teste-classico`** (CI, padrão, 3 processos; ~690 s aqui com 2): K0 a tabela, K1 a marca, K2 o hash (sem × `false` × `'sim'`
   IGUAIS; `true` DIFERENTE na demo e nos 4 roteiros), K3 os dois times e nunca o controlado (o cfg de cada tentativa =
-  `cfgBote`), K4 o árbitro igual, KI a instrumentação só lê; C1–C11 pareados (bootstrap estratificado por modo, as metas
+  `cfgBote`), K4 o árbitro igual, K5 o `segura` fora da própria área (2000 sorteios numa cena montada: dentro da área segura 2 =
+  segura 1; reprova antes da correção da revisão, 26 diferentes), KI a instrumentação só lê; C1–C11 pareados (bootstrap estratificado por modo, as metas
   reprovam só quando PROVAM): botes e faltas esperadas +25–50% (reprova se provar < +20% ou > +60%), chance por contato ±10%,
   amarelos, vermelhos ≤ 0,2 (Poisson, também o Lenda+C), gols sem queda > 25% nem alta > 10% provadas, chutes sem queda > 15%,
   bola rolando, volume/disparada/presença sem alta provada, a combinação com a dificuldade (no CI os degraus de ~10% vizinhos

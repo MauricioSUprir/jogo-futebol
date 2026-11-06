@@ -19,6 +19,9 @@
 //     que toda função do árbitro (faltas.js chanceFaltaBote, fatorForca/forcaContato, chanceFaltaDividida, chanceClara,
 //     ataquePromissor, faltaNoBote, faltaNaCarga, faltaTatica (também com o mesmo segura), faltaNoCarrinho, montarFalta; partida.js regrasPartida com a falta
 //     pendente; defesa.js chanceDividida e semAtropelar) dá o MESMO resultado e o MESMO estado do m.rng com e sem m.classico.
+//  K5 o segura não vale na PRÓPRIA área (lá a falta tática com SPA é pênalti): numa cena montada com o batido colado atrás do
+//     condutor num ataque promissor, faltaTatica com segura 2 e com 1 dá o MESMO resultado em 2000 estados do sorteio dentro
+//     da área e resultados diferentes fora dela (a cena não é vazia: há faltas nos dois lugares).
 //  KI a instrumentação só lê: a cópia com os ganchos ligados dá o mesmo hash da lógica original.
 // Medidas (pareadas: as mesmas sementes com e sem o clássico; "PROVADO" = bootstrap pareado e estratificado por modo, 2000×,
 // unilateral 95%; as metas reprovam só quando PROVAM, nunca pelo ponto — lição do D3/D8):
@@ -239,6 +242,14 @@ async function principal() {
   reg('K4. o árbitro igual: a grade de cenas com o MESMO resultado e o MESMO m.rng com e sem m.classico (faltas.js, regrasPartida, chanceDividida, semAtropelar)',
     k4.dif.length ? `DIFERENTE em ${k4.dif.length} de ${k4.n} chamadas: ${k4.dif.slice(0, 3).join('; ')}` : `iguais em ${k4.n} chamadas (${k4.cenas} cenas; ${k4.faltas} faltas, ${k4.rngGasto} com sorteio)`,
     'iguais', !k4.dif.length && k4.faltas > 0);
+
+  // ----------------------------------------------------------------------------------------------- K5 o segura fora da área
+  {
+    const k5 = seguraNaArea(L);
+    reg('K5. o segura do clássico não vale na própria área: faltaTatica com segura 2 = com 1 dentro dela (2000 sorteios); fora dela, mais faltas',
+      `dentro: ${k5.area.dif} diferentes (${k5.area.f1} → ${k5.area.f2} faltas); fora: ${k5.fora.dif} diferentes (${k5.fora.f1} → ${k5.fora.f2})`,
+      'dentro 0 diferentes (com faltas); fora > 0', k5.area.dif === 0 && k5.area.f1 > 0 && k5.fora.dif > 0 && k5.fora.f2 > k5.fora.f1);
+  }
 
   // ----------------------------------------------------------------------------------------------- tarefas
   const cenas = ['demo', ...ROTS];
@@ -510,6 +521,47 @@ async function principal() {
     console.log(falhas ? `\nteste-classico: REPROVOU (${falhas})` : '\nteste-classico: PASSOU');
     process.exit(falhas ? 1 : 0);
   }
+}
+
+// ------------------------------------------------------------------------------------------- K5 o segura fora da área
+/**
+ * A cena do batido que segura: o condutor A (time 0) com a bola indo para o gol a 5 m/s, o defensor D (time 1) colado atrás
+ * (0,9 m), um defensor do time 1 no caminho (não é chance clara) e o resto atrás da bola (≤ 2 à frente: ataque promissor). Dentro
+ * da área do time 1 (x = 44) e fora dela (x = 25). Para cada estado do sorteio, faltaTatica com segura 1 e 2 a partir do MESMO
+ * estado: dentro da área o resultado tem de ser o mesmo; fora, o segura 2 dá mais faltas.
+ */
+function seguraNaArea(L) {
+  const { P, F, R } = L;
+  const out = {};
+  for (const [nome, u] of [['area', 44], ['fora', 25]]) {
+    const m = P.criarPartida({ semente: 3 });
+    m.partida.estado = 'jogo'; m.parada = null; m.golTick = null; m.foraDesde = null; m.voo = null; m.naMao = null;
+    const s = m.ataca[0];
+    const A = m.jogadores.find(j => j.time === 0 && j.posicao === 'ATA') ?? m.jogadores.find(j => j.time === 0 && j.posicao !== 'GOL');
+    const lin = m.jogadores.filter(j => j.time === 1 && j.posicao !== 'GOL');
+    const D = lin[0], B = lin[1];
+    for (const j of m.jogadores) {
+      if (j === A || j === D || j === B) continue;
+      if (j.posicao === 'GOL') P.teleportar(j, s * 51 * (j.time === 1 ? 1 : -1), 0, 0);
+      else P.teleportar(j, -s * (20 + (j.vagaIdx ?? 0)), ((j.vagaIdx ?? 0) - 5) * 3, 0);
+    }
+    P.teleportar(A, s * u, 2, s > 0 ? 0 : Math.PI); A.vx = s * 5; A.vz = 0;
+    P.teleportar(D, s * (u - 0.9), 2, s > 0 ? 0 : Math.PI); D.vx = s * 5; D.vz = 0;
+    P.teleportar(B, s * (u + 4), 2, s > 0 ? Math.PI : 0); B.vx = 0; B.vz = 0;
+    m.bola.p.x = s * (u + 0.35); m.bola.p.z = 2; m.bola.p.y = 0.11; m.posse = A.id; m.eventos = []; m.faltaPendente = null;
+    if (F.chanceClara(m, A, D) || !F.ataquePromissor(m, A)) throw new Error(`K5: a cena ${nome} não é ataque promissor sem chance clara`);
+    const r = { dif: 0, f1: 0, f2: 0 };
+    for (let k = 1; k <= 2000; k++) {
+      const st = R.criarRng(k);
+      m.rng = structuredClone(st); const a = F.faltaTatica(m, D, A, 1);
+      m.rng = structuredClone(st); const b = F.faltaTatica(m, D, A, 2);
+      if (a) r.f1++;
+      if (b) r.f2++;
+      if (!!a !== !!b) r.dif++;
+    }
+    out[nome] = r;
+  }
+  return out;
 }
 
 // ------------------------------------------------------------------------------------------- K4 o árbitro igual
