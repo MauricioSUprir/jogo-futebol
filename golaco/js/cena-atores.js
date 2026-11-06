@@ -49,7 +49,7 @@ const marchaDe = a => a.mp ?? (a.mp = parametrosMarcha(a.id));
  */
 function marcharAtor(c, a, modo = 0) {
   const j = a.j, reinicia = modo !== 0 || !(a.wm > 0);
-  filtrarMarcha(j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, reinicia);
+  filtrarMarcha(j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, reinicia, a.atu);
   const w = modo === 2 ? 1 : modo === 1 || j.posicao === 'GOL' ? 0 : (a.wm ?? 0);
   marchar(a.atu, j, marchaDe(a), rampaMarcha(w * MARCHA.rampa), a.vm);
   a.wm = modo === 1 || j.posicao === 'GOL' ? 0 : Math.min(1, w + PASSO / MARCHA.rampa);

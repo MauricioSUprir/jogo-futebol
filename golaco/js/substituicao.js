@@ -570,7 +570,7 @@ function poseAtor(c, a, t) {
   pose(j, c.mF, o);
   // a passada natural (item 61, marcha.js): o braço e o tronco de quem anda, antes dos gestos; na rampa do começo da cena
   // (a velocidade filtrada: recomeça no 1º quadro da cena, t = 0)
-  filtrarMarcha(j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, !(t > 0));
+  filtrarMarcha(j, a.vm ?? (a.vm = { v: null, f: 0 }), PASSO, !(t > 0), o);
   marchar(o, j, a.mp ?? (a.mp = parametrosMarcha(a.id)), rampaMarcha(t), a.vm);
   if (a.tipo === SAI_T && a.cruzou >= 0) palmas(o, h, t, suave((t - a.cruzou * PASSO) / S.aplauso.entra));
   else if (a.tipo === ENTRA_T && a.fase === 'espera') trocaPeso(o, j, t, a.ordem * 1.7);
