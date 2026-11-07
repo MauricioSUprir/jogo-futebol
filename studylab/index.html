@@ -3,85 +3,45 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>MindTrack AI</title>
-<meta name="description" content="MindTrack: agenda escolar, prioridades inteligentes, revisão espaçada, questões, flashcards, foco e desempenho — tudo em um lugar." />
-<meta name="theme-color" content="#0a0b10" />
-<meta property="og:title" content="MindTrack AI — estude, pratique, evolua" />
-<link rel="manifest" href="./manifest.webmanifest" />
-<link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
-<link rel="apple-touch-icon" href="./assets/icon.svg" />
-<link rel="preload" href="./assets/fontes/anton-latin.woff2" as="font" type="font/woff2" crossorigin />
-<script src="./js/vitrine.js"></script>
-<link rel="stylesheet" href="./css/app.css" />
-<link rel="stylesheet" href="./css/visual.css" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="theme-color" content="#050608" />
+<title>Site bloqueado</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    display: flex; align-items: center; justify-content: center; padding: 24px;
+    background: #050608; color: #f3ead7; text-align: center;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+  .icone {
+    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;
+    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;
+  }
+  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
+  p { font-size: 15px; line-height: 1.55; color: #a9a396; }
+</style>
 </head>
 <body>
-<div id="boot" class="boot">
-  <div class="boot__mark"><svg class="mark" viewBox="0 0 128 128" aria-hidden="true">
-      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="7">
-        <path d="M64 22c-8-6-20-5-26 2-8-2-15 3-17 11-7 3-10 12-6 19-5 6-4 15 2 20-2 8 3 15 11 17 2 8 10 13 18 11 5 6 13 7 18 2 5 5 13 4 18-2 8 2 16-3 18-11 8-2 13-9 11-17 6-5 7-14 2-20 4-7 1-16-6-19-2-8-9-13-17-11-6-7-18-8-26-2z"/><path d="M34 76 50 60l12 10 16-20 16 12"/>
-      </g>
-      <g fill="currentColor"><circle cx="34" cy="76" r="6"/><circle cx="50" cy="60" r="6"/><circle cx="62" cy="70" r="6"/><circle cx="78" cy="50" r="6"/><circle cx="94" cy="62" r="6"/></g>
-    </svg></div>
-  <div class="marca boot__name">MindTrack<b>AI</b></div>
-  <div class="boot__bar"><i></i></div>
-</div>
-
-<div id="app" class="app" hidden>
-  <!-- ===== Menu lateral ===== -->
-  <aside class="side" id="side">
-    <div class="side__brand">
-      <span class="side__logo"><svg class="mark" viewBox="0 0 128 128" aria-hidden="true">
-      <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="7">
-        <path d="M64 22c-8-6-20-5-26 2-8-2-15 3-17 11-7 3-10 12-6 19-5 6-4 15 2 20-2 8 3 15 11 17 2 8 10 13 18 11 5 6 13 7 18 2 5 5 13 4 18-2 8 2 16-3 18-11 8-2 13-9 11-17 6-5 7-14 2-20 4-7 1-16-6-19-2-8-9-13-17-11-6-7-18-8-26-2z"/><path d="M34 76 50 60l12 10 16-20 16 12"/>
-      </g>
-      <g fill="currentColor"><circle cx="34" cy="76" r="6"/><circle cx="50" cy="60" r="6"/><circle cx="62" cy="70" r="6"/><circle cx="78" cy="50" r="6"/><circle cx="94" cy="62" r="6"/></g>
-    </svg></span>
-      <span class="marca">MindTrack<b>AI</b></span>
-      <button class="side__close icon-btn" data-close-side aria-label="Fechar menu"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  <main class="caixa" role="alert">
+    <div class="icone" aria-hidden="true">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/>
+        <path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
     </div>
-    <nav class="side__nav" id="sideNav"></nav>
-    <div class="side__foot">
-      <nav class="side__conta" id="sideConta" aria-label="Conta"></nav>
-      <div class="lvl" id="sideLevel"></div>
-    </div>
-  </aside>
-  <div class="side__scrim" data-close-side hidden></div>
-
-  <!-- ===== Barra superior ===== -->
-  <header class="top">
-    <button class="icon-btn top__burger" data-open-side aria-label="Abrir menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-    <button class="top__search" data-action="busca">
-      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="top__search-txt">Pesquisar em tudo…</span>
-    </button>
-    <div class="top__right">
-      <button class="pill pill--fire" data-action="streak" id="topStreak" title="Sequência de dias">🔥 <b>0</b></button>
-      <button class="icon-btn" data-action="quickadd" title="Adicionar" aria-label="Adicionar" id="topAdd"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
-      <button class="icon-btn" data-action="notifs" title="Notificações" aria-label="Notificações" id="topBell"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg><i class="dot" hidden></i></button>
-      <button class="avatar" data-action="perfil" title="Perfil" id="topAvatar">G</button>
-    </div>
-  </header>
-
-  <!-- ===== Conteúdo ===== -->
-  <main class="main" id="view" tabindex="-1"></main>
-
-  <!-- ===== Navegação inferior (mobile) ===== -->
-  <nav class="tabbar" id="tabbar"></nav>
-</div>
-
-<div class="modal" id="modal" hidden>
-  <div class="modal__scrim" data-modal-close></div>
-  <div class="modal__box" role="dialog" aria-modal="true">
-    <header class="modal__head">
-      <h2 id="modalTitle">—</h2>
-      <button class="icon-btn" data-modal-close aria-label="Fechar"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-    </header>
-    <div class="modal__body" id="modalBody"></div>
-  </div>
-</div>
-
-<div class="toasts" id="toasts"></div>
-
-<script type="module" src="./js/app.js"></script>
+    <h1>Site bloqueado</h1>
+    <p>O acesso ao MindTrack AI está bloqueado no momento.</p>
+  </main>
+<script>
+  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio
+  try {
+    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()
+      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
+    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
+  } catch (e) {}
+</script>
 </body>
 </html>
