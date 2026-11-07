@@ -1,7 +1,9 @@
 // Ponte com o Total Match (TM): o GOLAÇO é o motor 3D das partidas do TM (mesmo site, mesmo armazenamento).
 //   TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle, partida }
 //        e abre golaco/index.html?tm=<id> num quadro (iframe) por cima do TM
-//   3D → window.parent.postMessage({ tipo: 'tm3d:pronto' | 'tm3d:fim' | 'tm3d:sair', id, resultado, motivo? }, location.origin)
+//   3D → window.parent.postMessage({ tipo: 'tm3d:tela' | 'tm3d:pronto' | 'tm3d:fim' | 'tm3d:sair', id, resultado, motivo? }, location.origin)
+//        ('tm3d:tela' — item 106, TM v380: a tela antes do jogo à vista ANTES do 3D pronto, a tela cedo; o TM tira o aviso e o X e para
+//        o aviso de demora. 'tm3d:pronto': o 3D pronto — a porta do Online 3D vem em resposta a ele)
 //        (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder; o 'tm3d:sair' leva o motivo:
 //        'simular' = o "Simular partida" da tela antes do jogo — item 124; com os titulares da tela —, 'erro' = o 3D não rodou)
 // Lado do TM: legacy-total-match/js/tm3d.js. Sem ?tm na página, nada daqui é usado (PEDIDO_TM = null).

@@ -18,8 +18,8 @@
 // no relógio dele), aplaudindo 3 s quando os times saem do túnel; a câmera de cinema nunca dentro deles.
 import * as THREE from 'three';
 import { PASSO, BOLA } from '../config.js';
-import { pose, interpolarPose, NJ, J } from '../anim.js';
-import { criarCortejo, passoCortejo, fotoCortejo, restaurarCortejo, filaFinal } from '../cortejo.js';
+import { interpolarPose, NJ, J } from '../anim.js';
+import { criarCortejo, passoCortejo, fotoCortejo, restaurarCortejo, filaFinal, poseAndante } from '../cortejo.js';
 import { criarRoteiro, planoEm, proximoBloco, cameraEm, cameraAbertura, escuroEm, escalacaoEm, sinaisEm, PREJOGO } from '../prejogo-roteiro.js';
 import { noCorredorDoTunel } from '../estadio-forma.js';
 import { criarVaoPlacas } from './vao-placas.js';
@@ -76,7 +76,8 @@ export function criarPrejogo(ctx) {
     c.andantes.forEach((a, k) => {
       const e = estadoDe(k), j = a.j;
       if (!copia) { e.ant.set(e.atu); e.x0 = e.x1; e.z0 = e.z1; e.r0 = e.r1; }
-      pose(j, c.mini, e.atu);
+      // (a pose do jogo + a camada do braço e do tronco: cortejo.js poseAndante, item 61)
+      poseAndante(c, a, e.atu);
       e.x1 = j.x; e.z1 = j.z; e.r1 = j.rumo;
       if (copia) { e.ant.set(e.atu); e.x0 = e.x1; e.z0 = e.z1; e.r0 = e.r1; }
     });

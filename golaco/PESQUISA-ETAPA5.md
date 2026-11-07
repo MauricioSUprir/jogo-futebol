@@ -516,6 +516,13 @@ Garantias que continuam medidas:
 - **Estimativa:** **6–8 h**.
 - **Observação:** o dono aprovou a condução ("está bem boa, continue assim"). A camada não toca pés, bola nem ritmo; só o
   tronco e os braços, e tem a chave `?mocap=0`.
+- **Desde o item 61 (06/11):** fora da partida já existe uma camada procedural do braço e do tronco (`js/marcha.js`, contrato
+  "Passada natural fora da partida (item 61)", `PESQUISA-PREJOGO.md` §10) no cortejo, nas cenas, na comemoração e nos
+  treinadores, com a fase e o ritmo de cada um pelo id e o estado filtrado por ator. Nesses atores a camada A entra no LUGAR
+  do `marchar` (a fase espalhada, o ritmo, a rampa do 1º quadro, a conferência do braço e o estado filtrado ficam) e as
+  guardas do `teste-marcha` (G1, G2 por boneco e tick, G8, S3) passam a valer para ela. O corpo novo já tem o braço solto
+  com a dobra do jogo (`render/esqueleto.js maoSolta`), também no jogo; o quique da pelve (~13 cm por passo) e o calcanhar
+  continuam esperando o mocap.
 
 ---
 

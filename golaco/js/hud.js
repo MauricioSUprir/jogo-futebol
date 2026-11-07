@@ -1306,6 +1306,12 @@ export function criarHud(opc) {
       el.carregando.classList.add('sumir');
       setTimeout(() => { el.carregando.hidden = true; }, 400);
     },
+    /** A tela antes do jogo à vista antes do 3D (item 106, a tela cedo): a tela de carregar sai sem o "pronto" (a dica dele fica). */
+    carregandoAtras() {
+      if (el.carregando.classList.contains('sumir') || el.carregando.classList.contains('erro')) return;
+      el.carregando.classList.add('sumir');
+      setTimeout(() => { if (el.carregando.classList.contains('sumir')) el.carregando.hidden = true; }, 400);
+    },
     erro(msg) {
       el.carregando.hidden = false;
       el.carregando.classList.remove('sumir');

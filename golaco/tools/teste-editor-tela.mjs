@@ -245,6 +245,10 @@ async function conferirEditor(pg) {
 
     // ---- 3) só teclado
     await novaPartida(pg);
+    // (o mouse do item 1 ficou parado em cima do "Continuar": quando a pausa volta debaixo dele, o Chromium manda o pointerover de um
+    // mouse que não se mexeu e a pausa dá o foco ao item sob o mouse — hud.js, "o mouse em cima de um item dá o foco a ele" —, 8 ms
+    // depois do PRONTO pelo Esc; reprovava por sorteio, também na main 048b278f. O mouse vai para o meio da janela, sem item embaixo)
+    await pg.mouse.move(640, 360);
     await pg.keyboard.press('Escape');
     let foco = '';
     for (let k = 0; k < 8 && foco !== 'editar-time'; k++) {

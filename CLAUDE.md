@@ -104,7 +104,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   em todos os estádios, na I. Status, plano, fontes e as decisões dele em `golaco/FILA.md` ("Depende do dono" 11 e 12);
   resumo em `golaco/CATEGORIAS.md`.
   **Categoria I (visual, corpo e estádios; aprovada pelo dono)**: I-1 (itens 62 nuca, 63 bordas dos decalques e 77 mão
-  de apoio do carrinho) ENTREGUE no PR #631 (06/11); as escolhas em `golaco/FILA.md` "Depende do dono" 27.
+  de apoio do carrinho) ENTREGUE no PR #631 (06/11); I-2 (item 61, a passada natural fora da partida) ENTREGUE no PR
+  #632 (06/11); as escolhas em `golaco/FILA.md` "Depende do dono" 27 e 28.
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
   `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
@@ -653,6 +654,26 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ~60 s de cenas); conta de largura mede o que é DESENHADO (o separador com as margens) e confere no DOM — o "…" do CSS escondia
   a duração; a decisão do ícone das abas é da barra inteira; tela com camada por cima (pausa, editor) fica só o véu; foco nunca
   dentro de `aria-hidden`; medir também os modos com textos longos (TM pro, clássico, 4 abas) e o regime mínimo.
+- **Tela cedo** (item 106, PR #635; dono: "corrije e adianta"; contrato "Tela antes do jogo (item 64)", parte "A tela cedo", e
+  "Ponte com o Total Match", parte "O recado tm3d:tela"; escolhas na FILA "Depende do dono" 29): a tela antes do jogo à vista
+  ENQUANTO o 3D monta. O `iniciar()` espera o módulo dela, as fontes (pedidas junto com o módulo: `ppFontes`) e os escudos do TM no
+  máximo `PP_CEDO_MS` 0,3 s e abre com o fundo 2D (só CSS; `data-fundo="2d"`) antes da 1ª tarefa longa; sem o módulo a tempo, abre
+  quando ele chegar. Antes do 3D valem a Visão tática, o time mostrado, o Personalizar (recria o mundo do tick 0), o Simular e o
+  [<]; o Jogar, o Pronto do online, o Bater pênaltis, os submenus do Livre e o ≡ ESPERAM (`espera3d`: `aria-disabled` + `aria-busy`,
+  a barra de carga dentro da aba, sem animação infinita) e voltam sozinhos (`ligarFundo3D`). Um mini-laço (`quadroTelaCedo`) cuida
+  do controle Y/X/LB/RB, do armado e do editor antes do 3D. Sair antes do 3D (`pararCarga`) para a carga e o `tm3d:pronto` nunca
+  sai. Ao TM, o recado `tm3d:tela` (v380), só com uma saída à vista. A página com a tela 0,3 s depois da navegação (antes
+  2,9–4,1 s), mas o 3D pronto ~1–2 s mais tarde no Chromium sem GPU (decisão do dono). Testes: `teste-prepartida-tela` E26
+  (`--so cedo`, `--casos`; `?segurar3d=1` + `__golaco.soltar3d()` seguram o 3D antes do pronto; `__golaco.carga`), `teste-ponte-tm`
+  P14 e o `testar-3d`. Lições:
+  - teste de "aparece antes" mede a ORDEM (o quadro do navegador em que a tela fica à vista × o em que a cena 3D nasce), não
+    "≥ 1 s antes do pronto": isso mede a máquina;
+  - toque atendido tarde (tarefa longa) conta a janela do 2º toque também da hora em que o pedido APARECE (`armadoVisto`);
+  - módulo baixado sob demanda que abre algo depois confere se o contexto ainda vale quando chega (o editor abria por cima do jogo
+    começado);
+  - `import()` resolvido mas preso atrás de tarefas longas perde a corrida para o relógio: uma volta de tarefas antes da reserva;
+  - no renderizador por software, a tela DOM à vista disputa o processo da GPU com a montagem do 3D (tirar animações, camada
+    própria e contexto WebGL antes não mudaram nada).
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
   §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
   foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta
@@ -757,6 +778,18 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   Celular Média: pior plano 35 chamadas / 122 mil triângulos (meta ≤ 40 / ≤ 130 mil). O HUD não aparece no pré-jogo (por
   desenho). As placas de cá ganham um vão na frente do túnel SÓ no pré-jogo (recorte por `clippingPlanes`; no jogo a bola
   bate nelas) — o cortejo passava por dentro delas; celular em pé no pré-jogo = pausa (tempo e som).
+  **Passada natural** (item 61; dono, 23/10: "parecem que estão marchando, parecendo NPC"; contrato "Passada natural fora da
+  partida (item 61)", `PESQUISA-PREJOGO.md` §10): `js/marcha.js` (puro, FORA do fecho) dá a cada um a SUA fase da passada e o
+  SEU ritmo (×[1; 1,07] pelo id) e uma CAMADA do desenho depois da pose — o braço contra a perna do mesmo lado, o cotovelo que
+  dobra à frente, a pelve ±4° e o tórax ±3° ao contrário —, com o estado filtrado por ator e a faixa de 2,6–3,2 m/s em que ela
+  VIRA a pose do jogo. Vale no cortejo (`poseAndante`; a saída do parado em rampa τ 0,7 s que cai no mesmo ponto do caminho, os
+  árbitros pré-rolados, o rumo ≤ 2,2 rad/s), nas cenas (intervalo, fim, cartão, substituição), na comemoração (pela página,
+  `avancarComMarcha`: a `comemoracao.js` é do fecho) e nos treinadores (só a pelve e o tórax). Corpo novo: `render/esqueleto.js
+  maoSolta` (o braço solto com a dobra do jogo, também na partida). A partida não muda (`fecho-hash --diff` 0, hash IGUAL); o
+  quique da pelve (~13 cm) e o calcanhar ficam para o mocap (itens 50–52, que entram no lugar do `marchar`). Teste:
+  `teste-marcha` (padrão; o cortejo e as cenas nos dois corpos, guardas por boneco e por tick). Lições: quem nasce junto
+  (`criarJogador`, `recriarAtor`) nasce com a mesma fase — sem espalhar pelo id, toda cópia anda no mesmo pé; a `saida =
+  {ritmoVoo}` sem `pe` no `passoPassada` é um contrato implícito com o fecho (G7 do `teste-marcha`).
   **Escalação em pé** (item 29, dono 17/10; PR #614; `PESQUISA-PREJOGO.md` §9): o campo inteiro com o GOL embaixo (L/A
   0,80–0,85, as marcas no tamanho real: `campinho.js svgCampinho(true, largura)`), a carta da ponta 6 px para dentro ou centrada
   sobre a linha, a mesma caixa nas duas folhas e as cartas de cada uma pelos nomes dela (`escalacao-tela.js tamanhosDasFolhas`),
@@ -1236,7 +1269,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   ser o GOLAÇO NOVO, `golaco/`): o "Jogar" de toda partida do seu time (matchview com `pauseSide`;
   também a Partida de Base com ≥ 11 e o Rumo ao Estrelato titular) abre o 3D direto na TELA ANTES DO JOGO — Jogar partida ou
   Simular partida (o 3D fecha com `tm3d:sair {motivo: 'simular', titulares}` e o TM simula lance a lance com os titulares da
-  tela); a janela "Jogar em 3D / Simular" saiu no item 124 (dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de
+  tela);
+  desde o item 106 (v380) a tela aparece ENQUANTO o 3D monta: o recado `tm3d:tela` tira o aviso "Abrindo o estádio 3D…", o X e o
+  aviso de demora; a porta do Online 3D continua no `tm3d:pronto`. Ao sair, o quadro some da vista na hora (`fecha3d(true)`) e o
+  `remove()` (o desmonte do WebGL, no mesmo fio do TM) vem depois de o TM pintar;
+  a janela "Jogar em 3D / Simular" saiu no item 124 (dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de
   jogar 3d ou simular; quando clica em jogar, já entra essa tela, e é em todos os modos"). Config → "Partidas do seu time": Tela
   antes do jogo / Sempre simular (`settings.partidasTela`; o `partidas3d` antigo é ignorado: a migração foi única). Sem WebGL 2,
   simula com um aviso por sessão. Fora do 3D: o Online de salas e o Duelo ao vivo (resultado dividido), os pênaltis e a
