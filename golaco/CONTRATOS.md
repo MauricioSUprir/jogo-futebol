@@ -2339,7 +2339,7 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   das 5 mutações, o O5 de 100 s e o destaque do Sair aos 60 s (item 101); o fundo escuro e desfocado como o do FC, com o
   `pixelRatio` baixo atrás da tela (item 102, decisão do dono); o nome embaixo de cada disco da Visão tática (item 103); o selo
   grande da competição no alto do PC (item 104); o Editar time com a cara da tela (item 105); a "tela cedo", durante o
-  carregamento (item 106 — FEITA no #PRNUM: parte "A tela cedo", abaixo); o Personalizar no online (item 107, decisão do
+  carregamento (item 106 — FEITA no #635: parte "A tela cedo", abaixo); o Personalizar no online (item 107, decisão do
   dono); as FOTOS no lugar do busto
   (feitas no item 31, #615, só a edição pro: abaixo); o clima na linha de informação (a dificuldade entrou no item 33: seção
   "Tempo de jogo e dificuldade"). Nada foi medido
@@ -2364,7 +2364,7 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   especificação pedia ×1,15 e mexer nela arriscava as metas de encaixe). Testes: `teste-prepartida-tela` 83/83 (E3/E4 sem rolar
   e nada encosta em 10 telas, também com as fontes BLOQUEADAS; E5 as letras; E20 as proporções do FC 24), 0 rótulo com "…" em
   568, 667, 844 e 1280; `teste-prepartida` (Node) sem mudança.
-- **A tela cedo (item 106; 07/11; PR #PRNUM, base 048b278f)**: a tela à vista ENQUANTO o 3D monta (dono: "corrije e adianta"; a
+- **A tela cedo (item 106; 07/11; PR #635, base 048b278f)**: a tela à vista ENQUANTO o 3D monta (dono: "corrije e adianta"; a
   Fase 2 da especificação do item 64; as escolhas recomendadas T1–T8 no "Depende do dono" 29 da FILA). Só a página e o TM: `main.js`,
   `prepartida-tela.js`, `css/prepartida.css`, `hud.js` (`carregandoAtras()`), `ponte-tm.js` (o comentário do protocolo) e o
   `tm3d.js` do TM (v380: contrato "Ponte com o Total Match", parte "O recado tm3d:tela"); `fecho-hash --diff origin/main` 0,
@@ -3184,7 +3184,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
     app com a tela aberta, na carreira sem "reiniciar partidas", não registra o placar (já era assim no 3D; agora vale para toda
     partida); a confirmação do TM fora do 3D no celular em pé com menos de 600 px segue com o cartão de 380 px.
 
-- **O recado `tm3d:tela` e o quadro que some já (item 106, 07/11; PR #PRNUM; TM v380)**. Com a tela cedo (contrato "Tela antes do
+- **O recado `tm3d:tela` e o quadro que some já (item 106, 07/11; PR #635; TM v380)**. Com a tela cedo (contrato "Tela antes do
   jogo (item 64)", parte "A tela cedo") a tela antes do jogo fica à vista ENQUANTO o 3D monta, com o "Simular partida" e o [<]: o
   aviso "Abrindo o estádio 3D…" e o X do TM não têm mais o que fazer ali (sem o recado, os dois ficariam por cima da tela até o
   3D pronto). As escolhas no
