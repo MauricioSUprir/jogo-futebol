@@ -25,7 +25,9 @@ permissions:
 jobs:
   node:
     name: node ${{ matrix.parte }} de 4
-    runs-on: ubuntu-latest
+    # (fixo no Ubuntu 24.04: em 07/11 o ubuntu-latest passou a 26.04, onde o Playwright 1.56 não instala o Chromium; os
+    # tempos do tempos-ci.mjs e as metas de custo — o T14 do teste-tecnicos — foram medidos nesta imagem)
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -39,7 +41,7 @@ jobs:
         run: node golaco/tools/rodar-testes.mjs --parte ${{ matrix.parte }} --de 4
   navegador:
     name: navegador ${{ matrix.parte }} de 3
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
