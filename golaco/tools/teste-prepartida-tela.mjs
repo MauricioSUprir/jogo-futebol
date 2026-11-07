@@ -13,7 +13,8 @@
 //   E5  a letra: nome ≥ 10 px (568×320), ≥ 11 (outros celulares), ≥ 13 (PC ≥ 720); info ≥ 11; abas ≥ 13; o resto ≥ 11/12
 //   E6  os alvos: abas ≥ 177 × 40 (568), ≥ 200 × 44 (640+); ≡ ≥ 34/40/44; os times ≥ 30 × 56 (568) e 36 × 64; nada sob o entalhe
 //   E7* toques até o jogo: partida com o pré-jogo 2 (Jogar + Pular); sem pré-jogo 1 → o apito; Pênaltis 1; o requestFullscreen
-//       chamado DENTRO do handler do Jogar (toque)
+//       chamado DENTRO do handler do Jogar (toque); o "Pular" mostrado e lido num evaluate só e tocado logo depois (ele some 3 s
+//       depois do último gesto), e o fim do pré-jogo esperado até 3 s
 //   E9  o som: o toque no Jogar liga o contexto em ≤ 1 s; o apito só depois
 //   E10* teclado: o foco inicial no Jogar; ←/→; 40 Tabs presos; Enter na Visão tática e no Personalizar NÃO começa; Esc e P nunca
 //       levam ao jogo (na base, Esc no pré-jogo = o jogo); Q/E trocam o time; o ≡ abre a pausa "antes do jogo" — a tela some atrás
@@ -403,13 +404,19 @@ if (faz('cel')) {
       const tSom = (Date.now() - t0) / 1000;
       const dep = await pg.evaluate(() => ({ aberta: window.__golaco.prepartida.aberta, pre: window.__golaco.prejogo.fase, tick: window.__golaco.mundo.tick, som: window.__golaco.estadio?.som?.contexto ?? null, cheia: window.__telaCheia, apito: window.__golaco.estadio?.som?.tocados?.apito ?? 0 }));
       meta('E9 o som: o toque no Jogar liga o contexto (antes, sem contexto); o apito ainda não', `antes ${somAntes}; depois ${dep.som} em ${tSom.toFixed(2)} s; apito ${dep.apito}`, 'sem contexto → running ≤ 1 s; 0', dep.som === 'running' && tSom <= 1 && !dep.apito);
-      await pg.evaluate(() => window.__golaco.prejogo.escalacao.pular); // (o botão aparece com o movimento)
-      await pg.evaluate(() => document.getElementById('prejogo').dispatchEvent(new PointerEvent('pointermove', { bubbles: true })));
-      const pb = await pg.evaluate(() => { const r = document.querySelector('.pj-pular').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      // (robustez; o deploy do #634 saiu com "depois do Pular: pré-jogo true"): o "Pular" some 3 s depois do último gesto
+      // (prejogo-tela.js atualizar) e, escondido, o toque cai na camada de baixo (vira "próximo bloco") — com a máquina cheia, 3
+      // evaluate entre o gesto e o toque passavam disso. O gesto que o mostra e a leitura da caixa num evaluate só, o toque logo depois
+      // e a espera pelo fim do pré-jogo (até 3 s) no lugar de 3 quadros; o "à vista" no toque vai no medido
+      const pb = await pg.evaluate(() => {
+        document.getElementById('prejogo').dispatchEvent(new PointerEvent('pointermove', { bubbles: true }));
+        const b = document.querySelector('.pj-pular'), r = b.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2, vis: b.classList.contains('visivel') && getComputedStyle(b).pointerEvents !== 'none', t: performance.now() };
+      });
       await pg.touchscreen.tap(pb.x, pb.y);
-      await quadros(pg, 3);
-      const fim = await pg.evaluate(() => ({ pre: window.__golaco.prejogo.ativo, tick: window.__golaco.mundo.tick }));
-      meta('E7* com o pré-jogo: 2 toques (Jogar + Pular) até o jogo; o requestFullscreen DENTRO do gesto do Jogar', `depois do Jogar: tela ${dep.aberta}, pré-jogo ${dep.pre}, tick ${dep.tick}; tela cheia pedida ${dep.cheia.length}× (gesto ativo: ${dep.cheia.map(c => c.ativo).join(',')}); depois do Pular: pré-jogo ${fim.pre}, tick ${fim.tick}`,
+      await pg.waitForFunction(() => !window.__golaco.prejogo.ativo, null, { timeout: 3000 }).catch(() => {});
+      const fim = await pg.evaluate(t => ({ pre: window.__golaco.prejogo.ativo, tick: window.__golaco.mundo.tick, ms: Math.round(performance.now() - t) }), pb.t);
+      meta('E7* com o pré-jogo: 2 toques (Jogar + Pular) até o jogo; o requestFullscreen DENTRO do gesto do Jogar', `depois do Jogar: tela ${dep.aberta}, pré-jogo ${dep.pre}, tick ${dep.tick}; tela cheia pedida ${dep.cheia.length}× (gesto ativo: ${dep.cheia.map(c => c.ativo).join(',')}); o Pular à vista no toque ${pb.vis}; depois do Pular: pré-jogo ${fim.pre}, tick ${fim.tick} (${fim.ms} ms depois do gesto)`,
         'fechada, rodando, 0; 1× com o gesto; jogo', !dep.aberta && dep.pre === 'rodando' && dep.tick === 0 && dep.cheia.length >= 1 && dep.cheia[0].ativo !== false && !fim.pre);
     }
     meta('S1 0 erros no console (celular)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
