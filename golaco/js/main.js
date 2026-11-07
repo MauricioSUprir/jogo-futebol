@@ -4366,6 +4366,9 @@ async function iniciar() {
   await identCarga;
   if (cargaCancelada) return;
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
+  // a altura da tela para as cadeiras 3D (item 69: o orçamento e o LOD de perto) já no nascimento do campo — com a tela cedo (item
+  // 106) o resize pode chegar antes dele, e o padrão (720) valeria até o próximo redimensionar()
+  campo.definirAlturaTela(window.innerHeight);
   cena3d.cena.add(campo.grupo);
   // o orçamento de triângulos por quadro do 3D de perto (item 69) lê o total do último desenho
   campo.definirMedidor(() => cena3d.info().render);
