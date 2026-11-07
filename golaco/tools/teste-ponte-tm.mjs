@@ -64,7 +64,8 @@
 //      porta do Online 3D continua no 'tm3d:pronto'); no 'tm3d:sair' a tela do quadro já está fora da vista dentro do fns.sair e o
 //      remove() (o desmonte do WebGL do quadro, da mesma origem: 1–9 s no Chromium sem GPU) vem numa tarefa depois; sem o
 //      'tm3d:tela' (o motor antigo) o 'tm3d:pronto' tira o aviso e o X como antes; o abre3d com um quadro aberto tira o velho na
-//      hora. Na versão sem TM.tm3d._abre3d REPROVA.
+//      hora; com a aba escondida (o requestAnimationFrame que não vem), o relógio tira o quadro em ~1 s. Na versão sem
+//      TM.tm3d._abre3d REPROVA.
 //
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
@@ -880,6 +881,21 @@ if (typeof SU.melhorEmCampo === 'function') {
       C.avancar(2000);
       if (T.removido !== 1) ruins.push(`(c') o remove() ${T.removido}× depois`);
     }
+    // (f) a aba escondida (o requestAnimationFrame não vem): o tm3d:sair tira a tela da vista e o relógio garante o remove() em ~1 s
+    // (revisão do item 106: tirar o setTimeout(tira, 1000) do fecha3d passava no P14 — o quadro ficava no DOM até a aba voltar)
+    {
+      abre({ ...PED, id: 'p14f' }, { pronto() {}, sair() {}, fim() {}, falhou() {} });
+      const T = C.tela(), q = T.filhos.find(x => x.tag === 'iframe');
+      const manda = d => { for (const o of [...C.ouvintes]) o({ origin: ORIGEM, data: { id: 'p14f', ...d }, source: q.contentWindow }); };
+      const raf = C.ctx.requestAnimationFrame;
+      C.ctx.requestAnimationFrame = () => 0;
+      manda({ tipo: 'tm3d:sair', motivo: 'simular' });
+      const ja = { display: T.style.display, removido: T.removido };
+      C.avancar(1500);
+      C.ctx.requestAnimationFrame = raf;
+      if (ja.display !== 'none' || ja.removido !== 0) ruins.push(`(f) sem o quadro seguinte, no tm3d:sair: ${JSON.stringify(ja)} (fora da vista, o remove() ainda não)`);
+      if (T.removido !== 1 || T.isConnected) ruins.push(`(f) sem o quadro seguinte (a aba escondida), 1,5 s depois o remove() ${T.removido}× (ligada ${T.isConnected})`);
+    }
     // (e) o abre3d com um quadro ainda aberto tira o velho na hora (como antes)
     {
       abre({ ...PED, id: 'p14c' }, { pronto() {}, sair() {}, fim() {}, falhou() {} });
@@ -890,8 +906,8 @@ if (typeof SU.melhorEmCampo === 'function') {
       C.ctx.TM.tm3d.fechar();
       C.avancar(2000);
     }
-    reg('P14 o tm3d:tela (item 106): esconde o aviso e o X, cancela a demora de 30 s e não entrega a porta; o tm3d:sair tira a tela da vista JÁ (no fns.sair ela já está fora) e o remove() vem depois; sem o tm3d:tela o tm3d:pronto continua; o abre3d tira o velho na hora',
-      ruins.join('; ') || 'os 6 casos certos', 'os 6 casos certos', ruins.length === 0);
+    reg('P14 o tm3d:tela (item 106): esconde o aviso e o X, cancela a demora de 30 s e não entrega a porta; o tm3d:sair tira a tela da vista JÁ (no fns.sair ela já está fora) e o remove() vem depois — também com a aba escondida (sem o quadro seguinte, pelo relógio); sem o tm3d:tela o tm3d:pronto continua; o abre3d tira o velho na hora',
+      ruins.join('; ') || 'os 7 casos certos', 'os 7 casos certos', ruins.length === 0);
   }
 }
 
