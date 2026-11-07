@@ -904,16 +904,25 @@ function poseTec(T, tc, L) {
   // a passada natural (item 61, marcha.js): a pelve e o tórax de quem anda (o estado filtrado dele: tc.vm), antes da postura
   // e dos gestos — os braços ficam nas posturas (mãos nas costas, cruzados, na cintura: a camada do braço só aparece no
   // instante em que nenhuma postura os segura); parado com a fase 0, como ele nasce, não muda nada
-  const novoVm = !tc.vm;
-  if (novoVm) tc.vm = { v: null, f: 0 };
-  filtrarMarcha(j, tc.vm, PASSO, novoVm, o);
-  marchar(o, j, tc.mp ?? (tc.mp = parametrosMarcha(tc.id)), 1, tc.vm);
   // agachar ou levantar devagar (o corpo inteiro desce 0,3 m; as mãos vão junto)
   // (comemorando, ele levanta mais depressa: TC.comemora.levanta s)
   const a = tc.snap;
   const reacao = tc.estado === 'comemora' || tc.estado === 'sofreu';
   const durMix = Math.abs(a.agacha - _pb.agacha) > 0.3 ? Math.max(tc.mix, tc.estado === 'comemora' ? TC.comemora.levanta : TC.misturaAgacha) : tc.mix;
   const sMix = suave((k - tc.troca) * PASSO / durMix);
+  // as DUAS mãos presas por inteiro na postura ou no gesto (peso 1, sem mistura nem a troca medida neste passo): o
+  // aplicarMao refaz cada braço do ombro até o alvo com o polo fixo (comemoracao.js maoEm), e o braço que a camada da
+  // passada calcularia não chega ao desenho — ela gira só a pelve e o tórax (o mesmo resultado, sem o custo do braço:
+  // o T14 do teste-tecnicos, a camada custava +6 µs por passo nos dois treinadores)
+  const maosPresas = tc.mixMedido === tc.troca && _pb.e.w === 1 && _pb.d.w === 1 &&
+    (reacao ? suave((k - tc.troca - tc.espera) * PASSO / tc.mix) : sMix) >= 1;
+  const novoVm = !tc.vm;
+  if (novoVm) tc.vm = { v: null, f: 0 };
+  // (sem a conferência do braço: a pose do treinador é sempre a da passada — os gestos e as posturas entram depois —, e ela
+  // dá 1; calculá-la a cada passo custava ~1/3 da camada aqui)
+  filtrarMarcha(j, tc.vm, PASSO, novoVm);
+  tc.vm.c = 1;
+  marchar(o, j, tc.mp ?? (tc.mp = parametrosMarcha(tc.id)), 1, tc.vm, maosPresas);
   const agacha = sMix < 1 ? lerp(a.agacha, _pb.agacha, sMix) : _pb.agacha;
   const pitch = sMix < 1 ? lerp(a.pitch, _pb.pitch, sMix) : _pb.pitch;
   const pulo = sMix < 1 ? lerp(a.pulo, _pb.pulo, sMix) : _pb.pulo;
