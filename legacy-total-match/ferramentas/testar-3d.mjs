@@ -80,6 +80,28 @@ await p.addInitScript(() => {
     setTimeout(() => { const a = document.querySelector(".tm3d-aviso"), x = document.querySelector(".tm3d-sair"); window.__naTela = { aviso: a ? getComputedStyle(a).display : null, x: x ? getComputedStyle(x).display : null }; }, 0);
   });
 });
+// item 106: o "Simular partida" (2 toques) DENTRO do quadro do 3D logo que a tela antes do jogo aparece — antes do 3D pronto —, pedido
+// pela página do TM (localStorage "teste106:simular"); o que viu vai para o localStorage "teste106:toques" (o quadro sai depois). O
+// evaluate do Playwright espera o fio, que a carga do 3D ocupa: chegava só com o 3D pronto
+await p.addInitScript(() => {
+  if (window === window.top || !/[?&]tm=/.test(location.search)) return;
+  let feito = false;
+  const ob = new MutationObserver(() => {
+    if (feito || localStorage.getItem("teste106:simular") !== "1") return;
+    const pp = document.getElementById("prepartida"), c = document.getElementById("carregando");
+    if (!pp || pp.hidden || !c || !(c.hidden || c.classList.contains("sumir"))) return;
+    feito = true; ob.disconnect();
+    localStorage.removeItem("teste106:simular");
+    setTimeout(() => {
+      const g = window.__golaco, b = () => document.querySelector('#prepartida [data-aba="simular"]');
+      const r = { tela: !!(g && g.prepartida && g.prepartida.aberta && b()), antes: !(g && g.pronto) };
+      if (r.tela) { b().click(); r.armado = g.prepartida.estado.armado; r.t = Date.now(); b().click(); r.tick = g.mundo.tick; }
+      localStorage.setItem("teste106:toques", JSON.stringify(r));
+    }, 30);
+  });
+  const liga = () => ob.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  if (document.documentElement) liga(); else document.addEventListener("readystatechange", liga, { once: true });
+});
 await p.goto(BASE + "/index.html", { waitUntil: "networkidle" });
 await p.waitForFunction(() => window.TM && TM.tm3d && TM.ut && TM.rae && TM.comp, { timeout: 60000 });
 // (item 124) os avisos (TM.ui.toast) e o cfg de cada partida da tela de jogo do TM (com o placar de antes do 3D); a tela antes do
@@ -348,35 +370,26 @@ if (fr) {
 {
   await p.evaluate(() => {
     window.__msgs3d.length = 0; window.__toasts.length = 0; window.__naTela = null; window.__someEm = null;
-    const ids = TM.data.world().leagues[0].clubIds;
-    TM.ui.go("quick-match", { a: TM.engine.teamFromClub(ids[5]), b: TM.engine.teamFromClub(ids[6]) });
-  });
-  // o tm3d:tela (ou o tm3d:pronto, na base) em até 90 s
-  let viu = false;
-  for (let i = 0; i < 1800 && !viu; i++) { await p.waitForTimeout(50); viu = await p.evaluate(() => window.__msgs3d.some(m => m.tipo === "tm3d:tela" || m.tipo === "tm3d:pronto")); }
-  const fr3 = p.frames().find(f => /golaco\/index\.html\?tm=/.test(f.url()));
-  const naTela = await p.evaluate(() => window.__naTela);
-  // a página do TM marca o quadro em que a tela do 3D já saiu da vista (o MutationObserver pega o display none ou a saída do quadro;
-  // o requestAnimationFrame seguinte é o quadro pintado sem ele)
-  await p.evaluate(() => {
+    localStorage.removeItem("teste106:toques"); localStorage.setItem("teste106:simular", "1");
+    // a página do TM marca o quadro em que a tela do 3D já saiu da vista depois de aparecer (o MutationObserver pega o display none ou
+    // a saída do quadro; o requestAnimationFrame seguinte é o quadro pintado sem ele)
+    let viuTela = false;
     const ob = new MutationObserver(() => {
       const t = document.querySelector(".tm3d-tela");
-      if (t && getComputedStyle(t).display !== "none") return;
+      if (t && getComputedStyle(t).display !== "none") { viuTela = true; return; }
+      if (!viuTela) return;
       ob.disconnect();
       requestAnimationFrame(() => { window.__someEm = Date.now(); });
     });
     ob.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden"] });
+    const ids = TM.data.world().leagues[0].clubIds;
+    TM.ui.go("quick-match", { a: TM.engine.teamFromClub(ids[5]), b: TM.engine.teamFromClub(ids[6]) });
   });
-  const toques = fr3 ? await fr3.evaluate(() => {
-    const g = window.__golaco, b = () => document.querySelector('#prepartida [data-aba="simular"]');
-    if (!g || !g.prepartida || !g.prepartida.aberta || !b()) return { tela: false, antes: !(g && g.pronto) };
-    const antes = !g.pronto;
-    b().click();
-    const armado = g.prepartida.estado.armado;
-    const t = Date.now();
-    b().click();
-    return { tela: true, antes, armado, t, tick: g.mundo.tick };
-  }).catch(e => ({ erro: String(e).slice(0, 120) })) : null;
+  // os toques do quadro (até 90 s)
+  let toques = null;
+  for (let i = 0; i < 1800 && !toques; i++) { await p.waitForTimeout(50); toques = await p.evaluate(() => JSON.parse(localStorage.getItem("teste106:toques") || "null")); }
+  await p.evaluate(() => localStorage.removeItem("teste106:simular"));
+  const naTela = await p.evaluate(() => window.__naTela);
   for (let i = 0; i < 100 && !(await p.evaluate(() => window.__someEm != null)); i++) await p.waitForTimeout(100);
   const someEm = await p.evaluate(() => window.__someEm);
   const chegou = await ate(() => TM.ui.current() === "quick-result" && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
