@@ -32,7 +32,8 @@
    resultado volta com os dois; a pausa do 3D diz "Partida e cenas". O Ultimate com o padrão (4 min, Normal) e a carreira e o
    Rumo ao Estrelato com 6 min e Difícil.
    Item 106 (a tela cedo: a tela antes do jogo à vista enquanto o 3D monta), com o golaco de verdade na Partida rápida: o recado
-   tm3d:tela ≥ 1 s antes do tm3d:pronto; nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
+   tm3d:tela antes do tm3d:pronto e a tela pintada (um quadro inteiro) antes de a cena 3D nascer — a ordem, não quanto o 3D demora
+   (revisão do item 106: o "≥ 1 s antes" media a lentidão do 3D); nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
    do tm3d:pronto fecha com tm3d:sair "simular", sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some da vista ≤ 0,5 s
    depois do 2º toque (o remove() do quadro, o desmonte do WebGL, depois) e o TM simula o result de sempre.
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
@@ -79,6 +80,25 @@ await p.addInitScript(() => {
     if (!d || d.tipo !== "tm3d:tela" || window.__naTela) return;
     setTimeout(() => { const a = document.querySelector(".tm3d-aviso"), x = document.querySelector(".tm3d-sair"); window.__naTela = { aviso: a ? getComputedStyle(a).display : null, x: x ? getComputedStyle(x).display : null }; }, 0);
   });
+});
+// item 106: dentro do quadro do 3D, os quadros do navegador contados desde o começo — o quadro em que a tela antes do jogo fica à vista e o
+// quadro em que a cena 3D nasce (o 1º contexto WebGL do #tela): qGL − qTela ≥ 2 = um quadro inteiro pintado com a tela antes da cena
+await p.addInitScript(() => {
+  if (window === window.top || !/[?&]tm=/.test(location.search)) return;
+  const M = window.__ordem106 = { nq: 0, qTela: null, qGL: null };
+  const raf = window.requestAnimationFrame.bind(window);
+  const conta = () => { M.nq++; raf(conta); };
+  raf(conta);
+  const gc = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (t, ...r) { if (M.qGL == null && this.id === "tela" && /webgl/.test(String(t))) M.qGL = M.nq; return gc.call(this, t, ...r); };
+  const ob = new MutationObserver(() => {
+    if (M.qTela != null) return;
+    const pp = document.getElementById("prepartida"), c = document.getElementById("carregando");
+    if (!pp || pp.hidden || !c || !(c.hidden || c.classList.contains("sumir"))) return;
+    M.qTela = M.nq; ob.disconnect();
+  });
+  const liga = () => ob.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ["hidden", "class"] });
+  if (document.documentElement) liga(); else document.addEventListener("readystatechange", liga, { once: true });
 });
 // item 106: o "Simular partida" (2 toques) DENTRO do quadro do 3D logo que a tela antes do jogo aparece — antes do 3D pronto —, pedido
 // pela página do TM (localStorage "teste106:simular"); o que viu vai para o localStorage "teste106:toques" (o quadro sai depois). O
@@ -329,10 +349,13 @@ if (fr) {
   fr = await espera3d();
   const sob = await p.evaluate(() => { clearInterval(window.__olho); return { sobre: window.__sobre, amostras: window.__amostras }; });
   confere("revisão A7: o \"Abrindo o estádio 3D…\" do TM some quando a tela de carregar do 3D aparece (≤ 4 amostras de 50 ms com os dois à vista)", !!fr && sob.amostras >= 4 && sob.sobre <= 4, sob);
-  // item 106: a tela antes do jogo à vista ANTES do 3D — o recado tm3d:tela chega ≥ 1 s antes do tm3d:pronto (na base não há tm3d:tela)
+  // item 106: a tela antes do jogo à vista ANTES do 3D — o recado tm3d:tela chega antes do tm3d:pronto (na base não há tm3d:tela) e, no
+  // quadro, a tela pintou antes de a cena 3D nascer (a ordem; quanto antes do pronto é informativo)
   const mt = await p.evaluate(() => { const t = window.__msgs3d.find(m => m.tipo === "tm3d:tela"), r = window.__msgs3d.find(m => m.tipo === "tm3d:pronto"); return { tela: t ? t.t : null, pronto: r ? r.t : null, ordem: window.__msgs3d.map(m => m.tipo) }; });
-  confere("item 106 · Partida rápida: o tm3d:tela (a tela antes do jogo à vista) chega ≥ 1 s antes do tm3d:pronto", mt.tela != null && mt.pronto != null && mt.pronto - mt.tela >= 1000,
-    { antes: mt.tela != null && mt.pronto != null ? (mt.pronto - mt.tela) / 1000 : null, ordem: mt.ordem });
+  const ord = fr ? await fr.evaluate(() => window.__ordem106 || null).catch(() => null) : null;
+  confere("item 106 · Partida rápida: o tm3d:tela (a tela antes do jogo à vista) chega antes do tm3d:pronto e a tela pinta (um quadro inteiro) antes de a cena 3D nascer",
+    mt.tela != null && mt.pronto != null && mt.tela < mt.pronto && !!ord && ord.qTela != null && ord.qGL != null && ord.qGL - ord.qTela >= 2,
+    { antesDoPronto: mt.tela != null && mt.pronto != null ? (mt.pronto - mt.tela) / 1000 : null, quadros: ord, ordem: mt.ordem });
   if (fr) {
     const xiAntes = await xiDoTM();
     const ed = await fr.evaluate(() => {
