@@ -1373,7 +1373,8 @@ if (faz('fotos')) {
 // tela, os requestAnimationFrame novos ficam numa fila até __soltarRaf() — a carga do 3D para no quadro seguinte e a régua mede o
 // estado "carregando" com calma. Na página de cima (o quadro do TM), as mensagens tm3d:* com a hora (performance.now dela).
 function sondaCedo(o) {
-  const M = window.__cedo = { tTela: null, tPronto: null, naTela: null, antes: null, msgs: [], erro: null };
+  const M = window.__cedo = { tTela: null, tPronto: null, naTela: null, antes: null, msgs: [], erro: null, longas: [] };
+  try { new PerformanceObserver(l => { for (const e of l.getEntries()) M.longas.push([e.startTime, e.duration]); }).observe({ type: 'longtask', buffered: true }); } catch (_) { /* */ }
   if (window === window.top) {
     addEventListener('message', e => {
       const d = e.data;
@@ -1511,8 +1512,10 @@ if (faz('cedo')) {
       });
       const node = hashNode(criarPartida({ semente: SEM, times: { 0: vagasE } }), 0);
       const dt = c.tPronto - c.tTela;
+      // (informativo, item 106 T5: a maior tarefa longa do fio entre a tela à vista e o pronto — a tela fica parada nela)
+      const longa = c.longas.filter(([t, d]) => t + d > c.tTela && t < c.tPronto).reduce((a, [, d]) => Math.max(a, d), 0);
       meta('E26a* a tela cedo (partida, 1280×720): à vista ≥ 1 s antes do 3D pronto e ≤ 1,5 s depois do começo da navegação',
-        `tela ${s1(c.tTela)} s, pronto ${s1(c.tPronto)} s (a tela ${s1(dt)} s antes)`, 'tela ≤ 1,5 s; ≥ 1,0 s antes do pronto', c.tTela != null && c.tPronto != null && c.tTela <= 1500 && dt >= 1000);
+        `tela ${s1(c.tTela)} s, pronto ${s1(c.tPronto)} s (a tela ${s1(dt)} s antes); informativo: a maior tarefa longa entre os dois ${s1(longa)} s`, 'tela ≤ 1,5 s; ≥ 1,0 s antes do pronto', c.tTela != null && c.tPronto != null && c.tTela <= 1500 && dt >= 1000);
       meta('E26b* antes do 3D: o Jogar e o ≡ esperam (aria-disabled, "carregando") e o toque neles não começa nada; a Visão tática já vale; com o 3D, o Jogar e o ≡ sozinhos e o foco igual, o fundo de hoje (jogo)',
         `${c.erro ? `erro ${c.erro}; ` : ''}antes ${a.antes}/${a.antes2}: carregando ${a.carregando}, fundo ${a.fundo}, Jogar ${a.jogar} (ocupada ${a.ocupada}), ≡ ${a.menu}; o toque no Jogar → ${JSON.stringify(a.depoisJogar)}; Visão ${a.visao}; ≡ → pausa ${a.menu2}; foco ${a.foco} · depois: carregando ${depois.carregando}, fundo ${depois.fundo}, Jogar ${depois.jogar}, ≡ ${depois.menu}, foco ${depois.foco}`,
         'antes: true, 2d, Jogar e ≡ true; aberta, tick 0, sem pré-jogo; sem; ≡ fechada · depois: false, jogo, sem aria-disabled, o mesmo foco',

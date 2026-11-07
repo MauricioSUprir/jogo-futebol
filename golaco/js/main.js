@@ -3642,6 +3642,21 @@ function ligarFundo3D() {
 }
 /** A barra de carga dentro das abas que esperam (as etapas do iniciar(): 0 a 1). */
 function progressoCedo(f) { if (pp?.aberta && !pronto3d) pp.progresso?.(f); }
+/**
+ * A tela cedo: os programas (shaders) do 1º desenho mandados compilar ANTES dele, com o fio livre — no 1º desenho o fio esperava a
+ * compilação inteira, com a tela à vista e parada (0,6–2 s no Chromium sem GPU dos testes). Com o KHR_parallel_shader_compile (uma GPU
+ * de verdade) o compileAsync espera os programas prontos sem segurar o fio; sem ele, o compile() manda compilar e o fio cede dois
+ * quadros (o processo da GPU compila enquanto isso: o toque no "Simular partida" é atendido). Só desenho (o hash não muda); um erro
+ * aqui só deixa a compilação para o 1º desenho, como antes.
+ */
+async function compilarAntesDoDesenho() {
+  const r = cena3d?.renderer;
+  if (!r || !cam) return;
+  try {
+    if (r.extensions?.has?.('KHR_parallel_shader_compile')) await r.compileAsync(cena3d.cena, cam.camera);
+    else { r.compile(cena3d.cena, cam.camera); await proximoQuadro(); await proximoQuadro(); }
+  } catch (_) { /* compila no 1º desenho */ }
+}
 /** Saiu antes do 3D (no TM o quadro fecha): a carga para no próximo await do iniciar(). */
 function pararCarga() { if (!pronto3d && TM) cargaCancelada = true; }
 /** Fecha a tela (sem começar nada; quem chama decide). A entrada volta, salvo com o pré-jogo rodando. */
@@ -4454,6 +4469,12 @@ async function iniciar() {
     // (o import já resolvido mas preso atrás das tarefas longas perdia a corrida para o relógio — 1 em 14 carregamentos sem a tela
     // com o módulo baixado: mais uma volta das tarefas antes de decidir pela reserva)
     if (!MOD_PP && ppCarga) await new Promise(ok => setTimeout(ok, 0));
+    if (cargaCancelada) return;
+  }
+  // (com a tela cedo à vista: os shaders do 1º desenho compilam com o fio livre)
+  if (pp?.aberta) {
+    progressoCedo(0.85);
+    await compilarAntesDoDesenho();
     if (cargaCancelada) return;
   }
   pronto3d = true;

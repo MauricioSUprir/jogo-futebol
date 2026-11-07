@@ -182,7 +182,7 @@ export function criarPrepartida(opc) {
       h += `<button type="button" class="pp-aba pp-btn${a.primaria ? ' primaria' : ''}${st.comIcone ? '' : ' sem-icone'}" data-pp="aba" data-aba="${esc(a.id)}" data-i="${i}" tabindex="-1" style="font-size:${r1(A.letra)}px"`
         + `${a.id === 'visao' || a.id === 'adversario' ? ' aria-pressed="false"' : ''}>${IC[a.icone] ?? ''}<span class="pp-aba-txt">${esc(a.texto)}</span>`
         + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}`
-        + `${a.espera3d ? '<i class="pp-carga" aria-hidden="true"></i>' : ''}</button>`;
+        + `${a.espera3d ? `<i class="pp-carga" aria-hidden="true" style="--carga:${(st.carga ?? 0.08).toFixed(3)}"></i>` : ''}</button>`;
     });
     h += '</div>';
     // a linha dos comandos (só no PC, pelo último meio)
@@ -697,7 +697,11 @@ export function criarPrepartida(opc) {
      * voltam sem refazer a tela (o foco fica onde está) e o fundo 2D dá lugar ao `fundo` ('abertura' | 'jogo') em ~0,3 s.
      */
     /** A tela cedo: quanto da carga do 3D já foi (0 a 1; a barra dentro das abas que esperam — main.js, pelas etapas do iniciar()). */
-    progresso(f) { raiz.style.setProperty('--carga', String(Math.max(0.04, Math.min(1, +f || 0)).toFixed(3))); },
+    progresso(f) {
+      st.carga = Math.max(0.04, Math.min(1, +f || 0));
+      // (na barra só — no raiz a variável herdada mudava o estilo de toda a tela: no Chromium sem GPU, uma pintura inteira por etapa)
+      for (const b of raiz.querySelectorAll('.pp-carga')) b.style.setProperty('--carga', st.carga.toFixed(3));
+    },
     carregando(v, fundo = null) {
       st.carregando = !!v;
       if (fundo) { st.fundo = fundo; raiz.dataset.fundo = fundo; }
