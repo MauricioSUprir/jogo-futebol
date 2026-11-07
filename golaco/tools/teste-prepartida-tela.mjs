@@ -1373,7 +1373,7 @@ if (faz('fotos')) {
 // tela, os requestAnimationFrame novos ficam numa fila até __soltarRaf() — a carga do 3D para no quadro seguinte e a régua mede o
 // estado "carregando" com calma. Na página de cima (o quadro do TM), as mensagens tm3d:* com a hora (performance.now dela).
 function sondaCedo(o) {
-  const M = window.__cedo = { tTela: null, tPronto: null, antes: null, msgs: [], erro: null };
+  const M = window.__cedo = { tTela: null, tPronto: null, naTela: null, antes: null, msgs: [], erro: null };
   if (window === window.top) {
     addEventListener('message', e => {
       const d = e.data;
@@ -1446,6 +1446,8 @@ function sondaCedo(o) {
     const pp = document.getElementById('prepartida'), c = document.getElementById('carregando');
     if (!pp || pp.hidden || !c || !(c.hidden || c.classList.contains('sumir'))) return;
     M.tTela = performance.now();
+    // (o estado da tela no instante em que ela fica à vista: o evaluate de depois pode chegar só com o 3D pronto)
+    try { const e = window.__golaco?.prepartida?.estado; M.naTela = { fundo: e?.fundo ?? null, carregando: e?.carregando ?? null, pronto: !!window.__golaco?.pronto }; } catch (_) { /* */ }
     if (o.segurar) window.__segura = true;
     if (o.acoes) setTimeout(() => { try { ACOES[o.acoes](); } catch (e) { M.erro = String(e?.stack ?? e).slice(0, 300); } }, 30);
   };
@@ -1526,10 +1528,9 @@ if (faz('cedo')) {
   {
     const { s, pg } = await abrirCedo({ w: 1280, h: 720, q: `${Q}&prepartida=1&prejogo=1&semente=${SEM}` });
     try {
-      const fundo0 = await pg.evaluate(() => window.__golaco.prepartida.estado?.fundo ?? null);
       await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 240000 });
       await quadros(pg, 3);
-      const c = await cedo(pg);
+      const c = await cedo(pg), fundo0 = c.naTela?.fundo ?? null;
       const d = await pg.evaluate(() => ({ fundo: window.__golaco.prepartida.estado?.fundo ?? null, fase: window.__golaco.prejogo?.fase ?? null, muda: window.__golaco.prejogo?.muda ?? null, aberta: !!window.__golaco.prepartida.aberta, tick: window.__golaco.mundo.tick, vis: getComputedStyle(document.getElementById('prejogo')).visibility }));
       meta('E26h* a partida com o pré-jogo: a tela cedo (fundo 2d) ≥ 1 s antes do 3D; com ele, a abertura calada de hoje atrás da tela',
         `tela ${s1(c.tTela)} s (fundo ${fundo0}), pronto ${s1(c.tPronto)} s; depois: ${JSON.stringify(d)}`, 'tela ≥ 1 s antes, 2d; abertura, aberta, tick 0, hidden',

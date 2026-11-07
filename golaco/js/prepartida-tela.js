@@ -110,6 +110,8 @@ export function criarPrepartida(opc) {
     aberta: false, modo: 'partida', fundo: 'jogo', dados: null, abas: [], canto: null, meu: 0, time: 0, visao: 'escalacao',
     foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, armadoId: null, armadoEm: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
     saindo: null, nomeMostrado: null, ultimaChave: '', destaqueCanto: false,
+    // a tela cedo (item 106): o 3D ainda monta — as abas com espera3d e o ≡ esperam; quando a tela abriu (performance.now)
+    carregando: false, abertaEm: null,
   };
   const medidor = document.createElement('canvas').getContext('2d');
   const medir = (t, px, peso = 600) => { medidor.font = `${peso} ${px}px "Inter TM", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; return medidor.measureText(t).width; };
@@ -179,7 +181,8 @@ export function criarPrepartida(opc) {
     st.abas.forEach((a, i) => {
       h += `<button type="button" class="pp-aba pp-btn${a.primaria ? ' primaria' : ''}${st.comIcone ? '' : ' sem-icone'}" data-pp="aba" data-aba="${esc(a.id)}" data-i="${i}" tabindex="-1" style="font-size:${r1(A.letra)}px"`
         + `${a.id === 'visao' || a.id === 'adversario' ? ' aria-pressed="false"' : ''}>${IC[a.icone] ?? ''}<span class="pp-aba-txt">${esc(a.texto)}</span>`
-        + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}</button>`;
+        + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}`
+        + `${a.espera3d ? '<i class="pp-carga" aria-hidden="true"></i>' : ''}</button>`;
     });
     h += '</div>';
     // a linha dos comandos (só no PC, pelo último meio)
@@ -390,6 +393,13 @@ export function criarPrepartida(opc) {
         b.querySelector('.pp-aba-txt').textContent = armado ? rotuloQueCabe([a.armar, ...(a.armarCurto ?? [])], st.comIcone) : a.texto;
         b.setAttribute('aria-label', armado ? a.armar : a.texto);
       }
+      // (a tela cedo, item 106: a aba que precisa do 3D espera — aria-disabled e aria-busy, não disabled: o foco fica nela e ela volta
+      // sozinha; a barra de carga dentro da aba, o mesmo rótulo e a mesma medida)
+      if (a.espera3d) {
+        b.classList.toggle('espera', st.carregando);
+        if (st.carregando) { b.setAttribute('aria-disabled', 'true'); b.setAttribute('aria-busy', 'true'); }
+        else { b.removeAttribute('aria-busy'); if (!(st.aguardando && a.id === 'pronto')) b.removeAttribute('aria-disabled'); }
+      }
       // (o Pronto esperando: aria-disabled, não disabled — o foco fica nele e o leitor de tela lê "Aguardando {nome}…")
       if (st.aguardando && a.id === 'pronto') {
         b.setAttribute('aria-disabled', 'true'); b.classList.add('aguardando');
@@ -399,6 +409,11 @@ export function criarPrepartida(opc) {
       const glifo = raiz.dataset.meio === 'pad' && !st.L.pc && (i === st.foco || a.id === 'personalizar');
       b.classList.toggle('sem-glifo', glifo && !cabeAba(b.querySelector('.pp-aba-txt').textContent, st.comIcone, true));
     });
+    // (o ≡ também espera o 3D: a pausa mexe nele — qualidade, horário, câmera)
+    const mn = raiz.querySelector('[data-pp="menu"]');
+    if (mn) {
+      if (st.carregando) { mn.setAttribute('aria-disabled', 'true'); mn.setAttribute('aria-busy', 'true'); } else { mn.removeAttribute('aria-disabled'); mn.removeAttribute('aria-busy'); }
+    }
     const c = raiz.querySelector('[data-pp="canto"]');
     if (c && st.canto) {
       const armado = st.armado === 'canto' && performance.now() < st.armadoAte;
@@ -511,6 +526,8 @@ export function criarPrepartida(opc) {
     if (a.id === 'visao') { proximaVista(); return; }
     // o Pronto é final (sem cancelar): esperando o outro, nada
     if (a.id === 'pronto' && st.aguardando) return;
+    // (a aba que precisa do 3D, antes dele: nada — ela volta sozinha; item 106)
+    if (a.espera3d && st.carregando) { viva('O estádio ainda está carregando.'); return; }
     if (a.id === 'adversario') { trocarTime(st.time === st.meu ? 1 - st.meu : st.meu); return; }
     if (a.armar) {
       if (armadoVale(a.id, t)) { desarmar(); marcarAbas(); opc.aoAcao(a.id); return; }
@@ -546,6 +563,11 @@ export function criarPrepartida(opc) {
     // (o layout é o da formação do time mostrado: refaz tudo e o foco fica onde estava)
     refazer();
     viva(`Mostrando ${st.dados.times[t].nome}`);
+  }
+  /** O ≡ (a pausa "antes do jogo"): espera o 3D (item 106). */
+  function menu() {
+    if (st.carregando) { viva('O estádio ainda está carregando.'); return; }
+    opc.aoAcao('opcoes');
   }
   /** Esc / Ⓑ: volta um nível (a vista → a escalação; o adversário → o meu time; no 1º nível: o Simular no TM, senão nada). */
   function voltar() {
@@ -583,7 +605,7 @@ export function criarPrepartida(opc) {
   function ligar() {
     abasEl().forEach((b, i) => aoTocar(b, e => { if (!opc.ocupado()) acionarAba(i, horaDo(e)); }));
     for (const b of raiz.querySelectorAll('.pp-time')) aoTocar(b, () => { if (!opc.ocupado()) { st.linhaFoco = 'barra'; trocarTime(+b.dataset.t); } });
-    aoTocar(raiz.querySelector('[data-pp="menu"]'), () => { if (!opc.ocupado() && !st.saindo) opc.aoAcao('opcoes'); });
+    aoTocar(raiz.querySelector('[data-pp="menu"]'), () => { if (!opc.ocupado() && !st.saindo) menu(); });
     aoTocar(raiz.querySelector('[data-pp="canto"]'), e => { if (!opc.ocupado()) acionarCanto(horaDo(e)); });
     // tocar no campinho = Personalizar (só na escalação e onde é editável); na Visão tática, tocar num disco mostra o nome
     const campo = raiz.querySelector('.pp-campo');
@@ -618,7 +640,7 @@ export function criarPrepartida(opc) {
     else if (c === 'Escape') { if (!e.repeat) voltar(); }
     else if (c === 'KeyQ') trocarTime(0);
     else if (c === 'KeyE') trocarTime(1);
-    else if (c === 'KeyP') { if (!e.repeat) opc.aoAcao('opcoes'); }
+    else if (c === 'KeyP') { if (!e.repeat) menu(); }
     else usado = false;
     if (usado) { e.preventDefault(); e.stopPropagation(); }
   }, true);
@@ -627,7 +649,7 @@ export function criarPrepartida(opc) {
     if (!raiz.contains(el) || el === raiz) { acionarAba(st.foco, t); return; }
     if (el.classList.contains('pp-aba')) acionarAba(+el.dataset.i, t);
     else if (el.classList.contains('pp-time')) trocarTime(+el.dataset.t);
-    else if (el.dataset.pp === 'menu') opc.aoAcao('opcoes');
+    else if (el.dataset.pp === 'menu') menu();
     else if (el.dataset.pp === 'canto') acionarCanto(t);
     else if (el.classList.contains('pp-disco')) mostrarNomeDisco(el);
     else acionarAba(st.foco, t);
@@ -646,11 +668,15 @@ export function criarPrepartida(opc) {
     raiz,
     get aberta() { return st.aberta; },
     /**
-     * Abre: {modo, fundo ('abertura' | 'jogo'), dados (prepartida.js dadosDaPartida), abas: [{id, texto, icone, primaria, armar}],
-     * canto: {texto, armar} | null, meu: o meu time, foco: o id da aba com o foco (padrão a 1ª)}.
+     * Abre: {modo, fundo ('abertura' | 'jogo' | '2d': o da tela cedo, só CSS), carregando (a tela cedo: o 3D ainda monta — item 106),
+     * dados (prepartida.js dadosDaPartida), abas: [{id, texto, icone, primaria, armar, espera3d}], canto: {texto, armar} | null, meu: o
+     * meu time, foco: o id da aba com o foco (padrão a 1ª)}.
      */
     abrir(o) {
       st.modo = o.modo; st.fundo = o.fundo; st.dados = o.dados; st.abas = o.abas; st.canto = o.canto ?? null;
+      st.carregando = !!o.carregando; st.abertaEm = performance.now();
+      raiz.dataset.fundo = st.fundo ?? 'jogo';
+      raiz.classList.toggle('carregando', st.carregando);
       st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; desarmar(); st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1;
       st.saindo = null;
       st.foco = Math.max(0, st.abas.findIndex(a => a.id === (o.foco ?? st.abas[0]?.id)));
@@ -664,7 +690,21 @@ export function criarPrepartida(opc) {
       raiz.querySelector('.pp-campo')?.classList.add('cascata');
       requestAnimationFrame(() => raiz.classList.remove('entrando'));
       focarAba(st.foco);
-      viva(`Antes do jogo. ${st.dados.times[0].nome} contra ${st.dados.times[1].nome}.`);
+      viva(`Antes do jogo. ${st.dados.times[0].nome} contra ${st.dados.times[1].nome}.${st.carregando ? ' Carregando o estádio…' : ''}`);
+    },
+    /**
+     * A tela cedo (item 106): carregando = true enquanto o 3D monta (as abas com espera3d e o ≡ esperam); false com ele — as abas
+     * voltam sem refazer a tela (o foco fica onde está) e o fundo 2D dá lugar ao `fundo` ('abertura' | 'jogo') em ~0,3 s.
+     */
+    /** A tela cedo: quanto da carga do 3D já foi (0 a 1; a barra dentro das abas que esperam — main.js, pelas etapas do iniciar()). */
+    progresso(f) { raiz.style.setProperty('--carga', String(Math.max(0.04, Math.min(1, +f || 0)).toFixed(3))); },
+    carregando(v, fundo = null) {
+      st.carregando = !!v;
+      if (fundo) { st.fundo = fundo; raiz.dataset.fundo = fundo; }
+      raiz.classList.toggle('carregando', st.carregando);
+      if (!st.aberta || !st.L) return;
+      marcarAbas();
+      if (!v) viva('O estádio está pronto.');
     },
     /** Os dados novos (Personalizar, o Livre, as opções): refaz com o mesmo time, a mesma vista e o mesmo foco. */
     dados(d) {
@@ -725,7 +765,7 @@ export function criarPrepartida(opc) {
       else if (a === 'menu-dir') mover('dir');
       else if (a === 'menu-ok') ativar(document.activeElement);
       else if (a === 'menu-voltar') voltar();
-      else if (a === 'pausa') opc.aoAcao('opcoes');
+      else if (a === 'pausa') menu();
     },
     focar,
     /**
@@ -764,7 +804,7 @@ export function criarPrepartida(opc) {
         aberta: st.aberta, modo: st.modo, fundo: st.fundo, regime: st.L?.regime ?? null, abas: st.abas.map(a => a.id),
         foco: st.abas[st.foco]?.id ?? null, focoDom: document.activeElement?.closest?.('#prepartida') ? (document.activeElement.dataset.aba ?? document.activeElement.dataset.pp ?? document.activeElement.className) : null,
         time: st.time, meu: st.meu, visao: st.visao, armado: st.armado, aguardando: st.aguardando, disco: st.discoFoco,
-        destaqueCanto: !!st.destaqueCanto,
+        destaqueCanto: !!st.destaqueCanto, carregando: st.carregando, abertaEm: st.abertaEm,
       };
     },
     get layoutAtual() { return st.L; },

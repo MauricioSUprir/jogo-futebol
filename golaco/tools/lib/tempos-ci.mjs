@@ -131,8 +131,9 @@ export const TEMPOS_NAVEGADOR = {
   // (item 124, revisão: + o E14r, 3 páginas ?tm num quadro — em pé com toque, o PC com o quadro preso 3,6 s e a reserva —; ~+60 s
   // estimado sobre os 429,5 s do log do 1º CI do #618 (item 114); acertar pelo log do CI)
   // (item 106: 540,8 s no log do deploy do #634; + o E26, a tela cedo — 8 páginas, 4 delas ?tm num quadro: 85 s aqui na base com a
-  // máquina ociosa —; acertar pelo log do CI)
-  'teste-prepartida-tela.mjs': 625,
+  // máquina ociosa —; e cada página com a tela fica ~1,5 s mais lenta até o pronto no Chromium sem GPU (a tela à vista disputa o
+  // processo da GPU com a carga do 3D): 829 s aqui o teste inteiro; acertar pelo log do CI)
+  'teste-prepartida-tela.mjs': 700,
   'teste-som-jogo.mjs': 105,
   'teste-rede-tela.mjs': 53,
   // (itens 59 e 60: + o H12 nas 3 telas com e sem entalhe e 4 tamanhos, o H13 numa página a mais e a de ?prints=1; item 32: o
