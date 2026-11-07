@@ -6343,3 +6343,13 @@ substituição, sem a conferência, `pe ?? 0` no `jogador.js`, sem a camada na c
 `teste-prejogo` (navegador: andantes na tela e o pior plano do celular), `teste-cenas`, `teste-substituicao`,
 `teste-comemoracao`, `teste-tecnicos`, `teste-ossos` (O2: 117 → 168 saltos, 0,0231% ≤ 0,03% — os novos nos treinadores e na
 comemoração; na partida, 66 como antes) e `teste-corpo-tela`.
+
+**O custo nos treinadores (06/11, depois do deploy do #632):** a camada levou o T14 do `teste-tecnicos` (o custo dos dois
+treinadores e das duas poses por passo, meta ≤ 50 µs) de 43 para 50,7 µs no CI do deploy (aqui, 18 → 24,5 µs). Sem mudar
+o desenho (as poses dos treinadores bit a bit iguais em 4 partidas inteiras, 59 mil poses cada): (1) o `Math.hypot` do
+`marcha.js` virou `Math.sqrt` da soma (mais rápido no V8; no Float32 da pose, igual); (2) no `poseTec`, com as DUAS mãos
+presas por inteiro na postura ou no gesto (peso 1, sem mistura nem a troca medida no passo) a camada não calcula o braço
+(`marchar(..., semBraco)`): o `aplicarMao` refaz cada braço do ombro ao alvo com o polo fixo e o braço da camada nunca chegava
+ao desenho; (3) a conferência do braço do treinador é 1 por construção (a pose dele é sempre a da passada: os gestos e as
+posturas entram depois) e não é mais calculada a cada passo. Aqui: 24,5 → ~21 µs (a base, 18). Testado e NÃO entrou: pular a
+camada com o treinador parado (muda a pose em até 39 mm: a camada também endireita a pelve e o tórax de quem para).

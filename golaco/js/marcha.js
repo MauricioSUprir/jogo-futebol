@@ -80,6 +80,7 @@ export const MARCHA = {
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
 const suave = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+function hyp(a, b, c = 0) { return Math.sqrt(a * a + b * b + c * c); }
 function difAng(a, b) { let d = (b - a) % (2 * Math.PI); if (d > Math.PI) d -= 2 * Math.PI; else if (d < -Math.PI) d += 2 * Math.PI; return d; }
 const LMAX = (JOGADOR.coxa + JOGADOR.canela) * 0.998;
 
@@ -159,10 +160,10 @@ const misturaAlvo = v => suave(MARCHA.vSai[0], MARCHA.vSai[1], v);
  * amp·sen(π·fase) e a dobra fixa `flex`, dos ombros da pose; a camada inteira até MARCHA.confere[0], nada além de [1].
  */
 export function conferencia(P, j) {
-  const s = Math.hypot(j.vx, j.vz), fase = j.fase;
+  const s = hyp(j.vx, j.vz), fase = j.fase;
   const iE = J.ombroE * 3, iD = J.ombroD * 3;
   let orx = P[iD] - P[iE], orz = P[iD + 2] - P[iE + 2];
-  const l = Math.hypot(orx, orz) || 1;
+  const l = hyp(orx, orz) || 1;
   orx /= l; orz /= l;
   const ofx = orz, ofz = -orx;
   const amp = lerp(0.25, 0.95, clamp(s / 7, 0, 1)), flex = lerp(0.35, 1.45, clamp(s / 5, 0, 1));
@@ -173,16 +174,16 @@ export function conferencia(P, j) {
     const bal = amp * Math.sin(Math.PI * fase) * (lado < 0 ? 1 : -1);
     braco(P[iO * 3], P[iO * 3 + 1], P[iO * 3 + 2], ofx, ofz, orx, orz, lado, bal, bal + flex, abre);
     desvio = Math.max(desvio,
-      Math.hypot(P[iC * 3] - _C[0], P[iC * 3 + 1] - _C[1], P[iC * 3 + 2] - _C[2]),
-      Math.hypot(P[iM * 3] - _H[0], P[iM * 3 + 1] - _H[1], P[iM * 3 + 2] - _H[2]));
+      hyp(P[iC * 3] - _C[0], P[iC * 3 + 1] - _C[1], P[iC * 3 + 2] - _C[2]),
+      hyp(P[iM * 3] - _H[0], P[iM * 3 + 1] - _H[1], P[iM * 3 + 2] - _H[2]));
   }
   return 1 - suave(MARCHA.confere[0], MARCHA.confere[1], desvio);
 }
 
-export function marchar(P, j, mp, w = 1, est = null) {
+export function marchar(P, j, mp, w = 1, est = null, semBraco = false) {
   const M = MARCHA;
   if (!M.ligada || !(w > 0) || j.posicao === 'GOL') return 0;
-  const s = Math.hypot(j.vx, j.vz), h = j.rumo, fase = j.fase;
+  const s = hyp(j.vx, j.vz), h = j.rumo, fase = j.fase;
   const vf = est ? est.f : j.vx * Math.cos(h) + j.vz * Math.sin(h);
   // k: 0 = a camada, 1 = a pose do jogo (a corrida). Com o estado, as misturas filtradas (rampas de taxa fixa) passam por um
   // smoothstep: a mão sai e chega sem o tranco do começo e do fim da rampa
@@ -197,7 +198,7 @@ export function marchar(P, j, mp, w = 1, est = null) {
   if (wt <= 0) return 0;
   const iE = J.ombroE * 3, iD = J.ombroD * 3;
   let orx = P[iD] - P[iE], orz = P[iD + 2] - P[iE + 2];
-  let l = Math.hypot(orx, orz) || 1;
+  let l = hyp(orx, orz) || 1;
   orx /= l; orz /= l;
   let ofx = orz, ofz = -orx;
   const amp = lerp(0.25, 0.95, clamp(s / 7, 0, 1)), flex = lerp(0.35, 1.45, clamp(s / 5, 0, 1));
@@ -236,7 +237,7 @@ export function marchar(P, j, mp, w = 1, est = null) {
   // (a dobra da camada pesa pela velocidade para a frente; com o estado, pelo ganho filtrado — o vf passando pelo zero na
   // meia-volta andando para trás levava o cotovelo da camada à pose e de volta em 3 ticks)
   const wA = suave(0, 0.8, Math.abs(est ? ganho * M.vCheia : vf)), Aa = Math.max(Math.abs(A), M.braco * mp.braco);
-  for (let q = 0; q < 2; q++) {
+  if (!semBraco) for (let q = 0; q < 2; q++) {
     const lado = q ? 1 : -1, iO = q ? J.ombroD : J.ombroE, iC = q ? J.cotoveloD : J.cotoveloE, iM = q ? J.maoD : J.maoE;
     const ox = P[iO * 3], oy = P[iO * 3 + 1], oz = P[iO * 3 + 2];
     const b = A * gB * (lado < 0 ? 1 : -1);
@@ -248,8 +249,8 @@ export function marchar(P, j, mp, w = 1, est = null) {
     // misturado) — o osso não estica; misturando o cotovelo, um cotovelo que pula na pose (a IK de um gesto da comemoração
     // que vira de lado) passava o pulo para a mão
     // (os comprimentos são os do braço da pose: o do anim.js não é exatamente BRACO/ANTEBRACO com o braço aberto)
-    const L1 = Math.hypot(P[iC * 3] - ox, P[iC * 3 + 1] - oy, P[iC * 3 + 2] - oz);
-    const L2 = Math.hypot(P[iM * 3] - P[iC * 3], P[iM * 3 + 1] - P[iC * 3 + 1], P[iM * 3 + 2] - P[iC * 3 + 2]);
+    const L1 = hyp(P[iC * 3] - ox, P[iC * 3 + 1] - oy, P[iC * 3 + 2] - oz);
+    const L2 = hyp(P[iM * 3] - P[iC * 3], P[iM * 3 + 1] - P[iC * 3 + 1], P[iM * 3 + 2] - P[iC * 3 + 2]);
     const hx = lerp(P[iM * 3], _H[0], wt), hy = lerp(P[iM * 3 + 1], _H[1], wt), hz = lerp(P[iM * 3 + 2], _H[2], wt);
     const px = lerp(P[iC * 3], _C[0], wt) - ox, py = lerp(P[iC * 3 + 1], _C[1], wt) - oy, pz = lerp(P[iC * 3 + 2], _C[2], wt) - oz;
     ikDois(ox, oy, oz, hx, hy, hz, px, py, pz, L1, L2, P, iC, iM);
@@ -286,14 +287,14 @@ export function marchar(P, j, mp, w = 1, est = null) {
  */
 function ikDois(ox, oy, oz, hx, hy, hz, px, py, pz, L1, L2, P, iC, iM) {
   let dx = hx - ox, dy = hy - oy, dz = hz - oz;
-  const d0 = Math.hypot(dx, dy, dz) || 1e-9;
+  const d0 = hyp(dx, dy, dz) || 1e-9;
   const ux = dx / d0, uy = dy / d0, uz = dz / d0;
   const d = Math.min(d0, (L1 + L2) * 0.9999);
   const a = (L1 * L1 - L2 * L2 + d * d) / (2 * d);
   const hh = Math.sqrt(Math.max(0, L1 * L1 - a * a));
   const pd = px * ux + py * uy + pz * uz;
   let qx = px - pd * ux, qy = py - pd * uy, qz = pz - pd * uz;
-  const ql = Math.hypot(qx, qy, qz) || 1;
+  const ql = hyp(qx, qy, qz) || 1;
   qx /= ql; qy /= ql; qz /= ql;
   P[iC * 3] = ox + ux * a + qx * hh; P[iC * 3 + 1] = oy + uy * a + qy * hh; P[iC * 3 + 2] = oz + uz * a + qz * hh;
   P[iM * 3] = ox + ux * d; P[iM * 3 + 1] = oy + uy * d; P[iM * 3 + 2] = oz + uz * d;
@@ -306,7 +307,7 @@ function cabe(P, px, pz, a) {
     const iQ = (k ? J.quadrilD : J.quadrilE) * 3, iT = (k ? J.tornozeloD : J.tornozeloE) * 3;
     const x = P[iQ] - px, z = P[iQ + 2] - pz;
     const qx = px + x * c - z * s, qz = pz + x * s + z * c;
-    if (Math.hypot(P[iT] - qx, P[iT + 1] - P[iQ + 1], P[iT + 2] - qz) > LMAX) return false;
+    if (hyp(P[iT] - qx, P[iT + 1] - P[iQ + 1], P[iT + 2] - qz) > LMAX) return false;
   }
   return true;
 }
@@ -319,7 +320,7 @@ function cabe(P, px, pz, a) {
  */
 export function filtrarMarcha(j, est, dt, inicio = false, P = null) {
   const M = MARCHA;
-  const v = Math.hypot(j.vx, j.vz), f = j.vx * Math.cos(j.rumo) + j.vz * Math.sin(j.rumo);
+  const v = hyp(j.vx, j.vz), f = j.vx * Math.cos(j.rumo) + j.vz * Math.sin(j.rumo);
   const ct = P ? conferencia(P, j) : null;
   if (inicio || est.v == null) {
     est.v = v; est.f = f; est.k = misturaAlvo(v); est.g = ganhoAlvo(f); est.c = ct;
