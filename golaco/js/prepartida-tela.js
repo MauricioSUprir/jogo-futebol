@@ -108,8 +108,11 @@ export function criarPrepartida(opc) {
   document.body.appendChild(sonda);
   const st = {
     aberta: false, modo: 'partida', fundo: 'jogo', dados: null, abas: [], canto: null, meu: 0, time: 0, visao: 'escalacao',
-    foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, armadoId: null, armadoEm: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
+    foco: 0, linhaFoco: 'abas', armado: null, armadoAte: 0, armadoId: null, armadoEm: 0, armadoVisto: 0, discoFoco: -1, L: null, V: null, aguardando: null, padAntes: [],
     saindo: null, nomeMostrado: null, ultimaChave: '', destaqueCanto: false,
+    // a tela cedo (item 106): o 3D ainda monta — as abas com espera3d e o ≡ esperam; quando a tela abriu (performance.now); quanto da
+    // carga já foi (a barra dentro das abas que esperam); esperaAba: a aba cujo módulo ainda baixa (o Personalizar antes do editor chegar)
+    carregando: false, abertaEm: null, carga: 0.08, esperaAba: null,
   };
   const medidor = document.createElement('canvas').getContext('2d');
   const medir = (t, px, peso = 600) => { medidor.font = `${peso} ${px}px "Inter TM", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif`; return medidor.measureText(t).width; };
@@ -179,7 +182,8 @@ export function criarPrepartida(opc) {
     st.abas.forEach((a, i) => {
       h += `<button type="button" class="pp-aba pp-btn${a.primaria ? ' primaria' : ''}${st.comIcone ? '' : ' sem-icone'}" data-pp="aba" data-aba="${esc(a.id)}" data-i="${i}" tabindex="-1" style="font-size:${r1(A.letra)}px"`
         + `${a.id === 'visao' || a.id === 'adversario' ? ' aria-pressed="false"' : ''}>${IC[a.icone] ?? ''}<span class="pp-aba-txt">${esc(a.texto)}</span>`
-        + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}</button>`;
+        + `<i class="pp-glifo pp-g-a" aria-hidden="true">A</i>${a.id === 'personalizar' ? '<i class="pp-glifo pp-g-y" aria-hidden="true">Y</i>' : ''}`
+        + `${a.espera3d ? `<i class="pp-carga" aria-hidden="true" style="--carga:${st.carga.toFixed(3)}"></i>` : ''}</button>`;
     });
     h += '</div>';
     // a linha dos comandos (só no PC, pelo último meio)
@@ -390,6 +394,16 @@ export function criarPrepartida(opc) {
         b.querySelector('.pp-aba-txt').textContent = armado ? rotuloQueCabe([a.armar, ...(a.armarCurto ?? [])], st.comIcone) : a.texto;
         b.setAttribute('aria-label', armado ? a.armar : a.texto);
       }
+      // (a tela cedo, item 106: a aba que precisa do 3D espera — aria-disabled e aria-busy, não disabled: o foco fica nela e ela volta
+      // sozinha; a barra de carga dentro da aba, o mesmo rótulo e a mesma medida. A aba cujo módulo ainda baixa — o Personalizar antes
+      // do editor chegar — fica só ocupada: apagada e com aria-busy, sem aria-disabled — revisão do item 106)
+      const espera3d = !!a.espera3d && st.carregando, ocupada = espera3d || st.esperaAba === a.id;
+      b.classList.toggle('espera', ocupada);
+      if (ocupada) b.setAttribute('aria-busy', 'true'); else b.removeAttribute('aria-busy');
+      if (a.espera3d) {
+        if (espera3d) b.setAttribute('aria-disabled', 'true');
+        else if (!(st.aguardando && a.id === 'pronto')) b.removeAttribute('aria-disabled');
+      }
       // (o Pronto esperando: aria-disabled, não disabled — o foco fica nele e o leitor de tela lê "Aguardando {nome}…")
       if (st.aguardando && a.id === 'pronto') {
         b.setAttribute('aria-disabled', 'true'); b.classList.add('aguardando');
@@ -399,6 +413,11 @@ export function criarPrepartida(opc) {
       const glifo = raiz.dataset.meio === 'pad' && !st.L.pc && (i === st.foco || a.id === 'personalizar');
       b.classList.toggle('sem-glifo', glifo && !cabeAba(b.querySelector('.pp-aba-txt').textContent, st.comIcone, true));
     });
+    // (o ≡ também espera o 3D: a pausa mexe nele — qualidade, horário, câmera)
+    const mn = raiz.querySelector('[data-pp="menu"]');
+    if (mn) {
+      if (st.carregando) { mn.setAttribute('aria-disabled', 'true'); mn.setAttribute('aria-busy', 'true'); } else { mn.removeAttribute('aria-disabled'); mn.removeAttribute('aria-busy'); }
+    }
     const c = raiz.querySelector('[data-pp="canto"]');
     if (c && st.canto) {
       const armado = st.armado === 'canto' && performance.now() < st.armadoAte;
@@ -500,10 +519,16 @@ export function criarPrepartida(opc) {
   // pela hora em que o quadro o processa: com o quadro pesado, dois toques com 1,8 s entre eles chegavam com 3,05 s e o 2º armava de
   // novo (item 124, revisão A5 — o Simular passou a ser o caminho de toda partida do TM). O rótulo volta sozinho pela hora do
   // processamento (atualizar); o armadoId fica: um 2º toque FEITO dentro dos 3 s ainda vale. Sem o evento (o controle): agora.
+  // A janela do 2º toque conta também da hora em que o 1º foi ATENDIDO (armadoVisto: o "Toque de novo" aparece aí): com a tela cedo
+  // (item 106) o 1º toque podia cair numa tarefa longa do 3D e ser atendido 2,6–3,8 s depois — o 2º toque, feito depois de ler o pedido,
+  // já chegava fora dos 3 s contados do 1º e armava de novo (3 toques; avaliação do item 106). Vale o toque feito ATÉ 3 s depois do 1º
+  // (o toque duplo rápido) ou até 3 s depois de o pedido aparecer; o feito entre os dois, mais de 3 s depois do 1º e sem o pedido à
+  // vista, arma de novo.
   const horaDo = e => (e && Number.isFinite(e.timeStamp) && e.timeStamp > 0 ? e.timeStamp : performance.now());
   function desarmar() { st.armado = null; st.armadoId = null; }
-  function armar(id, t) { st.armado = st.armadoId = id; st.armadoEm = t; st.armadoAte = performance.now() + PREPARTIDA.armadoMs; }
-  const armadoVale = (id, t) => st.armadoId === id && t >= st.armadoEm && t - st.armadoEm < PREPARTIDA.armadoMs;
+  function armar(id, t) { st.armado = st.armadoId = id; st.armadoEm = t; st.armadoVisto = performance.now(); st.armadoAte = st.armadoVisto + PREPARTIDA.armadoMs; }
+  const armadoVale = (id, t) => st.armadoId === id && t >= st.armadoEm
+    && (t - st.armadoEm < PREPARTIDA.armadoMs || (t >= st.armadoVisto && t - st.armadoVisto < PREPARTIDA.armadoMs));
   function acionarAba(i, t = performance.now()) {
     const a = st.abas[i];
     if (!a || st.saindo) return;
@@ -511,6 +536,8 @@ export function criarPrepartida(opc) {
     if (a.id === 'visao') { proximaVista(); return; }
     // o Pronto é final (sem cancelar): esperando o outro, nada
     if (a.id === 'pronto' && st.aguardando) return;
+    // (a aba que precisa do 3D, antes dele: nada — ela volta sozinha —, com o aviso à vista: item 106)
+    if (a.espera3d && st.carregando) { avisoCarga(); return; }
     if (a.id === 'adversario') { trocarTime(st.time === st.meu ? 1 - st.meu : st.meu); return; }
     if (a.armar) {
       if (armadoVale(a.id, t)) { desarmar(); marcarAbas(); opc.aoAcao(a.id); return; }
@@ -546,6 +573,25 @@ export function criarPrepartida(opc) {
     // (o layout é o da formação do time mostrado: refaz tudo e o foco fica onde estava)
     refazer();
     viva(`Mostrando ${st.dados.times[t].nome}`);
+  }
+  /** O ≡ (a pausa "antes do jogo"): espera o 3D (item 106). */
+  function menu() {
+    if (st.carregando) { avisoCarga(); return; }
+    opc.aoAcao('opcoes');
+  }
+  // o aviso discreto no canto por `ms` (o som que não ligou pelo controle, o "Você saiu da partida.", o toque no que espera o 3D)
+  let avTimer = 0, avCarga = false;
+  function aviso(texto, ms = 2000) {
+    const a = raiz.querySelector('#pp-aviso');
+    if (!a) return;
+    a.textContent = texto; a.hidden = false; avCarga = false;
+    clearTimeout(avTimer); avTimer = setTimeout(() => { a.hidden = true; }, ms);
+  }
+  // o toque no que espera o 3D (item 106): o leitor de tela e o aviso À VISTA (a aba sozinha não dava retorno nenhum — avaliação do item
+  // 106); some quando o 3D fica pronto
+  function avisoCarga() {
+    const t = 'O estádio ainda está carregando.';
+    viva(t); aviso(t, 1800); avCarga = true;
   }
   /** Esc / Ⓑ: volta um nível (a vista → a escalação; o adversário → o meu time; no 1º nível: o Simular no TM, senão nada). */
   function voltar() {
@@ -583,7 +629,7 @@ export function criarPrepartida(opc) {
   function ligar() {
     abasEl().forEach((b, i) => aoTocar(b, e => { if (!opc.ocupado()) acionarAba(i, horaDo(e)); }));
     for (const b of raiz.querySelectorAll('.pp-time')) aoTocar(b, () => { if (!opc.ocupado()) { st.linhaFoco = 'barra'; trocarTime(+b.dataset.t); } });
-    aoTocar(raiz.querySelector('[data-pp="menu"]'), () => { if (!opc.ocupado() && !st.saindo) opc.aoAcao('opcoes'); });
+    aoTocar(raiz.querySelector('[data-pp="menu"]'), () => { if (!opc.ocupado() && !st.saindo) menu(); });
     aoTocar(raiz.querySelector('[data-pp="canto"]'), e => { if (!opc.ocupado()) acionarCanto(horaDo(e)); });
     // tocar no campinho = Personalizar (só na escalação e onde é editável); na Visão tática, tocar num disco mostra o nome
     const campo = raiz.querySelector('.pp-campo');
@@ -618,7 +664,7 @@ export function criarPrepartida(opc) {
     else if (c === 'Escape') { if (!e.repeat) voltar(); }
     else if (c === 'KeyQ') trocarTime(0);
     else if (c === 'KeyE') trocarTime(1);
-    else if (c === 'KeyP') { if (!e.repeat) opc.aoAcao('opcoes'); }
+    else if (c === 'KeyP') { if (!e.repeat) menu(); }
     else usado = false;
     if (usado) { e.preventDefault(); e.stopPropagation(); }
   }, true);
@@ -627,7 +673,7 @@ export function criarPrepartida(opc) {
     if (!raiz.contains(el) || el === raiz) { acionarAba(st.foco, t); return; }
     if (el.classList.contains('pp-aba')) acionarAba(+el.dataset.i, t);
     else if (el.classList.contains('pp-time')) trocarTime(+el.dataset.t);
-    else if (el.dataset.pp === 'menu') opc.aoAcao('opcoes');
+    else if (el.dataset.pp === 'menu') menu();
     else if (el.dataset.pp === 'canto') acionarCanto(t);
     else if (el.classList.contains('pp-disco')) mostrarNomeDisco(el);
     else acionarAba(st.foco, t);
@@ -646,12 +692,16 @@ export function criarPrepartida(opc) {
     raiz,
     get aberta() { return st.aberta; },
     /**
-     * Abre: {modo, fundo ('abertura' | 'jogo'), dados (prepartida.js dadosDaPartida), abas: [{id, texto, icone, primaria, armar}],
-     * canto: {texto, armar} | null, meu: o meu time, foco: o id da aba com o foco (padrão a 1ª)}.
+     * Abre: {modo, fundo ('abertura' | 'jogo' | '2d': o da tela cedo, só CSS), carregando (a tela cedo: o 3D ainda monta — item 106),
+     * dados (prepartida.js dadosDaPartida), abas: [{id, texto, icone, primaria, armar, espera3d}], canto: {texto, armar} | null, meu: o
+     * meu time, foco: o id da aba com o foco (padrão a 1ª)}.
      */
     abrir(o) {
       st.modo = o.modo; st.fundo = o.fundo; st.dados = o.dados; st.abas = o.abas; st.canto = o.canto ?? null;
-      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; desarmar(); st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1;
+      st.carregando = !!o.carregando; st.abertaEm = performance.now();
+      raiz.dataset.fundo = st.fundo ?? 'jogo';
+      raiz.classList.toggle('carregando', st.carregando);
+      st.meu = o.meu ?? 0; st.time = st.meu; st.visao = 'escalacao'; desarmar(); st.aguardando = null; st.destaqueCanto = false; st.discoFoco = -1; st.esperaAba = null;
       st.saindo = null;
       st.foco = Math.max(0, st.abas.findIndex(a => a.id === (o.foco ?? st.abas[0]?.id)));
       st.aberta = true;
@@ -664,7 +714,31 @@ export function criarPrepartida(opc) {
       raiz.querySelector('.pp-campo')?.classList.add('cascata');
       requestAnimationFrame(() => raiz.classList.remove('entrando'));
       focarAba(st.foco);
-      viva(`Antes do jogo. ${st.dados.times[0].nome} contra ${st.dados.times[1].nome}.`);
+      viva(`Antes do jogo. ${st.dados.times[0].nome} contra ${st.dados.times[1].nome}.${st.carregando ? ' Carregando o estádio…' : ''}`);
+    },
+    /** A tela cedo: quanto da carga do 3D já foi (0 a 1; a barra dentro das abas que esperam — main.js, pelas etapas do iniciar()). */
+    progresso(f) {
+      st.carga = Math.max(0.04, Math.min(1, +f || 0));
+      // (na barra só — no raiz a variável herdada mudava o estilo de toda a tela: no Chromium sem GPU, uma pintura inteira por etapa)
+      for (const b of raiz.querySelectorAll('.pp-carga')) b.style.setProperty('--carga', st.carga.toFixed(3));
+    },
+    /**
+     * A tela cedo (item 106): carregando = true enquanto o 3D monta (as abas com espera3d e o ≡ esperam); false com ele — as abas
+     * voltam sem refazer a tela (o foco fica onde está) e o fundo 2D dá lugar ao `fundo` ('abertura' | 'jogo') em ~0,3 s.
+     */
+    carregando(v, fundo = null) {
+      st.carregando = !!v;
+      if (fundo) { st.fundo = fundo; raiz.dataset.fundo = fundo; }
+      raiz.classList.toggle('carregando', st.carregando);
+      if (!v && avCarga) { const a = raiz.querySelector('#pp-aviso'); if (a) a.hidden = true; avCarga = false; }
+      if (!st.aberta || !st.L) return;
+      marcarAbas();
+      if (!v) viva('O estádio está pronto.');
+    },
+    /** A aba `id` ocupada enquanto o módulo dela baixa (o Personalizar antes do editor chegar; null = nenhuma; revisão do item 106). */
+    esperando(id) {
+      st.esperaAba = id ?? null;
+      if (st.aberta && st.L) marcarAbas();
     },
     /** Os dados novos (Personalizar, o Livre, as opções): refaz com o mesmo time, a mesma vista e o mesmo foco. */
     dados(d) {
@@ -725,7 +799,7 @@ export function criarPrepartida(opc) {
       else if (a === 'menu-dir') mover('dir');
       else if (a === 'menu-ok') ativar(document.activeElement);
       else if (a === 'menu-voltar') voltar();
-      else if (a === 'pausa') opc.aoAcao('opcoes');
+      else if (a === 'pausa') menu();
     },
     focar,
     /**
@@ -752,19 +826,14 @@ export function criarPrepartida(opc) {
       if (v && st.canto) viva(`Se ${st.aguardando ?? 'o outro'} não voltar, você pode usar ${st.canto.texto}.`);
     },
     /** Um aviso discreto no canto por `ms` (o som que não ligou pelo controle). */
-    aviso(texto, ms = 2000) {
-      const a = raiz.querySelector('#pp-aviso');
-      if (!a) return;
-      a.textContent = texto; a.hidden = false;
-      clearTimeout(this._av); this._av = setTimeout(() => { a.hidden = true; }, ms);
-    },
+    aviso,
     /** O estado (testes): aberta, modo, fundo, regime, abas, foco, time, visão, armado, layout. */
     get estado() {
       return {
         aberta: st.aberta, modo: st.modo, fundo: st.fundo, regime: st.L?.regime ?? null, abas: st.abas.map(a => a.id),
         foco: st.abas[st.foco]?.id ?? null, focoDom: document.activeElement?.closest?.('#prepartida') ? (document.activeElement.dataset.aba ?? document.activeElement.dataset.pp ?? document.activeElement.className) : null,
         time: st.time, meu: st.meu, visao: st.visao, armado: st.armado, aguardando: st.aguardando, disco: st.discoFoco,
-        destaqueCanto: !!st.destaqueCanto,
+        destaqueCanto: !!st.destaqueCanto, carregando: st.carregando, abertaEm: st.abertaEm,
       };
     },
     get layoutAtual() { return st.L; },

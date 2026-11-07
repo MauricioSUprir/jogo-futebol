@@ -11,9 +11,14 @@
    Como os dois conversam (mesmo endereço = mesmo armazenamento do navegador):
      TM → localStorage["tm3d:pedido:<id>"] = { v, id, titulo, home, away, userSide, controle, partida }
           e abre o 3D num quadro (iframe) por cima do TM: golaco/index.html?tm=<id>
-     3D → window.parent.postMessage({ tipo: "tm3d:pronto" | "tm3d:fim" | "tm3d:sair", id, resultado, motivo? })
+     3D → window.parent.postMessage({ tipo: "tm3d:tela" | "tm3d:pronto" | "tm3d:fim" | "tm3d:sair", id, resultado, motivo? })
           (o resultado também fica em localStorage["tm3d:resultado:<id>"], se a mensagem se perder; o 'tm3d:sair' diz o motivo:
           "simular" = o "Simular partida" da tela, calado; "erro" = o 3D não subiu — sem WebGL 2, pedido sumido —, com o aviso)
+          'tm3d:tela' (v380, item 106 do GOLAÇO — a tela cedo): a tela antes do jogo do 3D já está à vista, ENQUANTO o 3D monta (ela tem o
+          "Simular partida" e o [<]): o TM tira o aviso "Abrindo o estádio 3D…" e o X e para o aviso de demora; a porta do Online 3D
+          continua no 'tm3d:pronto' (o 3D pronto). O motor antigo (futebol3d/) não manda o 'tm3d:tela': o 'tm3d:pronto' faz o de sempre.
+          Ao sair ('tm3d:sair' / 'tm3d:fim'), o quadro some da vista NA HORA e o remove() — o desmonte da página do 3D, da mesma origem
+          e no mesmo fio do TM: 1–9 s no Chromium sem GPU — fica para depois de o TM pintar a tela dele
    Cada time leva nome, sigla, cores, uniformes, os jogadores (11 titulares na ordem da prancheta
    + reservas) com atributos, posição e aparência, e a identidade (v2): o MESMO escudo que o TM
    mostra (TM.img.clubImg/nationImg; Ultimate: o escudo desenhado), bandeira, liga, técnico e o
@@ -411,19 +416,20 @@
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
     document.body.classList.add("tm3d-aberto");
-    var pronto = false, acabou = false;
+    // tela = o 3D mandou o 'tm3d:tela' (a tela antes do jogo à vista antes do 3D pronto — item 106): o aviso, o X e a demora saem
+    var pronto = false, acabou = false, tela3d = false;
     // o "Abrindo o estádio 3D…" some quando a página do 3D já mostra a tela de carregar DELA (a marca do TM no meio da tela: o
     // texto ficava escrito por cima da logo — revisão A7 do item 124, agora em toda partida); o X fica até o 'tm3d:pronto'. Mesmo
     // site: o TM lê o documento do quadro (a página de ensaio dos testes não tem a tela de carregar: o aviso fica)
     var olhaCarga = setInterval(function () {
-      if (pronto || acabou || !quadro.isConnected) { clearInterval(olhaCarga); return; }
+      if (pronto || acabou || tela3d || !quadro.isConnected) { clearInterval(olhaCarga); return; }
       try {
         var d = quadro.contentDocument;
         if (d && d.getElementById("carregando")) { aviso.style.display = "none"; clearInterval(olhaCarga); }
       } catch (e) { clearInterval(olhaCarga); }
     }, 100);
     var espera = setTimeout(function () {
-      if (pronto || acabou) return;
+      if (pronto || acabou || tela3d) return;
       // (a oferta de simular volta à vista, embaixo — no meio fica a tela de carregar do 3D)
       aviso.textContent = "O 3D está demorando para abrir.";
       aviso.classList.add("demora");
@@ -434,8 +440,14 @@
     function ouvir(e) {
       if (e.origin !== global.location.origin || !e.data || e.data.id !== pedido.id) return;
       if (e.source && quadro.contentWindow && e.source !== quadro.contentWindow) return;
+      // a tela antes do jogo do 3D já está à vista (o 3D ainda monta; item 106): ela tem o "Simular partida" e o [<] — o aviso, o X e
+      // o aviso de demora saem; a porta do Online 3D NÃO (ela vem com o 'tm3d:pronto')
+      if (e.data.tipo === "tm3d:tela") {
+        tela3d = true; aviso.style.display = "none"; sair.style.display = "none";
+        clearTimeout(espera); clearInterval(olhaCarga);
+      }
       // com o 3D no ar, o botão de sair é o do próprio 3D (pausa): o X do TM some para não ficar por cima do placar
-      if (e.data.tipo === "tm3d:pronto") {
+      else if (e.data.tipo === "tm3d:pronto") {
         pronto = true; aviso.style.display = "none"; sair.style.display = "none";
         if (fns.pronto) fns.pronto(quadro.contentWindow, pedido.id);
       }
@@ -449,19 +461,32 @@
       if (acabou) return;
       acabou = true;
       clearTimeout(espera); clearInterval(olhaCarga);
-      fecha3d();
+      // o quadro some da vista já; o desmonte depois (fecha3d) — a tela do TM que o fns monta pinta antes
+      fecha3d(true);
       try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
       if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null);
     }
     global.addEventListener("message", ouvir);
     ativo = { tela: tela, ouvir: ouvir };
   }
-  function fecha3d() {
+  /* fecha o quadro do 3D. depois (o fim normal: 'tm3d:sair' / 'tm3d:fim' / o X): a tela some da vista NA HORA (display none, sem
+     toque) e o remove() vem depois de o TM pintar — o remove() desmonta a página do 3D (o WebGL), que é da MESMA origem e roda no
+     mesmo fio do TM: no Chromium sem GPU leva de 1 a 9 s, e com ele síncrono o quadro do 3D ficava à vista esse tempo todo depois
+     do "Simular partida" (item 106). Sem depois (o abre3d com um quadro aberto, o api.fechar): sai na hora, como antes. */
+  function fecha3d(depois) {
     if (!ativo) return;
+    var tela = ativo.tela;
     global.removeEventListener("message", ativo.ouvir);
-    try { ativo.tela.remove(); } catch (e) {}
     document.body.classList.remove("tm3d-aberto");
     ativo = null;
+    if (!depois) { try { tela.remove(); } catch (e) {} return; }
+    tela.style.display = "none"; tela.style.pointerEvents = "none";
+    var feito = false;
+    var tira = function () { if (feito) return; feito = true; try { tela.remove(); } catch (e) {} };
+    // (o quadro seguinte da página já sem o 3D e, numa tarefa depois dele, o desmonte; com a aba escondida o requestAnimationFrame
+    // não vem: o relógio garante)
+    if (global.requestAnimationFrame) global.requestAnimationFrame(function () { setTimeout(tira, 0); });
+    setTimeout(tira, 1000);
   }
 
   /* ---------- jogar uma partida do TM em 3D ----------
@@ -645,7 +670,8 @@
   api.jogarPenaltis = jogarPenaltis;
   api.jogarLivre = jogarLivre;
   api.jogarOnline = jogarOnline;
-  api.fechar = fecha3d;
+  api.fechar = function () { fecha3d(false); };
   api._gravaPedido = gravaPedido;   // (testes: golaco/tools/teste-ponte-tm.mjs P11)
+  api._abre3d = abre3d;             // (testes: golaco/tools/teste-ponte-tm.mjs P14 — o recado tm3d:tela e o quadro que some já)
   TM.tm3d = api;
 })(window);

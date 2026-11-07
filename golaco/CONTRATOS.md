@@ -2187,8 +2187,10 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   janela"); o quadro do TM pede `&prepartida=1` só nos testes (`TM.tm3d.PARAMS`: com o webdriver ela fica desligada).
 - **Carga** (sob demanda, fora do download inicial): `carregarPrepartida()` no TOPO do `iniciar()` (com a tela ligada) baixa o
   `prepartida-tela.js`, o `prepartida.js`, o `css/prepartida.css` (antes do `prejogo.css`) e pede a Inter TM (600/800) e a TM Cond
-  (o layout não espera as fontes: a conta do nome usa a tabela de avanços da TM Cond, `larguraCond`). **Reserva**: sem o módulo
-  até 1,5 s depois do 3D pronto (`esperarPrepartida`), a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
+  (o layout não espera as fontes: a conta do nome usa a tabela de avanços da TM Cond, `larguraCond`; desde o item 106 as fontes
+  são pedidas JUNTO com o módulo e a tela cedo as espera até 0,3 s: parte "A tela cedo", abaixo). Desde o item 106 a tela abre
+  ANTES do 3D (a tela cedo). **Reserva**: sem o módulo até o 3D montado, mais 1,5 s (`esperarPrepartida(PP_RESERVA_MS)`) e uma
+  volta de tarefas; sem ele ainda, a abertura de texto de hoje ("Toque para começar") e nenhuma tela nessa
   partida — no TM (partida e Rumo ao Estrelato) com o botão "Simular partida" no canto de baixo à direita (item 124, revisão A6:
   sem ele a única saída era começar o jogo e usar o "Simular o resto"; contrato "Ponte com o Total Match", parte "A tela no lugar
   da janela"). Com webdriver nada disso é pedido, nem pela pré-carga ociosa (`teste-carga`, lista `SO_COM_TELA`) — menos a TM
@@ -2244,7 +2246,8 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   volta à aba. Esc volta à Escalação.
 - **As abas por modo** (`abasDoModo`): partida Jogar partida · Visão tática · Personalizar; TM + **Simular partida** (armada:
   "Toque de novo: simular", 3 s contados pela HORA DO TOQUE — o `event.timeStamp`, não a hora em que o quadro o processa: com o
-  quadro pesado, dois toques com 1,8 s entre eles chegavam com 3,05 s e o 2º armava de novo; item 124, revisão A5 —; o 2º toque =
+  quadro pesado, dois toques com 1,8 s entre eles chegavam com 3,05 s e o 2º armava de novo; item 124, revisão A5; desde o item
+  106 vale também o 2º toque até 3 s depois de o pedido APARECER: parte "A tela cedo" —; o 2º toque =
   `simularNoTM()` = `sairTM({motivo: 'simular', titulares})`: o 3D volta SEM resultado e o TM simula lance a lance com os
   titulares que a tela mostrou — item 124, o "Simular" da janela que a tela substituiu; a tela fica aberta, o mundo no tick 0, até
   o TM fechar o quadro. Até o item 124 o 2º toque era o `voltarAoTM()` = o `simularResto()` do motor 3D do tick 0 → `tm3d:fim`);
@@ -2299,7 +2302,8 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
 - **API de teste** (`__golaco.prepartida`): `ligada`, `carregada`, `aberta`, `estado` (modo, fundo, regime, abas, foco, time,
   visão, armado, aguardando, destaqueCanto), `dados()`, `layout()`, `visao()`, `jogar()`, `personalizar()`, `adversario(t)`,
   `vista()`, `simular()`, `abrir()`, `carregar()`, `timesAntes`, `desenhos`, `fechadaEm`, `escalar(ed)`; `__golaco.online` ganhou
-  `fase`, `faseRemota`, `encerrado` e `aviso`; `sobDemanda.estado.prepartida`.
+  `fase`, `faseRemota`, `encerrado` e `aviso`; `sobDemanda.estado.prepartida`. Do item 106 (a tela cedo): `__golaco.carga`,
+  `__golaco.soltar3d()`, o `?segurar3d=1` e o `estado.carregando`/`abertaEm` (parte "A tela cedo", abaixo).
 - **Metas** (cobradas pelos testes abaixo; os números do PR no `PESQUISA-ESTADIO.md` §7.5): a simulação no tick 0 com a tela
   aberta (0 passos, o hash = o do Node; depois do Jogar, 600 passos = Node); 0 px de rolagem e 0 encosto em 4 telas do celular
   (844×390 com o entalhe, 667×375, 640×360, 568×320), no regime mínimo (640×304, 568×280) e em 6 do PC, × o meu time e o outro
@@ -2310,8 +2314,9 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   ≤ 50/255 de dia e de noite; as proporções do FC 24 no PC a ±1,5 ponto; com a tela, ≤ 140 KB TRANSFERIDOS a mais até +2,5 s
   (medido +99 KB; crus +160); online: a saída conjunta em ≤ 0,5 s (≤ 1 s com 20% de perda), os hashes iguais em todas as
   conferências até ~1200 passos (≥ 20 em comum).
-  Fora do teste por enquanto (item 101): o tempo até a tela e do Jogar ao 1º plano (E8), o download com `?tm` e 4 das 5
-  mutações da especificação.
+  Fora do teste por enquanto (item 101): o tempo até a tela e do Jogar ao 1º plano (E8; desde o item 106 o E26a cobra, no
+  Chromium sem GPU, a tela ≤ 1,5 s depois da navegação e pintada antes de a cena 3D nascer — o celular de verdade continua de
+  fora), o download com `?tm` e 4 das 5 mutações da especificação.
 - **Testes**: `teste-prepartida` (Node, padrão: L1 o layout da maquete medida em 11 telas × 6 formações, L2 a Visão tática sem
   encosto, L3 a linha de informação, L4 o árbitro, L5 a edição → times, L6 os dados por modo, L7 a pureza e o fecho);
   `teste-prepartida-tela` (navegador, CI e deploy; `--so pc,cel,telas,modos,pad,tm,online,carga`, `--raiz` mede a base, `--espera <s>`
@@ -2334,7 +2339,8 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   das 5 mutações, o O5 de 100 s e o destaque do Sair aos 60 s (item 101); o fundo escuro e desfocado como o do FC, com o
   `pixelRatio` baixo atrás da tela (item 102, decisão do dono); o nome embaixo de cada disco da Visão tática (item 103); o selo
   grande da competição no alto do PC (item 104); o Editar time com a cara da tela (item 105); a "tela cedo", durante o
-  carregamento (item 106, decisão do dono); o Personalizar no online (item 107, decisão do dono); as FOTOS no lugar do busto
+  carregamento (item 106 — FEITA no #635: parte "A tela cedo", abaixo); o Personalizar no online (item 107, decisão do
+  dono); as FOTOS no lugar do busto
   (feitas no item 31, #615, só a edição pro: abaixo); o clima na linha de informação (a dificuldade entrou no item 33: seção
   "Tempo de jogo e dificuldade"). Nada foi medido
   num celular de verdade.
@@ -2358,6 +2364,91 @@ tipográfico" —, a `larguraCond` reexportada pelo `prepartida.js`) + `assets/t
   especificação pedia ×1,15 e mexer nela arriscava as metas de encaixe). Testes: `teste-prepartida-tela` 83/83 (E3/E4 sem rolar
   e nada encosta em 10 telas, também com as fontes BLOQUEADAS; E5 as letras; E20 as proporções do FC 24), 0 rótulo com "…" em
   568, 667, 844 e 1280; `teste-prepartida` (Node) sem mudança.
+- **A tela cedo (item 106; 07/11; PR #635, base 048b278f)**: a tela à vista ENQUANTO o 3D monta (dono: "corrije e adianta"; a
+  Fase 2 da especificação do item 64; as escolhas recomendadas T1–T8 no "Depende do dono" 29 da FILA). Só a página e o TM: `main.js`,
+  `prepartida-tela.js`, `css/prepartida.css`, `hud.js` (`carregandoAtras()`), `ponte-tm.js` (o comentário do protocolo) e o
+  `tm3d.js` do TM (v380: contrato "Ponte com o Total Match", parte "O recado tm3d:tela"); `fecho-hash --diff origin/main` 0,
+  `hash-igual` e `hash-partida` IGUAIS (a tela segura o tick 0 como antes; o Personalizar antes do 3D recria o mundo do tick 0 pelo
+  mesmo `criarPartida({times})` e o 3D nasce dele).
+  - **A abertura** (`main.js iniciar`): logo depois do `PAG_ONLINE` e do `criarSimularTM()` (agora no começo), o `iniciar()` espera
+    o módulo da tela (`esperarPrepartida`), as fontes dela (`ppFontes`: a Inter TM 600/800 e a TM Cond, pedidas no
+    `carregarPrepartida()` JUNTO com o módulo — antes só depois dele, e chegavam no meio das tarefas longas: a letra trocava 3–4 s
+    depois de a tela aparecer) e a identidade do TM (`identCarga`: os escudos e as cores, pedidos já, sem o 3D) no máximo
+    `PP_CEDO_MS` = 300 ms, e `abrirTelaCedo()` abre a tela com `pp.abrir({…, fundo: '2d', carregando: true})` antes do
+    `criarCena`/`criarCampo` (a 1ª tarefa longa). Sem o módulo a tempo, a tela abre quando ele chegar (`ppCarga.then`), sem segurar
+    o 3D mais nada; a identidade que chega depois refaz a tela uma vez (`ppIdentNaTela`). Nunca abre depois do 3D pronto, da saída
+    ou com o pré-jogo rodando. O `html.com-toque` é ligado antes da entrada pela MESMA regra dela (`TOQUE_INICIAL`: `?toque=1` ou
+    `pointer: coarse`), o `#carregando` sai sem o "pronto" (`hud.carregandoAtras()`), o `resize` e o `visualViewport` ligados já (o
+    layout da tela só se refaz quando o tamanho MUDA: `ppTam`; refeito à toa custava uma pintura inteira no meio da carga) e o
+    "Tela cheia deitada" da "Gire o celular" é decidido no começo do `iniciar()` (antes só com o 3D: empurrava o Simular 36 px no
+    meio do toque).
+  - **O fundo 2D** (`#prepartida[data-fundo="2d"]::before`, só CSS, opaco, debaixo do véu): o preto do TM com o verde dele vindo de
+    baixo. Com o 3D pronto, `ligarFundo3D()` → `pp.carregando(false, fundo)`: o fundo de hoje (a abertura do pré-jogo CALADA ou o
+    jogo parado no tick 0, pela mesma `fundoDe3D()` do `abrirPrepartida`) e o 2D some em 0,3 s (o 1º quadro do 3D já está desenhado
+    atrás: sem estalo); a entrada que nasceu com o 3D fica bloqueada e os botões de toque e as cenas `inert` atrás da tela.
+  - **O que espera o 3D**: as abas com `espera3d` — o Jogar (e o "Bater pênaltis"), o Pronto do online, os submenus Jogadores e
+    Câmera do Livre — e o ≡ (a pausa mexe na qualidade, no horário e na câmera). Com `carregando`, `aria-disabled` + `aria-busy`
+    (não `disabled`: o foco fica nelas e elas voltam sozinhas), a classe `.espera` (o mesmo rótulo e a mesma medida, um pouco
+    apagada) e a barra `.pp-carga` DENTRO da aba, no pé, absoluta (o layout não muda), que anda pelas etapas do `iniciar()`
+    (`pp.progresso(f)`, 0,15/0,35/0,5/0,7/0,85; a variável `--carga` só na barra) com transição, SEM animação infinita (no
+    renderizador por software cada quadro composto disputa a GPU com a compilação do 3D). A aba com o foco esperando fica em
+    verde-escuro (`.espera.foco`), nunca no verde cheio de "pronto". O toque, o Enter ou o Espaço nelas (e o P e o ≡) não fazem nada
+    além do aviso "O estádio ainda está carregando." no `#pp-aviso` e na região viva (some com o 3D: "O estádio está pronto.");
+    a `acaoPrepartida` também confere `pronto3d` (`jogarPrepartida`, 'opcoes', 'jogadores', 'camera', 'pronto'). Com o 3D, as
+    abas voltam SEM refazer a tela (o foco fica onde estava).
+  - **O que já vale antes do 3D**: a Visão tática, a troca do time mostrado (Q/E, LB/RB, o toque na barra), o Personalizar (o
+    editor por cima do fundo 2D; o PRONTO recria o mundo do tick 0 — `teste-prepartida-tela` E26e), o "Simular partida" do TM
+    (também o da "Gire o celular") e o [<]. Um mini-laço (`quadroTelaCedo`, por `requestAnimationFrame`, sem entrada e sem
+    desenho, até o `pronto3d`) faz o que o laço do jogo faria: o `atualizarSimularTM()` (o Simular da "Gire o celular"), o
+    `avisarTelaTM()`, o `pp.cobrir` e o `voltarParaTela()` do editor/pausa e o `pp.atualizar` (o armado que expira; o controle Ⓨ,
+    Ⓧ, LB e RB). O teclado da tela vale desde a abertura (o ouvinte dela, na captura da `window`); no controle, a cruz, o Ⓐ, o Ⓑ e o
+    Start chegam com a entrada do jogo (`criarEntrada`, com o 3D).
+  - **O editor que chega depois** (`abrirEditor`): pelo Personalizar da tela, enquanto o `editor-time.js` baixa, a aba fica
+    ocupada (`pp.esperando('personalizar')`: apagada e `aria-busy`, sem `aria-disabled`) e ele só abre se a tela ainda estiver
+    aberta e o Personalizar ainda valendo, e nunca com o editor já aberto (antes abria depois do Jogar, por cima do jogo começado
+    e parado: passos 4 → 4; E26j).
+  - **O armado do "Simular partida"** (`prepartida-tela.js armadoVale`): o 2º toque vale se foi feito até 3 s depois do 1º (a hora
+    do toque, item 124) OU até 3 s depois de o "Toque de novo" APARECER (`armadoVisto`, a hora em que o 1º toque foi atendido) —
+    com a tela cedo o 1º toque podia cair numa tarefa longa e ser atendido 2,6–3,8 s depois, e o 2º, feito depois de ler o pedido,
+    armava de novo (3 toques). Vale também para o [<].
+  - **Sair antes do 3D**: o Simular (`simularNoTM`), o [<] e o Sair do online chamam `pararCarga()` (só com `?tm`): o `iniciar()`
+    para no próximo `await` (`parou()`, depois de cada etapa) e o `tm3d:pronto` nunca sai (a página do quadro é da mesma origem do
+    TM: as tarefas longas do 3D travariam a tela dele).
+  - **A carga mais leve com a tela à vista**: os programas do 1º desenho mandados compilar antes dele com o fio livre
+    (`compilarAntesDoDesenho`: com o `KHR_parallel_shader_compile`, `renderer.compileAsync`; sem ele — o SwiftShader dos testes —,
+    `renderer.compile()` e 2 quadros cedidos; um erro só deixa a compilação para o 1º desenho, como antes) e o campo nasce com a
+    altura da tela (`campo.definirAlturaTela(innerHeight)` logo depois do `criarCampo`: o `resize` pode chegar antes dele, e o
+    padrão 720 valeria para as cadeiras 3D até o próximo `redimensionar()`).
+  - **A reserva** (sem a tela cedo, isto é, sem o módulo até o 3D montado): mais `PP_RESERVA_MS` = 1,5 s e uma volta a mais de
+    tarefas (`setTimeout 0`) antes de decidir; chegando nesse meio-tempo, a tela abre (já com o 3D). O `import()` já resolvido,
+    preso atrás das tarefas longas, perdia a corrida para o relógio: na base, 1 em 14 carregamentos sem a tela com o módulo baixado.
+  - **API de teste**: `__golaco.carga` ('montando' → 'segurada' → 'pronta' | 'parou'), `__golaco.soltar3d()` e o `?segurar3d=1` (a
+    carga para logo antes do pronto até o `soltar3d()`: os testes olham a tela cedo com o 3D "lento" de propósito, sem depender da
+    máquina); o `__golaco.prepartida.estado` ganhou `carregando` e `abertaEm` (o `performance.now()` da abertura); `pp.progresso(f)`,
+    `pp.carregando(v, fundo)` e `pp.esperando(id)`; o `data-fundo` ('abertura' | 'jogo' | '2d') no `#prepartida`.
+  - **Medido** (3 rodadas de cada, a base e a versão nova uma logo depois da outra; Chromium sem GPU, 1280×720 Baixa, desde a
+    navegação; nada num celular de verdade): a tela no DOM 2,9–3,7 → 0,27–0,29 s (partida sem `?tm`), 3,8–4,1 → 0,32–0,34 s (TM
+    pública), 3,8–3,9 → 0,33–0,37 s (TM pro); pintada (aprox.: o 2º quadro depois) 4,8–5,3 → 2,1–2,2 s, 3,8–4,1 → 2,6–2,7 s,
+    3,8–4,0 → 2,5–2,8 s; o 3D pronto 2,9–3,7 → 5,1–5,4 s, 3,8–4,1 → 4,8–5,3 s, 3,8–3,9 → 4,7–5,2 s. O CUSTO: o 3D (o Jogar)
+    ~1–2 s mais tarde nesse ambiente — a tela à vista disputa o processo da GPU com a montagem do 3D (a rasterização em software
+    ~1,5–2 s; a maior tarefa longa depois da tela, 1,8–2,4 s, é a criação da cena e do campo esperando a GPU; sem nada por cima, a
+    mesma montagem leva 1,7 s) e a tela fica parada durante essas tarefas (0,1–1,7 s até atender um toque). Sem efeito (medido):
+    tirar as animações, camada própria, o contexto WebGL antes da tela, o laço sem quadros, menos remontagens. Decisão do dono
+    ("Depende do dono" 29).
+  - **Testes**: `teste-prepartida-tela` E26 (`--so cedo`; `--casos a,c,d,h,hp,i,j,k,l` roda só esses blocos; a sonda —
+    `addInitScript` — marca o quadro do navegador em que a tela fica à vista e o em que a cena 3D nasce, o 1º contexto WebGL do
+    `#tela`, e faz os gestos "antes do pronto" DENTRO da página; as metas cobram a ORDEM — a cena ≥ 2 quadros depois —, não quanto
+    o 3D demora): E26a a tela ≤ 1,5 s e pintada antes da cena 3D, com a TM Cond; E26b o Jogar e o ≡ esperam e voltam sozinhos, o
+    foco igual; E26c o TM público num quadro (o `tm3d:tela`; o Simular antes do 3D → `tm3d:sair` 'simular' com 11 + 11 titulares
+    em ≤ 2 s, sem `tm3d:pronto` nem `tm3d:fim` depois, `api.carga` 'parou'); E26d o estado "carregando" sem rolar e sem encosto
+    no TM (4 abas) em 568×320, 844×390 com o entalhe e no PC, contraste ≤ 50/255; E26e o Personalizar antes do 3D; E26h com o
+    pré-jogo (o fundo 2d e depois a abertura calada), os Pênaltis 3D do TM e o Rumo ao Estrelato (o 1º toque atendido 3,2 s
+    depois: o 2º vale); com o 3D SEGURADO: E26i (o módulo atrasado 1,2 s abre a tela cedo quando chega; o Jogar sem o verde cheio
+    e o aviso à vista; o editor de verdade antes do 3D e a tela de volta no Esc), E26k (o TM em pé: a "Gire o celular" com o
+    Simular e o `tm3d:tela`; o Simular no mesmo lugar com o 3D) e E26l (os Pênaltis do TM em pé: sem o `tm3d:tela` até deitar; o
+    [<] → `tm3d:sair` e a carga para); E26j (sem segurar) o editor que só baixa depois do Jogar não abre por cima do jogo. Na base
+    5/13 (só os S1); 11 de 12 mutações reprovam (a 12ª, só a espera das fontes nos 300 ms, passa: pedidas cedo, elas chegam antes
+    do módulo). Também `teste-ponte-tm` P14 e o `testar-3d` (contrato "Ponte com o Total Match").
 
 ## Sistema tipográfico — a letra esportiva do 3D (item 125; 05/11; contrato)
 Pedido do dono (05/11, com o print da pausa no PC 1917×1010 com `?tm`, West Ham × Preston): "fontes tem que ser mais legais, o
@@ -2960,7 +3051,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   id, ...}, location.origin)`), `gravarResultadoTM(r)`, `fimTM(r)` (grava + `tm3d:fim`; fora do quadro volta a `../index.html`)
   e `sairTM(extra)` (`tm3d:sair`, SEM resultado: o TM simula a partida lance a lance, como sem o 3D; `extra` vai na mensagem —
   `{motivo: 'simular', titulares: {home, away}}` = o "Simular partida" antes do jogo (item 124: o TM fica calado e simula com os
-  titulares mostrados, tmIds, 11 por lado), `{motivo: 'erro'}` = o 3D não roda aqui (sem WebGL 2, pedido sumido, erro no início:
+  titulares mostrados, tmIds, 11 por lado; desde o item 106 também antes do 3D pronto, sem `tm3d:pronto` depois), `{motivo: 'erro'}` = o 3D não roda aqui (sem WebGL 2, pedido sumido, erro no início:
   o TM avisa "O 3D não abriu: partida simulada."); sem motivo (os Pênaltis 3D antes do Bater) o TM só volta. O abandono do
   Online 3D vai pelo `avisarTM` direto: `{abandono: true}`).
 - **`tm-times.js`** (puro): `timesDoPedido(pedido)` → `{elencos: [tmcasa, tmfora], times: {0, 1}, humano, trava, mapa}`. Time 0 =
@@ -2991,7 +3082,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   no alvo e posse com as definições do painel (`tools/lib/partida-medidas.mjs`; o gol sem o chute aberto conta como chute no
   alvo); 2º amarelo = 'yellow' + 'red'; minuto = o do placar (1–45 no 1º tempo, 46–90 no 2º; os acréscimos ficam em 45/90).
 - **`main.js`** (só com `?tm`): os elencos registrados e toda partida criada com os times/humano/trava do pedido; `modoPagina`
-  sempre a partida; a súmula alimentada em `rodarPasso`; `tm3d:pronto` no `api.pronto`; o resultado gravado já no apito; a
+  sempre a partida; a súmula alimentada em `rodarPasso`; `tm3d:pronto` no `api.pronto` (e, antes dele, o `tm3d:tela` da tela
+  cedo — item 106, parte "O recado tm3d:tela", abaixo); o resultado gravado já no apito; a
   faixa do fim com "Voltar ao Total Match" (`data-cmd="voltar-tm"` → `fimTM`); **"Simular o resto"** (`data-cmd="simular-resto"`):
   fecha pré-jogo, replay, comemoração, substituição e editor, a IA joga pelo humano (`entradaDemoPartida`) e `passoPartida` roda
   em pedaços de 30 ms por quadro SEM desenhar, com a faixa "Simulando o resto da partida… 63' · FLA 1 × 0 PAL"; no apito, a faixa
@@ -3045,7 +3137,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
     escalação própria: os titulares da tela não chegam — ele não tem Personalizar). O "Simular o resto" e o "Voltar ao Total Match"
     da PAUSA, com a partida começada, continuam pelo motor 3D (`tm3d:fim`). Na página: a tela fica aberta, o mundo no tick 0, até o
     TM fechar o quadro (com o `fecharPrepartida` o jogo andava ~5 passos e aparecia nesse meio-tempo). Em pé, o `#girar` cobre a
-    tela e o X do TM já sumiu no `tm3d:pronto` (e o PWA do TM é travado em pé): a tela "Gire o celular" ganha o botão "Simular
+    tela e o X do TM já sumiu no `tm3d:pronto` (desde o item 106, no `tm3d:tela`) (e o PWA do TM é travado em pé): a tela "Gire o celular" ganha o botão "Simular
     partida" (um toque, sem armar; revisão A1); na reserva da tela, o mesmo botão no canto de baixo à direita (revisão A6) —
     `main.js criarSimularTM/atualizarSimularTM`, `css/tm.css .tm-simular`; só no TM partida e Estrelato (não no Online, nos
     Pênaltis e no Livre) e só antes do jogo, com o mundo no tick 0.
@@ -3062,7 +3154,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
     estavam pela janela: o "Enfrentar" do Ultimate Online (`utonline.js`, assíncrono contra o elenco publicado de outra pessoa; o
     placar vai ao `utRecord`) e os jogos da Copa Online (`copa.js`) — a E4 pedia o online assíncrono fora: decisão do dono
     ("Depende do dono" 24; para tirar, `sem3d: true` no cfg deles).
-  - **E5, o X "Voltar e simular"** do "Abrindo o estádio 3D…" (até o `tm3d:pronto`): a confirmação "Sair do 3D?" diz "A partida é
+  - **E5, o X "Voltar e simular"** do "Abrindo o estádio 3D…" (até o `tm3d:pronto`; desde o item 106, até o `tm3d:tela`): a confirmação "Sair do 3D?" diz "A partida é
     simulada lance a lance, sem o 3D." e o "Simular" dela fecha o quadro sem resultado, calado. Ela ficava ATRÁS do quadro (z-index
     5000; o toque no X não mostrava nada): `body.tm3d-aberto .sheet-overlay` com z-index 5100, no meio da tela (440 px). Vale
     para todo quadro: o X antes do pronto passou a funcionar também nos Pênaltis 3D, no Livre e no Online 3D (no Online o "Sair"
@@ -3076,7 +3168,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   - **Medido** (Chromium sem GPU, com outras frentes na máquina; nada num celular de verdade): a mensagem do Simular chega ao TM
     em 0,001–0,06 s; o quadro some 1,1–9 s depois (o `remove()` do iframe desmontando o WebGL, até 6,5 s, conforme a carga); a
     tela aparece 5,4–12,9 s depois do Jogar (8,1–8,5 s na Partida rápida). Quem só simula espera esse carregamento a cada partida
-    (na janela, um toque e nada do 3D baixado) — por isso a "tela cedo" (item 106) subiu de prioridade.
+    (na janela, um toque e nada do 3D baixado) — por isso a "tela cedo" (item 106) subiu de prioridade (feita: parte "O recado
+    tm3d:tela", abaixo).
   - **Testes**: `legacy-total-match/ferramentas/testar-3d.mjs` — a migração (os 4 casos: perguntar, 3d, simular, nada salvo), a
     Config, o quadro sem a janela no Ultimate Rivais, na Carreira e no Rumo ao Estrelato com o golaco de verdade (a tela, o Simular
     calado com os titulares da tela, o Jogar partida → Simular o resto → `tm3d:fim`), o Personalizar + Simular (A2) e o aviso fora
@@ -3090,6 +3183,42 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   - **Limites conhecidos**: a formação e a tática do Personalizar não chegam ao Simular do TM (o motor dele só lê os 11); fechar o
     app com a tela aberta, na carreira sem "reiniciar partidas", não registra o placar (já era assim no 3D; agora vale para toda
     partida); a confirmação do TM fora do 3D no celular em pé com menos de 600 px segue com o cartão de 380 px.
+
+- **O recado `tm3d:tela` e o quadro que some já (item 106, 07/11; PR #635; TM v380)**. Com a tela cedo (contrato "Tela antes do
+  jogo (item 64)", parte "A tela cedo") a tela antes do jogo fica à vista ENQUANTO o 3D monta, com o "Simular partida" e o [<]: o
+  aviso "Abrindo o estádio 3D…" e o X do TM não têm mais o que fazer ali (sem o recado, os dois ficariam por cima da tela até o
+  3D pronto). As escolhas no
+  "Depende do dono" 29 da FILA.
+  - **O protocolo** (topo do `ponte-tm.js` e do `tm3d.js`): o 3D manda `{tipo: 'tm3d:tela', id}` UMA vez, quando a tela cedo está
+    à vista COM uma saída à vista (`main.js avisarTelaTM`, também a cada quadro do mini-laço da tela cedo): em pé, a "Gire o
+    celular" cobre a tela — com o "Simular partida" dentro dela (a partida e o Rumo ao Estrelato do TM) o recado vale já; nos
+    Pênaltis, no Livre e no Online do TM ela não tem botão e o recado espera a pessoa deitar o celular (o app do TM instalado e
+    travado em pé ficava sem saída nenhuma durante a carga). O `tm3d:pronto` continua no fim da carga, e a porta do Online 3D
+    (`tm3d:porta`) continua vindo em resposta a ELE. Saindo antes do 3D (o Simular, o [<], o Sair do online), a carga para e o
+    `tm3d:pronto` nunca sai: o TM recebe só o `tm3d:sair` (ou o abandono do online). O motor antigo (`futebol3d/`) não manda o
+    `tm3d:tela`: o `tm3d:pronto` faz o de sempre.
+  - **O lado do TM** (`tm3d.js abre3d`): no `tm3d:tela` (`tela3d = true`) o aviso e o X somem, o aviso de demora (30 s) é
+    cancelado e o `olhaCarga` para; o `fns.pronto` NÃO é chamado (só no `tm3d:pronto`). Ao sair (`tm3d:sair`/`tm3d:fim`, o X e o botão do aviso de demora: o `termina`),
+    `fecha3d(true)`: a tela do quadro some da vista NA HORA (`display: none`, sem toque) — dentro do `fns.sair`/`fns.fim` ela já
+    está fora — e o `remove()` vem depois de o TM pintar (o `requestAnimationFrame` seguinte + uma tarefa; com a aba escondida,
+    pelo relógio de 1 s). O `remove()` desmonta a página do 3D (o WebGL), da MESMA origem e no mesmo fio do TM: 1–9 s no Chromium
+    sem GPU, e com ele síncrono o quadro ficava à vista esse tempo todo depois do Simular. O `abre3d` com um quadro aberto e o
+    `api.fechar` tiram na hora, como antes (`fecha3d(false)`). Para os testes, `TM.tm3d._abre3d`. Versão do TM: v380 (`index.html`
+    `?v=380`, `sw.js` `total-match-v380`); `conferir-estilos` igual à base.
+  - **Medido** (Chromium sem GPU; nada num celular de verdade): no `testar-3d` (Partida rápida, o golaco de verdade) o `tm3d:tela`
+    chega 1,3–1,7 s antes do `tm3d:pronto`, e no 2º toque do Simular o quadro sai da vista em 0,014–0,026 s (na base 2,44 s; o
+    item 124 media 1,1–9 s até o quadro sumir). A tela à vista, desde a navegação da página do 3D: 3,8–4,1 → 0,32–0,37 s (TM
+    pública e pro); o 3D pronto ~1–2 s mais tarde (o custo da tela à vista no renderizador por software: "Depende do dono" 29).
+  - **Testes**: `teste-ponte-tm` P14 (o `tm3d.js` num `vm` com um DOM e relógios de mentira: o `tm3d:tela` esconde o aviso e o X,
+    cancela a demora de 30 s e não chama o `fns.pronto`; no `tm3d:sair` a tela já está fora da vista dentro do `fns.sair` e o
+    `remove()` vem numa tarefa depois — também com a aba escondida, pelo relógio, em ~1 s; sem o `tm3d:tela` o `tm3d:pronto` tira o
+    aviso e o X como antes; o `abre3d` com um quadro aberto tira o velho na hora; reprova na base, sem o `_abre3d`);
+    `legacy-total-match/ferramentas/testar-3d.mjs` (Partida rápida com o golaco de verdade: o `tm3d:tela` antes do `tm3d:pronto` e a
+    tela pintada — um quadro inteiro — antes de a cena 3D nascer, o aviso e o X fora no `tm3d:tela`, o Simular antes do pronto →
+    `tm3d:sair` 'simular' sem `tm3d:pronto` nem `tm3d:fim` e o quadro fora da vista ≤ 0,5 s depois do 2º toque; na base os 3
+    reprovam; 69/69 na pro e 68/68 com `--publica`); `golaco/tools/teste-prepartida-tela` E26c, E26h (Pênaltis e Estrelato), E26k e
+    E26l (o `tm3d:tela` em pé). Também passaram `testar-penaltis` (14), `testar-livre` (16) e `testar-online3d --golaco` (18; os
+    casos do Viverde pulados sem `TM_SENHA_VIVERDE`).
 
 ## Identidade visual de cada time (Total Match, 15/10)
 Pedido do dono: "a logo dos times, torcida, e estádio adaptáveis a cada time". Só DESENHO (render/DOM): nada entra no mundo

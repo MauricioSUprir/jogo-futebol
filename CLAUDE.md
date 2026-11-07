@@ -654,6 +654,26 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   ~60 s de cenas); conta de largura mede o que é DESENHADO (o separador com as margens) e confere no DOM — o "…" do CSS escondia
   a duração; a decisão do ícone das abas é da barra inteira; tela com camada por cima (pausa, editor) fica só o véu; foco nunca
   dentro de `aria-hidden`; medir também os modos com textos longos (TM pro, clássico, 4 abas) e o regime mínimo.
+- **Tela cedo** (item 106, PR #635; dono: "corrije e adianta"; contrato "Tela antes do jogo (item 64)", parte "A tela cedo", e
+  "Ponte com o Total Match", parte "O recado tm3d:tela"; escolhas na FILA "Depende do dono" 29): a tela antes do jogo à vista
+  ENQUANTO o 3D monta. O `iniciar()` espera o módulo dela, as fontes (pedidas junto com o módulo: `ppFontes`) e os escudos do TM no
+  máximo `PP_CEDO_MS` 0,3 s e abre com o fundo 2D (só CSS; `data-fundo="2d"`) antes da 1ª tarefa longa; sem o módulo a tempo, abre
+  quando ele chegar. Antes do 3D valem a Visão tática, o time mostrado, o Personalizar (recria o mundo do tick 0), o Simular e o
+  [<]; o Jogar, o Pronto do online, o Bater pênaltis, os submenus do Livre e o ≡ ESPERAM (`espera3d`: `aria-disabled` + `aria-busy`,
+  a barra de carga dentro da aba, sem animação infinita) e voltam sozinhos (`ligarFundo3D`). Um mini-laço (`quadroTelaCedo`) cuida
+  do controle Y/X/LB/RB, do armado e do editor antes do 3D. Sair antes do 3D (`pararCarga`) para a carga e o `tm3d:pronto` nunca
+  sai. Ao TM, o recado `tm3d:tela` (v380), só com uma saída à vista. A página com a tela 0,3 s depois da navegação (antes
+  2,9–4,1 s), mas o 3D pronto ~1–2 s mais tarde no Chromium sem GPU (decisão do dono). Testes: `teste-prepartida-tela` E26
+  (`--so cedo`, `--casos`; `?segurar3d=1` + `__golaco.soltar3d()` seguram o 3D antes do pronto; `__golaco.carga`), `teste-ponte-tm`
+  P14 e o `testar-3d`. Lições:
+  - teste de "aparece antes" mede a ORDEM (o quadro do navegador em que a tela fica à vista × o em que a cena 3D nasce), não
+    "≥ 1 s antes do pronto": isso mede a máquina;
+  - toque atendido tarde (tarefa longa) conta a janela do 2º toque também da hora em que o pedido APARECE (`armadoVisto`);
+  - módulo baixado sob demanda que abre algo depois confere se o contexto ainda vale quando chega (o editor abria por cima do jogo
+    começado);
+  - `import()` resolvido mas preso atrás de tarefas longas perde a corrida para o relógio: uma volta de tarefas antes da reserva;
+  - no renderizador por software, a tela DOM à vista disputa o processo da GPU com a montagem do 3D (tirar animações, camada
+    própria e contexto WebGL antes não mudaram nada).
 - **Replay** (pedidos de 11/10: "o replay não funciona"; "no impedimento, o replay mostra a linha"; `PESQUISA-ESTADIO.md`
   §9, contrato "Replay" no CONTRATOS.md, `config.js REPLAY`): `render/replay-anel.js` (puro) grava os últimos 10 s do que
   foi DESENHADO (copiado logo depois da pose; 3,36 MB fixos, ~11 µs por passo); `render/replay-roteiro.js` (puro) monta
@@ -1249,7 +1269,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   ser o GOLAÇO NOVO, `golaco/`): o "Jogar" de toda partida do seu time (matchview com `pauseSide`;
   também a Partida de Base com ≥ 11 e o Rumo ao Estrelato titular) abre o 3D direto na TELA ANTES DO JOGO — Jogar partida ou
   Simular partida (o 3D fecha com `tm3d:sair {motivo: 'simular', titulares}` e o TM simula lance a lance com os titulares da
-  tela); a janela "Jogar em 3D / Simular" saiu no item 124 (dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de
+  tela);
+  desde o item 106 (v380) a tela aparece ENQUANTO o 3D monta: o recado `tm3d:tela` tira o aviso "Abrindo o estádio 3D…", o X e o
+  aviso de demora; a porta do Online 3D continua no `tm3d:pronto`. Ao sair, o quadro some da vista na hora (`fecha3d(true)`) e o
+  `remove()` (o desmonte do WebGL, no mesmo fio do TM) vem depois de o TM pintar;
+  a janela "Jogar em 3D / Simular" saiu no item 124 (dono, 05/11: "essa tela pré jogo é no lugar daqueles dois botões de
   jogar 3d ou simular; quando clica em jogar, já entra essa tela, e é em todos os modos"). Config → "Partidas do seu time": Tela
   antes do jogo / Sempre simular (`settings.partidasTela`; o `partidas3d` antigo é ignorado: a migração foi única). Sem WebGL 2,
   simula com um aviso por sessão. Fora do 3D: o Online de salas e o Duelo ao vivo (resultado dividido), os pênaltis e a

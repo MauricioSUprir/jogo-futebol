@@ -20,8 +20,20 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida[hidden] { display: none; }
 #prepartida.entrando { opacity: 0; }
 #prepartida.saindo { opacity: 0; transition-duration: 0.25s; pointer-events: none; }
+/* o fundo 2D da tela cedo (item 106: a tela à vista enquanto o 3D monta; prepartida-tela.js carregando): só CSS, opaco — o preto do TM
+   com o verde dele vindo de baixo, como a luz do gramado —, por baixo do véu; com o 3D pronto ele some em 0,3 s (o 1º quadro do 3D
+   já está desenhado atrás: sem estalo) */
+#prepartida::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 0.3s ease-out;
+  background:
+    radial-gradient(70% 48% at 50% 62%, rgba(34, 197, 94, 0.16), transparent 72%),
+    radial-gradient(120% 60% at 50% 120%, rgba(20, 83, 45, 0.55), transparent 70%),
+    linear-gradient(180deg, #050807 0%, #06100a 55%, #04170c 100%);
+}
+#prepartida[data-fundo="2d"]::before { opacity: 1; transition: none; }
 /* com a pausa, a Ajuda ou o editor por cima, só o véu sobre o 3D (prepartida-tela.js cobrir; revisões V5/V6) */
 #prepartida.coberta > :not(.pp-veu) { visibility: hidden; }
+/* (o editor do Personalizar antes do 3D: sobre o fundo 2D, que fica — atrás dele não há 3D desenhado) */
 #prepartida .pp-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 /* o véu (sem backdrop-filter): preto no alto (barra e info), mais leve no meio (o campinho tem o fundo dele), escuro embaixo (abas) */
 #prepartida .pp-veu {
@@ -216,6 +228,25 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .pp-aba[aria-pressed="true"]:not(.foco) { border-color: var(--pp-verde); }
 #prepartida .pp-aba:disabled, #prepartida .pp-aba[aria-disabled="true"] { cursor: default; opacity: 0.85; }
 #prepartida .pp-aba.aguardando > svg { display: none; }
+/* a aba que espera o 3D (a tela cedo, item 106; prepartida-tela.js marcarAbas: aria-disabled + aria-busy): o mesmo rótulo e a mesma
+   medida, um pouco apagada, com a barra de carga DENTRO dela, no pé (absoluta: o layout não muda). A barra anda pelas etapas da carga
+   (prepartida-tela.js progresso: --carga de 0 a 1), sem animação infinita — no Chromium sem GPU dos testes, cada quadro composto
+   disputa o processo da GPU com a compilação dos shaders do 3D */
+#prepartida .pp-aba.espera { cursor: progress; }
+#prepartida .pp-aba.espera > svg, #prepartida .pp-aba.espera .pp-aba-txt { opacity: 0.62; }
+/* (a aba com o foco esperando — o Jogar, que abre com ele — não fica no verde cheio de "pronto": um verde escuro, com o texto claro e a
+   barra verde; o verde cheio só com o 3D — avaliação do item 106: "o Jogar parece pronto antes de estar") */
+#prepartida .pp-aba.espera.foco { background: linear-gradient(180deg, #1b4d30, #153d26); color: #d1fae5; border-color: rgba(74, 222, 128, 0.35); }
+#prepartida .pp-aba.espera.foco::after { opacity: 0.04; }
+#prepartida .pp-aba.espera.foco:focus-visible { outline-color: #d1fae5; }
+#prepartida .pp-aba.espera.foco > svg, #prepartida .pp-aba.espera.foco .pp-aba-txt { opacity: 0.8; }
+#prepartida .pp-carga { display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; pointer-events: none; }
+#prepartida .pp-aba.espera .pp-carga { display: block; background: rgba(255, 255, 255, 0.12); }
+#prepartida .pp-aba.espera .pp-carga::before {
+  content: ""; position: absolute; inset: 0; background: var(--pp-verde); transform-origin: 0 50%; transform: scaleX(var(--carga, 0.08));
+  transition: transform 0.3s ease-out;
+}
+#prepartida .pp-menu[aria-disabled="true"] { cursor: progress; opacity: 0.55; }
 #prepartida .pp-aba.aguardando::before {
   content: ""; position: static; flex: none; width: 1em; height: 1em; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;
   animation: pp-gira 0.9s linear infinite; background: none;
@@ -247,7 +278,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .pp-aviso[hidden] { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
-  #prepartida, #prepartida.saindo { transition: none; }
+  #prepartida, #prepartida.saindo, #prepartida::before { transition: none; }
+  #prepartida .pp-aba.espera .pp-carga::before { transition: none; }
   #prepartida .pp-ficha, #prepartida .pp-disco { animation: none; }
   #prepartida .pp-aba.aguardando::before { animation: none; }
 }
