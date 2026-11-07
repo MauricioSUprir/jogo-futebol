@@ -59,6 +59,13 @@
 //      nos dois aparelhos) → true nos dois lados. A partida do pedido (como o main.js: {classico: true} só quando ligado) com
 //      m.classico === true; sem ele o campo NÃO existe (fora do hash). Na versão sem classicoDoPedido REPROVA.
 //
+//  P14 (item 106: a tela cedo) o tm3d.js do TM num vm com um DOM de mentira: o recado 'tm3d:tela' (a tela antes do jogo à vista
+//      ANTES do 3D) esconde o aviso "Abrindo o estádio 3D…" e o X, cancela o aviso de demora de 30 s e NÃO chama o fns.pronto (a
+//      porta do Online 3D continua no 'tm3d:pronto'); no 'tm3d:sair' a tela do quadro já está fora da vista dentro do fns.sair e o
+//      remove() (o desmonte do WebGL do quadro, da mesma origem: 1–9 s no Chromium sem GPU) vem numa tarefa depois; sem o
+//      'tm3d:tela' (o motor antigo) o 'tm3d:pronto' tira o aviso e o X como antes; o abre3d com um quadro aberto tira o velho na
+//      hora. Na versão sem TM.tm3d._abre3d REPROVA.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -760,6 +767,131 @@ if (typeof SU.melhorEmCampo === 'function') {
     reg('P13 classicoDoPedido: true só com partida.classico === true (o online: o pedido do anfitrião nos dois lados); a partida do pedido com m.classico só quando ligado',
       `${ruins.length ? ruins.join('; ') : `os ${casos.length} casos certos`}; ligado ${mC.classico === true ? 'm.classico true' : 'SEM'}; desligado ${'classico' in mS ? 'COM o campo' : 'sem o campo'}`,
       `os ${casos.length} casos certos; true; sem o campo`, ok);
+  }
+}
+
+// ------------------------------------------------------------------ P14 o recado tm3d:tela e o quadro que some já (item 106)
+// o tm3d.js do Total Match num vm com um DOM de mentira mínimo (TM.ui.el devolve objetos com style, classList, appendChild, remove
+// contado e contentWindow; document.body; o ouvinte de 'message'; relógios de mentira que o teste avança): o abre3d (api._abre3d)
+// com um pedido e as funções do modo; as mensagens chegam pelo ouvinte como as do quadro
+{
+  const vm = await import('node:vm');
+  const fs = await import('node:fs');
+  const TMJS = path.join(path.resolve(arg('--tm', path.join(JS, '../../legacy-total-match'))), 'js/tm3d.js');
+  const ORIGEM = 'https://tm.exemplo';
+  const novoCtx = () => {
+    let agora = 0, seq = 0;
+    const timers = new Map();
+    const agenda = (fn, ms, rep) => { const id = ++seq; timers.set(id, { fn, t: agora + Math.max(0, +ms || 0), rep: rep ? Math.max(1, +ms || 1) : 0 }); return id; };
+    const avancar = ms => {
+      const fimT = agora + ms;
+      for (;;) {
+        let prox = null;
+        for (const [id, x] of timers) if (x.t <= fimT && (!prox || x.t < prox[1].t || (x.t === prox[1].t && id < prox[0]))) prox = [id, x];
+        if (!prox) break;
+        const [id, x] = prox;
+        agora = Math.max(agora, x.t);
+        if (x.rep) x.t += x.rep; else timers.delete(id);
+        x.fn();
+      }
+      agora = fimT;
+    };
+    const lista = (el) => ({ s: new Set(), add(...c) { for (const k of c) this.s.add(k); }, remove(...c) { for (const k of c) this.s.delete(k); }, contains(k) { return this.s.has(k); }, toggle(k, v) { if (v ?? !this.s.has(k)) this.s.add(k); else this.s.delete(k); } });
+    const criados = [];
+    const el = (tag, at = {}, filhos = []) => {
+      const e = { tag, at, style: {}, filhos: [], pai: null, removido: 0, textContent: at.text ?? '', hidden: false, ouvintes: at.on ?? {},
+        appendChild(c) { if (c && typeof c === 'object') { c.pai = this; this.filhos.push(c); } return c; },
+        remove() { this.removido++; if (this.pai) { const i = this.pai.filhos.indexOf(this); if (i >= 0) this.pai.filhos.splice(i, 1); this.pai = null; } },
+        get isConnected() { let x = this; while (x) { if (x === corpo) return true; x = x.pai; } return false; },
+        setAttribute(k, v) { this.at[k] = v; }, getAttribute(k) { return this.at[k] ?? null; }, addEventListener() {}, removeEventListener() {} };
+      e.classList = lista(e);
+      for (const c of String(at.class ?? '').split(/\s+/).filter(Boolean)) e.classList.add(c);
+      if (tag === 'iframe') { e.contentWindow = { quadro: true }; e.contentDocument = { getElementById: () => null }; }
+      for (const f of filhos) e.appendChild(f);
+      criados.push(e);
+      return e;
+    };
+    const corpo = el('body');
+    const ouvintes = [];
+    const ctx = {
+      TM: { ui: { el, toast() {}, confirm() {}, current: () => '' }, ic: n => el('i', { class: 'ic-' + n }), storage: { edition: () => 'public', settings: () => ({}) } },
+      document: { body: corpo, createElement: t => el(t) },
+      location: { origin: ORIGEM },
+      localStorage: (() => { const m = new Map(); return { setItem(k, v) { m.set(k, String(v)); }, getItem(k) { return m.has(k) ? m.get(k) : null; }, removeItem(k) { m.delete(k); }, get length() { return m.size; }, key(i) { return [...m.keys()][i] ?? null; } }; })(),
+      setTimeout: (f, ms) => agenda(f, ms, false), clearTimeout: id => timers.delete(id), setInterval: (f, ms) => agenda(f, ms, true), clearInterval: id => timers.delete(id),
+      requestAnimationFrame: f => agenda(() => f(agora), 16, false),
+      addEventListener(t, f) { if (t === 'message') ouvintes.push(f); }, removeEventListener(t, f) { const i = ouvintes.indexOf(f); if (i >= 0) ouvintes.splice(i, 1); },
+      console,
+    };
+    ctx.window = ctx;
+    vm.createContext(ctx);
+    vm.runInContext(fs.readFileSync(TMJS, 'utf8'), ctx, { filename: TMJS });
+    const tela = () => corpo.filhos.find(x => x.classList.contains('tm3d-tela')) ?? null;
+    return { ctx, corpo, criados, avancar, ouvintes, tela, timers };
+  };
+  let C = null;
+  try { C = novoCtx(); } catch (e) { C = null; }
+  const abre = C?.ctx.TM.tm3d?._abre3d;
+  if (!abre) reg('P14 o recado tm3d:tela e o quadro que some já (item 106)', `${path.relative(process.cwd(), TMJS)}: sem TM.tm3d._abre3d (a versão de antes: sem o recado tm3d:tela; o quadro só saía no remove() síncrono)`, 'existe', false);
+  else {
+    const PED = { v: 2, id: 'p14', titulo: 'P14', home: { players: [] }, away: { players: [] } };
+    const ruins = [];
+    // (a)(b) o tm3d:tela tira o aviso e o X, cancela o aviso de demora e NÃO entrega a porta (o fns.pronto do Online 3D)
+    {
+      const f = { pronto: 0, sair: 0, fim: 0 };
+      abre({ ...PED }, { pronto: () => { f.pronto++; }, sair: () => { f.sair++; }, fim: () => { f.fim++; }, falhou: () => {} });
+      const T = C.tela(), aviso = T?.filhos.find(x => x.classList.contains('tm3d-aviso')), q = T?.filhos.find(x => x.tag === 'iframe'), x = T?.filhos.find(x => x.classList.contains('tm3d-sair'));
+      const manda = d => { for (const o of [...C.ouvintes]) o({ origin: ORIGEM, data: { id: 'p14', ...d }, source: q.contentWindow }); };
+      manda({ tipo: 'tm3d:tela' });
+      const dep = { aviso: aviso.style.display, x: x.style.display, pronto: f.pronto };
+      C.avancar(31000);
+      const demora = { texto: aviso.textContent, classe: aviso.classList.contains('demora'), vis: aviso.style.display };
+      if (dep.aviso !== 'none' || dep.x !== 'none') ruins.push(`(a) depois do tm3d:tela o aviso "${dep.aviso}" e o X "${dep.x}" à vista`);
+      if (demora.classe || /demorando/.test(demora.texto) || demora.vis !== 'none') ruins.push(`(a) 31 s depois da tela, o aviso de demora apareceu (${JSON.stringify(demora)})`);
+      if (dep.pronto !== 0) ruins.push(`(b) o tm3d:tela chamou o fns.pronto (${dep.pronto}×: a porta do Online 3D só no tm3d:pronto)`);
+      // (d) o tm3d:pronto depois: a porta (fns.pronto) uma vez
+      manda({ tipo: 'tm3d:pronto' });
+      if (f.pronto !== 1) ruins.push(`(d) o tm3d:pronto depois da tela chamou o fns.pronto ${f.pronto}×`);
+      // (c) o tm3d:sair: dentro do fns.sair a tela já fora da vista e sem o tm3d-aberto, o remove() ainda não; depois dos relógios, 1×
+      let dentro = null;
+      C.ctx.TM.tm3d._abre3d === abre;
+      const T0 = T;
+      // (o fns.sair desta abertura é o de cima: confere por fora, logo depois da mensagem — o termina chama o fns.sair na mesma pilha)
+      manda({ tipo: 'tm3d:sair', motivo: 'simular' });
+      dentro = { display: T0.style.display, vis: T0.style.visibility, hidden: T0.hidden, aberto: C.corpo.classList.contains('tm3d-aberto'), removido: T0.removido, sair: f.sair };
+      C.avancar(2000);
+      const fora = { removido: T0.removido, ligado: T0.isConnected };
+      const escondida = dentro.display === 'none' || dentro.vis === 'hidden' || dentro.hidden === true;
+      if (dentro.sair !== 1 || !escondida || dentro.aberto || dentro.removido !== 0) ruins.push(`(c) no tm3d:sair: ${JSON.stringify(dentro)} (a tela fora da vista, sem tm3d-aberto e o remove() ainda não)`);
+      if (fora.removido !== 1 || fora.ligado) ruins.push(`(c) depois dos relógios o remove() ${fora.removido}× (ligada ${fora.ligado})`);
+    }
+    // (c') dentro do fns.sair (a tela de jogo do TM monta nele): a tela já fora da vista; e (d') sem o tm3d:tela (o motor antigo,
+    // futebol3d/, não manda), o tm3d:pronto continua tirando o aviso e o X
+    {
+      let visto = null;
+      abre({ ...PED, id: 'p14b' }, { pronto: () => {}, fim: () => {}, falhou: () => {},
+        sair: () => { const T = C.tela() ?? C.criados.filter(x => x.classList.contains('tm3d-tela')).pop(); visto = { display: T.style.display, aberto: C.corpo.classList.contains('tm3d-aberto'), removido: T.removido }; } });
+      const T = C.tela(), aviso = T.filhos.find(x => x.classList.contains('tm3d-aviso')), q = T.filhos.find(x => x.tag === 'iframe'), x = T.filhos.find(x => x.classList.contains('tm3d-sair'));
+      const manda = d => { for (const o of [...C.ouvintes]) o({ origin: ORIGEM, data: { id: 'p14b', ...d }, source: q.contentWindow }); };
+      manda({ tipo: 'tm3d:pronto' });
+      if (aviso.style.display !== 'none' || x.style.display !== 'none') ruins.push(`(d') sem o tm3d:tela, o tm3d:pronto deixou o aviso "${aviso.style.display}" / o X "${x.style.display}"`);
+      manda({ tipo: 'tm3d:sair', motivo: 'simular' });
+      if (!visto || visto.display !== 'none' || visto.aberto || visto.removido !== 0) ruins.push(`(c') dentro do fns.sair: ${JSON.stringify(visto)}`);
+      C.avancar(2000);
+      if (T.removido !== 1) ruins.push(`(c') o remove() ${T.removido}× depois`);
+    }
+    // (e) o abre3d com um quadro ainda aberto tira o velho na hora (como antes)
+    {
+      abre({ ...PED, id: 'p14c' }, { pronto() {}, sair() {}, fim() {}, falhou() {} });
+      const velho = C.tela();
+      abre({ ...PED, id: 'p14d' }, { pronto() {}, sair() {}, fim() {}, falhou() {} });
+      const novo = C.tela();
+      if (velho.removido !== 1 || velho.isConnected || novo === velho) ruins.push(`(e) o abre3d com um aberto: o velho removido ${velho.removido}×`);
+      C.ctx.TM.tm3d.fechar();
+      C.avancar(2000);
+    }
+    reg('P14 o tm3d:tela (item 106): esconde o aviso e o X, cancela a demora de 30 s e não entrega a porta; o tm3d:sair tira a tela da vista JÁ (no fns.sair ela já está fora) e o remove() vem depois; sem o tm3d:tela o tm3d:pronto continua; o abre3d tira o velho na hora',
+      ruins.join('; ') || 'os 6 casos certos', 'os 6 casos certos', ruins.length === 0);
   }
 }
 

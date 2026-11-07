@@ -61,6 +61,16 @@
 //   E25 (item 35) o clássico pelo ?classico=1 fora do TM: o selo "Clássico" no PC (1280×720, .pp-classico) e o prefixo
 //       "Clássico · " no estádio no celular (844×390 com toque), com m.classico true; sem o parâmetro, nem o selo nem o prefixo e
 //       o campo ausente (como antes). Na base reprova (o selo só vinha do pedido do TM)
+//   E26 (item 106, a TELA CEDO: a tela à vista enquanto o 3D monta; a sonda — addInitScript — marca a tela à vista e o
+//       __golaco.pronto e faz os gestos "antes do pronto" DENTRO da página; na base a tela só aparece com o 3D pronto e tudo reprova):
+//       E26a* partida 1280×720: a tela ≤ 1,5 s depois do começo da navegação e ≥ 1 s antes do pronto; E26b* antes do 3D o Jogar e o ≡
+//       esperam (aria-disabled, "carregando", o toque não começa nada) e a Visão tática vale; com o 3D eles voltam sozinhos, o foco
+//       igual e o fundo de hoje; E26e* o Personalizar antes do 3D (o PRONTO do editor): 0 substituições, o hash = Node
+//       criarPartida({times}); E26h* com o pré-jogo (o fundo 2d e depois a abertura calada), os Pênaltis 3D do TM ("Bater" espera,
+//       "Cobradores do adversário" vale, o tm3d:tela ≥ 1 s antes do tm3d:pronto) e o Rumo ao Estrelato (a ficha VOCÊ e o Simular);
+//       E26c* TM pública num quadro: o tm3d:tela e o "Simular partida" (2 toques) antes do 3D → tm3d:sair 'simular' (11 + 11), sem
+//       tm3d:pronto nem tm3d:fim depois (a carga para; a página é da mesma origem do TM); E26d* o estado "carregando" (os quadros
+//       segurados na tela): 0 rolagem e nada encosta no TM (4 abas) em 568×320 e 844×390 com o entalhe e no PC, contraste ≤ 50/255
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
 //   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
@@ -69,7 +79,7 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
-//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,carga] [--espera <s>]
+//   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,cedo,carga] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -407,10 +417,11 @@ if (faz('cel')) {
 }
 
 /** A luminância mediana atrás da info e da barra (o print sem o texto: a tela fica com o texto transparente). */
-async function contraste(pg) {
+async function contraste(pg, semQuadros = false) {
   await pg.addStyleTag({ content: '#prepartida.medindo .pp-info, #prepartida.medindo .pp-barra { color: transparent !important; } #prepartida.medindo .pp-barra * { visibility: hidden !important; }' });
   await pg.evaluate(() => document.getElementById('prepartida').classList.add('medindo'));
-  await quadros(pg, 2);
+  // (semQuadros: a página com os quadros segurados — E26d; o print sai do compositor)
+  if (semQuadros) await pg.waitForTimeout(200); else await quadros(pg, 2);
   const caixas = await pg.evaluate(() => { const R = e => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; }; return { info: R(document.getElementById('pp-info')), barra: R(document.querySelector('.pp-barra')) }; });
   const png = await pg.screenshot({ type: 'png' });
   await pg.evaluate(() => document.getElementById('prepartida').classList.remove('medindo'));
@@ -1352,6 +1363,242 @@ if (faz('fotos')) {
       meta('E22d as fotos em 404: todas com o busto, nenhuma <img> visível; nenhum erro além dos 404 das fotos', `${f.comFoto} fotos visíveis, ${f.imgs} <img>, busto ${f.busto}/${f.n}; 404 no console ${n404} (das fotos ${ctx.fotos.consoles404}); outros erros ${errs.length}${errs.length ? ': ' + errs[0].slice(0, 80) : ''}`,
         '0; 0; 11/11; 0', f.n === 11 && f.comFoto === 0 && f.imgs === 0 && f.busto === 11 && errs.length === 0 && n404 <= ctx.fotos.consoles404);
     } finally { await ctx.navegador.close(); }
+  }
+}
+
+// ================================================================================================ a tela cedo (item 106)
+// A sonda (addInitScript, em todo quadro; não depende de como a página faz): tTela = o #prepartida à vista com o #carregando fora
+// (escondido ou sumindo); tPronto = o __golaco.pronto = true (um setter na API). Os gestos "antes do pronto" correm DENTRO da página,
+// 30 ms depois da tela (o evaluate do Playwright espera o fio, que a carga do 3D ocupa): o roteiro `o.acoes` abaixo. `o.segurar`: na
+// tela, os requestAnimationFrame novos ficam numa fila até __soltarRaf() — a carga do 3D para no quadro seguinte e a régua mede o
+// estado "carregando" com calma. Na página de cima (o quadro do TM), as mensagens tm3d:* com a hora (performance.now dela).
+function sondaCedo(o) {
+  const M = window.__cedo = { tTela: null, tPronto: null, antes: null, msgs: [], erro: null };
+  if (window === window.top) {
+    addEventListener('message', e => {
+      const d = e.data;
+      if (d && typeof d.tipo === 'string' && d.tipo.startsWith('tm3d:')) M.msgs.push({ tipo: d.tipo, motivo: d.motivo ?? null, t: performance.now(), nCasa: d.titulares?.home?.length ?? 0, nFora: d.titulares?.away?.length ?? 0 });
+    });
+  }
+  let g;
+  Object.defineProperty(window, '__golaco', {
+    configurable: true, enumerable: true, get: () => g,
+    set(v) {
+      g = v;
+      let p = !!v?.pronto;
+      try { Object.defineProperty(v, 'pronto', { configurable: true, enumerable: true, get: () => p, set(x) { p = x; if (x && M.tPronto == null) M.tPronto = performance.now(); } }); } catch (_) { /* */ }
+    },
+  });
+  if (o.segurar) {
+    const raf0 = window.requestAnimationFrame.bind(window), fila = [];
+    window.requestAnimationFrame = cb => { if (window.__segura) { fila.push(cb); return 0; } return raf0(cb); };
+    window.__soltarRaf = () => { window.__segura = false; for (const cb of fila.splice(0)) raf0(cb); };
+  }
+  const q = s => document.querySelector('#prepartida ' + s);
+  const aria = s => q(s)?.getAttribute('aria-disabled') ?? null;
+  const foco = () => { const a = document.activeElement; return a?.closest?.('#prepartida') ? (a.dataset.aba ?? a.dataset.pp ?? 'outro') : (a?.id || a?.tagName || null); };
+  const ACOES = {
+    // E26b/E26e (a partida sem ?tm): o Jogar e o ≡ esperam; a Visão tática e o Personalizar (o PRONTO do editor) já valem
+    partida() {
+      const G = window.__golaco, P = G.prepartida;
+      const a = { antes: M.tPronto == null, carregando: P.estado?.carregando ?? null, fundo: P.estado?.fundo ?? null, jogar: aria('[data-aba="jogar"]'), menu: aria('[data-pp="menu"]'), ocupada: q('[data-aba="jogar"]')?.getAttribute('aria-busy') ?? null };
+      q('[data-aba="jogar"]').click();
+      a.depoisJogar = { aberta: !!P.aberta, tick: G.mundo.tick, pre: !!G.prejogo?.ativo, passos: G.passos };
+      q('[data-aba="visao"]').click();
+      a.visao = P.estado?.visao ?? null;
+      q('[data-aba="visao"]').click(); q('[data-aba="visao"]').click();
+      q('[data-pp="menu"]').click();
+      a.menu2 = !!G.estado().menuAberto;
+      if (o.ed) a.escalou = P.escalar(o.ed);
+      a.ficha22 = !!q('.pp-ficha[data-id="22"]');
+      a.foco = foco();
+      a.antes2 = M.tPronto == null;
+      M.antes = a;
+    },
+    // E26c e E26h (TM e Rumo ao Estrelato num quadro): o "Simular partida" (2 toques) antes do pronto
+    simular() {
+      const G = window.__golaco, P = G.prepartida, b = () => q('[data-aba="simular"]');
+      const a = { antes: M.tPronto == null, carregando: P.estado?.carregando ?? null, simular: aria('[data-aba="simular"]'), jogar: aria('[data-aba="jogar"]'), voce: document.querySelectorAll('#prepartida .pp-ficha.voce').length };
+      b().click();
+      a.armado = P.estado?.armado ?? null;
+      const t = performance.now();
+      b().click();
+      const s = G.tm.mensagens.find(m => m.tipo === 'tm3d:sair');
+      a.sair = s ? { motivo: s.motivo ?? null, nCasa: s.titulares?.home?.length ?? 0, nFora: s.titulares?.away?.length ?? 0, ms: performance.now() - t } : null;
+      a.tick = G.mundo.tick;
+      a.antes2 = M.tPronto == null;
+      M.antes = a;
+    },
+    // E26h (os Pênaltis 3D do TM num quadro): o "Bater pênaltis" espera; "Cobradores do adversário" já vale
+    penaltis() {
+      const G = window.__golaco, P = G.prepartida;
+      const a = { antes: M.tPronto == null, carregando: P.estado?.carregando ?? null, jogar: aria('[data-aba="jogar"]') };
+      q('[data-aba="jogar"]').click();
+      a.depoisJogar = { aberta: !!P.aberta, tick: G.mundo.tick };
+      q('[data-aba="adversario"]').click();
+      a.time = P.estado?.time ?? null;
+      a.antes2 = M.tPronto == null;
+      M.antes = a;
+    },
+  };
+  const ver = () => {
+    if (M.tTela != null) return;
+    const pp = document.getElementById('prepartida'), c = document.getElementById('carregando');
+    if (!pp || pp.hidden || !c || !(c.hidden || c.classList.contains('sumir'))) return;
+    M.tTela = performance.now();
+    if (o.segurar) window.__segura = true;
+    if (o.acoes) setTimeout(() => { try { ACOES[o.acoes](); } catch (e) { M.erro = String(e?.stack ?? e).slice(0, 300); } }, 30);
+  };
+  const ob = new MutationObserver(ver);
+  const ligar = () => ob.observe(document.documentElement, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+  if (document.documentElement) ligar(); else document.addEventListener('readystatechange', ligar, { once: true });
+}
+/** A página (ou o TM num quadro) com a sonda da tela cedo; espera a tela (não o pronto). Devolve {s, pg (o frame do jogo), cima}. */
+async function abrirCedo(o) {
+  const s = await abrir({ largura: o.w, altura: o.h, toque: !!o.toque, dpr: o.toque ? 2 : 1 });
+  await s.contexto.addInitScript(sondaCedo, { acoes: o.acoes ?? null, segurar: !!o.segurar, ed: o.ed ?? null });
+  const q = `${o.q}${o.toque ? '&toque=1&entalhe=1' : ''}`;
+  let pg = s.pagina;
+  if (o.quadro) {
+    const ped = o.pedido;
+    const url = `index.html?tm=${ped.id}&${q}`;
+    const json = JSON.stringify(JSON.stringify(ped)).replace(/</g, '\\u003c');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><title>TM</title></head><body style="margin:0;background:#000"><script>
+localStorage.setItem('tm3d:pedido:' + ${JSON.stringify(ped.id)}, ${json});
+const f = document.createElement('iframe'); f.id = 'q'; f.src = ${JSON.stringify(url)};
+f.allow = 'fullscreen; autoplay; gamepad'; f.style.cssText = 'border:0;width:100vw;height:100vh;display:block';
+document.body.appendChild(f);
+</script></body></html>`;
+    const u = `${srv.url}__quadro-cedo-${ped.id}.html`;
+    await s.contexto.route(u, r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+    await s.pagina.goto(u, { waitUntil: 'load' });
+    let fr = null;
+    for (let i = 0; i < 400 && !fr; i++) { fr = s.pagina.frames().find(f => /[?&]tm=/.test(f.url())); if (!fr) await s.pagina.waitForTimeout(50); }
+    if (!fr) throw new Error('o quadro do jogo não abriu');
+    pg = fr;
+  } else {
+    if (o.pedido) await s.contexto.addInitScript(([id, json]) => { try { localStorage.setItem('tm3d:pedido:' + id, json); } catch (_) { /* */ } }, [o.pedido.id, JSON.stringify(o.pedido)]);
+    await s.pagina.goto(srv.url + '?' + q);
+  }
+  await pg.waitForFunction(() => window.__cedo?.tTela != null, null, { timeout: 240000 });
+  if (o.acoes) await pg.waitForFunction(() => window.__cedo.antes != null || window.__cedo.erro != null, null, { timeout: 120000 }).catch(() => {});
+  return { s, pg, cima: s.pagina };
+}
+const cedo = pg => pg.evaluate(() => ({ ...window.__cedo, msgs: undefined }));
+const s1 = v => (v == null ? '—' : (v / 1000).toFixed(2));
+if (faz('cedo')) {
+  const SEM = 3;
+  // E26a/b/e: a partida sem ?tm (1280×720), sem pré-jogo — o Jogar, a Visão tática, o ≡ e o Personalizar antes do pronto
+  {
+    const ESC = await imp('escalacao.js');
+    let r = ESC.rascunhoDe(structuredClone(criarPartida({ semente: SEM }).times[0]), null, 0);
+    for (const id of [9, 22]) r = ESC.tocar(r, id).rasc;
+    const edicao = ESC.edicaoDe(r);
+    const vagasE = { formacao: edicao.formacao, vagas: { ...edicao.vagas }, tatica: { ...edicao.tatica } };
+    const { s, pg } = await abrirCedo({ w: 1280, h: 720, q: `${Q}&prepartida=1&semente=${SEM}`, acoes: 'partida', ed: edicao });
+    try {
+      await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 240000 });
+      await quadros(pg, 3);
+      const c = await cedo(pg);
+      const a = c.antes ?? {};
+      const depois = await pg.evaluate(() => {
+        const g = window.__golaco, P = g.prepartida, q = s => document.querySelector('#prepartida ' + s), at = document.activeElement;
+        const t = g.estadoTime(0);
+        return { aberta: !!P.aberta, carregando: P.estado?.carregando ?? null, fundo: P.estado?.fundo ?? null, jogar: q('[data-aba="jogar"]')?.getAttribute('aria-disabled') ?? null, menu: q('[data-pp="menu"]')?.getAttribute('aria-disabled') ?? null,
+          foco: at?.closest?.('#prepartida') ? (at.dataset.aba ?? at.dataset.pp ?? 'outro') : (at?.id || at?.tagName || null), tick: g.mundo.tick, passos: g.passos, hash: g.hash(), feitas: t.subs.feitas, saiu: t.saiu.length, ficha22: !!q('.pp-ficha[data-id="22"]'), visao: P.estado?.visao ?? null };
+      });
+      const node = hashNode(criarPartida({ semente: SEM, times: { 0: vagasE } }), 0);
+      const dt = c.tPronto - c.tTela;
+      meta('E26a* a tela cedo (partida, 1280×720): à vista ≥ 1 s antes do 3D pronto e ≤ 1,5 s depois do começo da navegação',
+        `tela ${s1(c.tTela)} s, pronto ${s1(c.tPronto)} s (a tela ${s1(dt)} s antes)`, 'tela ≤ 1,5 s; ≥ 1,0 s antes do pronto', c.tTela != null && c.tPronto != null && c.tTela <= 1500 && dt >= 1000);
+      meta('E26b* antes do 3D: o Jogar e o ≡ esperam (aria-disabled, "carregando") e o toque neles não começa nada; a Visão tática já vale; com o 3D, o Jogar e o ≡ sozinhos e o foco igual, o fundo de hoje (jogo)',
+        `${c.erro ? `erro ${c.erro}; ` : ''}antes ${a.antes}/${a.antes2}: carregando ${a.carregando}, fundo ${a.fundo}, Jogar ${a.jogar} (ocupada ${a.ocupada}), ≡ ${a.menu}; o toque no Jogar → ${JSON.stringify(a.depoisJogar)}; Visão ${a.visao}; ≡ → pausa ${a.menu2}; foco ${a.foco} · depois: carregando ${depois.carregando}, fundo ${depois.fundo}, Jogar ${depois.jogar}, ≡ ${depois.menu}, foco ${depois.foco}`,
+        'antes: true, 2d, Jogar e ≡ true; aberta, tick 0, sem pré-jogo; sem; ≡ fechada · depois: false, jogo, sem aria-disabled, o mesmo foco',
+        a.antes === true && a.antes2 === true && a.carregando === true && a.fundo === '2d' && a.jogar === 'true' && a.menu === 'true' && a.depoisJogar?.aberta && a.depoisJogar.tick === 0 && !a.depoisJogar.pre && a.depoisJogar.passos === 0
+          && a.visao === 'sem' && a.menu2 === false && depois.aberta && depois.carregando === false && depois.fundo === 'jogo' && depois.jogar == null && depois.menu == null && depois.foco === a.foco);
+      meta('E26e* o Personalizar antes do 3D: o PRONTO do editor recria o mundo (0 substituições) e o 3D nasce dele — tick 0, 0 passos, o hash = Node criarPartida({times}); o reserva (22) nas fichas antes e depois',
+        `escalou ${a.escalou}, ficha 22 antes ${a.ficha22}; depois: tick ${depois.tick}, passos ${depois.passos}, feitas ${depois.feitas}, saiu ${depois.saiu}, ficha 22 ${depois.ficha22}; hash ${hexa(depois.hash)} × Node ${hexa(node.h0)}`,
+        'true, true; 0, 0, 0, 0, true, iguais', a.escalou === true && a.ficha22 && depois.tick === 0 && depois.passos === 0 && depois.feitas === 0 && depois.saiu === 0 && depois.ficha22 && depois.hash === node.h0);
+      meta('S1 0 erros (a tela cedo, partida)', s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // E26h a partida COM o pré-jogo (?prejogo=1): a tela cedo no fundo 2D e, com o 3D, a abertura calada de hoje
+  {
+    const { s, pg } = await abrirCedo({ w: 1280, h: 720, q: `${Q}&prepartida=1&prejogo=1&semente=${SEM}` });
+    try {
+      const fundo0 = await pg.evaluate(() => window.__golaco.prepartida.estado?.fundo ?? null);
+      await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 240000 });
+      await quadros(pg, 3);
+      const c = await cedo(pg);
+      const d = await pg.evaluate(() => ({ fundo: window.__golaco.prepartida.estado?.fundo ?? null, fase: window.__golaco.prejogo?.fase ?? null, muda: window.__golaco.prejogo?.muda ?? null, aberta: !!window.__golaco.prepartida.aberta, tick: window.__golaco.mundo.tick, vis: getComputedStyle(document.getElementById('prejogo')).visibility }));
+      meta('E26h* a partida com o pré-jogo: a tela cedo (fundo 2d) ≥ 1 s antes do 3D; com ele, a abertura calada de hoje atrás da tela',
+        `tela ${s1(c.tTela)} s (fundo ${fundo0}), pronto ${s1(c.tPronto)} s; depois: ${JSON.stringify(d)}`, 'tela ≥ 1 s antes, 2d; abertura, aberta, tick 0, hidden',
+        c.tTela != null && c.tPronto - c.tTela >= 1000 && fundo0 === '2d' && d.fundo === 'abertura' && d.fase === 'abertura' && d.aberta && d.tick === 0 && d.vis === 'hidden');
+      meta('S1 0 erros (a tela cedo com o pré-jogo)', s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // E26c (TM pública) e E26h (Rumo ao Estrelato), num quadro: o "Simular partida" antes do 3D → tm3d:sair 'simular' e a carga parada
+  for (const [nome, ped] of [['E26c* TM pública', { ...PED_A, id: 'tCedoA' }], ['E26h* Rumo ao Estrelato', { ...PED_B, id: 'tCedoB' }]]) {
+    const { s, pg, cima } = await abrirCedo({ w: 1280, h: 720, q: `${Q}&prepartida=1&min=1`, quadro: true, pedido: ped, acoes: 'simular' });
+    try {
+      // (o 3D, se a carga seguisse, ficaria pronto ~3–4 s depois da tela aqui: 8 s sem o pronto = a carga parou)
+      await pg.waitForTimeout(8000);
+      const c = await cedo(pg), a = c.antes ?? {};
+      const msgs = await cima.evaluate(() => window.__cedo.msgs.map(m => ({ ...m })));
+      const tipos = msgs.map(m => m.tipo + (m.motivo ? '/' + m.motivo : ''));
+      const sair = msgs.find(m => m.tipo === 'tm3d:sair');
+      const tick = await pg.evaluate(() => window.__golaco.mundo.tick);
+      const rae = ped.controle != null;
+      meta(`${nome}: a tela cedo manda tm3d:tela; o "Simular partida" (2 toques) ANTES do 3D → tm3d:sair "simular" (11 + 11) em ≤ 2 s, sem tm3d:fim nem tm3d:pronto depois (a carga para), tick 0${rae ? '; a ficha VOCÊ' : ''}`,
+        `${c.erro ? `erro ${c.erro}; ` : ''}antes ${a.antes}/${a.antes2}, carregando ${a.carregando}, Simular ${a.simular}, Jogar ${a.jogar}, armado ${a.armado}${rae ? `, VOCÊ ${a.voce}` : ''}; sair ${JSON.stringify(a.sair)}; mensagens ${tipos.join(', ')}; pronto ${s1(c.tPronto)}; tick ${tick}`,
+        `antes; Simular livre, Jogar true; simular; tm3d:tela, tm3d:sair/simular (11+11), nada depois; tick 0${rae ? '; VOCÊ 1' : ''}`,
+        a.antes === true && a.antes2 === true && a.carregando === true && a.simular == null && a.jogar === 'true' && a.armado === 'simular' && a.sair?.motivo === 'simular' && a.sair.nCasa === 11 && a.sair.nFora === 11 && a.sair.ms <= 2000
+          && tipos[0] === 'tm3d:tela' && !!sair && sair.nCasa === 11 && !tipos.some(t => t === 'tm3d:pronto' || t.startsWith('tm3d:fim')) && c.tPronto == null && tick === 0 && (!rae || a.voce === 1));
+      meta(`S1 0 erros (${nome.split(' ').slice(1).join(' ')})`, s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // E26h os Pênaltis 3D do TM num quadro: "Bater pênaltis" espera, "Cobradores do adversário" já vale; o tm3d:tela ≥ 1 s antes do pronto
+  {
+    const ped = { ...PED_A, id: 'tCedoPen', modo: 'penaltis' };
+    const { s, pg, cima } = await abrirCedo({ w: 1280, h: 720, q: `${Q}&prepartida=1`, quadro: true, pedido: ped, acoes: 'penaltis' });
+    try {
+      await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 240000 });
+      await quadros(pg, 3);
+      const c = await cedo(pg), a = c.antes ?? {};
+      const msgs = await cima.evaluate(() => window.__cedo.msgs.map(m => ({ ...m })));
+      const tT = msgs.find(m => m.tipo === 'tm3d:tela')?.t, tP = msgs.find(m => m.tipo === 'tm3d:pronto')?.t;
+      const d = await pg.evaluate(() => ({ jogar: document.querySelector('#prepartida [data-aba="jogar"]')?.getAttribute('aria-disabled') ?? null, carregando: window.__golaco.prepartida.estado?.carregando ?? null, aberta: !!window.__golaco.prepartida.aberta, tick: window.__golaco.mundo.tick }));
+      meta('E26h* Pênaltis 3D do TM: "Bater pênaltis" espera o 3D (o toque não começa a disputa), "Cobradores do adversário" já vale; o tm3d:tela ≥ 1 s antes do tm3d:pronto; com o 3D o Bater sozinho',
+        `${c.erro ? `erro ${c.erro}; ` : ''}antes ${a.antes}/${a.antes2}: carregando ${a.carregando}, Bater ${a.jogar}, o toque → ${JSON.stringify(a.depoisJogar)}, adversário → time ${a.time}; tm3d:tela ${tT != null && tP != null ? s1(tP - tT) + ' s antes do pronto' : `tela ${tT}, pronto ${tP}`}; depois ${JSON.stringify(d)}`,
+        'antes; true, true, aberta tick 0, time 1; ≥ 1 s; Bater livre, aberta, tick 0',
+        a.antes === true && a.antes2 === true && a.carregando === true && a.jogar === 'true' && a.depoisJogar?.aberta && a.depoisJogar.tick === 0 && a.time === 1 && tT != null && tP != null && tP - tT >= 1000
+          && d.jogar == null && d.carregando === false && d.aberta && d.tick === 0);
+      meta('S1 0 erros (a tela cedo, Pênaltis)', s.erros.slice(0, 3).join(' | ') || '0', '0', s.erros.length === 0);
+    } finally { await s.navegador.close(); }
+  }
+  // E26d o estado "carregando" (a carga do 3D segurada na tela): nada encosta, nada rola (o MEDIR de sempre) no TM (4 abas) em
+  // 568×320 e 844×390 com o entalhe e no PC; o contraste atrás da info e da barra com o fundo 2D ≤ 50/255 (844×390)
+  {
+    const linhas = [];
+    let ok = true;
+    for (const [w, h, toque] of [[568, 320, true], [844, 390, true], [1280, 720, false]]) {
+      const { s, pg } = await abrirCedo({ w, h, toque, q: `${Q}&prepartida=1&tm=tCedoD`, pedido: { ...PED_A, id: 'tCedoD' }, segurar: true });
+      try {
+        const e0 = await pg.evaluate(() => ({ carregando: window.__golaco.prepartida.estado?.carregando ?? null, fundo: window.__golaco.prepartida.estado?.fundo ?? null, pronto: !!window.__golaco.pronto }));
+        // (a entrada da tela acabada: os quadros estão segurados)
+        await pg.evaluate(() => document.getElementById('prepartida').classList.remove('entrando'));
+        const m = await pg.evaluate(MEDIR);
+        const ct = w === 844 ? await contraste(pg, true) : null;
+        const bom = e0.carregando === true && e0.fundo === '2d' && !e0.pronto && !!m && m.rolagem <= 0.5 && m.prob.length === 0 && m.nFichas === 11 && (!ct || (ct.info <= 50 && ct.barra <= 50));
+        if (!bom) ok = false;
+        linhas.push(`${w}×${h}: ${JSON.stringify(e0)}, rolagem ${m?.rolagem ?? '—'}, ${m ? m.prob.join(', ') || '0 problemas' : 'sem medida'}, ${m?.nFichas ?? 0} fichas${ct ? `, contraste info ${ct.info.toFixed(0)} barra ${ct.barra.toFixed(0)}` : ''}`);
+        await pg.evaluate(() => window.__soltarRaf());
+        await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 240000 });
+        if (s.erros.length) { ok = false; linhas.push(`erros: ${s.erros.slice(0, 2).join(' | ')}`); }
+      } finally { await s.navegador.close(); }
+    }
+    meta('E26d* o estado "carregando" (o 3D segurado): 0 rolagem e nada encosta no TM (4 abas) em 568×320 e 844×390 com o entalhe e no PC; o contraste atrás da info e da barra no fundo 2D ≤ 50/255',
+      linhas.join(' · '), 'carregando, 2d, antes do pronto; 0, 0 problemas, 11 fichas; ≤ 50', ok);
   }
 }
 

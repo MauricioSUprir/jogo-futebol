@@ -31,6 +31,10 @@
    (a Config "Dificuldade"; nas Batalhas, a delas com ajustesFixos) e o 3D joga com eles (ticksPorTempo, mundo.dificuldade); o
    resultado volta com os dois; a pausa do 3D diz "Partida e cenas". O Ultimate com o padrão (4 min, Normal) e a carreira e o
    Rumo ao Estrelato com 6 min e Difícil.
+   Item 106 (a tela cedo: a tela antes do jogo à vista enquanto o 3D monta), com o golaco de verdade na Partida rápida: o recado
+   tm3d:tela ≥ 1 s antes do tm3d:pronto; nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
+   do tm3d:pronto fecha com tm3d:sair "simular", sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some da vista ≤ 0,5 s
+   depois do 2º toque (o remove() do quadro, o desmonte do WebGL, depois) e o TM simula o result de sempre.
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -64,6 +68,17 @@ await p.addInitScript(() => {
   if (window !== window.top) return;
   window.__msgs3d = [];
   addEventListener("message", e => { const d = e.data; if (d && typeof d.tipo === "string" && d.tipo.indexOf("tm3d:") === 0) window.__msgs3d.push({ tipo: d.tipo, motivo: d.motivo || null, t: Date.now() }); });
+});
+// item 106 (a tela cedo): no 'tm3d:tela' o aviso "Abrindo o estádio 3D…" e o X do TM já saíram? (lido numa tarefa depois do recado:
+// o ouvinte do tm3d.js roda depois deste)
+await p.addInitScript(() => {
+  if (window !== window.top) return;
+  window.__naTela = null;
+  addEventListener("message", e => {
+    const d = e.data;
+    if (!d || d.tipo !== "tm3d:tela" || window.__naTela) return;
+    setTimeout(() => { const a = document.querySelector(".tm3d-aviso"), x = document.querySelector(".tm3d-sair"); window.__naTela = { aviso: a ? getComputedStyle(a).display : null, x: x ? getComputedStyle(x).display : null }; }, 0);
+  });
 });
 await p.goto(BASE + "/index.html", { waitUntil: "networkidle" });
 await p.waitForFunction(() => window.TM && TM.tm3d && TM.ut && TM.rae && TM.comp, { timeout: 60000 });
@@ -285,12 +300,17 @@ if (fr) {
       if (c && getComputedStyle(a).display !== "none" && getComputedStyle(c).display !== "none" && !c.hidden) window.__sobre++;
     }, 50);
     const ids = TM.data.world().leagues[0].clubIds;
+    window.__msgs3d.length = 0;
     window.__dadosAntes = TM.data.clubPlayers(ids[3]).slice(0, 11).map(x => x.id);
     TM.ui.go("quick-match", { a: TM.engine.teamFromClub(ids[3]), b: TM.engine.teamFromClub(ids[4]) });
   });
   fr = await espera3d();
   const sob = await p.evaluate(() => { clearInterval(window.__olho); return { sobre: window.__sobre, amostras: window.__amostras }; });
   confere("revisão A7: o \"Abrindo o estádio 3D…\" do TM some quando a tela de carregar do 3D aparece (≤ 4 amostras de 50 ms com os dois à vista)", !!fr && sob.amostras >= 4 && sob.sobre <= 4, sob);
+  // item 106: a tela antes do jogo à vista ANTES do 3D — o recado tm3d:tela chega ≥ 1 s antes do tm3d:pronto (na base não há tm3d:tela)
+  const mt = await p.evaluate(() => { const t = window.__msgs3d.find(m => m.tipo === "tm3d:tela"), r = window.__msgs3d.find(m => m.tipo === "tm3d:pronto"); return { tela: t ? t.t : null, pronto: r ? r.t : null, ordem: window.__msgs3d.map(m => m.tipo) }; });
+  confere("item 106 · Partida rápida: o tm3d:tela (a tela antes do jogo à vista) chega ≥ 1 s antes do tm3d:pronto", mt.tela != null && mt.pronto != null && mt.pronto - mt.tela >= 1000,
+    { antes: mt.tela != null && mt.pronto != null ? (mt.pronto - mt.tela) / 1000 : null, ordem: mt.ordem });
   if (fr) {
     const xiAntes = await xiDoTM();
     const ed = await fr.evaluate(() => {
@@ -317,6 +337,56 @@ if (fr) {
       { ed, xiTela0: xiTela[0], xiDepois0: xiDepois[0], deQuemSaiu, msgs: u.msgs, em3d: u.em3d });
     confere("revisão A2: o elenco do clube no TM.data não muda (o time da partida leva outro array)", dados, dados);
   }
+}
+
+// 1c) item 106 (a tela cedo), com o golaco de verdade na Partida rápida: a tela antes do jogo do 3D aparece ANTES do 3D pronto — o
+// recado tm3d:tela tira o aviso "Abrindo o estádio 3D…" e o X do TM — e o "Simular partida" (2 toques) feito antes do tm3d:pronto
+// fecha com tm3d:sair 'simular', sem tm3d:fim e sem tm3d:pronto (a carga do 3D para: a página do quadro é da mesma origem e as
+// tarefas longas dela travariam o TM); o quadro some da vista (o quadro seguinte da página do TM já sem ele) ≤ 0,5 s depois do 2º
+// toque — o remove(), o desmonte do WebGL, fica para depois — e o TM simula (com os titulares da tela: o placar pode ser outro, como
+// no 1b). Na base não há tm3d:tela: reprova
+{
+  await p.evaluate(() => {
+    window.__msgs3d.length = 0; window.__toasts.length = 0; window.__naTela = null; window.__someEm = null;
+    const ids = TM.data.world().leagues[0].clubIds;
+    TM.ui.go("quick-match", { a: TM.engine.teamFromClub(ids[5]), b: TM.engine.teamFromClub(ids[6]) });
+  });
+  // o tm3d:tela (ou o tm3d:pronto, na base) em até 90 s
+  let viu = false;
+  for (let i = 0; i < 1800 && !viu; i++) { await p.waitForTimeout(50); viu = await p.evaluate(() => window.__msgs3d.some(m => m.tipo === "tm3d:tela" || m.tipo === "tm3d:pronto")); }
+  const fr3 = p.frames().find(f => /golaco\/index\.html\?tm=/.test(f.url()));
+  const naTela = await p.evaluate(() => window.__naTela);
+  // a página do TM marca o quadro em que a tela do 3D já saiu da vista (o MutationObserver pega o display none ou a saída do quadro;
+  // o requestAnimationFrame seguinte é o quadro pintado sem ele)
+  await p.evaluate(() => {
+    const ob = new MutationObserver(() => {
+      const t = document.querySelector(".tm3d-tela");
+      if (t && getComputedStyle(t).display !== "none") return;
+      ob.disconnect();
+      requestAnimationFrame(() => { window.__someEm = Date.now(); });
+    });
+    ob.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ["style", "class", "hidden"] });
+  });
+  const toques = fr3 ? await fr3.evaluate(() => {
+    const g = window.__golaco, b = () => document.querySelector('#prepartida [data-aba="simular"]');
+    if (!g || !g.prepartida || !g.prepartida.aberta || !b()) return { tela: false, antes: !(g && g.pronto) };
+    const antes = !g.pronto;
+    b().click();
+    const armado = g.prepartida.estado.armado;
+    const t = Date.now();
+    b().click();
+    return { tela: true, antes, armado, t, tick: g.mundo.tick };
+  }).catch(e => ({ erro: String(e).slice(0, 120) })) : null;
+  for (let i = 0; i < 100 && !(await p.evaluate(() => window.__someEm != null)); i++) await p.waitForTimeout(100);
+  const someEm = await p.evaluate(() => window.__someEm);
+  const chegou = await ate(() => TM.ui.current() === "quick-result" && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
+  await p.waitForTimeout(1500);
+  const u = await ultimaPartida();
+  const some = toques && toques.t && someEm ? (someEm - toques.t) / 1000 : null;
+  confere("item 106 · Partida rápida: o tm3d:tela tira o aviso \"Abrindo o estádio 3D…\" e o X do TM", !!naTela && naTela.aviso === "none" && naTela.x === "none", naTela);
+  confere("item 106 · Partida rápida: o \"Simular partida\" (2 toques) ANTES do tm3d:pronto → tm3d:sair \"simular\", sem tm3d:pronto nem tm3d:fim; o quadro some da vista ≤ 0,5 s depois do 2º toque; o TM simula o result de sempre",
+    !!toques && toques.tela && toques.antes && toques.armado === "simular" && toques.tick === 0 && u.msgs[0] === "tm3d:tela" && !u.msgs.includes("tm3d:pronto") && some != null && some <= 0.5 && chegou && simulouNoTM(u, true),
+    { toques, some, chegou, msgs: u.msgs, em3d: u.em3d, placar: u.placar, antes: u.antes, toasts: u.toasts });
 }
 
 // 2) Carreira de técnico: o clube com o escudo e o estádio do TM, adversário escalado direito e resultado registrado
