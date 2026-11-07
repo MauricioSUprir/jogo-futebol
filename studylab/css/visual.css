@@ -403,3 +403,9 @@ label.f>span{font-size:12.5px;color:var(--txt)}
 
 /* botão de demonstração na tela de conta (para apresentar sem login) */
 .conta-demo{height:46px;font-weight:700;border-color:var(--acc);color:var(--txt)}
+.conta-teste{margin:22px 0 8px;text-align:center}
+.conta-teste__ou{display:flex;align-items:center;gap:12px;color:var(--dim2);font-size:12.5px;margin-bottom:14px}
+.conta-teste__ou::before,.conta-teste__ou::after{content:"";flex:1;height:1px;background:var(--line,#0000001f)}
+.conta-teste__selo{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:99px;border:1px solid var(--acc);color:var(--acc);margin-bottom:8px}
+.conta-teste__txt{margin:0 auto 12px;max-width:34ch;font-size:14px;color:var(--txt)}
+.conta-teste__nota{margin:8px 0 0}
