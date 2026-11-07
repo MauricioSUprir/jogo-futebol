@@ -234,14 +234,18 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
    disputa o processo da GPU com a compilação dos shaders do 3D */
 #prepartida .pp-aba.espera { cursor: progress; }
 #prepartida .pp-aba.espera > svg, #prepartida .pp-aba.espera .pp-aba-txt { opacity: 0.62; }
+/* (a aba com o foco esperando — o Jogar, que abre com ele — não fica no verde cheio de "pronto": um verde escuro, com o texto claro e a
+   barra verde; o verde cheio só com o 3D — avaliação do item 106: "o Jogar parece pronto antes de estar") */
+#prepartida .pp-aba.espera.foco { background: linear-gradient(180deg, #1b4d30, #153d26); color: #d1fae5; border-color: rgba(74, 222, 128, 0.35); }
+#prepartida .pp-aba.espera.foco::after { opacity: 0.04; }
+#prepartida .pp-aba.espera.foco:focus-visible { outline-color: #d1fae5; }
+#prepartida .pp-aba.espera.foco > svg, #prepartida .pp-aba.espera.foco .pp-aba-txt { opacity: 0.8; }
 #prepartida .pp-carga { display: none; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; overflow: hidden; pointer-events: none; }
-#prepartida .pp-aba.espera .pp-carga { display: block; background: rgba(255, 255, 255, 0.1); }
+#prepartida .pp-aba.espera .pp-carga { display: block; background: rgba(255, 255, 255, 0.12); }
 #prepartida .pp-aba.espera .pp-carga::before {
   content: ""; position: absolute; inset: 0; background: var(--pp-verde); transform-origin: 0 50%; transform: scaleX(var(--carga, 0.08));
   transition: transform 0.3s ease-out;
 }
-#prepartida .pp-aba.espera.foco .pp-carga { background: rgba(4, 18, 10, 0.18); }
-#prepartida .pp-aba.espera.foco .pp-carga::before { background: #04120a; }
 #prepartida .pp-menu[aria-disabled="true"] { cursor: progress; opacity: 0.55; }
 #prepartida .pp-aba.aguardando::before {
   content: ""; position: static; flex: none; width: 1em; height: 1em; border-radius: 50%; border: 2px solid currentColor; border-right-color: transparent;

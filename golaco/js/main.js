@@ -259,6 +259,8 @@ let ppDesenho = -1e9, ppDt = 0, ppVolta = null, ppDesenhos = 0;
 // TM, o "Sair da partida" do online): o iniciar() para no próximo await (a página do quadro é da mesma origem do TM — as tarefas
 // longas do 3D travariam a tela dele) e o 'tm3d:pronto' nunca sai; ppIdentNaTela: a tela abriu já com a identidade do TM (escudos)
 let pronto3d = false, cargaCancelada = false, ppIdentNaTela = false, ppTam = '';
+// (as fontes da tela — a Inter TM e a TM Cond —, pedidas junto com o módulo dela: a tela cedo as espera até PP_CEDO_MS)
+let ppFontes = null;
 
 const params = new URLSearchParams(location.search);
 const PRINTS = params.get('prints') === '1';
@@ -3211,10 +3213,16 @@ function tratarAcao(a) {
 /** Abre o "Editar time" (partida): a pausa some e a tela mostra o time (ou a edição na fila). */
 function abrirEditor() {
   if (mundo.modo !== 'partida' || !mundo.times) return false;
-  // a tela ainda não baixou (antes da pré-carga): pede e abre quando chegar (pela pausa: se ela ainda estiver aberta)
+  // a tela ainda não baixou (antes da pré-carga): pede e abre quando chegar (pela pausa: se ela ainda estiver aberta; pelo Personalizar
+  // da tela antes do jogo: se ela ainda estiver aberta e o Personalizar valendo — com a tela cedo, item 106, o toque vinha antes do 3D, o
+  // editor chegava depois do Jogar e abria por cima do jogo já começado, parado: revisão do item 106)
   if (!editor) {
-    const m0 = mundo, peloMenu = hud.menuAberto;
-    carregarSobDemanda('editor').then(() => { if (mundo === m0 && (!peloMenu || hud.menuAberto)) abrirEditor(); }, () => {});
+    const m0 = mundo, peloMenu = hud.menuAberto, pelaTela = ppPersonalizar && !!pp?.aberta;
+    const vale = () => mundo === m0 && (!peloMenu || hud.menuAberto) && (!pelaTela || (ppPersonalizar && !!pp?.aberta)) && !editor?.aberto;
+    // (a aba fica ocupada enquanto o editor baixa: o toque dá retorno)
+    if (pelaTela) pp.esperando('personalizar');
+    const fim = () => { if (pelaTela) { pp?.esperando?.(null); if (!vale()) ppPersonalizar = false; } };
+    carregarSobDemanda('editor').then(() => { const v = vale(); fim(); if (v) abrirEditor(); }, fim);
     return true;
   }
   hud.fecharMenu(); hud.fecharAjuda();
@@ -3463,16 +3471,17 @@ function prepartidaLigada(m = mundo) {
 const ppAberta = () => !!pp?.aberta;
 /** Baixa a tela (uma vez): o módulo DOM, as contas, o CSS (antes do prejogo.css) e a fonte (sem esperar por ela). */
 function carregarPrepartida() {
+  // a Inter TM (a da pausa) e a TM Cond: pedidas JÁ, junto com o módulo — a tela cedo (item 106) as espera até PP_CEDO_MS e abre com a
+  // letra certa (pedidas só com o módulo, chegavam no meio das tarefas longas do 3D e a tela trocava de letra 3–4 s depois de aparecer,
+  // com os nomes cortados pela reserva: avaliação do item 106); o layout não depende delas (a info refaz a conta quando chegam)
+  if (!ppCarga && !ppFontes) {
+    ppFontes = document.fonts?.load
+      ? Promise.all(['600 15px "Inter TM"', '800 15px "Inter TM"', ...FONTES_DISP].map(f => document.fonts.load(f).catch(() => null))).then(() => true, () => false)
+      : Promise.resolve(false);
+    ppFontes.then(() => { if (pp?.aberta) pp.layout(); });
+  }
   return ppCarga ??= Promise.all([import('./prepartida-tela.js'), import('./prepartida.js'), cssSobDemanda('css/prepartida.css', 'css/prejogo.css')])
-    .then(([md, puro]) => {
-      MOD_PP = md; PP_PURO = puro;
-      // a Inter TM (a da pausa) e a TM Cond: pedidas já; o layout não depende delas (a info refaz a conta quando chegam)
-      if (document.fonts?.load) {
-        Promise.all(['600 15px "Inter TM"', '800 15px "Inter TM"', ...FONTES_DISP].map(f => document.fonts.load(f).catch(() => null)))
-          .then(() => { if (pp?.aberta) pp.layout(); }, () => {});
-      }
-      return md;
-    }, e => { ppCarga = null; throw e; });
+    .then(([md, puro]) => { MOD_PP = md; PP_PURO = puro; return md; }, e => { ppCarga = null; throw e; });
 }
 /** Espera a tela até `ms` (a reserva: sem ela a tempo, a abertura de texto de hoje). */
 function esperarPrepartida(ms) {
@@ -3586,9 +3595,10 @@ function fundoDe3D() {
 }
 // ------------------------------------------------------------------ a tela cedo (item 106)
 // Dono (FILA 106, "corrije e adianta"; "Depende do dono" 19 e 24 pelas recomendadas): a tela antes do jogo à vista ENQUANTO o 3D
-// monta — desde o item 124 toda partida do TM passa por ela, também a de quem só simula. O iniciar() espera o módulo dela (e os
-// escudos do TM) no máximo PP_CEDO_MS — o bastante para ela pintar antes do criarCampo, uma tarefa longa — e a abre com o fundo 2D
-// (só CSS); sem o módulo a tempo, ela abre quando ele chegar, sem nunca segurar o 3D. Antes do 3D valem a Visão tática, a troca do
+// monta — desde o item 124 toda partida do TM passa por ela, também a de quem só simula. O iniciar() espera o módulo dela, as fontes
+// dela e os escudos do TM no máximo PP_CEDO_MS — o bastante para ela pintar antes do criarCampo, uma tarefa longa; é o tanto que a tela
+// segura o 3D, no máximo — e a abre com o fundo 2D (só CSS); sem o módulo a tempo, ela abre quando ele chegar, sem segurar o 3D mais
+// nada (sem as fontes a tempo, com a reserva delas: a letra troca quando chegam). Antes do 3D valem a Visão tática, a troca do
 // time mostrado, o Personalizar, o "Simular partida" e o [<]; o Jogar (o Pronto do online, o Bater pênaltis, os submenus do Livre) e
 // o ≡ esperam o 3D (aria-disabled e a barra de carga dentro da aba: o layout não muda) e voltam sozinhos com ele. O TM recebe o
 // 'tm3d:tela' (tira o aviso e o X dele: a tela tem o Simular e o [<]); o 'tm3d:pronto' continua no fim da carga (a porta do online)
@@ -3607,9 +3617,22 @@ function abrirTelaCedo() {
   // (a janela que muda de tamanho antes do 3D: o layout da tela; o redimensionar é o mesmo de depois)
   window.addEventListener('resize', redimensionar);
   if (window.visualViewport) window.visualViewport.addEventListener('resize', redimensionar);
-  if (TM) avisarTM('tm3d:tela');
+  avisarTelaTM();
   requestAnimationFrame(quadroTelaCedo);
   return true;
+}
+/**
+ * O recado 'tm3d:tela' ao TM (o aviso e o X dele saem; uma vez) só com uma saída da tela À VISTA: em pé, a "Gire o celular" cobre a
+ * tela — com o "Simular partida" dentro dela (a partida e o Rumo ao Estrelato do TM) vale já; nos Pênaltis, no Livre e no Online do TM
+ * ela não tem botão nenhum, e o X do TM fica até a pessoa girar o celular (ou até o 'tm3d:pronto', como antes da tela cedo) — o app do
+ * TM instalado e travado em pé ficava sem saída nenhuma durante a carga (avaliação do item 106).
+ */
+let telaAvisadaTM = false;
+function avisarTelaTM() {
+  if (!TM || telaAvisadaTM || !pp?.aberta) return;
+  if (retratoBloqueado() && !simTM?.girar) return;
+  telaAvisadaTM = true;
+  avisarTM('tm3d:tela');
 }
 /**
  * Um quadro da tela antes do 3D (o laço do jogo ainda não existe): o controle (Y, X, LB, RB) e o armado que expira, o "Simular
@@ -3619,6 +3642,7 @@ function quadroTelaCedo(agoraMs) {
   if (pronto3d) return;
   requestAnimationFrame(quadroTelaCedo);
   atualizarSimularTM();
+  avisarTelaTM();
   const ocup = hud.menuAberto || hud.ajudaAberta || !!editor?.aberto;
   if (ppOcupado && !ocup) voltarParaTela();
   ppOcupado = ocup;
@@ -3659,6 +3683,11 @@ async function compilarAntesDoDesenho() {
 }
 /** Saiu antes do 3D (no TM o quadro fecha): a carga para no próximo await do iniciar(). */
 function pararCarga() { if (!pronto3d && TM) cargaCancelada = true; }
+/** A carga parou (a saída antes do 3D)? Os testes leem o api.carga ('parou'). */
+function parou() { if (cargaCancelada) api.carga = 'parou'; return cargaCancelada; }
+// (testes, item 106) ?segurar3d=1: a carga do 3D para logo antes do pronto até __golaco.soltar3d() — os testes de navegador olham a tela
+// cedo com o 3D "lento" de propósito, sem depender da velocidade da máquina (api.carga: 'montando' → 'segurada' → 'pronta' | 'parou')
+const SEGURAR_3D = params.get('segurar3d') === '1';
 /** Fecha a tela (sem começar nada; quem chama decide). A entrada volta, salvo com o pré-jogo rodando. */
 function fecharPrepartida(imediato = false) {
   if (!pp?.aberta) return;
@@ -4336,6 +4365,11 @@ async function iniciar() {
   // TM: o "Simular partida" fora da tela (a "Gire o celular" e a abertura de texto da reserva — item 124, revisões A1/A6): já aqui,
   // com a tela cedo
   criarSimularTM();
+  // a "Gire o celular": o "Tela cheia deitada" (só onde a tela cheia consegue travar a tela deitada) decidido já — com a tela cedo ela
+  // cobre a tela em pé ANTES do 3D, e o botão que só aparecia com ele empurrava o "Simular partida" dela 36 px no meio do toque
+  // (avaliação do item 106)
+  const btnGirar = document.getElementById('girar-tela-cheia');
+  if (btnGirar) btnGirar.hidden = !(document.fullscreenEnabled && screen.orientation && typeof screen.orientation.lock === 'function');
   // identidade visual (com ?tm): pedida já, sem o 3D — a tela cedo mostra os escudos e as cores dela; os escudos decodificados ANTES
   // dos canvas do estádio e da torcida (desenhados uma vez só)
   const identCarga = identidadeDaPagina().then(id => {
@@ -4347,16 +4381,16 @@ async function iniciar() {
   });
   identCarga.catch(() => {});
   hud.progresso('Preparando o gramado…');
-  // a tela cedo (item 106): o módulo dela e a identidade até PP_CEDO_MS; a tela abre e pinta antes da 1ª tarefa longa do 3D. Sem o
-  // módulo a tempo, ela abre quando ele chegar (sem segurar a carga)
+  // a tela cedo (item 106): o módulo dela, as fontes dela e a identidade até PP_CEDO_MS; a tela abre e pinta antes da 1ª tarefa longa
+  // do 3D. Sem o módulo a tempo, ela abre quando ele chegar (sem segurar a carga)
   if (prepartidaLigada()) {
-    await Promise.race([Promise.all([esperarPrepartida(PP_CEDO_MS), identCarga.catch(() => null)]), new Promise(ok => setTimeout(ok, PP_CEDO_MS))]);
+    await Promise.race([Promise.all([esperarPrepartida(PP_CEDO_MS), identCarga.catch(() => null), ppFontes]), new Promise(ok => setTimeout(ok, PP_CEDO_MS))]);
     if (abrirTelaCedo()) await proximoQuadro();
     else ppCarga?.then(() => { abrirTelaCedo(); }, () => {});
-    if (cargaCancelada) return;
+    if (parou()) return;
   }
   await proximoQuadro();
-  if (cargaCancelada) return;
+  if (parou()) return;
   const canvas = document.getElementById('tela');
   cena3d = criarCena({ canvas, qualidade: qAtual, hora });
   cam = criarCamera(window.innerWidth / window.innerHeight);
@@ -4364,7 +4398,7 @@ async function iniciar() {
   PAG_LIVRE?.ligarCamera(!!mundo.livre);
   progressoCedo(0.15);
   await identCarga;
-  if (cargaCancelada) return;
+  if (parou()) return;
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
   // a altura da tela para as cadeiras 3D (item 69: o orçamento e o LOD de perto) já no nascimento do campo — com a tela cedo (item
   // 106) o resize pode chegar antes dele, e o padrão (720) valeria até o próximo redimensionar()
@@ -4377,7 +4411,7 @@ async function iniciar() {
   hud.progresso('Enchendo as arquibancadas…');
   progressoCedo(0.35);
   await proximoQuadro();
-  if (cargaCancelada) return;
+  if (parou()) return;
   // programas: os do renderizador (o impostor da torcida confere o dele: não compilou, o quadro SDF de volta — item 69, PR 3)
   torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT, programas: () => cena3d.info().programs ?? [] });
   // o torcedor 3D de perto (item 69, PR 2) senta nas cadeiras 3D quando elas chegam (render/torcedor3d.js)
@@ -4385,7 +4419,7 @@ async function iniciar() {
   hud.progresso('Montando os jogadores…');
   progressoCedo(0.5);
   await proximoQuadro();
-  if (cargaCancelada) return;
+  if (parou()) return;
   bola3d = criarBola3D(cena3d.cena, qAtual);
   // ?corpo=humano: o corpo realista da Etapa 5 (sob demanda; o manequim desenha até ele chegar). Na edição pro do Total
   // Match (o "Season Update", trancado por chave: a versão de teste com os jogadores reais) ele já vem ligado;
@@ -4422,10 +4456,7 @@ async function iniciar() {
     else { laco.ultimo = null; ultimoQuadro = null; }
   });
   // girou para em pé: solta o que estava segurado (o dedo saiu do analógico ao girar); ao deitar,
-  // o laço não tenta recuperar o tempo parado
-  // o botão de tela cheia da tela "Gire o celular": só onde a tela trava deitada (Android)
-  const btnGirar = document.getElementById('girar-tela-cheia');
-  if (btnGirar) btnGirar.hidden = !(document.fullscreenEnabled && screen.orientation && typeof screen.orientation.lock === 'function');
+  // o laço não tenta recuperar o tempo parado (o botão de tela cheia da "Gire o celular" mora no começo do iniciar(): a tela cedo)
   mqRetrato.addEventListener('change', () => {
     if (retratoBloqueado()) entrada.soltarTudo();
     else { laco.ultimo = null; ultimoQuadro = null; }
@@ -4449,7 +4480,7 @@ async function iniciar() {
   hud.progresso('Montando o estádio…');
   progressoCedo(0.7);
   await proximoQuadro();
-  if (cargaCancelada) return;
+  if (parou()) return;
   prejogo = criarPrejogo({
     cena3d, cam, jog3d, bola3d, campo, torcida, som: () => som, mundo: () => mundo, hora: () => hora, qualidade: () => qAtual,
     comToque: () => document.documentElement.classList.contains('com-toque'), aoFim: fimDoPrejogo, identidade: IDENT,
@@ -4472,15 +4503,22 @@ async function iniciar() {
     // (o import já resolvido mas preso atrás das tarefas longas perdia a corrida para o relógio — 1 em 14 carregamentos sem a tela
     // com o módulo baixado: mais uma volta das tarefas antes de decidir pela reserva)
     if (!MOD_PP && ppCarga) await new Promise(ok => setTimeout(ok, 0));
-    if (cargaCancelada) return;
+    if (parou()) return;
   }
   // (com a tela cedo à vista: os shaders do 1º desenho compilam com o fio livre)
   if (pp?.aberta) {
     progressoCedo(0.85);
     await compilarAntesDoDesenho();
-    if (cargaCancelada) return;
+    if (parou()) return;
+  }
+  // (testes: a carga segurada aqui até o __golaco.soltar3d(); a saída feita nesse meio-tempo para a carga como em qualquer etapa)
+  if (SEGURAR_3D) {
+    api.carga = 'segurada';
+    await new Promise(ok => { api.soltar3d = ok; });
+    if (parou()) return;
   }
   pronto3d = true;
+  api.carga = 'pronta';
   const comTela = pp?.aberta ? ligarFundo3D() : prepartidaLigada() && !!MOD_PP && abrirPrepartida();
   if (!comTela && !comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
   if (params.get('qps') === '1') hud.mostrarQps(true);
@@ -4602,6 +4640,9 @@ function resumo(arr, n, ini) {
 const api = {
   versao: VERSAO,
   pronto: false,
+  // (item 106: a carga do 3D — 'montando' | 'segurada' (?segurar3d=1, até o soltar3d()) | 'parou' (a saída antes do 3D) | 'pronta')
+  carga: 'montando',
+  soltar3d: () => {},
   get mundo() { return mundo; },
   hash() { return hashMundo(mundo); },
   get passos() { return contPassos; },
