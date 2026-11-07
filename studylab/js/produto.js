@@ -1,1 +1,71 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== produto.js — as configurações COMERCIAIS do MindTrack =====
+   É o único arquivo que você precisa mexer para ligar login e cobrança.
+   Enquanto estiver vazio, o app funciona normalmente: entra sem conta e o
+   MindTrack AI aparece bloqueado, convidando a assinar.                          */
+
+/** Client ID do Google (console.cloud.google.com → Credenciais → OAuth 2.0).
+ *  Lembre de autorizar a origem: https://mauriciosuprir.github.io */
+export const GOOGLE_CLIENT_ID = '';
+
+/** Endereço do servidor do MindTrack — o código dele está em `studylab-server/`.
+ *  Depois de publicar no Railway, cole aqui a URL que ele te der.
+ *  Ex.: 'https://studylab-server-production.up.railway.app'
+ *  Vazio = o app funciona sozinho, com conta local e Pro só por código. */
+export const SERVIDOR = 'https://mindtrack-servidor.onrender.com';
+
+/** Planos e preços mostrados na tela de assinatura.
+ *  Dois níveis: Pro e Plus. Os PREÇOS DE VERDADE ficam no servidor
+ *  (studylab-server/src/pagamento.js) — aqui é só o que a tela mostra,
+ *  então mantenha os dois arquivos iguais. */
+export const PLANOS = [
+  {
+    id: 'pro_semanal', nivel: 'pro', nome: 'Pro Semanal', preco: 7.90, periodo: '/semana',
+    chamada: 'Para experimentar', dias: 7,
+    detalhe: '7 dias de Pro. Pague com Pix ou cartão.',
+  },
+  {
+    id: 'pro_mensal', nivel: 'pro', nome: 'Pro Mensal', preco: 24.90, periodo: '/mês',
+    chamada: 'O mais escolhido', dias: 30, destaque: true,
+    detalhe: '30 dias de Pro. Pix, cartão ou cobrança automática.',
+  },
+  {
+    id: 'pro_anual', nivel: 'pro', nome: 'Pro Anual', preco: 199.90, periodo: '/ano', dias: 365,
+    chamada: 'Melhor custo', economia: 'economiza 33%',
+    detalhe: '365 dias de Pro. Sai por R$ 16,66 por mês.',
+  },
+  {
+    id: 'plus_mensal', nivel: 'plus', nome: 'Plus Mensal', preco: 44.90, periodo: '/mês',
+    chamada: 'Tudo liberado', dias: 30,
+    detalhe: '30 dias de Plus: mais perguntas, mais fotos e os recursos avançados.',
+  },
+  {
+    id: 'plus_anual', nivel: 'plus', nome: 'Plus Anual', preco: 379.90, periodo: '/ano', dias: 365,
+    chamada: 'Melhor do Plus', economia: 'economiza 29%',
+    detalhe: '365 dias de Plus. Sai por R$ 31,66 por mês.',
+  },
+];
+
+/** O que cada nível permite no MindTrack AI — espelho dos limites do servidor,
+ *  usado só para mostrar na tela (quem manda de verdade é o servidor). */
+export const LIMITES_PLANO = {
+  pro: { dia: 30, mes: 400, fotosDia: 5, fotosPergunta: 2 },
+  plus: { dia: 80, mes: 1000, fotosDia: 25, fotosPergunta: 4 },
+};
+
+/** Aparece nos Termos e na Política de Privacidade. TROQUE pelo seu e-mail. */
+export const EMAIL_CONTATO = 'contato@mindtrack.app';
+
+/** Quem responde legalmente pelo app (nome ou razão social). TROQUE. */
+export const RESPONSAVEL = 'MindTrack';
+
+export const precoBR = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+/** Códigos de acesso que liberam o Pro sem pagamento online (testes, cortesia,
+ *  venda por PIX). Formato: CODIGO: dias de Pro. Apague o que não usar.
+ *  Aviso honesto: isso é conferido no aparelho, então serve para uso controlado
+ *  — quando o servidor existir, a validação passa a ser feita lá. */
+export const CODIGOS = {
+  MINDTRACK30: { dias: 30, nivel: 'pro' },
+  PROFESSOR: { dias: 365, nivel: 'plus' },
+  TESTE7: { dias: 7, nivel: 'pro' },
+};

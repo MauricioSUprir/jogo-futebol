@@ -1,1 +1,287 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== store.js — estado único do app, salvo no navegador (localStorage) ===== */
+import { uid, iso, today, addDays } from './util.js';
+import { seedInicial } from './seed.js';
+
+const KEY = 'studylab.v1';
+const SCHEMA = 7;
+
+/* ---------- estado padrão ---------- */
+export function estadoVazio() {
+  return {
+    schema: SCHEMA,
+    perfil: { nome: '', serie: '', ano: new Date().getFullYear(), avatar: '🎓', tema: 'claro', onboarding: false },
+    conta: {
+      plano: 'free',            // free | pro | plus
+      desde: iso(), proAte: null, planoId: null, codigo: null,
+      provedor: null,           // null (ainda não entrou) | 'google' | 'local'
+      id: null, nome: '', email: '', foto: '', token: null,   // token = sessão no servidor
+      aparelhoId: null, aparelhoSegredo: null,                 // conta de aparelho (sem Google)
+    },
+    prefs: {
+      minutosDia: 90,             // quanto pretende estudar por dia
+      blocoFoco: 25,              // duração padrão do bloco de foco
+      pausaCurta: 5, pausaLonga: 15, ciclosAtePausaLonga: 4,
+      metaStreakMin: 10,          // streak exige 10 min OU 5 questões
+      metaStreakQuestoes: 5,
+      som: 'nenhum',              // ambiente de foco
+      notificar: true,
+    },
+    jogo: { xp: 0, moedas: 0, streak: 0, ultimoDia: null, recordeStreak: 0, conquistas: [], itens: [] },
+    // A chave da Claude API NÃO fica mais com o aluno: o MindTrack AI é do plano Pro
+    // e passa pelo servidor. chaveCriador só existe para você testar (Área do criador).
+    // servidor: preenchido nas Configurações depois de publicar o studylab-server.
+    // Assim dá para ligar o MindTrack AI sem mexer no código.
+    ia: { modelo: 'claude-opus-5', memoria: [], usoHoje: 0, usoDia: null, chaveCriador: '', servidor: '' },
+    materias: [], conteudos: [], tarefas: [], provas: [], eventos: [], horario: {},
+    flashcards: [], questoes: [], tentativas: [], sessoes: [], notas: [], metas: [],
+    anotacoes: [], biblioteca: [], resumos: [], mapas: [], conversas: [],
+    // Minha Escola: o que o aluno está aprendendo em cada matéria, escrito por
+    // ele. As fotos ficam no IndexedDB (fotos.js) — aqui só o texto.
+    escola: {},                 // { [materiaId]: { texto, em } }
+    relogio: {},             // cronômetro e timer (ver js/relogio.js)
+    apresentacoes: [],       // slides (views/apresentacoes.js)
+    conexoes: {},
+    social: null,            // meu perfil de amigos { apelido, nome, avatar } (o resto fica no servidor)
+    lidas: [],  // notificações já lidas
+  };
+}
+
+/* ---------- carregar / salvar ---------- */
+let S = estadoVazio();
+const ouvintes = new Set();
+
+export function carregar() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      S = migrar({ ...estadoVazio(), ...d });
+    } else {
+      S = estadoVazio();      // app começa vazio: o aluno cria a conta e as matérias
+      salvar();
+    }
+  } catch (e) {
+    console.warn('Falha ao ler dados salvos, começando limpo.', e);
+    S = estadoVazio();
+  }
+  aplicarTema();
+  return S;
+}
+function migrar(d) {
+  if (d.schema < 4) {
+    d.perfil = { ...d.perfil, onboarding: true };            // já estava usando: não repete o cadastro
+    d.conta = { ...estadoVazio().conta, ...d.conta, provedor: d.conta?.provedor || 'local' };
+    if (d.ia?.chave) { d.ia.chaveCriador = d.ia.chave; delete d.ia.chave; }
+  }
+  // visual novo (branco): o escuro era só o padrão antigo, então todo mundo passa para o claro uma vez
+  if (d.schema < 6 && d.perfil) d.perfil.tema = 'claro';
+  // notas lançadas nas provas passam a contar nas notas da matéria (antes ficavam só na prova)
+  if (d.schema < 7) {
+    d.notas = d.notas || [];
+    for (const p of d.provas || []) {
+      if (p.nota === null || p.nota === undefined || d.notas.some((n) => n.provaId === p.id)) continue;
+      d.notas.push({ id: uid('nt'), materiaId: p.materiaId || null, titulo: p.titulo || 'Prova', valor: Number(p.nota),
+        maximo: 10, peso: 1, bimestre: bimestreDaData(p.data), data: p.data || iso(), provaId: p.id });
+    }
+  }
+  d.schema = SCHEMA;
+  // garante que campos novos existam mesmo em dados antigos
+  const base = estadoVazio();
+  for (const k of Object.keys(base)) if (d[k] === undefined) d[k] = base[k];
+  for (const k of Object.keys(base.prefs)) if (d.prefs[k] === undefined) d.prefs[k] = base.prefs[k];
+  for (const k of Object.keys(base.jogo)) if (d.jogo[k] === undefined) d.jogo[k] = base.jogo[k];
+  for (const k of Object.keys(base.ia)) if (d.ia[k] === undefined) d.ia[k] = base.ia[k];
+  return d;
+}
+let timer = null;
+export function salvar() {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    try { localStorage.setItem(KEY, JSON.stringify(S)); }
+    catch (e) { console.error('Não consegui salvar (armazenamento cheio?)', e); }
+  }, 120);
+}
+export const st = () => S;
+export function set(fn) { fn(S); salvar(); emit(); }
+export function emit() { ouvintes.forEach((f) => { try { f(S); } catch (e) { console.error(e); } }); }
+export function onChange(f) { ouvintes.add(f); return () => ouvintes.delete(f); }
+
+export function aplicarTema() {
+  const raiz = document.documentElement;
+  raiz.setAttribute('data-theme', S.perfil.tema === 'claro' ? 'claro' : 'escuro');
+  if (S.perfil.acento) raiz.style.setProperty('--acc', S.perfil.acento);
+  else raiz.style.removeProperty('--acc');
+}
+
+/* ---------- exportar / importar / zerar ---------- */
+export function exportar() { return JSON.stringify(S, null, 2); }
+export function importar(txt) {
+  const d = JSON.parse(txt);
+  if (!d || typeof d !== 'object' || !d.perfil) throw new Error('Arquivo não parece ser um backup do MindTrack.');
+  S = migrar({ ...estadoVazio(), ...d });
+  salvar(); aplicarTema(); emit();
+}
+/* ---------- conta e assinatura ---------- */
+export const entrou = () => !!S.conta.provedor;
+/** Assinante (Pro OU Plus) com a assinatura em dia. */
+export const ehPro = () => (S.conta.plano === 'pro' || S.conta.plano === 'plus')
+  && (!S.conta.proAte || S.conta.proAte >= iso());
+/** Assinante do nível de cima. */
+export const ehPlus = () => S.conta.plano === 'plus'
+  && (!S.conta.proAte || S.conta.proAte >= iso());
+/** 'free' | 'pro' | 'plus' — já considerando o vencimento. */
+export const nivelPlano = () => (ehPlus() ? 'plus' : ehPro() ? 'pro' : 'free');
+
+export function entrarComo({ provedor, id = null, nome = '', email = '', foto = '', token = null }) {
+  set((s) => {
+    s.conta = { ...s.conta, provedor, id, nome, email, foto, ...(token ? { token } : {}) };
+    if (nome && !s.perfil.nome) s.perfil.nome = nome.split(' ')[0];
+  });
+}
+export function sairDaConta() {
+  set((s) => { s.conta = { ...estadoVazio().conta }; s.perfil.onboarding = false; });
+}
+export function ativarPro({ planoId, dias, codigo = null, nivel = 'pro' }) {
+  set((s) => {
+    s.conta.plano = nivel === 'plus' ? 'plus' : 'pro';
+    s.conta.planoId = planoId;
+    s.conta.codigo = codigo;
+    s.conta.proAte = iso(addDays(today(), dias));
+  });
+}
+export function cancelarPro() {
+  set((s) => { s.conta.plano = 'free'; s.conta.planoId = null; s.conta.proAte = null; s.conta.codigo = null; });
+}
+export function concluirOnboarding() { set((s) => { s.perfil.onboarding = true; }); }
+
+export function carregarExemplo() {
+  const conta = { ...S.conta };
+  // só carrega para cima o que o aluno realmente preencheu (nome vazio não apaga o do exemplo)
+  const meu = Object.fromEntries(Object.entries(S.perfil).filter(([, v]) => v !== '' && v !== null && v !== undefined));
+  S = seedInicial(estadoVazio());
+  S.conta = conta;
+  S.perfil = { ...S.perfil, ...meu, onboarding: true };
+  salvar(); aplicarTema(); emit();
+}
+
+export function zerar({ comExemplo = false } = {}) {
+  S = comExemplo ? seedInicial(estadoVazio()) : estadoVazio();
+  if (comExemplo) S.perfil.onboarding = true;
+  salvar(); aplicarTema(); emit();
+}
+
+/* ---------- buscas rápidas ---------- */
+export const materia = (id) => S.materias.find((m) => m.id === id) || null;
+export const conteudo = (id) => S.conteudos.find((c) => c.id === id) || null;
+export const tarefa = (id) => S.tarefas.find((t) => t.id === id) || null;
+export const prova = (id) => S.provas.find((p) => p.id === id) || null;
+export const conteudosDe = (materiaId) => S.conteudos.filter((c) => c.materiaId === materiaId);
+export const tarefasAbertas = () => S.tarefas.filter((t) => t.status !== 'concluido');
+export const nomeMateria = (id) => materia(id)?.nome || 'Geral';
+export const emojiMateria = (id) => materia(id)?.emoji || '📘';
+export const corMateria = (id) => materia(id)?.cor || '#3ec9f5';
+
+/* ---------- criação (com padrões) ---------- */
+export function novaMateria(d = {}) {
+  const m = {
+    id: uid('mat'), nome: 'Nova matéria', emoji: '📘', cor: '#3ec9f5', professor: '',
+    meta: 9, arquivada: false, criadaEm: iso(), ...d,
+  };
+  set((s) => s.materias.push(m)); return m;
+}
+export function novoConteudo(d = {}) {
+  const c = {
+    id: uid('cnt'), materiaId: null, paiId: null, nome: 'Novo conteúdo',
+    status: 'novo',                       // novo | estudando | revisar | dificuldade | dominado
+    dominio: 0,                           // 0..100 (calculado, mas pode ser ajustado à mão)
+    srs: { passo: 0, facilidade: 2.5, proxima: null, repeticoes: 0, falhas: 0, ultima: null },
+    criadoEm: iso(), ...d,
+  };
+  set((s) => s.conteudos.push(c)); return c;
+}
+export function novaTarefa(d = {}) {
+  const t = {
+    id: uid('tar'), materiaId: null, titulo: 'Nova tarefa', descricao: '',
+    prazo: iso(addDays(today(), 1)), importancia: 3, dificuldade: 3, minutos: 30, valor: 0,
+    status: 'aberto',                     // aberto | andamento | quase | concluido
+    subtarefas: [], conteudoIds: [], criadaEm: iso(), concluidaEm: null, minutosFeitos: 0, ...d,
+  };
+  set((s) => s.tarefas.push(t)); return t;
+}
+export function novaProva(d = {}) {
+  const p = {
+    id: uid('prv'), materiaId: null, titulo: 'Prova', data: iso(addDays(today(), 7)),
+    valor: 10, conteudoIds: [], plano: [], criadaEm: iso(), nota: null, ...d,
+  };
+  set((s) => s.provas.push(p)); return p;
+}
+export function novoEvento(d = {}) {
+  const e = { id: uid('evt'), tipo: 'aula', titulo: '', data: iso(), hora: '', materiaId: null, refId: null, ...d };
+  set((s) => s.eventos.push(e)); return e;
+}
+export function novoFlashcard(d = {}) {
+  const f = {
+    id: uid('fc'), materiaId: null, conteudoId: null, frente: '', verso: '', favorito: false,
+    srs: { passo: 0, facilidade: 2.5, proxima: iso(), repeticoes: 0, falhas: 0, ultima: null }, criadoEm: iso(), ...d,
+  };
+  set((s) => s.flashcards.push(f)); return f;
+}
+export function novaQuestao(d = {}) {
+  const q = {
+    id: uid('q'), materiaId: null, conteudoId: null, tipo: 'objetiva', dificuldade: 'medio',
+    enunciado: '', alternativas: [], correta: 0, resposta: '', explicacao: '', origem: 'manual',
+    favorita: false, criadaEm: iso(), ...d,
+  };
+  set((s) => s.questoes.push(q)); return q;
+}
+export function registrarTentativa(d) {
+  const t = { id: uid('tt'), questaoId: null, conteudoId: null, materiaId: null, acertou: false,
+    resposta: '', modo: 'treino', em: new Date().toISOString(), ...d };
+  set((s) => s.tentativas.push(t)); return t;
+}
+export function registrarSessao(d) {
+  const s0 = { id: uid('ses'), tipo: 'foco', minutos: 25, materiaId: null, tarefaId: null,
+    conteudoId: null, em: new Date().toISOString(), ...d };
+  set((s) => s.sessoes.push(s0)); return s0;
+}
+/** Bimestre provável pela data (calendário escolar brasileiro: fev–abr, mai–jul, ago–set, out–dez). */
+export function bimestreDaData(dataISO) {
+  const mes = Number(String(dataISO || '').slice(5, 7)) || (new Date().getMonth() + 1);
+  return mes <= 4 ? 1 : mes <= 7 ? 2 : mes <= 9 ? 3 : 4;
+}
+/** A nota registrada numa prova entra nas notas da matéria (uma nota por prova, atualizada se mudar). */
+export function notaDaProva(p, valor) {
+  set((s) => {
+    const n = s.notas.find((x) => x.provaId === p.id);
+    if (valor === null || valor === undefined || valor === '') { if (n) s.notas = s.notas.filter((x) => x !== n); return; }
+    const d = { materiaId: p.materiaId || null, titulo: p.titulo || 'Prova', valor: Number(valor), data: p.data || iso() };
+    if (n) Object.assign(n, d);
+    else {
+      const m = s.materias.find((x) => x.id === d.materiaId);
+      const item = m?.criterio?.itens?.find((i) => /prova/i.test(i.nome)) || null;
+      const per = m?.criterio ? Math.min(bimestreDaData(d.data), Number(m.criterio.periodos) || 4) : bimestreDaData(d.data);
+      s.notas.push({ id: uid('nt'), maximo: 10, peso: 1, bimestre: per, provaId: p.id, ...(item ? { itemId: item.id } : {}), ...d });
+    }
+  });
+}
+export function novaNota(d = {}) {
+  const n = { id: uid('nt'), materiaId: null, titulo: 'Avaliação', valor: 0, maximo: 10, peso: 1,
+    bimestre: 1, data: iso(), ...d };
+  set((s) => s.notas.push(n)); return n;
+}
+export function novoMaterial(d = {}) {
+  const m = { id: uid('bib'), materiaId: null, tipo: 'anotacao', titulo: 'Material', conteudo: '',
+    url: '', favorito: false, criadoEm: iso(), ...d };
+  set((s) => s.biblioteca.push(m)); return m;
+}
+export function novaMeta(d = {}) {
+  const m = { id: uid('meta'), tipo: 'semanal', titulo: 'Nova meta', alvo: 5, atual: 0,
+    materiaId: null, prazo: null, criadaEm: iso(), concluida: false, ...d };
+  set((s) => s.metas.push(m)); return m;
+}
+export function remover(colecao, id) {
+  set((s) => { const i = s[colecao].findIndex((x) => x.id === id); if (i >= 0) s[colecao].splice(i, 1); });
+}
+export function atualizar(colecao, id, patch) {
+  set((s) => { const o = s[colecao].find((x) => x.id === id); if (o) Object.assign(o, typeof patch === 'function' ? patch(o) : patch); });
+}

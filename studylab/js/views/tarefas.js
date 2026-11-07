@@ -1,1 +1,101 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== views/tarefas.js — gerenciador de tarefas ===== */
+import { h, iso, today, addDays, fmtMin, daysBetween, parseISO, norm } from '../util.js';
+import { st, nomeMateria } from '../store.js';
+import { filaTarefas, prioridade, ordemRecomendada } from '../engine.js';
+import { titulo, cartao, kpi, segmento, inp, vazio, modal, toast } from '../ui.js';
+import { linhaTarefa, formTarefa, opcoesMaterias } from './comum.js';
+
+let filtro = { texto: '', materia: '', quando: 'abertas', ordem: 'prioridade' };
+
+export function render(el) {
+  const pintar = () => { el.replaceChildren(); montar(el, pintar); };
+  montar(el, pintar);
+}
+
+function montar(el, pintar) {
+  const s = st();
+  const abertas = s.tarefas.filter((t) => t.status !== 'concluido');
+  const atrasadas = abertas.filter((t) => daysBetween(today(), parseISO(t.prazo)) < 0);
+  const hoje = abertas.filter((t) => t.prazo === iso());
+  const semana = abertas.filter((t) => { const d = daysBetween(today(), parseISO(t.prazo)); return d >= 0 && d <= 7; });
+
+  el.append(titulo('✅ Tarefas', 'Tudo que precisa ser feito, na ordem certa.',
+    h('button', { class: 'btn btn--p', onclick: () => formTarefa(null, pintar) }, '➕ Nova tarefa')));
+
+  el.append(h('div', { class: 'grid g4 keep2 mb' },
+    kpi(abertas.length, 'em aberto'),
+    kpi(atrasadas.length, 'atrasadas', atrasadas.length ? 'resolva primeiro' : 'tudo em dia'),
+    kpi(hoje.length, 'para hoje'),
+    kpi(fmtMin(semana.reduce((a, b) => a + (b.minutos || 0), 0)), 'nesta semana')));
+
+  /* filtros */
+  const busca = inp({ placeholder: '🔍 Filtrar por título…', value: filtro.texto });
+  busca.addEventListener('input', () => { filtro.texto = busca.value; pintarLista(); });
+  const selMat = h('select', { class: 'inp', style: { maxWidth: '200px' } });
+  for (const o of [{ v: '', t: 'Todas as matérias' }, ...opcoesMaterias(false)]) {
+    const op = h('option', { value: o.v }, o.t); if (o.v === filtro.materia) op.selected = true; selMat.append(op);
+  }
+  selMat.addEventListener('change', () => { filtro.materia = selMat.value; pintarLista(); });
+
+  el.append(cartao(
+    h('div', { class: 'flexb mb' }, busca, selMat),
+    h('div', { class: 'flexb' },
+      segmento([
+        { v: 'abertas', t: 'Em aberto' }, { v: 'hoje', t: 'Hoje' }, { v: 'semana', t: 'Semana' },
+        { v: 'atrasadas', t: 'Atrasadas' }, { v: 'concluidas', t: 'Concluídas' }, { v: 'todas', t: 'Todas' },
+      ], filtro.quando, (v) => { filtro.quando = v; pintarLista(); }),
+      h('span', { class: 'sp' }),
+      segmento([{ v: 'prioridade', t: '🔥 Prioridade' }, { v: 'prazo', t: '📅 Prazo' }, { v: 'materia', t: '📚 Matéria' }],
+        filtro.ordem, (v) => { filtro.ordem = v; pintarLista(); }))));
+
+  const listaBox = h('div', { class: 'mt2' });
+  el.append(listaBox);
+
+  function pintarLista() {
+    let ts = [...st().tarefas];
+    if (filtro.quando === 'abertas') ts = ts.filter((t) => t.status !== 'concluido');
+    if (filtro.quando === 'concluidas') ts = ts.filter((t) => t.status === 'concluido');
+    if (filtro.quando === 'hoje') ts = ts.filter((t) => t.status !== 'concluido' && t.prazo === iso());
+    if (filtro.quando === 'semana') ts = ts.filter((t) => { const d = daysBetween(today(), parseISO(t.prazo)); return t.status !== 'concluido' && d >= 0 && d <= 7; });
+    if (filtro.quando === 'atrasadas') ts = ts.filter((t) => t.status !== 'concluido' && daysBetween(today(), parseISO(t.prazo)) < 0);
+    if (filtro.materia) ts = ts.filter((t) => t.materiaId === filtro.materia);
+    if (filtro.texto) ts = ts.filter((t) => norm(t.titulo).includes(norm(filtro.texto)));
+
+    if (filtro.ordem === 'prioridade') ts.sort((a, b) => prioridade(b).nota - prioridade(a).nota);
+    if (filtro.ordem === 'prazo') ts.sort((a, b) => String(a.prazo).localeCompare(String(b.prazo)));
+    if (filtro.ordem === 'materia') ts.sort((a, b) => nomeMateria(a.materiaId).localeCompare(nomeMateria(b.materiaId)));
+
+    listaBox.replaceChildren();
+    if (!ts.length) {
+      listaBox.append(vazio('Nada por aqui', 'Nenhuma tarefa com esses filtros.',
+        h('button', { class: 'btn btn--p', onclick: () => formTarefa(null, pintar) }, '➕ Criar tarefa')));
+      return;
+    }
+    const lista = h('div', { class: 'list' });
+    for (const t of ts) lista.append(linhaTarefa(t, { aoMudar: pintar }));
+    listaBox.append(lista);
+    listaBox.append(h('p', { class: 'tiny muted center mt' }, `${ts.length} tarefa(s) · a bolinha à direita é a nota de prioridade (toque para entender)`));
+  }
+  pintarLista();
+
+  /* plano do dia */
+  el.append(h('div', { class: 'mt2' }, cartao(
+    h('div', { class: 'flexb mb' }, h('b', {}, '🧠 Como o MindTrack organizaria seu dia'),
+      h('span', { class: 'chip sp' }, `${st().prefs.minutosDia} min disponíveis`)),
+    (() => {
+      const { blocos } = ordemRecomendada();
+      if (!blocos.length) return h('p', { class: 'muted small' }, 'Sem tarefas em aberto.');
+      const box = h('div', { class: 'list' });
+      let i = 0;
+      for (const b of blocos) {
+        if (b.pausa) { box.append(h('div', { class: 'row row--flat', style: { opacity: .65 } }, '☕', h('span', { class: 'grow small muted' }, 'Pausa'), h('span', { class: 'chip' }, fmtMin(b.minutos)))); continue; }
+        i++;
+        box.append(h('a', { class: 'row row--flat', href: `#/foco?tarefa=${b.tarefaId}&min=${b.minutos}`, style: { color: 'inherit' } },
+          h('b', { style: { width: '18px' } }, i),
+          h('span', { class: 'grow' }, h('div', { class: 'small', style: { fontWeight: 700 } }, b.titulo),
+            h('div', { class: 'tiny muted' }, nomeMateria(b.materiaId))),
+          h('span', { class: 'chip' }, fmtMin(b.minutos))));
+      }
+      return box;
+    })())));
+}

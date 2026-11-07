@@ -1,1 +1,144 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== fotos.js — as fotos da Minha Escola, guardadas no aparelho =====
+   Fotos são grandes demais para o localStorage, então ficam no IndexedDB do
+   navegador. Nada disso sai do celular: só vai para a internet a foto que o
+   aluno anexar numa pergunta ao MindTrack AI.                                     */
+
+const NOME = 'studylab-fotos';
+const LOJA = 'fotos';
+const LOJA_ARQ = 'arquivos';
+let bancoP = null;
+
+function abrir() {
+  if (bancoP) return bancoP;
+  bancoP = new Promise((resolve, reject) => {
+    // versão 2: + a loja de arquivos dos Materiais (PDF, documentos, imagens)
+    const pedido = indexedDB.open(NOME, 2);
+    pedido.onupgradeneeded = () => {
+      const db = pedido.result;
+      if (!db.objectStoreNames.contains(LOJA)) {
+        const loja = db.createObjectStore(LOJA, { keyPath: 'id' });
+        loja.createIndex('materiaId', 'materiaId', { unique: false });
+      }
+      if (!db.objectStoreNames.contains(LOJA_ARQ)) db.createObjectStore(LOJA_ARQ, { keyPath: 'id' });
+    };
+    pedido.onsuccess = () => resolve(pedido.result);
+    pedido.onerror = () => reject(pedido.error || new Error('Não consegui abrir o armazenamento de fotos.'));
+  });
+  return bancoP;
+}
+
+function transacao(modo, executar, loja = LOJA) {
+  return abrir().then((db) => new Promise((resolve, reject) => {
+    const tx = db.transaction(loja, modo);
+    const saida = executar(tx.objectStore(loja));
+    tx.oncomplete = () => resolve(saida?.result ?? saida);
+    tx.onerror = () => reject(tx.error);
+  }));
+}
+
+export async function guardarFoto({ materiaId, dataUrl, legenda = '' }) {
+  const foto = {
+    id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    materiaId, dataUrl, legenda, em: new Date().toISOString(),
+  };
+  await transacao('readwrite', (loja) => loja.put(foto));
+  return foto;
+}
+
+export function fotosDaMateria(materiaId) {
+  return abrir().then((db) => new Promise((resolve, reject) => {
+    const pedido = db.transaction(LOJA, 'readonly').objectStore(LOJA).index('materiaId').getAll(materiaId);
+    pedido.onsuccess = () => resolve((pedido.result || []).sort((a, b) => a.em.localeCompare(b.em)));
+    pedido.onerror = () => reject(pedido.error);
+  }));
+}
+
+export const apagarFoto = (id) => transacao('readwrite', (loja) => loja.delete(id));
+
+export async function apagarFotosDaMateria(materiaId) {
+  const fotos = await fotosDaMateria(materiaId);
+  await Promise.all(fotos.map((f) => apagarFoto(f.id)));
+}
+
+export function contarFotosDaMateria(materiaId) {
+  return abrir().then((db) => new Promise((resolve) => {
+    const pedido = db.transaction(LOJA, 'readonly').objectStore(LOJA).index('materiaId').count(materiaId);
+    pedido.onsuccess = () => resolve(pedido.result || 0);
+    pedido.onerror = () => resolve(0);
+  }));
+}
+
+/* ---------- preparo de imagem ---------- */
+/** Redimensiona e comprime a foto (JPEG) para não estourar armazenamento nem
+ *  o envio ao servidor. Devolve um dataURL. */
+export function comprimirImagem(arquivo, { max = 1280, qualidade = 0.8 } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(arquivo.type)) return reject(new Error('Escolha uma imagem (JPG, PNG…).'));
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const escala = Math.min(1, max / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(img.width * escala));
+      c.height = Math.max(1, Math.round(img.height * escala));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', qualidade));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não consegui ler essa imagem.')); };
+    img.src = url;
+  });
+}
+
+/** Converte um dataURL no bloco de imagem que a IA entende. */
+export function dataUrlParaBloco(dataUrl) {
+  const m = String(dataUrl).match(/^data:([^;]+);base64,(.+)$/s);
+  if (!m) throw new Error('Foto em formato inesperado.');
+  return { type: 'image', source: { type: 'base64', media_type: m[1], data: m[2] } };
+}
+
+/* ---------- arquivos dos Materiais (ficam só no aparelho) ---------- */
+export const TETO_ARQUIVO = 25 * 1024 * 1024;   // 25 MB por arquivo
+
+/** Guarda o arquivo (Blob/File) e devolve o id para pôr no material. */
+export async function salvarArquivo(arquivo) {
+  if (arquivo.size > TETO_ARQUIVO) throw new Error('Arquivo grande demais (máximo 25 MB).');
+  const id = `arq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  await transacao('readwrite', (loja) => loja.put({
+    id, nome: arquivo.name || 'arquivo', mime: arquivo.type || 'application/octet-stream',
+    tamanho: arquivo.size, blob: arquivo, em: new Date().toISOString(),
+  }), LOJA_ARQ);
+  return { id, nome: arquivo.name || 'arquivo', mime: arquivo.type || '', tamanho: arquivo.size };
+}
+
+export function lerArquivoSalvo(id) {
+  return abrir().then((db) => new Promise((resolve, reject) => {
+    const pedido = db.transaction(LOJA_ARQ, 'readonly').objectStore(LOJA_ARQ).get(id);
+    pedido.onsuccess = () => resolve(pedido.result || null);
+    pedido.onerror = () => reject(pedido.error);
+  }));
+}
+
+/** Abre o arquivo numa aba nova (PDF e imagem o navegador mostra; o resto baixa). */
+export async function abrirArquivoSalvo(id) {
+  const a = await lerArquivoSalvo(id);
+  if (!a) throw new Error('Este arquivo não está mais neste aparelho.');
+  const url = URL.createObjectURL(a.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  if (/^(application\/pdf|image\/|text\/)/.test(a.mime)) link.target = '_blank';
+  else link.download = a.nome;
+  link.rel = 'noopener';
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+export const apagarArquivoSalvo = (id) => transacao('readwrite', (loja) => loja.delete(id), LOJA_ARQ);
+
+export function tamanhoLegivel(bytes = 0) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1).replace('.', ',')} MB`;
+}

@@ -1,47 +1,323 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="robots" content="noindex, nofollow" />
-<meta name="theme-color" content="#050608" />
-<title>Site bloqueado</title>
+<meta name="robots" content="noindex" />
+<title>MindTrack AI · Apresentação</title>
+<meta name="description" content="Apresentação do projeto de startup MindTrack AI." />
+<meta name="theme-color" content="#0c0d10" />
+<link rel="icon" href="../assets/icon.svg" />
 <style>
-  :root { color-scheme: dark; }
-  * { box-sizing: border-box; margin: 0; }
-  html, body { height: 100%; }
-  body {
-    display: flex; align-items: center; justify-content: center; padding: 24px;
-    background: #050608; color: #f3ead7; text-align: center;
-    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-    -webkit-user-select: none; user-select: none;
-  }
-  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
-  .icone {
-    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;
-    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;
-  }
-  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }
-  p { font-size: 15px; line-height: 1.55; color: #a9a396; }
+@font-face{font-family:'Inter';src:url('../assets/fontes/inter-latin.woff2') format('woff2');font-weight:100 900;font-display:block}
+:root{
+  --fundo:#0c0d10;--fundo2:#16181d;--linha:#2a2d35;--creme:#f3ead7;--cinza:#a9a396;
+  --papel:#f4ecd8;--papel2:#fbf6ea;--tinta:#1d1a15;--tinta2:#5c5648;--borda:#ddd0b0;
+  --azul:#3ec9f5;--azul2:#1f8fc4;--ouro:#e8c77a;--verde:#7fb98f;--roxo:#8f7fd1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#050608;color:var(--creme);font-family:'Inter',system-ui,sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+.palco{position:fixed;inset:0;display:grid;place-items:center}
+.deck{position:relative;width:1600px;height:900px;transform-origin:center center;flex:none}
+.slide{position:absolute;inset:0;padding:88px 110px;overflow:hidden;opacity:0;visibility:hidden;transition:opacity .35s ease}
+.slide.on{opacity:1;visibility:visible}
+.escuro{background:var(--fundo);color:var(--creme)}
+.claro{background:var(--papel);color:var(--tinta)}
+
+/* número da página e marca discreta */
+.pg{position:absolute;right:110px;bottom:52px;font-size:17px;color:var(--cinza);font-variant-numeric:tabular-nums}
+.claro .pg{color:var(--tinta2)}
+.assina{position:absolute;left:110px;bottom:52px;display:flex;align-items:center;gap:12px;font-size:17px;font-weight:600;color:var(--cinza)}
+.assina img{width:30px;height:30px;border-radius:8px;background:var(--fundo);padding:3px}
+.claro .assina{color:var(--tinta2)}
+
+h1{font-size:104px;font-weight:800;letter-spacing:-.035em;line-height:1}
+h2{font-size:64px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+h2 .ac{color:var(--azul)}
+.claro h2 .ac{color:var(--azul2)}
+.lead{font-size:28px;line-height:1.45;color:var(--cinza);max-width:1080px;margin-top:22px}
+.claro .lead{color:var(--tinta2)}
+
+/* capa */
+.capa-logo{display:flex;align-items:center;gap:18px;font-size:26px;font-weight:700}
+.capa-logo img{width:58px;height:58px;border-radius:16px;background:var(--fundo2);padding:7px;border:1px solid var(--linha)}
+.capa-meio{position:absolute;left:110px;right:110px;top:250px}
+.capa-meio h1 span{color:var(--azul)}
+.capa-pe{position:absolute;left:110px;right:110px;bottom:70px;display:flex;justify-content:space-between;align-items:flex-end;border-top:1px solid var(--linha);padding-top:24px;font-size:20px}
+.capa-pe small{display:block;font-size:15px;color:var(--cinza);margin-bottom:6px}
+.capa-pe .dir{color:var(--cinza)}
+
+/* blocos de texto simples */
+.colunas{display:grid;gap:44px;margin-top:56px}
+.c2{grid-template-columns:1fr 1fr}.c3{grid-template-columns:repeat(3,1fr)}.c4{grid-template-columns:repeat(4,1fr)}
+.bloco{border-top:3px solid var(--azul);padding-top:20px}
+.claro .bloco{border-top-color:var(--tinta)}
+.bloco .n{font-size:18px;font-weight:700;color:var(--azul);margin-bottom:8px}
+.claro .bloco .n{color:var(--azul2)}
+.bloco h3{font-size:28px;font-weight:700;margin-bottom:10px;letter-spacing:-.01em}
+.bloco p{font-size:21px;line-height:1.5;color:var(--cinza)}
+.claro .bloco p{color:var(--tinta2)}
+.bloco ul{list-style:none;margin-top:12px}
+.bloco li{font-size:19px;line-height:1.4;color:var(--creme);padding:6px 0;border-bottom:1px solid var(--linha)}
+.bloco li:last-child{border-bottom:0}
+.claro .bloco li{color:var(--tinta);border-bottom-color:var(--borda)}
+.fonte{position:absolute;left:110px;bottom:52px;font-size:16px;color:var(--cinza)}
+.claro .fonte{color:var(--tinta2)}
+
+/* lista numerada (objetivo) */
+.lista{list-style:none;margin-top:44px;counter-reset:n;max-width:1180px}
+.lista li{counter-increment:n;display:grid;grid-template-columns:70px 1fr;align-items:baseline;font-size:28px;line-height:1.35;padding:16px 0;border-top:1px solid var(--borda)}
+.lista li::before{content:counter(n);font-size:22px;font-weight:800;color:var(--azul2)}
+.c5{grid-template-columns:repeat(5,1fr);gap:30px}
+.c5 .bloco h3{font-size:24px}.c5 .bloco p{font-size:19px}
+
+/* demonstração */
+.demo{display:grid;grid-template-columns:auto 1fr;gap:60px;margin-top:40px;align-items:start}
+.celulares{display:flex;gap:20px}
+.cel{width:236px}
+.cel img{height:auto;aspect-ratio:390/844;display:block;width:100%;border-radius:26px;border:7px solid var(--tinta);box-shadow:0 18px 36px rgba(0,0,0,.18)}
+.cel figcaption{text-align:center;font-size:17px;font-weight:600;color:var(--tinta2);padding-top:10px}
+.pontos{display:flex;flex-direction:column;gap:26px;padding-top:6px}
+.ponto b{display:block;font-size:24px;margin-bottom:4px}
+.ponto p{font-size:19px;line-height:1.45;color:var(--tinta2)}
+.acesso{display:flex;align-items:center;gap:22px;margin-top:8px;padding-top:24px;border-top:1px solid var(--borda)}
+.acesso img{width:120px;height:120px;background:#fff;padding:9px;border-radius:12px;border:1px solid var(--borda)}
+.acesso b{display:block;font-size:24px;margin-bottom:6px}
+.acesso a{color:var(--azul2);font-size:20px;font-weight:600}
+
+/* modelo de negócios */
+.canais{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:44px}
+.canal{background:var(--fundo2);border:1px solid var(--linha);border-radius:18px;padding:30px 34px}
+.canal .tipo{font-size:17px;font-weight:700;letter-spacing:.02em;margin-bottom:6px}
+.canal.part .tipo{color:var(--verde)}.canal.pub .tipo{color:var(--roxo)}
+.canal h3{font-size:30px;font-weight:800;letter-spacing:-.01em}
+.canal .preco{font-size:44px;font-weight:800;letter-spacing:-.02em;margin:14px 0 4px}
+.canal .preco small{font-size:20px;font-weight:600;color:var(--cinza)}
+.canal p.sub{font-size:19px;color:var(--cinza);line-height:1.45}
+.canal ul{list-style:none;margin-top:14px}
+.canal li{font-size:19px;line-height:1.4;padding:7px 0;border-top:1px solid var(--linha)}
+.canal .seta{margin-top:14px;font-size:18px;color:var(--cinza);line-height:1.45}
+.exemplo{margin-top:30px;font-size:21px;color:var(--cinza)}
+.exemplo b{color:var(--creme)}
+
+/* investimento */
+.invest{display:grid;grid-template-columns:1.25fr 1fr;gap:70px;margin-top:40px;align-items:start}
+.tabela{width:100%;border-collapse:collapse}
+.tabela td{font-size:22px;padding:13px 0;border-bottom:1px solid var(--borda)}
+.tabela td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tabela tr.total td{border-bottom:0;border-top:2px solid var(--tinta);font-weight:800;font-size:26px;padding-top:18px}
+.barras{display:flex;flex-direction:column;gap:12px;padding-top:6px}
+.barra-l{display:grid;grid-template-columns:150px 1fr 54px;gap:14px;align-items:center;font-size:16px;color:var(--tinta2)}
+.barra-l i{display:block;height:14px;border-radius:7px;background:var(--azul2)}
+.barra-l span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.total-grande{font-size:78px;font-weight:800;letter-spacing:-.03em;line-height:1;margin-bottom:6px}
+.nota{font-size:19px;color:var(--tinta2);line-height:1.45;margin-top:22px}
+
+/* fim */
+.fim{display:flex;flex-direction:column;justify-content:center;height:100%}
+.fim h1{font-size:150px}
+.fim .lead{max-width:900px}
+.fim .acesso{border-top-color:var(--linha);max-width:760px;margin-top:44px}
+.fim .acesso img{border-color:transparent}
+.fim .acesso a{color:var(--azul)}
+.fim .time{position:absolute;left:110px;right:110px;bottom:52px;font-size:18px;color:var(--cinza)}
+
+/* navegação */
+.nav{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;background:#0c0d10dd;border:1px solid #ffffff22;border-radius:12px;padding:5px 7px;z-index:5;transition:opacity .3s}
+.nav button,.nav a{background:none;border:0;color:var(--creme);font:600 15px 'Inter',sans-serif;padding:7px 12px;border-radius:8px;cursor:pointer;text-decoration:none}
+.nav button:hover,.nav a:hover{background:#ffffff18}
+.nav .pos{color:var(--cinza);font:600 14px 'Inter',sans-serif;min-width:52px;text-align:center}
+.nav.some{opacity:0}
+
+@page{size:1600px 900px;margin:0}
+@media print{
+  html,body{overflow:visible;background:none;height:auto}
+  .palco{position:static;display:block}
+  .deck{transform:none!important;width:auto;height:auto}
+  .slide{position:relative;width:1600px;height:900px;opacity:1;visibility:visible;page-break-after:always;break-after:page;transition:none}
+  .nav{display:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+
+/* versão para importar no Canva: todos os slides visíveis */
+html,body{overflow:visible!important;height:auto!important;background:none!important}
+.slide{position:relative!important;inset:auto!important;width:1600px;height:900px;opacity:1!important;visibility:visible!important;transition:none!important}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 </style>
 </head>
 <body>
-  <main class="caixa" role="alert">
-    <div class="icone" aria-hidden="true">
-      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-        stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="10" rx="2"/>
-        <path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+
+
+<!-- CAPA -->
+<section class="slide escuro" aria-label="Capa" data-document-role="page" data-label="Capa">
+  <div class="capa-logo"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/logo.png" width="64" height="64" alt="" />MindTrack AI</div>
+  <div class="capa-meio">
+    <h1>MindTrack <span>AI</span></h1>
+    <p class="lead" style="font-size:34px;max-width:1000px;color:var(--creme)">Personalizar o ensino e ajudar cada aluno a alcançar o seu potencial.</p>
+    <p class="lead">Uma startup de tecnologia educacional para escolas e para o reforço escolar.</p>
+  </div>
+  <div class="capa-pe">
+    <div><small>Integrantes</small>Caio, Cauã, Eduardo, Guilherme, Khoan, Lucas, Thiago e Tarso</div>
+    <span class="dir">Projeto de Startup · Empreendedorismo</span>
+  </div>
+</section>
+
+<!-- QUEM SOMOS -->
+<section class="slide claro" aria-label="Quem somos" data-document-role="page" data-label="Quem somos">
+  <h2>Quem somos</h2>
+  <p class="lead">A MindTrack AI é uma startup de tecnologia educacional que usa inteligência artificial para ajudar cada aluno a estudar do jeito certo.</p>
+  <div class="colunas c3">
+    <div class="bloco"><div class="n">O que é</div><h3>Uma plataforma de estudo</h3><p>Conteúdos didáticos, exercícios personalizados e acompanhamento da aprendizagem num lugar só.</p></div>
+    <div class="bloco"><div class="n">Para quem</div><h3>Escolas e reforço escolar</h3><p>Feita para as escolas e também para o aluno que precisa de reforço fora da sala de aula.</p></div>
+    <div class="bloco"><div class="n">Missão</div><h3>Ensino para cada aluno</h3><p>Tornar o ensino mais acessível, eficiente e adaptado às necessidades de cada aluno.</p></div>
+  </div>
+  <span class="pg">2</span>
+</section>
+
+<!-- O PROBLEMA -->
+<section class="slide escuro" aria-label="O problema" data-document-role="page" data-label="O problema">
+  <h2>O problema</h2>
+  <p class="lead">Cada aluno aprende de um jeito, mas a escola ainda ensina todo mundo igual. No dia a dia, isso aparece assim:</p>
+  <div class="colunas c3">
+    <div class="bloco"><div class="n">1</div><h3>Estudo desorganizado</h3><p>Provas, tarefas e datas ficam espalhadas entre caderno, grupo de WhatsApp e Classroom.</p></div>
+    <div class="bloco"><div class="n">2</div><h3>Dificuldades que ninguém vê</h3><p>O aluno só descobre que precisava de nota no fim do bimestre, quando já é tarde.</p></div>
+    <div class="bloco"><div class="n">3</div><h3>Reforço caro</h3><p>Aula particular não cabe no bolso da maioria das famílias, principalmente na escola pública.</p></div>
+  </div>
+  <p class="fonte">46 milhões de estudantes na educação básica no Brasil (Censo Escolar, Inep).</p>
+  <span class="pg">3</span>
+</section>
+
+<!-- NOSSO OBJETIVO -->
+<section class="slide claro" aria-label="Nosso objetivo" data-document-role="page" data-label="Nosso objetivo">
+  <h2>Nosso objetivo</h2>
+  <p class="lead" style="color:var(--tinta);font-size:32px;font-weight:600">Personalizar o ensino e ajudar cada aluno a alcançar o seu potencial.</p>
+  <ol class="lista">
+    <li>Identificar as dificuldades em cada matéria</li>
+    <li>Criar cronogramas de estudo personalizados</li>
+    <li>Disponibilizar materiais didáticos digitais</li>
+    <li>Acompanhar o progresso dos alunos</li>
+    <li>Ajudar os professores a acompanhar a aprendizagem</li>
+  </ol>
+  <span class="pg">4</span>
+</section>
+
+<!-- O QUE TORNA ESPECIAL -->
+<section class="slide escuro" aria-label="O que torna a MindTrack AI especial" data-document-role="page" data-label="O que torna a MindTrack AI especial">
+  <h2>O que torna a <span class="ac">MindTrack AI</span> especial</h2>
+  <p class="lead">Muito além de uma plataforma digital: uma IA que entende as necessidades do aluno. Diferente do método tradicional, o aprendizado se adapta a cada um.</p>
+  <div class="colunas c5">
+    <div class="bloco"><div class="n">1</div><h3>IA personalizada</h3><p>Identifica as dificuldades e recomenda atividades.</p></div>
+    <div class="bloco"><div class="n">2</div><h3>Cronograma inteligente</h3><p>Organiza os estudos pelas provas e tarefas.</p></div>
+    <div class="bloco"><div class="n">3</div><h3>Materiais integrados</h3><p>Reúne os conteúdos numa plataforma só.</p></div>
+    <div class="bloco"><div class="n">4</div><h3>Acompanhamento contínuo</h3><p>Monitora a evolução e as notas do ano.</p></div>
+    <div class="bloco"><div class="n">5</div><h3>Integração escolar</h3><p>Conecta alunos, professores e tecnologia.</p></div>
+  </div>
+  <span class="pg">5</span>
+</section>
+
+<!-- COMO FUNCIONA -->
+<section class="slide claro" aria-label="Como funciona" data-document-role="page" data-label="Como funciona">
+  <h2>Como o <span class="ac">MindTrack</span> funciona</h2>
+  <p class="lead">Quatro etapas para transformar dificuldades em evolução.</p>
+  <div class="colunas c4">
+    <div class="bloco"><div class="n">1</div><h3>Análise</h3><p>Identifica as dificuldades de cada aluno pelas notas, provas e exercícios.</p>
+      <ul><li>Notas do ano por bimestre</li><li>Quanto falta para passar</li></ul></div>
+    <div class="bloco"><div class="n">2</div><h3>Planejamento</h3><p>Monta um cronograma personalizado com o que estudar e quando.</p>
+      <ul><li>Calendário da escola</li><li>"O que eu estudo agora?"</li></ul></div>
+    <div class="bloco"><div class="n">3</div><h3>Aprendizado</h3><p>Exercícios e explicações no ritmo do aluno, com a ajuda da IA.</p>
+      <ul><li>Questões e flashcards</li><li>Foto da lição explicada</li></ul></div>
+    <div class="bloco"><div class="n">4</div><h3>Continuidade</h3><p>Acompanha a evolução e ajusta os estudos conforme o progresso.</p>
+      <ul><li>Sequência de estudo</li><li>Duelos de quiz com amigos</li></ul></div>
+  </div>
+  <span class="pg">6</span>
+</section>
+
+<!-- DEMONSTRAÇÃO -->
+<section class="slide claro" aria-label="Demonstração" data-document-role="page" data-label="Demonstração">
+  <h2>O app funcionando</h2>
+  <div class="demo">
+    <div class="celulares">
+      <figure class="cel"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/inicio.png" width="236" height="511" alt="Tela de início do MindTrack" /><figcaption>Início</figcaption></figure>
+      <figure class="cel"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/chat.png" width="236" height="511" alt="Chat do MindTrack AI" /><figcaption>Chat com IA</figcaption></figure>
+      <figure class="cel"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/passar-de-ano.png" width="236" height="511" alt="Quanto falta para passar de ano" /><figcaption>Passar de ano</figcaption></figure>
     </div>
-    <h1>Site bloqueado</h1>
-    <p>O acesso ao MindTrack AI está bloqueado no momento.</p>
-  </main>
-<script>
-  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio
-  try {
-    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()
-      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});
-    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});
-  } catch (e) {}
-</script>
+    <div class="pontos">
+      <div class="ponto"><b>Diz o que estudar agora</b><p>Olha as provas, as tarefas e as notas do aluno e responde na hora.</p></div>
+      <div class="ponto"><b>Calcula quanto falta para passar</b><p>Cada matéria com o critério da escola e a nota necessária em cada prova.</p></div>
+      <div class="ponto"><b>Estudar junto</b><p>Amigos, sequência de estudo e duelos de quiz ao vivo entre dois celulares.</p></div>
+      <div class="acesso"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/qr.png" width="120" height="120" alt="QR code do app" /><div><b>Teste no celular</b><a href="https://mindtrack-ai-ws6c.onrender.com/?demo=1">mindtrack-ai-ws6c.onrender.com</a></div></div>
+    </div>
+  </div>
+  <span class="pg">7</span>
+</section>
+
+<!-- 5 MODELO DE NEGÓCIOS -->
+<section class="slide escuro" aria-label="Preços e modelo de negócios" data-document-role="page" data-label="Preços e modelo de negócios">
+  <h2>Preços e modelo de negócios</h2>
+  <p class="lead">Duas formas de gerar receita e chegar a escolas diferentes.</p>
+  <div class="canais">
+    <div class="canal part">
+      <div class="tipo">1. Escolas particulares</div>
+      <h3>Pacote anual por aluno</h3>
+      <div class="preco">R$ 1.500 a R$ 2.000 <small>por aluno, por ano</small></div>
+      <ul>
+        <li>Materiais didáticos de qualidade</li>
+        <li>Acesso à inteligência artificial</li>
+        <li>Cronograma personalizado</li>
+        <li>Análise de dificuldades e desempenho</li>
+      </ul>
+      <p class="seta">Venda por contrato anual com a escola.</p>
+    </div>
+    <div class="canal pub">
+      <div class="tipo">2. Escolas públicas</div>
+      <h3>Parceria com o governo</h3>
+      <p class="sub" style="margin-top:14px">Parcerias com prefeituras e secretarias municipais de educação.</p>
+      <ul>
+        <li>O governo contrata os serviços do MindTrack AI</li>
+        <li>Os alunos recebem acesso à plataforma</li>
+        <li>A startup recebe pelos contratos firmados</li>
+        <li>A receita mantém e expande o negócio</li>
+      </ul>
+    </div>
+  </div>
+  <p class="exemplo">Estratégia: vender pacotes às escolas particulares e atender as redes públicas por contratos com o governo. <b>Exemplo: uma escola com 300 alunos no pacote de R$ 1.500 = R$ 450 mil por ano.</b></p>
+  <span class="pg">8</span>
+</section>
+
+<!-- INVESTIMENTO -->
+<section class="slide claro" aria-label="Investimento inicial e custos" data-document-role="page" data-label="Investimento inicial e custos">
+  <h2>Investimento inicial e custos</h2>
+  <div class="invest">
+    <table class="tabela">
+      <tr><td>Desenvolvimento da plataforma e IA</td><td>R$ 45.000</td></tr>
+      <tr><td>Servidores e infraestrutura</td><td>R$ 35.000</td></tr>
+      <tr><td>Marketing e divulgação</td><td>R$ 30.000</td></tr>
+      <tr><td>Materiais didáticos</td><td>R$ 25.000</td></tr>
+      <tr><td>Equipe, testes e suporte</td><td>R$ 25.000</td></tr>
+      <tr><td>Segurança e manutenção</td><td>R$ 10.000</td></tr>
+      <tr><td>Reserva para imprevistos</td><td>R$ 10.000</td></tr>
+      <tr class="total"><td>Total</td><td>R$ 180.000</td></tr>
+    </table>
+    <div>
+      <div class="total-grande">R$ 180 mil</div>
+      <p class="nota" style="margin-top:0">para desenvolver e lançar uma solução educacional completa.</p>
+      <p class="nota" style="margin-top:34px;font-size:22px">O investimento permite desenvolver a plataforma, garantir a infraestrutura e começar a divulgação nas escolas.</p>
+    </div>
+  </div>
+  <span class="pg">9</span>
+</section>
+
+<!-- OBRIGADO -->
+<section class="slide escuro" aria-label="Obrigado" data-document-role="page" data-label="Obrigado">
+  <div class="fim">
+    <h1>Obrigado!</h1>
+    <p class="lead">O MindTrack AI já está no ar. Aponte a câmera e teste com a gente.</p>
+    <div class="acesso"><img src="https://mindtrack-ai-ws6c.onrender.com/slides/img/qr.png" width="120" height="120" alt="QR code do app" /><div><b>MindTrack AI</b><a href="https://mindtrack-ai-ws6c.onrender.com/?demo=1">mindtrack-ai-ws6c.onrender.com</a></div></div>
+  </div>
+  <div class="time">Caio, Cauã, Eduardo, Guilherme, Khoan, Lucas, Thiago e Tarso</div>
+</section>
+
+
+
 </body>
 </html>

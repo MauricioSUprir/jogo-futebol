@@ -1,1 +1,164 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== api.js — conversa com o servidor do MindTrack =====
+   Só entra em ação quando produto.js → SERVIDOR está preenchido. Sem servidor,
+   o app continua funcionando sozinho (conta local e Pro por código no aparelho). */
+import { SERVIDOR } from './produto.js';
+import { st, set } from './store.js';
+
+/** Endereço do servidor: o que o dono digitou nas Configurações vence o padrão do código. */
+export const enderecoServidor = () => (st().ia?.servidor || SERVIDOR || '').trim().replace(/\/$/, '');
+export const temServidor = () => !!enderecoServidor();
+const url = (rota) => `${enderecoServidor()}${rota}`;
+
+async function chamar(rota, { metodo = 'GET', corpo = null, comToken = true, timeout = 150000 } = {}) {
+  if (!temServidor()) throw new Error('Servidor do MindTrack não configurado.');
+  const token = st().conta.token;
+  if (comToken === true && !token) throw new Error('Entre com o Google para usar o MindTrack AI.');
+
+  const ctrl = new AbortController();
+  const relogio = setTimeout(() => ctrl.abort(), timeout);
+  let r;
+  try {
+    r = await fetch(url(rota), {
+      method: metodo,
+      headers: { 'content-type': 'application/json', ...(comToken && token ? { authorization: `Bearer ${token}` } : {}) },
+      body: corpo ? JSON.stringify(corpo) : undefined,
+      signal: ctrl.signal,
+    });
+  } catch (e) {
+    clearTimeout(relogio);
+    if (e.name === 'AbortError') throw new Error('A resposta demorou demais. Tente de novo.');
+    throw new Error('Não consegui falar com o servidor do MindTrack. Verifique sua internet — e, se abriu o app '
+      + 'dentro de um preview (Artifact, sandbox, iframe), a política de segurança bloqueia chamadas externas.');
+  }
+  clearTimeout(relogio);
+
+  const dados = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    if (r.status === 401) { set((s) => { s.conta.token = null; }); }
+    const e = new Error(dados.erro || `Erro ${r.status}`);
+    e.status = r.status;
+    throw e;
+  }
+  return dados;
+}
+
+/** Guarda no app o que o servidor disse sobre a conta e o plano. */
+export function aplicarConta(d) {
+  set((s) => {
+    if (d.token) s.conta.token = d.token;
+    if (d.usuario) {
+      s.conta.id = d.usuario.id;
+      s.conta.nome = d.usuario.nome || s.conta.nome;
+      s.conta.email = d.usuario.email || s.conta.email;
+      if (d.usuario.foto) s.conta.foto = d.usuario.foto;
+      if (['google', 'email'].includes(d.usuario.provedor)) s.conta.provedor = d.usuario.provedor;   // conta de verdade
+      if (d.usuario.telefone) s.conta.telefone = d.usuario.telefone;
+    }
+    if (d.plano) {
+      s.conta.plano = d.plano;
+      s.conta.planoId = d.planoId ?? s.conta.planoId;
+      s.conta.proAte = d.proAte ?? null;
+    }
+  });
+  return d;
+}
+
+export const entrarNoServidor = (idToken) =>
+  chamar('/entrar', { metodo: 'POST', corpo: { idToken }, comToken: false }).then(aplicarConta);
+
+/** Identidade do aparelho: sorteada uma vez e guardada aqui mesmo. */
+function credenciaisDoAparelho() {
+  const c = st().conta;
+  if (c.aparelhoId && c.aparelhoSegredo) return { id: c.aparelhoId, segredo: c.aparelhoSegredo };
+  const aleatorio = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2) + Date.now().toString(36));
+  const novo = { id: `ap_${aleatorio()}`, segredo: `${aleatorio()}${aleatorio()}` };
+  set((s) => { s.conta.aparelhoId = novo.id; s.conta.aparelhoSegredo = novo.segredo; });
+  return novo;
+}
+
+/** Entra sem Google: o suficiente para usar o MindTrack AI e assinar. */
+export function entrarPorAparelho(nome = 'Estudante') {
+  const d = credenciaisDoAparelho();
+  return chamar('/entrar', { metodo: 'POST', corpo: { dispositivo: { ...d, nome } }, comToken: false }).then(aplicarConta);
+}
+
+/** Garante que existe uma sessão válida no servidor antes de pedir algo pago. */
+export async function garantirSessao() {
+  if (!temServidor()) return null;
+  if (st().conta.token) return st().conta.token;
+  await entrarPorAparelho(st().perfil?.nome || 'Estudante');
+  return st().conta.token;
+}
+
+export const buscarEu = () => chamar('/eu').then(aplicarConta);
+
+export const ativarCodigoNoServidor = (codigo) =>
+  chamar('/codigo', { metodo: 'POST', corpo: { codigo } }).then(aplicarConta);
+
+export const cancelarNoServidor = () => chamar('/cancelar', { metodo: 'POST' }).then(aplicarConta);
+
+export const perguntarAoServidor = (pedido) => chamar('/ia', { metodo: 'POST', corpo: pedido });
+
+/**
+ * Abre o pagamento no Mercado Pago e devolve o link do checkout.
+ * forma 'unico' = Pix ou cartão (compra os dias) · 'recorrente' = cartão que renova sozinho.
+ */
+export const pagarNoServidor = (planoId, forma = 'unico') =>
+  chamar('/pagar', { metodo: 'POST', corpo: { planoId, forma } });
+
+/** Cria a cobrança Pix (QR + código copia-e-cola). */
+export const criarPixNoServidor = (planoId, email) =>
+  chamar('/pagar/pix', { metodo: 'POST', corpo: { planoId, email } });
+
+/** Pergunta ao servidor se o pagamento já caiu. */
+export const consultarPagamentoNoServidor = (id) =>
+  chamar(`/pagamento/${id}`, { timeout: 20000 }).then((d) => { aplicarConta(d); return d; });
+
+/** Chave PÚBLICA do Mercado Pago — é ela que monta o formulário do cartão. */
+export const chavePublicaDoServidor = () => chamar('/pagamento/chave-publica', { comToken: false, timeout: 15000 });
+
+/** Envia o token do cartão (o número nunca passa por aqui). */
+export const pagarComCartaoNoServidor = (planoId, cartao) =>
+  chamar('/pagar/cartao', { metodo: 'POST', corpo: { planoId, cartao } });
+
+export const saudeDoServidor = () => chamar('/saude', { comToken: false, timeout: 15000 });
+
+/** Mantém o servidor do Render acordado enquanto o app está aberto e visível
+ *  (o plano grátis dorme depois de 15 min sem ninguém chamar). Quem acorda o
+ *  servidor de madrugada é o robô do GitHub (.github/workflows/mindtrack-acordar.yml). */
+let cutucando = null;
+export function manterServidorAcordado(intervaloMs = 10 * 60000) {
+  if (cutucando || !temServidor()) return;
+  const cutucar = () => {
+    if (document.hidden) return;
+    fetch(url('/saude'), { cache: 'no-store' }).catch(() => { /* fora do ar ou sem internet: tenta na próxima */ });
+  };
+  cutucar();
+  cutucando = setInterval(cutucar, intervaloMs);
+}
+
+/* ---------- Conexões (Google Agenda, Classroom, Drive, calendário por link) ---------- */
+export const configConexoes = () => chamar('/conexoes/config', { comToken: false, timeout: 30000 });
+/** Endereço do Google para entrar ou ligar um app. 'conta' = entrar (usa a sessão do aparelho, se houver, para não perder o plano). */
+export const iniciarGoogle = (servico) => chamar('/conexoes/google/iniciar', {
+  metodo: 'POST', comToken: 'se-tiver',
+  corpo: { servico, volta: `${location.origin}${location.pathname}` },
+});
+export const trocarTicket = (ticket) =>
+  chamar('/conta/troca', { metodo: 'POST', corpo: { ticket }, comToken: false }).then((d) => { aplicarConta(d); return d; });
+export const listarConexoes = () => chamar('/conexoes');
+export const sincronizarConexao = (servico) => chamar('/conexoes/sincronizar', { metodo: 'POST', corpo: { servico }, timeout: 60000 });
+export const ligarCalendarioPorLink = (link) => chamar('/conexoes/ics', { metodo: 'POST', corpo: { url: link }, timeout: 60000 });
+export const acessoDoDrive = () => chamar('/conexoes/google/token', { metodo: 'POST', corpo: { servico: 'drive' } });
+export const removerConexao = (servico) => chamar('/conexoes/remover', { metodo: 'POST', corpo: { servico } });
+
+/* ---------- conta com e-mail e senha ---------- */
+export const criarContaNoServidor = (d) =>
+  chamar('/conta/criar', { metodo: 'POST', corpo: d, comToken: 'se-tiver', timeout: 60000 }).then((r) => { aplicarConta(r); return r; });
+/** Código de 6 números no e-mail: motivo 'criar' (conta nova) ou 'senha' (esqueci a senha). */
+export const pedirCodigo = (email, motivo = 'criar', nome = '') =>
+  chamar('/conta/codigo', { metodo: 'POST', corpo: { email, motivo, nome }, comToken: false, timeout: 60000 });
+export const novaSenha = (email, codigo, senha) =>
+  chamar('/conta/nova-senha', { metodo: 'POST', corpo: { email, codigo, senha }, comToken: false, timeout: 60000 }).then((r) => { aplicarConta(r); return r; });
+export const entrarComEmail = (email, senha) =>
+  chamar('/conta/entrar', { metodo: 'POST', corpo: { email, senha }, comToken: false }).then((r) => { aplicarConta(r); return r; });

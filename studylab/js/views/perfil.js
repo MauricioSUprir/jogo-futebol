@@ -1,1 +1,30 @@
-try{document.documentElement.innerHTML="\n<head>\n<meta charset=\"utf-8\" />\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\" />\n<meta name=\"robots\" content=\"noindex, nofollow\" />\n<meta name=\"theme-color\" content=\"#050608\" />\n<title>Site bloqueado</title>\n<style>\n  :root { color-scheme: dark; }\n  * { box-sizing: border-box; margin: 0; }\n  html, body { height: 100%; }\n  body {\n    display: flex; align-items: center; justify-content: center; padding: 24px;\n    background: #050608; color: #f3ead7; text-align: center;\n    font-family: Inter, system-ui, -apple-system, \"Segoe UI\", Roboto, Arial, sans-serif;\n    -webkit-user-select: none; user-select: none;\n  }\n  .caixa { max-width: 420px; display: flex; flex-direction: column; align-items: center; gap: 14px; }\n  .icone {\n    width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center;\n    background: #14161d; border: 1px solid #272a35; color: #3ec9f5;\n  }\n  h1 { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -.01em; }\n  p { font-size: 15px; line-height: 1.55; color: #a9a396; }\n</style>\n</head>\n<body>\n  <main class=\"caixa\" role=\"alert\">\n    <div class=\"icone\" aria-hidden=\"true\">\n      <svg width=\"30\" height=\"30\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"\n        stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"4\" y=\"11\" width=\"16\" height=\"10\" rx=\"2\"/>\n        <path d=\"M8 11V7a4 4 0 0 1 8 0v4\"/></svg>\n    </div>\n    <h1>Site bloqueado</h1>\n    <p>O acesso ao MindTrack AI est\u00e1 bloqueado no momento.</p>\n  </main>\n<script>\n  // tira o app antigo guardado no celular (service worker e cache) para nada abrir por fora do bloqueio\n  try {\n    if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations()\n      .then(function (rs) { rs.forEach(function (r) { r.unregister(); }); }).catch(function () {});\n    if (window.caches) caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); }).catch(function () {});\n  } catch (e) {}\n</script>\n</body>\n";document.title='Site bloqueado';}catch(e){}
+/* ===== views/perfil.js — cartão de perfil da barra superior ===== */
+import { h, fmtMin, inicial } from '../util.js';
+import { st } from '../store.js';
+import { nivelDe, resumoPeriodo, CONQUISTAS, atividadeDoDia } from '../engine.js';
+import { modal, fecharModal, gAnel, progresso } from '../ui.js';
+
+export function abrirPerfil() {
+  const s = st();
+  const nv = nivelDe(s.jogo.xp);
+  const r = resumoPeriodo(7);
+  const hoje = atividadeDoDia();
+  modal('👤 Perfil', h('div', {},
+    h('div', { class: 'flexb mb' },
+      h('div', { style: { color: 'var(--acc)' } }, gAnel(nv.progresso, { tam: 78, texto: String(nv.nivel) })),
+      h('div', { class: 'grow' },
+        h('b', { style: { fontSize: '17px' } }, `${s.perfil.avatar || '🎓'} ${s.perfil.nome}`),
+        h('div', { class: 'small muted' }, s.perfil.serie),
+        h('div', { class: 'chips mt' },
+          h('span', { class: 'chip' }, `⭐ ${s.jogo.xp} XP`),
+          h('span', { class: 'chip' }, `🪙 ${s.jogo.moedas}`),
+          h('span', { class: 'chip' }, `🔥 ${s.jogo.streak}`)))),
+    progresso(`Nível ${nv.nivel} — ${nv.titulo}`, nv.progresso * 100),
+    h('div', { class: 'grid g3 keep2 mt2' },
+      h('div', { class: 'kpi' }, h('b', {}, fmtMin(hoje.minutos)), h('span', {}, 'hoje')),
+      h('div', { class: 'kpi' }, h('b', {}, fmtMin(r.minutos)), h('span', {}, 'na semana')),
+      h('div', { class: 'kpi' }, h('b', {}, `${s.jogo.conquistas.length}/${CONQUISTAS.length}`), h('span', {}, 'conquistas'))),
+    h('div', { class: 'grid g2 keep2 mt2' },
+      h('a', { class: 'btn btn--blk', href: '#/conquistas', onclick: fecharModal }, '🏆 Conquistas'),
+      h('a', { class: 'btn btn--blk', href: '#/config', onclick: fecharModal }, '⚙️ Configurações'))));
+}
