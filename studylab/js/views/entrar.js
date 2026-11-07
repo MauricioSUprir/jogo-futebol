@@ -312,12 +312,16 @@ export function abrirEntrada(aoConcluir) {
         h('p', { class: 'muted small', style: { margin: '8px auto 0', maxWidth: '36ch' } },
           'Crie sua conta para começar. Seus estudos ficam salvos e seus amigos te encontram.')),
       caixa(abas, h('div', { class: 'mt' }, formulario), erro, caixaGoogle),
-      h('div', { class: 'center mt2' },
+      // parte separada, embaixo: entrar sem login, só para testar (apresentação, jurados, curiosos)
+      h('section', { class: 'conta-teste', 'aria-label': 'Entrar sem login para teste' },
+        h('div', { class: 'conta-teste__ou' }, h('span', {}, 'ou')),
+        h('div', { class: 'conta-teste__selo' }, 'Modo teste'),
+        h('p', { class: 'conta-teste__txt' }, 'Só quer conhecer o app? Entre sem login, com dados de exemplo.'),
         h('button', {
           class: 'btn btn--blk conta-demo', type: 'button',
-          onclick: () => { carregarExemplo(); toast('Demonstração aberta com dados de exemplo', 'good'); fechar(); },
-        }, 'Ver demonstração (sem conta)'),
-        h('p', { class: 'muted small', style: { margin: '6px 0 0' } }, 'Abre o app com dados de exemplo. Dá para criar a conta depois.')));
+          onclick: () => { carregarExemplo(); toast('Modo teste: app aberto com dados de exemplo', 'good'); fechar(); },
+        }, 'Entrar sem login (só para teste)'),
+        h('p', { class: 'muted small conta-teste__nota' }, 'Os dados são só de exemplo. Para usar de verdade, crie sua conta.')));
     pintarForm();
     tela.replaceChildren(conteudo);
 
