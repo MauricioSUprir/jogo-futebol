@@ -20,7 +20,7 @@
    Revisão do item 124: o "Simular partida" leva os titulares da tela e o TM simula com eles (A2: o Personalizar com 7 trocas na
    Partida rápida — o result simulado de novo, nenhum gol/cartão de quem foi para o banco sem entrar de volta, o elenco do TM.data
    intacto; no Ultimate os titulares do TM = os da tela); o "Abrindo o estádio 3D…" some quando a tela de carregar do 3D aparece
-   (A7); o "Simular direto" da Partida rápida não abre o 3D (A3); o título vai ao 3D sem emoji (Chefão das Lendas; A3); o Rumo ao
+   (A7); o título vai ao 3D sem emoji (Chefão das Lendas; A3); o Rumo ao
    Estrelato com "Sempre simular", sem WebGL 2 (o aviso da sessão) e com a falha do 3D (A2); a confirmação do TM fora do 3D no
    meio da tela abaixo do PC (960×540; A8).
    Item 31 (a foto do autor na comemoração): na pro o pedido leva `foto` (as fotos reais do TM em endereço absoluto ou a importada
@@ -665,27 +665,29 @@ if (fr) {
   await p.evaluate(() => { const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s); });
   confere("revisão A2 · Rumo ao Estrelato: com \"Sempre simular\" o titular não abre o 3D (a simulação dele)", !e.quadro && !e.janela && e.chegou && !e.msgs.length, resumo(e));
 
-  // revisão A3: o "Simular direto" da Partida rápida simula SEM o 3D (o "Iniciar partida" da escalação e o "Jogar de novo" abrem a tela)
-  await limpa();
-  await p.evaluate(() => {
-    window.__msgs3d.length = 0;
-    const ids = TM.data.world().leagues[0].clubIds, fila = [ids[6], ids[7]];
-    window.__pickOrig = TM.ui.pickTeam;
+  // a Partida rápida (dono, 10/11: "não aparece a opção de jogar"; o "Simular direto" simulava sem a tela): escolhidos os dois
+  // times, o "Jogar" abre a tela antes do jogo do 3D (o Simular dela volta ao lance a lance do TM) e o "Simular direto" saiu
+  const pelaEscolha = async (k) => {
+    const ids = TM.data.world().leagues[0].clubIds, fila = [ids[k], ids[k + 1]], orig = TM.ui.pickTeam;
     TM.ui.pickTeam = (o) => o.onPick(fila.shift());
     TM.ui.go("quick");
-  });
-  await p.waitForTimeout(400);
-  await p.evaluate(() => { const c = document.querySelector(".chosen-team"); if (c) c.click(); });
-  await p.waitForTimeout(300);
-  await p.evaluate(() => { const c = [...document.querySelectorAll(".chosen-team")][1]; if (c) c.click(); });
-  await p.waitForTimeout(300);
-  const nCfg0 = await p.evaluate(() => window.__cfgs.length);
-  await p.evaluate(() => { TM.ui.pickTeam = window.__pickOrig; const b = [...document.querySelectorAll("button")].find(x => /Simular direto/.test(x.textContent)); if (b) b.click(); });
-  let quadroSD = false;
-  for (let i = 0; i < 10 && !quadroSD; i++) { await p.waitForTimeout(150); quadroSD = (await janelaOuQuadro()).quadro; }
-  const chegouSD = await ate(naRapida, "^(Ver resultado|Pular|Avançar)", 80);
-  const sd = await p.evaluate((n0) => ({ partidas: window.__cfgs.length - n0, sem3d: !!(window.__cfgs[window.__cfgs.length - 1] || {}).cfg.sem3d, msgs: window.__msgs3d.length }), nCfg0);
-  confere("revisão A3: o \"Simular direto\" da Partida rápida simula sem abrir o 3D (o botão diz simular)", !quadroSD && chegouSD && sd.partidas === 1 && sd.sem3d && sd.msgs === 0, { quadro: quadroSD, chegou: chegouSD, ...sd });
+    await new Promise(r => setTimeout(r, 300));
+    document.querySelector(".chosen-team").click();
+    await new Promise(r => setTimeout(r, 300));
+    [...document.querySelectorAll(".chosen-team")][1].click();
+    await new Promise(r => setTimeout(r, 300));
+    TM.ui.pickTeam = orig;
+    const txt = [...document.querySelectorAll(".actions button")].map(x => x.textContent.trim().replace(/^▶\s*/, ""));
+    window.__botoesRapida = txt;
+    const b = [...document.querySelectorAll(".actions button")].find(x => x.textContent.trim().replace(/^▶\s*/, "") === "Jogar");
+    if (b) b.click();
+  };
+  e = await modoEnsaio("Partida rápida (a escolha dos times)", { inicia: pelaEscolha, arg: 6, final: naRapida });
+  const botoesRapida = await p.evaluate(() => window.__botoesRapida || []);
+  const semEsc = await p.evaluate(() => { const c = (window.__cfgs[window.__cfgs.length - 1] || {}).cfg || {}; return !c.sem3d; });
+  confere("Partida rápida (10/11): escolhidos os times, o \"Jogar\" abre a tela antes do jogo do 3D (sem a janela) e o Simular dela volta ao lance a lance do TM; o \"Simular direto\" saiu",
+    e.quadro && !e.janela && e.chegou && e.novaPartida && semEsc && simulouNoTM(e) && botoesRapida.includes("Jogar") && !botoesRapida.some(t => /Simular direto/.test(t)),
+    { ...resumo(e), botoesRapida, semEsc });
 
   // a falha do 3D ('tm3d:sair' {motivo: 'erro'}): o aviso e a simulação de sempre; o "Simular" da tela fica calado (acima)
   e = await modoEnsaio("Falha do 3D", { inicia: rapida, arg: 5, final: naRapida, modo: "erro" });
