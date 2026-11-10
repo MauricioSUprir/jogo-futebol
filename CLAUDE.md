@@ -1278,7 +1278,8 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   antes do jogo / Sempre simular (`settings.partidasTela`; o `partidas3d` antigo é ignorado: a migração foi única). Sem WebGL 2,
   simula com um aviso por sessão. Fora do 3D: o Online de salas e o Duelo ao vivo (resultado dividido), os pênaltis e a
   prorrogação do TM, o Estrelato no banco, o Palpite e a Base com < 11 (contrato "Ponte com o Total Match", parte "A tela no
-  lugar da janela"); para ficar fora do 3D, `sem3d: true` (como o "Simular direto" da Partida rápida); mexeu no fluxo?
+  lugar da janela"); para ficar fora do 3D, `sem3d: true` (a Base com < 11; na Partida rápida o "Jogar" abre a tela — item 130, dono, 10/11:
+  o "Simular direto" sem a tela saiu); mexeu no fluxo?
   `testar-3d` (e `--publica`). O 3D (`golaco/index.html?tm=<id>`,
   mesmo site e mesmo localStorage) recebe o pedido v2: os dois times com 18 jogadores, a vaga de cada titular na prancheta,
   os uniformes do TM (inclusive o do pré-jogo da carreira) e a identidade de cada time (`identidade`: o MESMO escudo do

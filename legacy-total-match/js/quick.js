@@ -76,15 +76,17 @@
     }
     updatePreview();
 
+    // "Jogar" abre a tela antes do jogo do 3D (Jogar partida · Simular partida), como em todo modo (dono, 10/11: o "Simular
+    // direto" simulava sem a tela e não havia um "Jogar" aqui; antes, revisão A3 do item 124). "Escalar meu time" abre a
+    // escalação, e o "Iniciar partida" dela abre a mesma tela
     screen.appendChild(el("div", { class: "actions" }, [
+      TM.ui.button("▶ Jogar", function () {
+        if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
+        TM.ui.go("quick-match", { a: teamObj(setup.teamA), b: teamObj(setup.teamB) });
+      }, "btn primary big"),
       TM.ui.button("📋 Escalar meu time", function () {
         if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
         TM.ui.go("quick-lineup", { side: 0 });
-      }, "btn primary big"),
-      TM.ui.button("▶ Simular direto", function () {
-        if (!setup.teamA || !setup.teamB || setup.teamA === setup.teamB) { TM.ui.toast("Escolha dois times diferentes"); return; }
-        // "Simular direto" simula SEM o 3D (item 124, revisão A3: o botão diz simular; a tela antes do jogo é do "Iniciar partida")
-        TM.ui.go("quick-match", { a: teamObj(setup.teamA), b: teamObj(setup.teamB), sem3d: true });
       }, "btn ghost")
     ]));
   });

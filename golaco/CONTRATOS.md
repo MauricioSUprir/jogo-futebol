@@ -3124,8 +3124,8 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
     "entra", banco ou fora dos relacionados, "Sempre simular" ou sem WebGL 2 (com o aviso): a simulação dele. Os modos que já
     iam direto (Pênaltis 3D, Modo Livre 3D, Online 3D) não mudam. A Partida de Base entrou (`coach.js`: `pauseSide: 0`,
     `simOpts`, `empateContinua: false` e `sem3d` com menos de 11 na base — o 3D joga 11 contra 11; efeito colateral: o 2D dela
-    ganhou a pausa e a tática da tela de jogo). O "Simular direto" da Partida rápida passa `sem3d` (o botão diz simular: sem o 3D;
-    o "Iniciar partida" e o "Jogar de novo" abrem a tela; revisão A3). O título vai ao 3D sem emoji (`TM.icones.semEmoji`, o
+    ganhou a pausa e a tática da tela de jogo). A Partida rápida abre a tela pelo "Jogar" da escolha dos times, pelo "Iniciar partida"
+    da escalação e pelo "Jogar de novo" (item 130, dono, 10/11: o "Simular direto" da revisão A3, que passava `sem3d`, saiu). O título vai ao 3D sem emoji (`TM.icones.semEmoji`, o
     critério do conversor: "👑 Chefão das Lendas" → "Chefão das Lendas" — o conversor do TM não alcança o quadro; revisão A3).
   - **E2, o "Simular partida" = o "Simular" da janela**: o 2º toque manda `tm3d:sair {motivo: 'simular', titulares}` e o
     `jogarCfg.sair` chama `escalacaoDaTela(cfg, titulares)`: se um lado mudou (o Personalizar, ou o time que o `escalacao()` do
@@ -3174,7 +3174,7 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
     Config, o quadro sem a janela no Ultimate Rivais, na Carreira e no Rumo ao Estrelato com o golaco de verdade (a tela, o Simular
     calado com os titulares da tela, o Jogar partida → Simular o resto → `tm3d:fim`), o Personalizar + Simular (A2) e o aviso fora
     da marca (A7) na Partida rápida; um caso por modo com uma página de ENSAIO no lugar do 3D (Partida rápida, Arena Chefão com o
-    título sem emoji, Batalha, Base com 14 e com 8, o Estrelato com o Simular, a falha e o "Sempre simular"), o "Simular direto", a
+    título sem emoji, Batalha, Base com 14 e com 8, o Estrelato com o Simular, a falha e o "Sempre simular"), o "Jogar" da escolha dos times da Partida rápida (item 130), a
     falha 'erro', o X por cima do quadro, o "Sempre simular" da Config, sem WebGL 2 (um aviso) e a confirmação no meio em 960×540
     (A8). Na base 29d67bad reprovavam 19 (a 1ª versão do teste); os 6 casos da revisão reprovavam em 212ec359; depois, 66/66 na pro
     e 65/65 com `--publica`. `testar-ultimate` ("Sempre simular" pela `partidasTela`: nenhuma partida abre o 3D);
