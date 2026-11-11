@@ -175,6 +175,20 @@ Detalhes que eu decido dentro das escolhas (escritos no PR e no "Depende do dono
   - o ritmo NÃO preso num divisor da tela com pouco tremor (o rAF a 30 regular do iPhone em pouca energia ou do economizador do Android cai na sessão, como hoje, mas não grava);
   - fora de `navigator.webdriver`, `?prints=1` e `?demo=1`; o `__golaco.quedaDeTeste()` grava de propósito.
 - **O xadrez da Ligue 1 fica de fora** (opção futura por liga). Vale a UEFA.
+- **A profundidade nas câmeras baixas (D9; a revisão do C4–C8):** o termo se APAGA pela altura da câmera (`gramado.js
+  rasanteDaCamera`: nada abaixo de 3 m, inteiro de 8 m para cima, smoothstep no meio).
+  - O motivo: numa câmera baixa o raio do meio da tela toca o chão muito além do assunto, ou nem toca (steadicam 106 m,
+    câmera do gol 37 m, entrada do pré-jogo 83 m, fila 20 m, cartão 18–32 m; o contraplano não toca), e o chão aos pés dele
+    caía no teto de −8% (L −0,021; a G4b pede ±0,005).
+  - Ficam com o termo inteiro: a TV do celular (13 m), a do PC (19 m), o escanteio (8 m), o Atrás do Livre (9,5 m), o aéreo e o
+    geral do pré-jogo. Ficam sem ele (como antes do item 45): a 1ª pessoa e a lateral do replay, a steadicam, o contraplano e a
+    reação da comemoração, a câmera do gol, a falta, o túnel, a entrada e as filas do pré-jogo e a cena do cartão. O Jogador
+    do Livre (3,9 m) fica com 9%.
+  - Alternativas que não entraram: (b) cada câmera passar o alvo (fio na comemoração, no pré-jogo, nas cenas e no replay; no
+    contraplano o alvo nem é o assunto: com o chão sob ele, os pés do autor ainda dariam −4,8%); (c) limitar a distância do foco
+    pela altura (a TV toca o chão a 3,9× a altura: o limite que serve às câmeras baixas pegaria a TV).
+  - Sem tocar o chão (olhando acima do horizonte), o foco é o horizonte, g = 1 (antes o ponto a 50 m: salto de até 2,6% de
+    brilho ao cruzar o horizonte e g 0 olhando reto para cima).
 
 ---
 
@@ -255,7 +269,11 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
 - **Cores:** albedos pela inversa do ACES do r170.
   - Claro `#6b7f45` (linear 0,1485; 0,2112; 0,0594) e escuro `#61723a` (0,1191; 0,1683; 0,0420), h 124°.
   - Chão de fora `#47541d` (hoje `0x2c5a26`, `campo.js:783`: h 143,8°).
-  - `uManchas` calibrado pela G6 (ponto de partida 0,10: ±5% de albedo, só luminância).
+  - `uManchas` calibrado pela G6 (ponto de partida 0,10: ±5% de albedo, só luminância). **No C6 ficou 0,17** (±8,5% de albedo
+    nos extremos), com o ruído da textura (`texturas.js MANCHAS_GRAMADO`) de desvio 0,45 (29% dos texels cortados em 0 ou 1):
+    com 0,10 a G6 dava 0,0060. A pesquisa dá k 0,08–0,12, e a meta 0,010 ± 0,004 é PROVISÓRIA (a régua da foto nunca foi refeita):
+    a calibração foi contra ela, uma conta circular (a revisão do C4–C8). A G6 ficou informativa; a comparação k 0,10 × 0,17 em
+    prints vai ao dono (seção 7).
   - **Calibrar pela MEDIDA da página, não pelo modelo** (revisão do C1–C3, item 16): o modelo prevê o ΔL das faixas 0,104 e a página mede 0,099 (−5%, 60% da tolerância de ±0,008). Ajustar as cores e o `uManchas` com o `teste-graficos-celular` (G1, G2, G6) e só conferir pelo `cor-aces`.
 - **Ganho de memória:** a textura do gramado 2048×1024 (~11 MB na GPU com mips) → 512×256 (~0,7 MB). Isso compensa parte da memória do MSAA no Safari (+~24 MB).
 - **Fontes:**
@@ -277,7 +295,11 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - `g = (1 − μ)²`;
   - **relativa ao foco:** `diffuseColor.rgb *= clamp(1 + uRasante·(g − uGFoco), 0,92; 1,08)`;
   - `uGFoco` = o g do ponto onde o raio do meio da tela toca o chão (se o raio não tocar o chão, o ponto a 50 m na direção da vista, levado ao chão). É calculado por quadro no `onBeforeRender` do gramado (`three.module.js:30471`; a sombra usa o `onBeforeShadow`, então não interfere). Assim vale para TODA câmera (TV, replay, cinema, Livre, pré-jogo) sem fio no `main.js`;
-  - `uRasante` ≈ 0,22 de dia, calibrado pela G4 para longe − perto = +0,026 na TV do celular; à noite começa na metade e é medido;
+  - `uRasante` ≈ 0,22 de dia, calibrado pela G4 para longe − perto = +0,026 na TV do celular; à noite começa na metade e é medido.
+    **No C7 ficou 0,41 de dia e de noite** (o 0,22 dava ~+0,014 no modelo; medido na página, 0,41 dá +0,0260 de dia e +0,0257 à
+    noite; com a metade à noite, ~+0,013, fora da meta, que é a do dia). Desde a revisão do C4–C8 o uRasante de cada desenho é o
+    da hora × a altura da câmera (seção 2, "A profundidade nas câmeras baixas"), e no PC a meta da G4 é a do celular × o modelo
+    do ângulo (24,6° × 15°: ×1,25, 0,033 ± 0,008; medido 0,0326 de dia e 0,0324 à noite);
   - o longe tem de ficar ≥ 0,6× o ΔL das faixas do foco e com |Δh| ≤ 2°.
   - **O gancho `campo.graficos.semProfundidade(bool)` é obrigatório** (revisão do C1–C3, item 6): a G4 mede o TERMO, longe − perto com − sem ele, de dia, de noite, na Baixa e no PC. O absoluto levava as manchas (±0,004–0,007 entre os ~4 blocos de cada região) e a luz da noite (a main dá +0,0075 de dia e −0,0094 de noite: com o mesmo termo, dia e noite não cabiam juntos em ±0,008). Sem o gancho o teste conta o termo como 0.
   - **O ΔC do termo tem de ser ≤ 0:** um termo que só clareia SOBE o C ao longe (o C do OKLab cresce com o brilho). Dessaturar ~5% ao longe, como a pesquisa (a foto: C 0,108 → 0,103), ou a G4 reprova.
@@ -309,8 +331,9 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   | Média, dia (o build: MSAA 4×) | main | C8 |
   |---|---|---|
   | E perto (z 22…10) → longe (z −24…−34) | 0,0033 → 0,0020 | 0,0033 → 0,0020 |
+  | E no perto do FOCO (z 10…0), a base da razão abaixo | 0,0029 | 0,0029 |
   | cintilação ÷ a do SSAA do mesmo LOD, por faixa | ×1,30–1,33 | ×1,33–1,36 |
-  | longe ÷ perto do foco: E / cintilação | ×0,70 / ×0,32 | ×0,68 / ×0,29 |
+  | longe (z −24…−34) ÷ perto do foco (z 10…0): E / cintilação | ×0,70 / ×0,32 | ×0,68 / ×0,29 |
   | Baixa (medida à parte, a seção D com a cena da Baixa): longe ÷ perto, E / cintilação | ×0,69 / ×0,34 | ×0,72 / ×0,29 |
 
   - O longe continua abaixo do perto nas duas qualidades: o filtro pela derivada NÃO entra.
@@ -409,6 +432,10 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - escolher qualidade à mão apaga a queda;
   - a linha da pausa: "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar de novo)".
 - **Perda de contexto (N7):** o ouvinte do passo 1 roda os ganchos no `webglcontextrestored`; o `main.js` reaquece a mira e redesenha. Testado pelo `WEBGL_lose_context` (seção R).
+- **Desde o C5 a troca Média↔Baixa também recria o renderizador** (o AA difere; na main só a Alta↔Média/Baixa recriava): o
+  aquecimento da mira (`main.js:444`) fica no contexto velho e ela compila na 1ª bola parada depois da troca (um engasgo). O
+  `aoRecriar` ainda não tem consumidor: este passo (C12) TEM de entrar antes do merge; se não entrar, o PR diz o engasgo (a
+  revisão do C4–C8, shader 4).
 - **Fonte:** `KHR_parallel_shader_compile` em 0,23% dos Android (web3dsurvey): recompilar trava. No iOS o contexto velho é liberado antes de criar o novo (o `cena.js` já faz `dispose` + `forceContextLoss`). O rAF a ~30 no modo de pouca energia: o teste do WebKit, Motion e o fórum da GreenSock.
 - **Pode quebrar:**
   - `teste-pausa-tela` (o submenu Opções);
@@ -505,9 +532,9 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | G2 | ΔL das faixas (média por faixa, x do mundo de cada pixel pelo raio até y = 0) | 0,056 ± 0,008; ao longe ≥ 0,6× o do foco | sim (0,104) |
 | G3 | Faixas e bordas | 18 no campo; cada borda a ≤ max(0,10 m; 1 px) da UEFA; a linha do meio separa claro de escuro | sim (20; 0,75 m na grande área) |
 | G4 | O TERMO de profundidade: longe − perto (L, C, h) com − sem o termo (o gancho `semProfundidade`; sem ele, 0), na TV do celular. O absoluto (o termo + as manchas + a luz) é informativo (revisão do C1–C3, item 6) | +0,026 ± 0,008; ΔC ≤ 0; \|Δh\| ≤ 2° | sim (0) |
-| G4b | A profundidade nas outras câmeras: 1ª pessoa e lateral baixa do replay, steadicam da comemoração, câmera do gol, "Jogador"/"Atrás" do Livre, bola parada, aéreo do pré-jogo; e o corte TV → 1ª pessoa | o L do gramado no foco = o sem o termo ± 0,005 em todas; a parte do termo no salto de L do corte (com − sem) ≤ 0,01 (o salto bruto, informativo: oscila com as manchas) | — (guarda nova) |
+| G4b | A profundidade nas outras câmeras: 1ª pessoa e lateral baixa do replay, steadicam da comemoração, câmera do gol, "Jogador"/"Atrás" do Livre, bola parada, aéreo do pré-jogo e, desde a revisão do C4–C8, as câmeras baixas das cenas (o contraplano e a reação da comemoração, a entrada, a fila e o túnel do pré-jogo, a frente e o árbitro da cena do cartão), medidas aos pés do assunto; e o corte TV → 1ª pessoa | o L do gramado no foco = o sem o termo ± 0,005 em todas; a parte do termo no salto de L do corte (com − sem) ≤ 0,01 (o salto bruto, informativo: oscila com as manchas) | — (guarda nova; no C7 reprovava em 2 das 9 e, pelo modelo, em todas as baixas novas) |
 | G5 | Pico da linha (p95 no foco) | 0,952 ± 0,01 e ≤ 0,97 | sim (0,908) |
-| G6 | σL das manchas em blocos de **8 m** (a mancha tem 3–10 m; o `d2` repete a cada 7,3 m e some na média do bloco), sem a média da faixa e sem um plano de perspectiva | a régua da foto refeita em blocos de 8 m no passo 0 (ponto de partida 0,010 ± 0,004); a main medida | a confirmar no passo 0 |
+| G6 | σL das manchas em blocos de **8 m** (a mancha tem 3–10 m; o `d2` repete a cada 7,3 m e some na média do bloco), sem a média da faixa e, desde a revisão do C4–C8, sem uma QUADRÁTICA em x e z, no quadro como ele sai (com o termo: uma foto também tem a curva do ângulo; o plano não a tirava) | a régua da foto refeita em blocos de 8 m (ponto de partida 0,010 ± 0,004, PROVISÓRIO); a main medida | **informativa** até a régua da foto (a revisão do C4–C8) |
 | G7 | GPU = JS: a paridade lida no pixel = `gramado.js faixaEm(x)` | 100% fora da borda | — (estrutural) |
 | D | Grão: E e cintilação por faixa da tela contra o SSAA do mesmo LOD, e o longe ÷ o perto no próprio build (o critério do passo 4) | só reprova se o filtro entrou (passo 4); senão informativa | — |
 | N | Noite, Baixa e PC. Noite: G2–G5 com as metas do dia, a linha ≤ 0,97 absoluta, e Δh(noite − dia) = o que o `cor-aces` prevê para o albedo do dia medido ± 0,5° (a inversa do ACES e a luz do dia dão o albedo de cada classe, que vai à luz da noite com o poço; a mesma h do dia é impossível com a luz fria, e a "ref ± 2°" caía no limite com as cores do C6: 3,3° → 5,3° — revisão do C1–C3, item 7). Baixa: G1–G5 e F. **PC 1280×720 Alta, dia e noite**: G1–G5 (a câmera a 24,6°) e A nada pior | como ao lado | parcial |
@@ -538,9 +565,9 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | G3 | 18 faixas; bordas ≤ max(0,10 m; 1 px); o meio separa | reprova (20; 0,75 m) | 20; a pior borda a 2,59 m (x = 18,3); o meio separa (0,541 \| 0,639) | vale (as faixas e as bordas; o meio é guarda) |
 | G4 | O termo (com − sem): ΔL +0,026 ± 0,008; ΔC ≤ 0; \|Δh\| ≤ 2° | reprova (0) | 0 (sem o gancho: a main não tem o termo); o absoluto, informativo: ΔL +0,0075 (as manchas, não zero), ΔC +0,0004, Δh −0,18° | vale |
 | G5 | 0,952 ± 0,01 e ≤ 0,97 | reprova (0,908) | 0,909 | vale |
-| G6 | 0,010 ± 0,004 | a confirmar | 0,0054 em 58 blocos (a pesquisa estimou ~0,005): fora por falta de mancha | vale, provisória (ver "Pendente" abaixo) |
+| G6 | 0,010 ± 0,004 | a confirmar | 0,0054 em 58 blocos (a pesquisa estimou ~0,005): fora por falta de mancha. Régua nova (quadrática): 0,0049 | **informativa** (a régua da foto não foi refeita; ver "Pendente" abaixo) |
 | G7 | GPU = JS | estrutural | sem `gramado.js` | estrutura a partir do C4 |
-| G4b | Com × sem o termo ≤ 0,005 nas 9 câmeras; a parte do termo no salto TV → 1ª pessoa ≤ 0,01 | guarda nova | sem o gancho: o L no foco vai de 0,529 a 0,650 nas 9; o salto bruto 0,0011 (informativo), a parte do termo 0 | guarda (o com × sem só com o gancho do C7) |
+| G4b | Com × sem o termo ≤ 0,005 nas 16 câmeras (as 9 e as 7 baixas das cenas, desde a revisão do C4–C8); a parte do termo no salto TV → 1ª pessoa ≤ 0,01 | guarda nova | sem o gancho: o L no foco vai de 0,513 a 0,650 nas 16; o salto bruto 0,0011 (informativo), a parte do termo 0 | guarda (o com × sem só com o gancho do C7) |
 | D | O grão | informativa | contra o SSAA do mesmo LOD: E 0,0033 (perto) a 0,0020 (longe), cintilação ×1,30–×1,33 em todas as faixas; longe ÷ perto: E ×0,70, cintilação ×0,32 (com o SSAA 3×: E 0,0030–0,0034, ×0,66–×0,84) | informativa. **C8: medido, sem filtro** (o gramado do C6 + o termo do C7: longe ÷ perto E ×0,68, cintilação ×0,29; ×1,33–1,36 o SSAA em todas as faixas; a Baixa ×0,72 / ×0,29; passo 4) |
 | N | Noite G1 | informativa (só o Δh conta) | L 0,568, C 0,124, h 138,0° | informativa |
 | N | Noite G2 / G3 / G4 | reprova | 0,098 (longe ×1,00) / 20 faixas, 2,59 m / o termo 0 (absoluto ΔL −0,0094, ΔC −0,0028, Δh +0,01°) | vale |
@@ -618,7 +645,7 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
   - o MSAA sozinho NÃO fecha a A2 na pose da bola (0,70) nem a cintilação do mastro da Média no foco (×3,22 a pior peça; a "média geral" de ×1,74 escondia isso);
   - na A do foco ele fecha com 0,09 de folga (×0,51 contra o SSAA do mesmo LOD).
 - **Pendente:**
-  - a régua da foto da G6 em blocos de 8 m NÃO foi refeita. Fica o ponto de partida 0,010 ± 0,004, e a main sai fora dele por falta de mancha. Fechar no C6, que calibra o `uManchas` por ela, antes de a G6 valer no C14;
+  - a régua da foto da G6 em blocos de 8 m NÃO foi refeita. Fica o ponto de partida 0,010 ± 0,004, e a main sai fora dele por falta de mancha. ~~Fechar no C6, que calibra o `uManchas` por ela, antes de a G6 valer no C14~~ — o C6 NÃO a refez e calibrou o `uManchas` (0,17) contra o ponto de partida (a revisão do C4–C8: conta circular). **Agora a G6 é informativa**, com a régua nova (o quadro com o termo, sem uma quadrática em x e z: a mesma que uma foto pediria), e a comparação k 0,10 × 0,17 em prints vai ao dono (seção 7). Refazer a régua da foto (as fotos da Allianz Arena: a panorâmica não é projeção de lente, e precisa da homografia pelas linhas do campo) é o que faz a G6 valer;
   - a CPU da P vai ao "Depende do dono" 30 (no C16), com a folga do pareado (+1,0 ms: o +0,2 não se mede aqui).
 - ~~A ref da `P.cpuP95` é a mediana das 7 rodadas~~: a CPU saiu da referência na revisão (a P é pareada); as 7 rodadas ficam no campo `pagina.historicoCpu` do JSON, só como história, e o `--gravar-referencia` guarda os campos extras do registro.
 
@@ -651,6 +678,77 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
   - A versão do C2 também quebrava assim com o Chromium 141.
 - **Recusadas:** nenhuma; as afirmações conferem no código. A do item 8 ("o SSAA tem mais detalhe que a imagem ideal") depende de qual imagem se chama ideal. O efeito prático, porém, confere: a régua 3× não decidia o passo 4, porque o build "cintilava menos que o ideal". Por isso aplicada.
 
+**O que a revisão do C4–C8 mudou** (três revisões em paralelo — o shader e o código, as medidas e a calibração, as regressões
+nos testes de antes —, 11/11; cada achado conferido no código antes; commits `27928d6c`, `b0d9a938`, `7e1a5aea` e este):
+- **Aplicadas:**
+  1. **O termo nas câmeras baixas** (shader 1): o termo se apaga pela altura da câmera (seção 2) e a G4b ganhou as 7 câmeras
+     baixas das cenas, medidas aos pés do assunto: as 16 dentro de ±0,005 (a steadicam −0,0206 → 0,0000, a câmera do gol −0,0186
+     → 0,0000); o `teste-gramado` F7 confere pelo modelo 14 câmeras das cenas (reprova sem o apagamento: −0,0207).
+  2. **A guarda do shader montado** (shader 2): os textos num módulo puro (`render/gramado-shader.js`) e o `teste-gramado` G (as
+     derivadas explícitas e as leituras de textura com mip antes do 1º desvio de cada bloco, nenhuma nas funções; o `?gfx=antigo`
+     = o hash da main no mesmo molde; as 6 chaves distintas; a troca sem o trecho avisa). A mutação da revisão (o `fwidth`
+     dentro de um `if`) passava e agora reprova. As linhas novas leem o grão ANTES do `discard` (o mesmo resultado por pixel).
+  3. **O foco no horizonte** (shader 3): sem tocar o chão, g = 1 (F4: o salto ao cruzar o horizonte 2,2·10⁻⁶).
+  4. **A pegada uma vez** (shader 5): `glslTopoGramado(x, fw)`; o bloco do gramado com 1 `fwidth`.
+  5. **A G6** (medidas 1, a saída b): informativa; a régua nova tira uma quadrática do quadro com o termo (0,0100; o piso sem as
+     manchas 0,0020; a main 0,0049); a comparação k 0,10 × 0,17 vai ao dono.
+  6. **O "nada pior" da A sem o contraste** (medidas 2): no PC a razão E_build/E_semAA (×0,986 / ×1,007 de dia, ×1,007 / ×1,000 à
+     noite); na Baixa o E ÷ o contraste da referência na máscara (×1,015 / ×1,008; o E absoluto ×1,045 / ×1,022).
+  7. **A G4 do PC pelo modelo do ângulo** (medidas 3): 0,033 ± 0,008 (medido 0,0326 e 0,0324; antes passava por 0,0014).
+  8. **Os textos** (medidas 4 e 5): as faixas de z do passo 4, os valores calibrados nos passos 2 e 3, a G4b e a G6 na seção 4.
+     O "G4b … FORA: 7 de 9" do relato do C8 queria dizer 7 passam e 2 reprovam (não está no plano).
+  9. **A G1 e a G2 sem as manchas** (medidas 6): o gancho `semManchas`; L 0,575 → 0,581, o longe ×1,07 → ×1,00.
+  10. **O download** (regressões 4): a tabela da seção 5 com o medido.
+  - A referência da main foi regravada SÓ nas seções G, A e N (as réguas que mudaram), com `--raiz <main> --so G,A,N
+    --gravar-referencia`: 0 valores mudados, 28 chaves novas (o contraste e o E normalizado da A, a G6 quadrática, as 7 câmeras
+    da G4b).
+- **Não aplicadas, e por quê:**
+  - **Shader 4** (a troca Média↔Baixa passou a recriar o renderizador no C5, e a mira aquecida fica no contexto velho): é do C12
+    (passo 7, os ganchos `aoRecriar`), que tem de entrar antes do merge; se não entrar, o PR diz que a troca Média↔Baixa pela
+    pausa ganhou um engasgo na 1ª bola parada depois dela. Anotado no passo 7.
+  - **Regressões 1** (o L5 do `teste-bola-parada-tela`, "GRAVE"): a leitura está errada. As tiras 16 e 17 que saíram da amostra
+    não são "gramado ao longe dessaturado": o fundo delas tem uma LINHA do campo (a mira é a trajetória da bola, que sobe, e na
+    tela passa por cima de uma linha ao fundo; conferido com a cópia instrumentada da revisão: o mesmo ponto da trajetória,
+    (50,4; 28,3) m, nas 3 telas e nas 2 horas). O v máximo da tira é 0,61–0,74, contra ≤ 0,55 nas tiras de gramado puro, e o s
+    mínimo 0,14–0,26; e esse v subiu exatamente como as linhas embranqueceram (0,68 → 0,73 de dia, 0,63 → 0,68 à noite: as linhas
+    do C7; a trave, a rede e os jogadores não mudaram no bloco, e no PC, com MSAA nos dois lados, o v subiu igual: 0,64 → 0,69).
+    A main as contava como gramado porque a linha de antes era
+    esverdeada (s ≥ 0,2); a linha nova, mais branca, sai pelo próprio filtro. No
+    gramado puro a mira não piorou: a pior tira de dia no 844×390 3,12 → 3,32:1, no PC 3,12 → 3,24:1, no 568×320 3,16 → 3,41:1
+    (as de longe). A tira 16 do 568×320 de dia ainda passa pelo filtro (s 0,218, v 0,71: a linha) e põe a cena em 95% exatos. Vai
+    ao C15: o "gramado" do L5 pela geometria (as linhas do campo projetadas) ou também pelo v; a meta do item 65 não muda.
+  - **Regressões 2 e 5** (o C9b e o C11b do `teste-corpo-tela` com o MSAA da Média no PC): o teste que mudou porque a imagem mudou
+    de propósito → C15 (seção 6).
+  - **Regressões 3** (o CI): infraestrutura, não do bloco. Os jobs de navegador dos commits do C4–C8 caíram na instalação (o apt
+    sem DNS) antes de qualquer teste; as rodadas destes commits (27928d6c, b0d9a938, 7e1a5aea) foram conferidas no fim.
+  - **Medidas 7 e 8** (os cantos de baixo à noite e a cor do chão de fora nas câmeras de cá): sem meta que as meça; vão ao dono
+    (seção 7).
+
+**Medido no bloco 2** (C4–C8 com a revisão; `teste-graficos-celular`, Chromium 141 do CI, a main `e41aa791` pela referência
+regravada; 70 s; 7 metas fora, todas da F, que é do C9):
+
+| Meta | Main | Agora |
+|---|---|---|
+| S: Média true/4; Baixa false/0 | 0 / 0 | 4 / 0 |
+| A Média dia/noite: razão ≤ 0,6 (foco / lá) | 1,00 / 1,00 · 1,00 / 1,00 | 0,51 / 0,45 · 0,46 / 0,45 |
+| A Baixa, nada pior (E ÷ contraste ≤ ref × 1,10; foco / lá) | 0,590 / 0,751 | 0,598 / 0,758 (×1,015 / ×1,008) |
+| A PC Alta, nada pior (razão ≤ ref × 1,10; dia foco/lá, noite foco/lá) | 0,566 / 0,514 · 0,451 / 0,525 | 0,559 / 0,518 · 0,455 / 0,525 |
+| G1 L 0,58 ± 0,02, C 0,10 ± 0,01, h 124 ± 3° (sem as manchas) | 0,582 / 0,127 / 134,7° | 0,581 / 0,100 / 124,0° |
+| G2 ΔL 0,056 ± 0,008; ao longe ≥ 0,6× | 0,099; ×1,03 | 0,056; ×1,00 |
+| G3 18 faixas, bordas ≤ 0,10 m, o meio separa | 20; 2,59 m | 18; 0,02 m |
+| G4 o termo +0,026 ± 0,008 (dia / noite / Baixa) | 0 / 0 / 0 | 0,0260 / 0,0257 / 0,0260 |
+| G4 PC +0,033 ± 0,008 (o modelo do ângulo; dia / noite) | 0 / 0 | 0,0326 / 0,0324 |
+| G4b com − sem ≤ 0,005 nas 16 câmeras | sem o termo | pior −0,0034 (o aéreo); as 7 baixas novas 0,0000 |
+| G5 pico da linha 0,952 ± 0,01 e ≤ 0,97 (dia; noite ≤ 0,97) | 0,909; 0,902 | 0,952; 0,951 |
+| G6 (informativa; régua nova) 0,010 ± 0,004 provisória | 0,0049 | 0,0100 |
+| G7 GPU = JS | — | 100% |
+| N Δh noite − dia = o previsto ± 0,5° | 3,32° (prev. 3,32°) | 5,20° (prev. 5,20°) |
+| F Média, buracos ≤ 5% (foco / lá) | 33,3% / 55,0% | 0% / 0% |
+| F Média, cintilação ≤ 1,5× (foco / lá) | ×12,6 / ×5,84 | ×3,22 (mastro) / ×1,33 — o foco fica para o C9 |
+| F Baixa, buracos / cintilação (foco / lá) | 57,1% / 62,5% · ×6,49 / ×6,02 | iguais (o C9) |
+| F Baixa com MSAA, cintilação (foco / lá) | ×1,69 / ×2,56 | iguais (o C9) |
+| D o longe ÷ o perto do foco, E / cintilação | ×0,70 / ×0,32 | ×0,68 / ×0,29 (sem filtro) |
+
 **Testes Node novos (padrão, `rodar-testes.mjs`):**
 
 - `teste-gramado`: as bordas UEFA, a paridade dos dois lados da linha do meio, a continuação atrás do gol, o GLSL gerado com as MESMAS constantes, as cores pela inversa do ACES (`tools/lib/cor-aces.mjs`) dando L/C/h/ΔL no alvo, e o `g(foco)` da profundidade.
@@ -667,17 +765,22 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 - **O teto não muda a partida:** o laço continua de passo fixo, e o relógio manual não passa pelo `aoQuadro`.
 - **Download inicial** (`teste-carga`, 4 MB, folga mínima 120 KB, `teste-carga.mjs:25-28`):
 
-  | Peça | Tamanho |
-  |---|---|
-  | `cena.js` | +~2 KB |
-  | `campo.js` | +~3 KB |
-  | `texturas.js` | +~1 KB |
-  | `gramado.js` | ~3 KB |
-  | `graficos-opcoes.js` | ~1 KB |
-  | `ritmo-desenho.js` | ~1,5 KB |
-  | `torcida.js`/`bandeiras.js`/`impostor.js` | +~1 KB |
-  | `main.js`/`hud.js` | +~2,5 KB |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) |
+  | Peça | Previsto | Medido (o bloco 2, com a revisão do C4–C8) |
+  |---|---|---|
+  | `cena.js` | +~2 KB | +6,5 KB |
+  | `campo.js` | +~3 KB | +5,0 KB (+8,9 antes dos textos irem para o `gramado-shader.js`) |
+  | `texturas.js` | +~1 KB | +3,7 KB |
+  | `gramado.js` | ~3 KB | 19,1 KB (a maior parte, os comentários com as fontes e as medidas) |
+  | `gramado-shader.js` (novo na revisão) | — | 8,5 KB |
+  | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
+  | `ritmo-desenho.js` | ~1,5 KB | (C12/C13) |
+  | `torcida.js`/`bandeiras.js`/`impostor.js` | +~1 KB | (C10) |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9, C11–C13) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+43 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB; nosso 2859 → 2902 KB) |
+
+  O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
+  pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
+  `shaderGramadoAntigo`) pode ir sob demanda se a folga apertar (precisa do `main.js` esperar o import antes do `criarCampo`).
 
   O `medidor-quadros.js` vai sob demanda (lista nova no `teste-carga.mjs`).
 - **Memória na GPU (Média):** −10 MB do gramado; +~12 MB de cor 4× e +~12 MB de profundidade 4× no 844×390 (a média na GPU do Ganesh descarta a profundidade no fim do quadro; no Safari e no Graphite é memória real). O teto de 1,2 MP limita isso a ~38 MB no pior celular com MSAA; os tablets ficam como hoje.
@@ -702,6 +805,36 @@ Medir base × PR com as mesmas sementes antes de qualquer recalibração. Recali
 | `teste-laco` (Node) | o laço | nada (o teto fica fora do `quadro`) |
 | `teste-tm-tela`, `legacy-total-match/ferramentas/testar-3d.mjs` (e `--publica`) | mexeu em `main.js`/`hud.js` (regra do CLAUDE.md); o 3D no iframe sem `?q` | rodar no fim; a queda natural não pode gravar com webdriver |
 
+**Medido no bloco 2** (C4–C8, a revisão "regressões": base `e41aa791` × HEAD `4bfd5035`, Chromium 141 do CI, cópias por
+`git archive`, um teste de navegador por vez alternando a ordem; todos PASSARAM nos dois lados). A lista para o C15 (nenhuma meta
+mexida agora):
+- `teste-bola-parada-tela` §7 L5 — **C15, o classificador**: as tiras 16 e 17 do escanteio (o fundo com uma linha do campo)
+  saíram do "gramado" no HEAD porque a linha ficou mais branca (s mínimo 0,24 → 0,20 e 0,20 → 0,17 no 844×390 de dia; v máximo
+  0,68 → 0,73); o pior contraste delas 2,90 → 2,42:1 (dia) e 3,42 → 2,78:1 (noite), e o L5b ("o miolo ou o contorno") as cobre:
+  100% nos dois. No gramado puro: 3,12 → 3,32:1 (844×390), 3,12 → 3,24:1 (PC), 3,16 → 3,41:1 (568×320). A tira 16 do 568×320 de
+  dia ainda conta como gramado (s 0,218): 95% exatos. Ação: o "gramado" pela geometria (as linhas projetadas) ou pelo v ≤ 0,6.
+- `teste-corpo-tela` C9b (informativo) — **C15**: com o MSAA da Média no PC a fronteira cabeça → corpo da máscara das partes
+  ganha um pixel misturado: vermelho logo acima de verde 406 → 116 colunas, com 1 pixel no meio 9 → 296. Ação: aceitar 1–2
+  pixels misturados, ou desenhar a máscara das partes sem MSAA.
+- `teste-corpo-tela` C11b — **C15, anotar**: os pixels da faixa em que o shader de sempre e o implícito diferem 36 e 25 → 11 e 11
+  (meta ≥ 5). Se cair mais, mais vistas ou o C11 sem MSAA.
+- `teste-rede-tela`: clareia o gol na TV ΔL* 17,1 → 17,2 (celular, dia) e 15,0 → 15,4 (PC); mexe na TV 4,0 → 3,9%; o fio de perto
+  L* 86,9 de dia e 89,7 à noite, iguais. Nada.
+- `teste-carga`: download 3,45 → 3,49 MB; a folga 561,5 → 525,0 KB (518,4 depois da revisão, com o `gramado-shader.js`); o hash
+  Node = Chromium. Nada (seção 5).
+- `teste-hud-minimo`: H3 12,6% de 15 145 px → 9,4% de 17 713 px — não é do bloco (a sonda com a conta do H3: 17 846 na base,
+  17 758 no HEAD, 17 769 com `?aa=0`, 17 817 com `?gfx=antigo`). Nada.
+- `teste-camera-tela`: J5 28,0 chamadas e 101,2 mil triângulos nos dois; E7 29/32 e 109,8/120,8 mil nos dois; J3 9,7 → 9,6%. Nada.
+- `teste-estadio`: passa sem mudar o teste (a troca Baixa → Média → Alta, a pior troca da torcida 0,0 ms); a torcida visível
+  35,10 → 35,33, a do celular 10,45 → 10,43%. Nada.
+- `teste-mira-tela` (saída idêntica), `teste-replay` (G4 com as mesmas chamadas: TV 26, atrás 32, 1ª pessoa 26, treinador 27),
+  `teste-comemoracao-tela` (A6 37,76 → 38,09%). Nada.
+- **Tempos** (uma rodada, ruído ±5%): o total 1615,8 → 1652,1 s (+2,2%); nenhum passou de +20% (o maior, o §7 da bola parada na
+  Média com MSAA: +7%, +15% no `--so 7`). Sem `?aa=0` em nenhum teste; o `tempos-ci` não muda.
+- **O CI do PR**: os jobs de navegador dos commits do C4–C8 caíram na instalação (`playwright install --with-deps`: o apt sem
+  DNS) antes de qualquer teste — a única evidência deles é a rodada local acima. As rodadas dos commits da revisão foram
+  conferidas no fim (o relato da revisão).
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -717,7 +850,18 @@ Medir base × PR com as mesmas sementes antes de qualquer recalibração. Recali
 6. **Perda de contexto no iOS** com os +24 MB: coberta pelos ganchos (passo 7, seção R); o que não volta sozinho aparece na seção R.
 7. **Franjas na silhueta** dos atlas que não são nossos (o corpo novo, os patrocínios): a seção K acusa; a sangria no atlas é da frente do corpo, e o PR diz se ficou algo.
 8. **Um celular que só segura 30 regulares** cai na sessão como hoje, mas não grava a queda (a regra do ritmo preso não distingue do iPhone em pouca energia). Vai ao "Depende do dono" 30.
-9. **Pedir ao dono:**
+9. **O que vai ao dono junto do "Depende do dono" 30** (a revisão do C4–C8; sem meta que meça, ou decisão de gosto):
+   - **A profundidade nas câmeras baixas** (decidido, seção 2): a 1ª pessoa, a lateral do replay, a comemoração, a câmera do gol,
+     a falta, o pré-jogo de perto e as cenas ficam sem o gradiente de vista (como antes do item 45); a TV, o escanteio, o Atrás do
+     Livre e os aéreos com ele.
+   - **As manchas, k 0,10 × 0,17** em prints, lado a lado (a G6 informativa: a régua da foto não foi refeita; a pesquisa dá
+     0,08–0,12, e o 0,17 saiu de uma meta provisória).
+   - **Os cantos de baixo à noite**: o poço de luz compete com as faixas — na linha de baixo do quadro do jogo uma faixa clara vai
+     de 0,438 a 0,483 e a escura ao lado de 0,441 a 0,495; o degrau numa das bordas fica em 0,028 (o ΔL das faixas é 0,056; na main
+     0,108 e 0,088). A G2 tira a média por faixa perto do foco e não vê.
+   - **O chão de fora nas câmeras do lado de cá**: rgb 59,76,11 de dia (L 0,389, C 0,090, h 124,2°, o alvo do plano) e 26,40,4 à
+     noite (na main 21,88,25). A razão C/L é 0,23, contra 0,17 do gramado: lê como oliva. Opção: C 0,07 (C/L 0,17).
+10. **Pedir ao dono:**
    - 1 minuto com `?perf=1&aa=0` e `?perf=1&aa=1` num Android (Adreno ou Mali) e num iPhone, de dia, na partida;
    - o print do painel;
    - a impressão do gramado novo contra o `?gfx=antigo`.
