@@ -15,13 +15,17 @@
 //      informativo — nunca passa calado). O build: Média true/4; Baixa false/0; ?aa=0 na Média 0; ?aa=1 na Baixa 4;
 //      ?gfx=antigo na Média 0 (cada um numa carga da página com o parâmetro; na main os parâmetros não existem).
 //   A  serrilhado da geometria do campo (o campo inteiro, sem jogadores nem torcida), na câmera com o gol no foco ('foco') e
-//      com o gol de lá ('la'). Máscara GEOMÉTRICA do mesmo build: |MSAA − sem AA| > 0,01 num canal. E = RMS(imagem − SSAA
-//      3×3 reduzido por caixa) só na máscara; razão E_build / E_semAA. Meta: Média ≤ 0,6 (na main a Média é a sem AA: 1).
+//      com o gol de lá ('la'). Máscara GEOMÉTRICA do mesmo build: |MSAA − sem AA| > 0,01 num canal (dos quadros FÍSICOS: os
+//      truques dos finos desligados pelo gancho `graficos.fisico` do C9/C10, quando existir). E = RMS(imagem − SSAA 3×3) só
+//      na máscara, com o SSAA do MESMO LOD (9 desenhos 1× com a câmera a −⅓, 0, +⅓ px: o 3× descia o mip das texturas em
+//      log2 3 e punha um piso no E) e físico; razão E_build / E_semAA. Meta: Média ≤ 0,6 (na main a Média é a sem AA: 1).
 //   F  finos (hastes do véu, cordas do pé e do fundo, mastro da bandeirinha), só a malha 'gols' sobre o preto, 8 quadros com a
-//      câmera andando 0,25 px por quadro: em pontos ao longo da projeção de cada peça, a intensidade SOMADA no corte
-//      transversal (±3 px). Buraco = soma < 15% da do SSAA no mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8
-//      quadros. Metas: buracos ≤ 5%; cintilação ≤ 1,5 × a do SSAA; soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa
-//      com MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1).
+//      câmera andando 0,25 px por quadro PERPENDICULAR à peça na tela (o x da câmera para as peças em pé, o y para as
+//      deitadas: andando ao longo da peça o traço é o mesmo pixel a pixel e a cintilação não mede nada): em pontos ao longo
+//      da projeção de cada peça, a intensidade SOMADA no corte transversal (±3 px). Buraco = soma < 15% da do SSAA (físico) no
+//      mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8 quadros. Metas POR PEÇA, valendo a pior: buracos ≤ 5%;
+//      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
+//      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1).
 //   G  o gramado (só a malha 'gramado'; G5 com as 'linhas'): G1 a cor na faixa do foco (OKLab, a média das duas classes);
 //      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe; G3 as faixas e as bordas
 //      (vista de cima, 2 quadros ortográficos: quantas no campo, a distância de cada borda da UEFA à medida, a linha do meio
@@ -30,15 +34,19 @@
 //      faixa = gramado.js faixaEm(x), quando o módulo existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta,
 //      sem dizer qual é clara, casa pela maioria); G4b a profundidade nas outras câmeras (1ª pessoa e lateral baixa
 //      do replay, steadicam, câmera do gol, Jogador e Atrás do Livre, falta e escanteio, aéreo do pré-jogo): o L do gramado
-//      no foco com × sem o termo (o gancho `campo.graficos.semProfundidade(bool)`, quando existir) e o salto no corte TV →
-//      1ª pessoa contra a referência.
-//   D  o grão: E (contra o SSAA) e a cintilação (4 quadros a 0,25 px) por faixa da tela, de perto a longe (informativa).
-//   N  noite (Média: G1–G5 e A), Baixa (G1–G5, A e F) e PC 1280×720 Alta, dia e noite (G1–G5 e A "nada pior").
+//      no foco com × sem o termo (o gancho `campo.graficos.semProfundidade(bool)`, quando existir) e a parte do termo no
+//      salto do corte TV → 1ª pessoa (com − sem). A G4 que vale é o TERMO: longe − perto com − sem ele (sem o gancho, 0); o
+//      absoluto (o termo + as manchas + a luz) é informativo.
+//   D  o grão: E e a cintilação (4 quadros a 0,25 px) por faixa da tela contra o SSAA do MESMO LOD, de perto a longe, e o
+//      longe × o perto do foco no próprio build (o critério do passo 4); informativa.
+//   N  noite (Média: G1–G5 e A; o Δh noite − dia contra o que o cor-aces prevê para o albedo do dia medido, ± 0,5°), Baixa
+//      (G1–G5, A e F) e PC 1280×720 Alta, dia e noite (G1–G5 e A "nada pior").
 //
 // A referência (`--gravar-referencia`) grava em tools/dados/graficos-ref.json (chave "celular"; a do teste-graficos-pagina é
 // outra chave do mesmo arquivo) os valores AGREGADOS — nunca o hash dos pixels — com a versão do Chromium e o renderizador
-// (UNMASKED_RENDERER). As guardas "nada pior" que dependem da rasterização comparam com ela; com versão diferente da gravada
-// ganham +50% de tolerância e avisam. As metas absolutas valem sempre.
+// (UNMASKED_RENDERER). As guardas "nada pior" que dependem da rasterização comparam com ela; com OUTRO renderizador ganham +50%
+// de tolerância e avisam; outra versão do Chromium só avisa (os valores não dependem dela: 141 do CI × 153). A referência é
+// gravada com o Chromium do CI (o Playwright do `golaco-testes.yml`). As metas absolutas valem sempre.
 //
 // Informativo por enquanto (até o C14 do plano): imprime as metas e o estado, mas sai 0 (a sonda inválida e um erro no
 // console saem 1 sempre). `--valendo` faz as metas contarem.
@@ -49,7 +57,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
-import { oklab, decSrgb, difMatiz } from './lib/cor-aces.mjs';
+import { oklab, decSrgb, difMatiz, albedoPara, corNaTela, pocoNoite } from './lib/cor-aces.mjs';
 
 const T0 = Date.now();
 const args = process.argv.slice(2);
@@ -80,6 +88,12 @@ const valores = {};
 /** Uma meta: tipo 'meta' (conta com --valendo), 'info' (só mostra), 'estrutura' (conta sempre: o teste valeu). */
 function meta(secao, nome, medido, alvo, ok, tipo = 'meta') { res.push({ secao, nome, medido, alvo, ok: ok === null ? null : !!ok, tipo }); }
 const guarda = (k, v) => { if (Number.isFinite(v)) valores[k] = +v.toFixed(5); return v; };
+/** Roda `fn` e passa as metas que ela registrou a informativas (o "passaria"/"fora" fica no texto). */
+function comoInfo(fn) {
+  const n0 = res.length;
+  fn();
+  for (let i = n0; i < res.length; i++) { const m = res[i]; if (m.ok !== null) m.medido = `[${m.ok ? 'passaria' : 'fora'}] ${m.medido}`; m.ok = null; m.tipo = 'info'; }
+}
 const f = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : String(v));
 const pct = (v, d = 1) => (Number.isFinite(v) ? (v * 100).toFixed(d).replace('.', ',') + '%' : String(v));
 const tempos = [];
@@ -90,7 +104,10 @@ const marcar = nome => { const t = Date.now(); tempos.push(`${nome} ${((t - tMar
 let REF = null;
 try { REF = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8'))[CHAVE_REF] ?? null; } catch (_) { REF = null; }
 const cond = { chromium: '', renderer: '' };
-const tolRef = () => (REF && (REF.chromium !== cond.chromium || REF.renderer !== cond.renderer) ? 1.5 : 1);
+// a tolerância das guardas "nada pior" só abre com OUTRO renderizador (a rasterização muda); a versão do Chromium só avisa: os
+// valores não dependem dela (147 de 153 iguais e 6 na 5ª casa, entre o 141 do CI e o 153 daqui — a revisão do C3)
+const tolRef = () => (REF && REF.renderer !== cond.renderer ? 1.5 : 1);
+const versaoDif = () => !!REF && REF.chromium !== cond.chromium;
 
 // ------------------------------------------------------------------ vetores e a câmera do three (lookAt, fov vertical)
 const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
@@ -134,7 +151,8 @@ function mapaChao(B) {
   }
   return { X, Z };
 }
-const desloca = (pose, dx) => ({ ...pose, de: [pose.de[0] + dx, pose.de[1], pose.de[2]], para: [pose.para[0] + dx, pose.para[1], pose.para[2]] });
+/** A pose andada d (m) no eixo da TELA: 'h' = o x da câmera (B.ex), 'v' = o y dela (B.ey); a orientação não muda. */
+const deslocaCam = (pose, B, eixo, d) => { const e = eixo === 'v' ? B.ey : B.ex; return { ...pose, de: pose.de.map((v, i) => v + d * e[i]), para: pose.para.map((v, i) => v + d * e[i]) }; };
 
 // ------------------------------------------------------------------ pixels e cor
 const LIN = Float64Array.from({ length: 256 }, (_, i) => decSrgb(i / 255));
@@ -214,14 +232,18 @@ async function instalarPagina() {
     },
     hora(id, campoId, h) { const C = cenas.get(id); C.hora = h; C.c3.definirHora(h); campos.get(campoId).definirHora(h); },
     semProfundidade(campoId, v) { const c = campos.get(campoId); if (typeof c?.graficos?.semProfundidade !== 'function') return false; c.graficos.semProfundidade(v); return true; },
+    /** O gancho `fisico` (C9/C10) existe no campo ou na cena? */
+    temFisico(id, campoId) { return typeof campos.get(campoId)?.graficos?.fisico === 'function' || typeof cenas.get(id)?.c3?.graficos?.fisico === 'function'; },
     faixas(xs) {
       if (typeof GR?.faixaEm !== 'function') return null;
       return xs.map(x => { const v = GR.faixaEm(x); return v && typeof v === 'object' ? ('claro' in v ? (v.claro ? 1 : 0) : ((v.paridade ?? v.indice ?? 0) & 1) + 2) : typeof v === 'boolean' ? (v ? 1 : 0) : (v & 1) + 2; });
     },
     /**
      * Um quadro: pose {de, para, fov, perto | orto: {hw, hh}, up}; opc {so: nomes visíveis do campo (null = todos), semCeu,
-     * fundo (cor de fundo), escala (1 | 3: SSAA 3×3 reduzido por caixa → soma de 9 em Uint16), rect {x, y, w, h} (no buffer
-     * 1×, y de baixo), png}. readPixels no mesmo evaluate do desenho.
+     * fundo (cor de fundo), escala (1 | 3: SSAA 3×3 reduzido por caixa → soma de 9 em Uint16 | 'lod': o MESMO SSAA 3×3 com o
+     * mip das texturas do quadro 1×), fisico (os truques dos finos desligados pelo gancho `graficos.fisico`, quando existir: a
+     * referência e a máscara FÍSICAS), rect {x, y, w, h} (no buffer 1×, y de baixo), png}. readPixels no mesmo evaluate do
+     * desenho.
      */
     quadro(id, campoId, pose, opc = {}) {
       const C = cenas.get(id), c3 = C.c3, r = c3.renderer, campo = campos.get(campoId);
@@ -233,6 +255,7 @@ async function instalarPagina() {
         cam = C.orto; cam.left = -pose.orto.hw; cam.right = pose.orto.hw; cam.top = pose.orto.hh; cam.bottom = -pose.orto.hh; cam.near = 0.1; cam.far = 600;
       } else { cam = C.cam; cam.fov = pose.fov; cam.aspect = W / H; cam.near = pose.perto ?? 0.5; cam.far = 900; }
       cam.up.set(...(pose.up ?? [0, 1, 0]));
+      cam.clearViewOffset();
       cam.position.set(...pose.de); cam.lookAt(...pose.para); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
       c3.acompanhar(pose.para[0], pose.para[2]);
       campo.atualizar(0, cam, true, true);
@@ -242,19 +265,43 @@ async function instalarPagina() {
       if (opc.semCeu) ceu.visible = false;
       const fundoAntes = new THREE.Color(); r.getClearColor(fundoAntes);
       if (opc.fundo !== undefined) r.setClearColor(opc.fundo);
-      const k = opc.escala === 3 ? 3 : 1;
+      // (os ganchos dos finos — C9/C10 — desligados só neste desenho: a referência não depende do código medido)
+      const fis = [campo.graficos?.fisico, c3.graficos?.fisico].filter(fn => typeof fn === 'function');
+      if (opc.fisico) for (const fn of fis) fn(true);
+      const k = opc.escala === 3 ? 3 : 1, lod = opc.escala === 'lod';
       const pr = r.getPixelRatio(), tam = r.getSize(new THREE.Vector2());
-      if (k === 3) { r.setPixelRatio(1); r.setSize(W * 3, H * 3, false); }
-      c3.desenhar(cam);
       const R = opc.rect ?? { x: 0, y: 0, w: W, h: H };
-      const px = new Uint8Array(R.w * k * R.h * k * 4);
-      gl.readPixels(R.x * k, R.y * k, R.w * k, R.h * k, gl.RGBA, gl.UNSIGNED_BYTE, px);
-      if (k === 3) { r.setPixelRatio(pr); r.setSize(tam.x, tam.y, false); }
+      let px, soma = null;
+      try {
+        if (lod) {
+          // o SSAA com o MESMO LOD do 1× (item 8 da revisão): 9 desenhos no buffer 1× com a câmera deslocada −⅓, 0 e +⅓ px nos
+          // dois eixos (os pontos de amostra do 3×3) — as derivadas, e o mip das texturas, são as do quadro 1× (o 3× desce o
+          // LOD em log2 3 ≈ 1,58 e ganha um detalhe que o quadro 1× não tem)
+          px = new Uint8Array(R.w * R.h * 4); soma = new Uint16Array(R.w * R.h * 4);
+          for (const oy of [-1 / 3, 0, 1 / 3]) for (const ox of [-1 / 3, 0, 1 / 3]) {
+            cam.setViewOffset(W, H, ox, oy, W, H);
+            c3.desenhar(cam);
+            gl.readPixels(R.x, R.y, R.w, R.h, gl.RGBA, gl.UNSIGNED_BYTE, px);
+            for (let i = 0; i < soma.length; i++) soma[i] += px[i];
+          }
+          cam.clearViewOffset();
+        } else {
+          if (k === 3) { r.setPixelRatio(1); r.setSize(W * 3, H * 3, false); }
+          c3.desenhar(cam);
+          px = new Uint8Array(R.w * k * R.h * k * 4);
+          gl.readPixels(R.x * k, R.y * k, R.w * k, R.h * k, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        }
+      } finally {
+        if (k === 3) { r.setPixelRatio(pr); r.setSize(tam.x, tam.y, false); }
+        if (opc.fisico) for (const fn of fis) fn(false);
+        cam.clearViewOffset();
+      }
       campo.grupo.children.forEach((o, i) => { o.visible = vis[i]; });
       ceu.visible = true;
       r.setClearColor(fundoAntes);
       let saida;
-      if (k === 3) {
+      if (lod) saida = { dados: b64(new Uint8Array(soma.buffer)), tipo: 'u16' };
+      else if (k === 3) {
         const w = R.w, h = R.h, W3 = w * 3, s = new Uint16Array(w * h * 4);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
           const o = 4 * (y * w + x);
@@ -265,7 +312,7 @@ async function instalarPagina() {
         }
         saida = { dados: b64(new Uint8Array(s.buffer)), tipo: 'u16' };
       } else saida = { dados: b64(px), tipo: 'u8' };
-      return { ...saida, w: R.w, h: R.h, x: R.x, y: R.y, W, H, png: opc.png && k === 1 ? png(px, R.w, R.h) : null };
+      return { ...saida, w: R.w, h: R.h, x: R.x, y: R.y, W, H, png: opc.png && k === 1 && !lod ? png(px, R.w, R.h) : null };
     },
     liberar(id) { const C = cenas.get(id); if (!C) return; C.c3.renderer.dispose(); C.c3.renderer.forceContextLoss(); cenas.delete(id); },
   };
@@ -374,13 +421,13 @@ function pecasGol() {
 const FINOS = ['haste', 'corda do pé', 'corda do fundo', 'mastro'];
 
 // ------------------------------------------------------------------ medidas
-/** Serrilhado (A): {E1, E0, mascara} pela máscara geométrica |MSAA − sem| > 0,01. */
-function serrilhado(I1, I0, S) {
+/** Serrilhado (A): {E1, E0, mascara} pela máscara geométrica |MSAA − sem| > 0,01 (M1/M0: os quadros físicos da máscara). */
+function serrilhado(I1, I0, S, M1 = I1, M0 = I0) {
   let n = 0, s1 = 0, s0 = 0;
   const N = I1.w * I1.h;
   for (let i = 0; i < N; i++) {
     let m = 0;
-    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(I1.px[4 * i + c] - I0.px[4 * i + c]));
+    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(M1.px[4 * i + c] - M0.px[4 * i + c]));
     if (m <= 2.55) continue;
     n++;
     for (let c = 0; c < 3; c++) {
@@ -579,7 +626,10 @@ const distSeg = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * v
 
 /**
  * F: os pontos de amostra das peças finas na pose (quadro 0) e o recorte que cobre todos os quadros. Cada ponto guarda a
- * peça e o t ao longo dela (refeito a cada quadro pela pose deslocada).
+ * peça, o t ao longo dela (refeito a cada quadro pela pose deslocada) e o PASSE em que é medido: a câmera anda na direção da
+ * tela mais perpendicular à peça ('h' para a peça mais em pé que deitada na tela, 'v' para a deitada). Andando AO LONGO da
+ * peça, o traço projetado é o mesmo pixel a pixel (uma reta é invariante pela translação paralela a ela) e a "cintilação"
+ * virava o tracejado parado lido em 8 pontos (o SSAA dava CV 0 na corda do pé: a revisão do C3).
  */
 function prepararFinos(pose, W, H, nq, cRef) {
   const pecas = pecasGol();
@@ -597,7 +647,7 @@ function prepararFinos(pose, W, H, nq, cRef) {
       const pt = { x: p.A.x + t * (p.Bp.x - p.A.x), y: p.A.y + t * (p.Bp.y - p.A.y) };
       // longe de qualquer outra peça (as grossas e as outras finas) no corte de ±3 px
       if (proj.some(o => o !== p && o.A.c > 0.5 && o.Bp.c > 0.5 && distSeg(pt, o.A, o.Bp) < 5)) continue;
-      pontos.push({ peca: p, t });
+      pontos.push({ peca: p, t, passe: Math.abs(p.Bp.y - p.A.y) >= Math.abs(p.Bp.x - p.A.x) ? 'h' : 'v' });
       x0 = Math.min(x0, pt.x); x1 = Math.max(x1, pt.x); y0 = Math.min(y0, pt.y); y1 = Math.max(y1, pt.y);
     }
   }
@@ -620,20 +670,43 @@ function somasFinos(I, pose, W, H, pontos) {
     return s;
   });
 }
-/** Buracos, cintilação e soma de um conjunto de quadros contra o SSAA (as listas de somas por quadro). */
-function estatFinos(Sb, Ss, pontos, filtro = null) {
+/**
+ * Buracos, cintilação e soma de um conjunto de pontos contra o SSAA: cada ponto traz as somas por quadro do quadro medido
+ * (`campo`: 'vb' o build, 'vx' o outro contexto) e do SSAA ('vs'), no passe dele.
+ */
+function estatFinos(pontos, filtro = null, campo = 'vb') {
   let nb = 0, n = 0, sb = 0, ss = 0;
   const cvB = [], cvS = [];
-  for (let j = 0; j < pontos.length; j++) {
-    if (filtro && pontos[j].peca.tipo !== filtro) continue;
-    const vb = Sb.map(q => q[j]), vs = Ss.map(q => q[j]);
+  for (const p of pontos) {
+    if (filtro && p.peca.tipo !== filtro) continue;
+    const vb = p[campo], vs = p.vs;
+    if (!vb || !vs) continue;
     const mb = media(vb), ms = media(vs);
     if (!(ms > 6)) continue;
     for (let k = 0; k < vb.length; k++) { n++; if (vb[k] < 0.15 * vs[k]) nb++; sb += vb[k]; ss += vs[k]; }
     cvB.push(mb > 0 ? Math.sqrt(media(vb.map(v => (v - mb) ** 2))) / mb : 1);
     cvS.push(Math.sqrt(media(vs.map(v => (v - ms) ** 2))) / ms);
   }
-  return { n, pontos: cvB.length, buracos: n ? nb / n : NaN, cint: media(cvB), cintS: media(cvS), soma: ss ? sb / ss : NaN };
+  const cint = media(cvB), cintS = media(cvS);
+  return { n, pontos: cvB.length, buracos: n ? nb / n : NaN, cint, cintS, raz: cint / Math.max(cintS, PISO_CV), soma: ss ? sb / ss : NaN };
+}
+// o piso do denominador da cintilação (o SSAA de uma peça que cruza poucos pixels dá CV perto de 0) e o mínimo de pontos de
+// uma peça para ela contar na meta POR PEÇA
+const PISO_CV = 0.02, MIN_PONTOS_PECA = 2;
+/** Por peça (as que têm pontos bastantes) e a pior de cada medida. */
+function porPeca(pontos, campo = 'vb') {
+  const tipos = Object.fromEntries(FINOS.map(t => [t, estatFinos(pontos, t, campo)]));
+  const validas = FINOS.filter(t => tipos[t].pontos >= MIN_PONTOS_PECA);
+  const pior = (fn, cmp) => validas.reduce((a, t) => (a === null || cmp(fn(tipos[t]), fn(tipos[a])) ? t : a), null);
+  const pb = pior(e => e.buracos, (x, y) => x > y), pc = pior(e => e.raz, (x, y) => x > y), ps = pior(e => Math.abs(Math.log(e.soma)), (x, y) => x > y);
+  return {
+    tipos, validas, geral: estatFinos(pontos, null, campo),
+    pior: {
+      buracos: pb ? { peca: pb, v: tipos[pb].buracos } : null,
+      raz: pc ? { peca: pc, v: tipos[pc].raz } : null,
+      soma: ps ? { peca: ps, v: tipos[ps].soma } : null,
+    },
+  };
 }
 
 // ------------------------------------------------------------------ as rodadas
@@ -643,38 +716,64 @@ const PC = { nome: 'pc', w: 1280, h: 720, dpr: 1, toque: false };
 let invalido = null;
 const errosConsole = [];
 
-/** A seção F numa cena (build) contra a sem AA com SSAA: 2 câmeras, NQ_F quadros. Devolve as estatísticas por câmera. */
+/**
+ * A seção F numa cena (build) contra a sem AA com SSAA (físico): 2 câmeras, NQ_F quadros em cada passe (a câmera andando 0,25
+ * px por quadro no x da tela para as peças em pé e no y para as deitadas). Devolve os pontos com as somas e as estatísticas
+ * por peça, por câmera; com `extra`, as do outro contexto também.
+ */
 async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null) {
   const saida = {};
   for (const cn of ['foco', 'la']) {
     const pose = P[cn];
     const B = baseCam(pose, W, H), cRef = projetar(B, [CAMPO.meioX, 1, 0]).c;
-    const dx0 = 0.25 * (2 * cRef * B.tanV * B.asp) / W;
+    // 0,25 px na profundidade do gol (pixels quadrados: o mesmo no x e no y da tela)
+    const d0 = (0.25 * 2 * cRef * B.tanV) / H;
     const { pontos, rect } = prepararFinos(pose, W, H, NQ_F, cRef);
     if (!pontos.length) { saida[cn] = null; continue; }
-    const Sb = [], Ss = [], Sx = [];
-    for (let q = 0; q < NQ_F; q++) {
-      const pq = desloca(pose, q * dx0);
-      const opc = { so: ['gols'], semCeu: true, fundo: 0x000000, rect };
-      const Ib = await quadro(pg, cenaBuild, campo, pq, opc, q === 0 ? `${rotulo}-F-${cn}` : null);
-      const Is = await quadro(pg, cenaSem, campo, pq, { ...opc, escala: 3 });
-      Sb.push(somasFinos(Ib, pq, W, H, pontos)); Ss.push(somasFinos(Is, pq, W, H, pontos));
-      if (extra) { const Ix = await quadro(pg, extra, campo, pq, opc); Sx.push(somasFinos(Ix, pq, W, H, pontos)); }
+    for (const p of pontos) { p.vb = []; p.vs = []; if (extra) p.vx = []; }
+    const opc = { so: ['gols'], semCeu: true, fundo: 0x000000, rect };
+    for (const passe of ['h', 'v']) {
+      const pp = pontos.filter(p => p.passe === passe);
+      if (!pp.length) continue;
+      for (let q = 0; q < NQ_F; q++) {
+        const pq = deslocaCam(pose, B, passe, q * d0);
+        const Ib = await quadro(pg, cenaBuild, campo, pq, opc, q === 0 && passe === 'h' ? `${rotulo}-F-${cn}` : null);
+        const Is = await quadro(pg, cenaSem, campo, pq, { ...opc, escala: 3, fisico: true });
+        const sb = somasFinos(Ib, pq, W, H, pp), ss = somasFinos(Is, pq, W, H, pp);
+        pp.forEach((p, j) => { p.vb.push(sb[j]); p.vs.push(ss[j]); });
+        if (extra) { const sx = somasFinos(await quadro(pg, extra, campo, pq, opc), pq, W, H, pp); pp.forEach((p, j) => p.vx.push(sx[j])); }
+      }
     }
-    saida[cn] = { geral: estatFinos(Sb, Ss, pontos), porTipo: Object.fromEntries(FINOS.map(t => [t, estatFinos(Sb, Ss, pontos, t)])), extra: extra ? estatFinos(Sx, Ss, pontos) : null };
+    saida[cn] = { pontos, build: porPeca(pontos, 'vb'), extra: extra ? porPeca(pontos, 'vx') : null, passes: { h: pontos.filter(p => p.passe === 'h').length, v: pontos.filter(p => p.passe === 'v').length } };
   }
   return saida;
 }
-function metasF(rotulo, F, chave) {
+const slugPeca = t => ({ haste: 'haste', 'corda do pé': 'cordaPe', 'corda do fundo': 'cordaFundo', mastro: 'mastro' }[t] ?? t);
+/**
+ * As metas da F POR PEÇA, valendo a pior (a média de todos os pontos escondia o mastro: × 3,22 numa "geral" de × 1,74):
+ * buracos ≤ 5% em toda peça; cintilação ≤ 1,5 × a do SSAA (com o piso PISO_CV no denominador) e soma 0,7–1,3 em toda peça.
+ * `qual`: 'build' (as somas do quadro medido) ou 'extra' (o outro contexto).
+ */
+function metasF(rotulo, F, chave, qual = 'build', tipo = 'meta') {
   for (const cn of ['foco', 'la']) {
-    const r = F[cn];
-    if (!r) { meta('F', `Finos (${rotulo}, ${cn}): sem peça fina no quadro`, '—', 'peças no quadro', false, 'info'); continue; }
-    const g = r.geral;
-    guarda(`F.${chave}.${cn}.buracos`, g.buracos); guarda(`F.${chave}.${cn}.cint`, g.cint); guarda(`F.${chave}.${cn}.cintSSAA`, g.cintS); guarda(`F.${chave}.${cn}.soma`, g.soma);
-    const tipos = FINOS.map(t => r.porTipo[t]).map((e, k) => (e.pontos ? `${FINOS[k]} ${pct(e.buracos, 0)}/${f(e.soma, 2)}` : null)).filter(Boolean).join(' · ');
-    meta('F', `Finos (${rotulo}, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): buracos`, `${pct(g.buracos)} de ${g.n} (${g.pontos} pontos × ${NQ_F} quadros) · por peça (buracos/soma): ${tipos}`, '≤ 5%', g.buracos <= 0.05);
-    meta('F', `Finos (${rotulo}, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): cintilação e soma`, `CV ${f(g.cint)} (SSAA ${f(g.cintS)}, × ${f(g.cint / g.cintS, 2)}) · soma × ${f(g.soma, 2)} do SSAA`,
-      'CV ≤ 1,5 × SSAA · soma 0,7–1,3', g.cint <= 1.5 * g.cintS && g.soma >= 0.7 && g.soma <= 1.3);
+    const r0 = F[cn], r = r0?.[qual];
+    const nomeCam = cn === 'foco' ? 'gol no foco' : 'gol de lá';
+    if (!r) { meta('F', `Finos (${rotulo}, ${nomeCam}): sem peça fina no quadro`, '—', 'peças no quadro', false, 'info'); continue; }
+    for (const t of r.validas) {
+      const e = r.tipos[t], s = slugPeca(t);
+      guarda(`F.${chave}.${cn}.${s}.buracos`, e.buracos); guarda(`F.${chave}.${cn}.${s}.cint`, e.cint); guarda(`F.${chave}.${cn}.${s}.cintSSAA`, e.cintS); guarda(`F.${chave}.${cn}.${s}.soma`, e.soma);
+    }
+    const P_ = r.pior;
+    guarda(`F.${chave}.${cn}.buracos`, P_.buracos?.v); guarda(`F.${chave}.${cn}.razao`, P_.raz?.v); guarda(`F.${chave}.${cn}.soma`, P_.soma?.v);
+    const fora = FINOS.filter(t => !r.validas.includes(t) && r.tipos[t].pontos > 0);
+    const tipos = r.validas.map(t => { const e = r.tipos[t]; return `${t} ${pct(e.buracos, 0)} · CV ${f(e.cint)}/${f(e.cintS)} × ${f(e.raz, 2)} · soma ${f(e.soma, 2)} (${e.pontos} pt)`; }).join(' | ');
+    const extraTxt = `${tipos}${fora.length ? ` | poucos pontos: ${fora.join(', ')}` : ''} · passes h ${r0.passes.h} / v ${r0.passes.v} pontos`;
+    const okB = r.validas.length > 0 && r.validas.every(t => r.tipos[t].buracos <= 0.05);
+    meta('F', `Finos (${rotulo}, ${nomeCam}): buracos, pior peça`, `${P_.buracos ? `${pct(P_.buracos.v)} (${P_.buracos.peca})` : '—'} · geral ${pct(r.geral.buracos)} de ${r.geral.n} · ${extraTxt}`, '≤ 5% em toda peça', okB, tipo);
+    const okC = r.validas.length > 0 && r.validas.every(t => r.tipos[t].raz <= 1.5 && r.tipos[t].soma >= 0.7 && r.tipos[t].soma <= 1.3);
+    meta('F', `Finos (${rotulo}, ${nomeCam}): cintilação e soma, pior peça`,
+      `cintilação × ${f(P_.raz?.v, 2)} (${P_.raz?.peca ?? '—'}) · soma ${f(P_.soma?.v, 2)} (${P_.soma?.peca ?? '—'}) · geral CV ${f(r.geral.cint)} (SSAA ${f(r.geral.cintS)}) · soma ${f(r.geral.soma, 2)}`,
+      `CV ≤ 1,5 × SSAA (piso ${f(PISO_CV, 2)}) · soma 0,7–1,3, em toda peça`, okC, tipo);
   }
 }
 
@@ -685,10 +784,16 @@ async function medirG(pg, rotulo, cena, campo, P, topo) {
   const g3 = medirFaixas(tq, topo);
   const Imeio = await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }, `${rotulo}-G-meio`);
   const gm = g3.bordas.length >= 8 ? medirGramado(Imeio, P.meio, g3.bordas) : null;
+  // o mesmo quadro SEM o termo de profundidade (o gancho do C7): a G4 mede com − sem, só o termo (item 6 da revisão: o absoluto
+  // levava as manchas, ±0,004–0,007 entre ~4 blocos de cada região, e a luz da noite, −0,017 contra o dia)
+  let g4sem = null, temGancho = false;
+  if (gm && (temGancho = await G(pg, 'semProfundidade', campo, true))) {
+    try { g4sem = medirGramado(await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }), P.meio, g3.bordas).g4; } finally { await G(pg, 'semProfundidade', campo, false); }
+  }
   const Icom = await quadro(pg, cena, campo, P.foco, { so: ['gramado', 'linhas'], semCeu: true }, `${rotulo}-G5-linhas`);
   const Isem = await quadro(pg, cena, campo, P.foco, { so: ['gramado'], semCeu: true });
   const g5 = picoLinha(Icom, Isem);
-  return { g3, gm, g5 };
+  return { g3, gm, g5, g4sem, temGancho };
 }
 function metasG(rotulo, chave, M, opc = {}) {
   const { g3, gm, g5 } = M;
@@ -713,12 +818,19 @@ function metasG(rotulo, chave, M, opc = {}) {
   const tolB = Math.max(0.10, g3.passo || 0);
   meta(sec, `G3 faixas e bordas (${rotulo})`, `${g3.faixas} faixas no campo · pior borda da UEFA a ${f(g3.pior.erro, 2)} m (x = ${f(g3.pior.u, 2)}) · meio ${g3.meioSepara ? 'separa' : 'NÃO separa'} (${f(g3.meioE)} | ${f(g3.meioD)})`,
     `18 · ≤ ${f(tolB, 2)} m · separa`, g3.faixas === 18 && g3.pior.erro <= tolB && g3.meioSepara);
-  // G4
+  // G4: o termo de profundidade = (longe − perto) com o termo − sem ele; o absoluto (o termo + as manchas + a luz) informativo
   const g4 = gm?.g4;
   if (g4 && !opc.semG4) {
     guarda(`G4.${chave}.dL`, g4.dL); guarda(`G4.${chave}.dC`, g4.dC); guarda(`G4.${chave}.dh`, g4.dh);
-    meta(sec, `G4 longe − perto (${rotulo})`, `ΔL ${f(g4.dL, 4)} · ΔC ${f(g4.dC, 4)} · Δh ${f(g4.dh, 2)}° (perto L ${f(g4.perto.L)}, longe L ${f(g4.longe.L)})`, 'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°',
-      Math.abs(g4.dL - 0.026) <= 0.008 && g4.dC <= 0 && Math.abs(g4.dh) <= 2);
+    meta(sec, `G4 longe − perto no quadro, absoluto (${rotulo})`, `ΔL ${f(g4.dL, 4)} · ΔC ${f(g4.dC, 4)} · Δh ${f(g4.dh, 2)}° (perto L ${f(g4.perto.L)}, longe L ${f(g4.longe.L)})`,
+      'informativo (o termo + as manchas + a luz)', null, 'info');
+    const s4 = M.g4sem;
+    // sem o gancho a versão não tem o termo: com − sem = 0 (a main reprova a meta por isso)
+    const t = s4 ? { dL: g4.dL - s4.dL, dC: g4.dC - s4.dC, dh: g4.dh - s4.dh } : { dL: 0, dC: 0, dh: 0 };
+    guarda(`G4t.${chave}.dL`, t.dL); guarda(`G4t.${chave}.dC`, t.dC); guarda(`G4t.${chave}.dh`, t.dh);
+    meta(sec, `G4 o termo de profundidade, longe − perto com − sem o termo (${rotulo})`,
+      `ΔL ${f(t.dL, 4)} · ΔC ${f(t.dC, 4)} · Δh ${f(t.dh, 2)}°${s4 ? '' : ' (sem o gancho semProfundidade: a versão não tem o termo, 0)'}`, 'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°',
+      Math.abs(t.dL - 0.026) <= 0.008 && t.dC <= 0 && Math.abs(t.dh) <= 2);
   }
   // G5
   guarda(`G5.${chave}.p95`, g5.p95);
@@ -726,13 +838,21 @@ function metasG(rotulo, chave, M, opc = {}) {
     opc.linhaSo97 ? g5.p95 <= 0.97 : Math.abs(g5.p95 - 0.952) <= 0.01 && g5.p95 <= 0.97);
 }
 
+/**
+ * A: a máscara geométrica |MSAA − sem| e a referência são FÍSICAS (os truques dos finos do C9/C10 desligados pelo gancho
+ * `graficos.fisico`, quando existir: sem ele, o contexto sem AA deixa de ser "o mesmo build menos o MSAA" e a máscara deixa de
+ * ser só geometria); a referência é o SSAA com o MESMO LOD do quadro 1× (o 3× desce o mip e põe um piso de textura no E).
+ */
 async function secaoA(pg, rotulo, chave, cena1, cena0, campo, P, buildAA, opc = {}) {
   const out = {};
+  const temFisico = await G(pg, 'temFisico', cena0, campo);
   for (const cn of ['foco', 'la']) {
     const I1 = await quadro(pg, cena1, campo, P[cn], {}, `${rotulo}-A-${cn}-msaa`);
     const I0 = await quadro(pg, cena0, campo, P[cn], {}, `${rotulo}-A-${cn}-sem`);
-    const S = await quadro(pg, cena0, campo, P[cn], { escala: 3 });
-    const r = serrilhado(I1, I0, S);
+    const S = await quadro(pg, cena0, campo, P[cn], { escala: 'lod', fisico: true });
+    const M1 = temFisico ? await quadro(pg, cena1, campo, P[cn], { fisico: true }) : I1;
+    const M0 = temFisico ? await quadro(pg, cena0, campo, P[cn], { fisico: true }) : I0;
+    const r = serrilhado(I1, I0, S, M1, M0);
     const Eb = buildAA ? r.E1 : r.E0, raz = Eb / r.E0;
     guarda(`A.${chave}.${cn}.Ebuild`, Eb); guarda(`A.${chave}.${cn}.Esem`, r.E0); guarda(`A.${chave}.${cn}.Emsaa`, r.E1); guarda(`A.${chave}.${cn}.razao`, raz); guarda(`A.${chave}.${cn}.mascara`, r.mascara);
     out[cn] = { ...r, Eb, raz };
@@ -750,8 +870,22 @@ async function secaoA(pg, rotulo, chave, cena1, cena0, campo, P, buildAA, opc = 
   return out;
 }
 
+/**
+ * A cor da noite que o cor-aces prevê para o gramado do dia medido (G1 por classe): o albedo de cada classe pela inversa
+ * exata do ACES sob a luz do dia, levado à luz da noite com o poço de luz do foco (a região do G1 fica toda no 1,04), e a
+ * média das classes como na G1.
+ */
+function preverNoite(g1) {
+  const fator = pocoNoite(0, 0);
+  const lab = o => oklab(corNaTela(albedoPara(o.L, o.C, o.h, { hora: 'dia' }), { hora: 'noite', fator }));
+  const c = lab(g1.claro), e = lab(g1.escuro);
+  const hm = e.h + difMatiz(c.h, e.h) / 2;
+  return { L: (c.L + e.L) / 2, C: (c.C + e.C) / 2, h: (hm + 360) % 360 };
+}
+
 // ================================================================== celular (844×390, dpr 2, toque)
 const sessoes = [];
+let g1Dia = null;
 try {
   const cel = await abrirPagina(CEL);
   sessoes.push(cel);
@@ -804,6 +938,7 @@ try {
     // ---- G (dia, Média)
     if (so.has('G')) {
       const M = await medirG(pg, 'cel-media-dia', mb, 'cm', P, topo);
+      g1Dia = M.gm?.g1 ?? null;
       metasG('celular Média, dia', 'media.dia', M);
       // G6
       const g6 = M.gm?.g6;
@@ -842,26 +977,35 @@ try {
       const PB = posesG4b(info.consts, asp, P.foco.para);
       const temGancho = await G(pg, 'semProfundidade', 'cm', false);
       const linhas = [];
+      const Lsem = {};
       let piorDif = 0;
-      for (const [nome, pose] of Object.entries(PB)) {
-        const Ic = await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }, `cel-media-dia-G4b-${nome}`);
-        const Lc = Lfoco(Ic, pose);
+      const comSem = async (pose, nomePrint = null) => {
+        const Lc = Lfoco(await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }, nomePrint), pose);
         let Ls = Lc;
-        if (temGancho) { await G(pg, 'semProfundidade', 'cm', true); Ls = Lfoco(await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }), pose); await G(pg, 'semProfundidade', 'cm', false); }
+        if (temGancho) { await G(pg, 'semProfundidade', 'cm', true); try { Ls = Lfoco(await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }), pose); } finally { await G(pg, 'semProfundidade', 'cm', false); } }
+        return { Lc, Ls };
+      };
+      for (const [nome, pose] of Object.entries(PB)) {
+        const { Lc, Ls } = await comSem(pose, `cel-media-dia-G4b-${nome}`);
+        Lsem[nome] = Ls.L;
         guarda(`G4b.media.dia.${nome}.L`, Lc.L);
         const d = Lc.L - Ls.L; piorDif = Math.max(piorDif, Math.abs(d));
         linhas.push(`${nome} ${f(Lc.L)}${temGancho ? ` (${d >= 0 ? '+' : ''}${f(d, 4)})` : ''}`);
       }
       meta('G', 'G4b L do gramado no foco nas outras câmeras', `${linhas.join(' · ')}${temGancho ? '' : ' · sem o gancho semProfundidade: nada a comparar'}`, 'com − sem o termo ≤ 0,005 em todas',
         temGancho ? piorDif <= 0.005 : null, temGancho ? 'meta' : 'info');
-      // o corte TV (o gol no foco) → 1ª pessoa: o salto do L no meio da tela
-      const Itv = await quadro(pg, mb, 'cm', P.foco, { so: ['gramado'], semCeu: true });
-      const Ltv = Lfoco(Itv, P.foco).L, L1p = valores['G4b.media.dia.replay-1a-pessoa.L'];
-      const salto = Math.abs(L1p - Ltv);
-      guarda('G4b.media.dia.salto', salto);
+      // o corte TV (o gol no foco) → 1ª pessoa: o salto do L no meio da tela. A meta é a parte do TERMO no salto, com − sem
+      // (item 16 da revisão: as duas janelas veem pedaços diferentes das manchas, e com as manchas do C6 o salto bruto oscila
+      // perto do 0,01 sem o termo ter culpa); o salto bruto e a referência ficam informativos
+      const tv = await comSem(P.foco);
+      const L1p = valores['G4b.media.dia.replay-1a-pessoa.L'];
+      const salto = Math.abs(L1p - tv.Lc.L);
+      const saltoTermo = (L1p - tv.Lc.L) - (Lsem['replay-1a-pessoa'] - tv.Ls.L);
+      guarda('G4b.media.dia.salto', salto); guarda('G4b.media.dia.saltoTermo', saltoTermo);
       const refSalto = REF?.valores?.['G4b.media.dia.salto'];
-      meta('G', 'G4b salto do L no corte TV → 1ª pessoa', `${f(salto, 4)} (TV ${f(Ltv)} → 1ª pessoa ${f(L1p)})${Number.isFinite(refSalto) ? ` · ref ${f(refSalto, 4)}` : ' · sem referência'}`, '≤ ref + 0,01',
-        Number.isFinite(refSalto) ? salto <= refSalto + 0.01 : null, Number.isFinite(refSalto) ? 'meta' : 'info');
+      meta('G', 'G4b salto do L no corte TV → 1ª pessoa, bruto', `${f(salto, 4)} (TV ${f(tv.Lc.L)} → 1ª pessoa ${f(L1p)})${Number.isFinite(refSalto) ? ` · ref ${f(refSalto, 4)}` : ''}`, 'informativo', null, 'info');
+      meta('G', 'G4b a parte do termo no salto TV → 1ª pessoa (com − sem o termo)', `${f(saltoTermo, 4)}${temGancho ? '' : ' (sem o gancho: a versão não tem o termo, 0)'}`, '|com − sem| ≤ 0,01',
+        Math.abs(saltoTermo) <= 0.01);
       marcar('G (Média, dia)');
     }
 
@@ -875,17 +1019,16 @@ try {
     if (so.has('F')) {
       const F = await secaoF(pg, 'cel-media', mb, 'm0', 'cm', P, W, H, mb === 'm1' ? 'm0' : 'm1');
       metasF('celular Média', F, 'media');
-      for (const cn of ['foco', 'la']) {
-        const x = F[cn]?.extra;
-        if (x) meta('F', `Finos (celular Média, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): o outro contexto (${mb === 'm1' ? 'sem AA' : 'MSAA forçado'})`, `buracos ${pct(x.buracos)} · CV ${f(x.cint)} (SSAA ${f(x.cintS)}) · soma × ${f(x.soma, 2)}`, '—', null, 'info');
-      }
+      // o outro contexto (na main, o MSAA forçado: o que a Média ganha no C5), informativo
+      comoInfo(() => metasF(`celular Média, o outro contexto: ${mb === 'm1' ? 'sem AA' : 'MSAA forçado'}`, F, 'mediaOutro', 'extra'));
       marcar('F (Média)');
     }
 
-    // ---- D (grão, Média, dia): E e cintilação por faixa da tela
+    // ---- D (grão, Média, dia): E e cintilação por faixa da tela, contra o SSAA com o MESMO LOD (item 8 da revisão: o SSAA 3×
+    // desce o mip em log2 3 e o build "cintilava menos que o ideal", × 0,66–0,84) e entre as faixas do próprio build
     if (so.has('D')) {
       const pose = P.meio, B = baseCam(pose, W, H), cRef = projetar(B, [0, 0, 0]).c;
-      const dx0 = 0.25 * (2 * cRef * B.tanV * B.asp) / W;
+      const d0 = (0.25 * 2 * cRef * B.tanV) / H;
       // as faixas da tela pela distância: z de 22 (o pé da tela) a −34 (a lateral de lá), em 5 faixas
       const ZB = [22, 10, 0, -12, -24, -34], nb = ZB.length - 1, bandas = Array.from({ length: nb }, () => ({ e: 0, n: 0, vb: [], vs: [] }));
       const { X, Z } = mapaChao(B);
@@ -893,9 +1036,9 @@ try {
       for (let i = 0; i < W * H; i++) if (Math.abs(X[i]) <= 50) for (let k = 0; k < nb; k++) if (Z[i] <= ZB[k] && Z[i] > ZB[k + 1]) { banda[i] = k; break; }
       const quadrosB = [], quadrosS = [];
       for (let q = 0; q < NQ_D; q++) {
-        const pq = desloca(pose, q * dx0);
+        const pq = deslocaCam(pose, B, 'h', q * d0);
         quadrosB.push(await quadro(pg, mb, 'cm', pq, { so: ['gramado'], semCeu: true }));
-        quadrosS.push(await quadro(pg, 'm0', 'cm', pq, { so: ['gramado'], semCeu: true, escala: 3 }));
+        quadrosS.push(await quadro(pg, 'm0', 'cm', pq, { so: ['gramado'], semCeu: true, escala: 'lod', fisico: true }));
       }
       // amostra de 1 a cada 3 pixels (a cintilação por pixel nos NQ_D quadros)
       for (let i = 0; i < W * H; i += 3) {
@@ -905,12 +1048,16 @@ try {
         const mb_ = media(vb), ms_ = media(vs);
         bandas[b].vb.push(Math.sqrt(media(vb.map(v => (v - mb_) ** 2)))); bandas[b].vs.push(Math.sqrt(media(vs.map(v => (v - ms_) ** 2))));
       }
-      const txt = bandas.map((b, k) => {
-        const E = Math.sqrt(b.e / Math.max(1, b.n)), cb = media(b.vb), cs = media(b.vs);
-        guarda(`D.media.dia.b${k}.E`, E); guarda(`D.media.dia.b${k}.cint`, cb / cs);
-        return `z ${ZB[k]}…${ZB[k + 1]} E ${f(E, 4)} cint × ${f(cb / cs, 2)}`;
+      const R = bandas.map(b => ({ E: Math.sqrt(b.e / Math.max(1, b.n)), cb: media(b.vb), cs: media(b.vs) }));
+      const txt = R.map((r, k) => {
+        guarda(`D.media.dia.b${k}.E`, r.E); guarda(`D.media.dia.b${k}.cint`, r.cb / r.cs); guarda(`D.media.dia.b${k}.cintBuild`, r.cb);
+        return `z ${ZB[k]}…${ZB[k + 1]} E ${f(r.E, 4)} cint × ${f(r.cb / r.cs, 2)} (${f(r.cb, 2)}/255)`;
       }).join(' · ');
-      meta('D', 'Grão: E contra o SSAA e cintilação (÷ a do SSAA) por faixa da tela, de perto para longe', txt, 'informativa (só reprova se o filtro do passo 4 entrar)', null, 'info');
+      meta('D', 'Grão: E e cintilação contra o SSAA do MESMO LOD (÷ a dele) por faixa da tela, de perto para longe', txt, 'informativa (só reprova se o filtro do passo 4 entrar)', null, 'info');
+      // o critério do passo 4 entre as faixas do PRÓPRIO build: o longe (z −24…−34) × o perto do foco (z 10…0)
+      const rE = R[4].E / R[1].E, rC = R[4].cb / R[1].cb;
+      guarda('D.media.dia.longePertoE', rE); guarda('D.media.dia.longePertoCint', rC);
+      meta('D', 'Grão: o longe × o perto do foco no próprio build (o critério do passo 4)', `E × ${f(rE, 2)} · cintilação × ${f(rC, 2)} (longe ÷ perto)`, 'informativa (o filtro do passo 4 só entra se o longe passar do perto)', null, 'info');
       marcar('D (grão)');
     }
 
@@ -920,12 +1067,17 @@ try {
       for (const c of ['m1', 'm0']) await G(pg, 'hora', c, 'cm', 'noite');
       const Mn = await medirG(pg, 'cel-media-noite', mb, 'cm', P, topo);
       metasG('celular Média, noite', 'media.noite', Mn, { secao: 'N', semG1: true, linhaSo97: true });
-      const hDia = valores['G1.media.dia.h'], hNoite = Mn.gm?.g1?.h;
-      if (Number.isFinite(hDia) && Number.isFinite(hNoite)) {
-        const dh = difMatiz(hNoite, hDia); guarda('N.media.dhNoiteDia', dh);
+      // Δh (noite − dia) contra o que o cor-aces PREVÊ para o albedo em uso (item 7 da revisão: com a referência ± 2°, as cores
+      // do C6 caíam no limite — a luz fria gira mais um verde mais amarelo, 3,3° → 5,3°): o albedo de cada classe sai do dia
+      // medido pela inversa exata do ACES e da luz do dia, e vai à luz da noite com o poço do foco
+      const hNoite = Mn.gm?.g1?.h;
+      if (g1Dia && Number.isFinite(hNoite)) {
+        const dh = difMatiz(hNoite, g1Dia.h), pr = preverNoite(g1Dia), dhPrev = difMatiz(pr.h, g1Dia.h);
+        guarda('N.media.dhNoiteDia', dh); guarda('N.media.dhPrevisto', dhPrev);
         const ref = REF?.valores?.['N.media.dhNoiteDia'];
-        meta('N', 'Δh (noite − dia), celular Média', `${f(dh, 2)}°${Number.isFinite(ref) ? ` · ref ${f(ref, 2)}°` : ' · sem referência'}`, 'a da referência ± 2°', Number.isFinite(ref) ? Math.abs(dh - ref) <= 2 : null, Number.isFinite(ref) ? 'meta' : 'info');
-      }
+        meta('N', 'Δh (noite − dia), celular Média, contra a previsão do cor-aces', `${f(dh, 2)}° · previsto ${f(dhPrev, 2)}° (noite prevista L ${f(pr.L)} C ${f(pr.C)} h ${f(pr.h, 1)}° · medida L ${f(Mn.gm.g1.L)} C ${f(Mn.gm.g1.C)} h ${f(hNoite, 1)}°)${Number.isFinite(ref) ? ` · ref ${f(ref, 2)}°` : ''}`,
+          'o previsto ± 0,5°', Math.abs(dh - dhPrev) <= 0.5);
+      } else meta('N', 'Δh (noite − dia), celular Média', 'sem o dia medido (rode com a seção G)', 'o previsto ± 0,5°', null, 'info');
       await secaoA(pg, 'cel-media-noite', 'media.noite', 'm1', 'm0', 'cm', P, build.media.antialias, { secao: 'N' });
       for (const c of ['m1', 'm0']) await G(pg, 'hora', c, 'cm', 'dia');
       marcar('N (Média, noite)');
@@ -946,9 +1098,7 @@ try {
       const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', P, Wb, Hb, 'b1');
       metasF('celular Baixa', Fb, 'baixa');
       // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto
-      const Fq = {};
-      for (const cn of ['foco', 'la']) if (Fb[cn]) Fq[cn] = { geral: Fb[cn].extra, porTipo: Object.fromEntries(FINOS.map(t => [t, { pontos: 0 }])) };
-      metasF('celular Baixa com MSAA (a queda)', Fq, 'baixaMsaa');
+      metasF('celular Baixa com MSAA (a queda)', Fb, 'baixaMsaa', 'extra');
       await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
       marcar('N (Baixa)');
     }
@@ -1001,10 +1151,13 @@ if (gravar && !invalido) {
   // com --so parcial, junta com o que já estava gravado (as outras seções ficam)
   const antes = so.size < SECOES.length ? tudo[CHAVE_REF] : null;
   const secoes = new Set([...(antes?.secoes ? antes.secoes.split(',') : []), ...so]);
+  // (os outros campos do registro — notas à mão, histórico — ficam em toda gravação, também com --so)
+  const extras = Object.fromEntries(Object.entries(tudo[CHAVE_REF] ?? {}).filter(([k]) => !['gravado', 'commit', 'secoes', 'chromium', 'renderer', 'nota', 'valores'].includes(k)));
   tudo[CHAVE_REF] = {
     gravado: new Date().toISOString().slice(0, 10), commit, secoes: SECOES.filter(x => secoes.has(x)).join(','), chromium: cond.chromium, renderer: cond.renderer,
     nota: 'valores AGREGADOS do teste-graficos-celular (nunca hash de pixels); as guardas "nada pior" comparam com eles',
     valores: { ...(antes?.valores ?? {}), ...valores },
+    ...extras,
   };
   fs.mkdirSync(path.dirname(ARQ_REF), { recursive: true });
   fs.writeFileSync(ARQ_REF, JSON.stringify(tudo, null, 2) + '\n');
@@ -1018,7 +1171,7 @@ for (const m of res) console.log(`${est(m)} | ${m.secao.padEnd(1)} | ${m.nome.pa
 const fora = res.filter(m => m.ok === false && m.tipo === 'meta').length;
 const estrutura = res.filter(m => m.ok === false && m.tipo === 'estrutura').length;
 console.log(`\nChromium ${cond.chromium} · ${cond.renderer}`);
-if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — VERSÃO DIFERENTE da gravada: as guardas "nada pior" com +50% de tolerância' : ''}`);
+if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — RENDERIZADOR DIFERENTE do gravado: as guardas "nada pior" com +50% de tolerância' : versaoDif() ? ' — Chromium diferente do gravado (só aviso: a tolerância não muda)' : ''}`);
 else console.log('referência: nenhuma gravada (as guardas "nada pior" ficam informativas; grave com --gravar-referencia na main)');
 if (gravar && !invalido) console.log(`referência gravada em ${ARQ_REF} (${Object.keys(valores).length} valores)`);
 console.log(`tempos: ${tempos.join(' · ')} · total ${((Date.now() - T0) / 1000).toFixed(0)} s`);
