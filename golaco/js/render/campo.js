@@ -831,9 +831,10 @@ export function criarCampo(opc) {
   // a profundidade relativa ao foco (C7): o uGFoco e o uRasante de cada desenho, pela câmera dele (os mesmos uniforms nos dois
   // materiais; os dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos
   // testes; `rasBase` = o uRasante da hora antes da altura da câmera
-  let horaG = 'dia', semProf = false, rasBase = uGramado ? uGramado.uRasante.value : 0;
+  let horaG = 'dia', semProf = false, semMan = false, rasBase = uGramado ? uGramado.uRasante.value : 0;
   if (uGramado) grama.onBeforeRender = fora.onBeforeRender = focador(uGramado, () => rasBase);
   const rasante = () => { if (uGramado) uGramado.uRasante.value = rasBase = semProf ? 0 : valoresGramado(horaG).uRasante; };
+  const manchas = () => { if (uGramado) uGramado.uManchas.value = semMan ? 0 : valoresGramado(horaG).uManchas; };
   grupo.add(criarLinhas(detalhe, uGramado));
   const gols = criarGols();
   grupo.add(gols.estrutura, gols.rede);
@@ -865,11 +866,13 @@ export function criarCampo(opc) {
      * gramado de antes); gramado = os uniforms do gramado no shader ({uClara, uEscura, uManchas, uRasante, uGFoco, …}:
      * render/gramado.js), null no antigo; semProfundidade(bool) = o termo de profundidade desligado (o uRasante em 0, também
      * depois de uma troca de hora) — a G4 do teste-graficos-celular mede o TERMO, com − sem ele (sem efeito no antigo, que não
-     * tem o termo).
+     * tem o termo); semManchas(bool) = as manchas desligadas (o uManchas em 0, também depois de uma troca de hora) — a G1 e a
+     * G2 medem a cor e as faixas sem depender de onde as manchas caem perto do foco (a revisão do C4–C8; sem efeito no antigo).
      */
     graficos: {
       antigo, gramado: uGramado,
       semProfundidade(v) { semProf = !!v; rasante(); },
+      semManchas(v) { semMan = !!v; manchas(); },
     },
     definirHora(hora) {
       const noite = hora === 'noite';
@@ -878,6 +881,7 @@ export function criarCampo(opc) {
         horaG = hora;
         horaGramado(uGramado, hora);
         rasante();
+        manchas();
         fora.material.color.setRGB(...(GRAMADO_HORAS[hora] ?? GRAMADO_HORAS.dia).fora);
       }
       // arquibancada à noite: só a luz que escapa dos refletores

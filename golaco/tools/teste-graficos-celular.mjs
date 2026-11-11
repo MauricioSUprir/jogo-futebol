@@ -27,21 +27,28 @@
 //      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
 //      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1).
 //   G  o gramado (só a malha 'gramado'; G5 com as 'linhas'): G1 a cor na faixa do foco (OKLab, a média das duas classes);
-//      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe; G3 as faixas e as bordas
-//      (vista de cima, 2 quadros ortográficos: quantas no campo, a distância de cada borda da UEFA à medida, a linha do meio
-//      separando claro de escuro); G4 longe − perto (L, C, h); G5 o pico da linha (p95 do L dos pixels da linha perto do
-//      foco); G6 o σL das manchas em blocos de 8 m (sem a média da faixa e sem um plano; no quadro SEM o termo de
-//      profundidade quando há o gancho — o termo é uma curva em z que o plano não tira); G7 GPU = JS (a classe lida em cada
-//      faixa = gramado.js faixaEm(x), quando o módulo existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta,
-//      sem dizer qual é clara, casa pela maioria); G4b a profundidade nas outras câmeras (1ª pessoa e lateral baixa
-//      do replay, steadicam, câmera do gol, Jogador e Atrás do Livre, falta e escanteio, aéreo do pré-jogo): o L do gramado
-//      no foco com × sem o termo (o gancho `campo.graficos.semProfundidade(bool)`, quando existir) e a parte do termo no
-//      salto do corte TV → 1ª pessoa (com − sem). A G4 que vale é o TERMO: longe − perto com − sem ele (sem o gancho, 0); o
-//      absoluto (o termo + as manchas + a luz) é informativo.
+//      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe — as duas no quadro SEM as
+//      manchas quando há o gancho `campo.graficos.semManchas(bool)` (a revisão do C4–C8: dependiam de onde as manchas caíam
+//      perto do foco); G3 as faixas e as bordas (vista de cima, 2 quadros ortográficos: quantas no campo, a distância de cada
+//      borda da UEFA à medida, a linha do meio separando claro de escuro); G4 longe − perto (L, C, h); G5 o pico da linha (p95
+//      do L dos pixels da linha perto do foco); G6 o σL das manchas em blocos de 8 m, sem a média da faixa e sem uma
+//      QUADRÁTICA em x e z, no quadro como ele sai (com o termo de profundidade: uma foto real também tem a curva do ângulo) —
+//      INFORMATIVA: a meta 0,010 ± 0,004 é provisória até a régua da foto (o piso, o quadro sem as manchas, e a régua do C6,
+//      sem o termo e sem um plano, ao lado); G7 GPU = JS (a classe lida em cada faixa = gramado.js faixaEm(x), quando o módulo
+//      existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta, sem dizer qual é clara, casa pela maioria); G4b
+//      a profundidade nas outras câmeras (1ª pessoa e lateral baixa do replay, steadicam, câmera do gol, Jogador e Atrás do
+//      Livre, falta e escanteio, aéreo do pré-jogo e, desde a revisão do C4–C8, as câmeras baixas das cenas: o contraplano e a
+//      reação da comemoração, a entrada, a fila e o túnel do pré-jogo, a frente e o árbitro da cena do cartão, medidas aos pés
+//      do assunto): o L do gramado no foco com × sem o termo (o gancho `campo.graficos.semProfundidade(bool)`, quando existir)
+//      e a parte do termo no salto do corte TV → 1ª pessoa (com − sem). A G4 que vale é o TERMO: longe − perto com − sem ele
+//      (sem o gancho, 0); o absoluto (o termo + as manchas + a luz) é informativo. No PC a meta do ΔL é a do celular × o modelo
+//      do ângulo (24,6° × 15°: render/gramado.js e o cor-aces, a conta do F6 do teste-gramado).
 //   D  o grão: E e a cintilação (4 quadros a 0,25 px) por faixa da tela contra o SSAA do MESMO LOD, de perto a longe, e o
 //      longe × o perto do foco no próprio build (o critério do passo 4); informativa.
 //   N  noite (Média: G1–G5 e A; o Δh noite − dia contra o que o cor-aces prevê para o albedo do dia medido, ± 0,5°), Baixa
-//      (G1–G5, A e F) e PC 1280×720 Alta, dia e noite (G1–G5 e A "nada pior").
+//      (G1–G5, A e F) e PC 1280×720 Alta, dia e noite (G1–G5 e A "nada pior"). O "nada pior" da A pelo que não depende do
+//      contraste das bordas (a revisão do C4–C8: as linhas mais brancas subiram o E absoluto): no PC (build com MSAA) a razão
+//      E_build / E_semAA do mesmo build; na Baixa (sem MSAA) o E ÷ o contraste da referência na máscara (o RMS do gradiente).
 //
 // A referência (`--gravar-referencia`) grava em tools/dados/graficos-ref.json (chave "celular"; a do teste-graficos-pagina é
 // outra chave do mesmo arquivo) os valores AGREGADOS — nunca o hash dos pixels — com a versão do Chromium e o renderizador
@@ -77,7 +84,11 @@ const CHAVE_REF = 'celular';
 
 // ------------------------------------------------------------------ os módulos puros da versão medida (em Node)
 const doJogo = p => import(pathToFileURL(path.join(raiz, p)).href);
-const { CAMPO, REPLAY } = await doJogo('js/config.js');
+const { CAMPO, REPLAY, COMEMORACAO } = await doJogo('js/config.js');
+// as câmeras baixas das cenas (a G4b; a revisão do C4–C8): o pré-jogo e a cena do cartão, quando a versão medida os tem
+const opcional = async p => { try { return await doJogo(p); } catch (_) { return null; } };
+const PLANOS_PREJOGO = (await opcional('js/prejogo-roteiro.js'))?.PLANOS_PREJOGO ?? null;
+const CENA_CARTAO = (await opcional('js/cenas-config.js'))?.CENA_CARTAO ?? null;
 const EQ = await doJogo('js/render/enquadramento.js');
 const { VEU } = await doJogo('js/rede-forma.js');
 let GR_NODE = null;
@@ -233,6 +244,7 @@ async function instalarPagina() {
     },
     hora(id, campoId, h) { const C = cenas.get(id); C.hora = h; C.c3.definirHora(h); campos.get(campoId).definirHora(h); },
     semProfundidade(campoId, v) { const c = campos.get(campoId); if (typeof c?.graficos?.semProfundidade !== 'function') return false; c.graficos.semProfundidade(v); return true; },
+    semManchas(campoId, v) { const c = campos.get(campoId); if (typeof c?.graficos?.semManchas !== 'function') return false; c.graficos.semManchas(v); return true; },
     /** O gancho `fisico` (C9/C10) existe no campo ou na cena? */
     temFisico(id, campoId) { return typeof campos.get(campoId)?.graficos?.fisico === 'function' || typeof cenas.get(id)?.c3?.graficos?.fisico === 'function'; },
     faixas(xs) {
@@ -397,7 +409,30 @@ function posesG4b(consts, asp, focoTV) {
     falta: { de: [24 - BP.atras, BP.altura, 4 + BP.lado], para: [MX, BP.alvoY, 0], fov: fBP },
     escanteio: { de: [MX + ES.atras * 0.55, ES.altura, MZ + ES.atras * 0.8], para: [MX - 11, ES.alvoY, 0], fov: fES },
     'prejogo-aereo': { de: [267 * Math.cos(orbAng), 113, 267 * Math.sin(orbAng)], para: [0, 12, 0], fov: 38 },
+    ...posesBaixas(),
   };
+}
+/**
+ * As câmeras BAIXAS das cenas que a G4b não media (a revisão do C4–C8: o raio do meio toca o chão muito além do assunto, ou
+ * não toca, e o termo de antes punha o chão aos pés dele no teto de −8%): o contraplano e a reação da comemoração (o autor em
+ * (40, 20), andando em +x), a entrada, a fila do mandante e o túnel do pré-jogo (o ponto do chão sob o "para" do trilho) e a
+ * cena do cartão (o punido em (30, −10)). `pe` = os pés do assunto, onde a Lfoco mede.
+ */
+function posesBaixas() {
+  const out = {};
+  const C = COMEMORACAO?.camera, A = [40, 20];
+  if (C?.contraplano) out['com-contraplano'] = { de: [A[0] - C.contraplano.atras, C.contraplano.altura, A[1] + C.contraplano.lado], para: [A[0] + C.contraplano.alem, C.contraplano.olharY, A[1]], fov: C.contraplano.fov ?? 36, pe: A };
+  if (C?.reacao) out['com-reacao'] = { de: [A[0] + C.reacao.dist, C.reacao.altura, A[1]], para: [A[0], C.reacao.olharY, A[1]], fov: C.reacao.fov ?? 30, pe: A };
+  const trilho = (id, k) => {
+    const P = PLANOS_PREJOGO?.[id]?.cam; if (!P?.de) return null;
+    const j = k < 0 ? P.de.length - 1 : k, fov = Array.isArray(P.fov) ? P.fov[j] : P.fov;
+    return { de: [...P.de[j]], para: [...P.para[j]], fov: fov ?? 40, pe: [P.para[j][0], P.para[j][2]] };
+  };
+  for (const [nome, id, k] of [['pre-entrada', 'entrada', -1], ['pre-fila', 'filaMandante', 0], ['pre-tunel', 'tunel', -1]]) { const p = trilho(id, k); if (p) out[nome] = p; }
+  const CC = CENA_CARTAO?.camera, B = [30, -10];
+  if (CC?.frente) out['cartao-frente'] = { de: [B[0] + CC.frente.dist, CC.frente.altura, B[1]], para: [B[0], CC.frente.olharY, B[1]], fov: CC.frente.fov ?? 30, pe: B };
+  if (CC?.arbitro) out['cartao-arbitro'] = { de: [B[0] + CC.arbitro.dist, CC.arbitro.altura, B[1]], para: [B[0], CC.arbitro.olharY, B[1]], fov: CC.arbitro.fov ?? 31, pe: B };
+  return out;
 }
 
 // ------------------------------------------------------------------ as peças finas do gol (cópia da geometria de campo.js criarGols)
@@ -422,10 +457,15 @@ function pecasGol() {
 const FINOS = ['haste', 'corda do pé', 'corda do fundo', 'mastro'];
 
 // ------------------------------------------------------------------ medidas
-/** Serrilhado (A): {E1, E0, mascara} pela máscara geométrica |MSAA − sem| > 0,01 (M1/M0: os quadros físicos da máscara). */
+/**
+ * Serrilhado (A): {E1, E0, mascara, C} pela máscara geométrica |MSAA − sem| > 0,01 (M1/M0: os quadros físicos da máscara). C =
+ * o CONTRASTE da referência na máscara (o RMS do gradiente da SSAA, de um pixel ao vizinho da direita e ao de cima, 0–1): o E
+ * cresce com o contraste das bordas (as linhas mais brancas do C7 subiram o E da Baixa sem AA em 2–4%, sem mudar o
+ * serrilhado); E ÷ C é o serrilhado sem o contraste (a guarda "nada pior" da Baixa; a revisão do C4–C8).
+ */
 function serrilhado(I1, I0, S, M1 = I1, M0 = I0) {
-  let n = 0, s1 = 0, s0 = 0;
-  const N = I1.w * I1.h;
+  let n = 0, s1 = 0, s0 = 0, sg = 0, ng = 0;
+  const W = I1.w, N = I1.w * I1.h;
   for (let i = 0; i < N; i++) {
     let m = 0;
     for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(M1.px[4 * i + c] - M0.px[4 * i + c]));
@@ -435,8 +475,15 @@ function serrilhado(I1, I0, S, M1 = I1, M0 = I0) {
       const ss = S.px[4 * i + c] / 9;
       s1 += ((I1.px[4 * i + c] - ss) / 255) ** 2; s0 += ((I0.px[4 * i + c] - ss) / 255) ** 2;
     }
+    if (i % W < W - 1 && i + W < N) {
+      for (let c = 0; c < 3; c++) {
+        const ss = S.px[4 * i + c];
+        sg += ((S.px[4 * (i + 1) + c] - ss) / 2295) ** 2 + ((S.px[4 * (i + W) + c] - ss) / 2295) ** 2;
+      }
+      ng++;
+    }
   }
-  return { E1: Math.sqrt(s1 / Math.max(1, 3 * n)), E0: Math.sqrt(s0 / Math.max(1, 3 * n)), mascara: n / N };
+  return { E1: Math.sqrt(s1 / Math.max(1, 3 * n)), E0: Math.sqrt(s0 / Math.max(1, 3 * n)), mascara: n / N, C: Math.sqrt(sg / Math.max(1, 6 * ng)) };
 }
 
 /** Bordas das faixas num perfil L(x) (x crescente): medianas de 1 m de cada lado, máximo local, refino pelo cruzamento. */
@@ -580,9 +627,30 @@ function medirGramado(I, pose, bordas) {
     const D = det(S), coef = [0, 1, 2].map(k => det(S.map((row, i) => row.map((v, j) => (j === k ? y[i] : v)))) / D);
     const resid = bl.map(b => b.r - (coef[0] + coef[1] * b.x + coef[2] * b.z));
     const m = media(resid);
-    g6 = { sigma: Math.sqrt(media(resid.map(r => (r - m) ** 2))), blocos: bl.length };
+    // a régua nova (a revisão do C4–C8): sem uma QUADRÁTICA em x e z (1, x, z, x², xz, z²) — o termo de profundidade e o
+    // ângulo da vista são curvas suaves em z que o plano não tira (uma foto real também as tem: medida assim, ela se compara
+    // com o quadro COM o termo); as manchas (3–10 m) e o grão ficam
+    const fq = [b => 1, b => b.x, b => b.z, b => b.x * b.x, b => b.x * b.z, b => b.z * b.z];
+    const residQ = residuosMQ(bl, fq), mq = media(residQ);
+    g6 = { sigma: Math.sqrt(media(resid.map(r => (r - m) ** 2))), sigmaQ: Math.sqrt(media(residQ.map(r => (r - mq) ** 2))), blocos: bl.length };
   }
   return { g1, g2, g4, g6, classe, X, Z, kp };
+}
+
+/** Mínimos quadrados de r ≈ Σ aₖ·fₖ(b) (eliminação de Gauss com pivô parcial nas normais): os resíduos r − ajuste. */
+function residuosMQ(bl, fns) {
+  const n = fns.length, A = Array.from({ length: n }, () => new Float64Array(n + 1));
+  for (const b of bl) {
+    const v = fns.map(fn => fn(b));
+    for (let i = 0; i < n; i++) { A[i][n] += v[i] * b.r; for (let j = 0; j < n; j++) A[i][j] += v[i] * v[j]; }
+  }
+  for (let c = 0; c < n; c++) {
+    let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(A[r][c]) > Math.abs(A[p][c])) p = r;
+    [A[c], A[p]] = [A[p], A[c]];
+    for (let r = 0; r < n; r++) if (r !== c) { const k = A[r][c] / A[c][c]; for (let j = c; j <= n; j++) A[r][j] -= k * A[c][j]; }
+  }
+  const a = A.map((row, i) => row[n] / row[i]);
+  return bl.map(b => b.r - fns.reduce((acc, fn, i) => acc + a[i] * fn(b), 0));
 }
 
 /** G5: o pico da linha (p95 do L dos pixels que a linha clareia em ≥ 0,08) no meio do quadro. */
@@ -599,7 +667,8 @@ function picoLinha(Icom, Isem) {
 /** G4b: L do gramado (média linear) numa janela de 40 × 40 px em volta do ponto do chão olhado (ou do meio da tela). */
 function Lfoco(I, pose) {
   const B = baseCam(pose, I.w, I.h);
-  let alvo = projetar(B, [pose.para[0], 0, pose.para[2]]);
+  // (os pés do assunto quando a pose os dá: no contraplano da comemoração o alvo fica 6 m além do autor)
+  let alvo = projetar(B, pose.pe ? [pose.pe[0], 0, pose.pe[1]] : [pose.para[0], 0, pose.para[2]]);
   if (!(alvo.c > 0 && alvo.x >= 20 && alvo.x < I.w - 20 && alvo.y >= 20 && alvo.y < I.h - 20)) alvo = { x: I.w / 2, y: I.h / 2 };
   const { X, Z } = mapaChao(B), s = [0, 0, 0, 0];
   for (let y = Math.round(alvo.y) - 20; y < Math.round(alvo.y) + 20; y++) for (let x = Math.round(alvo.x) - 20; x < Math.round(alvo.x) + 20; x++) {
@@ -791,27 +860,62 @@ async function medirG(pg, rotulo, cena, campo, P, topo) {
   if (gm && (temGancho = await G(pg, 'semProfundidade', campo, true))) {
     try { gmSem = medirGramado(await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }), P.meio, g3.bordas); g4sem = gmSem.g4; } finally { await G(pg, 'semProfundidade', campo, false); }
   }
+  // a G1 e a G2 no quadro SEM as manchas (o gancho semManchas, quando existir; a revisão do C4–C8: o L da G1 e o ΔL ao longe
+  // da G2 dependiam de onde as manchas caíam perto do foco — uManchas 0 / 0,17 / 0,34 dava L 0,581 / 0,575 / 0,568 e o longe
+  // × 1,00 / 1,07 / 1,14); a G6 desse quadro é o piso da régua (só o termo e o grão: a quadrática tem de tirar o termo)
+  let gm12 = null;
+  if (gm && await G(pg, 'semManchas', campo, true)) {
+    try { gm12 = medirGramado(await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }), P.meio, g3.bordas); } finally { await G(pg, 'semManchas', campo, false); }
+  }
   const Icom = await quadro(pg, cena, campo, P.foco, { so: ['gramado', 'linhas'], semCeu: true }, `${rotulo}-G5-linhas`);
   const Isem = await quadro(pg, cena, campo, P.foco, { so: ['gramado'], semCeu: true });
   const g5 = picoLinha(Icom, Isem);
-  return { g3, gm, g5, g4sem, gmSem, temGancho };
+  return { g3, gm, g5, g4sem, gmSem, temGancho, gm12 };
+}
+
+/**
+ * O TERMO de profundidade pelo MODELO (render/gramado.js e a luz do dia e o ACES do r170 pelo cor-aces; a conta do F6 do
+ * teste-gramado), longe − perto com − sem, nas regiões da G4 (|x| ≤ 12; perto z 8…18, longe z −32…−22), para a câmera da
+ * pose; null sem o gramado.js. A meta da G4 do PC sai daqui (a revisão do C4–C8): a foto (+0,026) é da TV a ~15°, e no PC
+ * (24,6°) o MESMO termo dá outro gradiente — a meta do PC é a do celular × modelo(PC) ÷ modelo(celular).
+ */
+function termoModelo(pose) {
+  const GRn = GR_NODE;
+  if (typeof GRn?.termoProfundidade !== 'function' || typeof GRn?.gFocoDe !== 'function') return null;
+  const D = GRn.GRAMADO_HORAS.dia, ras0 = GRn.valoresGramado('dia').uRasante;
+  const ras = typeof GRn.rasanteDaCamera === 'function' ? GRn.rasanteDaCamera(ras0, pose.de[1]) : ras0;
+  const gf = GRn.gFocoDe(pose.de, sub(pose.para, pose.de));
+  const regiao = (z0, z1, com) => {
+    const acc = [0, 0, 0]; let n = 0;
+    for (let x = -12; x <= 12; x += 0.5) for (let z = z0; z <= z1; z += 0.5) for (const alb of [D.clara, D.escura]) {
+      const g = GRn.gProfundidade(...pose.de, x, z);
+      const c = corNaTela(com ? GRn.termoProfundidade(alb, g, gf, ras) : alb);
+      for (let i = 0; i < 3; i++) acc[i] += c[i];
+      n++;
+    }
+    return oklab(acc.map(v => v / n));
+  };
+  const dif = com => regiao(-32, -22, com).L - regiao(8, 18, com).L;
+  return dif(true) - dif(false);
 }
 function metasG(rotulo, chave, M, opc = {}) {
   const { g3, gm, g5 } = M;
   const sec = opc.secao ?? 'G';
+  // G1 e G2 do quadro sem as manchas, quando há o gancho (a revisão do C4–C8)
+  const gc = M.gm12 ?? gm, semMan = M.gm12 ? ', sem as manchas' : '';
   // G1
-  const g1 = gm?.g1;
+  const g1 = gc?.g1;
   if (g1) {
     guarda(`G1.${chave}.L`, g1.L); guarda(`G1.${chave}.C`, g1.C); guarda(`G1.${chave}.h`, g1.h);
-    meta(sec, `G1 cor na faixa do foco (${rotulo})`, `L ${f(g1.L)} C ${f(g1.C)} h ${f(g1.h, 1)}° (clara L ${f(g1.claro.L)} · escura L ${f(g1.escuro.L)})`, 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°',
+    meta(sec, `G1 cor na faixa do foco (${rotulo}${semMan})`, `L ${f(g1.L)} C ${f(g1.C)} h ${f(g1.h, 1)}° (clara L ${f(g1.claro.L)} · escura L ${f(g1.escuro.L)})`, 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°',
       opc.semG1 ? null : Math.abs(g1.L - 0.58) <= 0.02 && Math.abs(g1.C - 0.10) <= 0.01 && Math.abs(difMatiz(g1.h, 124)) <= 3, opc.semG1 ? 'info' : 'meta');
   } else meta(sec, `G1 cor na faixa do foco (${rotulo})`, 'não medido (faixas não achadas)', 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°', false, opc.semG1 ? 'info' : 'meta');
   // G2
-  const g2 = gm?.g2;
+  const g2 = gc?.g2;
   if (g2) {
     guarda(`G2.${chave}.foco`, g2.foco.dL); guarda(`G2.${chave}.longe`, g2.longe.dL);
     const raz = g2.longe.dL / g2.foco.dL;
-    meta(sec, `G2 ΔL das faixas (${rotulo})`, `perto do foco ${f(g2.foco.dL)} (${g2.foco.pares} pares) · ao longe ${f(g2.longe.dL)} (× ${f(raz, 2)})`, '0,056 ± 0,008; ao longe ≥ 0,6×',
+    meta(sec, `G2 ΔL das faixas (${rotulo}${semMan})`, `perto do foco ${f(g2.foco.dL)} (${g2.foco.pares} pares) · ao longe ${f(g2.longe.dL)} (× ${f(raz, 2)})`, '0,056 ± 0,008; ao longe ≥ 0,6×',
       Math.abs(g2.foco.dL - 0.056) <= 0.008 && raz >= 0.6);
   } else meta(sec, `G2 ΔL das faixas (${rotulo})`, 'não medido', '0,056 ± 0,008', false);
   // G3
@@ -829,9 +933,11 @@ function metasG(rotulo, chave, M, opc = {}) {
     // sem o gancho a versão não tem o termo: com − sem = 0 (a main reprova a meta por isso)
     const t = s4 ? { dL: g4.dL - s4.dL, dC: g4.dC - s4.dC, dh: g4.dh - s4.dh } : { dL: 0, dC: 0, dh: 0 };
     guarda(`G4t.${chave}.dL`, t.dL); guarda(`G4t.${chave}.dC`, t.dC); guarda(`G4t.${chave}.dh`, t.dh);
+    // a meta do ΔL: a da foto (+0,026, a TV do celular a ~15°) ou, no PC, a do celular × o modelo do ângulo (opc.alvoG4)
+    const alvo = opc.alvoG4?.v ?? 0.026;
     meta(sec, `G4 o termo de profundidade, longe − perto com − sem o termo (${rotulo})`,
-      `ΔL ${f(t.dL, 4)} · ΔC ${f(t.dC, 4)} · Δh ${f(t.dh, 2)}°${s4 ? '' : ' (sem o gancho semProfundidade: a versão não tem o termo, 0)'}`, 'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°',
-      Math.abs(t.dL - 0.026) <= 0.008 && t.dC <= 0 && Math.abs(t.dh) <= 2);
+      `ΔL ${f(t.dL, 4)} · ΔC ${f(t.dC, 4)} · Δh ${f(t.dh, 2)}°${s4 ? '' : ' (sem o gancho semProfundidade: a versão não tem o termo, 0)'}${opc.alvoG4 ? ` · ${opc.alvoG4.txt}` : ''}`,
+      `ΔL +${f(alvo, 3)} ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°`, Math.abs(t.dL - alvo) <= 0.008 && t.dC <= 0 && Math.abs(t.dh) <= 2);
   }
   // G5
   guarda(`G5.${chave}.p95`, g5.p95);
@@ -854,16 +960,23 @@ async function secaoA(pg, rotulo, chave, cena1, cena0, campo, P, buildAA, opc = 
     const M1 = temFisico ? await quadro(pg, cena1, campo, P[cn], { fisico: true }) : I1;
     const M0 = temFisico ? await quadro(pg, cena0, campo, P[cn], { fisico: true }) : I0;
     const r = serrilhado(I1, I0, S, M1, M0);
-    const Eb = buildAA ? r.E1 : r.E0, raz = Eb / r.E0;
+    const Eb = buildAA ? r.E1 : r.E0, raz = Eb / r.E0, En = Eb / r.C;
     guarda(`A.${chave}.${cn}.Ebuild`, Eb); guarda(`A.${chave}.${cn}.Esem`, r.E0); guarda(`A.${chave}.${cn}.Emsaa`, r.E1); guarda(`A.${chave}.${cn}.razao`, raz); guarda(`A.${chave}.${cn}.mascara`, r.mascara);
-    out[cn] = { ...r, Eb, raz };
+    guarda(`A.${chave}.${cn}.contraste`, r.C); guarda(`A.${chave}.${cn}.Enorm`, En);
+    out[cn] = { ...r, Eb, raz, En };
     const nomeCam = cn === 'foco' ? 'gol no foco' : 'gol de lá';
-    const base = `E build ${f(Eb, 4)} · sem AA ${f(r.E0, 4)} · MSAA forçado ${f(r.E1, 4)} (× ${f(r.E1 / r.E0, 2)}) · máscara ${pct(r.mascara, 2)} · build ${buildAA ? 'com' : 'sem'} MSAA`;
+    const base = `E build ${f(Eb, 4)} · sem AA ${f(r.E0, 4)} · MSAA forçado ${f(r.E1, 4)} (× ${f(r.E1 / r.E0, 2)}) · máscara ${pct(r.mascara, 2)} · contraste ${f(r.C, 4)} · build ${buildAA ? 'com' : 'sem'} MSAA`;
     if (opc.nadaPior) {
-      const k = `A.${chave}.${cn}.Ebuild`, ref = REF?.valores?.[k];
+      // a guarda pelo que não depende do contraste das bordas (a revisão do C4–C8: as linhas mais brancas do C7 subiram o E
+      // absoluto em 2–5% sem mudar o antisserrilhado): com MSAA no build (o PC Alta), a razão E_build / E_semAA do mesmo build;
+      // sem (a Baixa), o E ÷ o contraste da referência na máscara. O E absoluto contra a referência fica no texto.
       const tol = 0.10 * tolRef();
-      meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): nada pior que a referência`, `${base}${Number.isFinite(ref) ? ` · ref ${f(ref, 4)}` : ' · sem referência'}`, `E ≤ ref × ${f(1 + tol, 2)}`,
-        Number.isFinite(ref) ? Eb <= ref * (1 + tol) : null, Number.isFinite(ref) ? (opc.tipo ?? 'meta') : 'info');
+      const qual = buildAA ? 'razao' : 'Enorm', v = buildAA ? raz : En, ref = REF?.valores?.[`A.${chave}.${cn}.${qual}`];
+      const refE = REF?.valores?.[`A.${chave}.${cn}.Ebuild`];
+      const nomeV = buildAA ? 'razão E_build / E_semAA' : 'E ÷ contraste';
+      meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): nada pior que a referência, pela ${nomeV}`,
+        `${nomeV} ${f(v, 4)}${Number.isFinite(ref) ? ` · ref ${f(ref, 4)} (× ${f(v / ref, 3)})` : ' · sem referência'} · ${base}${Number.isFinite(refE) ? ` · E absoluto ref ${f(refE, 4)} (× ${f(Eb / refE, 3)})` : ''}`,
+        `${nomeV} ≤ ref × ${f(1 + tol, 2)}`, Number.isFinite(ref) ? v <= ref * (1 + tol) : null, Number.isFinite(ref) ? (opc.tipo ?? 'meta') : 'info');
     } else {
       meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): razão E_build / E_semAA`, `${f(raz, 2)} · ${base}`, opc.alvo ?? '≤ 0,6', opc.alvoFn ? opc.alvoFn(raz) : raz <= 0.6, opc.tipo ?? 'meta');
     }
@@ -939,15 +1052,23 @@ try {
     // ---- G (dia, Média)
     if (so.has('G')) {
       const M = await medirG(pg, 'cel-media-dia', mb, 'cm', P, topo);
-      g1Dia = M.gm?.g1 ?? null;
+      g1Dia = (M.gm12 ?? M.gm)?.g1 ?? null;
       metasG('celular Média, dia', 'media.dia', M);
-      // G6: as manchas no quadro SEM o termo de profundidade quando há o gancho (o termo é uma curva suave em z que o plano de
-      // mínimos quadrados não tira inteira: com ele no quadro a G6 media também a profundidade, 0,0101 → 0,0128 no C7); o
-      // quadro com o termo fica informativo
-      const g6 = (M.gmSem ?? M.gm)?.g6;
-      if (g6) { guarda('G6.media.dia.sigma', g6.sigma); meta('G', `G6 σL das manchas, blocos de 8 m (celular Média, dia${M.gmSem ? ', sem o termo de profundidade' : ''})`, `${f(g6.sigma, 4)} (${g6.blocos} blocos)`, '0,010 ± 0,004', Math.abs(g6.sigma - 0.010) <= 0.004); }
-      else meta('G', 'G6 σL das manchas (celular Média, dia)', 'não medido', '0,010 ± 0,004', false);
-      if (M.gmSem && M.gm?.g6) { guarda('G6.media.dia.sigmaComTermo', M.gm.g6.sigma); meta('G', 'G6 σL em blocos de 8 m com o termo de profundidade no quadro', `${f(M.gm.g6.sigma, 4)} (${M.gm.g6.blocos} blocos)`, 'informativo (as manchas + a curva da profundidade)', null, 'info'); }
+      // G6 (a revisão do C4–C8): a régua NOVA é o quadro como ele sai (com o termo de profundidade) sem uma QUADRÁTICA em x e z
+      // — o termo e o ângulo da vista são curvas suaves em z, e uma foto real também as tem: só assim o número se compara com
+      // o de uma foto. A meta 0,010 ± 0,004 é PROVISÓRIA (o ponto de partida; a régua da foto em blocos de 8 m nunca foi refeita
+      // e o C6 calibrou o uManchas contra ela): INFORMATIVA até a régua da foto, e a comparação k 0,10 × 0,17 vai ao dono
+      // (PLANO-GRAFICOS.md §4 e §7). O piso da régua (o quadro sem as manchas: só o termo e o grão) mostra que a quadrática
+      // tira o termo; a régua do C6 (o quadro sem o termo, sem um plano) fica ao lado
+      const g6 = M.gm?.g6;
+      if (g6) {
+        guarda('G6.media.dia.sigmaQ', g6.sigmaQ);
+        comoInfo(() => meta('G', 'G6 σL das manchas, blocos de 8 m, sem uma quadrática em x e z (a régua nova; o quadro com o termo)', `${f(g6.sigmaQ, 4)} (${g6.blocos} blocos)`,
+          '0,010 ± 0,004 PROVISÓRIA (a régua da foto não foi refeita: informativa)', Math.abs(g6.sigmaQ - 0.010) <= 0.004));
+      } else meta('G', 'G6 σL das manchas (celular Média, dia)', 'não medido', '0,010 ± 0,004 provisória', null, 'info');
+      if (M.gm12?.g6) { guarda('G6.media.dia.pisoQ', M.gm12.g6.sigmaQ); meta('G', 'G6 o piso da régua nova: o quadro sem as manchas (o termo e o grão), sem a quadrática', `${f(M.gm12.g6.sigmaQ, 4)} (${M.gm12.g6.blocos} blocos)`, 'informativo (o grão e o resto do termo depois da quadrática: em quadratura com as manchas, ~2% do σ)', null, 'info'); }
+      const g6c6 = (M.gmSem ?? M.gm)?.g6;
+      if (g6c6) { guarda('G6.media.dia.sigma', g6c6.sigma); meta('G', `G6 a régua do C6: sem um plano${M.gmSem ? ', o quadro sem o termo' : ''}`, `${f(g6c6.sigma, 4)} (${g6c6.blocos} blocos)`, 'informativo (a régua com que o C6 calibrou o uManchas)', null, 'info'); }
       // G7: a classe medida de cada faixa contra o gramado.js faixaEm
       if (M.gm && (info.faixaEm || typeof GR_NODE?.faixaEm === 'function')) {
         const xs = [];
@@ -1074,12 +1195,12 @@ try {
       // Δh (noite − dia) contra o que o cor-aces PREVÊ para o albedo em uso (item 7 da revisão: com a referência ± 2°, as cores
       // do C6 caíam no limite — a luz fria gira mais um verde mais amarelo, 3,3° → 5,3°): o albedo de cada classe sai do dia
       // medido pela inversa exata do ACES e da luz do dia, e vai à luz da noite com o poço do foco
-      const hNoite = Mn.gm?.g1?.h;
+      const g1n = (Mn.gm12 ?? Mn.gm)?.g1, hNoite = g1n?.h;
       if (g1Dia && Number.isFinite(hNoite)) {
         const dh = difMatiz(hNoite, g1Dia.h), pr = preverNoite(g1Dia), dhPrev = difMatiz(pr.h, g1Dia.h);
         guarda('N.media.dhNoiteDia', dh); guarda('N.media.dhPrevisto', dhPrev);
         const ref = REF?.valores?.['N.media.dhNoiteDia'];
-        meta('N', 'Δh (noite − dia), celular Média, contra a previsão do cor-aces', `${f(dh, 2)}° · previsto ${f(dhPrev, 2)}° (noite prevista L ${f(pr.L)} C ${f(pr.C)} h ${f(pr.h, 1)}° · medida L ${f(Mn.gm.g1.L)} C ${f(Mn.gm.g1.C)} h ${f(hNoite, 1)}°)${Number.isFinite(ref) ? ` · ref ${f(ref, 2)}°` : ''}`,
+        meta('N', 'Δh (noite − dia), celular Média, contra a previsão do cor-aces', `${f(dh, 2)}° · previsto ${f(dhPrev, 2)}° (noite prevista L ${f(pr.L)} C ${f(pr.C)} h ${f(pr.h, 1)}° · medida L ${f(g1n.L)} C ${f(g1n.C)} h ${f(hNoite, 1)}°)${Number.isFinite(ref) ? ` · ref ${f(ref, 2)}°` : ''}`,
           'o previsto ± 0,5°', Math.abs(dh - dhPrev) <= 0.5);
       } else meta('N', 'Δh (noite − dia), celular Média', 'sem o dia medido (rode com a seção G)', 'o previsto ± 0,5°', null, 'info');
       await secaoA(pg, 'cel-media-noite', 'media.noite', 'm1', 'm0', 'cm', P, build.media.antialias, { secao: 'N' });
@@ -1127,10 +1248,16 @@ if (so.has('N') && !invalido) {
     await G(pg, 'novoCampo', 'ca', { q: 'alta', cena: 'a1' });
     const ab = bAlta.antialias ? 'a1' : 'a0';
     const asp = info.w / info.h, P = posesTV(asp, false), topo = posesTopo(asp);
+    // a meta da G4 no PC (a revisão do C4–C8): a da foto é da TV a ~15° (a do celular); a 24,6° o MESMO termo dá outro
+    // gradiente — a meta do celular × modelo(PC) ÷ modelo(celular), o modelo pela conta do F6 do teste-gramado
+    const mPC = termoModelo(P.meio), mCel = termoModelo(posesTV(CEL.w / CEL.h, true).meio);
+    const alvoG4 = Number.isFinite(mPC) && Number.isFinite(mCel) && mCel > 0
+      ? { v: 0.026 * mPC / mCel, txt: `a meta do celular × o modelo do ângulo (PC ${f(mPC, 4)} ÷ celular ${f(mCel, 4)} = × ${f(mPC / mCel, 2)})` } : null;
+    if (alvoG4) guarda('G4.alta.alvo', alvoG4.v);
     for (const hora of ['dia', 'noite']) {
       if (hora === 'noite') for (const c of ['a1', 'a0']) await G(pg, 'hora', c, 'ca', 'noite');
       const M = await medirG(pg, `pc-alta-${hora}`, ab, 'ca', P, topo);
-      metasG(`PC Alta, ${hora}`, `alta.${hora}`, M, { secao: 'N', semG1: hora === 'noite', linhaSo97: hora === 'noite' });
+      metasG(`PC Alta, ${hora}`, `alta.${hora}`, M, { secao: 'N', semG1: hora === 'noite', linhaSo97: hora === 'noite', alvoG4 });
       await secaoA(pg, `pc-alta-${hora}`, `alta.${hora}`, 'a1', 'a0', 'ca', P, bAlta.antialias, { secao: 'N', nadaPior: true });
     }
     for (const e of pc.erros.splice(0)) if (!/status of 404/.test(e)) errosConsole.push(e);
