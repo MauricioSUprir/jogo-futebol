@@ -4,7 +4,8 @@
 // - a luz Lambert do three r170: radiância = albedo × E/π, com E = Σ max(N·d, 0)·cor·intensidade (as direcionais) +
 //   mix(chão, céu, 0,5·N·cima + 0,5)·intensidade (o hemisfério); BRDF_Lambert = albedo/π (`common`), sem o π antigo (r155+).
 //   As luzes do dia e da noite são CÓPIAS do `HORAS` de `js/render/cena.js` e o poço de luz da noite é a cópia do
-//   `LUZ_NOITE_GLSL` de `js/render/campo.js` (o `--auto` confere as duas pelo texto dos arquivos);
+//   `LUZ_NOITE_GLSL` de `js/render/gramado-shader.js` (antes da revisão do C4–C8, do `campo.js`; o `--auto` confere as duas
+//   pelo texto dos arquivos);
 // - os tons do r170 (`tonemapping_pars_fragment`), na MESMA ordem das contas do shader: ACES (o ajuste do Hill, com o ×1/0,6
 //   do PR #19696), AgX (o do Filament #7236, PRs #27366 e #27413) e o Khronos PBR Neutral (PR #27668);
 // - a inversa EXATA do ACES do r170 (por canal, a raiz não negativa da quadrática do RRTAndODTFit, na forma estável): o
@@ -208,7 +209,7 @@ export function luzLambert(normal = [0, 1, 0], hora = 'dia') {
 /** E/π no chão (normal para cima). */
 export const luzChao = (hora = 'dia') => luzLambert([0, 1, 0], hora);
 
-/** Cópia do `luzNoite` (o poço de luz da noite no gramado e no entorno) do `LUZ_NOITE_GLSL` de `js/render/campo.js`. */
+/** Cópia do `luzNoite` (o poço de luz da noite no gramado e no entorno) do `LUZ_NOITE_GLSL` de `js/render/gramado-shader.js`. */
 export function pocoNoite(x, z) {
   const qx = x / 62.0, qz = z / 41.0;
   const r2 = qx * qx * 0.75 + qz * qz;
@@ -354,7 +355,7 @@ function autoTeste() {
   const En = luzChao('noite');
   conferir(En.every(x => x > 0) && En[2] / En[0] > E[2] / E[0], `E/π da noite no chão: ${En.map(x => x.toFixed(4)).join(' ')} (mais azul que a do dia)`);
 
-  // 5. As cópias conferidas pelo texto: o HORAS do cena.js e o luzNoite do campo.js
+  // 5. As cópias conferidas pelo texto: o HORAS do cena.js e o luzNoite do gramado-shader.js (numa versão sem ele, o do campo.js)
   const ler = arq => { try { return fs.readFileSync(path.join(GOLACO, ...arq), 'utf8'); } catch { falhas.push(`não li ${arq.join('/')}`); return ''; } };
   const cena = ler(['js', 'render', 'cena.js']);
   for (const [hora, H] of Object.entries(LUZES)) {
@@ -370,9 +371,10 @@ function autoTeste() {
   conferir(cena.includes(`extra.color.setHex(0x${COR_EXTRA.toString(16)})`), 'cena.js: a cor da luz extra');
   conferir(cena.includes('THREE.ACESFilmicToneMapping'), 'cena.js: o tom é o ACES');
   conferir(/luz\.position\.copy\(foco\)\.addScaledVector\(dirLuz, \d+\)/.test(cena), 'cena.js: o sol na direção do solDir');
-  const campo = ler(['js', 'render', 'campo.js']);
+  const arqLuz = fs.existsSync(path.join(GOLACO, 'js', 'render', 'gramado-shader.js')) ? 'gramado-shader.js' : 'campo.js';
+  const campo = ler(['js', 'render', arqLuz]);
   conferir(campo.includes('vec2 q = vec2(p.x / 62.0, p.y / 41.0);') && campo.includes('float r2 = q.x * q.x * 0.75 + q.y * q.y;')
-    && campo.includes('return mix(1.04, 0.5, smoothstep(0.3, 1.35, r2));'), 'campo.js: o luzNoite igual à cópia');
+    && campo.includes('return mix(1.04, 0.5, smoothstep(0.3, 1.35, r2));'), `${arqLuz}: o luzNoite igual à cópia`);
 
   // 6. As fórmulas do r170 conferidas no three do cache do CDN (o mesmo que a página baixa), quando ele está aqui
   const three = path.join(GOLACO, 'tools', '.cache-cdn', 'https___cdn.jsdelivr.net_npm_three_0.170.0_build_three.module.min.js');

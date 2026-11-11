@@ -20,6 +20,9 @@
 //      dessaturação a guarda) e o brilho fica em ±8%; o modelo (luz e ACES do r170) na TV do celular nas metas da G4; o termo
 //      apagado pela altura da câmera (rasanteDaCamera) e, pelo modelo, o chão aos pés do assunto nas câmeras baixas das cenas
 //      (comemoração, câmera do gol, pré-jogo, cartão) igual ao sem termo (a G4b; a revisão do C4–C8).
+//   G) o shader MONTADO (render/gramado-shader.js, os textos que o campo injeta no shader do three): as derivadas explícitas e
+//      implícitas antes do 1º desvio de cada bloco e nenhuma nas funções; o `?gfx=antigo` com o texto e a chave da main (hash
+//      gravado); as chaves do cache distintas; a troca que não acha o trecho avisa (a revisão do C4–C8).
 // A GPU de verdade fica para a G7 do teste-graficos-celular (a classe da faixa lida no pixel = faixaEm, depois que o C6 liga o
 // shader); conferido à parte no C4: o GRAMADO_GLSL compila no Chromium 141 do CI (SwiftShader) e, em 4096 x, dá o índice
 // igual e a distância à borda a ≤ 4,2 µm do JS — o mesmo que a emulação em float32 da D6.
@@ -643,6 +646,79 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
           `0 · 0 · 0 · ${fmt(ras / 2, 3)} · ${fmt(ras, 2)} … ; câmeras: |com − sem| ≤ 0,005 (≥ 10 câmeras)`, okF && casosB.length >= 10 && Math.abs(piorB.dL) <= 0.005);
       }
     }
+  }
+}
+
+// ------------------------------------------------------------------ G) o shader MONTADO (render/gramado-shader.js; a revisão do C4–C8)
+// O D2 só lê as linhas do glslTopoGramado; o bloco que o campo injeta no shader do three é conferido aqui, sobre um molde fixo
+// com os #include que as trocas procuram (o texto do three r170 não chega ao CI): G1 as derivadas — explícitas (fwidth, dFdx,
+// dFdy) e implícitas (a leitura de textura com mip: texture2D/texture sem Lod/Grad) — antes do 1º desvio (if, ?:, discard,
+// for, while, return) de cada bloco do main(), e nenhuma nas funções do #include <common> (a lição do PR #631: o SwiftShader
+// do CI não acusa derivada em desvio — a mutação com o fwidth dentro de um if passava no teste); G2 o `?gfx=antigo` (o gramado,
+// o chão de fora e as linhas) com o texto e a chave da main, pelo hash gravado da main e41aa791 (o sha256 do JSON {v, f,
+// chave}: o LUZ_NOITE_GLSL, o comDetalhe e o onBeforeCompile das linhas do campo.js da main extraídos do texto e rodados sobre
+// o MESMO molde, uma vez, na revisão do C4–C8); G3 as chaves do cache distintas; G4 a troca que não acha o trecho AVISA.
+{
+  let SH = null, erroSH = null;
+  try { SH = await imp('render/gramado-shader.js'); } catch (e) { erroSH = e; }
+  if (!SH || typeof SH.shaderGramado !== 'function') {
+    reg('G o shader montado (render/gramado-shader.js)', `sem o módulo (${String(erroSH?.message ?? erroSH).slice(0, 80)})`, 'o módulo', false);
+  } else {
+    const crypto = await import('node:crypto');
+    const MOLDE_VERTEX = '#include <common>\nvoid main() {\n#include <begin_vertex>\n#include <project_vertex>\n}\n';
+    const MOLDE_FRAGMENT = '#include <common>\nvoid main() {\n#include <map_fragment>\n#include <alphatest_fragment>\n}\n';
+    const avisos = [];
+    const montar = S => ({ v: SH.aplicarTrocas(MOLDE_VERTEX, S.vertex, 'teste', m => avisos.push(m)), f: SH.aplicarTrocas(MOLDE_FRAGMENT, S.fragment, 'teste', m => avisos.push(m)), chave: S.chave });
+    const hash = o => crypto.createHash('sha256').update(JSON.stringify(o)).digest('hex');
+    const novos = {
+      gramado: SH.shaderGramado(0.85, { faixas: true, profundidade: true }),
+      'chão de fora': SH.shaderGramado(0.6, { profundidade: true }),
+      linhas: SH.shaderLinhas({ branco: true }),
+    };
+    const antigos = { 'gramado 0.85': SH.shaderGramadoAntigo(0.85), 'gramado 0.6': SH.shaderGramadoAntigo(0.6), linhas: SH.shaderLinhas({ branco: false }) };
+    // G1: por bloco inserido no main() (os `para` das trocas fora do #include <common>), a posição da última derivada/leitura e
+    // a do 1º desvio; no #include <common> (funções), nenhuma
+    const RE_DERIV = /\b(fwidth|dFdx|dFdy)\s*\(|\btexture2D\s*\(|\btexture\s*\(/g;
+    const RE_DESVIO = /\bif\s*\(|\?|\bdiscard\b|\bfor\s*\(|\bwhile\s*\(|\breturn\b/;
+    const semComent = t => t.replace(/\/\/[^\n]*/g, '');
+    const g1 = [];
+    let okG1 = true;
+    for (const [nome, S] of Object.entries(novos)) {
+      for (const [de, para] of S.fragment) {
+        const t = semComent(para).replace(/#include <[^>]+>/g, '');
+        const derivs = [...t.matchAll(RE_DERIV)].map(m => m.index);
+        if (de === '#include <common>') {
+          if (derivs.length) okG1 = false;
+          g1.push(`${nome} (funções): ${derivs.length ? `${derivs.length} DERIVADA(S)` : '0 derivadas'}`);
+          continue;
+        }
+        const desvio = t.search(RE_DESVIO);
+        const depois = desvio >= 0 ? derivs.filter(i => i > desvio).length : 0;
+        if (depois) okG1 = false;
+        g1.push(`${nome} (${de.replace('#include ', '')}): ${derivs.length} derivada(s)/leitura(s), ${desvio >= 0 ? `${depois} depois do 1º desvio` : 'sem desvio'}`);
+      }
+    }
+    // o bloco do gramado tem a pegada uma vez só (a revisão do C4–C8: o fwidth(vMundoXZ.x) saía duas vezes)
+    const fwGramado = (semComent(novos.gramado.fragment.find(([de]) => de === '#include <map_fragment>')[1]).match(/\bfwidth\s*\(/g) ?? []).length;
+    reg('G1 o shader montado: as derivadas (fwidth/dFdx/dFdy e a leitura de textura com mip) antes do 1º desvio de cada bloco; nenhuma nas funções; a pegada do gramado uma vez',
+      `${g1.join(' · ')} · fwidth no bloco do gramado: ${fwGramado}`, 'nenhuma depois de desvio; 0 nas funções; 1 fwidth', okG1 && fwGramado === 1);
+    // G2: o ?gfx=antigo = a main
+    const HASH_MAIN = {
+      'gramado 0.85': '7367c5599508e2361f555e81928e41ec5979ecabe886db49c2a376fcaf5f968a',
+      'gramado 0.6': '63975db940bb45c3f057b05dfdf7214a5a60e3ba255326edbf1e40dd282762c0',
+      linhas: 'fd0cfb0fd426c2f79766cae5e7c5c6050abf315ef8e1cf0efeaafb3c5cd9fdec',
+    };
+    const g2 = Object.entries(antigos).map(([nome, S]) => ({ nome, ok: hash(montar(S)) === HASH_MAIN[nome], chave: S.chave }));
+    reg('G2 o ?gfx=antigo = a main: o texto do shader (vertex e fragment no molde) e a chave do gramado, do chão de fora e das linhas, pelo hash da main e41aa791',
+      g2.map(x => `${x.nome} (${x.chave}) ${x.ok ? 'igual' : 'DIFERENTE'}`).join(' · '), 'os 3 iguais', g2.every(x => x.ok));
+    // G3: as chaves do cache distintas (o three reusaria o programa de outro material com a mesma chave)
+    const chaves = [...Object.values(novos), ...Object.values(antigos)].map(S => S.chave);
+    reg('G3 as chaves do cache distintas (o gramado, o chão de fora e as linhas, novos e antigos)', chaves.join(' · '), `${chaves.length} distintas`, new Set(chaves).size === chaves.length);
+    // G4: nada achado = aviso (nunca um replace calado); com o molde, nenhum aviso
+    const semAviso = avisos.length;
+    const av = [];
+    SH.aplicarTrocas('void main() {}', novos.gramado.fragment, 'teste', m => av.push(m));
+    reg('G4 a troca que não acha o trecho AVISA; no molde com os #include, nenhum aviso', `sem o trecho: ${av.length} aviso(s) de ${novos.gramado.fragment.length} trocas · no molde: ${semAviso}`, `${novos.gramado.fragment.length} · 0`, av.length === novos.gramado.fragment.length && semAviso === 0);
   }
 }
 

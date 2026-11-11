@@ -9,10 +9,8 @@ import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
   GRAMA, texGramadoAntigo, texManchasGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
-import {
-  GRAMADO_GLSL, glslTopoGramado, valoresGramado, GRAMADO_GASTO, GRAMADO_ENTORNO, GRAMADO_HORAS, PROFUNDIDADE_GLSL, gFocoDe,
-  rasanteDaCamera,
-} from './gramado.js';
+import { valoresGramado, GRAMADO_HORAS, gFocoDe, rasanteDaCamera } from './gramado.js';
+import { shaderGramado, shaderGramadoAntigo, shaderLinhas, aplicarTrocas } from './gramado-shader.js';
 import { GRAFICOS } from './graficos-opcoes.js';
 import { imagemEscudo } from './escudo-desenho.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
@@ -38,95 +36,46 @@ const HG = 0.45;
 
 // 0 = dia, 1 = noite (compartilhado pelos materiais do chão): à noite a luz dos refletores
 // forma um "poço" de luz — gramado mais claro no meio e caindo para as bordas e o entorno.
+// (o luzNoite do shader: render/gramado-shader.js LUZ_NOITE_GLSL)
 const uNoite = { value: 0 };
-const LUZ_NOITE_GLSL = `
-  float luzNoite(vec2 p) {
-    vec2 q = vec2(p.x / 62.0, p.y / 41.0);
-    float r2 = q.x * q.x * 0.75 + q.y * q.y;
-    return mix(1.04, 0.5, smoothstep(0.3, 1.35, r2));
-  }`;
-
-/** Troca um trecho do texto de um shader e AVISA no console (erro) quando não acha o trecho: nunca um replace calado. */
-function trocar(texto, de, para, onde) {
-  if (!texto.includes(de)) console.error(`campo: a troca de "${de}" não achou o trecho (${onde}) — o shader saiu sem ela`);
-  return texto.replace(de, para);
-}
-
-const glf = v => (Number.isInteger(v) ? v.toFixed(1) : String(v));
-const glv3 = a => `vec3(${a.map(glf).join(', ')})`;
 
 /**
  * O gramado e o chão de fora de ANTES do item 45 (só o `?gfx=antigo`): o grão (textura de detalhe em coordenadas do mundo,
- * duas escalas) e o poço de luz da noite por cima da cor do material/textura. O MESMO texto de shader e a mesma chave de antes.
+ * duas escalas) e o poço de luz da noite por cima da cor do material/textura. O MESMO texto de shader e a mesma chave da main
+ * (render/gramado-shader.js shaderGramadoAntigo; o teste-gramado confere pelo hash gravado da main).
  */
 function comDetalheAntigo(mat, detalhe, forca) {
+  const S = shaderGramadoAntigo(forca);
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uForca = { value: forca };
     sh.uniforms.uNoite = uNoite;
-    let v = sh.vertexShader, fr = sh.fragmentShader;
-    v = trocar(v, '#include <common>', '#include <common>\nvarying vec2 vMundoXZ;', 'gramado antigo, vertex');
-    v = trocar(v, '#include <project_vertex>', '#include <project_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;', 'gramado antigo, vertex');
-    fr = trocar(fr, '#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nuniform float uNoite;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL, 'gramado antigo, fragment');
-    fr = trocar(fr, '#include <map_fragment>', `#include <map_fragment>
-        {
-          float d1 = texture2D(uDetalhe, vMundoXZ * 0.55).r;
-          float d2 = texture2D(uDetalhe, vMundoXZ * 0.137 + 0.31).r;
-          float d = d1 * d2 * 4.0;
-          diffuseColor.rgb *= mix(1.0, d, uForca);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
-        }`, 'gramado antigo, fragment');
-    sh.vertexShader = v;
-    sh.fragmentShader = fr;
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'gramado antigo, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'gramado antigo, fragment');
   };
-  mat.customProgramCacheKey = () => 'grama-detalhe-' + forca;
+  mat.customProgramCacheKey = () => S.chave;
   return mat;
 }
 
 /**
- * O gramado no shader (item 45, `PLANO-GRAFICOS.md` passo 2): o grão e o poço da noite de antes e, com `faixas`, a cor inteira
- * do gramado pela conta (render/gramado.js) — as 18 faixas da UEFA pelo x do mundo (o filtro de caixa sobre o degrau, as
- * derivadas no TOPO do bloco, fora de qualquer desvio: a lição do PR #631), o desgaste (o G da textura das manchas leva a cor
- * para a do desgaste), as manchas (o R: × (1 + uManchas·(n − 0,5)), só luminância) e o entorno fora das linhas ×0,88
- * (filtrado pela pegada do pixel). Sem `faixas` (o chão de fora), só o grão e a noite por cima da cor do material. Com
- * `profundidade` (o C7, passo 3; no gramado e no chão de fora, o MESMO texto: sem emenda nos cantos), no fim do bloco, a
- * profundidade relativa ao foco (render/gramado.js PROFUNDIDADE_GLSL: o gramado de raspão mais claro e menos saturado, × 1 + p
- * com p = clamp(uRasante·(g − uGFoco), ±0,08)); sem derivada nem desvio. `uniforms`: os do gramado (render/gramado.js
- * valoresGramado; os MESMOS objetos nos dois materiais), que o campo muda na troca da hora e, o uGFoco, por quadro; 0 chamada
- * a mais.
+ * O gramado no shader (item 45, `PLANO-GRAFICOS.md` passos 2 e 3): os textos em render/gramado-shader.js shaderGramado (puro: o
+ * teste-gramado confere o shader montado — as derivadas antes de qualquer desvio, as chaves). `faixas` = a cor inteira do
+ * gramado pela conta (as 18 faixas da UEFA, o desgaste, as manchas, o entorno); sem ela (o chão de fora), só o grão e a noite
+ * por cima da cor do material. `profundidade` = a profundidade relativa ao foco (no gramado e no chão de fora). `uniforms`: os
+ * do gramado (render/gramado.js valoresGramado; os MESMOS objetos nos dois materiais), que o campo muda na troca da hora e, o
+ * uGFoco e o uRasante, por quadro; 0 chamada a mais.
  */
 function comDetalhe(mat, detalhe, forca, { faixas = false, profundidade = false, uniforms = null } = {}) {
+  const S = shaderGramado(forca, { faixas, profundidade });
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uForca = { value: forca };
     sh.uniforms.uNoite = uNoite;
     if (faixas || profundidade) Object.assign(sh.uniforms, uniforms);
-    let v = sh.vertexShader, fr = sh.fragmentShader;
-    v = trocar(v, '#include <common>', '#include <common>\nvarying vec2 vMundoXZ;', 'gramado, vertex');
-    v = trocar(v, '#include <project_vertex>', '#include <project_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;', 'gramado, vertex');
-    fr = trocar(fr, '#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nuniform float uNoite;\nvarying vec2 vMundoXZ;'
-      + LUZ_NOITE_GLSL + (faixas || profundidade ? GRAMADO_GLSL : '') + (profundidade ? PROFUNDIDADE_GLSL : ''), 'gramado, fragment');
-    // as faixas: as derivadas primeiro (fora de qualquer desvio), depois a cor pela conta; o sampledDiffuseColor é a textura
-    // das manchas (R manchas, G desgaste) que o map_fragment do three acabou de ler
-    const cor = faixas ? `
-          vec2 gramadoFw = fwidth(vMundoXZ);
-          ${glslTopoGramado('vMundoXZ.x', 'gramadoFw.x')}
-          float gramadoFora = clamp(max((abs(vMundoXZ.x) - ${glf(CAMPO.meioX)}) / max(gramadoFw.x, 1e-4), (abs(vMundoXZ.y) - ${glf(CAMPO.meioZ)}) / max(gramadoFw.y, 1e-4)) + 0.5, 0.0, 1.0);
-          vec3 gramadoCor = mix(mix(uClara, uEscura, gramadoT), ${glv3(GRAMADO_GASTO)}, sampledDiffuseColor.g);
-          diffuseColor.rgb = gramadoCor * (1.0 + uManchas * (sampledDiffuseColor.r - 0.5)) * mix(1.0, ${glf(GRAMADO_ENTORNO)}, gramadoFora);` : '';
-    fr = trocar(fr, '#include <map_fragment>', `#include <map_fragment>
-        {${cor}
-          float d1 = texture2D(uDetalhe, vMundoXZ * 0.55).r;
-          float d2 = texture2D(uDetalhe, vMundoXZ * 0.137 + 0.31).r;
-          float d = d1 * d2 * 4.0;
-          diffuseColor.rgb *= mix(1.0, d, uForca);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);${profundidade ? `
-          diffuseColor.rgb = gramadoProfundidade(diffuseColor.rgb, gramadoG(cameraPosition, vMundoXZ), uGFoco, uRasante);` : ''}
-        }`, 'gramado, fragment');
-    sh.vertexShader = v;
-    sh.fragmentShader = fr;
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'gramado, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'gramado, fragment');
   };
-  mat.customProgramCacheKey = () => 'grama-detalhe-' + forca + (faixas ? '-faixas' : '') + (profundidade ? '-prof' : '') + '-v2';
+  mat.customProgramCacheKey = () => S.chave;
   return mat;
 }
 
@@ -254,35 +203,16 @@ function criarLinhas(detalhe, uGramado = null) {
     color: 0xf3f6f1, transparent: true, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   });
+  const S = shaderLinhas({ branco: !!uGramado });
   mat.onBeforeCompile = sh => {
     sh.uniforms.uMeia = { value: h };
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uNoite = uNoite;
     if (uGramado) sh.uniforms.uBrancoLinha = uGramado.uBrancoLinha;
-    let v = sh.vertexShader, fr = sh.fragmentShader;
-    v = trocar(v, '#include <common>', '#include <common>\nattribute float aCruz;\nvarying float vCruz;\nvarying vec2 vMundoXZ;', 'linhas, vertex');
-    v = trocar(v, '#include <project_vertex>', '#include <project_vertex>\nvCruz = aCruz;\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;', 'linhas, vertex');
-    fr = trocar(fr, '#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nuniform float uNoite;\nvarying float vCruz;\nvarying vec2 vMundoXZ;'
-      + (uGramado ? '\nuniform float uBrancoLinha;' : '') + LUZ_NOITE_GLSL, 'linhas, fragment');
-    fr = trocar(fr, '#include <alphatest_fragment>', `
-        {
-          // cobertura analítica da linha no pixel; abaixo de ~1,5 px a linha não afina mais,
-          // só fica mais transparente (não some nem pisca à distância)
-          float w = max(fwidth(vCruz), 1e-5);
-          float hw = max(uMeia, 0.75 * w);
-          float cob = clamp((hw - abs(vCruz)) / w + 0.5, 0.0, 1.0) * (uMeia / hw);
-          diffuseColor.a *= cob;
-          if (diffuseColor.a < 0.004) discard;
-          float d = texture2D(uDetalhe, vMundoXZ * 0.55).r * 2.0;
-          diffuseColor.rgb *= mix(1.0, d, 0.35);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);${uGramado ? `
-          diffuseColor.rgb *= uBrancoLinha;` : ''}
-        }
-        #include <alphatest_fragment>`, 'linhas, fragment');
-    sh.vertexShader = v;
-    sh.fragmentShader = fr;
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'linhas, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'linhas, fragment');
   };
-  mat.customProgramCacheKey = () => (uGramado ? 'linhas-aa-branco' : 'linhas-aa');
+  mat.customProgramCacheKey = () => S.chave;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.renderOrder = 1;
