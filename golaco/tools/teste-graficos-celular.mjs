@@ -1,0 +1,1029 @@
+// Gráficos do celular pelos MÓDULOS (item 45, caminho A do plano; `golaco/PLANO-GRAFICOS.md` §4): a régua do gramado, das
+// linhas, dos objetos finos e do serrilhado da geometria do campo, num Chromium com WebGL de verdade (SwiftShader). No molde
+// do teste-rede-tela: a cena e o campo de render/cena.js + render/campo.js numa tela à parte (uma página mínima com o MESMO
+// importmap do index.html), a câmera de TV do celular pelas funções puras de render/enquadramento.js (perfilCamera/poseTV),
+// readPixels no mesmo evaluate do desenho. A conta dos pixels é em Node (tools/lib/cor-aces.mjs: OKLab), com a mesma
+// projeção da câmera do three (lookAt, fov vertical): de cada pixel, o ponto do chão pelo raio até y = 0.
+//
+// O antisserrilhado é FORÇADO nos dois sentidos com o contexto PRÉ-CRIADO (canvas.getContext('webgl2', {antialias}) antes do
+// criarCena: o three r170 pede o contexto pelo getContext e o navegador devolve o que já existe) — vale na main, que não tem
+// ?aa. "O build" é o renderizador que o próprio criarCena cria (sem contexto pré-criado): a seção S diz se ele tem MSAA, e as
+// medidas "do build" usam o contexto forçado igual a ele.
+//
+// Seções (`--so S,A,F,G,D,N`):
+//   S  sonda: um contexto com antialias pedido dá antialias/SAMPLES = true/4 (senão o TESTE É INVÁLIDO: reprova sempre, mesmo
+//      informativo — nunca passa calado). O build: Média true/4; Baixa false/0; ?aa=0 na Média 0; ?aa=1 na Baixa 4;
+//      ?gfx=antigo na Média 0 (cada um numa carga da página com o parâmetro; na main os parâmetros não existem).
+//   A  serrilhado da geometria do campo (o campo inteiro, sem jogadores nem torcida), na câmera com o gol no foco ('foco') e
+//      com o gol de lá ('la'). Máscara GEOMÉTRICA do mesmo build: |MSAA − sem AA| > 0,01 num canal. E = RMS(imagem − SSAA
+//      3×3 reduzido por caixa) só na máscara; razão E_build / E_semAA. Meta: Média ≤ 0,6 (na main a Média é a sem AA: 1).
+//   F  finos (hastes do véu, cordas do pé e do fundo, mastro da bandeirinha), só a malha 'gols' sobre o preto, 8 quadros com a
+//      câmera andando 0,25 px por quadro: em pontos ao longo da projeção de cada peça, a intensidade SOMADA no corte
+//      transversal (±3 px). Buraco = soma < 15% da do SSAA no mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8
+//      quadros. Metas: buracos ≤ 5%; cintilação ≤ 1,5 × a do SSAA; soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa
+//      com MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1).
+//   G  o gramado (só a malha 'gramado'; G5 com as 'linhas'): G1 a cor na faixa do foco (OKLab, a média das duas classes);
+//      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe; G3 as faixas e as bordas
+//      (vista de cima, 2 quadros ortográficos: quantas no campo, a distância de cada borda da UEFA à medida, a linha do meio
+//      separando claro de escuro); G4 longe − perto (L, C, h); G5 o pico da linha (p95 do L dos pixels da linha perto do
+//      foco); G6 o σL das manchas em blocos de 8 m (sem a média da faixa e sem um plano); G7 GPU = JS (a classe lida em cada
+//      faixa = gramado.js faixaEm(x), quando o módulo existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta,
+//      sem dizer qual é clara, casa pela maioria); G4b a profundidade nas outras câmeras (1ª pessoa e lateral baixa
+//      do replay, steadicam, câmera do gol, Jogador e Atrás do Livre, falta e escanteio, aéreo do pré-jogo): o L do gramado
+//      no foco com × sem o termo (o gancho `campo.graficos.semProfundidade(bool)`, quando existir) e o salto no corte TV →
+//      1ª pessoa contra a referência.
+//   D  o grão: E (contra o SSAA) e a cintilação (4 quadros a 0,25 px) por faixa da tela, de perto a longe (informativa).
+//   N  noite (Média: G1–G5 e A), Baixa (G1–G5, A e F) e PC 1280×720 Alta, dia e noite (G1–G5 e A "nada pior").
+//
+// A referência (`--gravar-referencia`) grava em tools/dados/graficos-ref.json (chave "celular"; a do teste-graficos-pagina é
+// outra chave do mesmo arquivo) os valores AGREGADOS — nunca o hash dos pixels — com a versão do Chromium e o renderizador
+// (UNMASKED_RENDERER). As guardas "nada pior" que dependem da rasterização comparam com ela; com versão diferente da gravada
+// ganham +50% de tolerância e avisam. As metas absolutas valem sempre.
+//
+// Informativo por enquanto (até o C14 do plano): imprime as metas e o estado, mas sai 0 (a sonda inválida e um erro no
+// console saem 1 sempre). `--valendo` faz as metas contarem.
+//   node tools/teste-graficos-celular.mjs [--raiz <pasta golaco>] [--so S,A,F,G,D,N] [--gravar-referencia] [--valendo]
+//                                         [--prints <pasta>] [--json <arquivo>]
+import fs from 'node:fs';
+import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { pathToFileURL } from 'node:url';
+import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
+import { oklab, decSrgb, difMatiz } from './lib/cor-aces.mjs';
+
+const T0 = Date.now();
+const args = process.argv.slice(2);
+const tem = n => args.includes(n);
+const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
+const raiz = path.resolve(arg('--raiz', RAIZ));
+const SECOES = ['S', 'A', 'F', 'G', 'D', 'N'];
+const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
+const gravar = tem('--gravar-referencia');
+const valendo = tem('--valendo');
+const pastaPrints = arg('--prints', '') ? path.resolve(arg('--prints', '')) : null;
+const arqJson = arg('--json', '') ? path.resolve(arg('--json', '')) : null;
+if (pastaPrints) fs.mkdirSync(pastaPrints, { recursive: true });
+const ARQ_REF = path.join(RAIZ, 'tools', 'dados', 'graficos-ref.json');
+const CHAVE_REF = 'celular';
+
+// ------------------------------------------------------------------ os módulos puros da versão medida (em Node)
+const doJogo = p => import(pathToFileURL(path.join(raiz, p)).href);
+const { CAMPO, REPLAY } = await doJogo('js/config.js');
+const EQ = await doJogo('js/render/enquadramento.js');
+const { VEU } = await doJogo('js/rede-forma.js');
+let GR_NODE = null;
+if (fs.existsSync(path.join(raiz, 'js', 'render', 'gramado.js'))) { try { GR_NODE = await doJogo('js/render/gramado.js'); } catch (_) { GR_NODE = null; } }
+
+// ------------------------------------------------------------------ resultados
+const res = [];
+const valores = {};
+/** Uma meta: tipo 'meta' (conta com --valendo), 'info' (só mostra), 'estrutura' (conta sempre: o teste valeu). */
+function meta(secao, nome, medido, alvo, ok, tipo = 'meta') { res.push({ secao, nome, medido, alvo, ok: ok === null ? null : !!ok, tipo }); }
+const guarda = (k, v) => { if (Number.isFinite(v)) valores[k] = +v.toFixed(5); return v; };
+const f = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : String(v));
+const pct = (v, d = 1) => (Number.isFinite(v) ? (v * 100).toFixed(d).replace('.', ',') + '%' : String(v));
+const tempos = [];
+let tMarca = Date.now();
+const marcar = nome => { const t = Date.now(); tempos.push(`${nome} ${((t - tMarca) / 1000).toFixed(1)} s`); tMarca = t; };
+
+// a referência gravada (se houver) e as condições desta rodada
+let REF = null;
+try { REF = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8'))[CHAVE_REF] ?? null; } catch (_) { REF = null; }
+const cond = { chromium: '', renderer: '' };
+const tolRef = () => (REF && (REF.chromium !== cond.chromium || REF.renderer !== cond.renderer) ? 1.5 : 1);
+
+// ------------------------------------------------------------------ vetores e a câmera do three (lookAt, fov vertical)
+const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const norm = a => { const l = Math.hypot(...a) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
+
+/** A base da câmera como o Matrix4.lookAt do three: z = de − para, x = up × z, y = z × x. pose = {de, para, fov | orto, up}. */
+function baseCam(pose, W, H) {
+  const ez = norm(sub(pose.de, pose.para)), ex = norm(cross(pose.up ?? [0, 1, 0], ez)), ey = cross(ez, ex);
+  const B = { o: pose.de, ex, ey, ez, W, H };
+  if (pose.orto) { B.orto = true; B.hw = pose.orto.hw; B.hh = pose.orto.hh; } else { B.tanV = Math.tan((pose.fov * Math.PI) / 360); B.asp = W / H; }
+  return B;
+}
+/** Ponto do mundo → pixel (x da esquerda, y de BAIXO, centro do pixel = inteiro) e profundidade c. */
+function projetar(B, p) {
+  const d = sub(p, B.o), c = -dot(d, B.ez);
+  const nx = B.orto ? dot(d, B.ex) / B.hw : dot(d, B.ex) / (c * B.tanV * B.asp);
+  const ny = B.orto ? dot(d, B.ey) / B.hh : dot(d, B.ey) / (c * B.tanV);
+  return { x: ((nx + 1) / 2) * B.W - 0.5, y: ((ny + 1) / 2) * B.H - 0.5, c };
+}
+/** O ponto do chão (y = 0) de cada pixel: Float32Array X e Z (NaN sem chão à frente). */
+function mapaChao(B) {
+  const { W, H } = B, X = new Float32Array(W * H), Z = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) {
+    const v = ((y + 0.5) / H) * 2 - 1;
+    for (let x = 0; x < W; x++) {
+      const u = ((x + 0.5) / W) * 2 - 1, i = y * W + x;
+      let o = B.o, d;
+      if (B.orto) {
+        o = [B.o[0] + u * B.hw * B.ex[0] + v * B.hh * B.ey[0], B.o[1] + u * B.hw * B.ex[1] + v * B.hh * B.ey[1], B.o[2] + u * B.hw * B.ex[2] + v * B.hh * B.ey[2]];
+        d = [-B.ez[0], -B.ez[1], -B.ez[2]];
+      } else {
+        const a = u * B.tanV * B.asp, b = v * B.tanV;
+        d = [-B.ez[0] + a * B.ex[0] + b * B.ey[0], -B.ez[1] + a * B.ex[1] + b * B.ey[1], -B.ez[2] + a * B.ex[2] + b * B.ey[2]];
+      }
+      if (d[1] >= -1e-9) { X[i] = NaN; Z[i] = NaN; continue; }
+      const t = -o[1] / d[1];
+      X[i] = o[0] + t * d[0]; Z[i] = o[2] + t * d[2];
+    }
+  }
+  return { X, Z };
+}
+const desloca = (pose, dx) => ({ ...pose, de: [pose.de[0] + dx, pose.de[1], pose.de[2]], para: [pose.para[0] + dx, pose.para[1], pose.para[2]] });
+
+// ------------------------------------------------------------------ pixels e cor
+const LIN = Float64Array.from({ length: 256 }, (_, i) => decSrgb(i / 255));
+/** Decodifica o que a página devolveu: {px (Uint8 ou Uint16 com a soma de 9), w, h, x, y, div (1 ou 9)}. */
+function decodificar(r) {
+  const buf = Buffer.from(r.dados, 'base64');
+  let px;
+  if (r.tipo === 'u16') { px = new Uint16Array(buf.length / 2); Buffer.from(px.buffer).set(buf); } else { px = new Uint8Array(buf.length); px.set(buf); }
+  return { px, w: r.w, h: r.h, x: r.x, y: r.y, div: r.tipo === 'u16' ? 9 : 1 };
+}
+const linDe = v => (Number.isInteger(v) ? LIN[v] : decSrgb(v / 255));
+/** OKLab da média LINEAR de um acumulador [r, g, b, n]. */
+const labDe = s => (s[3] > 0 ? oklab([s[0] / s[3], s[1] / s[3], s[2] / s[3]]) : null);
+function acumular(s, I, i) { s[0] += linDe(I.px[4 * i] / I.div); s[1] += linDe(I.px[4 * i + 1] / I.div); s[2] += linDe(I.px[4 * i + 2] / I.div); s[3]++; }
+const Lpix = (I, i) => oklab([linDe(I.px[4 * i] / I.div), linDe(I.px[4 * i + 1] / I.div), linDe(I.px[4 * i + 2] / I.div)]).L;
+const media = a => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : NaN);
+const percentil = (a, p) => { if (!a.length) return NaN; const b = Float64Array.from(a).sort(); return b[Math.min(b.length - 1, Math.max(0, Math.floor(p * (b.length - 1) + 0.5)))]; };
+
+// ------------------------------------------------------------------ o que roda na página
+async function instalarPagina() {
+  const THREE = await import('three');
+  const { criarCena } = await import('./js/render/cena.js');
+  const { criarCampo } = await import('./js/render/campo.js');
+  const pega = async p => { try { return await import(p); } catch (_) { return null; } };
+  const CAM = await pega('./js/render/camera.js');
+  const PBP = await pega('./js/render/plano-bola-parada.js');
+  const CL = await pega('./js/render/camera-livre.js');
+  const GR = await pega('./js/render/gramado.js');
+  const ATTR = { alpha: false, depth: true, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' };
+  const cenas = new Map(), campos = new Map();
+  const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+  const infoGl = gl => {
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    return { antialias: gl.getContextAttributes().antialias, samples: gl.getParameter(gl.SAMPLES), W: gl.drawingBufferWidth, H: gl.drawingBufferHeight, renderer: dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER) };
+  };
+  const png = (px, W, H) => {
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const g2 = cv.getContext('2d'), im = g2.createImageData(W, H);
+    for (let y = 0; y < H; y++) im.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+    g2.putImageData(im, 0, 0);
+    return cv.toDataURL('image/png').split(',')[1];
+  };
+  window.__G = {
+    sonda() {
+      const r = {};
+      for (const aa of [true, false]) {
+        const cv = document.createElement('canvas'); cv.width = 64; cv.height = 64;
+        const gl = cv.getContext('webgl2', { ...ATTR, antialias: aa });
+        r[aa ? 'com' : 'sem'] = gl ? { ...infoGl(gl), maxSamples: gl.getParameter(gl.MAX_SAMPLES) } : null;
+        gl?.getExtension('WEBGL_lose_context')?.loseContext();
+      }
+      return r;
+    },
+    /** O renderizador que o próprio build cria para a qualidade q (sem contexto pré-criado). */
+    doBuild(q) {
+      const cv = document.createElement('canvas');
+      const c3 = criarCena({ canvas: cv, qualidade: q, hora: 'dia' });
+      c3.redimensionar(innerWidth, innerHeight);
+      const r = { q, ...infoGl(c3.renderer.getContext()), pr: c3.renderer.getPixelRatio() };
+      c3.renderer.dispose(); c3.renderer.forceContextLoss();
+      return r;
+    },
+    /** Cena com o antisserrilhado forçado (aa true/false: contexto pré-criado). */
+    novaCena(id, { q, hora, aa }) {
+      const cv = document.createElement('canvas');
+      cv.getContext('webgl2', { ...ATTR, antialias: aa });
+      const c3 = criarCena({ canvas: cv, qualidade: q, hora });
+      c3.redimensionar(innerWidth, innerHeight);
+      cenas.set(id, { c3, hora, cam: new THREE.PerspectiveCamera(32, 1, 0.5, 900), orto: new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 600) });
+      return { ...infoGl(c3.renderer.getContext()), pr: c3.renderer.getPixelRatio(), aniso: c3.anisotropia() };
+    },
+    novoCampo(id, { q, cena }) {
+      const campo = criarCampo({ qualidade: q, aniso: cenas.get(cena).c3.anisotropia() });
+      campo.definirHora(cenas.get(cena).hora);
+      campos.set(id, campo);
+      return { filhos: campo.grupo.children.map(o => o.name) };
+    },
+    hora(id, campoId, h) { const C = cenas.get(id); C.hora = h; C.c3.definirHora(h); campos.get(campoId).definirHora(h); },
+    semProfundidade(campoId, v) { const c = campos.get(campoId); if (typeof c?.graficos?.semProfundidade !== 'function') return false; c.graficos.semProfundidade(v); return true; },
+    faixas(xs) {
+      if (typeof GR?.faixaEm !== 'function') return null;
+      return xs.map(x => { const v = GR.faixaEm(x); return v && typeof v === 'object' ? ('claro' in v ? (v.claro ? 1 : 0) : ((v.paridade ?? v.indice ?? 0) & 1) + 2) : typeof v === 'boolean' ? (v ? 1 : 0) : (v & 1) + 2; });
+    },
+    /**
+     * Um quadro: pose {de, para, fov, perto | orto: {hw, hh}, up}; opc {so: nomes visíveis do campo (null = todos), semCeu,
+     * fundo (cor de fundo), escala (1 | 3: SSAA 3×3 reduzido por caixa → soma de 9 em Uint16), rect {x, y, w, h} (no buffer
+     * 1×, y de baixo), png}. readPixels no mesmo evaluate do desenho.
+     */
+    quadro(id, campoId, pose, opc = {}) {
+      const C = cenas.get(id), c3 = C.c3, r = c3.renderer, campo = campos.get(campoId);
+      if (campo.grupo.parent !== c3.cena) c3.cena.add(campo.grupo);
+      const gl = r.getContext();
+      const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+      let cam;
+      if (pose.orto) {
+        cam = C.orto; cam.left = -pose.orto.hw; cam.right = pose.orto.hw; cam.top = pose.orto.hh; cam.bottom = -pose.orto.hh; cam.near = 0.1; cam.far = 600;
+      } else { cam = C.cam; cam.fov = pose.fov; cam.aspect = W / H; cam.near = pose.perto ?? 0.5; cam.far = 900; }
+      cam.up.set(...(pose.up ?? [0, 1, 0]));
+      cam.position.set(...pose.de); cam.lookAt(...pose.para); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
+      c3.acompanhar(pose.para[0], pose.para[2]);
+      campo.atualizar(0, cam, true, true);
+      const vis = campo.grupo.children.map(o => o.visible);
+      if (opc.so) campo.grupo.children.forEach(o => { o.visible = opc.so.includes(o.name); });
+      const ceu = c3.cena.getObjectByName('ceu');
+      if (opc.semCeu) ceu.visible = false;
+      const fundoAntes = new THREE.Color(); r.getClearColor(fundoAntes);
+      if (opc.fundo !== undefined) r.setClearColor(opc.fundo);
+      const k = opc.escala === 3 ? 3 : 1;
+      const pr = r.getPixelRatio(), tam = r.getSize(new THREE.Vector2());
+      if (k === 3) { r.setPixelRatio(1); r.setSize(W * 3, H * 3, false); }
+      c3.desenhar(cam);
+      const R = opc.rect ?? { x: 0, y: 0, w: W, h: H };
+      const px = new Uint8Array(R.w * k * R.h * k * 4);
+      gl.readPixels(R.x * k, R.y * k, R.w * k, R.h * k, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      if (k === 3) { r.setPixelRatio(pr); r.setSize(tam.x, tam.y, false); }
+      campo.grupo.children.forEach((o, i) => { o.visible = vis[i]; });
+      ceu.visible = true;
+      r.setClearColor(fundoAntes);
+      let saida;
+      if (k === 3) {
+        const w = R.w, h = R.h, W3 = w * 3, s = new Uint16Array(w * h * 4);
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const o = 4 * (y * w + x);
+          for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 3; dx++) {
+            const q = 4 * ((y * 3 + dy) * W3 + x * 3 + dx);
+            s[o] += px[q]; s[o + 1] += px[q + 1]; s[o + 2] += px[q + 2]; s[o + 3] += px[q + 3];
+          }
+        }
+        saida = { dados: b64(new Uint8Array(s.buffer)), tipo: 'u16' };
+      } else saida = { dados: b64(px), tipo: 'u8' };
+      return { ...saida, w: R.w, h: R.h, x: R.x, y: R.y, W, H, png: opc.png && k === 1 ? png(px, R.w, R.h) : null };
+    },
+    liberar(id) { const C = cenas.get(id); if (!C) return; C.c3.renderer.dispose(); C.c3.renderer.forceContextLoss(); cenas.delete(id); },
+  };
+  return {
+    consts: {
+      CAMERA_GOL: CAM?.CAMERA_GOL ?? null, CAMERA_BOLA_PARADA: PBP?.CAMERA_BOLA_PARADA ?? null, CAMERA_ESCANTEIO: PBP?.CAMERA_ESCANTEIO ?? null,
+      PERFIS_LIVRE: CL?.PERFIS_LIVRE ?? null,
+    },
+    gramado: !!GR, faixaEm: typeof GR?.faixaEm === 'function', w: innerWidth, h: innerHeight, dpr: devicePixelRatio,
+  };
+}
+
+// ------------------------------------------------------------------ a página mínima (o importmap da versão medida)
+const htmlJogo = fs.readFileSync(path.join(raiz, 'index.html'), 'utf8');
+const importmap = (htmlJogo.match(/<script type="importmap">[\s\S]*?<\/script>/) || [''])[0];
+if (!importmap) { console.error('teste-graficos-celular: sem importmap no index.html da raiz'); process.exit(1); }
+// a mesma meta viewport do jogo (sem ela o Chromium "móvel" põe a página em 980 px e o buffer da Média sai 1470×679)
+const viewport = (htmlJogo.match(/<meta name="viewport"[^>]*>/) || ['<meta name="viewport" content="width=device-width, initial-scale=1">'])[0];
+const HTML = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">${viewport}<link rel="icon" href="data:,"><title>gráficos</title>${importmap}</head><body style="margin:0;background:#000"></body></html>`;
+// 404 que são do próprio teste: os módulos que a versão medida pode não ter (o import opcional)
+const OPCIONAIS = /\/js\/render\/(gramado|graficos-opcoes)\.js(\?|$)/;
+const srv = await servidor(0, raiz);
+
+async function abrirPagina(cfg) {
+  const s = await abrir({ largura: cfg.w, altura: cfg.h, dpr: cfg.dpr, toque: cfg.toque });
+  await s.contexto.route(/\/__graficos\.html(\?|$)/, rota => rota.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: HTML }));
+  s.pagina.setDefaultTimeout(240000);
+  s.outros404 = [];
+  s.pagina.on('response', r => { if (r.status() === 404 && !OPCIONAIS.test(r.url())) s.outros404.push(r.url()); });
+  if (!cond.chromium) cond.chromium = s.navegador.version();
+  s.ir = async (busca = '') => {
+    await s.pagina.goto(`${srv.url}__graficos.html${busca}`, { waitUntil: 'load' });
+    return s.pagina.evaluate(instalarPagina);
+  };
+  return s;
+}
+/** Chama um método do __G na página. */
+const G = (pg, nome, ...a) => pg.evaluate(([n, aa]) => window.__G[n](...aa), [nome, a]);
+async function quadro(pg, cena, campo, pose, opc = {}, nomePrint = null) {
+  const r = await G(pg, 'quadro', cena, campo, pose, { ...opc, png: !!(pastaPrints && nomePrint) });
+  if (r.png && nomePrint) fs.writeFileSync(path.join(pastaPrints, `${nomePrint}.png`), Buffer.from(r.png, 'base64'));
+  return decodificar(r);
+}
+
+// ------------------------------------------------------------------ as poses
+const poses = {};
+function posesTV(asp, pequena) {
+  const p = EQ.perfilCamera({}, 0, asp, pequena);
+  const tv = (fx, fz) => { const o = EQ.poseTV(p, fx, fz, asp, pequena, {}); return { de: [...o.de], para: [...o.para], fov: o.fov }; };
+  return { perfil: p, meio: tv(0, 0), foco: tv(p.limX, 0), la: tv(p.limX, p.limZ1), canto: tv(p.limX, p.limZ0) };
+}
+/** Vista de cima, ortográfica (x da tela = x do mundo; para cima = −z): metade do campo com 3 m de sobra no meio. */
+function posesTopo(asp) {
+  const hw = 30, hh = hw / asp, cz = -34 + hh + 1.2;
+  return [-1, 1].map(s => ({ orto: { hw, hh }, de: [s * 27, 150, cz], para: [s * 27, 0, cz], up: [0, 0, -1] }));
+}
+/** As câmeras da G4b (pelas constantes dos módulos quando a página as deu; senão os valores de hoje). */
+function posesG4b(consts, asp, focoTV) {
+  const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
+  const fovDeH = fh => (2 * Math.atan(Math.tan((fh * Math.PI) / 360) / asp) * 180) / Math.PI;
+  const CG = consts.CAMERA_GOL ?? { recuo: 6.5, lateral: 13, altura: 2.6, olharAlem: 1, olharY: 1.55, fov: 27 };
+  const BP = consts.CAMERA_BOLA_PARADA ?? { atras: 4.6, lado: 1.9, altura: 2.6, alvoY: 0.4, fov: [40, 74] };
+  const ES = consts.CAMERA_ESCANTEIO ?? { atras: 13, lado: 1.2, altura: 8, alvoY: 0.3, fov: [26, 62] };
+  const PL = consts.PERFIS_LIVRE ?? { atras: { recuo: 19, altura: 9.5, adiante: 12, olharY: 0, fov: 42 }, jogador: { recuo: 7.5, altura: 3.9, adiante: 7, olharY: 0.2, fov: 48 } };
+  const LT = REPLAY?.lateral ?? { recuo: 5, altura: 1.6, fora: 3.5, fov: 18 };
+  const P1 = REPLAY?.gol?.primeira ?? REPLAY?.primeira ?? { fovH: 90, arfagemAntes: -18, perto: 0.1 };
+  const ST = { frente: 6.5, lado: 2.4, altura: 1.6, fov: 32 };
+  // 1ª pessoa: o olho a 1,72 m com a arfagem de antes do chute, olhando o MESMO ponto do chão que a TV com o gol no foco
+  // (o corte TV → 1ª pessoa compara o mesmo pedaço de gramado: o salto é só o que muda com a vista, não a troca de faixa)
+  const arf = (Math.abs(P1.arfagemAntes ?? -18) * Math.PI) / 180, dOlho = 1.72 / Math.tan(arf);
+  const olho = [focoTV[0] - dOlho, 1.72, focoTV[2]];
+  const fBP = Array.isArray(BP.fov) ? BP.fov[0] : BP.fov, fES = Array.isArray(ES.fov) ? ES.fov[0] : ES.fov;
+  const orbAng = (50 * Math.PI) / 180;
+  return {
+    'replay-1a-pessoa': { de: olho, para: [focoTV[0], 0, focoTV[2]], fov: fovDeH(P1.fovH ?? 90), perto: P1.perto ?? 0.1 },
+    'replay-lateral': { de: [28 - LT.recuo, LT.altura, MZ + LT.fora], para: [30, 0.4, 10], fov: LT.fov },
+    steadicam: { de: [40 + ST.frente, ST.altura, 20 + ST.lado], para: [40.3, 1.5, 20], fov: ST.fov },
+    'camera-gol': { de: [MX - CG.recuo, CG.altura, CG.lateral], para: [MX + CG.olharAlem, CG.olharY, 0], fov: CG.fov },
+    'livre-jogador': { de: [20 - PL.jogador.recuo, PL.jogador.altura, 5], para: [20 + PL.jogador.adiante, PL.jogador.olharY, 5], fov: PL.jogador.fov },
+    'livre-atras': { de: [20 - PL.atras.recuo, PL.atras.altura, 5], para: [20 + PL.atras.adiante, PL.atras.olharY, 5], fov: PL.atras.fov },
+    falta: { de: [24 - BP.atras, BP.altura, 4 + BP.lado], para: [MX, BP.alvoY, 0], fov: fBP },
+    escanteio: { de: [MX + ES.atras * 0.55, ES.altura, MZ + ES.atras * 0.8], para: [MX - 11, ES.alvoY, 0], fov: fES },
+    'prejogo-aereo': { de: [267 * Math.cos(orbAng), 113, 267 * Math.sin(orbAng)], para: [0, 12, 0], fov: 38 },
+  };
+}
+
+// ------------------------------------------------------------------ as peças finas do gol (cópia da geometria de campo.js criarGols)
+function pecasGol() {
+  const g = CAMPO.gol, R = g.raioPoste, zp = g.largura / 2 + R, yt = g.altura + R, zl = g.largura / 2;
+  const H = VEU?.haste ?? g.veu?.haste ?? 0.45, F = VEU?.fundo ?? g.veu?.fundo ?? 2.8, MX = CAMPO.meioX, MZ = CAMPO.meioZ;
+  const L = [];
+  for (const s of [-1, 1]) {
+    const x = s * MX;
+    for (const t of [-1, 1]) {
+      L.push({ nome: `poste${s}${t}`, tipo: 'grosso', a: [x, 0, t * zp], b: [x, yt + R, t * zp], r: R });
+      L.push({ nome: `haste${s}${t}`, tipo: 'haste', a: [x, yt, t * zp], b: [x + s * H, g.altura + 0.02, t * zl], r: 0.028 });
+      L.push({ nome: `pe${s}${t}`, tipo: 'corda do pé', a: [x + s * R, 0.012, t * zl], b: [x + s * F, 0.012, t * zl], r: 0.012 });
+      L.push({ nome: `mastro${s}${t}`, tipo: 'mastro', a: [x, 0, t * MZ], b: [x, 1.55, t * MZ], r: 0.018 });
+      L.push({ nome: `tampa${s}${t}`, tipo: 'grosso', a: [x, 1.55, t * MZ], b: [x, 1.57, t * MZ], r: 0.022 });
+    }
+    L.push({ nome: `travessao${s}`, tipo: 'grosso', a: [x, yt, -zp - R], b: [x, yt, zp + R], r: R });
+    L.push({ nome: `fundo${s}`, tipo: 'corda do fundo', a: [x + s * F, 0.012, -zl], b: [x + s * F, 0.012, zl], r: 0.014 });
+  }
+  return L;
+}
+const FINOS = ['haste', 'corda do pé', 'corda do fundo', 'mastro'];
+
+// ------------------------------------------------------------------ medidas
+/** Serrilhado (A): {E1, E0, mascara} pela máscara geométrica |MSAA − sem| > 0,01. */
+function serrilhado(I1, I0, S) {
+  let n = 0, s1 = 0, s0 = 0;
+  const N = I1.w * I1.h;
+  for (let i = 0; i < N; i++) {
+    let m = 0;
+    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(I1.px[4 * i + c] - I0.px[4 * i + c]));
+    if (m <= 2.55) continue;
+    n++;
+    for (let c = 0; c < 3; c++) {
+      const ss = S.px[4 * i + c] / 9;
+      s1 += ((I1.px[4 * i + c] - ss) / 255) ** 2; s0 += ((I0.px[4 * i + c] - ss) / 255) ** 2;
+    }
+  }
+  return { E1: Math.sqrt(s1 / Math.max(1, 3 * n)), E0: Math.sqrt(s0 / Math.max(1, 3 * n)), mascara: n / N };
+}
+
+/** Bordas das faixas num perfil L(x) (x crescente): medianas de 1 m de cada lado, máximo local, refino pelo cruzamento. */
+function bordasDoPerfil(xs, Ls) {
+  const n = xs.length, dx = (xs[n - 1] - xs[0]) / (n - 1), w = Math.max(3, Math.round(1 / dx));
+  const med = (a, b) => { const v = []; for (let i = Math.max(0, a); i <= Math.min(n - 1, b); i++) if (Number.isFinite(Ls[i])) v.push(Ls[i]); return v.length ? percentil(v, 0.5) : NaN; };
+  const e = new Float64Array(n).fill(NaN), esq = new Float64Array(n), dir = new Float64Array(n);
+  for (let i = w; i < n - w; i++) { esq[i] = med(i - w, i - 1); dir[i] = med(i + 1, i + w); e[i] = dir[i] - esq[i]; }
+  const abs = Array.from(e).filter(Number.isFinite).map(Math.abs);
+  const contraste = percentil(abs, 0.98);
+  const cand = [];
+  for (let i = w; i < n - w; i++) {
+    const a = Math.abs(e[i]);
+    if (!(a >= 0.45 * contraste)) continue;
+    let max = true;
+    for (let j = i - w; j <= i + w; j++) if (j !== i && Math.abs(e[j]) > a) { max = false; break; }
+    if (max) cand.push(i);
+  }
+  const bordas = [];
+  for (const i of cand) {
+    const alvo = (esq[i] + dir[i]) / 2;
+    let melhor = null;
+    for (let k = i - Math.ceil(w / 2); k < i + Math.ceil(w / 2); k++) {
+      if (k < 0 || k + 1 >= n) continue;
+      const a = Ls[k] - alvo, b = Ls[k + 1] - alvo;
+      if (a * b <= 0 && a !== b) { const x = xs[k] + (a / (a - b)) * (xs[k + 1] - xs[k]); if (!melhor || Math.abs(k - i) < melhor.d) melhor = { x, d: Math.abs(k - i) }; }
+    }
+    const x = melhor ? melhor.x : xs[i];
+    if (bordas.length && x - bordas[bordas.length - 1].x < 2) { if (Math.abs(e[i]) > bordas[bordas.length - 1].e) bordas[bordas.length - 1] = { x, e: Math.abs(e[i]), sobe: e[i] > 0 }; continue; }
+    bordas.push({ x, e: Math.abs(e[i]), sobe: e[i] > 0 });
+  }
+  return { bordas, contraste };
+}
+/** As bordas da UEFA (a partir da linha de fundo: 4 × 5,5 m + 5 faixas iguais até o meio), em x. */
+function bordasUefa() {
+  const MX = CAMPO.meioX, d = [5.5, 11, 16.5, 22], resto = (MX - 22) / 5;
+  for (let k = 1; k < 5; k++) d.push(22 + k * resto);
+  const xs = [0];
+  for (const s of [-1, 1]) for (const v of d) xs.push(s * (MX - v));
+  return xs.sort((a, b) => a - b);
+}
+
+/** G3: o perfil da vista de cima (2 quadros) → as bordas, a contagem e o erro contra a UEFA. */
+function medirFaixas(quadros, topo) {
+  const cols = new Map();
+  quadros.forEach((I, q) => {
+    const B = baseCam(topo[q], I.w, I.h), { X, Z } = mapaChao(B);
+    for (let x = 0; x < I.w; x++) {
+      const xm = X[x]; // a coluna tem o mesmo x
+      if (Math.abs(xm) > 56) continue;
+      // de cada quadro só a parte longe da borda dele: a linha do meio (uma borda) fica inteira no 1º, que vai até x = 3
+      if ((q === 0 && xm > 2) || (q === 1 && xm <= 2)) continue;
+      const s = [0, 0, 0, 0];
+      for (let y = 0; y < I.h; y++) { const i = y * I.w + x, z = Z[i]; if (z >= -31 && z <= -12) acumular(s, I, i); }
+      if (s[3] > 20) cols.set(Math.round(xm * 1000), { x: xm, L: labDe(s).L });
+    }
+  });
+  const v = [...cols.values()].sort((a, b) => a.x - b.x);
+  const xs = v.map(c => c.x), Ls = v.map(c => c.L);
+  const { bordas, contraste } = bordasDoPerfil(xs, Ls);
+  const MX = CAMPO.meioX;
+  const dentro = bordas.filter(b => Math.abs(b.x) < MX - 0.3);
+  const uefa = bordasUefa();
+  const erros = uefa.map(u => { let m = Infinity; for (const b of dentro) m = Math.min(m, Math.abs(b.x - u)); return { u, erro: m }; });
+  const pior = erros.reduce((a, b) => (b.erro > a.erro ? b : a), { erro: -1 });
+  const nivel = (a, b) => { const l = []; for (let i = 0; i < xs.length; i++) if (xs[i] >= a && xs[i] <= b) l.push(Ls[i]); return media(l); };
+  const meioE = nivel(-0.9, -0.25), meioD = nivel(0.25, 0.9);
+  const passo = xs.length > 1 ? (xs[xs.length - 1] - xs[0]) / (xs.length - 1) : NaN;
+  return { bordas: dentro.map(b => b.x), faixas: dentro.length + 1, erros, pior, contraste, meioSepara: Math.abs(meioD - meioE) >= 0.5 * contraste, meioE, meioD, passo };
+}
+
+/** Faixa de cada x pelas bordas medidas: índice e a distância à borda mais perto. */
+function faixaDe(bordas, x) {
+  let lo = 0, hi = bordas.length;
+  while (lo < hi) { const m = (lo + hi) >> 1; if (bordas[m] < x) lo = m + 1; else hi = m; }
+  const d = Math.min(lo < bordas.length ? bordas[lo] - x : Infinity, lo > 0 ? x - bordas[lo - 1] : Infinity);
+  return { k: lo, d };
+}
+/**
+ * G1, G2, G4, G6 (e a classe de cada faixa para a G7) no quadro do 'meio' (só o gramado). perto do foco: |Z| ≤ 8, |X| ≤ 15
+ * (sem o desgaste do círculo central); longe: Z de −34 a −24; G4: perto Z 8–18 × longe Z −32 a −22, |X| ≤ 12.
+ */
+function medirGramado(I, pose, bordas) {
+  const B = baseCam(pose, I.w, I.h), { X, Z } = mapaChao(B);
+  const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
+  const nf = bordas.length + 1;
+  const reg = { foco: [], longe: [], g4perto: [], g4longe: [], todo: [] };
+  for (const k in reg) for (let j = 0; j < nf; j++) reg[k].push([0, 0, 0, 0]);
+  const Lp = new Float32Array(I.w * I.h).fill(NaN), kp = new Int16Array(I.w * I.h).fill(-1);
+  for (let i = 0; i < I.w * I.h; i++) {
+    const x = X[i], z = Z[i];
+    if (!(Math.abs(x) <= MX - 0.3 && Math.abs(z) <= MZ - 0.3)) continue;
+    const { k, d } = faixaDe(bordas, x);
+    if (d < 0.3) continue;
+    const desgaste = Math.abs(x) < 4 && Math.abs(z) < 3.5;
+    if (!desgaste) { acumular(reg.todo[k], I, i); Lp[i] = Lpix(I, i); kp[i] = k; }
+    if (Math.abs(z) <= 8 && Math.abs(x) <= 15 && !desgaste) acumular(reg.foco[k], I, i);
+    if (z >= -34 && z <= -24 && Math.abs(x) <= 30) acumular(reg.longe[k], I, i);
+    if (Math.abs(x) <= 12 && z >= 8 && z <= 18) acumular(reg.g4perto[k], I, i);
+    if (Math.abs(x) <= 12 && z >= -32 && z <= -22) acumular(reg.g4longe[k], I, i);
+  }
+  // a classe de cada faixa (clara = acima da média das vizinhas), pelo campo todo
+  const Ltodo = reg.todo.map(s => (s[3] > 200 ? labDe(s).L : NaN));
+  const classe = Ltodo.map((L, j) => {
+    const viz = [Ltodo[j - 1], Ltodo[j + 1]].filter(Number.isFinite);
+    return Number.isFinite(L) && viz.length ? (L > media(viz) ? 1 : 0) : -1;
+  });
+  const dL = (acc, min) => {
+    const Ls = acc.map(s => (s[3] >= min ? labDe(s).L : NaN)), d = [];
+    for (let j = 0; j + 1 < Ls.length; j++) if (Number.isFinite(Ls[j]) && Number.isFinite(Ls[j + 1])) d.push(Math.abs(Ls[j] - Ls[j + 1]));
+    return { dL: media(d), pares: d.length };
+  };
+  const porClasse = acc => {
+    const s = [[0, 0, 0, 0], [0, 0, 0, 0]];
+    acc.forEach((a, j) => { if (classe[j] >= 0) for (let c = 0; c < 4; c++) s[classe[j]][c] += a[c]; });
+    const o = s.map(labDe);
+    if (!o[0] || !o[1]) return null;
+    const hm = o[0].h + difMatiz(o[1].h, o[0].h) / 2;
+    return { L: (o[0].L + o[1].L) / 2, C: (o[0].C + o[1].C) / 2, h: (hm + 360) % 360, claro: o[1], escuro: o[0] };
+  };
+  const g1 = porClasse(reg.foco);
+  const g2 = { foco: dL(reg.foco, 300), longe: dL(reg.longe, 300) };
+  const p4 = porClasse(reg.g4perto), l4 = porClasse(reg.g4longe);
+  const g4 = p4 && l4 ? { dL: l4.L - p4.L, dC: l4.C - p4.C, dh: difMatiz(l4.h, p4.h), perto: p4, longe: l4 } : null;
+  // G6: σL das manchas em blocos de 8 m, sem a média da faixa e sem um plano (mínimos quadrados em X e Z)
+  const Lfaixa = reg.todo.map(s => (s[3] > 200 ? labDe(s).L : NaN));
+  const blocos = new Map();
+  for (let i = 0; i < Lp.length; i++) {
+    if (!Number.isFinite(Lp[i]) || kp[i] < 0 || !Number.isFinite(Lfaixa[kp[i]])) continue;
+    const bx = Math.floor((X[i] + 56) / 8), bz = Math.floor((Z[i] + 40) / 8), ch = bx * 100 + bz;
+    let b = blocos.get(ch); if (!b) { b = { s: 0, n: 0, sx: 0, sz: 0 }; blocos.set(ch, b); }
+    b.s += Lp[i] - Lfaixa[kp[i]]; b.n++; b.sx += X[i]; b.sz += Z[i];
+  }
+  const bl = [...blocos.values()].filter(b => b.n >= 200).map(b => ({ r: b.s / b.n, x: b.sx / b.n, z: b.sz / b.n, n: b.n }));
+  let g6 = null;
+  if (bl.length >= 6) {
+    // plano r ≈ a + b·x + c·z (normais 3×3)
+    let S = [[0, 0, 0], [0, 0, 0], [0, 0, 0]], y = [0, 0, 0];
+    for (const b of bl) { const v = [1, b.x, b.z]; for (let i = 0; i < 3; i++) { y[i] += v[i] * b.r; for (let j = 0; j < 3; j++) S[i][j] += v[i] * v[j]; } }
+    const det = M => M[0][0] * (M[1][1] * M[2][2] - M[1][2] * M[2][1]) - M[0][1] * (M[1][0] * M[2][2] - M[1][2] * M[2][0]) + M[0][2] * (M[1][0] * M[2][1] - M[1][1] * M[2][0]);
+    const D = det(S), coef = [0, 1, 2].map(k => det(S.map((row, i) => row.map((v, j) => (j === k ? y[i] : v)))) / D);
+    const resid = bl.map(b => b.r - (coef[0] + coef[1] * b.x + coef[2] * b.z));
+    const m = media(resid);
+    g6 = { sigma: Math.sqrt(media(resid.map(r => (r - m) ** 2))), blocos: bl.length };
+  }
+  return { g1, g2, g4, g6, classe, X, Z, kp };
+}
+
+/** G5: o pico da linha (p95 do L dos pixels que a linha clareia em ≥ 0,08) no meio do quadro. */
+function picoLinha(Icom, Isem) {
+  const L = [];
+  const { w, h } = Icom;
+  for (let y = Math.floor(h * 0.2); y < Math.ceil(h * 0.8); y++) for (let x = Math.floor(w * 0.2); x < Math.ceil(w * 0.8); x++) {
+    const i = y * w + x, Lc = Lpix(Icom, i);
+    if (Lc - Lpix(Isem, i) >= 0.08) L.push(Lc);
+  }
+  return { p95: percentil(L, 0.95), n: L.length };
+}
+
+/** G4b: L do gramado (média linear) numa janela de 40 × 40 px em volta do ponto do chão olhado (ou do meio da tela). */
+function Lfoco(I, pose) {
+  const B = baseCam(pose, I.w, I.h);
+  let alvo = projetar(B, [pose.para[0], 0, pose.para[2]]);
+  if (!(alvo.c > 0 && alvo.x >= 20 && alvo.x < I.w - 20 && alvo.y >= 20 && alvo.y < I.h - 20)) alvo = { x: I.w / 2, y: I.h / 2 };
+  const { X, Z } = mapaChao(B), s = [0, 0, 0, 0];
+  for (let y = Math.round(alvo.y) - 20; y < Math.round(alvo.y) + 20; y++) for (let x = Math.round(alvo.x) - 20; x < Math.round(alvo.x) + 20; x++) {
+    if (x < 0 || y < 0 || x >= I.w || y >= I.h) continue;
+    const i = y * I.w + x;
+    if (Math.abs(X[i]) <= 58 && Math.abs(Z[i]) <= 39) acumular(s, I, i);
+  }
+  const o = labDe(s);
+  return o ? { L: o.L, n: s[3] } : { L: NaN, n: 0 };
+}
+
+/** Amostra bilinear do brilho (média dos 3 canais, 0–255) num recorte. */
+function brilho(I, x, y) {
+  const x0 = Math.floor(x), y0 = Math.floor(y), fx = x - x0, fy = y - y0;
+  let s = 0;
+  for (const [dx, dy, wt] of [[0, 0, (1 - fx) * (1 - fy)], [1, 0, fx * (1 - fy)], [0, 1, (1 - fx) * fy], [1, 1, fx * fy]]) {
+    const xx = x0 + dx, yy = y0 + dy;
+    if (xx < 0 || yy < 0 || xx >= I.w || yy >= I.h) continue;
+    const i = 4 * (yy * I.w + xx);
+    s += wt * (I.px[i] + I.px[i + 1] + I.px[i + 2]) / (3 * I.div);
+  }
+  return s;
+}
+const distSeg = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * vx + vy * vy || 1; let t = ((p.x - a.x) * vx + (p.y - a.y) * vy) / l2; t = Math.max(0, Math.min(1, t)); return Math.hypot(p.x - a.x - t * vx, p.y - a.y - t * vy); };
+
+/**
+ * F: os pontos de amostra das peças finas na pose (quadro 0) e o recorte que cobre todos os quadros. Cada ponto guarda a
+ * peça e o t ao longo dela (refeito a cada quadro pela pose deslocada).
+ */
+function prepararFinos(pose, W, H, nq, cRef) {
+  const pecas = pecasGol();
+  const B = baseCam(pose, W, H);
+  const proj = pecas.map(p => ({ ...p, A: projetar(B, p.a), Bp: projetar(B, p.b) }));
+  const dentro = q => q.c > 0.5 && q.x > 4 && q.x < W - 5 && q.y > 4 && q.y < H - 5;
+  const pontos = [];
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of proj) {
+    if (!FINOS.includes(p.tipo) || !dentro(p.A) || !dentro(p.Bp)) continue;
+    const comp = Math.hypot(p.Bp.x - p.A.x, p.Bp.y - p.A.y);
+    const n = Math.max(1, Math.floor((comp * 0.7) / 2));
+    for (let j = 0; j < n; j++) {
+      const t = 0.15 + (0.7 * (j + 0.5)) / n;
+      const pt = { x: p.A.x + t * (p.Bp.x - p.A.x), y: p.A.y + t * (p.Bp.y - p.A.y) };
+      // longe de qualquer outra peça (as grossas e as outras finas) no corte de ±3 px
+      if (proj.some(o => o !== p && o.A.c > 0.5 && o.Bp.c > 0.5 && distSeg(pt, o.A, o.Bp) < 5)) continue;
+      pontos.push({ peca: p, t });
+      x0 = Math.min(x0, pt.x); x1 = Math.max(x1, pt.x); y0 = Math.min(y0, pt.y); y1 = Math.max(y1, pt.y);
+    }
+  }
+  // a câmera anda 0,25 px por quadro na profundidade cRef: o ponto mais perto anda 0,25 × cRef / c
+  const cMin = Math.min(...pontos.map(p => Math.min(projetar(B, p.peca.a).c, projetar(B, p.peca.b).c)));
+  const m = 8 + Math.ceil(0.25 * nq * (cRef / Math.max(1, cMin)));
+  const rect = pontos.length ? { x: Math.max(0, Math.floor(x0 - m)), y: Math.max(0, Math.floor(y0 - m)) } : null;
+  if (rect) { rect.w = Math.min(W, Math.ceil(x1 + m)) - rect.x; rect.h = Math.min(H, Math.ceil(y1 + m)) - rect.y; }
+  return { pontos, rect };
+}
+/** A soma no corte transversal (±3 px, de 1 em 1 px) de cada ponto num quadro (a pose deslocada). */
+function somasFinos(I, pose, W, H, pontos) {
+  const B = baseCam(pose, W, H);
+  return pontos.map(({ peca, t }) => {
+    const A = projetar(B, peca.a), Bp = projetar(B, peca.b);
+    const px = A.x + t * (Bp.x - A.x) - I.x, py = A.y + t * (Bp.y - A.y) - I.y;
+    let nx = -(Bp.y - A.y), ny = Bp.x - A.x; const l = Math.hypot(nx, ny) || 1; nx /= l; ny /= l;
+    let s = 0;
+    for (let k = -3; k <= 3; k++) s += brilho(I, px + k * nx, py + k * ny);
+    return s;
+  });
+}
+/** Buracos, cintilação e soma de um conjunto de quadros contra o SSAA (as listas de somas por quadro). */
+function estatFinos(Sb, Ss, pontos, filtro = null) {
+  let nb = 0, n = 0, sb = 0, ss = 0;
+  const cvB = [], cvS = [];
+  for (let j = 0; j < pontos.length; j++) {
+    if (filtro && pontos[j].peca.tipo !== filtro) continue;
+    const vb = Sb.map(q => q[j]), vs = Ss.map(q => q[j]);
+    const mb = media(vb), ms = media(vs);
+    if (!(ms > 6)) continue;
+    for (let k = 0; k < vb.length; k++) { n++; if (vb[k] < 0.15 * vs[k]) nb++; sb += vb[k]; ss += vs[k]; }
+    cvB.push(mb > 0 ? Math.sqrt(media(vb.map(v => (v - mb) ** 2))) / mb : 1);
+    cvS.push(Math.sqrt(media(vs.map(v => (v - ms) ** 2))) / ms);
+  }
+  return { n, pontos: cvB.length, buracos: n ? nb / n : NaN, cint: media(cvB), cintS: media(cvS), soma: ss ? sb / ss : NaN };
+}
+
+// ------------------------------------------------------------------ as rodadas
+const NQ_F = 8, NQ_D = 4;
+const CEL = { nome: 'cel', w: 844, h: 390, dpr: 2, toque: true };
+const PC = { nome: 'pc', w: 1280, h: 720, dpr: 1, toque: false };
+let invalido = null;
+const errosConsole = [];
+
+/** A seção F numa cena (build) contra a sem AA com SSAA: 2 câmeras, NQ_F quadros. Devolve as estatísticas por câmera. */
+async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null) {
+  const saida = {};
+  for (const cn of ['foco', 'la']) {
+    const pose = P[cn];
+    const B = baseCam(pose, W, H), cRef = projetar(B, [CAMPO.meioX, 1, 0]).c;
+    const dx0 = 0.25 * (2 * cRef * B.tanV * B.asp) / W;
+    const { pontos, rect } = prepararFinos(pose, W, H, NQ_F, cRef);
+    if (!pontos.length) { saida[cn] = null; continue; }
+    const Sb = [], Ss = [], Sx = [];
+    for (let q = 0; q < NQ_F; q++) {
+      const pq = desloca(pose, q * dx0);
+      const opc = { so: ['gols'], semCeu: true, fundo: 0x000000, rect };
+      const Ib = await quadro(pg, cenaBuild, campo, pq, opc, q === 0 ? `${rotulo}-F-${cn}` : null);
+      const Is = await quadro(pg, cenaSem, campo, pq, { ...opc, escala: 3 });
+      Sb.push(somasFinos(Ib, pq, W, H, pontos)); Ss.push(somasFinos(Is, pq, W, H, pontos));
+      if (extra) { const Ix = await quadro(pg, extra, campo, pq, opc); Sx.push(somasFinos(Ix, pq, W, H, pontos)); }
+    }
+    saida[cn] = { geral: estatFinos(Sb, Ss, pontos), porTipo: Object.fromEntries(FINOS.map(t => [t, estatFinos(Sb, Ss, pontos, t)])), extra: extra ? estatFinos(Sx, Ss, pontos) : null };
+  }
+  return saida;
+}
+function metasF(rotulo, F, chave) {
+  for (const cn of ['foco', 'la']) {
+    const r = F[cn];
+    if (!r) { meta('F', `Finos (${rotulo}, ${cn}): sem peça fina no quadro`, '—', 'peças no quadro', false, 'info'); continue; }
+    const g = r.geral;
+    guarda(`F.${chave}.${cn}.buracos`, g.buracos); guarda(`F.${chave}.${cn}.cint`, g.cint); guarda(`F.${chave}.${cn}.cintSSAA`, g.cintS); guarda(`F.${chave}.${cn}.soma`, g.soma);
+    const tipos = FINOS.map(t => r.porTipo[t]).map((e, k) => (e.pontos ? `${FINOS[k]} ${pct(e.buracos, 0)}/${f(e.soma, 2)}` : null)).filter(Boolean).join(' · ');
+    meta('F', `Finos (${rotulo}, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): buracos`, `${pct(g.buracos)} de ${g.n} (${g.pontos} pontos × ${NQ_F} quadros) · por peça (buracos/soma): ${tipos}`, '≤ 5%', g.buracos <= 0.05);
+    meta('F', `Finos (${rotulo}, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): cintilação e soma`, `CV ${f(g.cint)} (SSAA ${f(g.cintS)}, × ${f(g.cint / g.cintS, 2)}) · soma × ${f(g.soma, 2)} do SSAA`,
+      'CV ≤ 1,5 × SSAA · soma 0,7–1,3', g.cint <= 1.5 * g.cintS && g.soma >= 0.7 && g.soma <= 1.3);
+  }
+}
+
+/** G1–G5 (e G6/G7 quando pedido) num conjunto de cena/campo/hora: devolve as medidas. */
+async function medirG(pg, rotulo, cena, campo, P, topo) {
+  const tq = [];
+  for (let k = 0; k < topo.length; k++) tq.push(await quadro(pg, cena, campo, topo[k], { so: ['gramado'], semCeu: true }, `${rotulo}-G3-topo${k}`));
+  const g3 = medirFaixas(tq, topo);
+  const Imeio = await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }, `${rotulo}-G-meio`);
+  const gm = g3.bordas.length >= 8 ? medirGramado(Imeio, P.meio, g3.bordas) : null;
+  const Icom = await quadro(pg, cena, campo, P.foco, { so: ['gramado', 'linhas'], semCeu: true }, `${rotulo}-G5-linhas`);
+  const Isem = await quadro(pg, cena, campo, P.foco, { so: ['gramado'], semCeu: true });
+  const g5 = picoLinha(Icom, Isem);
+  return { g3, gm, g5 };
+}
+function metasG(rotulo, chave, M, opc = {}) {
+  const { g3, gm, g5 } = M;
+  const sec = opc.secao ?? 'G';
+  // G1
+  const g1 = gm?.g1;
+  if (g1) {
+    guarda(`G1.${chave}.L`, g1.L); guarda(`G1.${chave}.C`, g1.C); guarda(`G1.${chave}.h`, g1.h);
+    meta(sec, `G1 cor na faixa do foco (${rotulo})`, `L ${f(g1.L)} C ${f(g1.C)} h ${f(g1.h, 1)}° (clara L ${f(g1.claro.L)} · escura L ${f(g1.escuro.L)})`, 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°',
+      opc.semG1 ? null : Math.abs(g1.L - 0.58) <= 0.02 && Math.abs(g1.C - 0.10) <= 0.01 && Math.abs(difMatiz(g1.h, 124)) <= 3, opc.semG1 ? 'info' : 'meta');
+  } else meta(sec, `G1 cor na faixa do foco (${rotulo})`, 'não medido (faixas não achadas)', 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°', false, opc.semG1 ? 'info' : 'meta');
+  // G2
+  const g2 = gm?.g2;
+  if (g2) {
+    guarda(`G2.${chave}.foco`, g2.foco.dL); guarda(`G2.${chave}.longe`, g2.longe.dL);
+    const raz = g2.longe.dL / g2.foco.dL;
+    meta(sec, `G2 ΔL das faixas (${rotulo})`, `perto do foco ${f(g2.foco.dL)} (${g2.foco.pares} pares) · ao longe ${f(g2.longe.dL)} (× ${f(raz, 2)})`, '0,056 ± 0,008; ao longe ≥ 0,6×',
+      Math.abs(g2.foco.dL - 0.056) <= 0.008 && raz >= 0.6);
+  } else meta(sec, `G2 ΔL das faixas (${rotulo})`, 'não medido', '0,056 ± 0,008', false);
+  // G3
+  guarda(`G3.${chave}.faixas`, g3.faixas); guarda(`G3.${chave}.piorErro`, g3.pior.erro);
+  const tolB = Math.max(0.10, g3.passo || 0);
+  meta(sec, `G3 faixas e bordas (${rotulo})`, `${g3.faixas} faixas no campo · pior borda da UEFA a ${f(g3.pior.erro, 2)} m (x = ${f(g3.pior.u, 2)}) · meio ${g3.meioSepara ? 'separa' : 'NÃO separa'} (${f(g3.meioE)} | ${f(g3.meioD)})`,
+    `18 · ≤ ${f(tolB, 2)} m · separa`, g3.faixas === 18 && g3.pior.erro <= tolB && g3.meioSepara);
+  // G4
+  const g4 = gm?.g4;
+  if (g4 && !opc.semG4) {
+    guarda(`G4.${chave}.dL`, g4.dL); guarda(`G4.${chave}.dC`, g4.dC); guarda(`G4.${chave}.dh`, g4.dh);
+    meta(sec, `G4 longe − perto (${rotulo})`, `ΔL ${f(g4.dL, 4)} · ΔC ${f(g4.dC, 4)} · Δh ${f(g4.dh, 2)}° (perto L ${f(g4.perto.L)}, longe L ${f(g4.longe.L)})`, 'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°',
+      Math.abs(g4.dL - 0.026) <= 0.008 && g4.dC <= 0 && Math.abs(g4.dh) <= 2);
+  }
+  // G5
+  guarda(`G5.${chave}.p95`, g5.p95);
+  meta(sec, `G5 pico da linha (${rotulo})`, `p95 L ${f(g5.p95)} (${g5.n} px da linha)`, opc.linhaSo97 ? '≤ 0,97' : '0,952 ± 0,01 e ≤ 0,97',
+    opc.linhaSo97 ? g5.p95 <= 0.97 : Math.abs(g5.p95 - 0.952) <= 0.01 && g5.p95 <= 0.97);
+}
+
+async function secaoA(pg, rotulo, chave, cena1, cena0, campo, P, buildAA, opc = {}) {
+  const out = {};
+  for (const cn of ['foco', 'la']) {
+    const I1 = await quadro(pg, cena1, campo, P[cn], {}, `${rotulo}-A-${cn}-msaa`);
+    const I0 = await quadro(pg, cena0, campo, P[cn], {}, `${rotulo}-A-${cn}-sem`);
+    const S = await quadro(pg, cena0, campo, P[cn], { escala: 3 });
+    const r = serrilhado(I1, I0, S);
+    const Eb = buildAA ? r.E1 : r.E0, raz = Eb / r.E0;
+    guarda(`A.${chave}.${cn}.Ebuild`, Eb); guarda(`A.${chave}.${cn}.Esem`, r.E0); guarda(`A.${chave}.${cn}.Emsaa`, r.E1); guarda(`A.${chave}.${cn}.razao`, raz); guarda(`A.${chave}.${cn}.mascara`, r.mascara);
+    out[cn] = { ...r, Eb, raz };
+    const nomeCam = cn === 'foco' ? 'gol no foco' : 'gol de lá';
+    const base = `E build ${f(Eb, 4)} · sem AA ${f(r.E0, 4)} · MSAA forçado ${f(r.E1, 4)} (× ${f(r.E1 / r.E0, 2)}) · máscara ${pct(r.mascara, 2)} · build ${buildAA ? 'com' : 'sem'} MSAA`;
+    if (opc.nadaPior) {
+      const k = `A.${chave}.${cn}.Ebuild`, ref = REF?.valores?.[k];
+      const tol = 0.10 * tolRef();
+      meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): nada pior que a referência`, `${base}${Number.isFinite(ref) ? ` · ref ${f(ref, 4)}` : ' · sem referência'}`, `E ≤ ref × ${f(1 + tol, 2)}`,
+        Number.isFinite(ref) ? Eb <= ref * (1 + tol) : null, Number.isFinite(ref) ? (opc.tipo ?? 'meta') : 'info');
+    } else {
+      meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): razão E_build / E_semAA`, `${f(raz, 2)} · ${base}`, opc.alvo ?? '≤ 0,6', opc.alvoFn ? opc.alvoFn(raz) : raz <= 0.6, opc.tipo ?? 'meta');
+    }
+  }
+  return out;
+}
+
+// ================================================================== celular (844×390, dpr 2, toque)
+const sessoes = [];
+try {
+  const cel = await abrirPagina(CEL);
+  sessoes.push(cel);
+  const pg = cel.pagina;
+  const anotarErros = () => { for (const e of cel.erros.splice(0)) if (!/status of 404/.test(e)) errosConsole.push(e); for (const u of cel.outros404.splice(0)) errosConsole.push(`404: ${u}`); };
+
+  // ---- S: o build com os parâmetros (cada um numa carga)
+  const buildPar = {};
+  if (so.has('S')) {
+    for (const [busca, q] of [['?aa=0', 'media'], ['?aa=1', 'baixa'], ['?gfx=antigo', 'media']]) {
+      await cel.ir(busca);
+      buildPar[busca] = await G(pg, 'doBuild', q);
+    }
+  }
+  const info = await cel.ir('');
+  const sonda = await G(pg, 'sonda');
+  cond.renderer = sonda.com?.renderer ?? '';
+  const build = { media: await G(pg, 'doBuild', 'media'), baixa: await G(pg, 'doBuild', 'baixa'), alta: await G(pg, 'doBuild', 'alta') };
+  anotarErros();
+  marcar('carga e sonda');
+  // a sonda vale para o teste inteiro: sem MSAA quando pedido, as medidas com "MSAA forçado" não medem nada
+  const sondaOk = sonda.com && sonda.com.antialias === true && sonda.com.samples === 4 && sonda.sem && sonda.sem.samples === 0;
+  meta('S', 'Sonda: contexto com antialias pedido (SwiftShader)', `com: antialias ${sonda.com?.antialias} SAMPLES ${sonda.com?.samples} (MAX ${sonda.com?.maxSamples}) · sem: SAMPLES ${sonda.sem?.samples} · ${sonda.com?.renderer}`,
+    'true/4 e 0 (senão o teste é INVÁLIDO)', sondaOk, 'estrutura');
+  if (!sondaOk) invalido = 'o SwiftShader não deu SAMPLES 4 com antialias pedido';
+  if (so.has('S')) {
+    const fx = b => `antialias ${b.antialias} SAMPLES ${b.samples} · buffer ${b.W}×${b.H} (pr ${b.pr})`;
+    meta('S', 'Build: Média (844×390 dpr 2)', fx(build.media), 'true/4', build.media.antialias === true && build.media.samples === 4);
+    meta('S', 'Build: Baixa', fx(build.baixa), 'false/0', build.baixa.antialias === false && build.baixa.samples === 0);
+    meta('S', 'Build: Alta (só informação)', fx(build.alta), '—', null, 'info');
+    meta('S', 'Build: ?aa=0 na Média', fx(buildPar['?aa=0']), 'SAMPLES 0', buildPar['?aa=0'].samples === 0);
+    meta('S', 'Build: ?aa=1 na Baixa', fx(buildPar['?aa=1']), 'SAMPLES 4', buildPar['?aa=1'].samples === 4);
+    meta('S', 'Build: ?gfx=antigo na Média', fx(buildPar['?gfx=antigo']), 'SAMPLES 0', buildPar['?gfx=antigo'].samples === 0);
+    guarda('S.media.samples', build.media.samples); guarda('S.baixa.samples', build.baixa.samples);
+  }
+  if (invalido) throw new Error('sonda');
+
+  const asp = info.w / info.h;
+  const P = posesTV(asp, true), topo = posesTopo(asp);
+  const precisaMedia = ['A', 'F', 'G', 'D', 'N'].some(s => so.has(s));
+  if (precisaMedia) {
+    const im1 = await G(pg, 'novaCena', 'm1', { q: 'media', hora: 'dia', aa: true });
+    const im0 = await G(pg, 'novaCena', 'm0', { q: 'media', hora: 'dia', aa: false });
+    await G(pg, 'novoCampo', 'cm', { q: 'media', cena: 'm1' });
+    if (im1.samples !== 4 || im0.samples !== 0 || im1.W !== im0.W) throw new Error(`contextos forçados: ${JSON.stringify([im1, im0])}`);
+    const W = im1.W, H = im1.H;
+    const mb = build.media.antialias ? 'm1' : 'm0';
+    marcar('cenas da Média');
+
+    // ---- G (dia, Média)
+    if (so.has('G')) {
+      const M = await medirG(pg, 'cel-media-dia', mb, 'cm', P, topo);
+      metasG('celular Média, dia', 'media.dia', M);
+      // G6
+      const g6 = M.gm?.g6;
+      if (g6) { guarda('G6.media.dia.sigma', g6.sigma); meta('G', 'G6 σL das manchas, blocos de 8 m (celular Média, dia)', `${f(g6.sigma, 4)} (${g6.blocos} blocos)`, '0,010 ± 0,004', Math.abs(g6.sigma - 0.010) <= 0.004); }
+      else meta('G', 'G6 σL das manchas (celular Média, dia)', 'não medido', '0,010 ± 0,004', false);
+      // G7: a classe medida de cada faixa contra o gramado.js faixaEm
+      if (M.gm && (info.faixaEm || typeof GR_NODE?.faixaEm === 'function')) {
+        const xs = [];
+        for (let x = -5300; x <= 5300; x++) xs.push(x / 100);
+        let par;
+        if (typeof GR_NODE?.faixaEm === 'function') par = xs.map(x => { const v = GR_NODE.faixaEm(x); return v && typeof v === 'object' ? ('claro' in v ? (v.claro ? 1 : 0) : ((v.paridade ?? v.indice ?? 0) & 1) + 2) : typeof v === 'boolean' ? (v ? 1 : 0) : (v & 1) + 2; });
+        else par = await G(pg, 'faixas', xs);
+        const parEm = x => par[Math.max(0, Math.min(par.length - 1, Math.round(x * 100) + 5300))];
+        // por pixel fora da borda (±0,3 m pela própria faixaEm): a classe da faixa medida × a da faixaEm
+        const { X, kp, classe } = M.gm;
+        const conta = new Map();
+        for (let i = 0; i < kp.length; i++) {
+          if (kp[i] < 0 || classe[kp[i]] < 0) continue;
+          const x = X[i], p = parEm(x);
+          if (parEm(x - 0.3) !== p || parEm(x + 0.3) !== p) continue;
+          const ch = `${p}:${classe[kp[i]]}`; conta.set(ch, (conta.get(ch) ?? 0) + 1);
+        }
+        let total = 0, certos = 0;
+        const temClaro = [...conta.keys()].some(k => k.startsWith('0:') || k.startsWith('1:'));
+        if (temClaro) { for (const [k, n] of conta) { total += n; const [p, c] = k.split(':').map(Number); if (p === c) certos += n; } }
+        else {
+          // paridade sem dizer qual é clara: a correspondência pela maioria
+          const a = (conta.get('2:0') ?? 0) + (conta.get('3:1') ?? 0), b = (conta.get('2:1') ?? 0) + (conta.get('3:0') ?? 0);
+          total = a + b; certos = Math.max(a, b);
+        }
+        guarda('G7.media.dia.acerto', total ? certos / total : NaN);
+        meta('G', 'G7 GPU = JS (classe da faixa × gramado.js faixaEm)', `${pct(total ? certos / total : NaN, 2)} de ${total} px${temClaro ? '' : ' (paridade pela maioria)'}`, '100% fora da borda', total > 0 && certos === total);
+      } else meta('G', 'G7 GPU = JS (gramado.js faixaEm)', 'sem gramado.js faixaEm nesta versão', 'estrutural (C4 em diante)', null, 'info');
+
+      // G4b: o L do gramado no foco nas outras câmeras, com × sem o termo de profundidade, e o salto no corte TV → 1ª pessoa
+      const PB = posesG4b(info.consts, asp, P.foco.para);
+      const temGancho = await G(pg, 'semProfundidade', 'cm', false);
+      const linhas = [];
+      let piorDif = 0;
+      for (const [nome, pose] of Object.entries(PB)) {
+        const Ic = await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }, `cel-media-dia-G4b-${nome}`);
+        const Lc = Lfoco(Ic, pose);
+        let Ls = Lc;
+        if (temGancho) { await G(pg, 'semProfundidade', 'cm', true); Ls = Lfoco(await quadro(pg, mb, 'cm', pose, { so: ['gramado'], semCeu: true }), pose); await G(pg, 'semProfundidade', 'cm', false); }
+        guarda(`G4b.media.dia.${nome}.L`, Lc.L);
+        const d = Lc.L - Ls.L; piorDif = Math.max(piorDif, Math.abs(d));
+        linhas.push(`${nome} ${f(Lc.L)}${temGancho ? ` (${d >= 0 ? '+' : ''}${f(d, 4)})` : ''}`);
+      }
+      meta('G', 'G4b L do gramado no foco nas outras câmeras', `${linhas.join(' · ')}${temGancho ? '' : ' · sem o gancho semProfundidade: nada a comparar'}`, 'com − sem o termo ≤ 0,005 em todas',
+        temGancho ? piorDif <= 0.005 : null, temGancho ? 'meta' : 'info');
+      // o corte TV (o gol no foco) → 1ª pessoa: o salto do L no meio da tela
+      const Itv = await quadro(pg, mb, 'cm', P.foco, { so: ['gramado'], semCeu: true });
+      const Ltv = Lfoco(Itv, P.foco).L, L1p = valores['G4b.media.dia.replay-1a-pessoa.L'];
+      const salto = Math.abs(L1p - Ltv);
+      guarda('G4b.media.dia.salto', salto);
+      const refSalto = REF?.valores?.['G4b.media.dia.salto'];
+      meta('G', 'G4b salto do L no corte TV → 1ª pessoa', `${f(salto, 4)} (TV ${f(Ltv)} → 1ª pessoa ${f(L1p)})${Number.isFinite(refSalto) ? ` · ref ${f(refSalto, 4)}` : ' · sem referência'}`, '≤ ref + 0,01',
+        Number.isFinite(refSalto) ? salto <= refSalto + 0.01 : null, Number.isFinite(refSalto) ? 'meta' : 'info');
+      marcar('G (Média, dia)');
+    }
+
+    // ---- A (dia e noite, Média)
+    if (so.has('A')) {
+      await secaoA(pg, 'cel-media-dia', 'media.dia', 'm1', 'm0', 'cm', P, build.media.antialias);
+      marcar('A (Média, dia)');
+    }
+
+    // ---- F (Média)
+    if (so.has('F')) {
+      const F = await secaoF(pg, 'cel-media', mb, 'm0', 'cm', P, W, H, mb === 'm1' ? 'm0' : 'm1');
+      metasF('celular Média', F, 'media');
+      for (const cn of ['foco', 'la']) {
+        const x = F[cn]?.extra;
+        if (x) meta('F', `Finos (celular Média, ${cn === 'foco' ? 'gol no foco' : 'gol de lá'}): o outro contexto (${mb === 'm1' ? 'sem AA' : 'MSAA forçado'})`, `buracos ${pct(x.buracos)} · CV ${f(x.cint)} (SSAA ${f(x.cintS)}) · soma × ${f(x.soma, 2)}`, '—', null, 'info');
+      }
+      marcar('F (Média)');
+    }
+
+    // ---- D (grão, Média, dia): E e cintilação por faixa da tela
+    if (so.has('D')) {
+      const pose = P.meio, B = baseCam(pose, W, H), cRef = projetar(B, [0, 0, 0]).c;
+      const dx0 = 0.25 * (2 * cRef * B.tanV * B.asp) / W;
+      // as faixas da tela pela distância: z de 22 (o pé da tela) a −34 (a lateral de lá), em 5 faixas
+      const ZB = [22, 10, 0, -12, -24, -34], nb = ZB.length - 1, bandas = Array.from({ length: nb }, () => ({ e: 0, n: 0, vb: [], vs: [] }));
+      const { X, Z } = mapaChao(B);
+      const banda = new Int8Array(W * H).fill(-1);
+      for (let i = 0; i < W * H; i++) if (Math.abs(X[i]) <= 50) for (let k = 0; k < nb; k++) if (Z[i] <= ZB[k] && Z[i] > ZB[k + 1]) { banda[i] = k; break; }
+      const quadrosB = [], quadrosS = [];
+      for (let q = 0; q < NQ_D; q++) {
+        const pq = desloca(pose, q * dx0);
+        quadrosB.push(await quadro(pg, mb, 'cm', pq, { so: ['gramado'], semCeu: true }));
+        quadrosS.push(await quadro(pg, 'm0', 'cm', pq, { so: ['gramado'], semCeu: true, escala: 3 }));
+      }
+      // amostra de 1 a cada 3 pixels (a cintilação por pixel nos NQ_D quadros)
+      for (let i = 0; i < W * H; i += 3) {
+        const b = banda[i]; if (b < 0) continue;
+        const vb = quadrosB.map(I => (I.px[4 * i] + I.px[4 * i + 1] + I.px[4 * i + 2]) / 3), vs = quadrosS.map(I => (I.px[4 * i] + I.px[4 * i + 1] + I.px[4 * i + 2]) / 27);
+        for (let k = 0; k < NQ_D; k++) { bandas[b].e += ((vb[k] - vs[k]) / 255) ** 2; bandas[b].n++; }
+        const mb_ = media(vb), ms_ = media(vs);
+        bandas[b].vb.push(Math.sqrt(media(vb.map(v => (v - mb_) ** 2)))); bandas[b].vs.push(Math.sqrt(media(vs.map(v => (v - ms_) ** 2))));
+      }
+      const txt = bandas.map((b, k) => {
+        const E = Math.sqrt(b.e / Math.max(1, b.n)), cb = media(b.vb), cs = media(b.vs);
+        guarda(`D.media.dia.b${k}.E`, E); guarda(`D.media.dia.b${k}.cint`, cb / cs);
+        return `z ${ZB[k]}…${ZB[k + 1]} E ${f(E, 4)} cint × ${f(cb / cs, 2)}`;
+      }).join(' · ');
+      meta('D', 'Grão: E contra o SSAA e cintilação (÷ a do SSAA) por faixa da tela, de perto para longe', txt, 'informativa (só reprova se o filtro do passo 4 entrar)', null, 'info');
+      marcar('D (grão)');
+    }
+
+    // ---- N: noite (Média) e Baixa
+    if (so.has('N')) {
+      // noite, Média: G1–G5 e A
+      for (const c of ['m1', 'm0']) await G(pg, 'hora', c, 'cm', 'noite');
+      const Mn = await medirG(pg, 'cel-media-noite', mb, 'cm', P, topo);
+      metasG('celular Média, noite', 'media.noite', Mn, { secao: 'N', semG1: true, linhaSo97: true });
+      const hDia = valores['G1.media.dia.h'], hNoite = Mn.gm?.g1?.h;
+      if (Number.isFinite(hDia) && Number.isFinite(hNoite)) {
+        const dh = difMatiz(hNoite, hDia); guarda('N.media.dhNoiteDia', dh);
+        const ref = REF?.valores?.['N.media.dhNoiteDia'];
+        meta('N', 'Δh (noite − dia), celular Média', `${f(dh, 2)}°${Number.isFinite(ref) ? ` · ref ${f(ref, 2)}°` : ' · sem referência'}`, 'a da referência ± 2°', Number.isFinite(ref) ? Math.abs(dh - ref) <= 2 : null, Number.isFinite(ref) ? 'meta' : 'info');
+      }
+      await secaoA(pg, 'cel-media-noite', 'media.noite', 'm1', 'm0', 'cm', P, build.media.antialias, { secao: 'N' });
+      for (const c of ['m1', 'm0']) await G(pg, 'hora', c, 'cm', 'dia');
+      marcar('N (Média, noite)');
+    }
+    await G(pg, 'liberar', 'm1'); await G(pg, 'liberar', 'm0');
+
+    if (so.has('N')) {
+      // Baixa: o contexto sem AA (o build) e o com MSAA (a queda: a Baixa no canvas da Média)
+      const ib0 = await G(pg, 'novaCena', 'b0', { q: 'baixa', hora: 'dia', aa: false });
+      await G(pg, 'novaCena', 'b1', { q: 'baixa', hora: 'dia', aa: true });
+      await G(pg, 'novoCampo', 'cb', { q: 'baixa', cena: 'b0' });
+      const bb = build.baixa.antialias ? 'b1' : 'b0';
+      const Wb = ib0.W, Hb = ib0.H;
+      const Mb = await medirG(pg, 'cel-baixa-dia', bb, 'cb', P, topo);
+      metasG('celular Baixa, dia', 'baixa.dia', Mb, { secao: 'N' });
+      // a Baixa sem MSAA: a razão é 1 por construção; o "nada pior" contra a referência fica informativo (plano §4)
+      await secaoA(pg, 'cel-baixa-dia', 'baixa.dia', 'b1', 'b0', 'cb', P, build.baixa.antialias, { secao: 'N', nadaPior: true, tipo: 'info' });
+      const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', P, Wb, Hb, 'b1');
+      metasF('celular Baixa', Fb, 'baixa');
+      // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto
+      const Fq = {};
+      for (const cn of ['foco', 'la']) if (Fb[cn]) Fq[cn] = { geral: Fb[cn].extra, porTipo: Object.fromEntries(FINOS.map(t => [t, { pontos: 0 }])) };
+      metasF('celular Baixa com MSAA (a queda)', Fq, 'baixaMsaa');
+      await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
+      marcar('N (Baixa)');
+    }
+  }
+  anotarErros();
+} catch (e) {
+  if (!invalido) meta('—', 'Rodou (celular)', e.message.split('\n')[0], 'sem erro', false, 'estrutura');
+} finally {
+  for (const s of sessoes.splice(0)) await s.navegador.close();
+}
+
+// ================================================================== PC 1280×720 Alta, dia e noite
+if (so.has('N') && !invalido) {
+  let pc = null;
+  try {
+    pc = await abrirPagina(PC);
+    const pg = pc.pagina;
+    const info = await pc.ir('');
+    const bAlta = await G(pg, 'doBuild', 'alta');
+    await G(pg, 'novaCena', 'a1', { q: 'alta', hora: 'dia', aa: true });
+    await G(pg, 'novaCena', 'a0', { q: 'alta', hora: 'dia', aa: false });
+    await G(pg, 'novoCampo', 'ca', { q: 'alta', cena: 'a1' });
+    const ab = bAlta.antialias ? 'a1' : 'a0';
+    const asp = info.w / info.h, P = posesTV(asp, false), topo = posesTopo(asp);
+    for (const hora of ['dia', 'noite']) {
+      if (hora === 'noite') for (const c of ['a1', 'a0']) await G(pg, 'hora', c, 'ca', 'noite');
+      const M = await medirG(pg, `pc-alta-${hora}`, ab, 'ca', P, topo);
+      metasG(`PC Alta, ${hora}`, `alta.${hora}`, M, { secao: 'N', semG1: hora === 'noite', linhaSo97: hora === 'noite' });
+      await secaoA(pg, `pc-alta-${hora}`, `alta.${hora}`, 'a1', 'a0', 'ca', P, bAlta.antialias, { secao: 'N', nadaPior: true });
+    }
+    for (const e of pc.erros.splice(0)) if (!/status of 404/.test(e)) errosConsole.push(e);
+    for (const u of pc.outros404.splice(0)) errosConsole.push(`404: ${u}`);
+    marcar('N (PC Alta)');
+  } catch (e) {
+    meta('—', 'Rodou (PC)', e.message.split('\n')[0], 'sem erro', false, 'estrutura');
+  } finally {
+    if (pc) await pc.navegador.close();
+  }
+}
+await srv.fechar();
+
+if (errosConsole.length) meta('—', 'Sem erro no console', errosConsole.slice(0, 3).join(' | ').slice(0, 300), 'nenhum', false, 'estrutura');
+
+// ------------------------------------------------------------------ a referência
+if (gravar && !invalido) {
+  let tudo = {};
+  try { tudo = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8')); } catch (_) { tudo = {}; }
+  let commit = '';
+  try { commit = execFileSync('git', ['-C', raiz, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(); } catch (_) { commit = ''; }
+  // com --so parcial, junta com o que já estava gravado (as outras seções ficam)
+  const antes = so.size < SECOES.length ? tudo[CHAVE_REF] : null;
+  const secoes = new Set([...(antes?.secoes ? antes.secoes.split(',') : []), ...so]);
+  tudo[CHAVE_REF] = {
+    gravado: new Date().toISOString().slice(0, 10), commit, secoes: SECOES.filter(x => secoes.has(x)).join(','), chromium: cond.chromium, renderer: cond.renderer,
+    nota: 'valores AGREGADOS do teste-graficos-celular (nunca hash de pixels); as guardas "nada pior" comparam com eles',
+    valores: { ...(antes?.valores ?? {}), ...valores },
+  };
+  fs.mkdirSync(path.dirname(ARQ_REF), { recursive: true });
+  fs.writeFileSync(ARQ_REF, JSON.stringify(tudo, null, 2) + '\n');
+}
+if (arqJson) fs.writeFileSync(arqJson, JSON.stringify({ cond, valores, res }, null, 2) + '\n');
+
+// ------------------------------------------------------------------ a tabela
+const est = m => (m.ok === null ? 'INFO    ' : m.ok ? 'PASSOU  ' : m.tipo === 'estrutura' || valendo ? 'REPROVOU' : 'FORA    ');
+const w0 = Math.max(...res.map(m => m.nome.length)), w1 = Math.min(140, Math.max(...res.map(m => m.medido.length)));
+for (const m of res) console.log(`${est(m)} | ${m.secao.padEnd(1)} | ${m.nome.padEnd(w0)} | ${m.medido.padEnd(w1)} | ${m.alvo}`);
+const fora = res.filter(m => m.ok === false && m.tipo === 'meta').length;
+const estrutura = res.filter(m => m.ok === false && m.tipo === 'estrutura').length;
+console.log(`\nChromium ${cond.chromium} · ${cond.renderer}`);
+if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — VERSÃO DIFERENTE da gravada: as guardas "nada pior" com +50% de tolerância' : ''}`);
+else console.log('referência: nenhuma gravada (as guardas "nada pior" ficam informativas; grave com --gravar-referencia na main)');
+if (gravar && !invalido) console.log(`referência gravada em ${ARQ_REF} (${Object.keys(valores).length} valores)`);
+console.log(`tempos: ${tempos.join(' · ')} · total ${((Date.now() - T0) / 1000).toFixed(0)} s`);
+if (invalido) { console.log(`\nteste-graficos-celular: TESTE INVÁLIDO (${invalido})`); process.exit(1); }
+if (estrutura) { console.log(`\nteste-graficos-celular: REPROVOU (${estrutura} falha(s) de estrutura)`); process.exit(1); }
+if (valendo) { console.log(fora ? `\nteste-graficos-celular: REPROVOU (${fora})` : '\nteste-graficos-celular: PASSOU'); process.exit(fora ? 1 : 0); }
+console.log(`\nteste-graficos-celular: INFORMATIVO (${fora} meta(s) fora; as metas valem com --valendo, a partir do C14)`);
+process.exit(0);
