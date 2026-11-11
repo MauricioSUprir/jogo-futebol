@@ -32,8 +32,9 @@
 //      (informativa): cobertura ÷ SSAA e a cintilação da silhueta em dois quadros com a câmera andando 0,25 px.
 //   P  chamadas e triângulos no quadro fixo da TV ('jogo') = a referência (+0; triângulos ≤ +1%); CPU do quadro (medirQuadro
 //      sem a GPU, CPU 4×, com a demo, como o teste-desempenho-celular) PAREADA: com `--base <pasta golaco>`, a versão medida e
-//      a base abertas juntas e ≥ 5 janelas de 400 quadros de cada, alternadas; meta: a mediana das diferenças por par ≤ +0,2
-//      ms. O "≤ 6 ms" absoluto e o desenho (a parte JS do render) informativos. A CPU NÃO vai à referência (é da máquina).
+//      a base abertas juntas e ≥ 5 janelas de 400 quadros de cada, alternadas; meta: a mediana das diferenças por par ≤ +1,0
+//      ms (a main contra ela mesma chega a +0,7: o efeito é da instância do navegador). O "≤ 6 ms" absoluto e o desenho (a
+//      parte JS do render) informativos. A CPU NÃO vai à referência (é da máquina).
 //   P2 ?perf=1 e ?qps=1 na tela antes do jogo (?prepartida=1): __golaco.perf(); o painel com p95, fase, AA, buffer, GPU e
 //      refresh; visível POR CIMA na tela antes do jogo, na pausa e no replay (a pilha do ponto — elementsFromPoint — com toda
 //      camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada que PINTA ali: sem isso o véu e a marca
@@ -88,6 +89,10 @@ const raiz = path.resolve(arg('--raiz', RAIZ));
 // --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas)
 const raizBase = arg('--base', '') ? path.resolve(arg('--base', '')) : null;
 const JANELAS_CPU = Math.max(5, +arg('--janelas-cpu', 6) || 6);
+// a folga do "nada pior" da CPU pareada: a main contra ela mesma deu +0,10, +0,30, +0,70 e 0,00 ms (4 rodadas de 6 pares, Chromium
+// 141 do CI; uma rodada com os 6 pares ≥ 0 — o efeito é da INSTÂNCIA do navegador, não da janela, e alternar não o tira): o
+// +0,2 ms do plano reprovava o mesmo código em metade das rodadas. Com +1,0 a guarda pega só a piora de ~15% para cima.
+const TOL_CPU = 1.0;
 const SECOES = ['S2', 'A2', 'K', 'P', 'P2', 'P3', 'R', 'Q', 'Z', 'T'];
 const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
 for (const s of so) if (!SECOES.includes(s)) { console.error(`teste-graficos-pagina: seção desconhecida "${s}" (${SECOES.join(', ')})`); process.exit(2); }
@@ -1319,7 +1324,7 @@ try {
  * referência guardava números DESTA máquina e o CI comparava os dele com eles; aqui a base varia 5,4–6,8 ms entre rodadas e
  * 4,5–7,3 entre janelas da mesma rodada). A versão medida e a de base (`--base`) abertas JUNTAS, cada uma com o relógio
  * manual (a outra fica parada: o laço não desenha), e as janelas de 400 quadros ALTERNADAS (medida, base, base, medida, …): a
- * meta é a mediana das diferenças por par ≤ +0,2 ms. Sem `--base`, só a medida, informativa. Nada disso vai à referência.
+ * meta é a mediana das diferenças por par ≤ TOL_CPU. Sem `--base`, só a medida, informativa. Nada disso vai à referência.
  */
 async function medirCpu() {
   const versoes = [{ rot: 'medida', sv: srv }, ...(srvBase ? [{ rot: 'base', sv: srvBase }] : [])];
@@ -1377,8 +1382,8 @@ async function medirCpu() {
     const d = M.p95.map((v, i) => v - B.p95[i]), dm = percentil(d, 0.5);
     medidas['P.cpuP95base'] = med(B); medidas['P.cpuDifPar'] = dm;
     meta('P', 'CPU do quadro: nada pior que a base, PAREADO (a mediana das diferenças por par de janelas)',
-      `${dm >= 0 ? '+' : ''}${f(dm, 2)} ms · medida ${f(med(M), 2)} (${lista(M)}) · base ${f(med(B), 2)} (${lista(B)})`, '≤ +0,2 ms', dm <= 0.2);
-  } else meta('P', 'CPU do quadro: nada pior que a base (pareado)', 'sem --base: não medido', '≤ +0,2 ms (com --base <pasta golaco da base>)', null, 'info');
+      `${dm >= 0 ? '+' : ''}${f(dm, 2)} ms · medida ${f(med(M), 2)} (${lista(M)}) · base ${f(med(B), 2)} (${lista(B)})`, `≤ +${f(TOL_CPU, 1)} ms (o mesmo código varia até +0,7 entre instâncias)`, dm <= TOL_CPU);
+  } else meta('P', 'CPU do quadro: nada pior que a base (pareado)', 'sem --base: não medido', `≤ +${f(TOL_CPU, 1)} ms (com --base <pasta golaco da base>)`, null, 'info');
   meta('P', 'O desenho (a parte JS do render, CPU 4×, 120 quadros)', abertas.map(a => `${a.rot} p95 ${f(a.desenho?.p95, 2)} · méd ${f(a.desenho?.media, 2)} ms`).join(' · '), 'informativo (o ruído não separa versões)', null, 'info');
   marcar('P (CPU pareada)');
 }
