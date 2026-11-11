@@ -304,6 +304,19 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - longe ÷ perto: E × 0,70 e cintilação × 0,32.
 
   O longe NÃO passa do perto. Se o gramado do C6 não mudar isso, o C8 fica "medido, sem filtro".
+- **Medido no C8 (o gramado do C6 com o termo do C7; Chromium 141 do CI, a main na mesma rodada): sem filtro.**
+
+  | Média, dia (o build: MSAA 4×) | main | C8 |
+  |---|---|---|
+  | E perto (z 22…10) → longe (z −24…−34) | 0,0033 → 0,0020 | 0,0033 → 0,0020 |
+  | cintilação ÷ a do SSAA do mesmo LOD, por faixa | ×1,30–1,33 | ×1,33–1,36 |
+  | longe ÷ perto do foco: E / cintilação | ×0,70 / ×0,32 | ×0,68 / ×0,29 |
+  | Baixa (medida à parte, a seção D com a cena da Baixa): longe ÷ perto, E / cintilação | ×0,69 / ×0,34 | ×0,72 / ×0,29 |
+
+  - O longe continua abaixo do perto nas duas qualidades: o filtro pela derivada NÃO entra.
+  - O `campo.js` e o grão não mudam, nem as linhas, que usam o grão a 35%: a G5 fica a do C7.
+  - A razão contra o SSAA é a mesma em todas as faixas, na main e no C8: ao longe o grão não cintila mais do que perto.
+  - A seção D segue informativa, também no C14.
 - **Só se o longe passar do perto:** o desvanecimento pela derivada (`k = 1 − smoothstep(0,5·S, S, pegada)` por escala; a média continua 1, então nada muda de brilho), com S = 0,029/0,114 m na Média e 0,057/0,23 m na Baixa.
   - Metas nesse caso: E longe ≤ 0,5× o de antes, |ΔL médio| longe ≤ 0,003 e o grão no foco ≥ o de antes.
   - Se não acusar, a seção fica informativa e o PR diz.
@@ -528,7 +541,7 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | G6 | 0,010 ± 0,004 | a confirmar | 0,0054 em 58 blocos (a pesquisa estimou ~0,005): fora por falta de mancha | vale, provisória (ver "Pendente" abaixo) |
 | G7 | GPU = JS | estrutural | sem `gramado.js` | estrutura a partir do C4 |
 | G4b | Com × sem o termo ≤ 0,005 nas 9 câmeras; a parte do termo no salto TV → 1ª pessoa ≤ 0,01 | guarda nova | sem o gancho: o L no foco vai de 0,529 a 0,650 nas 9; o salto bruto 0,0011 (informativo), a parte do termo 0 | guarda (o com × sem só com o gancho do C7) |
-| D | O grão | informativa | contra o SSAA do mesmo LOD: E 0,0033 (perto) a 0,0020 (longe), cintilação ×1,30–×1,33 em todas as faixas; longe ÷ perto: E ×0,70, cintilação ×0,32 (com o SSAA 3×: E 0,0030–0,0034, ×0,66–×0,84) | informativa (o longe não passa do perto: sem filtro, se o C6 não mudar isso) |
+| D | O grão | informativa | contra o SSAA do mesmo LOD: E 0,0033 (perto) a 0,0020 (longe), cintilação ×1,30–×1,33 em todas as faixas; longe ÷ perto: E ×0,70, cintilação ×0,32 (com o SSAA 3×: E 0,0030–0,0034, ×0,66–×0,84) | informativa. **C8: medido, sem filtro** (o gramado do C6 + o termo do C7: longe ÷ perto E ×0,68, cintilação ×0,29; ×1,33–1,36 o SSAA em todas as faixas; a Baixa ×0,72 / ×0,29; passo 4) |
 | N | Noite G1 | informativa (só o Δh conta) | L 0,568, C 0,124, h 138,0° | informativa |
 | N | Noite G2 / G3 / G4 | reprova | 0,098 (longe ×1,00) / 20 faixas, 2,59 m / o termo 0 (absoluto ΔL −0,0094, ΔC −0,0028, Δh +0,01°) | vale |
 | N | Noite G5 ≤ 0,97 | guarda (teto) | 0,902 | guarda |
