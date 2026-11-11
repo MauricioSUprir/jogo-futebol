@@ -16,8 +16,10 @@
 //      da G2 do teste-graficos-celular, a noite com o mesmo albedo, o chão de fora na mesma matiz, as linhas ≤ 0,97;
 //   F) a profundidade relativa ao foco (C7): o TEXTO do PROFUNDIDADE_GLSL no interpretador = gProfundidade/termoProfundidade
 //      (double e float32), sem derivada e só com as constantes do PROFUNDIDADE; o foco (gFocoDe: o raio do meio da tela no chão,
-//      sem tocar o ponto a 50 m levado ao chão); o termo NO foco é a identidade, a luminância só muda pelo 1 + p (a
-//      dessaturação a guarda) e o brilho fica em ±8%; o modelo (luz e ACES do r170) na TV do celular nas metas da G4.
+//      sem tocar o horizonte, g = 1, contínuo nele); o termo NO foco é a identidade, a luminância só muda pelo 1 + p (a
+//      dessaturação a guarda) e o brilho fica em ±8%; o modelo (luz e ACES do r170) na TV do celular nas metas da G4; o termo
+//      apagado pela altura da câmera (rasanteDaCamera) e, pelo modelo, o chão aos pés do assunto nas câmeras baixas das cenas
+//      (comemoração, câmera do gol, pré-jogo, cartão) igual ao sem termo (a G4b; a revisão do C4–C8).
 // A GPU de verdade fica para a G7 do teste-graficos-celular (a classe da faixa lida no pixel = faixaEm, depois que o C6 liga o
 // shader); conferido à parte no C4: o GRAMADO_GLSL compila no Chromium 141 do CI (SwiftShader) e, em 4096 x, dá o índice
 // igual e a distância à borda a ≤ 4,2 µm do JS — o mesmo que a emulação em float32 da D6.
@@ -406,8 +408,13 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
     const linhasTopo = topo.split('\n').map(l => l.trim()).filter(Boolean);
     const derivFunc = /\b(fwidth|dFdx|dFdy)\b/.test(GRAMADO_GLSL);
     const derivTopo = linhasTopo.map(l => /\b(fwidth|dFdx|dFdy)\b/.test(l));
-    reg('D2 as derivadas no topo do bloco, fora das funções (lição do PR #631)', `nas funções: ${derivFunc ? 'SIM' : 'nenhuma'}; no topo: na linha ${derivTopo.map((v, k) => (v ? k + 1 : null)).filter(Boolean).join(', ') || '—'} de ${linhasTopo.length}`,
-      'nenhuma nas funções; só a 1ª do topo', !derivFunc && derivTopo[0] === true && derivTopo.slice(1).every(v => !v));
+    // com a pegada dada (o `fwidth(vMundoXZ)` que o bloco do campo já calcula no topo: a revisão do C4–C8, a pegada uma vez
+    // só), nenhuma derivada nas linhas do topo — a do bloco montado a guarda G1 confere
+    const topoDado = typeof glslTopoGramado === 'function' ? glslTopoGramado('xMundo', 'pegadaX') : '';
+    const derivDado = /\b(fwidth|dFdx|dFdy)\b/.test(topoDado), usaDado = /\bpegadaX\b/.test(topoDado);
+    reg('D2 as derivadas no topo do bloco, fora das funções (lição do PR #631); com a pegada dada, nenhuma',
+      `nas funções: ${derivFunc ? 'SIM' : 'nenhuma'}; no topo: na linha ${derivTopo.map((v, k) => (v ? k + 1 : null)).filter(Boolean).join(', ') || '—'} de ${linhasTopo.length}; com a pegada dada: ${derivDado ? 'SIM' : 'nenhuma'}${usaDado ? ', a dada' : ', SEM a dada'}`,
+      'nenhuma nas funções; só a 1ª do topo; nenhuma com a dada', !derivFunc && derivTopo[0] === true && derivTopo.slice(1).every(v => !v) && !derivDado && usaDado);
     // os números do GLSL são as constantes do JS (as da UEFA e do campo; o resto é 0, 0,5, 1 e 2 das contas)
     const nums = [...new Set((GRAMADO_GLSL.replace(/\/\/[^\n]*/g, '').match(/\b\d+\.\d*\b|\b\d+\b/g) ?? []).map(Number))].sort((a, b) => a - b);
     const permitidos = [0, 0.5, 1, 2, CAMPO.meioX, 22, 5.5, 6.1, 4, 17];
@@ -538,19 +545,26 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
       const perm = [0, 0.0001, 1, PROFUNDIDADE.limite, PROFUNDIDADE.saturacao, ...PROFUNDIDADE.luminancia];
       const estranhos = nums.filter(v => !perm.some(p => Math.abs(p - v) <= 1e-12));
       reg('F3 sem derivada; os números do GLSL = o PROFUNDIDADE (limite, saturação, luminância; 0 · 1 · 1e−4)', `derivada: ${deriv ? 'SIM' : 'nenhuma'}; ${nums.join(' · ')}`, 'nenhuma; nenhum outro número', !deriv && estranhos.length === 0);
-      // o foco: o raio do meio da tela no chão; sem tocar, o ponto a 50 m na direção da vista levado ao chão
+      // o foco: o raio do meio da tela no chão; sem tocar (acima do horizonte, na horizontal, reto para cima), o horizonte: g = 1,
+      // o limite de quando o raio toca cada vez mais longe (a revisão do C4–C8: o ponto a 50 m dava um salto no quadro em que o
+      // raio cruzava o horizonte — 0,937 com a lente a 1,6 m — e olhando reto para cima, g 0)
       const EQ = await imp('render/enquadramento.js');
       const asp = 844 / 390, perf = EQ.perfilCamera({}, 0, asp, true), tv = EQ.poseTV(perf, 0, 0, asp, true, {});
       const ponto = [0, 0, 0];
       const gTV = gFocoDe(tv.de, [tv.para[0] - tv.de[0], tv.para[1] - tv.de[1], tv.para[2] - tv.de[2]], ponto);
       const okTV = Math.abs(tv.para[1]) <= 1e-9 && Math.hypot(ponto[0] - tv.para[0], ponto[2] - tv.para[2]) <= 1e-9 && Math.abs(gTV - gProfundidade(...tv.de, tv.para[0], tv.para[2])) <= 1e-12;
       const pc = [0, 0, 0], gCima = gFocoDe([10, 1.6, 5], [3, 0.4, 4], pc);
-      const esperado = [10 + 50 * 3 / Math.hypot(3, 0.4, 4), 0, 5 + 50 * 4 / Math.hypot(3, 0.4, 4)];
-      const okCima = Math.hypot(pc[0] - esperado[0], pc[2] - esperado[2]) <= 1e-9 && Math.abs(gCima - gProfundidade(10, 1.6, 5, esperado[0], esperado[2])) <= 1e-12;
-      const pl = [0, 0, 0]; gFocoDe([0, 2, 0], [1, 0, 0], pl);
-      reg('F4 o foco (gFocoDe): o raio do meio da tela no chão (a TV do celular: o ponto olhado); sem descer, o ponto a 50 m levado ao chão',
-        `TV do celular: g ${fmt(gTV, 4)} no (${fmt(ponto[0], 2)}, ${fmt(ponto[2], 2)}) · raio subindo: (${fmt(pc[0], 2)}, ${fmt(pc[2], 2)}) · na horizontal: (${fmt(pl[0], 2)}, ${fmt(pl[2], 2)})`,
-        'o para da TV · o ponto a 50 m · (50, 0)', okTV && okCima && Math.abs(pl[0] - 50) <= 1e-9 && Math.abs(pl[2]) <= 1e-12);
+      const pl = [0, 0, 0], gHoriz = gFocoDe([0, 2, 0], [1, 0, 0], pl), gReto = gFocoDe([0, 2, 0], [0, 1, 0]);
+      // a continuidade no horizonte: o raio descendo 1,1e−6 (toca a ~1,5 mil km) e 0,9e−6 (não toca), com a lente a 1,6, 3 e 6,6 m
+      let saltoH = 0;
+      for (const y of [1.6, 3, 6.6]) {
+        const a = gFocoDe([0, y, 0], [Math.sqrt(1 - 1.1e-6 ** 2), -1.1e-6, 0]), b = gFocoDe([0, y, 0], [Math.sqrt(1 - 0.9e-6 ** 2), -0.9e-6, 0]);
+        saltoH = Math.max(saltoH, Math.abs(a - b));
+      }
+      reg('F4 o foco (gFocoDe): o raio do meio da tela no chão (a TV do celular: o ponto olhado); sem descer, o horizonte (g = 1), contínuo nele',
+        `TV do celular: g ${fmt(gTV, 4)} no (${fmt(ponto[0], 2)}, ${fmt(ponto[2], 2)}) · raio subindo: g ${fmt(gCima, 4)} · na horizontal: g ${fmt(gHoriz, 4)} · reto para cima: g ${fmt(gReto, 4)} · `
+        + `o salto ao cruzar o horizonte ${saltoH.toExponential(1)} · sem tocar, o ponto ${Number.isNaN(pc[0]) && Number.isNaN(pl[2]) ? 'NaN (o horizonte)' : `(${fmt(pc[0], 2)}, ${fmt(pc[2], 2)})`}`,
+        'o para da TV · 1 · 1 · 1 · ≤ 1e−5 · NaN', okTV && gCima === 1 && gHoriz === 1 && gReto === 1 && saltoH <= 1e-5 && Number.isNaN(pc[0]) && Number.isNaN(pl[2]));
       // no foco a identidade; a luminância só pelo 1 + p; o brilho em ±8%
       const W = PROFUNDIDADE.luminancia, lum = c => c[0] * W[0] + c[1] * W[1] + c[2] * W[2];
       let idErr = 0, lumErr = 0, pMax = 0;
@@ -581,6 +595,53 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
       const com = dif(true), sem = dif(false), t = { dL: com.dL - sem.dL, dC: com.dC - sem.dC, dh: com.dh - sem.dh };
       reg('F6 o modelo (luz do dia, ACES do r170) na TV do celular: o termo longe − perto com − sem (as metas da G4)', `uRasante ${ras}: ΔL ${fmt(t.dL, 4)} · ΔC ${fmt(t.dC, 4)} · Δh ${fmt(t.dh, 2)}°`,
         'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°', Math.abs(t.dL - 0.026) <= 0.008 && t.dC <= 0 && Math.abs(t.dh) <= 2);
+      // o termo apagado pela altura da câmera (a revisão do C4–C8: nas câmeras baixas o raio do meio toca o chão muito além de
+      // quem está no quadro, e o chão aos pés dele caía no teto de −8%): rasanteDaCamera = 0 até 3 m, inteiro de 8 m para cima,
+      // smoothstep entre eles; e o MODELO (a luz do dia e o ACES do r170, a média das duas faixas) do chão aos pés do assunto, com
+      // − sem o termo, nas câmeras baixas das cenas (as constantes dos módulos) — a G4b do teste-graficos-celular mede na GPU
+      const { rasanteDaCamera } = GR;
+      if (typeof rasanteDaCamera !== 'function' || !Array.isArray(PROFUNDIDADE.altura)) {
+        reg('F7 o termo apagado pela altura da câmera (rasanteDaCamera)', 'sem a conta', 'o módulo com a conta', false);
+      } else {
+        const [a0, a1] = PROFUNDIDADE.altura;
+        const { COMEMORACAO, CAMERA } = await imp('config.js');
+        // a TV do celular (a do enquadramento, 13 m), a do PC (19 m) e o aéreo do pré-jogo (113 m): inteiro
+        const hs = [0, 1.6, a0, (a0 + a1) / 2, a1, tv.de[1], CAMERA?.altura ?? 19.4, 113];
+        const vs = hs.map(h => rasanteDaCamera(ras, h));
+        let mono = true;
+        for (let h = 0, ant = -1; h <= 20; h += 0.01) { const v = rasanteDaCamera(ras, h); if (v < ant - 1e-15) mono = false; ant = v; }
+        const okF = vs[0] === 0 && vs[1] === 0 && vs[2] === 0 && Math.abs(vs[3] - ras / 2) <= 1e-12 && vs[4] === ras && vs[5] === ras && vs[6] === ras && vs[7] === ras && mono;
+        let PLANOS = null, CC = null;
+        try { PLANOS = (await imp('prejogo-roteiro.js')).PLANOS_PREJOGO; } catch (_) { PLANOS = null; }
+        try { CC = (await imp('cenas-config.js')).CENA_CARTAO; } catch (_) { CC = null; }
+        const alb = D.clara.map((v, i) => (v + D.escura[i]) / 2), Lsem = COR.oklab(COR.corNaTela(alb)).L;
+        const casosB = [];
+        const caso = (nome, de, para, pe) => {
+          const d = para.map((v, i) => v - de[i]), gF = gFocoDe(de, d), g = gProfundidade(...de, pe[0], pe[1]);
+          const r = rasanteDaCamera(ras, de[1]);
+          casosB.push({ nome, alt: de[1], dL: COR.oklab(COR.corNaTela(termoProfundidade(alb, g, gF, r))).L - Lsem });
+        };
+        const C = COMEMORACAO?.camera;
+        if (C) {
+          // o autor em (0, 0), andando em +x
+          caso('steadicam', [C.steadicam.frente, C.steadicam.altura, C.steadicam.lado], [0.3, 1.5, 0], [0, 0]);
+          caso('contraplano', [-C.contraplano.atras, C.contraplano.altura, C.contraplano.lado], [C.contraplano.alem, C.contraplano.olharY, 0], [0, 0]);
+          caso('reação', [C.reacao.dist, C.reacao.altura, 0], [0, C.reacao.olharY, 0], [0, 0]);
+        }
+        // a câmera do gol (render/replay: recuo 6,5, lateral 13, altura 2,6, olhando 1 m além da linha a 1,55 m)
+        caso('câmera do gol', [52.5 - 6.5, 2.6, 13], [52.5 + 1, 1.55, 0], [52.5 + 1, 0]);
+        for (const id of ['tunel', 'entrada', 'filaMandante', 'filaVisitante']) {
+          const P = PLANOS?.[id]; if (!P?.cam?.de) continue;
+          for (const k of [0, P.cam.de.length - 1]) caso(`${id}[${k}]`, P.cam.de[k], P.cam.para[k], [P.cam.para[k][0], P.cam.para[k][2]]);
+        }
+        const CCc = CC?.camera;
+        if (CCc?.frente) caso('cartão de frente', [CCc.frente.dist, CCc.frente.altura, 0], [0, CCc.frente.olharY, 0], [0, 0]);
+        if (CCc?.arbitro) caso('cartão no árbitro', [CCc.arbitro.dist, CCc.arbitro.altura, 0], [0, CCc.arbitro.olharY, 0], [0, 0]);
+        const piorB = casosB.reduce((m, c) => (Math.abs(c.dL) > Math.abs(m.dL) ? c : m), { dL: 0, nome: '—' });
+        reg('F7 o termo apagado pela altura da câmera (0 até 3 m, inteiro de 8 m para cima); o modelo aos pés do assunto nas câmeras baixas das cenas (a G4b)',
+          `rasante ${hs.map((h, k) => `${fmt(h, 1)} m ${fmt(vs[k], 3)}`).join(' · ')}${mono ? '' : ' · NÃO monótono'} · ${casosB.length} câmeras baixas: pior ${piorB.nome} ${fmt(piorB.dL, 4)}`,
+          `0 · 0 · 0 · ${fmt(ras / 2, 3)} · ${fmt(ras, 2)} … ; câmeras: |com − sem| ≤ 0,005 (≥ 10 câmeras)`, okF && casosB.length >= 10 && Math.abs(piorB.dL) <= 0.005);
+      }
     }
   }
 }

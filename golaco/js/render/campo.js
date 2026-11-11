@@ -11,6 +11,7 @@ import {
 } from './texturas.js';
 import {
   GRAMADO_GLSL, glslTopoGramado, valoresGramado, GRAMADO_GASTO, GRAMADO_ENTORNO, GRAMADO_HORAS, PROFUNDIDADE_GLSL, gFocoDe,
+  rasanteDaCamera,
 } from './gramado.js';
 import { GRAFICOS } from './graficos-opcoes.js';
 import { imagemEscudo } from './escudo-desenho.js';
@@ -109,7 +110,7 @@ function comDetalhe(mat, detalhe, forca, { faixas = false, profundidade = false,
     // das manchas (R manchas, G desgaste) que o map_fragment do three acabou de ler
     const cor = faixas ? `
           vec2 gramadoFw = fwidth(vMundoXZ);
-          ${glslTopoGramado('vMundoXZ.x')}
+          ${glslTopoGramado('vMundoXZ.x', 'gramadoFw.x')}
           float gramadoFora = clamp(max((abs(vMundoXZ.x) - ${glf(CAMPO.meioX)}) / max(gramadoFw.x, 1e-4), (abs(vMundoXZ.y) - ${glf(CAMPO.meioZ)}) / max(gramadoFw.y, 1e-4)) + 0.5, 0.0, 1.0);
           vec3 gramadoCor = mix(mix(uClara, uEscura, gramadoT), ${glv3(GRAMADO_GASTO)}, sampledDiffuseColor.g);
           diffuseColor.rgb = gramadoCor * (1.0 + uManchas * (sampledDiffuseColor.r - 0.5)) * mix(1.0, ${glf(GRAMADO_ENTORNO)}, gramadoFora);` : '';
@@ -144,17 +145,20 @@ function horaGramado(u, hora) {
 
 /**
  * O onBeforeRender do gramado e do chão de fora (item 45, C7): o uGFoco = o g da profundidade no ponto do chão no meio da tela
- * (render/gramado.js gFocoDe), pela câmera que vai desenhar — vale para TODA câmera (TV, replay, cinema, Livre, pré-jogo) sem
- * fio no main.js. O three sobe os uniforms do material no 1º desenho dele em cada render() (o `_currentMaterialId` volta a −1
- * no fim de cada um), depois deste gancho; a sombra usa o onBeforeShadow, que não passa aqui.
+ * (render/gramado.js gFocoDe) e o uRasante = o da hora (`base()`: 0 com o gancho semProfundidade) apagado pela altura da
+ * câmera (render/gramado.js rasanteDaCamera: nada abaixo de 3 m, inteiro de 8 m para cima — a revisão do C4–C8: nas câmeras
+ * baixas o foco cai longe do assunto), pela câmera que vai desenhar — vale para TODA câmera (TV, replay, cinema, Livre,
+ * pré-jogo) sem fio no main.js. O three sobe os uniforms do material no 1º desenho dele em cada render() (o
+ * `_currentMaterialId` volta a −1 no fim de cada um), depois deste gancho; a sombra usa o onBeforeShadow, que não passa aqui.
  */
-function focador(uGFoco) {
+function focador(u, base) {
   const o = [0, 0, 0], d = [0, 0, 0];
   return (renderer, cena, camera) => {
     const e = camera.matrixWorld.elements;
     o[0] = e[12]; o[1] = e[13]; o[2] = e[14];
     d[0] = -e[8]; d[1] = -e[9]; d[2] = -e[10];
-    uGFoco.value = gFocoDe(o, d);
+    u.uGFoco.value = gFocoDe(o, d);
+    u.uRasante.value = rasanteDaCamera(base(), o[1]);
   };
 }
 
@@ -894,11 +898,12 @@ export function criarCampo(opc) {
     : comDetalhe(new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(...GRAMADO_HORAS.dia.fora) }), detalhe, 0.6, { profundidade: true, uniforms: uGramado }));
   fora.name = 'chao-fora';
   grupo.add(fora);
-  // a profundidade relativa ao foco (C7): o uGFoco de cada desenho, pela câmera dele (o mesmo uniform nos dois materiais; os
-  // dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos testes
-  let horaG = 'dia', semProf = false;
-  if (uGramado) grama.onBeforeRender = fora.onBeforeRender = focador(uGramado.uGFoco);
-  const rasante = () => { if (uGramado) uGramado.uRasante.value = semProf ? 0 : valoresGramado(horaG).uRasante; };
+  // a profundidade relativa ao foco (C7): o uGFoco e o uRasante de cada desenho, pela câmera dele (os mesmos uniforms nos dois
+  // materiais; os dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos
+  // testes; `rasBase` = o uRasante da hora antes da altura da câmera
+  let horaG = 'dia', semProf = false, rasBase = uGramado ? uGramado.uRasante.value : 0;
+  if (uGramado) grama.onBeforeRender = fora.onBeforeRender = focador(uGramado, () => rasBase);
+  const rasante = () => { if (uGramado) uGramado.uRasante.value = rasBase = semProf ? 0 : valoresGramado(horaG).uRasante; };
   grupo.add(criarLinhas(detalhe, uGramado));
   const gols = criarGols();
   grupo.add(gols.estrutura, gols.rede);

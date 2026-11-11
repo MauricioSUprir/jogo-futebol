@@ -141,7 +141,8 @@ export const GRAMADO_GASTO = Object.freeze([0.262251, 0.230740, 0.088656]);
 export const GRAMADO_ENTORNO = 0.88;
 
 /** Os nomes dos uniforms do gramado (os do `GRAMADO_GLSL`). `uGFoco` = o g da profundidade no ponto do chão no meio da
- *  tela (`gFocoDe`), calculado por quadro no onBeforeRender do gramado e do chão de fora (render/campo.js). */
+ *  tela (`gFocoDe`) e `uRasante` = o rasante da hora apagado pela altura da câmera (`rasanteDaCamera`), os dois escritos por
+ *  quadro no onBeforeRender do gramado e do chão de fora (render/campo.js), pela câmera que vai desenhar. */
 export const UNIFORMS_GRAMADO = Object.freeze(['uClara', 'uEscura', 'uManchas', 'uRasante', 'uBrancoLinha', 'uBorda', 'uGFoco']);
 
 /** Os valores iniciais dos uniforms numa hora ('dia' | 'noite'): {uClara: [r, g, b], uEscura, uManchas, uRasante,
@@ -188,10 +189,11 @@ float gramadoMistura(vec2 faixa, float w) {
 
 /**
  * As linhas do TOPO do bloco do shader (antes de qualquer desvio): a derivada e o t das faixas no x do mundo `x` (uma
- * expressão GLSL, p.ex. 'vMundoXZ.x'). Declaram `gramadoW` e `gramadoT`.
+ * expressão GLSL, p.ex. 'vMundoXZ.x'). Declaram `gramadoW` e `gramadoT`. `fw` (opcional): a pegada do pixel em x já calculada
+ * no topo do bloco (p.ex. 'gramadoFw.x', de um `fwidth(vMundoXZ)` que o bloco também usa): sem ela, o `fwidth(x)` sai aqui.
  */
-export function glslTopoGramado(x) {
-  return `float gramadoW = fwidth(${x}) + uBorda;\nfloat gramadoT = gramadoMistura(gramadoFaixa(${x}), gramadoW);`;
+export function glslTopoGramado(x, fw = null) {
+  return `float gramadoW = ${fw ?? `fwidth(${x})`} + uBorda;\nfloat gramadoT = gramadoMistura(gramadoFaixa(${x}), gramadoW);`;
 }
 
 // ------------------------------------------------------------------ a profundidade relativa ao foco (C7, passo 3 do plano)
@@ -205,19 +207,37 @@ export function glslTopoGramado(x) {
 // câmera — TV, replay, cinema, Livre, pré-jogo — sem fio no main.js): o meio da tela não muda de brilho com a câmera, e o
 // corte de uma câmera para outra não vira um salto de exposição (com o g absoluto, as câmeras baixas clareavam o gramado
 // inteiro em ~+11% e o aéreo do pré-jogo escurecia ~10%). O MESMO texto no gramado e no chão de fora: sem emenda nos cantos.
-// O limite (medido no C7, a G4b do teste-graficos-celular): a câmera baixa que olha ACIMA do chão (a steadicam da comemoração
-// mirando o peito a 6,6 m, a câmera do gol mirando o gol a 1,55 m) tem o raio do meio tocando o chão muito além do alvo (106 m
-// e 37 m), e o L do gramado aos pés do alvo cai 0,021 e 0,019 contra o sem termo (a steadicam no limite de −8% de brilho; a
-// meta da G4b é ±0,005); só pela câmera não se sabe a altura do alvo (a lateral do replay, também baixa e com o raio quase
-// deitado, mira a bola a 0,4 m, e nela o termo fica em −0,003).
+// As câmeras BAIXAS (a revisão do C4–C8): numa câmera a poucos metros do chão o raio do meio da tela passa rente a ele e o
+// toca muito além de quem está no quadro, ou nem toca — a steadicam (1,6 m) toca a 106 m, a câmera do gol (2,6 m) a 37 m, o
+// contraplano da comemoração não toca, a reação a 13 m, a entrada do pré-jogo a 83 m, a fila a 20 m, a cena do cartão a 18 e
+// 32 m —; o foco fica longe, com g perto de 1, e o chão aos pés do assunto (g ~0,5–0,6) cai no teto de −8% (L −0,021 contra o
+// sem termo; a G4b pede ±0,005). Só pela câmera não se sabe a altura do assunto (no contraplano o alvo nem é o assunto: fica
+// 6 m além do autor, a 2,4 m), então o termo se APAGA pela altura da câmera (`rasanteDaCamera`): inteiro de 8 m para cima (a
+// TV do celular a 13 m, a do PC a 19 m, o escanteio a 8 m, o Atrás do Livre a 9,5 m, o aéreo e o geral do pré-jogo), nada
+// abaixo de 3 m (a 1ª pessoa e a lateral do replay, a steadicam, o contraplano e a reação da comemoração, a câmera do gol, a
+// falta, o túnel, a entrada e as filas do pré-jogo, a cena do cartão), em smoothstep no meio (o Jogador do Livre a 3,9 m:
+// 0,09). Nessas câmeras o gramado não ganha o gradiente de vista (como antes do item 45), e o corte de uma câmera alta para
+// uma baixa não muda o brilho do foco (as duas têm o foco igual ao sem termo). Sem tocar o chão (a câmera olhando acima do
+// horizonte), o foco é o horizonte: g = 1, o limite de quando o raio toca cada vez mais longe — antes o ponto a 50 m dava um
+// salto de até 2,6% de brilho no quadro em que o raio cruzava o horizonte, e olhando reto para cima, g 0 (o chão todo +8%).
 // A conta em JS (`gProfundidade`, `termoProfundidade`) é a do `PROFUNDIDADE_GLSL` (o teste-gramado avalia o texto GLSL no
 // interpretador mínimo e compara com estas funções).
 
 /** A profundidade: `limite` = o |p| máximo (±8% de brilho), `saturacao` = quanto a cor vai para o cinza por unidade de p (com
  *  p > 0, ao longe, dessatura: o ΔC do termo ≤ 0, a meta da G4; sem ela, só clarear SOBE o C ao longe, porque o C do OKLab
- *  cresce com o brilho), `semToque` = a distância (m) do ponto do foco na direção da vista quando o raio do meio da tela não
- *  desce até o chão, `luminancia` = os pesos da luminância (Rec. 709, o espaço linear do three). */
-export const PROFUNDIDADE = Object.freeze({ limite: 0.08, saturacao: 0.6, semToque: 50, luminancia: Object.freeze([0.2126, 0.7152, 0.0722]) });
+ *  cresce com o brilho), `altura` = [de, até] (m): a altura da câmera em que o termo começa a valer e em que vale inteiro
+ *  (`rasanteDaCamera`), `luminancia` = os pesos da luminância (Rec. 709, o espaço linear do three). */
+export const PROFUNDIDADE = Object.freeze({
+  limite: 0.08, saturacao: 0.6, altura: Object.freeze([3, 8]), luminancia: Object.freeze([0.2126, 0.7152, 0.0722]),
+});
+
+/** O uRasante de uma câmera a `alturaCamera` m do chão: o `rasante` da hora × smoothstep(altura[0], altura[1], alturaCamera)
+ *  (0 abaixo de 3 m, inteiro de 8 m para cima). O campo escreve no onBeforeRender do gramado, pela câmera que vai desenhar. */
+export function rasanteDaCamera(rasante, alturaCamera) {
+  const [a, b] = PROFUNDIDADE.altura;
+  const t = clamp((alturaCamera - a) / (b - a), 0, 1);
+  return rasante * t * t * (3 - 2 * t);
+}
 
 /** g = (1 − μ)² da câmera (cx, cy, cz) para o ponto (x, 0, z) do chão. */
 export function gProfundidade(cx, cy, cz, x, z) {
@@ -228,13 +248,18 @@ export function gProfundidade(cx, cy, cz, x, z) {
 
 /**
  * O g do FOCO: o ponto onde o raio do meio da tela (origem o = [x, y, z], direção d, não precisa ser unitária) toca o chão
- * (y = 0); se o raio não desce (d.y ≥ −1e−6 × |d|), o ponto a `PROFUNDIDADE.semToque` m na direção da vista, levado ao chão.
- * Escreve o ponto em `ponto` (opcional).
+ * (y = 0); se o raio não desce (d.y ≥ −1e−6 × |d|: olhando acima do horizonte, na horizontal ou reto para cima), o foco é o
+ * horizonte, g = 1 — o limite de quando o raio toca cada vez mais longe, sem salto no quadro em que ele cruza o horizonte.
+ * Escreve o ponto em `ponto` (opcional; sem tocar, x e z NaN: o horizonte não é um ponto).
  */
 export function gFocoDe(o, d, ponto = null) {
   const n = Math.hypot(d[0], d[1], d[2]) || 1;
   const dx = d[0] / n, dy = d[1] / n, dz = d[2] / n;
-  const t = dy < -1e-6 ? -o[1] / dy : PROFUNDIDADE.semToque;
+  if (!(dy < -1e-6)) {
+    if (ponto) { ponto[0] = NaN; ponto[1] = 0; ponto[2] = NaN; }
+    return 1;
+  }
+  const t = -o[1] / dy;
   const x = o[0] + t * dx, z = o[2] + t * dz;
   if (ponto) { ponto[0] = x; ponto[1] = 0; ponto[2] = z; }
   return gProfundidade(o[0], o[1], o[2], x, z);
