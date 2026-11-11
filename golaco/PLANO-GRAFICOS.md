@@ -447,6 +447,20 @@ Na referência só ficam valores agregados com tolerância, nunca o hash dos pix
 
 **Seções** (antes = calculado ou a gravar na main). A coluna "Reprova na main" é o que se espera pelas contas; o passo 0 confirma, e a meta que a main não reprovar vira informativa e o PR diz.
 
+**Medido na main (C3).** A referência está em `tools/dados/graficos-ref.json`, chaves `celular` (153 valores) e `pagina` (61 valores):
+- gravada da main `e41aa791` pela worktree de leitura, com `--raiz <main>/golaco --gravar-referencia`;
+- Chromium 153.0.8010.12, `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`;
+- tempos: ~60 s o do celular e ~236 s o da página.
+
+A sonda é válida nos dois testes: com `antialias` pedido, o SwiftShader dá `antialias` true e `SAMPLES` 4 (`MAX_SAMPLES` 4); sem pedir, 0. O MSAA funciona no SwiftShader, o mesmo renderizador do CI.
+
+Depois de gravar, a branch (o mesmo código da main) foi relida contra a referência: o `teste-graficos-celular` inteiro e a seção P da página. Todas as guardas "nada pior" deram iguais à ref.
+
+Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa destas três classes:
+- **vale**: a main reprova, e a mudança tem de levar a meta para dentro. É a prova antes → depois.
+- **guarda**: passa na main por construção (a peça ainda não existe; é "nada pior", "chave de volta" ou estrutura). Vale a partir do C14 para nada piorar, mas não conta como prova de melhoria.
+- **informativa**: meta de melhoria que a main já cumpre, ou que na main não mede nada. Fica na saída do teste, não reprova, e o PR diz. O C14 passa essas linhas a `info` no código.
+
 **`teste-graficos-celular` (módulos):**
 
 | Sec. | O que mede | Meta (depois) | Reprova na main? |
@@ -465,6 +479,44 @@ Na referência só ficam valores agregados com tolerância, nunca o hash dos pix
 | D | Grão: E e cintilação por faixa da tela | só reprova se o filtro entrou (passo 4); senão informativa | — |
 | N | Noite, Baixa e PC. Noite: G2–G5 com as metas do dia, a linha ≤ 0,97 absoluta, e Δh(noite − dia) = o da main ± 2° (a mesma h do dia é impossível com a luz fria). Baixa: G1–G5 e F. **PC 1280×720 Alta, dia e noite**: G1–G5 (a câmera a 24,6°) e A nada pior | como ao lado | parcial |
 
+**`teste-graficos-celular`, medido na main (C3):** "forçado" é o mesmo build com o contexto pré-criado com MSAA, o que a Média ganha no C5.
+
+| Sec. | Meta | Esperado na main | Medido na main | Fica |
+|---|---|---|---|---|
+| S | Sonda | true/4 | true/4 (MAX 4); sem pedir, 0 | estrutura (válido) |
+| S | Build Média true/4 | reprova | false/0, buffer 1266×585 (pr 1,5) | vale |
+| S | Build Baixa false/0 | — | false/0, 844×390 | guarda |
+| S | `?aa=0` na Média 0 | — | 0 (a main não lê `?aa`) | guarda |
+| S | `?aa=1` na Baixa 4 | reprova | 0 | vale |
+| S | `?gfx=antigo` na Média 0 | — | 0 | guarda |
+| A | Média, dia: razão ≤ 0,6 (gol no foco / gol de lá) | reprova (1) | 1,00 / 1,00 (forçado ×0,58 / ×0,54) | vale (só o MSAA deixa o foco com 0,02 de folga) |
+| N | Média, noite: razão ≤ 0,6 (foco / lá) | reprova | 1,00 / 1,00 (forçado ×0,54 / ×0,44) | vale |
+| N | A da Baixa, nada pior (foco / lá) | — | E 0,0473 / 0,0623 = ref | guarda (informativa no CI, como no plano) |
+| N | A do PC Alta, nada pior (dia foco/lá; noite foco/lá) | — | E 0,0313 / 0,0312; 0,0270 / 0,0323 = ref | guarda |
+| F | Média: buracos ≤ 5% (foco / lá) | reprova | 34,3% / 26,3% (corda do pé 57% / 40%, mastro 33% / 12%); forçado 0% / 0% | vale |
+| F | Média: cintilação ≤ 1,5× o SSAA e soma 0,7–1,3 (foco / lá) | reprova | ×13,3 / ×9,5; a soma 0,85 / 0,87 passa; forçado ×1,74 / ×1,19, soma 1,00 / 0,98 | vale (só com o MSAA o foco fica fora: o C9 fecha) |
+| F | Baixa: buracos (foco / lá) | reprova | 67,3% / 30,6% | vale |
+| F | Baixa: cintilação e soma (foco / lá) | reprova | ×15,6 / ×8,6; soma 0,49 / 1,30 | vale |
+| F | Baixa com MSAA (a queda): buracos (foco / lá) | reprova | 0% / 0% (forçado) | **informativa** |
+| F | Baixa com MSAA: cintilação e soma, gol no foco | reprova | ×1,28, soma 0,81 | **informativa** |
+| F | Baixa com MSAA: cintilação e soma, gol de lá | reprova | ×1,73, soma 0,86 | vale |
+| G1 | L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3° | reprova (C 0,128, h 134,8°) | L 0,582 (passa), C 0,127, h 134,7° | vale (C e h; o L é guarda) |
+| G2 | ΔL 0,056 ± 0,008; ao longe ≥ 0,6× | reprova (0,104) | 0,099 perto, 0,102 longe (×1,03 passa) | vale |
+| G3 | 18 faixas; bordas ≤ max(0,10 m; 1 px); o meio separa | reprova (20; 0,75 m) | 20; a pior borda a 2,59 m (x = 18,3); o meio separa (0,541 \| 0,639) | vale (as faixas e as bordas; o meio é guarda) |
+| G4 | ΔL +0,026 ± 0,008; ΔC ≤ 0; \|Δh\| ≤ 2° | reprova (≈ 0) | ΔL +0,0075 (as manchas da textura, não zero); ΔC +0,0004; Δh −0,18° | vale pelo ΔL (o ΔC fica fora por 0,0004, ruído) |
+| G5 | 0,952 ± 0,01 e ≤ 0,97 | reprova (0,908) | 0,909 | vale |
+| G6 | 0,010 ± 0,004 | a confirmar | 0,0054 em 58 blocos (a pesquisa estimou ~0,005): fora por falta de mancha | vale, provisória (ver "Pendente" abaixo) |
+| G7 | GPU = JS | estrutural | sem `gramado.js` | estrutura a partir do C4 |
+| G4b | Com × sem o termo ≤ 0,005 nas 9 câmeras; o salto TV → 1ª pessoa ≤ ref + 0,01 | guarda nova | sem o gancho: o L no foco vai de 0,529 a 0,650 nas 9; o salto 0,0011 (agora a ref) | guarda (o com × sem só com o gancho do C7) |
+| D | O grão | informativa | E 0,0030–0,0034; cintilação ×0,66–×0,84 a do SSAA | informativa |
+| N | Noite G1 | informativa (só o Δh conta) | L 0,568, C 0,124, h 138,0° | informativa |
+| N | Noite G2 / G3 / G4 | reprova | 0,098 (longe ×1,00) / 20 faixas, 2,59 m / ΔL −0,0094, ΔC −0,0028, Δh +0,01° | vale |
+| N | Noite G5 ≤ 0,97 | guarda (teto) | 0,902 | guarda |
+| N | Δh(noite − dia) = ref ± 2° | guarda | 3,32° (agora a ref) | guarda |
+| N | Baixa G1–G5 | reprova | L 0,581 C 0,127 h 134,7°; ΔL 0,099; 20 faixas, 2,60 m; ΔL longe +0,0082, ΔC +0,0005; linha 0,909 | vale |
+| N | PC Alta, dia, G1–G5 | reprova | os números da Média do dia (L 0,582 C 0,127 h 134,7°; 0,099; 20 / 2,59 m; +0,0075; 0,909) | vale |
+| N | PC Alta, noite: G1 / G2–G4 / G5 | parcial | G1 L 0,568 C 0,124 h 138,0°; 0,098; 20 / 2,59 m; ΔL −0,0057, ΔC −0,0018; linha 0,902 | G1 informativa; G2–G4 vale; G5 guarda |
+
 **`teste-graficos-pagina` (página):**
 
 | Sec. | O que mede | Meta (depois) | Reprova na main? |
@@ -479,6 +531,62 @@ Na referência só ficam valores agregados com tolerância, nunca o hash dos pix
 | Q | Queda: `__golaco.quedaDeTeste()`: mesmo canvas (sem recriar), `qAtual` 'baixa', `SAMPLES` continua 4, a queda nas preferências, a linha da pausa; recarregar em Automática abre na Baixa com `SAMPLES` 0; escolher a Média apaga. A queda natural com webdriver (um rAF falso a 20 Hz, sem `?q`): cai na sessão e NÃO grava | como ao lado | sim |
 | Z | Redimensionar: atribuições a `canvas.width/height` (instrumentadas pelo `addInitScript`) com o mesmo tamanho (`resize` + `visualViewport`) e com um tamanho novo | mesmo tamanho: 0 (main: 8); tamanho novo: 2 (main: até 8) | sim |
 | T | Teto: um `addInitScript` com um rAF falso a 90, 120, 144 e 165 Hz (o headless roda o rAF a 60); conta os desenhos pelo `renderer.info.render.frame` | celular: 90 / 60 / 72 / 82,5 por segundo ± 1, intervalos regulares; PC sem toque: sem teto | sim (desenha todos) |
+
+**`teste-graficos-pagina`, medido na main (C3):** "forçado" é a carga com o MSAA pelo `addInitScript`.
+
+| Sec. | Meta | Esperado na main | Medido na main | Fica |
+|---|---|---|---|---|
+| S2 | Sonda | true/4 | true/4 (MAX 4); sem pedir, 0 | estrutura (válido) |
+| S2 | Celular 844×390 dpr 2, Média = 4 | reprova | 0 (1266×585) | vale |
+| S2 | Tablet 1366×1024 com toque, dpr 2, Média = 0 | — (o teto) | 0 (2049×1536, 3,15 MP) | guarda |
+| S2 | Tablet com `?aa=1` = 4 / PC 1280×720 Média = 4 | reprova | 0 / 0 | vale |
+| A2 | Razão ≤ 0,6 (TV na bola / gol no foco) | reprova | 1,00 / 1,00 (forçado ×0,70 / ×0,55); máscara 1,41% / 0,97% | vale (na pose da bola, só o MSAA fica fora: 0,70; o C10 tem de baixar, senão a meta se revê no C14) |
+| A2 | Carga oposta forçada; carga igual = o mesmo quadro | estrutura | `SAMPLES` 4; 0 px nos 3 quadros, o hash igual | estrutura |
+| K | K1 franjas ≤ 0,2%: torcida (bola / gol no foco) | reprova | 1,83% / 0,73% (forçado) | vale |
+| K | K1 franjas ≤ 0,2%: bandeiras (bola / gol no foco) | reprova (o N11) | 10,50% / 1,42% (forçado; a linha verde-clara da faixa da mureta) | vale |
+| K | K1 franjas: placas (bola / gol no foco) | — | 0% / 0% em 1262 / 585 px de borda | guarda |
+| K | K1 franjas: letreiro do pré-jogo | reprova | 0 px de borda (sem a A2C o MSAA não muda um `alphaTest`) | **informativa** (na main não mede nada; com a A2C do C10 vira guarda ≤ 0,2%) |
+| K | K2 cobertura das bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | reprova (as de longe) | 0,966 / 0,935 sem AA; forçado 1,006 / 1,004 | **informativa** |
+| K | K3 A2C da torcida | informativa | sem AA: cobertura 0,926, cintilação ×1,32; forçado 0,987 e ×1,23 | informativa |
+| P | Chamadas = ref; triângulos ≤ ref + 1% | guarda | 31; 91 524 | guarda |
+| P | CPU p95 ≤ 6 ms e ≤ ref + 0,2 ms | guarda | 7 rodadas da main: 5,8, 6,2, 6,5 (C2); 6,6, 5,6, 5,4, 6,8 (C3). Mediana 6,2 (a ref), acima de 6 em 4 das 7. A 8ª, na branch com o mesmo código: 6,1 | o "≤ 6 ms" absoluto **informativo** (a base já passa dele: "Depende do dono" 30); o "nada pior" só pareado no C14 (base × branch na mesma rodada, mais janelas: ±0,7 ms entre rodadas > 0,2) |
+| P | O desenho p95 (a parte JS do render, 120 quadros) | informativo | 10,5, 9,2, 12,8, 7,8 na main (C3) e 11,7 na branch com o mesmo código (C2: 6–7,6) | informativo. Também passa de 6 ms: "os 6 ms valem para o desenho" (a saída da P) só com mais quadros |
+| P2 | `__golaco.perf()`; a fase no jogo | reprova | não existe | vale |
+| P2 | O painel com p95, fase, AA, buffer, GPU e refresh | reprova | "60 qps · 16.7 ms / 25 chamadas · 91 mil tri / qualidade media" | vale |
+| P2 | O painel por cima da tela antes do jogo / da pausa / no jogo, pausa e replay | reprova | escondido / escondido / no jogo à vista (67% por cima), na pausa e no replay escondido | vale |
+| P2 | O qps da tela antes do jogo = os desenhos (N3) | reprova | mostra 60, desenhou 30,0 (×2,00) | vale |
+| P3 | `?gfx=antigo`: `SAMPLES` 0 e o gramado = a ref | chave de volta | 0; L 0,586, C 0,127, h 134,4°, ΔL 0,097, 3 bordas, +0,0072, linha 0,909 (agora a ref) | guarda |
+| P3 | `?tom=neutro`: Neutral e a exposição × 1,40 | — | ACES em todos; exposição 1,000 de dia e 0,980 à noite (meta 1,400 e 1,372), 2 recriações | vale (a main ignora o `?tom`) |
+| R | R1 `SAMPLES` 4 → 0 → 4 | reprova | 0 → 0 → 0 (o mesmo canvas) | vale |
+| R | R1 o `aria-label` e o `inert` depois das trocas | reprova | ficam (na main a troca Média ↔ Baixa NÃO recria: o AA é o mesmo) | guarda (prova de verdade quando o C5 fizer essa troca recriar) |
+| R | R1 "Ajustando…" à vista e fora | reprova | visto 0× | vale |
+| R | R1 / R4 a mira desenha depois | — | 3476 / 8697 px | guarda |
+| R | R2 Alta → Baixa: o `localClippingEnabled` do vão e o `aria-label` | reprova | true → false; "Campo 3D" → null | vale |
+| R | R3 troca e desenha no mesmo `evaluate`; R4 perde, restaura e desenha | estrutura | 96,0% / 96,1%; 94,4% não preto | estrutura |
+| R | R3 `SAMPLES` pela tabela | reprova | 0 → 0 → 0 | vale |
+| R | R4 os ganchos (A2C dos finos, `uAlturaBuffer`) | reprova | A2C false, sem `uAlturaBuffer` | vale |
+| Q | A queda natural com webdriver: cai, NÃO grava, a recarga abre na Média | guarda | media → baixa em 173 quadros; preferências `{}`; media | guarda |
+| Q | `quedaDeTeste()`; a recarga depois da queda gravada abre na Baixa | reprova | não existe; media | vale |
+| Q | Escolher a Média apaga a queda | — | nada a apagar | guarda a partir do C12 (na main não há como medir) |
+| Z | Mesmo tamanho 0; tamanho novo 2 | reprova | 8 (4 + 4); 8 | vale |
+| T | Celular a 90 Hz = 90; PC a 144 Hz sem teto | — | 90,0; 144,0 | guarda |
+| T | Celular a 120 / 144 / 165 Hz = 60 / 72 / 82,5 | reprova | 120,0 / 144,0 / 165,0 (regulares) | vale |
+
+**O que o C3 mudou no plano:**
+- **7 metas de melhoria viraram informativas** porque a main já as cumpre ou nelas não mede nada:
+  - F, Baixa com MSAA: os buracos no foco e no gol de lá, e a cintilação no foco;
+  - K2: a cobertura a 50 m e a 100 m;
+  - K1: o letreiro;
+  - P: o "≤ 6 ms" absoluto da CPU.
+- **Riscos para os próximos commits** (contas de "forçado" acima):
+  - o MSAA sozinho NÃO fecha a A2 na pose da bola (0,70) nem a cintilação dos finos da Média no foco (×1,74);
+  - na A do foco, ele fecha com 0,02 de folga.
+- **Pendente:**
+  - a régua da foto da G6 em blocos de 8 m NÃO foi refeita. Fica o ponto de partida 0,010 ± 0,004, e a main sai fora dele por falta de mancha. Fechar no C6, que calibra o `uManchas` por ela, antes de a G6 valer no C14;
+  - a CPU da P vai ao "Depende do dono" 30 (no C16).
+- **A ref da `P.cpuP95` é a mediana das 7 rodadas, não a da rodada que gravou (6,6):**
+  - as rodadas estão no campo `pagina.cpuBase` do JSON;
+  - um novo `--gravar-referencia` troca pela da rodada.
 
 **Testes Node novos (padrão, `rodar-testes.mjs`):**
 
