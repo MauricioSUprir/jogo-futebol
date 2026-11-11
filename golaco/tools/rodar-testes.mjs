@@ -89,6 +89,8 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
+  // Item 45 (gráficos do celular, C4): as faixas de corte da UEFA puras (render/gramado.js), o GLSL = o JS, as cores
+  ['gramado: as 18 faixas da UEFA (Fig. 15), faixaEm, o filtro do degrau, o GLSL interpretado = o JS (double e float32), as cores', 'teste-gramado.mjs'],
   // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): a TV nova em Node (a mola, a
   // geometria da área e da bola parada, 10 partidas com o legado lado a lado; 2 processos)
   ['câmera de TV: acompanha a bola (atraso, miolo, espaço à frente), a área inteira no último terço e na bola parada, a bola com prioridade (a alta sem tirar o chão do quadro), sem tranco, jogadores ≥ 34 px, o travado do Rumo ao Estrelato no quadro', 'teste-camera.mjs', [], 'padrao', 2],
