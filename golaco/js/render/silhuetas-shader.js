@@ -28,12 +28,14 @@ const SILHUETA_VERT_TORCIDA = `  // a UV da amostra (centroid) é a mesma; no ra
  * torcedor (aLod: 0 o quadro, 1 o impostor) — o quadro SDF continua igual (lido no topo, pelo nível do mip da cópia sem
  * centroid); sem imp (o programa de hoje, a única coisa que a TV do celular desenha), nada do impostor. antigo
  * (`?gfx=antigo`): o texto da main, com o ramo de antes do impostor (imp.antigo). Devolve {vert, frag}.
- * A A2C do quadro (com MSAA, render/torcida.js definirAA) é uma TROCA, medida na revisão do bloco 3 (teste-graficos-pagina,
- * sem ela × com ela): a cintilação da silhueta com a câmera andando (K3) × 1,20 → × 0,88 do SSAA, as franjas da torcida na TV na
- * bola (K1) 1,95 → 0,33% e a A2 0,75 / 0,58 → 0,69 / 0,46 — e, em troca, as franjas das bandeiras NA FRENTE dela (K1) 2,22 →
- * 2,43% na TV na bola e 0,26 → 0,61% com o gol no foco, e 1 px de franja da torcida com o gol no foco (0 → 0,06%). A derivada
- * do alfa da A2C vem da leitura na UV centroid (a imprecisão de borda que a UV evita: medir a variante pela leitura na vUv é
- * uma leitura a mais; fica anotado no plano).
+ * A A2C do quadro (com MSAA, render/torcida.js definirAA) é uma TROCA, medida na revisão do bloco 3 (teste-graficos-pagina com
+ * a cena ASSENTADA — o torcedor 3D e o impostor já chegados —, sem ela × com ela): as franjas da torcida na TV na bola (K1) 1,95 →
+ * 0,33%, a A2 0,75 / 0,58 → 0,69 / 0,47 e a cintilação da silhueta com a câmera andando 0,25 px (K3) × 1,32 → × 1,28 do SSAA
+ * (cobertura 0,928 → 0,934) — e, em troca, as franjas das bandeiras NA FRENTE dela (K1) 2,22 → 2,43% na TV na bola e 0,26 →
+ * 0,65% com o gol no foco, e 1 px de franja da torcida com o gol no foco (0 → 0,06%). (O "× 1,20 → × 0,88" do C10 era a cena
+ * antes do torcedor 3D chegar.) A derivada do alfa da A2C vem da leitura na UV centroid; a variante pela leitura na vUv (sem
+ * a imprecisão de borda do centroid, uma leitura a mais) foi medida na revisão do bloco 3 e não ganha: K3 igual (0,934, 5,87%),
+ * A2 da TV na bola E 0,0624 → 0,0626 e as franjas das bandeiras 2,43 → 2,49%.
  */
 export function shaderTorcida(imp = null, { antigo = false } = {}) {
   if (antigo && imp) imp = imp.antigo ?? imp;

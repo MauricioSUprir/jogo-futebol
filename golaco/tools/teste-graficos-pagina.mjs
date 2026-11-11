@@ -203,6 +203,9 @@ async function instalarPagina() {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const g2 = cv.getContext('2d'), im = g2.createImageData(W, H);
     for (let y = 0; y < H; y++) im.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+    // alfa 255 (a revisão do bloco 3): o three r170 pede o contexto com alpha true e a A2C deixa alfa < 1 no buffer nas bordas
+    // das peças — na tela o compositor soma quase nada (o fundo da página é quase preto), mas o PNG saía translúcido
+    for (let i = 3; i < im.data.length; i += 4) im.data[i] = 255;
     g2.putImageData(im, 0, 0);
     return cv.toDataURL('image/png').split(',')[1];
   };
@@ -769,6 +772,22 @@ async function sequenciaCel(s, papel, semAA) {
   const pg = s.pagina, r = { papel };
   r.info = await P(pg, 'info');
   await pg.waitForFunction(() => window.__golaco.sobDemanda?.ja() ?? true, null, { timeout: 120000 });
+  // (a revisão do bloco 3) o que chega DEPOIS e muda a torcida no quadro — o modelo do torcedor 3D (pedido no quadro seguinte ao
+  // das cadeiras: os torcedores dos blocos de perto saem do quadro) e o impostor ASSADO em fatias ociosas entre os desenhos —
+  // assenta antes de qualquer medida, desenhando até lá (sem desenho nada anda): sem isso a cena mudava entre os quadros a e b
+  // da K3 conforme o relógio da máquina (a carga sem AA com cobertura 0,925 e o SSAA cintilando 4,60% em 2 de 7 rodadas)
+  r.assentado = await pg.evaluate(async () => {
+    const g = window.__golaco, t0 = performance.now();
+    const ok = () => {
+      const e = g.estadio;
+      if (!e?.torcida || e.torcida.qualidade === 'baixa') return true;
+      const tor = e.cadeiras?.torcedores, io = e.impostorObj, imp = io ? io.estado : null;
+      return !!tor?.carregado && (!imp || imp.pronto || imp.falhou);
+    };
+    while (!ok() && performance.now() - t0 < 90000) { g.desenhar(); await new Promise(res => setTimeout(res, 100)); }
+    const io = g.estadio?.impostorObj, imp = io ? io.estado : null;
+    return { ok: ok(), ms: Math.round(performance.now() - t0), torcedores: !!g.estadio?.cadeiras?.torcedores?.carregado, impostor: imp ? (imp.pronto ? 'pronto' : imp.falhou ? 'falhou' : 'assando') : 'nenhum' };
+  });
   // o relógio manual num instante fixo (a torcida anda no relógio do desenho)
   r.plano = await pg.evaluate(() => {
     const g = window.__golaco;
@@ -816,6 +835,9 @@ async function medirK23(pg, cel) {
   const pj = cel.poses.jogo, B = baseCam(pj, cel.quadros.jogo.W, cel.quadros.jogo.H);
   const cT = projetar(B, [pj.para[0], 8, -50]).c, dx = (0.25 * 2 * cT * B.tanV * B.asp) / B.W;
   cel.torc = [await P(pg, 'cobertura', pj, ['torcida*']), await P(pg, 'cobertura', desloca(pj, dx), ['torcida*'])];
+  // o quadro a de novo DEPOIS do b (a revisão do bloco 3): a cena tem de ser a mesma (o SSAA idêntico); senão a cintilação mede
+  // a cena mudando, não a câmera andando 0,25 px
+  cel.torcDeNovo = await P(pg, 'cobertura', pj, ['torcida*']);
 }
 
 let celBuild = null, celOposta = null, celIgual = null;
@@ -967,9 +989,13 @@ try {
           const rf = ref(`K.franjasFora.${l.k}`);
           const tolF = Math.max(0.0005, (rf ?? 0) * 0.25) * tolRef();
           const onde = l.nome === 'prejogo' ? 'pré-jogo, fachada' : l.nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco';
+          // (a revisão do bloco 3) o letreiro do Estádio Golaço é TRANSPARENTE (a borda pela mistura): a A2C do C10 não o pega e a
+          // linha não mede nada (0 px de borda na main e agora); o letreiro OPACO (o dos pórticos do Maracanã, só no pré-jogo da
+          // edição pro com o estádio real) foi medido à parte no C10 — fica informativa até o C14 decidir se mede o pro aqui
+          const naoMede = l.nome === 'prejogo';
           meta('K', `K1 franjas na silhueta, centro do pixel FORA da região (a amostra extrapolada, N11): ${l.cat} (${onde})`,
-            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
-            '≤ 0,2% e ≤ a da main com o MSAA forçado', l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF));
+            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}${naoMede ? ' · o letreiro do Estádio Golaço é transparente: a A2C não o pega (não mede)' : ''}`,
+            '≤ 0,2% e ≤ a da main com o MSAA forçado', naoMede ? null : l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF), naoMede ? 'info' : 'meta');
           meta('K', `K1 franjas, centro DENTRO da região (o fundo escondido na mistura: o piso da medida): ${l.cat} (${onde})`,
             `${pct(l.fracDentro, 2)} de ${l.bDentro} px (${l.fDentro}) · todas as bordas ${pct(l.frac, 2)} de ${l.bordas}`, 'informativa', null, 'info');
         }
@@ -991,6 +1017,13 @@ try {
         for (const [rot, cel] of [['build', celBuild], ['outra', celOposta]]) {
           if (!cel.torc?.[0] || !cel.torc?.[1]) continue;
           const [a, b] = cel.torc, a1 = u8(a.m1), b1 = u8(b.m1), a3 = u8(a.m3), b3 = u8(b.m3);
+          // a cena parada durante a medida: o quadro a desenhado de novo depois do b = o primeiro (máscara 1× e SSAA)
+          const r1 = cel.torcDeNovo ? u8(cel.torcDeNovo.m1) : null, r3 = cel.torcDeNovo ? u8(cel.torcDeNovo.m3) : null;
+          let dif1 = 0, dif3 = 0;
+          if (r1 && r3) for (let i = 0; i < a1.length; i++) { dif1 += a1[i] ^ r1[i]; dif3 += a3[i] ^ r3[i]; }
+          meta('K', `K3 a cena parada durante a medida (${rot === 'build' ? 'o build' : 'a carga oposta'}): o quadro a de novo depois do b`,
+            r1 ? `${dif1} px diferentes no 1× · ${dif3} no SSAA · assentada antes: ${cel.assentado ? `${cel.assentado.ok ? 'sim' : 'NÃO'} (${cel.assentado.ms} ms; torcedor 3D ${cel.assentado.torcedores ? 'chegou' : 'não'}, impostor ${cel.assentado.impostor})` : '—'}` : 'não medido',
+            '0 · 0', r1 ? dif1 === 0 && dif3 === 0 : false, 'estrutura');
           let x1 = 0, o1 = 0, x3 = 0, o3 = 0;
           for (let i = 0; i < a1.length; i++) { x1 += a1[i] ^ b1[i]; o1 += a1[i] | b1[i]; x3 += a3[i] ^ b3[i]; o3 += a3[i] | b3[i]; }
           const cob = contar(a1) / contar(a3), c1 = x1 / o1, c3 = x3 / o3;

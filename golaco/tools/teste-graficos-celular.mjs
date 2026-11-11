@@ -205,6 +205,9 @@ async function instalarPagina() {
     const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
     const g2 = cv.getContext('2d'), im = g2.createImageData(W, H);
     for (let y = 0; y < H; y++) im.data.set(px.subarray((H - 1 - y) * W * 4, (H - y) * W * 4), y * W * 4);
+    // alfa 255 (a revisão do bloco 3): o three r170 pede o contexto com alpha true e a A2C deixa alfa < 1 no buffer nas bordas
+    // das peças — na tela o compositor soma quase nada (o fundo da página é quase preto), mas o PNG saía translúcido
+    for (let i = 3; i < im.data.length; i += 4) im.data[i] = 255;
     g2.putImageData(im, 0, 0);
     return cv.toDataURL('image/png').split(',')[1];
   };
