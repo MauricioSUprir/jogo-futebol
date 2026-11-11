@@ -134,6 +134,18 @@ try {
   // a parte da torcida (antes ela era remontada: ~300 ms); a troca do renderizador (sombras, antialias) é a de antes
   {
     const cdp = await contexto.newCDPSession(pg);
+    // o que chega sozinho DEPOIS (o modelo do torcedor 3D, pedido no quadro seguinte ao das cadeiras, e o impostor assado em
+    // fatias ociosas entre os desenhos) assenta ANTES da contagem, desenhando até lá: senão chegava no meio da medida e parecia
+    // vazamento (a revisão do bloco 3 do item 45: geometrias 26 → 29 e texturas 14 → 15 numa rodada da main, sem vazar nada)
+    await pg.evaluate(async () => {
+      const g = window.__golaco, t0 = performance.now();
+      const ok = () => {
+        const e = g.estadio, tor = e?.cadeiras?.torcedores, io = e?.impostorObj, imp = io ? io.estado : null;
+        return !e?.torcida || e.torcida.qualidade === 'baixa' || (!!tor?.carregado && (!imp || imp.pronto || imp.falhou));
+      };
+      while (!ok() && performance.now() - t0 < 60000) { g.desenhar(); await new Promise(res => setTimeout(res, 100)); }
+      for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
+    });
     const mem0 = await pg.evaluate(() => { const e = window.__golaco.estado(); return { geo: e.geometrias, tex: e.texturas }; });
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     const trocas = await pg.evaluate(() => {
