@@ -24,13 +24,14 @@ import { estadoOla, aberturaBandeirao } from './festa.js';
 import { bandeiroes } from './bandeiras-dados.js';
 import { ESTADO_GLSL } from './torcedor-pose.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
-import { criarBandeiras } from './bandeiras.js';
+import { criarBandeiras, COMPENSA_MIP } from './bandeiras.js';
 import { criarSinalizadores } from './sinalizadores.js';
 
 /**
  * Os shaders do quadro (o atlas SDF de hoje). imp (o impostor octaédrico do item 69, PR 3: render/impostor.js, sob demanda)
- * = {vertPars, vertMain, fragPars, fragMain}: o MESMO programa com um ramo por torcedor (aLod: 0 o quadro, 1 o impostor) — o
- * quadro SDF continua igual; sem imp (o programa de hoje, a única coisa que a TV do celular desenha), nada do impostor.
+ * = {vertPars, vertMain, fragPars, fragTopo (no topo do main, fora de desvio: o nível do mip das fotos), fragMain}: o MESMO
+ * programa com um ramo por torcedor (aLod: 0 o quadro, 1 o impostor) — o quadro SDF continua igual (lido no topo, pelo nível
+ * do mip da cópia sem centroid); sem imp (o programa de hoje, a única coisa que a TV do celular desenha), nada do impostor.
  */
 function shaders(imp = null) {
   const vert = /* glsl */`
@@ -47,6 +48,7 @@ uniform vec3 uCamPos;
 uniform vec3 uAcento0;
 uniform vec3 uAcento1;
 varying vec2 vUv;
+centroid varying vec2 vUvC;
 varying vec3 vCamisa;
 varying vec3 vPele;
 varying vec3 vCabelo;
@@ -102,6 +104,8 @@ ${imp.vertMain}
     vLuz = luz * (0.88 + 0.24 * fract(h * 7.31));
     vAltura = qy;
   }
+  // a UV da amostra (centroid) é a mesma; no ramo do impostor o vUv é o canto na foto 0 (render/impostor.js: a derivada dele)
+  vUvC = vUv;
   gl_Position = projectionMatrix * mvPosition;
   #include <fog_vertex>
 }
@@ -112,6 +116,7 @@ ${imp.vertMain}
 uniform sampler2D uAtlas;
 uniform vec2 uTamAtlas;
 varying vec2 vUv;
+centroid varying vec2 vUvC;
 varying vec3 vCamisa;
 varying vec3 vPele;
 varying vec3 vCabelo;
@@ -121,24 +126,46 @@ varying float vAltura;
 varying vec3 vFlare;
 ${imp ? imp.fragPars : ''}
 void main() {
+  // (item 45, C10; PLANO-GRAFICOS.md passo 5) a SILHUETA com MSAA: o pixel da borda é sombreado no centro dele, que pode ficar
+  // fora do triângulo (a UV extrapolada sai da caixa da pose e lê o vizinho do atlas: o N11). A UV da AMOSTRA vem num varying
+  // centroid (vUvC: dentro da parte coberta do pixel) e as DERIVADAS (o nível do mip da compensação e o da leitura) da cópia SEM
+  // centroid (vUv). Medido (teste-graficos-pagina, a A2 por categoria): lida pela derivada IMPLÍCITA da entrada centroid, a
+  // torcida da TV ficava mais longe do SSAA (os quadros de 2×2 com um pixel de borda deslocado erram o mip). As derivadas e a
+  // leitura no TOPO, fora de qualquer desvio (a lição do PR #631), pelo nível dado (textureLod: o atlas é isotrópico, a conta é a
+  // do GL — ρ = o maior comprimento das derivadas em texels —, e o textureGrad pesa no celular).
+  // A cobertura preservada de longe (o mipmap tira opacidade das partes finas): sobe o alfa pelo nível do mipmap (Castaño,
+  // "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test")
+  vec2 d = fwidth(vUv * uTamAtlas);
+  float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
+  vec2 dSx = dFdx(vUv * uTamAtlas), dSy = dFdy(vUv * uTamAtlas);
+  vec4 tSdf = textureLod(uAtlas, vUvC, 0.5 * log2(max(max(dot(dSx, dSx), dot(dSy, dSy)), 1e-8)));
+  float aSdf = tSdf.a * (1.0 + ${COMPENSA_MIP.toFixed(2)} * nivel);
+  float saidaA = 1.0;
+  #ifdef ALPHA_TO_COVERAGE
+  // com MSAA (definirAA), o alfa para cobertura afiado pela derivada do próprio alfa (Golus, "Anti-aliased Alpha Test": a borda
+  // de ~1 px em volta do limiar 0,5 vira fração das amostras): medido na seção K, a cintilação da silhueta com a câmera andando
+  // 0,25 px cai (2,25 → 1,62%, abaixo da do SSAA) sem a cobertura cair
+  float cobSdf = (aSdf - 0.5) / max(fwidth(aSdf), 1e-4) + 0.5;
+  #endif
+${imp ? (imp.fragTopo ?? '') : ''}
   vec3 cor;
   ${imp ? `if (vImpModo > 0.5) {
 ${imp.fragMain}
   } else {` : '{'}
-    vec4 t = texture2D(uAtlas, vUv);
-    // cobertura preservada de longe (mipmap tira opacidade das partes finas): sobe o alfa pelo nível do
-    // mipmap (Castaño, "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test")
-    vec2 d = fwidth(vUv * uTamAtlas);
-    float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
-    float a = t.a * (1.0 + 0.22 * nivel);
-    if (a < 0.5) discard;
+    vec4 t = tSdf;
+    #ifdef ALPHA_TO_COVERAGE
+    if (cobSdf <= 0.0) discard;
+    saidaA = clamp(cobSdf, 0.0, 1.0);
+    #else
+    if (aSdf < 0.5) discard;
+    #endif
     vec3 w = t.rgb / max(t.a, 0.004);
     float ac = max(0.0, 1.0 - w.r - w.g - w.b);
     cor = w.r * vCamisa + w.g * vPele + w.b * vCabelo + ac * vAcento;
     // a fileira da frente faz sombra nas pernas; o resto pela luz do setor
     cor *= vLuz * (0.68 + 0.32 * smoothstep(0.08, 0.7, vAltura)) + vFlare;
   }
-  gl_FragColor = vec4(cor, 1.0);
+  gl_FragColor = vec4(cor, saidaA);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -188,6 +215,14 @@ export function criarTorcida(cena, opc) {
   // impostor; o grupo só usa impMat com alguém nele — sem ninguém, o programa de hoje), a malha PERTO (a densidade real nos
   // blocos das cadeiras 3D, fora das fileiras em 3D) e a conferência do programa (falhou = o quadro SDF de volta)
   let impMat = null, lod = null, emImp = [], perto = null, precargaImp = false, conferir = 0, falhasAntes = 0, impFalhou = false;
+  // o alfa para cobertura do quadro (item 45, C10): pelas AMOSTRAS do contexto que desenha (definirAA: o SAMPLES, nunca o nome da
+  // qualidade — a queda deixa a Baixa num contexto com MSAA) e desligado pelo gancho físico dos testes (fisico)
+  let amostrasAA = 0, fisicoAA = false;
+  /** A A2C nos dois programas (o de hoje e o com o impostor): só o que mudou pede o programa novo (o bit 21 da chave). */
+  function aplicarAA() {
+    const a2c = !fisicoAA && amostrasAA >= 2;
+    for (const m of [material, impMat]) if (m && m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+  }
   const grupos = () => (mesh ? mesh.children.filter(m => m.userData.grupo !== undefined) : []);
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   function desmontar() {
@@ -217,6 +252,7 @@ export function criarTorcida(cena, opc) {
     uni.uTamAtlas.value.set(at.largura, at.altura);
     const sh = shaders();
     material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
+    aplicarAA();
     // um InstancedMesh por grupo (lado de lá, fundo +x, fundo −x, lado de cá frente, lado de cá cima): o mesmo
     // material e o mesmo atlas, cada um com a caixa de corte dos seus torcedores — com a câmera de TV no meio-campo
     // os fundos e o lado de cá ficam fora do quadro e nem chegam à GPU (só 1 chamada de desenho no jogo).
@@ -294,7 +330,7 @@ export function criarTorcida(cena, opc) {
     return m;
   }
   /**
-   * Liga o impostor: imp = {vertPars, vertMain, fragPars, fragMain (o GLSL do render/impostor.js), uniforms (os dele: o
+   * Liga o impostor: imp = {vertPars, vertMain, fragPars, fragTopo, fragMain (o GLSL do render/impostor.js), uniforms (os dele: o
    * atlas e as contas), rumo: Int8Array(2·n) (cos e sen do rumo de cada torcedor × 127)}. O programa compila no próximo
    * quadro desenhado (a malha perto com 0 instâncias) e é conferido no seguinte (falhou: o quadro SDF de volta).
    */
@@ -304,6 +340,7 @@ export function criarTorcida(cena, opc) {
     impMat?.dispose();
     impMat = new THREE.ShaderMaterial({ uniforms: { ...uni, ...imp.uniforms }, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
     impMat.name = 'torcida-impostor';
+    aplicarAA();
     lod = new Uint8Array(dados.n); emImp = [];
     for (const m of grupos()) {
       const [i0, i1] = m.userData.faixa;
@@ -471,6 +508,19 @@ export function criarTorcida(cena, opc) {
     /** A malha perto (testes). */
     get malhaPerto() { return perto; },
     definirHora(h) { uni.uLuz.value.set(...(h === 'noite' ? LUZ.noite : LUZ.dia)); bandeiras.definirHora(h); sinalizadores.definirHora(h); },
+    /**
+     * O antisserrilhado do quadro pelas AMOSTRAS do contexto que desenha (item 45, C10; main.js: na criação e no cena.aoRecriar —
+     * a recriação do renderizador e o contexto restaurado): ≥ 2 = o alfa para cobertura (a fórmula do Golus); < 2 = o descarte de
+     * hoje (sem amostras o A2C não faz nada: a Baixa fica com o descarte). Muda o material FORA do desenho.
+     */
+    definirAA(n) { amostrasAA = n | 0; aplicarAA(); },
+    /**
+     * O gancho físico dos testes (item 45, C10: graficos.fisico): true = os desenhos seguintes sem os truques (sem a A2C no quadro,
+     * sem a compensação de alfa das bandeiras: as referências SSAA e as máscaras geométricas); false = de volta.
+     */
+    fisico(v) { fisicoAA = !!v; aplicarAA(); bandeiras.fisico(v); },
+    /** O estado do antisserrilhado do quadro (testes): {a2c, amostras, fisico}. */
+    get aa() { return { a2c: !!material?.alphaToCoverage, amostras: amostrasAA, fisico: fisicoAA }; },
     definirQualidade(q) { if (q !== qualidade && TORCIDA.ocupacao[q]) { aplicarQualidade(q); bandeiras.definirQualidade(q); sinalizadores.definirQualidade(q); } },
     /** Faixas/bandeiras/bandeirões e sinalizadores (testes e prints). */
     bandeiras, sinalizadores,

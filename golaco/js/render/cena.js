@@ -278,6 +278,8 @@ export function criarCena(opc) {
       ganchos.push(fn);
       return () => { const i = ganchos.indexOf(fn); if (i >= 0) ganchos.splice(i, 1); };
     },
+    /** Quantos ganchos do contexto novo estão registrados (testes: nenhum vaza a cada pré-jogo — o letreiro de fora, C10). */
+    get nGanchos() { return ganchos.length; },
     /**
      * O buffer do canvas para a janela w × h (px CSS) com o pixel ratio da qualidade. Só mexe quando a largura, a altura ou o
      * pixel ratio mudam (o resize e o visualViewport chamam os dois; cada atribuição a canvas.width/height refaz o provedor do

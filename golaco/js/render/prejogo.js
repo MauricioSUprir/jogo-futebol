@@ -51,7 +51,11 @@ export function criarPrejogo(ctx) {
     tcsPrevia: [], filaPronta: false, disparados: new Set(), fora: null, emocao: null, desde: 0, terminando: false,
     nevoa: null, cameraNF: null, cenaSom: { ganho: 1, filtro: null }, ladoDeCaForcado: false,
     tec: null, tecL: criarLeitura(), tecAcum: 0, tecAplaudiu: false,
+    // o gancho do contexto novo do letreiro de fora (item 45, C10): registrado com o estádio de fora, tirado com ele
+    tiraAA: null,
   };
+  // o gancho físico dos testes (item 45, C10: os letreiros sem a A2C), guardado para o estádio de fora que nascer depois
+  let fisicoG = false;
   // desenho do cortejo: pose anterior/atual/desenhada por andante (nada alocado por quadro)
   const est = [];
   const lista = [];
@@ -303,6 +307,14 @@ export function criarPrejogo(ctx) {
     const entorno = !!opc.abertura || st.r.planos.some(p => p.fora);
     st.fora = criarEstadioFora(cena, { qualidade: ctx.qualidade(), hora: ctx.hora(), aniso: ctx.cena3d.anisotropia(), materialTorcida: ctx.torcida.mesh?.children?.[0]?.material ?? null, entorno, identidade: ctx.identidade ?? null });
     st.msFora = performance.now() - t0;
+    // o letreiro de fora (alphaTest) com A2C pelo MSAA do contexto (item 45, C10: o SAMPLES, nunca o nome da qualidade): agora,
+    // na recriação do renderizador e no contexto restaurado. O estádio de fora nasce e morre com o pré-jogo: o gancho também
+    // (encerrar), nenhum fica para trás a cada pré-jogo
+    if (st.fora.definirAA) {
+      st.fora.definirAA(ctx.cena3d.amostras ?? 0);
+      if (fisicoG) st.fora.fisico(true);
+      st.tiraAA = ctx.cena3d.aoRecriar?.(() => st.fora?.definirAA(ctx.cena3d.amostras ?? 0)) ?? null;
+    }
     vao.abrir();
     tela.escalacao.montar(m.times);
     tela.mostrar(true);
@@ -363,6 +375,7 @@ export function criarPrejogo(ctx) {
     const cena = ctx.cena3d.cena, cam = camera();
     if (st.nevoa) { cena.fog.near = st.nevoa.near; cena.fog.far = st.nevoa.far; }
     if (st.cameraNF) { cam.near = st.cameraNF.near; cam.far = st.cameraNF.far; cam.updateProjectionMatrix(); }
+    if (st.tiraAA) { st.tiraAA(); st.tiraAA = null; }
     if (st.fora) { st.fora.dispose(); st.fora = null; }
     vao.fechar();
     const som = ctx.som();
@@ -505,7 +518,7 @@ export function criarPrejogo(ctx) {
     /** O último quadro desenhado: chamadas de desenho e triângulos. */
     get desenho() { const i = ctx.cena3d.info().render; return { chamadas: i.calls, triangulos: i.triangles }; },
     get cortejo() { return st.c ? { tick: st.c.tick, fila: st.filaPronta, fotos: [...st.fotos.keys()], previa: !!st.previa } : null; },
-    get fora() { return st.fora ? { ...st.fora.info, msCriar: Math.round(st.msFora ?? 0) } : null; },
+    get fora() { return st.fora ? { ...st.fora.info, msCriar: Math.round(st.msFora ?? 0), aa: st.fora.aa ?? null } : null; },
     pular: () => proximo(), pularTudo: () => pularTudo(), irPara: t => irPara(t), comecar: () => comecar(),
     andantesNaTela,
     /** Posição desenhada (interpolada) do andante `id` no último quadro, ou null (testes: a câmera passando pela fila). */
@@ -529,6 +542,8 @@ export function criarPrejogo(ctx) {
     mudo: v => tela.mudo(v),
     /** Sai sem avisar o main.js (mundo novo pela API ou troca de modo no meio do pré-jogo). */
     cancelar: () => encerrar(false),
+    /** O gancho físico dos testes (item 45, C10): o letreiro de fora sem a A2C (vale também para o que nascer depois). */
+    fisicoGraficos(v) { fisicoG = !!v; st.fora?.fisico?.(fisicoG); },
     get ativo() { return st.ativo; },
     get naAbertura() { return st.fase === 'abertura'; },
     api,

@@ -31,8 +31,8 @@ uniform vec4 uImpRet[${OBJETOS}];
 uniform vec4 uImpCen[${OBJETOS}];
 uniform vec3 uImpLuz;
 varying float vImpModo;
-varying vec4 vImpUv01;
-varying vec2 vImpUv2;
+centroid varying vec4 vImpUv01;
+centroid varying vec2 vImpUv2;
 varying vec4 vImpCel01;
 varying vec2 vImpCel2;
 varying vec3 vImpW;
@@ -82,8 +82,12 @@ const VERT_MAIN = /* glsl */`
     vec3 iP = aPos.xyz + iX * iPl.x + vec3(0.0, iPl.y, 0.0) + iZ * iPl.z;
     mvPosition = viewMatrix * vec4(iP, 1.0);
     // o canto do quadro em cada foto (a projeção virtual: o raio da câmera no plano de cada foto)
-    vImpUv01 = vec4((impReprojeta(iLp, iV, iD0, iBx0, iBy0) - iR.xy) / iR.zw, (impReprojeta(iLp, iV, iD1, iBx1, iBy1) - iR.xy) / iR.zw);
+    vec4 iUv01 = vec4((impReprojeta(iLp, iV, iD0, iBx0, iBy0) - iR.xy) / iR.zw, (impReprojeta(iLp, iV, iD1, iBx1, iBy1) - iR.xy) / iR.zw);
+    vImpUv01 = iUv01;
     vImpUv2 = (impReprojeta(iLp, iV, iD2, iBx2, iBy2) - iR.xy) / iR.zw;
+    // (item 45, C10) as UVs das fotos vão em varyings centroid (com MSAA, dentro da parte coberta do pixel); a cópia SEM centroid
+    // do canto na foto 0 vai no vUv do quadro (livre neste ramo): a derivada dela dá o nível do mip das 3 fotos (FRAG_TOPO)
+    vUv = iUv01.xy;
     float iO = float(iObj);
     vImpCel01 = vec4(impOrigem(iO, iF0), impOrigem(iO, iF1));
     vImpCel2 = impOrigem(iO, iF2);
@@ -104,8 +108,8 @@ uniform float uNoiteImp;
 uniform vec3 uCalcaImp[${T3.calca.length}];
 uniform vec3 uSapatoImp[${T3.sapato.length}];
 varying float vImpModo;
-varying vec4 vImpUv01;
-varying vec2 vImpUv2;
+centroid varying vec4 vImpUv01;
+centroid varying vec2 vImpUv2;
 varying vec4 vImpCel01;
 varying vec2 vImpCel2;
 varying vec3 vImpW;
@@ -116,29 +120,39 @@ varying vec4 vImpX;
 // o peso da foto que vale neste pixel (0 fora do retângulo dela) e o ponto no atlas
 float impPeso(vec2 uv, float w) { return (w <= 0.0 || uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) ? 0.0 : w; }
 vec2 impAtlas(vec2 cel, vec2 uv) { return cel + uv * uImpCel / uImpTam; }
-// a 2ª textura de uma foto (a calça, a normal, a altura) somada pelo peso; N·L no espaço dela (a normal × a cobertura)
-void impAmostraB(vec2 c, float w, float a, vec3 L, inout vec4 B, inout float ndl) {
+// a 2ª textura de uma foto (a calça, a normal, a altura) somada pelo peso; N·L no espaço dela (a normal × a cobertura). Lida
+// pelo nível dado (lod: FRAG_TOPO), nunca pela derivada implícita: aqui ela está num desvio
+void impAmostraB(vec2 c, float w, float a, vec3 L, float lod, inout vec4 B, inout float ndl) {
   if (w <= 0.0) return;
-  vec4 tb = texture2D(uImpB, c);
+  vec4 tb = textureLod(uImpB, c, lod);
   B += w * tb;
   vec2 n = tb.gb * 2.0 - a;
   ndl += w * dot(vec3(n, sqrt(max(a * a - dot(n, n), 0.0))), L);
 }
 `;
+// no TOPO do main() da torcida, fora de qualquer desvio (item 45, C10; a lição do PR #631): o nível do mip das fotos pela
+// derivada da cópia SEM centroid (vUv = o canto na foto 0; a de uma entrada centroid sai imprecisa na borda). As 3 fotos são
+// vistas vizinhas do mesmo quadro: o nível delas difere pouco (a razão das derivadas é o cosseno do ângulo entre elas). As
+// leituras do ramo (dentro de desvios: a foto sem peso não lê) vão por textureLod com ele — a derivada implícita num desvio é
+// indefinida (GLSL ES 3.00 §8.9)
+const FRAG_TOPO = /* glsl */`
+  vec2 iDx = dFdx(vUv) * uImpCel, iDy = dFdy(vUv) * uImpCel;
+  float iLod = 0.5 * log2(max(max(dot(iDx, iDx), dot(iDy, iDy)), 1e-8));
+`;
 const FRAG_MAIN = /* glsl */`
     // 1º a cobertura e as regiões (a 1ª textura das 3 fotos): o recorte antes da 2ª textura — metade do quadro é vazio
     float iW0 = impPeso(vImpUv01.xy, vImpW.x), iW1 = impPeso(vImpUv01.zw, vImpW.y), iW2 = impPeso(vImpUv2, vImpW.z);
     vec2 iC0 = impAtlas(vImpCel01.xy, vImpUv01.xy), iC1 = impAtlas(vImpCel01.zw, vImpUv01.zw), iC2 = impAtlas(vImpCel2, vImpUv2);
-    vec4 iA0 = iW0 > 0.0 ? texture2D(uImpA, iC0) : vec4(0.0);
-    vec4 iA1 = iW1 > 0.0 ? texture2D(uImpA, iC1) : vec4(0.0);
-    vec4 iA2 = iW2 > 0.0 ? texture2D(uImpA, iC2) : vec4(0.0);
+    vec4 iA0 = iW0 > 0.0 ? textureLod(uImpA, iC0, iLod) : vec4(0.0);
+    vec4 iA1 = iW1 > 0.0 ? textureLod(uImpA, iC1, iLod) : vec4(0.0);
+    vec4 iA2 = iW2 > 0.0 ? textureLod(uImpA, iC2, iLod) : vec4(0.0);
     vec4 iA = iW0 * iA0 + iW1 * iA1 + iW2 * iA2;
     if (iA.a < ${g(I.alfa)}) discard;
     vec4 iB = vec4(0.0);
     float iNdl = 0.0;
-    impAmostraB(iC0, iW0, iA0.a, vImpL0, iB, iNdl);
-    impAmostraB(iC1, iW1, iA1.a, vImpL1, iB, iNdl);
-    impAmostraB(iC2, iW2, iA2.a, vImpL2, iB, iNdl);
+    impAmostraB(iC0, iW0, iA0.a, vImpL0, iLod, iB, iNdl);
+    impAmostraB(iC1, iW1, iA1.a, vImpL1, iLod, iB, iNdl);
+    impAmostraB(iC2, iW2, iA2.a, vImpL2, iLod, iB, iNdl);
     vec3 iWr = iA.rgb / iA.a;
     float iWc = iB.r / iA.a;
     float iAlt = iB.a / iA.a * ${g(I.alturaMax)};
@@ -156,7 +170,7 @@ const FRAG_MAIN = /* glsl */`
     iLuz *= vImpX.w * (0.7 + 0.3 * smoothstep(0.05, 0.75, iAlt - vImpX.z * 0.5));
     cor *= iLuz + vFlare;
 `;
-export const GLSL_IMPOSTOR = Object.freeze({ vertPars: VERT_PARS, vertMain: VERT_MAIN, fragPars: FRAG_PARS, fragMain: FRAG_MAIN });
+export const GLSL_IMPOSTOR = Object.freeze({ vertPars: VERT_PARS, vertMain: VERT_MAIN, fragPars: FRAG_PARS, fragTopo: FRAG_TOPO, fragMain: FRAG_MAIN });
 
 /** As texturas do atlas (o nível 0 e o 1: imutáveis com 2 níveis — o 2 misturaria fotos vizinhas). */
 function texturas(r) {

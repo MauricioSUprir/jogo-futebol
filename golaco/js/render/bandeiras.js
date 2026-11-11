@@ -21,6 +21,8 @@ const Y_BANDEIRA = 576, BAND_W = 182, BAND_H = 128;
 const Y_BANDEIRAO = 704;
 const BANDEIRAO_PX = [[0, Y_BANDEIRAO, 512, 128], [512, Y_BANDEIRAO, 512, 298]];
 const MASTRO_PX = [8, 1012, 8, 8];
+// quanto o alfa sobe por nível do mip (a cobertura de longe): o MESMO da torcida (render/torcida.js, o shader do quadro, lê daqui)
+export const COMPENSA_MIP = 0.22;
 
 const VERT = /* glsl */`
 #include <common>
@@ -39,6 +41,7 @@ uniform vec3 uSol;
 uniform vec2 uLuz;
 uniform vec4 uLente;
 varying vec2 vUv;
+centroid varying vec2 vUvC;
 varying float vLuz;
 varying vec3 vFlare;
 ${BANDEIRA_GLSL}
@@ -81,23 +84,46 @@ void main() {
   vec4 mvPosition = viewMatrix * vec4(p, 1.0);
   gl_Position = projectionMatrix * mvPosition;
   vUv = uv;
+  vUvC = uv;
   vLuz = uLuz.x + uLuz.y * abs(dot(n, uSol));
   vFlare = luzFalsa(p);
   #include <fog_vertex>
 }
 `;
 
+// (item 45, C10; PLANO-GRAFICOS.md passo 5) A SILHUETA com MSAA: o pixel da borda é sombreado no CENTRO dele, que pode ficar
+// fora do triângulo — a UV de lá sai do retângulo da peça e lia a célula vizinha do atlas (a linha verde-clara no alto das faixas
+// da mureta: o N11). A UV da AMOSTRA vem num varying `centroid` (dentro da parte coberta do pixel; GLSL ES 3.00 §4.3) e as
+// DERIVADAS (a da leitura e o nível do mip da compensação) da cópia SEM centroid. Medido (teste-graficos-pagina K1, as franjas
+// da borda na TV na bola): 13,4% sem centroid; 11,8% com a UV centroid lida pela derivada IMPLÍCITA dela (o quadro de 2×2 com
+// um pixel de borda deslocado erra o mip: a faixa ganhava uma linha escura em cima); 2,2% com a derivada da cópia sem centroid.
+// textureGrad (e não textureLod): o atlas tem anisotropia 4 (as faixas dos fundos vistas de lado). A leitura com mip e as
+// derivadas no TOPO, fora de qualquer desvio (a lição do PR #631). A COBERTURA de longe: como a torcida
+// (render/torcida.js), o alfa sobe pelo nível do mip (Castaño, "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test") —
+// sem isso a bandeira e o mastro somem aos pedaços de longe — e a cor sai da média do mip sem o preto das células vazias do
+// atlas (o canvas guarda o transparente como preto: o mip da borda é a cor × a cobertura). uCompensa 0 = a peça "física" (o
+// gancho dos testes: graficos.fisico, as referências SSAA). O alfa escrito é o da cobertura (o canvas é opaco: alpha false).
+// O alfa para cobertura (a fórmula do Golus, como na torcida) NÃO entrou aqui: medido na K, as franjas da borda subiam (2,2 →
+// 2,4% na TV na bola, 0,26 → 0,61% com o gol no foco) e a cobertura de longe (K2) não mudava — as bordas destas peças são
+// as do retângulo (a geometria, que o MSAA já trata), não recortes finos dentro dele.
 const FRAG = /* glsl */`
 #include <common>
 #include <fog_pars_fragment>
 uniform sampler2D uAtlas;
+uniform vec2 uTamAtlas;
+uniform float uCompensa;
 varying vec2 vUv;
+centroid varying vec2 vUvC;
 varying float vLuz;
 varying vec3 vFlare;
 void main() {
-  vec4 t = texture2D(uAtlas, vUv);
-  if (t.a < 0.5) discard;
-  gl_FragColor = vec4(t.rgb * (vLuz + vFlare), 1.0);
+  vec2 gx = dFdx(vUv), gy = dFdy(vUv);
+  vec4 t = textureGrad(uAtlas, vUvC, gx, gy);
+  vec2 d = abs(gx * uTamAtlas) + abs(gy * uTamAtlas);
+  float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
+  float a = t.a * (1.0 + ${COMPENSA_MIP.toFixed(2)} * nivel * uCompensa);
+  if (a < 0.5) discard;
+  gl_FragColor = vec4(t.rgb / max(t.a, 0.004) * (vLuz + vFlare), min(a, 1.0));
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
   #include <fog_fragment>
@@ -260,7 +286,7 @@ export function criarBandeiras(cena, opc = {}) {
   const tex = ident ? atlasFesta(lFaixas, ident.festa, imagemEscudo(ident, ident.festa.escudo ?? 0)) : atlasFesta(lFaixas);
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
-    uAtlas: { value: tex }, uTempo: { value: 0 }, uAnimada: { value: 1 }, uAbre: { value: new THREE.Vector2(0, 0) },
+    uAtlas: { value: tex }, uTamAtlas: { value: new THREE.Vector2(ATLAS, ATLAS) }, uCompensa: { value: 1 }, uTempo: { value: 0 }, uAnimada: { value: 1 }, uAbre: { value: new THREE.Vector2(0, 0) },
     uBandA: { value: lBand2.map(b => new THREE.Vector3(...b.A)) }, uBandU: { value: lBand2.map(b => new THREE.Vector3(...b.U)) },
     uBandV: { value: lBand2.map(b => new THREE.Vector3(...b.V)) }, uBandN: { value: lBand2.map(b => new THREE.Vector3(...b.N)) },
     uBandLarg: { value: new THREE.Vector2(lBand2[0].larg, lBand2[1].larg) },
@@ -290,6 +316,11 @@ export function criarBandeiras(cena, opc = {}) {
       uni.uAnimada.value = q === 'baixa' ? 0 : 1;
     },
     definirHora(h) { uni.uLuz.value.set(h === 'noite' ? 0.36 : 0.62, h === 'noite' ? 0.12 : 0.42); },
+    /**
+     * O gancho físico dos testes (item 45, C10: graficos.fisico): true = os desenhos seguintes sem a compensação de alfa pelo
+     * mip (a peça de verdade: as referências SSAA e as máscaras); false = de volta. Só o uniform (nada recompila).
+     */
+    fisico(v) { uni.uCompensa.value = v ? 0 : 1; },
     /** A lente da câmera da bola parada ({x, y, z}) neste quadro, ou null fora desse plano: as bandeiras perto dela abaixam. */
     definirLente(p) { if (p) uni.uLente.value.set(p.x, p.y, p.z, 1); else uni.uLente.value.w = 0; },
     dispose() { cena.remove(mesh); geo.dispose(); material.dispose(); tex.dispose(); },

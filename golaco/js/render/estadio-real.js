@@ -16,7 +16,7 @@
 // brilhos); no pré-jogo ≤ 13 peças de fora (como antes).
 import * as THREE from 'three';
 import { ESTADIO } from '../config.js';
-import { criarCanvas, texturaCanvas, gerador } from './util.js';
+import { criarCanvas, texturaCanvas, gerador, recorteAA } from './util.js';
 import { GRAMA } from './texturas.js';
 import { definirForma } from '../estadio-forma.js';
 import { definirLadoDeCa } from './torcida-dados.js';
@@ -1572,7 +1572,7 @@ function criarEsplanada(P, aniso, q) {
 
 /**
  * O lado de fora com a forma própria (o mesmo contrato de estadio-fora.js criarEstadioFora: {grupo, modoFora,
- * definirHora, atualizar, dispose, info}). pecas: as de estadio-fora.js que servem a qualquer forma (túnel por dentro,
+ * definirHora, definirAA, fisico, aa, atualizar, dispose, info}). pecas: as de estadio-fora.js que servem a qualquer forma (túnel por dentro,
  * bairro, prédios, carros, torcedores chegando).
  */
 export function criarForaForma(cena, opc, P, pecas) {
@@ -1594,6 +1594,8 @@ export function criarForaForma(cena, opc, P, pecas) {
   for (const m of [...estrutura, ...entorno]) { m.castShadow = false; m.receiveShadow = false; grupo.add(m); }
   cena.add(grupo);
   const [fachada, placa] = estrutura;
+  // o letreiro dos pórticos (alphaTest opaco): A2C centrada no limiar com MSAA (item 45, C10; render/util.js recorteAA)
+  const aa = recorteAA([placa.material]);
   const esplanada = entorno[0], bairro = entorno[1], montanhas = entorno[2];
   function definirHora(h) {
     const noite = h === 'noite';
@@ -1643,6 +1645,9 @@ export function criarForaForma(cena, opc, P, pecas) {
     // de dentro a tigela e a cobertura tapam a fachada, as rampas e os pórticos (fora do desenho; o túnel fica)
     modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = placa.visible = !!v; fora = !!v; luzDoRio(fora); },
     definirHora,
+    definirAA: n => aa.definirAA(n),
+    fisico: v => aa.fisico(v),
+    get aa() { return aa.estado; },
     // o sol de fora: render/cena.js acompanhar() repõe a luz pelo rumo do jogo a cada quadro; aqui (depois dele, antes de
     // desenhar) ela vem do rumo de SOL, no mesmo alvo
     atualizar() { if (fora && hora !== 'noite' && sol) { sol.position.copy(sol.target.position).add(_v.set(...SOL).multiplyScalar(80)); } },

@@ -4418,6 +4418,9 @@ async function iniciar() {
   if (parou()) return;
   // programas: os do renderizador (o impostor da torcida confere o dele: não compilou, o quadro SDF de volta — item 69, PR 3)
   torcida = criarTorcida(cena3d.cena, { qualidade: qAtual, mascara: mascaraDaIdentidade(IDENT), hora, identidade: IDENT, programas: () => cena3d.info().programs ?? [] });
+  // o alfa para cobertura da torcida (item 45, C10) pelo MSAA do contexto, como os finos do gol: agora e nos ganchos do cena.js
+  torcida.definirAA(cena3d.amostras);
+  cena3d.aoRecriar(() => torcida.definirAA(cena3d.amostras));
   // o torcedor 3D de perto (item 69, PR 2) senta nas cadeiras 3D quando elas chegam (render/torcedor3d.js)
   campo.ligarTorcida(torcida);
   hud.progresso('Montando os jogadores…');
@@ -4952,12 +4955,15 @@ const api = {
   acao(a) { tratarAcao(a); },
   definirQualidade(nome) { comando('qualidade', nome); },
   /**
-   * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques dos finos (render/campo.js
-   * graficos.fisico: a referência SSAA e a máscara geométrica dos testes de gráficos); finos = o estado deles agora.
+   * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques (a referência SSAA e a máscara
+   * geométrica dos testes de gráficos): os dos finos (render/campo.js graficos.fisico), a A2C da torcida e a compensação de alfa
+   * das bandeiras (render/torcida.js fisico) e a A2C dos letreiros do pré-jogo (render/prejogo.js fisicoGraficos; C10); finos = o estado
+   * deles agora; ganchos = quantos ganchos do contexto novo estão registrados (cena.aoRecriar: nenhum vaza por pré-jogo).
    */
   graficos: {
-    fisico(v) { campo?.graficos.fisico(v); },
+    fisico(v) { campo?.graficos.fisico(v); torcida?.fisico(v); prejogo?.fisicoGraficos(v); },
     get finos() { return campo?.graficos.finos ?? null; },
+    get ganchos() { return cena3d?.nGanchos ?? null; },
   },
   definirHora(h) { comando('hora', h); },
   definirCamera(m) { comando('camera', m); },

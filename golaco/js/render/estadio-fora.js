@@ -16,7 +16,7 @@ import * as THREE from 'three';
 import { ESTADIO } from '../config.js';
 import { FORA, predios, arvores, carros, torcedoresFora } from '../estadio-forma.js';
 import { ARQUIBANCADA as A } from './torcida-dados.js';
-import { criarCanvas, texturaCanvas, gerador, juntarGeometrias } from './util.js';
+import { criarCanvas, texturaCanvas, gerador, juntarGeometrias, recorteAA } from './util.js';
 import { texArquibancada } from './texturas.js';
 import { desenharEscudo, imagemEscudo } from './escudo-desenho.js';
 
@@ -485,8 +485,8 @@ function criarTorcedores(material, tf = null, L = torcedoresFora()) {
 
 /**
  * Monta o lado de fora na cena. opc = {qualidade, hora, aniso, materialTorcida, entorno (padrão true; false: só a
- * estrutura — o pré-jogo sem plano de fora)}. Devolve {grupo, modoFora(v), definirHora(h), atualizar(t, camera),
- * dispose(), info}.
+ * estrutura — o pré-jogo sem plano de fora)}. Devolve {grupo, modoFora(v), definirHora(h), definirAA(amostras), fisico(v), aa,
+ * atualizar(t, camera), dispose(), info}.
  */
 export function criarEstadioFora(cena, opc = {}) {
   // estádio com forma própria (render/estadio-real.js, sob demanda): a estrutura e o entorno dele, com as peças daqui
@@ -515,6 +515,9 @@ export function criarEstadioFora(cena, opc = {}) {
   cena.add(grupo);
   const marquise = estilos ? estilos.esconderMarquise(cena, fa.cobertura) : null;   // sem cobertura: some no pré-jogo
   const [fachada, placa] = estrutura;
+  // o letreiro (item 45, C10; render/util.js recorteAA): ele é TRANSPARENTE (a borda vem da mistura), e a A2C só pega os
+  // recortes opacos — medido contra o SSAA, a A2C aqui ficava pior que a mistura; o contrato (definirAA/fisico) fica o mesmo
+  const aa = recorteAA([placa.material]);
   const cantos = estrutura[3];
   const [esplanada, bairro] = entorno;
   function definirHora(h) {
@@ -535,6 +538,11 @@ export function criarEstadioFora(cena, opc = {}) {
     /** Planos de fora (o entorno inteiro) ou de dentro (só a estrutura: fachada, cobertura, cantos, túnel). */
     modoFora(v) { for (const m of entorno) m.visible = !!v; },
     definirHora,
+    /** O antisserrilhado do letreiro pelas amostras do contexto (render/prejogo.js: na criação e no cena.aoRecriar). */
+    definirAA: n => aa.definirAA(n),
+    /** O gancho físico dos testes (sem a A2C). */
+    fisico: v => aa.fisico(v),
+    get aa() { return aa.estado; },
     atualizar() { /* nada por quadro: os torcedores andam pelo relógio da torcida (uniforms dela) */ },
     dispose() {
       if (disposto) return;

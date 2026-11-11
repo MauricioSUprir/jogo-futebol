@@ -49,7 +49,7 @@
 //      (2) PC Alta → Baixa com ?prejogo=1 (o vão das placas aberto): localClippingEnabled do vão e o aria-label continuam. (3)
 //      __golaco.definirQualidade troca e desenha no mesmo evaluate (o quadro não preto; SAMPLES pela tabela). (4)
 //      WEBGL_lose_context: os ganchos ESTRAGADOS antes (a A2C ao contrário, o uAlturaBuffer em −1), perde e restaura — o quadro
-//      desenha, os ganchos rodam de novo (A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira desenha. As
+//      desenha, os ganchos rodam de novo (A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira desenha. As
 //      trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); __golaco.quedaDeTeste(): o mesmo canvas, 'baixa', SAMPLES continua 4, a queda nas preferências e na linha da
@@ -464,10 +464,14 @@ async function instalarPagina() {
       } else if (!liga && r.__renderOriginal) { r.render = r.__renderOriginal; delete r.__renderOriginal; }
       return true;
     },
-    /** Os ganchos do item 45 nos finos (o material da malha 'gols'): a A2C e o uAlturaBuffer, onde estiverem. */
+    /**
+     * Os ganchos do item 45 nos finos (o material da malha 'gols': a A2C e o uAlturaBuffer, onde estiverem) e na torcida (a A2C
+     * do material do quadro, C10; null sem a torcida).
+     */
     ganchos() {
       const { gols, mat, uni, gl } = matGols();
-      return { temGols: !!gols, a2c: mat ? !!mat.alphaToCoverage : null, uAltura: uni ? (typeof uni === 'object' && 'value' in uni ? uni.value : uni) : null, H: gl?.drawingBufferHeight ?? null, samples: gl ? gl.getParameter(gl.SAMPLES) : null };
+      const tor = g.estadio?.torcidaObj?.mesh?.children?.[0]?.material ?? null;
+      return { temGols: !!gols, a2c: mat ? !!mat.alphaToCoverage : null, a2cTorcida: tor ? !!tor.alphaToCoverage : null, uAltura: uni ? (typeof uni === 'object' && 'value' in uni ? uni.value : uni) : null, H: gl?.drawingBufferHeight ?? null, samples: gl ? gl.getParameter(gl.SAMPLES) : null };
     },
     /**
      * Estraga os ganchos ANTES de perder o contexto (item 3 da revisão: a A2C e o uAlturaBuffer são estado JS do material, o
@@ -478,9 +482,11 @@ async function instalarPagina() {
       const { mat, uni, gl } = matGols();
       const certoA2c = gl ? gl.getParameter(gl.SAMPLES) >= 2 : null;
       if (mat && certoA2c !== null) mat.alphaToCoverage = !certoA2c;
+      const tor = g.estadio?.torcidaObj?.mesh?.children?.[0]?.material ?? null;
+      if (tor && certoA2c !== null) tor.alphaToCoverage = !certoA2c;
       const temU = !!(uni && typeof uni === 'object' && 'value' in uni);
       if (temU) uni.value = -1;
-      return { a2c: mat ? mat.alphaToCoverage : null, uAltura: temU ? -1 : null };
+      return { a2c: mat ? mat.alphaToCoverage : null, a2cTorcida: tor ? tor.alphaToCoverage : null, uAltura: temU ? -1 : null };
     },
   };
   return { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, versao: g.versao };
@@ -1210,9 +1216,9 @@ try {
         const m2 = await P(pg, 'mira');
         meta('R', 'R4 WEBGL_lose_context: perde, restaura e o quadro desenha', r4.ext ? `perdeu ${r4.perdido} (${r4.perdeu} evento) · restaurou ${r4.restaurado} (${r4.voltou} evento) · ${pct(np)} não preto` : 'sem a extensão',
           'restaurado e ≥ 50% não preto', r4.ext && r4.restaurado && np >= 0.5, 'estrutura');
-        meta('R', 'R4 os ganchos depois do contexto restaurado (estragados antes de perder: A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight)',
-          `estragados: A2C ${r4.sabotado?.a2c}, uAlturaBuffer ${r4.sabotado?.uAltura ?? 'não existe'} · depois: gols ${gan.temGols} · A2C ${gan.a2c} (SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'os ganchos refazem os dois',
-          gan.temGols && gan.a2c === (gan.samples >= 2) && gan.uAltura === gan.H);
+        meta('R', 'R4 os ganchos depois do contexto restaurado (estragados antes de perder: A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight)',
+          `estragados: A2C ${r4.sabotado?.a2c} (torcida ${r4.sabotado?.a2cTorcida}), uAlturaBuffer ${r4.sabotado?.uAltura ?? 'não existe'} · depois: gols ${gan.temGols} · A2C ${gan.a2c} (torcida ${gan.a2cTorcida}; SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'os ganchos refazem os três',
+          gan.temGols && gan.a2c === (gan.samples >= 2) && gan.a2cTorcida === (gan.samples >= 2) && gan.uAltura === gan.H);
         meta('R', 'R4 a mira desenha depois do contexto restaurado', `${m2.n} px com × sem a linha`, '≥ 150 px', m2.n >= 150);
         marcar('R1 (mira) e R4 (contexto)');
       }
