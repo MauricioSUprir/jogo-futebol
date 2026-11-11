@@ -5,7 +5,7 @@
 // é estático vira um mesh só por material.
 import * as THREE from 'three';
 import { CAMPO, ESTADIO } from '../config.js';
-import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
+import { juntarGeometrias, cilindroEntre, caixa, atributosFino } from './util.js';
 import {
   GRAMA, texGramadoAntigo, texManchasGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
@@ -222,7 +222,97 @@ function criarLinhas(detalhe, uGramado = null) {
 
 // ------------------------------------------------------------------ gols
 
-function criarGols() {
+/**
+ * A LARGURA MÍNIMA das peças finas do gol (item 45, C9; `PLANO-GRAFICOS.md` passo 5, o "phone-wire AA" do Humus): hastes do véu,
+ * cordas do pé e do fundo, mastros das bandeirinhas e as tampas deles ficam a 0,3–0,9 px na TV do celular e saíam TRACEJADAS
+ * (abaixo de 1 px a peça cai entre os centros dos pixels ou das amostras e some aos pedaços). No vértice a peça cresce no corte
+ * (crescer o raio do círculo por k cresce a silhueta na tela por k em qualquer direção da câmera) e a COBERTURA esmaece o que
+ * cresceu, pelo MSAA do contexto que desenha:
+ * - com MSAA: até `largMin` px EXATO, alfa = largura real ÷ largura nova, em alfa para cobertura (A2C, sem ordenar). Com 1 px
+ *   exato as 4 amostras cobrem a faixa uma vez cada, e a A2C (no SwiftShader por degraus fixos, alfa ≥ 0,2 / 0,4 / 0,6 / 0,8,
+ *   sem pontilhado) mostra o mesmo tanto com a câmera andando; a corda deitada cresce a partir do contato com o chão (aChao);
+ * - sem MSAA (a Baixa): mistura com cobertura ANALÍTICA, como as linhas do campo: abaixo de 2 × `meiaAnalitica` px a peça
+ *   cresce até a meia largura + 1 px e cada pixel leva a fração da faixa de verdade na caixa dele, no eixo menor da tela (a
+ *   soma por coluna é a largura da faixa). Com 1 px e o alfa constante, cada coluna acendia 1 ou 2 pixels inteiros e a corda
+ *   do fundo, em diagonal, cintilava ×2,2 o SSAA.
+ * Postes e travessão (≥ 1,6 px mesmo na Baixa do gol de lá) não crescem. O px vem do `uAlturaBuffer` (a altura do buffer onde
+ * se desenha, no onBeforeRender da malha: acompanha a rotação, a queda de 1,5 para 1 e a recriação sem gancho).
+ */
+export const FINOS = Object.freeze({ largMin: 1, meiaAnalitica: 1 });
+// os lados do prisma fino (antes 5 nas cordas, 8 no resto): com 16 a largura na tela varia só 2% com o giro (2r × cos(π/16) a 2r);
+// a A2C só fica parada a 1 px EXATO, e o octógono do mastro de frente para a TV dava 1,08 px (×1,96)
+const SEGS_FINO = 16;
+
+/** Os textos do shader dos finos (sem derivada nem leitura de textura: nada a conferir na ordem dos desvios). uModoFino: 0 =
+ *  físico (a peça de verdade), 1 = A2C (com MSAA), 2 = mistura analítica (sem MSAA). */
+const SHADER_FINOS = {
+  vertex: [
+    ['#include <common>', `#include <common>
+      attribute float aFino;
+      attribute vec3 aEixo;
+      attribute vec3 aDir;
+      attribute float aChao;
+      uniform float uAlturaBuffer;
+      uniform float uLargMin;
+      uniform float uMeiaAnalitica;
+      uniform float uModoFino;
+      varying float vCob;
+      varying float vLado;
+      varying float vMeia;
+      varying float vCos;`],
+    ['#include <begin_vertex>', `#include <begin_vertex>
+      vCob = 1.0; vLado = 0.0; vMeia = -1.0; vCos = 1.0;
+      if (aFino > 0.0 && uModoFino > 0.5) {
+        // px por metro na profundidade do eixo: P[1][1] × H/2 ÷ w (perspectiva e ortográfica)
+        vec4 cE = projectionMatrix * modelViewMatrix * vec4(aEixo, 1.0);
+        float pxM = projectionMatrix[1][1] * uAlturaBuffer * 0.5 / max(cE.w, 1e-4);
+        float meiaPx = aFino * pxM;
+        if (uModoFino < 1.5) {
+          float k = uLargMin / max(2.0 * meiaPx, 1e-4);
+          if (k > 1.0) {
+            vec3 c = aEixo - vec3(0.0, aChao * aFino, 0.0);
+            transformed = c + (transformed - c) * k;
+            vCob = 1.0 / k;
+          }
+        } else if (meiaPx < uMeiaAnalitica) {
+          transformed = aEixo + (transformed - aEixo) * ((meiaPx + 1.0) / max(meiaPx, 1e-4));
+          // a tela em px (x pelo aspecto): o eixo projetado, a normal dele e a distância lateral deste vértice ao eixo
+          float asp = projectionMatrix[1][1] / projectionMatrix[0][0];
+          vec4 cD = projectionMatrix * modelViewMatrix * vec4(aEixo + aDir * 0.05, 1.0);
+          vec4 cV = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+          vec2 sE = vec2(cE.x * asp, cE.y) / cE.w;
+          vec2 A = vec2(cD.x * asp, cD.y) / cD.w - sE;
+          float lA = length(A);
+          A = lA > 1e-9 ? A / lA : vec2(1.0, 0.0);
+          vLado = dot(vec2(cV.x * asp, cV.y) / cV.w - sE, vec2(-A.y, A.x)) * uAlturaBuffer * 0.5;
+          vMeia = meiaPx;
+          vCos = max(abs(A.x), abs(A.y));
+        }
+      }`],
+  ],
+  fragment: [
+    ['#include <common>', `#include <common>
+      varying float vCob;
+      varying float vLado;
+      varying float vMeia;
+      varying float vCos;`],
+    ['#include <color_fragment>', `#include <color_fragment>
+      {
+        // a cobertura: a fração da caixa do pixel no eixo menor da tela (meia altura vCos/2 na distância lateral) que cai na
+        // faixa de verdade (|lado| ≤ vMeia); fora do modo analítico, a do vértice
+        float cob = vCob;
+        if (vMeia >= 0.0) {
+          float hc = 0.5 * vCos;
+          cob = clamp(min(vLado + hc, vMeia) - max(vLado - hc, -vMeia), 0.0, vCos) / vCos;
+          if (cob < 0.004) discard;
+        }
+        diffuseColor.a *= cob;
+      }`],
+  ],
+  chave: 'gols-finos-v1',
+};
+
+function criarGols(antigo = false) {
   const g = CAMPO.gol;
   const R = g.raioPoste;
   const zp = g.largura / 2 + R;          // centro do poste (igual a bola.js)
@@ -230,27 +320,80 @@ function criarGols() {
   const geos = [], cores = [];
   const branco = new THREE.Color(0xf7f9f8), preto = new THREE.Color(0x1a1d1e);
   const zl = g.largura / 2, H = VEU.haste, F = VEU.fundo;
+  // uma peça: o cilindro de a a b com os atributos da largura mínima. Fina = cresce abaixo de FINOS.largMin px, com SEGS_FINO
+  // lados e aberta (as pontas ficam dentro de outra peça ou do chão: com tampa, os 16 lados dobravam os triângulos); no
+  // `?gfx=antigo`, os lados (`velho`) e as tampas de antes
+  const peca = (a, b, raio, velho, cor, { fino = true, noChao = false, tampa = !fino } = {}) => {
+    const segs = fino && !antigo ? SEGS_FINO : velho;
+    geos.push(atributosFino(cilindroEntre(a, b, raio, segs, !tampa && !antigo), a, b, fino ? raio : 0, { noChao, segs }));
+    cores.push(cor);
+  };
   for (const s of [-1, 1]) {
     const x = s * MX;
     for (const t of [-1, 1]) {
-      geos.push(cilindroEntre([x, 0, t * zp], [x, yt + R, t * zp], R, 16)); cores.push(branco);
+      peca([x, 0, t * zp], [x, yt + R, t * zp], R, 16, branco, { fino: false });
       // haste do canto de cima (véu de noiva): do alto do poste para trás, segura a faixa de cima da rede
-      geos.push(cilindroEntre([x, yt, t * zp], [x + s * H, g.altura + 0.02, t * zl], 0.028, 8)); cores.push(branco);
+      peca([x, yt, t * zp], [x + s * H, g.altura + 0.02, t * zl], 0.028, 8, branco);
       // pé da lateral no chão (corda presa por estacas), do poste até o fundo do véu
-      geos.push(cilindroEntre([x + s * R, 0.012, t * zl], [x + s * F, 0.012, t * zl], 0.012, 5)); cores.push(branco);
-      // mastro da bandeirinha
-      geos.push(cilindroEntre([x, 0, t * MZ], [x, 1.55, t * MZ], 0.018, 8)); cores.push(branco);
-      geos.push(cilindroEntre([x, 1.55, t * MZ], [x, 1.57, t * MZ], 0.022, 8)); cores.push(preto);
+      peca([x + s * R, 0.012, t * zl], [x + s * F, 0.012, t * zl], 0.012, 5, branco, { noChao: true });
+      // mastro da bandeirinha e a tampa dele
+      peca([x, 0, t * MZ], [x, 1.55, t * MZ], 0.018, 8, branco);
+      peca([x, 1.55, t * MZ], [x, 1.57, t * MZ], 0.022, 8, preto, { tampa: true });
     }
-    geos.push(cilindroEntre([x, yt, -zp - R], [x, yt, zp + R], R, 16)); cores.push(branco);
+    peca([x, yt, -zp - R], [x, yt, zp + R], R, 16, branco, { fino: false });
     // fundo do véu preso no chão (corda e estacas)
-    geos.push(cilindroEntre([x + s * F, 0.012, -zl], [x + s * F, 0.012, zl], 0.014, 5)); cores.push(branco);
+    peca([x + s * F, 0.012, -zl], [x + s * F, 0.012, zl], 0.014, 5, branco, { noChao: true });
   }
   const matArm = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: LUZ_GOL.armDia });
   const estrutura = new THREE.Mesh(juntarGeometrias(geos, cores), matArm);
   estrutura.name = 'gols';
+  const finos = larguraMinima(estrutura, antigo);
   const rede = criarRede();
-  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms, matArm, matRede: rede.mesh.material };
+  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms, matArm, matRede: rede.mesh.material, finos };
+}
+
+/**
+ * O shader e o esmaecimento da largura mínima numa malha de finos (render/util.js atributosFino). Controles: definirAA(amostras)
+ * = o modo pelo SAMPLES do contexto que desenha (nunca o nome da qualidade: a queda deixa a Baixa num contexto com MSAA) — ≥ 2:
+ * A2C (lista opaca); < 2: mistura (transparente, escrevendo a profundidade, renderOrder 1; a rede continua no 2); fisico(bool) =
+ * os desenhos seguintes SEM os truques (a peça de verdade, opaca: as referências e as máscaras dos testes). Os dois mudam o
+ * material FORA do desenho (o `transparent` decide a lista no projectObject, antes do onBeforeRender), sempre escrevem tudo (um
+ * material estragado por fora volta ao certo) e só pedem o programa novo quando algo mudou. `antigo` (`?gfx=antigo`): o
+ * material de antes, sem shader nem modos.
+ */
+function larguraMinima(mesh, antigo = false) {
+  const mat = mesh.material;
+  if (antigo) return { definirAA() {}, fisico() {}, get estado() { return { modo: 'antigo', amostras: null, largMin: null }; } };
+  const U = { uAlturaBuffer: { value: 1 }, uLargMin: { value: FINOS.largMin }, uMeiaAnalitica: { value: FINOS.meiaAnalitica }, uModoFino: { value: 0 } };
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, SHADER_FINOS.vertex, 'gols (finos), vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, SHADER_FINOS.fragment, 'gols (finos), fragment');
+  };
+  mat.customProgramCacheKey = () => SHADER_FINOS.chave;
+  // (os testes acham o uniform aqui: teste-graficos-pagina R4)
+  mat.userData.uAlturaBuffer = U.uAlturaBuffer;
+  mesh.onBeforeRender = renderer => {
+    const alvo = renderer.getRenderTarget();
+    U.uAlturaBuffer.value = alvo ? alvo.height : renderer.getContext().drawingBufferHeight;
+  };
+  let amostras = 0, fisico = false;
+  const aplicar = () => {
+    const a2c = !fisico && amostras >= 2, mistura = !fisico && amostras < 2;
+    const mudou = mat.alphaToCoverage !== a2c || mat.transparent !== mistura;
+    mat.alphaToCoverage = a2c;
+    mat.transparent = mistura;
+    mat.depthWrite = true;
+    mesh.renderOrder = mistura ? 1 : 0;
+    U.uModoFino.value = fisico ? 0 : a2c ? 1 : 2;
+    if (mudou) mat.needsUpdate = true;
+  };
+  aplicar();
+  return {
+    definirAA(n) { amostras = n | 0; aplicar(); },
+    fisico(v) { fisico = !!v; aplicar(); },
+    get estado() { return { modo: fisico ? 'fisico' : amostras >= 2 ? 'a2c' : 'mistura', amostras, largMin: U.uLargMin.value }; },
+  };
 }
 
 /**
@@ -836,7 +979,7 @@ export function criarCampo(opc) {
   const rasante = () => { if (uGramado) uGramado.uRasante.value = rasBase = semProf ? 0 : valoresGramado(horaG).uRasante; };
   const manchas = () => { if (uGramado) uGramado.uManchas.value = semMan ? 0 : valoresGramado(horaG).uManchas; };
   grupo.add(criarLinhas(detalhe, uGramado));
-  const gols = criarGols();
+  const gols = criarGols(antigo);
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
@@ -862,17 +1005,28 @@ export function criarCampo(opc) {
     /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
     rede: { a: uRede.uRedeA.value, b: uRede.uRedeB.value, mesh: gols.rede },
     /**
-     * Os gráficos do item 45 (testes e diagnóstico; o `fisico` do C9/C10 entra com a peça dele): antigo = o `?gfx=antigo` (o
-     * gramado de antes); gramado = os uniforms do gramado no shader ({uClara, uEscura, uManchas, uRasante, uGFoco, …}:
-     * render/gramado.js), null no antigo; semProfundidade(bool) = o termo de profundidade desligado (o uRasante em 0, também
-     * depois de uma troca de hora) — a G4 do teste-graficos-celular mede o TERMO, com − sem ele (sem efeito no antigo, que não
-     * tem o termo); semManchas(bool) = as manchas desligadas (o uManchas em 0, também depois de uma troca de hora) — a G1 e a
-     * G2 medem a cor e as faixas sem depender de onde as manchas caem perto do foco (a revisão do C4–C8; sem efeito no antigo).
+     * O antisserrilhado dos finos do gol (item 45, C9: FINOS) pelas AMOSTRAS do contexto que desenha (o SAMPLES: o
+     * `cena.amostras`, nunca o nome da qualidade): ≥ 2 = alfa para cobertura, < 2 = mistura. O main.js chama na criação e no
+     * `cena.aoRecriar` (a recriação do renderizador e o contexto restaurado); sem chamada, a mistura (certa em qualquer contexto).
+     */
+    definirAA(amostras) { gols.finos.definirAA(amostras); },
+    /**
+     * Os gráficos do item 45 (testes e diagnóstico): antigo = o `?gfx=antigo` (o gramado de antes); gramado = os uniforms do
+     * gramado no shader ({uClara, uEscura, uManchas, uRasante, uGFoco, …}: render/gramado.js), null no antigo;
+     * semProfundidade(bool) = o termo de profundidade desligado (o uRasante em 0, também depois de uma troca de hora) — a G4 do
+     * teste-graficos-celular mede o TERMO, com − sem ele (sem efeito no antigo, que não tem o termo); semManchas(bool) = as
+     * manchas desligadas (o uManchas em 0, também depois de uma troca de hora) — a G1 e a G2 medem a cor e as faixas sem
+     * depender de onde as manchas caem perto do foco (a revisão do C4–C8; sem efeito no antigo); fisico(bool) = os desenhos
+     * seguintes SEM os truques dos finos (C9: sem a largura mínima, sem A2C, sem mistura — a peça de verdade, opaca; com false
+     * voltam): as referências SSAA e as máscaras geométricas dos testes (seções A, A2 e F) não dependem do código medido;
+     * finos = o estado dos finos agora ({modo: 'a2c' | 'mistura' | 'fisico', amostras, largMin}).
      */
     graficos: {
       antigo, gramado: uGramado,
       semProfundidade(v) { semProf = !!v; rasante(); },
       semManchas(v) { semMan = !!v; manchas(); },
+      fisico(v) { gols.finos.fisico(v); },
+      get finos() { return gols.finos.estado; },
     },
     definirHora(hora) {
       const noite = hora === 'noite';

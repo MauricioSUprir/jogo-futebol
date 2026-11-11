@@ -4400,6 +4400,10 @@ async function iniciar() {
   await identCarga;
   if (parou()) return;
   campo = criarCampo({ qualidade: qAtual, aniso: cena3d.anisotropia(), identidade: IDENT });
+  // os finos do gol (item 45, C9) pelo MSAA do contexto (o SAMPLES, nunca o nome da qualidade): agora, na recriação do
+  // renderizador e no contexto restaurado (os ganchos do cena.js)
+  campo.definirAA(cena3d.amostras);
+  cena3d.aoRecriar(() => campo.definirAA(cena3d.amostras));
   // a altura da tela para as cadeiras 3D (item 69: o orçamento e o LOD de perto) já no nascimento do campo — com a tela cedo (item
   // 106) o resize pode chegar antes dele, e o padrão (720) valeria até o próximo redimensionar()
   campo.definirAlturaTela(window.innerHeight);
@@ -4947,6 +4951,14 @@ const api = {
   },
   acao(a) { tratarAcao(a); },
   definirQualidade(nome) { comando('qualidade', nome); },
+  /**
+   * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques dos finos (render/campo.js
+   * graficos.fisico: a referência SSAA e a máscara geométrica dos testes de gráficos); finos = o estado deles agora.
+   */
+  graficos: {
+    fisico(v) { campo?.graficos.fisico(v); },
+    get finos() { return campo?.graficos.finos ?? null; },
+  },
   definirHora(h) { comando('hora', h); },
   definirCamera(m) { comando('camera', m); },
   abrirMenu() { hud.abrirMenu(true); },

@@ -278,6 +278,10 @@ async function instalarPagina() {
       if (opc.semCeu) ceu.visible = false;
       const fundoAntes = new THREE.Color(); r.getClearColor(fundoAntes);
       if (opc.fundo !== undefined) r.setClearColor(opc.fundo);
+      // o modo dos finos (C9) pelo MSAA do contexto que vai desenhar: o jogo chama campo.definirAA(cena.amostras) na criação e
+      // na recriação; aqui o MESMO campo desenha em contextos com e sem MSAA, e cada quadro diz o seu (sem isto o campo ficaria
+      // no modo de nascença, a mistura, também no contexto com MSAA, onde o build usa a A2C)
+      if (typeof campo.definirAA === 'function') campo.definirAA(gl.getParameter(gl.SAMPLES));
       // (os ganchos dos finos — C9/C10 — desligados só neste desenho: a referência não depende do código medido)
       const fis = [campo.graficos?.fisico, c3.graficos?.fisico].filter(fn => typeof fn === 'function');
       if (opc.fisico) for (const fn of fis) fn(true);

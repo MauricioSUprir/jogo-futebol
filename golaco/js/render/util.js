@@ -83,17 +83,46 @@ export function juntarGeometrias(geos, cores = null) {
   return saida;
 }
 
-/** Cilindro entre dois pontos (para traves, mastros, estruturas). */
-export function cilindroEntre(a, b, raio, segs = 12) {
+/** Cilindro entre dois pontos (para traves, mastros, estruturas); `aberto` = sem as tampas das pontas. */
+export function cilindroEntre(a, b, raio, segs = 12, aberto = false) {
   const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
   const dir = new THREE.Vector3().subVectors(vb, va);
   const len = dir.length();
-  const g = new THREE.CylinderGeometry(raio, raio, len, segs, 1, false);
+  const g = new THREE.CylinderGeometry(raio, raio, len, segs, 1, aberto);
   g.translate(0, len / 2, 0);
   const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
   g.applyQuaternion(q);
   g.translate(va.x, va.y, va.z);
   return g;
+}
+
+/**
+ * Os atributos da LARGURA MÍNIMA de uma peça do gol feita por cilindroEntre(a, b, raio, segs) (item 45, C9; render/campo.js
+ * criarGols, `PLANO-GRAFICOS.md` passo 5):
+ * - aFino = a MEIA LARGURA MÍNIMA do prisma (0 = a peça não cresce: postes e travessão). A largura de um polígono regular de n
+ *   lados vai de raio × (1 + cos(π/n)) com n ímpar, ou 2 × raio × cos(π/n) com n par, até 2 × raio: com o raio, a corda de 5
+ *   lados ficava com 0,90 de "1 px" no lado mais estreito e caía entre os centros dos pixels;
+ * - aEixo = o ponto do eixo a–b mais perto do vértice (o centro do corte dele) e aDir = a direção do eixo (unitária);
+ * - aChao = 1 na corda deitada no gramado (`noChao`, eixo horizontal): o corte cresce a partir do contato com o chão
+ *   (crescendo em volta do eixo, a metade de baixo ficaria atrás do gramado).
+ * O juntarGeometrias só mantém o atributo que TODAS as peças têm: toda peça da malha passa por aqui. Devolve a geometria.
+ */
+export function atributosFino(geo, a, b, raio, { noChao = false, segs = 0 } = {}) {
+  const p = geo.attributes.position, n = p.count;
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], l2 = dx * dx + dy * dy + dz * dz || 1, l = Math.sqrt(l2);
+  const meia = segs >= 3 ? raio * (segs % 2 ? (1 + Math.cos(Math.PI / segs)) / 2 : Math.cos(Math.PI / segs)) : raio;
+  const fino = new Float32Array(n).fill(meia), chao = new Float32Array(n).fill(noChao ? 1 : 0);
+  const eixo = new Float32Array(n * 3), dir = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const t = Math.min(1, Math.max(0, ((p.getX(i) - a[0]) * dx + (p.getY(i) - a[1]) * dy + (p.getZ(i) - a[2]) * dz) / l2));
+    eixo[3 * i] = a[0] + t * dx; eixo[3 * i + 1] = a[1] + t * dy; eixo[3 * i + 2] = a[2] + t * dz;
+    dir[3 * i] = dx / l; dir[3 * i + 1] = dy / l; dir[3 * i + 2] = dz / l;
+  }
+  geo.setAttribute('aFino', new THREE.BufferAttribute(fino, 1));
+  geo.setAttribute('aEixo', new THREE.BufferAttribute(eixo, 3));
+  geo.setAttribute('aDir', new THREE.BufferAttribute(dir, 3));
+  geo.setAttribute('aChao', new THREE.BufferAttribute(chao, 1));
+  return geo;
 }
 
 /** Caixa com centro e tamanho. */
