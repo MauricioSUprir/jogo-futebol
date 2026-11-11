@@ -89,9 +89,10 @@ const raiz = path.resolve(arg('--raiz', RAIZ));
 // --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas)
 const raizBase = arg('--base', '') ? path.resolve(arg('--base', '')) : null;
 const JANELAS_CPU = Math.max(5, +arg('--janelas-cpu', 6) || 6);
-// a folga do "nada pior" da CPU pareada: a main contra ela mesma deu +0,10, +0,30, +0,70 e 0,00 ms (4 rodadas de 6 pares, Chromium
-// 141 do CI; uma rodada com os 6 pares ≥ 0 — o efeito é da INSTÂNCIA do navegador, não da janela, e alternar não o tira): o
-// +0,2 ms do plano reprovava o mesmo código em metade das rodadas. Com +1,0 a guarda pega só a piora de ~15% para cima.
+// a folga do "nada pior" da CPU pareada: a main contra ela mesma deu +0,10, +0,30, +0,70, 0,00 e +0,20 ms (5 rodadas de 6
+// pares, Chromium 141 do CI; uma rodada com os 6 pares ≥ 0 — o efeito é da INSTÂNCIA do navegador, não da janela, e alternar
+// não o tira): o +0,2 ms do plano reprovava o mesmo código em 2 de 5 rodadas. Com +1,0 a guarda pega só a piora de ~15% para
+// cima.
 const TOL_CPU = 1.0;
 const SECOES = ['S2', 'A2', 'K', 'P', 'P2', 'P3', 'R', 'Q', 'Z', 'T'];
 const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
