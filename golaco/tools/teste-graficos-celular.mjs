@@ -30,7 +30,8 @@
 //      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe; G3 as faixas e as bordas
 //      (vista de cima, 2 quadros ortográficos: quantas no campo, a distância de cada borda da UEFA à medida, a linha do meio
 //      separando claro de escuro); G4 longe − perto (L, C, h); G5 o pico da linha (p95 do L dos pixels da linha perto do
-//      foco); G6 o σL das manchas em blocos de 8 m (sem a média da faixa e sem um plano); G7 GPU = JS (a classe lida em cada
+//      foco); G6 o σL das manchas em blocos de 8 m (sem a média da faixa e sem um plano; no quadro SEM o termo de
+//      profundidade quando há o gancho — o termo é uma curva em z que o plano não tira); G7 GPU = JS (a classe lida em cada
 //      faixa = gramado.js faixaEm(x), quando o módulo existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta,
 //      sem dizer qual é clara, casa pela maioria); G4b a profundidade nas outras câmeras (1ª pessoa e lateral baixa
 //      do replay, steadicam, câmera do gol, Jogador e Atrás do Livre, falta e escanteio, aéreo do pré-jogo): o L do gramado
@@ -786,14 +787,14 @@ async function medirG(pg, rotulo, cena, campo, P, topo) {
   const gm = g3.bordas.length >= 8 ? medirGramado(Imeio, P.meio, g3.bordas) : null;
   // o mesmo quadro SEM o termo de profundidade (o gancho do C7): a G4 mede com − sem, só o termo (item 6 da revisão: o absoluto
   // levava as manchas, ±0,004–0,007 entre ~4 blocos de cada região, e a luz da noite, −0,017 contra o dia)
-  let g4sem = null, temGancho = false;
+  let g4sem = null, gmSem = null, temGancho = false;
   if (gm && (temGancho = await G(pg, 'semProfundidade', campo, true))) {
-    try { g4sem = medirGramado(await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }), P.meio, g3.bordas).g4; } finally { await G(pg, 'semProfundidade', campo, false); }
+    try { gmSem = medirGramado(await quadro(pg, cena, campo, P.meio, { so: ['gramado'], semCeu: true }), P.meio, g3.bordas); g4sem = gmSem.g4; } finally { await G(pg, 'semProfundidade', campo, false); }
   }
   const Icom = await quadro(pg, cena, campo, P.foco, { so: ['gramado', 'linhas'], semCeu: true }, `${rotulo}-G5-linhas`);
   const Isem = await quadro(pg, cena, campo, P.foco, { so: ['gramado'], semCeu: true });
   const g5 = picoLinha(Icom, Isem);
-  return { g3, gm, g5, g4sem, temGancho };
+  return { g3, gm, g5, g4sem, gmSem, temGancho };
 }
 function metasG(rotulo, chave, M, opc = {}) {
   const { g3, gm, g5 } = M;
@@ -940,10 +941,13 @@ try {
       const M = await medirG(pg, 'cel-media-dia', mb, 'cm', P, topo);
       g1Dia = M.gm?.g1 ?? null;
       metasG('celular Média, dia', 'media.dia', M);
-      // G6
-      const g6 = M.gm?.g6;
-      if (g6) { guarda('G6.media.dia.sigma', g6.sigma); meta('G', 'G6 σL das manchas, blocos de 8 m (celular Média, dia)', `${f(g6.sigma, 4)} (${g6.blocos} blocos)`, '0,010 ± 0,004', Math.abs(g6.sigma - 0.010) <= 0.004); }
+      // G6: as manchas no quadro SEM o termo de profundidade quando há o gancho (o termo é uma curva suave em z que o plano de
+      // mínimos quadrados não tira inteira: com ele no quadro a G6 media também a profundidade, 0,0101 → 0,0128 no C7); o
+      // quadro com o termo fica informativo
+      const g6 = (M.gmSem ?? M.gm)?.g6;
+      if (g6) { guarda('G6.media.dia.sigma', g6.sigma); meta('G', `G6 σL das manchas, blocos de 8 m (celular Média, dia${M.gmSem ? ', sem o termo de profundidade' : ''})`, `${f(g6.sigma, 4)} (${g6.blocos} blocos)`, '0,010 ± 0,004', Math.abs(g6.sigma - 0.010) <= 0.004); }
       else meta('G', 'G6 σL das manchas (celular Média, dia)', 'não medido', '0,010 ± 0,004', false);
+      if (M.gmSem && M.gm?.g6) { guarda('G6.media.dia.sigmaComTermo', M.gm.g6.sigma); meta('G', 'G6 σL em blocos de 8 m com o termo de profundidade no quadro', `${f(M.gm.g6.sigma, 4)} (${M.gm.g6.blocos} blocos)`, 'informativo (as manchas + a curva da profundidade)', null, 'info'); }
       // G7: a classe medida de cada faixa contra o gramado.js faixaEm
       if (M.gm && (info.faixaEm || typeof GR_NODE?.faixaEm === 'function')) {
         const xs = [];

@@ -9,7 +9,9 @@ import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
 import {
   GRAMA, texGramadoAntigo, texManchasGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
-import { GRAMADO_GLSL, glslTopoGramado, valoresGramado, GRAMADO_GASTO, GRAMADO_ENTORNO, GRAMADO_HORAS } from './gramado.js';
+import {
+  GRAMADO_GLSL, glslTopoGramado, valoresGramado, GRAMADO_GASTO, GRAMADO_ENTORNO, GRAMADO_HORAS, PROFUNDIDADE_GLSL, gFocoDe,
+} from './gramado.js';
 import { GRAFICOS } from './graficos-opcoes.js';
 import { imagemEscudo } from './escudo-desenho.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
@@ -85,21 +87,24 @@ function comDetalheAntigo(mat, detalhe, forca) {
  * do gramado pela conta (render/gramado.js) — as 18 faixas da UEFA pelo x do mundo (o filtro de caixa sobre o degrau, as
  * derivadas no TOPO do bloco, fora de qualquer desvio: a lição do PR #631), o desgaste (o G da textura das manchas leva a cor
  * para a do desgaste), as manchas (o R: × (1 + uManchas·(n − 0,5)), só luminância) e o entorno fora das linhas ×0,88
- * (filtrado pela pegada do pixel). Sem `faixas` (o chão de fora), só o grão e a noite por cima da cor do material.
- * `profundidade` (o C7) só entra na chave por enquanto. `uniforms`: os do gramado (render/gramado.js valoresGramado), que o
- * campo muda na troca da hora; 0 chamada a mais.
+ * (filtrado pela pegada do pixel). Sem `faixas` (o chão de fora), só o grão e a noite por cima da cor do material. Com
+ * `profundidade` (o C7, passo 3; no gramado e no chão de fora, o MESMO texto: sem emenda nos cantos), no fim do bloco, a
+ * profundidade relativa ao foco (render/gramado.js PROFUNDIDADE_GLSL: o gramado de raspão mais claro e menos saturado, × 1 + p
+ * com p = clamp(uRasante·(g − uGFoco), ±0,08)); sem derivada nem desvio. `uniforms`: os do gramado (render/gramado.js
+ * valoresGramado; os MESMOS objetos nos dois materiais), que o campo muda na troca da hora e, o uGFoco, por quadro; 0 chamada
+ * a mais.
  */
 function comDetalhe(mat, detalhe, forca, { faixas = false, profundidade = false, uniforms = null } = {}) {
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uForca = { value: forca };
     sh.uniforms.uNoite = uNoite;
-    if (faixas) Object.assign(sh.uniforms, uniforms);
+    if (faixas || profundidade) Object.assign(sh.uniforms, uniforms);
     let v = sh.vertexShader, fr = sh.fragmentShader;
     v = trocar(v, '#include <common>', '#include <common>\nvarying vec2 vMundoXZ;', 'gramado, vertex');
     v = trocar(v, '#include <project_vertex>', '#include <project_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;', 'gramado, vertex');
     fr = trocar(fr, '#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nuniform float uNoite;\nvarying vec2 vMundoXZ;'
-      + LUZ_NOITE_GLSL + (faixas ? GRAMADO_GLSL : ''), 'gramado, fragment');
+      + LUZ_NOITE_GLSL + (faixas || profundidade ? GRAMADO_GLSL : '') + (profundidade ? PROFUNDIDADE_GLSL : ''), 'gramado, fragment');
     // as faixas: as derivadas primeiro (fora de qualquer desvio), depois a cor pela conta; o sampledDiffuseColor é a textura
     // das manchas (R manchas, G desgaste) que o map_fragment do three acabou de ler
     const cor = faixas ? `
@@ -114,7 +119,8 @@ function comDetalhe(mat, detalhe, forca, { faixas = false, profundidade = false,
           float d2 = texture2D(uDetalhe, vMundoXZ * 0.137 + 0.31).r;
           float d = d1 * d2 * 4.0;
           diffuseColor.rgb *= mix(1.0, d, uForca);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
+          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);${profundidade ? `
+          diffuseColor.rgb = gramadoProfundidade(diffuseColor.rgb, gramadoG(cameraPosition, vMundoXZ), uGFoco, uRasante);` : ''}
         }`, 'gramado, fragment');
     sh.vertexShader = v;
     sh.fragmentShader = fr;
@@ -131,14 +137,35 @@ function uniformsGramado(hora) {
 }
 function horaGramado(u, hora) {
   for (const [k, val] of Object.entries(valoresGramado(hora))) {
-    if (k === 'uGFoco') continue; // o C7 escreve por quadro
+    if (k === 'uGFoco') continue; // escrito por quadro (focador)
     if (Array.isArray(val)) u[k].value.set(...val); else u[k].value = val;
   }
 }
 
+/**
+ * O onBeforeRender do gramado e do chão de fora (item 45, C7): o uGFoco = o g da profundidade no ponto do chão no meio da tela
+ * (render/gramado.js gFocoDe), pela câmera que vai desenhar — vale para TODA câmera (TV, replay, cinema, Livre, pré-jogo) sem
+ * fio no main.js. O three sobe os uniforms do material no 1º desenho dele em cada render() (o `_currentMaterialId` volta a −1
+ * no fim de cada um), depois deste gancho; a sombra usa o onBeforeShadow, que não passa aqui.
+ */
+function focador(uGFoco) {
+  const o = [0, 0, 0], d = [0, 0, 0];
+  return (renderer, cena, camera) => {
+    const e = camera.matrixWorld.elements;
+    o[0] = e[12]; o[1] = e[13]; o[2] = e[14];
+    d[0] = -e[8]; d[1] = -e[9]; d[2] = -e[10];
+    uGFoco.value = gFocoDe(o, d);
+  };
+}
+
 // ------------------------------------------------------------------ linhas
 
-function criarLinhas(detalhe) {
+/**
+ * As linhas do campo (um mesh só, antisserrilhado analítico). `uGramado` (os uniforms do gramado no shader; null no
+ * `?gfx=antigo`): as linhas mais brancas pelo `uBrancoLinha` (item 45, C7: o ACES do r170 acinzentava o branco — pico L 0,908 —;
+ * × 1,8 de dia no albedo dá o pico 0,952, a G5, sem `toneMapped = false`, que dava 0,98 e quebrava a noite).
+ */
+function criarLinhas(detalhe, uGramado = null) {
   const pos = [], cruz = [], idx = [];
   const y = 0.012;
   function quad(ax, az, bx, bz, ca, cb) {
@@ -227,12 +254,13 @@ function criarLinhas(detalhe) {
     sh.uniforms.uMeia = { value: h };
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uNoite = uNoite;
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aCruz;\nvarying float vCruz;\nvarying vec2 vMundoXZ;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvCruz = aCruz;\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nuniform float uNoite;\nvarying float vCruz;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL)
-      .replace('#include <alphatest_fragment>', `
+    if (uGramado) sh.uniforms.uBrancoLinha = uGramado.uBrancoLinha;
+    let v = sh.vertexShader, fr = sh.fragmentShader;
+    v = trocar(v, '#include <common>', '#include <common>\nattribute float aCruz;\nvarying float vCruz;\nvarying vec2 vMundoXZ;', 'linhas, vertex');
+    v = trocar(v, '#include <project_vertex>', '#include <project_vertex>\nvCruz = aCruz;\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;', 'linhas, vertex');
+    fr = trocar(fr, '#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nuniform float uNoite;\nvarying float vCruz;\nvarying vec2 vMundoXZ;'
+      + (uGramado ? '\nuniform float uBrancoLinha;' : '') + LUZ_NOITE_GLSL, 'linhas, fragment');
+    fr = trocar(fr, '#include <alphatest_fragment>', `
         {
           // cobertura analítica da linha no pixel; abaixo de ~1,5 px a linha não afina mais,
           // só fica mais transparente (não some nem pisca à distância)
@@ -243,11 +271,14 @@ function criarLinhas(detalhe) {
           if (diffuseColor.a < 0.004) discard;
           float d = texture2D(uDetalhe, vMundoXZ * 0.55).r * 2.0;
           diffuseColor.rgb *= mix(1.0, d, 0.35);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
+          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);${uGramado ? `
+          diffuseColor.rgb *= uBrancoLinha;` : ''}
         }
-        #include <alphatest_fragment>`);
+        #include <alphatest_fragment>`, 'linhas, fragment');
+    sh.vertexShader = v;
+    sh.fragmentShader = fr;
   };
-  mat.customProgramCacheKey = () => 'linhas-aa';
+  mat.customProgramCacheKey = () => (uGramado ? 'linhas-aa-branco' : 'linhas-aa');
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.renderOrder = 1;
@@ -847,7 +878,7 @@ export function criarCampo(opc) {
   gg.rotateX(-Math.PI / 2);
   const matGrama = antigo
     ? comDetalheAntigo(new THREE.MeshLambertMaterial({ map: texGramadoAntigo(tamGrama, aniso) }), detalhe, 0.85)
-    : comDetalhe(new THREE.MeshLambertMaterial({ map: texManchasGramado(tamGrama, aniso) }), detalhe, 0.85, { faixas: true, uniforms: uGramado });
+    : comDetalhe(new THREE.MeshLambertMaterial({ map: texManchasGramado(tamGrama, aniso) }), detalhe, 0.85, { faixas: true, profundidade: true, uniforms: uGramado });
   const grama = new THREE.Mesh(gg, matGrama);
   grama.receiveShadow = true;
   grama.name = 'gramado';
@@ -860,10 +891,15 @@ export function criarCampo(opc) {
   // (render/gramado.js, a mesma matiz das faixas; antes 0x2c5a26, h 143,8°)
   const fora = new THREE.Mesh(gf, antigo
     ? comDetalheAntigo(new THREE.MeshLambertMaterial({ color: 0x2c5a26 }), detalhe, 0.6)
-    : comDetalhe(new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(...GRAMADO_HORAS.dia.fora) }), detalhe, 0.6));
+    : comDetalhe(new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(...GRAMADO_HORAS.dia.fora) }), detalhe, 0.6, { profundidade: true, uniforms: uGramado }));
   fora.name = 'chao-fora';
   grupo.add(fora);
-  grupo.add(criarLinhas(detalhe));
+  // a profundidade relativa ao foco (C7): o uGFoco de cada desenho, pela câmera dele (o mesmo uniform nos dois materiais; os
+  // dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos testes
+  let horaG = 'dia', semProf = false;
+  if (uGramado) grama.onBeforeRender = fora.onBeforeRender = focador(uGramado.uGFoco);
+  const rasante = () => { if (uGramado) uGramado.uRasante.value = semProf ? 0 : valoresGramado(horaG).uRasante; };
+  grupo.add(criarLinhas(detalhe, uGramado));
   const gols = criarGols();
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
@@ -890,16 +926,23 @@ export function criarCampo(opc) {
     /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
     rede: { a: uRede.uRedeA.value, b: uRede.uRedeB.value, mesh: gols.rede },
     /**
-     * Os gráficos do item 45 (testes e diagnóstico; os ganchos que os testes procuram — `semProfundidade` do C7, `fisico`
-     * do C9/C10 — entram com as peças deles): antigo = o `?gfx=antigo` (o gramado de antes); gramado = os uniforms do
-     * gramado no shader ({uClara, uEscura, uManchas, …}: render/gramado.js), null no antigo.
+     * Os gráficos do item 45 (testes e diagnóstico; o `fisico` do C9/C10 entra com a peça dele): antigo = o `?gfx=antigo` (o
+     * gramado de antes); gramado = os uniforms do gramado no shader ({uClara, uEscura, uManchas, uRasante, uGFoco, …}:
+     * render/gramado.js), null no antigo; semProfundidade(bool) = o termo de profundidade desligado (o uRasante em 0, também
+     * depois de uma troca de hora) — a G4 do teste-graficos-celular mede o TERMO, com − sem ele (sem efeito no antigo, que não
+     * tem o termo).
      */
-    graficos: { antigo, gramado: uGramado },
+    graficos: {
+      antigo, gramado: uGramado,
+      semProfundidade(v) { semProf = !!v; rasante(); },
+    },
     definirHora(hora) {
       const noite = hora === 'noite';
       uNoite.value = noite ? 1 : 0;
       if (uGramado) {
+        horaG = hora;
         horaGramado(uGramado, hora);
+        rasante();
         fora.material.color.setRGB(...(GRAMADO_HORAS[hora] ?? GRAMADO_HORAS.dia).fora);
       }
       // arquibancada à noite: só a luz que escapa dos refletores

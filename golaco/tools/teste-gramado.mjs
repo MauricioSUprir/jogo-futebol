@@ -13,7 +13,11 @@
 //      a operação (o highp da GPU), contra as funções JS; os uniforms; nenhuma derivada nas funções; as linhas do topo do
 //      bloco com o fwidth dado;
 //   E) as cores (pontos de partida do C6) pela luz e pelo ACES do r170 (tools/lib/cor-aces.mjs): L/C/h/ΔL nas metas da G1 e
-//      da G2 do teste-graficos-celular, a noite com o mesmo albedo, o chão de fora na mesma matiz, as linhas ≤ 0,97.
+//      da G2 do teste-graficos-celular, a noite com o mesmo albedo, o chão de fora na mesma matiz, as linhas ≤ 0,97;
+//   F) a profundidade relativa ao foco (C7): o TEXTO do PROFUNDIDADE_GLSL no interpretador = gProfundidade/termoProfundidade
+//      (double e float32), sem derivada e só com as constantes do PROFUNDIDADE; o foco (gFocoDe: o raio do meio da tela no chão,
+//      sem tocar o ponto a 50 m levado ao chão); o termo NO foco é a identidade, a luminância só muda pelo 1 + p (a
+//      dessaturação a guarda) e o brilho fica em ±8%; o modelo (luz e ACES do r170) na TV do celular nas metas da G4.
 // A GPU de verdade fica para a G7 do teste-graficos-celular (a classe da faixa lida no pixel = faixaEm, depois que o C6 liga o
 // shader); conferido à parte no C4: o GRAMADO_GLSL compila no Chromium 141 do CI (SwiftShader) e, em 4096 x, dá o índice
 // igual e a distância à borda a ≤ 4,2 µm do JS — o mesmo que a emulação em float32 da D6.
@@ -490,6 +494,93 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
       reg('E5 valoresGramado: um valor por uniform, a borda macia 0,10 m, cópias (mexer no devolvido não muda a tabela)',
         `${chaves.join(', ')}; uBorda ${vn.uBorda}; manchas ${vn.uManchas}; rasante dia ${valoresGramado('dia').uRasante} · noite ${vn.uRasante}; brancoLinha ${valoresGramado('dia').uBrancoLinha} · ${vn.uBrancoLinha}`,
         'os 7; 0,10; cópias', okV && copia);
+    }
+  }
+
+  // ---------------------------------------------------------------- F) a profundidade relativa ao foco (C7)
+  {
+    const { PROFUNDIDADE, PROFUNDIDADE_GLSL, gProfundidade, gFocoDe, termoProfundidade } = GR;
+    if (typeof PROFUNDIDADE_GLSL !== 'string' || typeof gFocoDe !== 'function' || typeof termoProfundidade !== 'function') {
+      reg('F a profundidade relativa ao foco (PROFUNDIDADE_GLSL, gFocoDe, termoProfundidade)', 'sem a conta', 'o módulo com a conta', false);
+    } else {
+      // uma amostra determinística (LCG): câmeras de 0,1 a 120 m de altura, pontos no gramado e fora, cores, g e focos
+      let semente = 12345;
+      const sorte = () => { semente = (Math.imul(semente, 1103515245) + 12345) >>> 0; return semente / 4294967296; };
+      const casos = [];
+      for (let k = 0; k < 4000; k++) {
+        casos.push({
+          cam: [(sorte() - 0.5) * 300, 0.1 + sorte() ** 2 * 120, (sorte() - 0.5) * 300], xz: [(sorte() - 0.5) * 200, (sorte() - 0.5) * 140],
+          cor: [sorte() * 0.4, sorte() * 0.5, sorte() * 0.2], gf: sorte(), ras: sorte() * 0.6,
+        });
+      }
+      let gD = null, gF = null, erroP = null;
+      try {
+        gD = criarInterpretador(PROFUNDIDADE_GLSL, {});
+        gF = criarInterpretador(PROFUNDIDADE_GLSL, { f32: true });
+      } catch (e) { erroP = e.message; }
+      if (erroP) reg('F1 o PROFUNDIDADE_GLSL no interpretador mínimo', erroP, 'avalia', false);
+      else {
+        let dgD = 0, dtD = 0, dgF = 0, dtF = 0;
+        for (const c of casos) {
+          const gJ = gProfundidade(c.cam[0], c.cam[1], c.cam[2], c.xz[0], c.xz[1]);
+          dgD = Math.max(dgD, Math.abs(gD.chamar('gramadoG', c.cam, c.xz) - gJ));
+          dgF = Math.max(dgF, Math.abs(gF.chamar('gramadoG', c.cam, c.xz) - gJ));
+          const tJ = termoProfundidade(c.cor, gJ, c.gf, c.ras);
+          const tD = gD.chamar('gramadoProfundidade', c.cor, gJ, c.gf, c.ras), tF = gF.chamar('gramadoProfundidade', c.cor, gJ, c.gf, c.ras);
+          for (let i = 0; i < 3; i++) { dtD = Math.max(dtD, Math.abs(tD[i] - tJ[i])); dtF = Math.max(dtF, Math.abs(tF[i] - tJ[i])); }
+        }
+        reg('F1 PROFUNDIDADE_GLSL (double) = JS: gramadoG = gProfundidade e gramadoProfundidade = termoProfundidade', `${casos.length} casos: g até ${dgD.toExponential(1)} · cor até ${dtD.toExponential(1)}`, '≤ 1e−12', dgD <= 1e-12 && dtD <= 1e-12);
+        reg('F2 PROFUNDIDADE_GLSL em float32 (o highp da GPU, emulado) = JS', `g até ${dgF.toExponential(1)} · cor até ${dtF.toExponential(1)}`, '≤ 2e−6', dgF <= 2e-6 && dtF <= 2e-6);
+      }
+      // sem derivada e só as constantes do PROFUNDIDADE (o desvio o interpretador já recusa: D7)
+      const deriv = /\b(fwidth|dFdx|dFdy)\b/.test(PROFUNDIDADE_GLSL);
+      const nums = [...new Set((PROFUNDIDADE_GLSL.match(/\b\d+\.\d*\b|\b\d+\b/g) ?? []).map(Number))].sort((a, b) => a - b);
+      const perm = [0, 0.0001, 1, PROFUNDIDADE.limite, PROFUNDIDADE.saturacao, ...PROFUNDIDADE.luminancia];
+      const estranhos = nums.filter(v => !perm.some(p => Math.abs(p - v) <= 1e-12));
+      reg('F3 sem derivada; os números do GLSL = o PROFUNDIDADE (limite, saturação, luminância; 0 · 1 · 1e−4)', `derivada: ${deriv ? 'SIM' : 'nenhuma'}; ${nums.join(' · ')}`, 'nenhuma; nenhum outro número', !deriv && estranhos.length === 0);
+      // o foco: o raio do meio da tela no chão; sem tocar, o ponto a 50 m na direção da vista levado ao chão
+      const EQ = await imp('render/enquadramento.js');
+      const asp = 844 / 390, perf = EQ.perfilCamera({}, 0, asp, true), tv = EQ.poseTV(perf, 0, 0, asp, true, {});
+      const ponto = [0, 0, 0];
+      const gTV = gFocoDe(tv.de, [tv.para[0] - tv.de[0], tv.para[1] - tv.de[1], tv.para[2] - tv.de[2]], ponto);
+      const okTV = Math.abs(tv.para[1]) <= 1e-9 && Math.hypot(ponto[0] - tv.para[0], ponto[2] - tv.para[2]) <= 1e-9 && Math.abs(gTV - gProfundidade(...tv.de, tv.para[0], tv.para[2])) <= 1e-12;
+      const pc = [0, 0, 0], gCima = gFocoDe([10, 1.6, 5], [3, 0.4, 4], pc);
+      const esperado = [10 + 50 * 3 / Math.hypot(3, 0.4, 4), 0, 5 + 50 * 4 / Math.hypot(3, 0.4, 4)];
+      const okCima = Math.hypot(pc[0] - esperado[0], pc[2] - esperado[2]) <= 1e-9 && Math.abs(gCima - gProfundidade(10, 1.6, 5, esperado[0], esperado[2])) <= 1e-12;
+      const pl = [0, 0, 0]; gFocoDe([0, 2, 0], [1, 0, 0], pl);
+      reg('F4 o foco (gFocoDe): o raio do meio da tela no chão (a TV do celular: o ponto olhado); sem descer, o ponto a 50 m levado ao chão',
+        `TV do celular: g ${fmt(gTV, 4)} no (${fmt(ponto[0], 2)}, ${fmt(ponto[2], 2)}) · raio subindo: (${fmt(pc[0], 2)}, ${fmt(pc[2], 2)}) · na horizontal: (${fmt(pl[0], 2)}, ${fmt(pl[2], 2)})`,
+        'o para da TV · o ponto a 50 m · (50, 0)', okTV && okCima && Math.abs(pl[0] - 50) <= 1e-9 && Math.abs(pl[2]) <= 1e-12);
+      // no foco a identidade; a luminância só pelo 1 + p; o brilho em ±8%
+      const W = PROFUNDIDADE.luminancia, lum = c => c[0] * W[0] + c[1] * W[1] + c[2] * W[2];
+      let idErr = 0, lumErr = 0, pMax = 0;
+      for (const c of casos) {
+        const t0 = termoProfundidade(c.cor, c.gf, c.gf, c.ras);
+        for (let i = 0; i < 3; i++) idErr = Math.max(idErr, Math.abs(t0[i] - c.cor[i]));
+        const g = gProfundidade(c.cam[0], c.cam[1], c.cam[2], c.xz[0], c.xz[1]);
+        const p = Math.max(-PROFUNDIDADE.limite, Math.min(PROFUNDIDADE.limite, c.ras * (g - c.gf)));
+        const t = termoProfundidade(c.cor, g, c.gf, c.ras), l0 = lum(c.cor);
+        if (l0 > 1e-6) { lumErr = Math.max(lumErr, Math.abs(lum(t) / l0 - (1 + p))); pMax = Math.max(pMax, Math.abs(lum(t) / l0 - 1)); }
+      }
+      reg('F5 no foco o termo é a identidade; fora dele a luminância × (1 + p) (a dessaturação a guarda), |p| ≤ 0,08', `identidade até ${idErr.toExponential(1)} · luminância até ${lumErr.toExponential(1)} · brilho até ±${fmt(pMax * 100, 2)}%`,
+        '≤ 1e−15 · ≤ 1e−12 · ≤ 8%', idErr <= 1e-15 && lumErr <= 1e-12 && pMax <= PROFUNDIDADE.limite + 1e-12);
+      // o modelo: a luz do dia e o ACES do r170 nas regiões da G4 do teste-graficos-celular (TV do celular; |x| ≤ 12, perto
+      // z 8…18, longe z −32…−22), a média linear de cada região e das duas faixas, o termo com − sem
+      const D = GRAMADO_HORAS.dia, ras = valoresGramado('dia').uRasante, gf = gTV;
+      const regiao = (z0, z1, comTermo) => {
+        const s = [0, 0, 0]; let n = 0;
+        for (let x = -12; x <= 12; x += 0.5) for (let z = z0; z <= z1; z += 0.5) for (const alb of [D.clara, D.escura]) {
+          const g = gProfundidade(...tv.de, x, z);
+          const c = COR.corNaTela(comTermo ? termoProfundidade(alb, g, gf, ras) : alb);
+          for (let i = 0; i < 3; i++) s[i] += c[i];
+          n++;
+        }
+        return COR.oklab(s.map(v => v / n));
+      };
+      const dif = t => { const p = regiao(8, 18, t), l = regiao(-32, -22, t); return { dL: l.L - p.L, dC: l.C - p.C, dh: COR.difMatiz(l.h, p.h) }; };
+      const com = dif(true), sem = dif(false), t = { dL: com.dL - sem.dL, dC: com.dC - sem.dC, dh: com.dh - sem.dh };
+      reg('F6 o modelo (luz do dia, ACES do r170) na TV do celular: o termo longe − perto com − sem (as metas da G4)', `uRasante ${ras}: ΔL ${fmt(t.dL, 4)} · ΔC ${fmt(t.dC, 4)} · Δh ${fmt(t.dh, 2)}°`,
+        'ΔL +0,026 ± 0,008; ΔC ≤ 0; |Δh| ≤ 2°', Math.abs(t.dL - 0.026) <= 0.008 && t.dC <= 0 && Math.abs(t.dh) <= 2);
     }
   }
 }

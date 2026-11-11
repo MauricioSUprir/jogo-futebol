@@ -1,4 +1,4 @@
-// Gramado (desenho; item 45, plano em `golaco/PLANO-GRAFICOS.md` passo 2, pesquisa em `PESQUISA-ESTADIO.md` §19): a conta
+// Gramado (desenho; item 45, plano em `golaco/PLANO-GRAFICOS.md` passos 2 e 3, pesquisa em `PESQUISA-ESTADIO.md` §19): a conta
 // PURA (sem three.js nem DOM, fora do fecho do hash) das faixas de corte, usada igual pelo fragment shader do gramado (o
 // `GRAMADO_GLSL`, gerado daqui com as MESMAS constantes; o C6 do plano liga no `render/campo.js`) e pelos testes em Node
 // (`tools/teste-gramado.mjs`, que avalia o texto GLSL num interpretador mínimo e o compara com as funções JS). O modelo é o
@@ -119,13 +119,16 @@ const FORA = Object.freeze([0.063303, 0.089402, 0.012024]);
  * Por hora: as cores (albedos lineares; a noite com o MESMO albedo do dia), `manchas` (o `uManchas`, só luminância: ±8,5% de
  * albedo nos extremos da textura das manchas; calibrado pela G6 no C6 com o ruído de texturas.js MANCHAS_GRAMADO — σL 0,0101
  * em 58 blocos de 8 m, meta 0,010 ± 0,004; com o ponto de partida 0,10 dava 0,0060 e a textura de antes 0,0054), `rasante`
- * (a profundidade relativa ao foco, o `uRasante`: 0,22 de dia e a metade à noite, calibrado pela G4 no C7) e `brancoLinha`
- * (o fator das linhas, o `uBrancoLinha`: pelo modelo, o pico da linha 0,952 de dia com 1,8 e à noite, no meio do poço de luz,
- * com 1,9; calibrado pela G5 no C7).
+ * (a profundidade relativa ao foco, o `uRasante`; calibrado pela G4 no C7, o TERMO longe − perto com − sem ele na TV do
+ * celular, meta +0,026 ± 0,008: o 0,22 do plano dava ~+0,014 no modelo; medido na página com 0,42 deu +0,0266 e com 0,41,
+ * +0,0260 — e no PC Alta, a 24,6°, +0,0326, dentro do 0,034; à noite o MESMO 0,41 dá +0,0257: com a metade, como a pesquisa
+ * sugeria, o termo da noite ficaria em ~+0,013, fora da meta, que é a do dia) e `brancoLinha` (o fator das linhas, o
+ * `uBrancoLinha`: pelo modelo, o pico da linha 0,952 de dia com 1,8 e à noite, no meio do poço de luz, com 1,9; medido pela G5
+ * no C7: 0,952 de dia, 0,951 à noite, também na Baixa e no PC Alta).
  */
 export const GRAMADO_HORAS = Object.freeze({
-  dia: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.22, brancoLinha: 1.8 }),
-  noite: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.11, brancoLinha: 1.9 }),
+  dia: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.41, brancoLinha: 1.8 }),
+  noite: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.41, brancoLinha: 1.9 }),
 });
 
 /** O desgaste (a boca dos gols, a marca do pênalti, a frente da área e o círculo central; o quanto, no G da textura das
@@ -138,7 +141,7 @@ export const GRAMADO_GASTO = Object.freeze([0.262251, 0.230740, 0.088656]);
 export const GRAMADO_ENTORNO = 0.88;
 
 /** Os nomes dos uniforms do gramado (os do `GRAMADO_GLSL`). `uGFoco` = o g da profundidade no ponto do chão no meio da
- *  tela, calculado por quadro (C7). */
+ *  tela (`gFocoDe`), calculado por quadro no onBeforeRender do gramado e do chão de fora (render/campo.js). */
 export const UNIFORMS_GRAMADO = Object.freeze(['uClara', 'uEscura', 'uManchas', 'uRasante', 'uBrancoLinha', 'uBorda', 'uGFoco']);
 
 /** Os valores iniciais dos uniforms numa hora ('dia' | 'noite'): {uClara: [r, g, b], uEscura, uManchas, uRasante,
@@ -190,3 +193,75 @@ float gramadoMistura(vec2 faixa, float w) {
 export function glslTopoGramado(x) {
   return `float gramadoW = fwidth(${x}) + uBorda;\nfloat gramadoT = gramadoMistura(gramadoFaixa(${x}), gramadoW);`;
 }
+
+// ------------------------------------------------------------------ a profundidade relativa ao foco (C7, passo 3 do plano)
+//
+// O gramado visto de raspão fica mais claro e menos saturado (a refletância do dossel cresce com o ângulo da vista: Kimes 1983,
+// Applied Optics 22(9):1364; Sandmeier et al. 1998, RSE 66:222; nas fotos de TV, longe − perto ΔL +0,026 e C 0,108 → 0,103;
+// a névoa real, β = 3,912/V pela Koschmieder, dá só 1–2% a 100 m: não é a névoa). Com V = câmera − (x, 0, z), μ = V.y/|V| (o
+// cosseno do ângulo zenital da vista) e g = (1 − μ)², o termo é RELATIVO AO FOCO (escolha D9 do dono): p = clamp(uRasante·(g −
+// uGFoco), −0,08, 0,08), a cor vai para o cinza da mesma luminância em `saturacao`·p e é multiplicada por 1 + p. uGFoco é o g
+// do ponto do chão no meio da tela (`gFocoDe`, por quadro, no onBeforeRender do gramado e do chão de fora: vale para TODA
+// câmera — TV, replay, cinema, Livre, pré-jogo — sem fio no main.js): o meio da tela não muda de brilho com a câmera, e o
+// corte de uma câmera para outra não vira um salto de exposição (com o g absoluto, as câmeras baixas clareavam o gramado
+// inteiro em ~+11% e o aéreo do pré-jogo escurecia ~10%). O MESMO texto no gramado e no chão de fora: sem emenda nos cantos.
+// O limite (medido no C7, a G4b do teste-graficos-celular): a câmera baixa que olha ACIMA do chão (a steadicam da comemoração
+// mirando o peito a 6,6 m, a câmera do gol mirando o gol a 1,55 m) tem o raio do meio tocando o chão muito além do alvo (106 m
+// e 37 m), e o L do gramado aos pés do alvo cai 0,021 e 0,019 contra o sem termo (a steadicam no limite de −8% de brilho; a
+// meta da G4b é ±0,005); só pela câmera não se sabe a altura do alvo (a lateral do replay, também baixa e com o raio quase
+// deitado, mira a bola a 0,4 m, e nela o termo fica em −0,003).
+// A conta em JS (`gProfundidade`, `termoProfundidade`) é a do `PROFUNDIDADE_GLSL` (o teste-gramado avalia o texto GLSL no
+// interpretador mínimo e compara com estas funções).
+
+/** A profundidade: `limite` = o |p| máximo (±8% de brilho), `saturacao` = quanto a cor vai para o cinza por unidade de p (com
+ *  p > 0, ao longe, dessatura: o ΔC do termo ≤ 0, a meta da G4; sem ela, só clarear SOBE o C ao longe, porque o C do OKLab
+ *  cresce com o brilho), `semToque` = a distância (m) do ponto do foco na direção da vista quando o raio do meio da tela não
+ *  desce até o chão, `luminancia` = os pesos da luminância (Rec. 709, o espaço linear do three). */
+export const PROFUNDIDADE = Object.freeze({ limite: 0.08, saturacao: 0.6, semToque: 50, luminancia: Object.freeze([0.2126, 0.7152, 0.0722]) });
+
+/** g = (1 − μ)² da câmera (cx, cy, cz) para o ponto (x, 0, z) do chão. */
+export function gProfundidade(cx, cy, cz, x, z) {
+  const vx = cx - x, vz = cz - z;
+  const mu = clamp(cy / Math.max(Math.hypot(vx, cy, vz), 1e-4), 0, 1);
+  return (1 - mu) * (1 - mu);
+}
+
+/**
+ * O g do FOCO: o ponto onde o raio do meio da tela (origem o = [x, y, z], direção d, não precisa ser unitária) toca o chão
+ * (y = 0); se o raio não desce (d.y ≥ −1e−6 × |d|), o ponto a `PROFUNDIDADE.semToque` m na direção da vista, levado ao chão.
+ * Escreve o ponto em `ponto` (opcional).
+ */
+export function gFocoDe(o, d, ponto = null) {
+  const n = Math.hypot(d[0], d[1], d[2]) || 1;
+  const dx = d[0] / n, dy = d[1] / n, dz = d[2] / n;
+  const t = dy < -1e-6 ? -o[1] / dy : PROFUNDIDADE.semToque;
+  const x = o[0] + t * dx, z = o[2] + t * dz;
+  if (ponto) { ponto[0] = x; ponto[1] = 0; ponto[2] = z; }
+  return gProfundidade(o[0], o[1], o[2], x, z);
+}
+
+/** O termo na cor linear rgb ([r, g, b]) com o g do ponto, o do foco e o uRasante: a MESMA conta do `gramadoProfundidade`. */
+export function termoProfundidade(rgb, g, gFoco, rasante) {
+  const { limite, saturacao, luminancia: W } = PROFUNDIDADE;
+  const p = clamp(rasante * (g - gFoco), -limite, limite);
+  const lum = rgb[0] * W[0] + rgb[1] * W[1] + rgb[2] * W[2];
+  const s = 1 - saturacao * p;
+  return rgb.map(v => (lum + (v - lum) * s) * (1 + p));
+}
+
+/**
+ * GLSL da profundidade (depois do `GRAMADO_GLSL`, que declara o uRasante e o uGFoco): `float gramadoG(vec3 cam, vec2 xz)` e
+ * `vec3 gramadoProfundidade(vec3 cor, float g, float gFoco, float rasante)`. Sem derivada e sem desvio.
+ */
+export const PROFUNDIDADE_GLSL = `
+float gramadoG(vec3 cam, vec2 xz) {
+  vec3 V = cam - vec3(xz.x, 0.0, xz.y);
+  float mu = clamp(V.y / max(length(V), 0.0001), 0.0, 1.0);
+  return (1.0 - mu) * (1.0 - mu);
+}
+vec3 gramadoProfundidade(vec3 cor, float g, float gFoco, float rasante) {
+  float p = clamp(rasante * (g - gFoco), ${f(-PROFUNDIDADE.limite)}, ${f(PROFUNDIDADE.limite)});
+  float lum = dot(cor, vec3(${PROFUNDIDADE.luminancia.map(f).join(', ')}));
+  return mix(vec3(lum), cor, 1.0 - ${f(PROFUNDIDADE.saturacao)} * p) * (1.0 + p);
+}
+`;
