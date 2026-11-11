@@ -26,7 +26,9 @@
 //      mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8 quadros. Metas POR PEÇA, valendo a pior: buracos ≤ 5%;
 //      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
 //      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1). Na Baixa, também a pose do LIMIAR (a corda
-//      do pé de perto, com a meia largura de 1 px caindo entre as pontas: a revisão do bloco 3).
+//      do pé de perto, com a meia largura de 1 px caindo entre as pontas: a revisão do bloco 3). Na Média, informativa, a F
+//      SOBRE O GRAMADO (a revisão do bloco 3, achado 6 das medidas): as peças com o gramado atrás e as somas do quadro só com
+//      o gramado descontadas (no build e no SSAA) — o quadro real; o grão e a sombra atrás da peça entram na conta.
 //   G  o gramado (só a malha 'gramado'; G5 com as 'linhas'): G1 a cor na faixa do foco (OKLab, a média das duas classes);
 //      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe — as duas no quadro SEM as
 //      manchas quando há o gancho `campo.graficos.semManchas(bool)` (a revisão do C4–C8: dependiam de onde as manchas caíam
@@ -814,7 +816,7 @@ const errosConsole = [];
  * px por quadro no x da tela para as peças em pé e no y para as deitadas). Devolve os pontos com as somas e as estatísticas
  * por peça, por câmera; com `extra`, as do outro contexto também.
  */
-async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null, cams = ['foco', 'la']) {
+async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null, cams = ['foco', 'la'], grama = false) {
   const saida = {};
   for (const cn of cams) {
     const pose = P[cn];
@@ -824,7 +826,10 @@ async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = nu
     const { pontos, rect } = prepararFinos(pose, W, H, NQ_F, cRef);
     if (!pontos.length) { saida[cn] = null; continue; }
     for (const p of pontos) { p.vb = []; p.vs = []; if (extra) p.vx = []; }
-    const opc = { so: ['gols'], semCeu: true, fundo: 0x000000, rect };
+    const opc = { so: grama ? ['gols', 'gramado'] : ['gols'], semCeu: true, fundo: 0x000000, rect };
+    // sobre o gramado: as somas do quadro só com o gramado descontadas (no build e no SSAA físico)
+    const opcG = { so: ['gramado'], semCeu: true, fundo: 0x000000, rect };
+    const menos = (a, b) => a.map((v, j) => v - b[j]);
     for (const passe of ['h', 'v']) {
       const pp = pontos.filter(p => p.passe === passe);
       if (!pp.length) continue;
@@ -832,7 +837,11 @@ async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = nu
         const pq = deslocaCam(pose, B, passe, q * d0);
         const Ib = await quadro(pg, cenaBuild, campo, pq, opc, q === 0 && passe === 'h' ? `${rotulo}-F-${cn}` : null);
         const Is = await quadro(pg, cenaSem, campo, pq, { ...opc, escala: 3, fisico: true });
-        const sb = somasFinos(Ib, pq, W, H, pp), ss = somasFinos(Is, pq, W, H, pp);
+        let sb = somasFinos(Ib, pq, W, H, pp), ss = somasFinos(Is, pq, W, H, pp);
+        if (grama) {
+          sb = menos(sb, somasFinos(await quadro(pg, cenaBuild, campo, pq, opcG), pq, W, H, pp));
+          ss = menos(ss, somasFinos(await quadro(pg, cenaSem, campo, pq, { ...opcG, escala: 3, fisico: true }), pq, W, H, pp));
+        }
         pp.forEach((p, j) => { p.vb.push(sb[j]); p.vs.push(ss[j]); });
         if (extra) { const sx = somasFinos(await quadro(pg, extra, campo, pq, opc), pq, W, H, pp); pp.forEach((p, j) => p.vx.push(sx[j])); }
       }
@@ -1170,6 +1179,9 @@ try {
       metasF('celular Média', F, 'media');
       // o outro contexto (na main, o MSAA forçado: o que a Média ganha no C5), informativo
       comoInfo(() => metasF(`celular Média, o outro contexto: ${mb === 'm1' ? 'sem AA' : 'MSAA forçado'}`, F, 'mediaOutro', 'extra'));
+      // sobre o gramado (informativa; a revisão do bloco 3): a guarda continua a do preto
+      const Fg = await secaoF(pg, 'cel-media-grama', mb, 'm0', 'cm', P, W, H, null, ['foco', 'la'], true);
+      comoInfo(() => metasF('celular Média, sobre o gramado: o grão e a sombra atrás da peça entram na conta', Fg, 'mediaGrama'));
       marcar('F (Média)');
     }
 
