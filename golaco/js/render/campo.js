@@ -5,7 +5,7 @@
 // é estático vira um mesh só por material.
 import * as THREE from 'three';
 import { CAMPO, ESTADIO } from '../config.js';
-import { juntarGeometrias, cilindroEntre, caixa, atributosFino } from './util.js';
+import { juntarGeometrias, cilindroEntre, caixa, atributosFino, alfaDoCanvas } from './util.js';
 import {
   GRAMA, texGramadoAntigo, texManchasGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
@@ -325,6 +325,8 @@ function larguraMinima(mesh, antigo = false) {
     mat.alphaToCoverage = a2c;
     mat.transparent = mistura;
     mat.depthWrite = true;
+    // o canvas opaco: na A2C o fragmento escreve a cobertura no alfa (render/util.js alfaDoCanvas); a mistura volta à de sempre
+    alfaDoCanvas(mat, a2c);
     mesh.renderOrder = mistura ? 1 : 0;
     U.uModoFino.value = fisico ? 0 : a2c ? 1 : 2;
     if (mudou) mat.needsUpdate = true;

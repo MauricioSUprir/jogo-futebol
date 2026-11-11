@@ -27,6 +27,7 @@ import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js'
 import { criarBandeiras } from './bandeiras.js';
 import { shaderTorcida } from './silhuetas-shader.js';
 import { GRAFICOS } from './graficos-opcoes.js';
+import { alfaDoCanvas } from './util.js';
 import { criarSinalizadores } from './sinalizadores.js';
 
 // os shaders do quadro (e o ramo do impostor dentro dele): os TEXTOS em render/silhuetas-shader.js shaderTorcida (puro: o
@@ -81,7 +82,11 @@ export function criarTorcida(cena, opc) {
   /** A A2C nos dois programas (o de hoje e o com o impostor): só o que mudou pede o programa novo (o bit 21 da chave). */
   function aplicarAA() {
     const a2c = !antigo && !fisicoAA && amostrasAA >= 2;
-    for (const m of [material, impMat]) if (m && m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+    for (const m of [material, impMat]) {
+      if (m && m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+      // o canvas opaco: a A2C escreve o alfa da cobertura (render/util.js alfaDoCanvas; a regressão do V8 na revisão do bloco 3)
+      alfaDoCanvas(m, a2c);
+    }
   }
   const grupos = () => (mesh ? mesh.children.filter(m => m.userData.grupo !== undefined) : []);
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();

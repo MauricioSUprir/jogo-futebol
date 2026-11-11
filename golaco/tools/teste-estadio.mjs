@@ -22,7 +22,8 @@
 //      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2);
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
-//      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos);
+//      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos); 10b) o canvas fica OPACO com a A2C
+//      da torcida e dos finos (alfa 255 em todo pixel do buffer; item 45, a revisão do bloco 3: render/util.js alfaDoCanvas);
 //  11) o LADO DE CÁ (11/10): fora do desenho na câmera de TV (celular e PC, 20 instantes), visível do outro lado do
 //      campo com a torcida e o túnel no meio; os bancos de reservas (na mesma malha) fora da TV com a bola perto da
 //      linha de cá (no celular a cobertura deles aparecia no canto de baixo);
@@ -957,9 +958,19 @@ try {
       const cx = off.getContext('2d', { willReadFrequently: true });
       const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
       const fr = [], alt = [];
+      // 10b) o canvas OPACO (item 45, a revisão do bloco 3): a A2C da torcida e dos finos (a Média tem MSAA) escreve o alfa da
+      // cobertura e o three r170 pede o contexto com alpha true — sem a mistura própria do canal alfa (render/util.js
+      // alfaDoCanvas) o buffer ficava com alfa < 1 nas bordas e qualquer cópia do canvas saía translúcida (o V8 do
+      // teste-tecnicos-tela). Lido do buffer logo depois do desenho (o mesmo evaluate: o buffer ainda não foi apresentado).
+      const gl = cv.getContext('webgl2');
+      const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight, buf = new Uint8Array(W * H * 4);
+      let transl = 0, minA = 255;
       for (let k = 0; k < 20; k++) {
         for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-        g.estadio.mostrarTorcida(true); g.desenhar(); const a = ler();
+        g.estadio.mostrarTorcida(true); g.desenhar();
+        gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, buf);
+        for (let i = 3; i < buf.length; i += 4) if (buf[i] < 255) { transl++; if (buf[i] < minA) minA = buf[i]; }
+        const a = ler();
         g.estadio.mostrarTorcida(false); g.desenhar(); const b = ler();
         g.estadio.mostrarTorcida(true);
         let n = 0;
@@ -968,8 +979,10 @@ try {
         const j = g.render.jogador;
         if (j) { const p0 = g.naTela(j.x, 0, j.z), p1 = g.naTela(j.x, 1.8, j.z); if (p0 && p1) alt.push(Math.abs(p0.y - p1.y)); }
       }
-      return { fr, alt };
+      return { fr, alt, transl, minA, a2c: !!g.estadio.torcidaObj?.aa?.a2c, amostras: gl.getParameter(gl.SAMPLES) };
     });
+    meta('Celular deitado: o canvas opaco com a A2C da torcida e dos finos (alfa 255 em todo pixel, 20 instantes)',
+      `${r.transl} px com alfa < 255 (mínimo ${r.minA}; A2C da torcida ${r.a2c ? 'ligada' : 'DESLIGADA'}, SAMPLES ${r.amostras})`, '0 px (com a A2C ligada)', r.a2c && r.transl === 0);
     const vis = r.fr.filter(f => f >= 0.01).length;
     const med = v => { const s = [...v].sort((x, y) => x - y); return s.length ? s[s.length >> 1] : NaN; };
     meta('Celular deitado: a torcida aparece durante o jogo (20 instantes, ≥ 1% da tela)', `${vis}/${r.fr.length} (mediana ${f2(med(r.fr) * 100)}% da tela)`, '≥ 18/20', vis >= 18 && errosCel.length === 0);

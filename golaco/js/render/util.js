@@ -129,6 +129,36 @@ export function atributosFino(geo, a, b, raio, { noChao = false, segs = 0 } = {}
 }
 
 /**
+ * O CANVAS OPACO com a A2C (item 45, a revisão do bloco 3: a regressão do V8 do teste-tecnicos-tela). O alfa que o alfa para
+ * cobertura usa é o MESMO que o fragmento escreve, e o three r170 cria o contexto sempre com `alpha: true` (o `alpha: false` do
+ * renderizador só vale para a limpeza): a borda das silhuetas da torcida, das letras e dos finos deixava o buffer do canvas com
+ * alfa < 1 (na tela some no fundo quase preto da página; qualquer CÓPIA do canvas sai translúcida — o drawImage num canvas 2D que
+ * guarda o quadro anterior misturava o plano de antes nas bordas das pessoas: o 1º desenho depois de um corte de câmera saía
+ * diferente do 2º, 207–228 px a 1/2 no V8). A mistura PRÓPRIA só no canal alfa: o destino fica (0 · alfa do fragmento + 1 · alfa
+ * do destino, que a limpeza e os opacos deixam em 1) e a cor é substituída (1 · cor + 0 · destino) — a cobertura não muda (a A2C
+ * vem antes da mistura) e o canvas fica opaco. a2c false: a mistura de antes do material de volta (o material que nunca ligou a
+ * A2C não é tocado: o `?gfx=antigo` fica bit a bit).
+ */
+export function alfaDoCanvas(m, a2c) {
+  if (!m) return;
+  const orig = m.userData.alfaCanvas;
+  if (a2c) {
+    if (!orig) {
+      m.userData.alfaCanvas = {
+        blending: m.blending, blendEquation: m.blendEquation, blendSrc: m.blendSrc, blendDst: m.blendDst,
+        blendEquationAlpha: m.blendEquationAlpha, blendSrcAlpha: m.blendSrcAlpha, blendDstAlpha: m.blendDstAlpha,
+      };
+    }
+    m.blending = THREE.CustomBlending;
+    m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.ZeroFactor;
+    m.blendEquationAlpha = THREE.AddEquation; m.blendSrcAlpha = THREE.ZeroFactor; m.blendDstAlpha = THREE.OneFactor;
+  } else if (orig) {
+    Object.assign(m, orig);
+    m.userData.alfaCanvas = null;
+  }
+}
+
+/**
  * O antisserrilhado de RECORTES por alphaTest (item 45, C10; `PLANO-GRAFICOS.md` passo 5: os letreiros do pré-jogo) pelas
  * AMOSTRAS do contexto que desenha (o SAMPLES: o `cena.amostras`, nunca o nome da qualidade — a queda deixa a Baixa num contexto
  * com MSAA). Só os materiais OPACOS: o recorte transparente já tem a borda pela MISTURA (o alfa da textura é a cobertura) — medido
@@ -151,7 +181,10 @@ export function recorteAA(materiais, { antigo = GRAFICOS.gfxAntigo } = {}) {
   let amostras = 0, fisico = false;
   const aplicar = () => {
     const a2c = !fisico && amostras >= 2;
-    for (const m of lista) if (m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+    for (const m of lista) {
+      if (m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+      alfaDoCanvas(m, a2c);
+    }
   };
   return {
     definirAA(n) { amostras = n | 0; aplicar(); },
