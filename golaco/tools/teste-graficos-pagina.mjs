@@ -358,6 +358,8 @@ async function instalarPagina() {
   };
   window.__P = {
     info: () => infoGl(glTela()),
+    /** Espera a GPU acabar o que está na fila (gl.finish e as leituras do contexto, que sincronizam com o processo da GPU). */
+    drenarGpu() { const gl = glTela(); if (!gl) return null; gl.finish(); return infoGl(gl); },
     canvasInfo, painel, ajustando,
     sonda() {
       const r = {};
@@ -1066,11 +1068,14 @@ try {
         // o qps de verdade atrás da tela (os desenhos do 3D, 30 por segundo pelo instante do rAF) × o que o painel mostra: um rAF
         // falso a 60 Hz com o render só contando (no SwiftShader a página desenha 3–6 quadros por segundo de verdade e a razão
         // rAF ÷ desenhos variava de 1,35 a 2,3 entre rodadas; a 60 Hz virtuais ela é 2 na main)
+        // (drena a fila da GPU antes: atrás da tela o SwiftShader leva ~3 s por quadro de verdade, e com um quadro em voo a tela
+        // não desenhava nos quadros do rAF falso — 1 desenho em 158 quadros, sempre que a carga da P2 não era a 1ª da rodada)
         await espera(500);
-        const a = await pg.evaluate(() => { window.__P.soContar(true); const d = window.__golaco.prepartida.desenhos; window.__rafLigar(60); return { d, t: window.__raf.t }; });
+        await P(pg, 'drenarGpu');
+        const a = await pg.evaluate(() => { const ok = window.__P.soContar(true); const d = window.__golaco.prepartida.desenhos; window.__rafLigar(60); return { ok, d, t: window.__raf.t, n: window.__raf.n, nr: window.__nRender || 0 }; });
         const lidos = [];
         for (const k of [1600, 2100, 2600]) { await esperarRaf(pg, a.t + k); lidos.push(await P(pg, 'painel')); }
-        const b = await pg.evaluate(() => { const r = { d: window.__golaco.prepartida.desenhos, t: window.__raf.t }; window.__rafLigar(0); window.__P.soContar(false); return r; });
+        const b = await pg.evaluate(() => { const r = { d: window.__golaco.prepartida.desenhos, t: window.__raf.t, n: window.__raf.n, nr: window.__nRender || 0 }; window.__rafLigar(0); window.__P.soContar(false); return r; });
         // (a tela desenha pelo instante do rAF: o relógio de verdade alcança o virtual antes de seguir)
         await pg.waitForFunction(t => performance.now() > t + 50, b.t, { timeout: 20000 }).catch(() => {});
         const real = (b.d - a.d) / ((b.t - a.t) / 1000);
@@ -1084,7 +1089,7 @@ try {
         meta('P2', 'O painel mostra p95, fase, AA, buffer, GPU e refresh', `"${txt.slice(0, 110)}"${falta.length ? ` · falta: ${falta.join(', ')}` : ''}`, 'tudo', pn.existe && !falta.length);
         meta('P2', 'O painel à vista POR CIMA da tela antes do jogo', `${pn.existe ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima${pn.tapado ? ` (tapa: ${pn.tapado})` : ''}` : 'escondido') : 'não existe'}${pn.fixo ? ' (.perf-fixo)' : ` (no #${pn.pai})`}`, '100% por cima', pn.visivel && pn.topo === 1);
         // (a régua é a razão mostrado ÷ desenhado: ~1 com o intervalo entre DESENHOS; na main o painel mostra o ritmo do rAF, 60)
-        meta('P2', 'O qps do painel na tela antes do jogo = os desenhos de verdade (N3; rAF falso a 60 Hz)', `mostra ${f(mostrado, 1)} · desenhou ${f(real, 1)} por segundo atrás da tela (× ${f(mostrado / real, 2)})`, '0,8–1,25 × os desenhos e ≤ 32',
+        meta('P2', 'O qps do painel na tela antes do jogo = os desenhos de verdade (N3; rAF falso a 60 Hz)', `mostra ${f(mostrado, 1)} · desenhou ${f(real, 1)} por segundo atrás da tela (× ${f(mostrado / real, 2)}) · ${b.n - a.n} quadros do rAF falso em ${f((b.t - a.t) / 1000, 1)} s, ${b.nr - a.nr} desenhos contados${a.ok ? '' : ' (o render NÃO virou conta)'}`, '0,8–1,25 × os desenhos e ≤ 32',
           Number.isFinite(mostrado) && real > 0 && mostrado / real >= 0.8 && mostrado / real <= 1.25 && mostrado <= 32);
         marcar('P2 (tela)');
       }
@@ -1139,6 +1144,9 @@ try {
       // ---- o jogo: o painel no jogo, na pausa e no replay; a mira; a perda de contexto
       await pg.evaluate(() => window.__golaco.prepartida.jogar());
       await pg.waitForFunction(() => !window.__golaco.prepartida.aberta, null, { timeout: 15000 }).catch(() => {});
+      // (a tela sai por uma animação CSS, no relógio de verdade: o painel "no jogo" só se lê com ela fora da vista — lida no meio
+      // do esmaecimento, o véu dela ainda tapa o painel)
+      await pg.waitForFunction(() => { const pp = document.getElementById('prepartida'); return !pp || pp.hidden || !pp.checkVisibility({ opacityProperty: true, visibilityProperty: true }); }, null, { timeout: 30000 }).catch(() => {});
       await pg.evaluate(() => { const g = window.__golaco; g.relogio.usarManual(true); for (let i = 0; i < 300; i++) g.relogio.avancar(1000 / 60, { desenhar: i % 30 === 29 }); });
       if (so.has('P2')) {
         const noJogo = await P(pg, 'painel');
