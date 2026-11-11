@@ -63,6 +63,21 @@ As linhas citadas pela FILA estão desatualizadas e são corrigidas no commit de
 - 24: o painel por cima de tudo (passo 6);
 - 25: o teste dividido em dois arquivos (seção 4).
 
+**O bloco 3 (C9–C10), a revisão e o fecho (11/11).** Os finos com largura mínima (C9, `52896f71`), as bandeiras com o alfa
+compensado, o letreiro opaco com A2C e as silhuetas com `centroid` (C10, `a2561f8f`), a revisão em três lentes (`4792e0c6`,
+`73f34b56`, `35f967c5`, `3c4b5719`) e o fecho (`bc01cece`, `3c4bf4c3` e este). O medido está na seção 6 ("Medido no bloco 3").
+- **A F fecha** na Média e na Baixa (de 7 metas fora para 1: a queda no gol de lá, ×2,26 na corda do fundo e ×1,97 no mastro;
+  decisão do C14). A A da Média continua 0,53 / 0,50 (dia) e 0,46 / 0,46 (noite).
+- **A K melhora mas não fecha:** franjas das bandeiras 13,40% → 2,43% (bola) e 3,91% → 0,65% (gol no foco), a torcida na bola
+  2,36% → 0,33% (meta 0,2%); a A2 da TV na bola 1,00 → 0,69 (meta 0,6; o resto das placas e das bandeiras). Decisão do C14.
+- **A regressão do bloco 3 (o CI do `4792e0c6`, o V8 do `teste-tecnicos-tela`)**: o alfa que a A2C usa é o que o fragmento
+  escreve, e o three r170 pede o contexto sempre com `alpha: true`; desde o C10 o buffer do canvas ficava com alfa < 1 nas bordas
+  das pessoas (~15 mil px por quadro na TV do celular Média). Qualquer cópia do canvas saía translúcida: o V8 lê por `drawImage`
+  num canvas 2D que guarda o quadro anterior, e o 1º desenho depois de um corte de câmera misturava o plano de antes (211 de
+  costas: 207–228 px, meta < 40). Corrigido no código (`render/util.js alfaDoCanvas`: na A2C, a mistura só do canal alfa mantém o
+  destino em 1; a cor sai igual bit a bit) e guardado pelo `teste-estadio` 10b (o alfa 255 em todo pixel).
+- **`?gfx=antigo`** desfaz também o C10 (a torcida, as bandeiras e o ramo do impostor = o texto da main pelo FNV-1a, P3).
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -509,7 +524,7 @@ Na referência só ficam valores agregados com tolerância, nunca o hash dos pix
 
 **Medido na main (C3; regravado na revisão do C1–C3).** A referência está em `tools/dados/graficos-ref.json`, chaves `celular` (281 valores) e `pagina` (79 valores, nenhum de CPU):
 - gravada da main `e41aa791` pela worktree de leitura, com `--raiz <main>/golaco --gravar-referencia`;
-- **Chromium 141.0.7390.37, o do CI** (Playwright 1.56.1 do `golaco-testes.yml`, por `NODE_PATH` e `PLAYWRIGHT_BROWSERS_PATH` de uma instalação à parte), `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`. No C3 era o 153 daqui: os valores do `celular` não mudam entre os dois; na página, só a K3 do build sem AA (cobertura 0,926 no 153, 0,986 no 141; informativa);
+- **Chromium 141.0.7390.37, o do CI** (Playwright 1.56.1 do `golaco-testes.yml`, por `NODE_PATH` e `PLAYWRIGHT_BROWSERS_PATH` de uma instalação à parte), `ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)`. No C3 era o 153 daqui: os valores do `celular` não mudam entre os dois. ~~na página, só a K3 do build sem AA (cobertura 0,926 no 153, 0,986 no 141)~~ — não era a versão: a revisão do bloco 3 achou o mesmo 0,925 no 141 em 2 de 7 rodadas. A K3 não era determinística (o modelo do torcedor 3D e o impostor assado em fatias ociosas chegavam entre os quadros a e b); desde o `35f967c5` a cena ASSENTA antes de cada carga e a K3 desenha o quadro a de novo (estrutura: 0 px), e a referência foi regravada SÓ na K e na A2 (a K3 da main 0,926 / 6,05%);
 - tempos com o 141: ~64 s o do celular e ~240 s o da página (com a CPU pareada, `--base`).
 
 A sonda é válida nos dois testes: com `antialias` pedido, o SwiftShader dá `antialias` true e `SAMPLES` 4 (`MAX_SAMPLES` 4); sem pedir, 0. O MSAA funciona no SwiftShader, o mesmo renderizador do CI (conferido também no Chromium 141 do CI).
@@ -606,9 +621,9 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | K | K1 franjas ≤ 0,2% com o centro FORA: torcida, gol no foco | — | 0% (0 de 611). O centro dentro: 1,24% (11 de 890), todas 0,73%: era 100% piso, a meta antiga reprovava mesmo com o `centroid` certo | guarda |
 | K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | vale |
 | K | K1 franjas: placas (bola / gol no foco) | — | 0 px de borda fora / 0% de 366; o centro dentro 0% de 1262 / 219 | guarda |
-| K | K1 franjas: letreiro do pré-jogo | reprova | 0 px de borda (sem a A2C o MSAA não muda um `alphaTest`) | **informativa** (na main não mede nada; com a A2C do C10 vira guarda ≤ 0,2%) |
+| K | K1 franjas: letreiro do pré-jogo | reprova | 0 px de borda (sem a A2C o MSAA não muda um `alphaTest`) | **informativa** (na main não mede nada; ~~com a A2C do C10 vira guarda ≤ 0,2%~~ — o letreiro do Estádio Golaço é TRANSPARENTE e a A2C do C10 não o pega: continua 0 px; o opaco, o do Maracanã, só na edição pro, medido à parte no C10. O C14 decide se mede o pro aqui) |
 | K | K2 cobertura das bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | reprova (as de longe) | 0,966 / 0,935 sem AA; forçado 1,006 / 1,004 | **informativa** |
-| K | K3 A2C da torcida | informativa | sem AA: cobertura 0,986, cintilação ×1,16 (no Chromium 153: 0,926 e ×1,32); forçado 0,987 e ×1,23 | informativa |
+| K | K3 A2C da torcida | informativa | ~~sem AA: cobertura 0,986, cintilação ×1,16 (no Chromium 153: 0,926 e ×1,32); forçado 0,987 e ×1,23~~ regravada com a cena assentada (`35f967c5`): sem AA 0,926 e 6,05% (SSAA 4,60%, ×1,32); forçado 0,926 e ×1,32 | informativa |
 | P | Chamadas = ref; triângulos ≤ ref + 1% | guarda | 31; 91 524 | guarda |
 | P | CPU p95 ≤ 6 ms (a mediana de 6 janelas de 400 quadros) | guarda | 7 rodadas da main (C2/C3, "historicoCpu" no JSON): 5,8 a 6,8, mediana 6,2. Com o 141, pareada: 5,6; 6,9; 7,0; 6,7; 6,8 | o "≤ 6 ms" absoluto **informativo** (a base já passa dele: "Depende do dono" 30) |
 | P | CPU nada pior que a base, PAREADO (`--base`): a mediana das diferenças por par ≤ +1,0 ms | guarda | a main contra ela mesma: +0,10; +0,30; +0,70; 0,00; +0,20 (5 rodadas de 6 pares). Numa delas os 6 pares ≥ 0: o efeito é da instância do navegador, e alternar as janelas não o tira | guarda. O +0,2 do plano reprovava o mesmo código em 2 de 5 rodadas; com +1,0 a guarda pega a piora de ~15% para cima (o +0,2 não se mede neste equipamento: vai ao "Depende do dono" 30 com os 6 ms) |
@@ -748,6 +763,48 @@ regravada; 70 s; 7 metas fora, todas da F, que é do C9):
 | F Baixa, buracos / cintilação (foco / lá) | 57,1% / 62,5% · ×6,49 / ×6,02 | iguais (o C9) |
 | F Baixa com MSAA, cintilação (foco / lá) | ×1,69 / ×2,56 | iguais (o C9) |
 | D o longe ÷ o perto do foco, E / cintilação | ×0,70 / ×0,32 | ×0,68 / ×0,29 (sem filtro) |
+
+**O que a revisão do bloco 3 mudou** (C9–C10; três revisões em paralelo — o shader e o código, as medidas F e K, as
+regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Medido no bloco 3"):
+- **Aplicadas:**
+  1. **Shader 1 (GRAVE), o buraco no limiar da mistura** (`4792e0c6`): na Baixa sem MSAA, a peça que cruzava 1 px de meia
+     largura entre as pontas interpolava um vértice analítico com um de fora (a razão build/física até 0,02 em 31 faixas). A
+     cobertura analítica vale em todo vértice fino (o `FINOS.franja`; a chave `gols-finos-v2`). A F ganhou a pose do LIMIAR na
+     Baixa (a corda do pé a 1,09 / 0,89 px nas pontas; a estrutura confere que o limiar cai dentro da peça): buracos 3,9% → 0%,
+     ×4,76 → ×1,12, soma 1,34 → 1,11. Mutação (sem a largura mínima e sem a franja): 8 metas da F fora.
+  2. **Shader 2, as pontas abertas à vista** (`4792e0c6`): a haste e as cordas do pé e do fundo com as pontas fechadas (+320
+     triângulos; a P em 92 044, +0,57%).
+  3. **Shader 3, a guarda estática** (`73f34b56`): os textos num módulo puro (`render/silhuetas-shader.js`, o `glslImpostor` e o
+     `SHADER_FINOS`); o `teste-gramado` G5 (as derivadas e as leituras com mip antes do 1º desvio, nada nas funções; provada
+     pelas 4 mutações da revisão), G6 (o antigo = a main pelo sha256) e G7 (o recorte dentro do `#ifdef USE_ALPHATEST` e o alfa
+     em [0, 1]).
+  4. **Shader 4 e regressões 1, o `?gfx=antigo` do C10** (`73f34b56`): a torcida, as bandeiras e o impostor voltam ao texto da
+     main bit a bit; a P3 confere o FNV-1a dos programas.
+  5. **Shader 7, o recorte** (`73f34b56`): um `aplicarTrocas` só (o que avisa), o `#ifdef` e o `clamp`.
+  6. **Medidas 1 e 5** (`73f34b56`): o comentário falso das bandeiras (a A2C nelas não muda nada medido; a piora das franjas das
+     bandeiras é a troca que a A2C da TORCIDA faz) e as bandeiras escrevem alfa 1.
+  7. **Medidas 2, a K3 determinística** (`35f967c5`): a cena assenta antes de cada carga e a K3 desenha o quadro a de novo (0 px);
+     a referência regravada só na K e na A2. Com a cena assentada, a A2C da torcida ainda ganha (K1 da torcida na bola 1,95 →
+     0,33%, A2 0,75 / 0,58 → 0,69 / 0,47, K3 ×1,32 → ×1,28) e custa as franjas das bandeiras (2,22 → 2,43% e 0,26 → 0,65%) e 1 px
+     da torcida com o gol no foco: fica.
+  8. **Medidas 4** (`35f967c5`): a K1 do letreiro informativa e dita (acima).
+  9. **Medidas 6** (`3c4bf4c3`): a F também SOBRE O GRAMADO, informativa (a guarda continua a do preto).
+  10. **Regressões 2** (`4792e0c6`): o `teste-rede-tela` com o campo pelo `definirAA`, como o jogo.
+  11. **Regressões 3** (`3c4b5719`): o `teste-estadio` conta a memória depois de o torcedor 3D e o impostor chegarem.
+  12. **O fecho** (`bc01cece`): o canvas opaco com a A2C (a regressão do V8; seção 0) — o mesmo achado 5 das medidas, que a
+      revisão só tinha tratado nas bandeiras e nos PNG dos testes: a torcida, os finos e o letreiro também escreviam o alfa.
+- **Medidas só, sem mudar o código (ficam):** shader 5 (a derivada do alfa pela leitura na `vUv`: K3 igual, A2 0,0624 →
+  0,0626, bandeiras 2,43 → 2,49%); shader 6 (a franja da mistura que esconde a rede: os finos depois da rede mudam o "clareia o
+  gol na TV" da Baixa 17,4 → 17,6; não pesa).
+- **Não aplicadas, e por quê:**
+  - **Medidas 3** (a queda no gol de lá tem DUAS peças fora: a corda do fundo ×2,26 e o mastro ×1,97): é relato; a escolha
+    (a mistura analítica também com MSAA, que fecha as duas — ×1,35 nessa câmera —, contra o "A2C com MSAA" do plano e o R4, ou
+    rever a meta) é do C14.
+  - **Medidas 7** (as metas da K1 decididas por 1 px: as placas 1 de 366 e a torcida 1 de 1737 com o gol no foco): o critério
+    por contagem (binomial) mexe na régua de TODAS as linhas da K1 — com ele a torcida na bola (0,33%, 7 de 2134) também passaria
+    a "não prova" contra 0,2%. Mudar a régua de uma meta que está fora é afrouxar sem prova: vai ao C14, que decide as metas.
+  - **Medidas 8** (a haste quase não é medida na F: 4 pontos com o gol no foco, "poucos pontos" no gol de lá): uma pose em que a
+    haste cresça na tela é uma régua nova; vai ao C14 junto com a medida 3.
 
 **Testes Node novos (padrão, `rodar-testes.mjs`):**
 
