@@ -26,10 +26,11 @@
 //
 // As cores (passo 2 do plano): albedos LINEARES da faixa clara, da escura e do chão de fora, pela inversa EXATA do ACES do
 // r170 (`tools/lib/cor-aces.mjs` `albedoPara`) para a luz do dia no chão: o verde realista (escolha D1 do dono) — na tela
-// L 0,58, C 0,10, h 124°, ΔL das faixas 0,056 (a foto). São os pontos de PARTIDA: o C6 calibra pela MEDIDA da página
-// (`teste-graficos-celular` G1, G2, G6), não pelo modelo — o modelo dá ΔL 0,104 para as faixas de hoje e a página mede
-// 0,099. A noite usa o MESMO albedo (a luz dos refletores e o poço mudam a cor na tela; a seção N do
-// `teste-graficos-celular` prevê a noite pelo albedo do dia), por isso a tabela é por hora mas as cores são as mesmas.
+// L 0,58, C 0,10, h 124°, ΔL das faixas 0,056 (a foto). Conferidas pela MEDIDA da página no C6 (`teste-graficos-celular`,
+// SwiftShader do CI, celular Média de dia): L 0,575, C 0,100, h 124,0°, ΔL 0,056 perto do foco; os albedos do modelo ficaram
+// (com as faixas de antes o modelo dava ΔL 0,104 e a página 0,099; com estas, o modelo 0,0560 e a página 0,056). A noite usa
+// o MESMO albedo (a luz dos refletores e o poço mudam a cor na tela; a seção N do `teste-graficos-celular` prevê a noite pelo
+// albedo do dia), por isso a tabela é por hora mas as cores são as mesmas.
 import { CAMPO } from '../config.js';
 
 /** As faixas da UEFA (§4.3.1, Fig. 15): as primeiras `primeiras` de `primeira` m a partir de cada linha de fundo (também a
@@ -106,7 +107,7 @@ export function misturaEm(x, fw, borda = BORDA_CORTE) {
   return misturaFaixa(_f.paridade, _f.distBorda, fw + borda);
 }
 
-// ------------------------------------------------------------------ cores e parâmetros por hora (pontos de partida)
+// ------------------------------------------------------------------ cores e parâmetros por hora
 
 /** Albedos lineares (r, g, b) da faixa clara (#6b7f45), da escura (#61723a) e do chão de fora (#47541d): a inversa do ACES
  *  do r170 com a luz do dia no chão para L 0,607 / 0,551 / 0,404, C 0,10 / 0,10 / 0,09, h 124° (`cor-aces` `albedoPara`). */
@@ -115,15 +116,26 @@ const ESCURA = Object.freeze([0.119089, 0.168344, 0.042002]);
 const FORA = Object.freeze([0.063303, 0.089402, 0.012024]);
 
 /**
- * Por hora: as cores (albedos lineares; a noite com o MESMO albedo do dia), `manchas` (o ±5% de albedo das manchas, só
- * luminância: o `uManchas`; calibrado pela G6 no C6), `rasante` (a profundidade relativa ao foco, o `uRasante`: 0,22 de dia
- * e a metade à noite, calibrado pela G4 no C7) e `brancoLinha` (o fator das linhas, o `uBrancoLinha`: pelo modelo, o pico da
- * linha 0,952 de dia com 1,8 e à noite, no meio do poço de luz, com 1,9; calibrado pela G5 no C7).
+ * Por hora: as cores (albedos lineares; a noite com o MESMO albedo do dia), `manchas` (o `uManchas`, só luminância: ±8,5% de
+ * albedo nos extremos da textura das manchas; calibrado pela G6 no C6 com o ruído de texturas.js MANCHAS_GRAMADO — σL 0,0101
+ * em 58 blocos de 8 m, meta 0,010 ± 0,004; com o ponto de partida 0,10 dava 0,0060 e a textura de antes 0,0054), `rasante`
+ * (a profundidade relativa ao foco, o `uRasante`: 0,22 de dia e a metade à noite, calibrado pela G4 no C7) e `brancoLinha`
+ * (o fator das linhas, o `uBrancoLinha`: pelo modelo, o pico da linha 0,952 de dia com 1,8 e à noite, no meio do poço de luz,
+ * com 1,9; calibrado pela G5 no C7).
  */
 export const GRAMADO_HORAS = Object.freeze({
-  dia: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.10, rasante: 0.22, brancoLinha: 1.8 }),
-  noite: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.10, rasante: 0.11, brancoLinha: 1.9 }),
+  dia: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.22, brancoLinha: 1.8 }),
+  noite: Object.freeze({ clara: CLARA, escura: ESCURA, fora: FORA, manchas: 0.17, rasante: 0.11, brancoLinha: 1.9 }),
 });
+
+/** O desgaste (a boca dos gols, a marca do pênalti, a frente da área e o círculo central; o quanto, no G da textura das
+ *  manchas): a cor amarelada para onde o albedo vai, linear (#8c8454: com a força de antes na boca do gol, 0,32, a mesma
+ *  mudança da textura de antes na tela — L +0,019, h −7,6° pela luz do dia e o ACES). */
+export const GRAMADO_GASTO = Object.freeze([0.262251, 0.230740, 0.088656]);
+
+/** O entorno (fora das linhas): o fator do albedo (a textura de antes punha 12% de verde-escuro por cima; aqui ×0,88 no
+ *  albedo, ΔL ~0,03 na tela: a mesma metade do contraste das faixas que o de antes tinha das faixas de antes). */
+export const GRAMADO_ENTORNO = 0.88;
 
 /** Os nomes dos uniforms do gramado (os do `GRAMADO_GLSL`). `uGFoco` = o g da profundidade no ponto do chão no meio da
  *  tela, calculado por quadro (C7). */
