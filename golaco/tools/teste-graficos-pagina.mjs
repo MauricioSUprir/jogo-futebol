@@ -31,8 +31,8 @@
 //      ms e ≤ a referência + 0,2 ms; o desenho (a parte JS do render) informativo.
 //   P2 ?perf=1 e ?qps=1 na tela antes do jogo (?prepartida=1): __golaco.perf(); o painel com p95, fase, AA, buffer, GPU e
 //      refresh; visível POR CIMA na tela antes do jogo, na pausa e no replay; o qps mostrado na tela = os desenhos de verdade
-//      (0,8–1,25 ×; na main o painel soma o dt de 1 quadro do navegador por desenho e mostra o ritmo do rAF — no SwiftShader
-//      ~2× o dos desenhos atrás da tela).
+//      (0,8–1,25 ×, com um rAF falso a 60 Hz: a tela desenha 30; na main o painel soma o dt de 1 quadro do navegador por
+//      desenho e mostra 60).
 //   P3 ?gfx=antigo: SAMPLES 0 na Média e o gramado da página (G1–G5 da página, só o gramado e as linhas na pose do meio) = a
 //      referência da main; ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
 //      definirHora e de uma recriação (Média → Alta → Baixa recria nas duas versões).
@@ -48,8 +48,8 @@
 //   Z  redimensionar: atribuições a canvas.width/height do #tela (contadas pelo addInitScript) com o mesmo tamanho (resize e
 //      visualViewport) e com um tamanho novo. Metas 0 e 2 (main: 8 e até 8).
 //   T  teto: um rAF falso (tempo virtual) a 90, 120, 144 e 165 Hz conta os desenhos do #tela por segundo: celular 90 / 60 / 72
-//      / 82,5 ± 1 em intervalos regulares; PC sem toque a 144 Hz, sem teto. (Em T e na queda natural o render do #tela só
-//      conta — o que se mede é quantas vezes a página desenha.)
+//      / 82,5 ± 1 em intervalos regulares; PC sem toque a 144 Hz, sem teto. (Em T, na queda natural e no qps da P2 o render do
+//      #tela só conta — o que se mede é quantas vezes a página desenha.)
 //
 // As seções que dependem de peças que ainda não existem (?aa, ?gfx, ?tom, ?perf, __golaco.perf, quedaDeTeste, o teto) RODAM na
 // main e registram o estado de hoje, reprovando a meta como informativa.
@@ -974,12 +974,16 @@ try {
         try { return JSON.parse(JSON.stringify(g.perf())); } catch (e) { return { erro: String(e) }; }
       });
       if (so.has('P2')) {
-        // o qps de verdade atrás da tela (os desenhos do 3D) × o que o painel mostra
-        await espera(1000);
-        const a = await pg.evaluate(() => ({ d: window.__golaco.prepartida.desenhos, t: performance.now() }));
+        // o qps de verdade atrás da tela (os desenhos do 3D, 30 por segundo pelo instante do rAF) × o que o painel mostra: um rAF
+        // falso a 60 Hz com o render só contando (no SwiftShader a página desenha 3–6 quadros por segundo de verdade e a razão
+        // rAF ÷ desenhos variava de 1,35 a 2,3 entre rodadas; a 60 Hz virtuais ela é 2 na main)
+        await espera(500);
+        const a = await pg.evaluate(() => { window.__P.soContar(true); const d = window.__golaco.prepartida.desenhos; window.__rafLigar(60); return { d, t: window.__raf.t }; });
         const lidos = [];
-        for (let k = 0; k < 6; k++) { await espera(500); lidos.push(await P(pg, 'painel')); }
-        const b = await pg.evaluate(() => ({ d: window.__golaco.prepartida.desenhos, t: performance.now() }));
+        for (const k of [1600, 2100, 2600]) { await esperarRaf(pg, a.t + k); lidos.push(await P(pg, 'painel')); }
+        const b = await pg.evaluate(() => { const r = { d: window.__golaco.prepartida.desenhos, t: window.__raf.t }; window.__rafLigar(0); window.__P.soContar(false); return r; });
+        // (a tela desenha pelo instante do rAF: o relógio de verdade alcança o virtual antes de seguir)
+        await pg.waitForFunction(t => performance.now() > t + 50, b.t, { timeout: 20000 }).catch(() => {});
         const real = (b.d - a.d) / ((b.t - a.t) / 1000);
         const pn = lidos[lidos.length - 1], mostrado = percentil(lidos.map(x => x.qps).filter(Number.isFinite), 0.5);
         guarda('P2.tela.real', real); guarda('P2.tela.mostrado', mostrado);
@@ -990,9 +994,8 @@ try {
         const falta = [['p95', /p95/i], ['fase', /fase|tela|jogo|replay|pausa|pré-jogo|cena/i], ['AA', /\bAA\b|MSAA|SAMPLES|amostras/i], ['buffer', /\d+\s*[×x]\s*\d+/], ['GPU', /SwiftShader|ANGLE|GPU|Mali|Adreno|Apple/i], ['refresh', /Hz/i]].filter(([, re]) => !re.test(txt)).map(([k]) => k);
         meta('P2', 'O painel mostra p95, fase, AA, buffer, GPU e refresh', `"${txt.slice(0, 110)}"${falta.length ? ` · falta: ${falta.join(', ')}` : ''}`, 'tudo', pn.existe && !falta.length);
         meta('P2', 'O painel à vista POR CIMA da tela antes do jogo', `${pn.existe ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima` : 'escondido') : 'não existe'}${pn.fixo ? ' (.perf-fixo)' : ` (no #${pn.pai})`}`, '100% por cima', pn.visivel && pn.topo === 1);
-        // (o SwiftShader desenha poucos quadros por segundo atrás da tela: a régua é a razão mostrado ÷ desenhado, ~1 com o
-        // intervalo entre DESENHOS; na main o painel mostra o ritmo do rAF, que aqui anda ~2× o dos desenhos)
-        meta('P2', 'O qps do painel na tela antes do jogo = os desenhos de verdade (N3)', `mostra ${f(mostrado, 1)} · desenhou ${f(real, 1)} por segundo atrás da tela (× ${f(mostrado / real, 2)})`, '0,8–1,25 × os desenhos e ≤ 32',
+        // (a régua é a razão mostrado ÷ desenhado: ~1 com o intervalo entre DESENHOS; na main o painel mostra o ritmo do rAF, 60)
+        meta('P2', 'O qps do painel na tela antes do jogo = os desenhos de verdade (N3; rAF falso a 60 Hz)', `mostra ${f(mostrado, 1)} · desenhou ${f(real, 1)} por segundo atrás da tela (× ${f(mostrado / real, 2)})`, '0,8–1,25 × os desenhos e ≤ 32',
           Number.isFinite(mostrado) && real > 0 && mostrado / real >= 0.8 && mostrado / real <= 1.25 && mostrado <= 32);
         marcar('P2 (tela)');
       }
