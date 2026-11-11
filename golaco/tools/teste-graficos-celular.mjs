@@ -25,7 +25,8 @@
 //      da projeção de cada peça, a intensidade SOMADA no corte transversal (±3 px). Buraco = soma < 15% da do SSAA (físico) no
 //      mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8 quadros. Metas POR PEÇA, valendo a pior: buracos ≤ 5%;
 //      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
-//      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1).
+//      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1). Na Baixa, também a pose do LIMIAR (a corda
+//      do pé de perto, com a meia largura de 1 px caindo entre as pontas: a revisão do bloco 3).
 //   G  o gramado (só a malha 'gramado'; G5 com as 'linhas'): G1 a cor na faixa do foco (OKLab, a média das duas classes);
 //      G2 o ΔL das faixas (média por faixa pelo x do mundo de cada pixel) perto do foco e ao longe — as duas no quadro SEM as
 //      manchas quando há o gancho `campo.graficos.semManchas(bool)` (a revisão do C4–C8: dependiam de onde as manchas caíam
@@ -783,6 +784,21 @@ function porPeca(pontos, campo = 'vb') {
   };
 }
 
+/**
+ * F, a pose do LIMIAR (a revisão do bloco 3): a corda do pé do gol de +x vista de perto e de lado (a câmera 'atras' do replay, a do
+ * gol e a da comemoração passam por aqui), com a meia largura de 1 px caindo entre as duas pontas no buffer da Baixa (844 × 390).
+ */
+function poseLimiar() {
+  const MX = CAMPO.meioX, zl = CAMPO.gol.largura / 2;
+  return { de: [MX - 3.5, 1.6, 10], para: [MX + 1.5, 0.3, zl], fov: 32 };
+}
+/** A meia largura na tela (px) nas duas pontas da corda do pé de +x pela conta do shader (render/campo.js: P[1][1]·H/2/w). */
+function meiaNasPontas(pose, W, H) {
+  const pe = pecasGol().find(p => p.nome === 'pe11'), B = baseCam(pose, W, H);
+  const meia = pe.r * Math.cos(Math.PI / 16);
+  return [pe.a, pe.b].map(q => (meia * H) / (2 * projetar(B, q).c * B.tanV));
+}
+
 // ------------------------------------------------------------------ as rodadas
 const NQ_F = 8, NQ_D = 4;
 const CEL = { nome: 'cel', w: 844, h: 390, dpr: 2, toque: true };
@@ -795,9 +811,9 @@ const errosConsole = [];
  * px por quadro no x da tela para as peças em pé e no y para as deitadas). Devolve os pontos com as somas e as estatísticas
  * por peça, por câmera; com `extra`, as do outro contexto também.
  */
-async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null) {
+async function secaoF(pg, rotulo, cenaBuild, cenaSem, campo, P, W, H, extra = null, cams = ['foco', 'la']) {
   const saida = {};
-  for (const cn of ['foco', 'la']) {
+  for (const cn of cams) {
     const pose = P[cn];
     const B = baseCam(pose, W, H), cRef = projetar(B, [CAMPO.meioX, 1, 0]).c;
     // 0,25 px na profundidade do gol (pixels quadrados: o mesmo no x e no y da tela)
@@ -828,10 +844,11 @@ const slugPeca = t => ({ haste: 'haste', 'corda do pé': 'cordaPe', 'corda do fu
  * buracos ≤ 5% em toda peça; cintilação ≤ 1,5 × a do SSAA (com o piso PISO_CV no denominador) e soma 0,7–1,3 em toda peça.
  * `qual`: 'build' (as somas do quadro medido) ou 'extra' (o outro contexto).
  */
+const NOME_CAM_F = { foco: 'gol no foco', la: 'gol de lá', limiar: 'o limiar de 1 px dentro da corda do pé' };
 function metasF(rotulo, F, chave, qual = 'build', tipo = 'meta') {
-  for (const cn of ['foco', 'la']) {
+  for (const cn of Object.keys(F)) {
     const r0 = F[cn], r = r0?.[qual];
-    const nomeCam = cn === 'foco' ? 'gol no foco' : 'gol de lá';
+    const nomeCam = NOME_CAM_F[cn] ?? cn;
     if (!r) { meta('F', `Finos (${rotulo}, ${nomeCam}): sem peça fina no quadro`, '—', 'peças no quadro', false, 'info'); continue; }
     for (const t of r.validas) {
       const e = r.tipos[t], s = slugPeca(t);
@@ -841,7 +858,7 @@ function metasF(rotulo, F, chave, qual = 'build', tipo = 'meta') {
     guarda(`F.${chave}.${cn}.buracos`, P_.buracos?.v); guarda(`F.${chave}.${cn}.razao`, P_.raz?.v); guarda(`F.${chave}.${cn}.soma`, P_.soma?.v);
     const fora = FINOS.filter(t => !r.validas.includes(t) && r.tipos[t].pontos > 0);
     const tipos = r.validas.map(t => { const e = r.tipos[t]; return `${t} ${pct(e.buracos, 0)} · CV ${f(e.cint)}/${f(e.cintS)} × ${f(e.raz, 2)} · soma ${f(e.soma, 2)} (${e.pontos} pt)`; }).join(' | ');
-    const extraTxt = `${tipos}${fora.length ? ` | poucos pontos: ${fora.join(', ')}` : ''} · passes h ${r0.passes.h} / v ${r0.passes.v} pontos`;
+    const extraTxt = `${tipos}${fora.length ? ` | poucos pontos: ${fora.join(', ')}` : ''} · passes h ${r0.passes.h} / v ${r0.passes.v} pontos${r0.nota ? ` · ${r0.nota}` : ''}`;
     const okB = r.validas.length > 0 && r.validas.every(t => r.tipos[t].buracos <= 0.05);
     meta('F', `Finos (${rotulo}, ${nomeCam}): buracos, pior peça`, `${P_.buracos ? `${pct(P_.buracos.v)} (${P_.buracos.peca})` : '—'} · geral ${pct(r.geral.buracos)} de ${r.geral.n} · ${extraTxt}`, '≤ 5% em toda peça', okB, tipo);
     const okC = r.validas.length > 0 && r.validas.every(t => r.tipos[t].raz <= 1.5 && r.tipos[t].soma >= 0.7 && r.tipos[t].soma <= 1.3);
@@ -1224,10 +1241,21 @@ try {
       metasG('celular Baixa, dia', 'baixa.dia', Mb, { secao: 'N' });
       // a Baixa sem MSAA: a razão é 1 por construção; o "nada pior" contra a referência fica informativo (plano §4)
       await secaoA(pg, 'cel-baixa-dia', 'baixa.dia', 'b1', 'b0', 'cb', P, build.baixa.antialias, { secao: 'N', nadaPior: true, tipo: 'info' });
-      const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', P, Wb, Hb, 'b1');
+      // + a pose do LIMIAR (a revisão do bloco 3): a corda do pé de perto, com a meia largura de 1 px (o limiar que a mistura
+      // tinha) caindo DENTRO da peça — o caso que abria o buraco onde a meia interpolada passava por 0 (a TV fica abaixo do
+      // limiar nas duas pontas e não o via)
+      const pl = poseLimiar(), mp = meiaNasPontas(pl, Wb, Hb);
+      const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', { ...P, limiar: pl }, Wb, Hb, 'b1', ['foco', 'la', 'limiar']);
+      if (Fb.limiar) Fb.limiar.nota = `meia largura nas pontas da corda ${f(mp[0], 2)} / ${f(mp[1], 2)} px`;
+      meta('F', 'Finos (celular Baixa): a pose do limiar cruza 1 px dentro da corda do pé', `meia largura nas pontas ${f(mp[0], 2)} / ${f(mp[1], 2)} px`,
+        'uma ponta acima de 1 px e a outra abaixo', Math.max(...mp) > 1 && Math.min(...mp) < 1, 'estrutura');
       metasF('celular Baixa', Fb, 'baixa');
-      // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto
-      metasF('celular Baixa com MSAA (a queda)', Fb, 'baixaMsaa', 'extra');
+      // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto (a TV); a pose do limiar ali é INFORMATIVA — a A2C não tem
+      // limiar (contínua em k = 1) e as cordas dessa pose têm 1,2–2,3 px (não crescem): o que ela mede é o MSAA 4× numa peça de
+      // 1–2 px contra o SSAA 3×3 (×2,67 a corda do fundo, igual no HEAD do C10; a escolha da mistura analítica também com MSAA
+      // é do C14, com a do gol de lá)
+      metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la }, 'baixaMsaa', 'extra');
+      if (Fb.limiar) comoInfo(() => metasF('celular Baixa com MSAA (a queda), sem limiar na A2C', { limiar: Fb.limiar }, 'baixaMsaa', 'extra'));
       await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
       marcar('N (Baixa)');
     }
