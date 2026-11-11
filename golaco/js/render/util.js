@@ -1,5 +1,8 @@
 // Utilidades do desenho (three.js): junção de geometrias, ruído determinístico e canvas.
 import * as THREE from 'three';
+import { aplicarTrocas } from './gramado-shader.js';
+import { TROCA_RECORTE } from './silhuetas-shader.js';
+import { GRAFICOS } from './graficos-opcoes.js';
 
 /** Hash inteiro → [0, 1). Determinístico (as texturas saem iguais em toda abertura). */
 export function hash2(x, y, s = 0) {
@@ -126,29 +129,6 @@ export function atributosFino(geo, a, b, raio, { noChao = false, segs = 0 } = {}
 }
 
 /**
- * Troca cada trecho `de` do texto de um shader por `para`, AVISANDO no console quando não acha (uma troca calada que não acha
- * passa despercebida: a lição do PR #631; o mesmo de render/gramado-shader.js aplicarTrocas). Devolve o texto.
- */
-export function trocarNoShader(texto, trocas, onde) {
-  let t = texto;
-  for (const [de, para] of trocas) {
-    if (!t.includes(de)) console.error(`render: a troca de "${de}" não achou o trecho (${onde}) — o shader saiu sem ela`);
-    t = t.replace(de, () => para);
-  }
-  return t;
-}
-
-// a troca do alphatest_fragment do r170 (onBeforeCompile: os #include ainda FECHADOS, a lição do PR #631) pelo alfa para
-// cobertura CENTRADO no limiar (Golus, "Anti-aliased Alpha Test": a = (a − limiar) / fwidth(a) + 0,5 — metade das amostras no
-// limiar, como o descarte); sem ALPHA_TO_COVERAGE, o descarte de sempre
-const TROCA_RECORTE = [['#include <alphatest_fragment>', `#ifdef ALPHA_TO_COVERAGE
-  diffuseColor.a = (diffuseColor.a - alphaTest) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
-  if (diffuseColor.a <= 0.0) discard;
-#else
-  if (diffuseColor.a < alphaTest) discard;
-#endif`]];
-
-/**
  * O antisserrilhado de RECORTES por alphaTest (item 45, C10; `PLANO-GRAFICOS.md` passo 5: os letreiros do pré-jogo) pelas
  * AMOSTRAS do contexto que desenha (o SAMPLES: o `cena.amostras`, nunca o nome da qualidade — a queda deixa a Baixa num contexto
  * com MSAA). Só os materiais OPACOS: o recorte transparente já tem a borda pela MISTURA (o alfa da textura é a cobertura) — medido
@@ -158,13 +138,14 @@ const TROCA_RECORTE = [['#include <alphatest_fragment>', `#ifdef ALPHA_TO_COVERA
  * smoothstep(limiar, limiar + fwidth, a) do alphatest_fragment, three.module.js:13990) começa no limiar e afina a letra meio pixel:
  * 0,059 → 0,076. Sem MSAA, o descarte de hoje (o A2C não faz nada sem amostras). fisico(true) = os desenhos seguintes sem a A2C (o
  * gancho dos testes). Muda o material FORA do desenho, sempre reescreve tudo (um material estragado por fora volta ao certo) e só
- * pede o programa novo quando algo mudou (o alphaToCoverage é o bit 21 da chave do programa). Devolve {definirAA(n), fisico(v),
- * estado}.
+ * pede o programa novo quando algo mudou (o alphaToCoverage é o bit 21 da chave do programa). A troca do texto (TROCA_RECORTE,
+ * render/silhuetas-shader.js) pelo aplicarTrocas que AVISA quando não acha o trecho (o mesmo do gramado). No `?gfx=antigo` (a
+ * escolha D7 do dono), nada: os materiais ficam como antes do item 45. Devolve {definirAA(n), fisico(v), estado}.
  */
-export function recorteAA(materiais) {
-  const lista = materiais.filter(m => m && !m.transparent && m.alphaTest > 0);
+export function recorteAA(materiais, { antigo = GRAFICOS.gfxAntigo } = {}) {
+  const lista = antigo ? [] : materiais.filter(m => m && !m.transparent && m.alphaTest > 0);
   for (const m of lista) {
-    m.onBeforeCompile = sh => { sh.fragmentShader = trocarNoShader(sh.fragmentShader, TROCA_RECORTE, 'recorte com A2C, fragment'); };
+    m.onBeforeCompile = sh => { sh.fragmentShader = aplicarTrocas(sh.fragmentShader, TROCA_RECORTE, 'recorte com A2C, fragment'); };
     m.customProgramCacheKey = () => 'recorte-a2c';
   }
   let amostras = 0, fisico = false;

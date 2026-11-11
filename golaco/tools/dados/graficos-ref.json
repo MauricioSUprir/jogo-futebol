@@ -404,7 +404,9 @@
       "T.cel144": 144,
       "T.cel165": 165,
       "P2.tela.real": 30.18182,
-      "P2.tela.mostrado": 60
+      "P2.tela.mostrado": 60,
+      "P3.fonte.torcida": 3046274822,
+      "P3.fonte.bandeiras": 2295424622
     },
     "historicoCpu": {
       "nota": "HISTÓRIA, não comparar: a CPU do quadro (seção P) desta máquina (4 CPUs, SwiftShader) na main e41aa791, rodadas do C2 e do C3. A medida varia ±0,7 ms entre rodadas e 4,5–7,3 ms entre janelas da mesma rodada; o teste não compara a CPU com a referência (revisão do C1–C3, item 4): ela é medida PAREADA, com --base, a base e a versão medida na mesma rodada.",

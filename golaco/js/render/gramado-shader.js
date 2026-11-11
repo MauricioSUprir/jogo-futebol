@@ -1,4 +1,5 @@
-// Os TEXTOS do shader do gramado, do chão de fora e das linhas do campo (item 45; a revisão do C4–C8, `PLANO-GRAFICOS.md`):
+// Os TEXTOS do shader do gramado, do chão de fora, das linhas do campo e dos finos do gol (item 45; a revisão do C4–C8 e a do
+// bloco 3, `PLANO-GRAFICOS.md`):
 // puro (sem three.js nem DOM, fora do fecho do hash), para o `render/campo.js` montar os materiais e o `tools/teste-gramado.mjs`
 // conferir o shader MONTADO sem GPU — as derivadas (explícitas, fwidth/dFdx/dFdy, e implícitas, a leitura de textura com mip)
 // antes de qualquer desvio (a lição do PR #631: derivada dentro de desvio é indefinida e o SwiftShader do CI não acusa), o
@@ -130,6 +131,78 @@ export function shaderLinhas({ branco = false } = {}) {
     chave: branco ? 'linhas-aa-branco' : 'linhas-aa',
   };
 }
+
+/**
+ * Os textos do shader dos FINOS do gol (item 45, C9; render/campo.js larguraMinima, que explica a conta; a revisão do bloco 3:
+ * aqui, puros, para o tools/teste-gramado conferir o shader montado — sem derivada nem leitura de textura). uModoFino: 0 =
+ * físico (a peça de verdade), 1 = A2C (com MSAA), 2 = mistura analítica (sem MSAA).
+ */
+export const SHADER_FINOS = {
+  vertex: [
+    ['#include <common>', `#include <common>
+      attribute float aFino;
+      attribute vec3 aEixo;
+      attribute vec3 aDir;
+      attribute float aChao;
+      uniform float uAlturaBuffer;
+      uniform float uLargMin;
+      uniform float uFranja;
+      uniform float uModoFino;
+      varying float vCob;
+      varying float vLado;
+      varying float vMeia;
+      varying float vCos;`],
+    ['#include <begin_vertex>', `#include <begin_vertex>
+      vCob = 1.0; vLado = 0.0; vMeia = -1.0; vCos = 1.0;
+      if (aFino > 0.0 && uModoFino > 0.5) {
+        // px por metro na profundidade do eixo: P[1][1] × H/2 ÷ w (perspectiva e ortográfica)
+        vec4 cE = projectionMatrix * modelViewMatrix * vec4(aEixo, 1.0);
+        float pxM = projectionMatrix[1][1] * uAlturaBuffer * 0.5 / max(cE.w, 1e-4);
+        float meiaPx = aFino * pxM;
+        if (uModoFino < 1.5) {
+          float k = uLargMin / max(2.0 * meiaPx, 1e-4);
+          if (k > 1.0) {
+            vec3 c = aEixo - vec3(0.0, aChao * aFino, 0.0);
+            transformed = c + (transformed - c) * k;
+            vCob = 1.0 / k;
+          }
+        } else {
+          transformed = aEixo + (transformed - aEixo) * ((meiaPx + uFranja) / max(meiaPx, 1e-4));
+          // a tela em px (x pelo aspecto): o eixo projetado, a normal dele e a distância lateral deste vértice ao eixo
+          float asp = projectionMatrix[1][1] / projectionMatrix[0][0];
+          vec4 cD = projectionMatrix * modelViewMatrix * vec4(aEixo + aDir * 0.05, 1.0);
+          vec4 cV = projectionMatrix * modelViewMatrix * vec4(transformed, 1.0);
+          vec2 sE = vec2(cE.x * asp, cE.y) / cE.w;
+          vec2 A = vec2(cD.x * asp, cD.y) / cD.w - sE;
+          float lA = length(A);
+          A = lA > 1e-9 ? A / lA : vec2(1.0, 0.0);
+          vLado = dot(vec2(cV.x * asp, cV.y) / cV.w - sE, vec2(-A.y, A.x)) * uAlturaBuffer * 0.5;
+          vMeia = meiaPx;
+          vCos = max(abs(A.x), abs(A.y));
+        }
+      }`],
+  ],
+  fragment: [
+    ['#include <common>', `#include <common>
+      varying float vCob;
+      varying float vLado;
+      varying float vMeia;
+      varying float vCos;`],
+    ['#include <color_fragment>', `#include <color_fragment>
+      {
+        // a cobertura: a fração da caixa do pixel no eixo menor da tela (meia altura vCos/2 na distância lateral) que cai na
+        // faixa de verdade (|lado| ≤ vMeia); fora do modo analítico, a do vértice
+        float cob = vCob;
+        if (vMeia >= 0.0) {
+          float hc = 0.5 * vCos;
+          cob = clamp(min(vLado + hc, vMeia) - max(vLado - hc, -vMeia), 0.0, vCos) / vCos;
+          if (cob < 0.004) discard;
+        }
+        diffuseColor.a *= cob;
+      }`],
+  ],
+  chave: 'gols-finos-v2',
+};
 
 /** Aplica as trocas [de, para] em ordem (a 1ª ocorrência de cada `de`) e AVISA (`avisar`, padrão console.error) quando não
  *  acha o trecho: o shader sai sem aquela troca, mas nunca em silêncio. */

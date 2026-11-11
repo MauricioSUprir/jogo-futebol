@@ -24,155 +24,13 @@ import { estadoOla, aberturaBandeirao } from './festa.js';
 import { bandeiroes } from './bandeiras-dados.js';
 import { ESTADO_GLSL } from './torcedor-pose.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
-import { criarBandeiras, COMPENSA_MIP } from './bandeiras.js';
+import { criarBandeiras } from './bandeiras.js';
+import { shaderTorcida } from './silhuetas-shader.js';
+import { GRAFICOS } from './graficos-opcoes.js';
 import { criarSinalizadores } from './sinalizadores.js';
 
-/**
- * Os shaders do quadro (o atlas SDF de hoje). imp (o impostor octaédrico do item 69, PR 3: render/impostor.js, sob demanda)
- * = {vertPars, vertMain, fragPars, fragTopo (no topo do main, fora de desvio: o nível do mip das fotos), fragMain}: o MESMO
- * programa com um ramo por torcedor (aLod: 0 o quadro, 1 o impostor) — o quadro SDF continua igual (lido no topo, pelo nível
- * do mip da cópia sem centroid); sem imp (o programa de hoje, a única coisa que a TV do celular desenha), nada do impostor.
- */
-function shaders(imp = null) {
-  const vert = /* glsl */`
-#include <common>
-#include <fog_pars_vertex>
-attribute vec4 aPos;
-attribute vec4 aCamisa;
-attribute vec4 aPele;
-attribute vec4 aCabelo;
-attribute vec4 aInfo;
-attribute float aOculto;
-uniform vec4 uLuz;
-uniform vec3 uCamPos;
-uniform vec3 uAcento0;
-uniform vec3 uAcento1;
-varying vec2 vUv;
-centroid varying vec2 vUvC;
-varying vec3 vCamisa;
-varying vec3 vPele;
-varying vec3 vCabelo;
-varying vec3 vAcento;
-varying float vLuz;
-varying float vAltura;
-varying vec3 vFlare;
-vec3 lin(vec3 c) { return c * c * (0.3 + 0.7 * c); }
-${ESTADO_GLSL}
-${LUZ_FALSA_GLSL}
-const vec2 CAIXA[${CAIXA_POSE.length}] = vec2[${CAIXA_POSE.length}](${CAIXA_POSE.map(([w, h]) => `vec2(${w.toFixed(3)}, ${h.toFixed(3)})`).join(', ')});
-${imp ? imp.vertPars : ''}
-void main() {
-  // o torcedor desenhado em 3D (render/torcedor3d.js, os blocos perto da câmera) sai do quadro: nada a rasterizar
-  if (aOculto > 0.5) { gl_Position = vec4(0.0, 0.0, 2.0, 1.0); return; }
-  float time = step(0.5, aInfo.x);
-  float setor = floor(aInfo.y * 3.0 + 0.5);
-  float h = aPele.w;
-  float h2 = aInfo.w;
-  // a pose, o pulo e o balanço: a MESMA conta do torcedor 3D (render/torcedor-pose.js ESTADO_GLSL: a regra de
-  // torcida-dados.js POSE_REGRA, a ola de festa.js e o bandeirão de bandeiras-dados.js; a organizada no relógio da
-  // batucada — pula no surdo da gravação quando o som toca)
-  vec3 est = torcedorEstado(aPos.xyz, h, aInfo);
-  float pose = est.x;
-  float pulo = est.y;
-  float bal = est.z;
-  vCamisa = lin(aCamisa.rgb);
-  vPele = lin(aPele.rgb);
-  vCabelo = lin(aCabelo.rgb);
-  vAcento = time > 0.5 ? uAcento1 : uAcento0;
-  vFlare = luzFalsa(aPos.xyz + vec3(0.0, 1.2, 0.0));
-  vec4 mvPosition;
-  ${imp ? `vImpModo = step(0.5, aLod);
-  if (aLod > 0.5) {
-${imp.vertMain}
-  } else {` : '{'}
-    // virado para a câmera, girando só em volta do eixo vertical
-    vec3 paraCam = uCamPos - aPos.xyz;
-    paraCam.y = 0.0;
-    vec3 dir = normalize(paraCam + vec3(1e-4, 0.0, 0.0));
-    vec3 dirX = vec3(dir.z, 0.0, -dir.x);
-    float esc = aPos.w;
-    // o quadro encolhe para a caixa da pose (fração da célula): qx em −w/2…w/2, qy em 0…h
-    vec2 cx = CAIXA[int(pose + 0.5)];
-    float qx = position.x * cx.x;
-    float qy = position.y * cx.y;
-    vec3 p = aPos.xyz + dirX * (qx * ${TORCIDA.largura.toFixed(3)} * esc + bal)
-           + vec3(0.0, qy * ${TORCIDA.altura.toFixed(3)} * esc + pulo, 0.0)
-           + dir * (h2 - 0.5) * 0.08;
-    mvPosition = viewMatrix * vec4(p, 1.0);
-    vUv = vec2((pose + qx + 0.5) / ${TORCIDA.quadros}.0, qy);
-    float luz = setor < 0.5 ? uLuz.x : (setor < 1.5 ? uLuz.y : (setor < 2.5 ? uLuz.z : uLuz.w));
-    vLuz = luz * (0.88 + 0.24 * fract(h * 7.31));
-    vAltura = qy;
-  }
-  // a UV da amostra (centroid) é a mesma; no ramo do impostor o vUv é o canto na foto 0 (render/impostor.js: a derivada dele)
-  vUvC = vUv;
-  gl_Position = projectionMatrix * mvPosition;
-  #include <fog_vertex>
-}
-`;
-  const frag = /* glsl */`
-#include <common>
-#include <fog_pars_fragment>
-uniform sampler2D uAtlas;
-uniform vec2 uTamAtlas;
-varying vec2 vUv;
-centroid varying vec2 vUvC;
-varying vec3 vCamisa;
-varying vec3 vPele;
-varying vec3 vCabelo;
-varying vec3 vAcento;
-varying float vLuz;
-varying float vAltura;
-varying vec3 vFlare;
-${imp ? imp.fragPars : ''}
-void main() {
-  // (item 45, C10; PLANO-GRAFICOS.md passo 5) a SILHUETA com MSAA: o pixel da borda é sombreado no centro dele, que pode ficar
-  // fora do triângulo (a UV extrapolada sai da caixa da pose e lê o vizinho do atlas: o N11). A UV da AMOSTRA vem num varying
-  // centroid (vUvC: dentro da parte coberta do pixel) e as DERIVADAS (o nível do mip da compensação e o da leitura) da cópia SEM
-  // centroid (vUv). Medido (teste-graficos-pagina, a A2 por categoria): lida pela derivada IMPLÍCITA da entrada centroid, a
-  // torcida da TV ficava mais longe do SSAA (os quadros de 2×2 com um pixel de borda deslocado erram o mip). As derivadas e a
-  // leitura no TOPO, fora de qualquer desvio (a lição do PR #631), pelo nível dado (textureLod: o atlas é isotrópico, a conta é a
-  // do GL — ρ = o maior comprimento das derivadas em texels —, e o textureGrad pesa no celular).
-  // A cobertura preservada de longe (o mipmap tira opacidade das partes finas): sobe o alfa pelo nível do mipmap (Castaño,
-  // "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test")
-  vec2 d = fwidth(vUv * uTamAtlas);
-  float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
-  vec2 dSx = dFdx(vUv * uTamAtlas), dSy = dFdy(vUv * uTamAtlas);
-  vec4 tSdf = textureLod(uAtlas, vUvC, 0.5 * log2(max(max(dot(dSx, dSx), dot(dSy, dSy)), 1e-8)));
-  float aSdf = tSdf.a * (1.0 + ${COMPENSA_MIP.toFixed(2)} * nivel);
-  float saidaA = 1.0;
-  #ifdef ALPHA_TO_COVERAGE
-  // com MSAA (definirAA), o alfa para cobertura afiado pela derivada do próprio alfa (Golus, "Anti-aliased Alpha Test": a borda
-  // de ~1 px em volta do limiar 0,5 vira fração das amostras): medido na seção K, a cintilação da silhueta com a câmera andando
-  // 0,25 px cai (2,25 → 1,62%, abaixo da do SSAA) sem a cobertura cair
-  float cobSdf = (aSdf - 0.5) / max(fwidth(aSdf), 1e-4) + 0.5;
-  #endif
-${imp ? (imp.fragTopo ?? '') : ''}
-  vec3 cor;
-  ${imp ? `if (vImpModo > 0.5) {
-${imp.fragMain}
-  } else {` : '{'}
-    vec4 t = tSdf;
-    #ifdef ALPHA_TO_COVERAGE
-    if (cobSdf <= 0.0) discard;
-    saidaA = clamp(cobSdf, 0.0, 1.0);
-    #else
-    if (aSdf < 0.5) discard;
-    #endif
-    vec3 w = t.rgb / max(t.a, 0.004);
-    float ac = max(0.0, 1.0 - w.r - w.g - w.b);
-    cor = w.r * vCamisa + w.g * vPele + w.b * vCabelo + ac * vAcento;
-    // a fileira da frente faz sombra nas pernas; o resto pela luz do setor
-    cor *= vLuz * (0.68 + 0.32 * smoothstep(0.08, 0.7, vAltura)) + vFlare;
-  }
-  gl_FragColor = vec4(cor, saidaA);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-  #include <fog_fragment>
-}
-`;
-  return { vert, frag };
-}
+// os shaders do quadro (e o ramo do impostor dentro dele): os TEXTOS em render/silhuetas-shader.js shaderTorcida (puro: o
+// tools/teste-gramado confere o shader montado e o ?gfx=antigo bit a bit; a revisão do bloco 3 do item 45)
 
 // luz por setor: [lado de lá (de frente para +z), fundo +x (de frente para −x), fundo −x (para +x), lado de cá (para −z)]
 function luzDoSol(sol) {
@@ -186,11 +44,13 @@ const LUZ = { dia: luzDoSol(SOL_DIA), noite: [0.44, 0.41, 0.41, 0.42] };
 /**
  * Cria a torcida. opc = {qualidade, mascara (Uint8Array das cadeiras do mosaico, ou null), hora, identidade (identidade.js:
  * só a do Total Match — `tm` — muda as camisas, os cachecóis, as faixas, as bandeiras e o público; os lugares e os
- * sorteios são os mesmos)}.
+ * sorteios são os mesmos), antigo (o `?gfx=antigo` do item 45, padrão o do endereço: os shaders de antes — sem o varying
+ * centroid, a leitura pela derivada implícita, sem a A2C —, também nas bandeiras e no ramo do impostor)}.
  * Devolve {mesh, n, atualizar(t, emocao, camera), definirHora(h), definirQualidade(q), dispose()}.
  */
 export function criarTorcida(cena, opc) {
   const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
+  const antigo = opc.antigo ?? GRAFICOS.gfxAntigo;
   const BANDEIROES = bandeiroes();   // aqui (não na carga): um estádio com forma própria troca os lugares antes
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
@@ -220,7 +80,7 @@ export function criarTorcida(cena, opc) {
   let amostrasAA = 0, fisicoAA = false;
   /** A A2C nos dois programas (o de hoje e o com o impostor): só o que mudou pede o programa novo (o bit 21 da chave). */
   function aplicarAA() {
-    const a2c = !fisicoAA && amostrasAA >= 2;
+    const a2c = !antigo && !fisicoAA && amostrasAA >= 2;
     for (const m of [material, impMat]) if (m && m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
   }
   const grupos = () => (mesh ? mesh.children.filter(m => m.userData.grupo !== undefined) : []);
@@ -250,7 +110,7 @@ export function criarTorcida(cena, opc) {
     tex.needsUpdate = true;
     uni.uAtlas.value = tex;
     uni.uTamAtlas.value.set(at.largura, at.altura);
-    const sh = shaders();
+    const sh = shaderTorcida(null, { antigo });
     material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
     aplicarAA();
     // um InstancedMesh por grupo (lado de lá, fundo +x, fundo −x, lado de cá frente, lado de cá cima): o mesmo
@@ -305,7 +165,7 @@ export function criarTorcida(cena, opc) {
   montar();
   aplicarQualidade(TORCIDA.ocupacao[opc.qualidade] ? opc.qualidade : 'media');
   // a festa da torcida: faixas, bandeiras e bandeirões (1 chamada) e os sinalizadores (1 chamada, só no evento)
-  const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora, identidade: ident });
+  const bandeiras = criarBandeiras(cena, { qualidade, hora: opc.hora, identidade: ident, antigo });
   const sinalizadores = criarSinalizadores(cena, { qualidade, hora: opc.hora });
   let festaVisivel = true;
   // ---------------------------------------------------------------- o impostor (item 69, PR 3) e a densidade real perto
@@ -330,13 +190,13 @@ export function criarTorcida(cena, opc) {
     return m;
   }
   /**
-   * Liga o impostor: imp = {vertPars, vertMain, fragPars, fragTopo, fragMain (o GLSL do render/impostor.js), uniforms (os dele: o
+   * Liga o impostor: imp = {vertPars, vertMain, fragPars, fragTopo, fragMain, antigo (o GLSL de render/impostor-dados.js GLSL_IMPOSTOR), uniforms (os dele: o
    * atlas e as contas), rumo: Int8Array(2·n) (cos e sen do rumo de cada torcedor × 127)}. O programa compila no próximo
    * quadro desenhado (a malha perto com 0 instâncias) e é conferido no seguinte (falhou: o quadro SDF de volta).
    */
   function ligarImpostor(imp) {
     if (!mesh || impFalhou) return false;
-    const sh = shaders(imp);
+    const sh = shaderTorcida(imp, { antigo });
     impMat?.dispose();
     impMat = new THREE.ShaderMaterial({ uniforms: { ...uni, ...imp.uniforms }, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true });
     impMat.name = 'torcida-impostor';

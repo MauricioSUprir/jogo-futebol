@@ -22,7 +22,10 @@
 //      (comemoração, câmera do gol, pré-jogo, cartão) igual ao sem termo (a G4b; a revisão do C4–C8).
 //   G) o shader MONTADO (render/gramado-shader.js, os textos que o campo injeta no shader do three): as derivadas explícitas e
 //      implícitas antes do 1º desvio de cada bloco e nenhuma nas funções; o `?gfx=antigo` com o texto e a chave da main (hash
-//      gravado); as chaves do cache distintas; a troca que não acha o trecho avisa (a revisão do C4–C8).
+//      gravado); as chaves do cache distintas; a troca que não acha o trecho avisa (a revisão do C4–C8). G5–G7 (a revisão do
+//      bloco 3): a mesma regra nos outros shaders do item 45 (os finos do gol, o quadro da torcida com e sem o impostor, as
+//      bandeiras, o recorte dos letreiros: render/silhuetas-shader.js e impostor-dados.js), provada por 4 mutações; o
+//      `?gfx=antigo` deles = o texto da main (hash); o recorte dentro do #ifdef USE_ALPHATEST e com o alfa limitado.
 // A GPU de verdade fica para a G7 do teste-graficos-celular (a classe da faixa lida no pixel = faixaEm, depois que o C6 liga o
 // shader); conferido à parte no C4: o GRAMADO_GLSL compila no Chromium 141 do CI (SwiftShader) e, em 4096 x, dá o índice
 // igual e a distância à borda a ≤ 4,2 µm do JS — o mesmo que a emulação em float32 da D6.
@@ -719,6 +722,91 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
     const av = [];
     SH.aplicarTrocas('void main() {}', novos.gramado.fragment, 'teste', m => av.push(m));
     reg('G4 a troca que não acha o trecho AVISA; no molde com os #include, nenhum aviso', `sem o trecho: ${av.length} aviso(s) de ${novos.gramado.fragment.length} trocas · no molde: ${semAviso}`, `${novos.gramado.fragment.length} · 0`, av.length === novos.gramado.fragment.length && semAviso === 0);
+
+    // ---------------------------------------------------------------- G5–G7: os outros shaders do item 45 (a revisão do bloco 3)
+    // Os finos do gol (SHADER_FINOS, aqui), o quadro da torcida com e sem o ramo do impostor, as bandeiras e o recorte dos
+    // letreiros (render/silhuetas-shader.js e render/impostor-dados.js, puros): G5 a mesma regra da G1 no fragment shader inteiro
+    // (as derivadas e as leituras com mip implícito antes do 1º desvio do main(); nenhuma nas funções antes do main()), com a
+    // prova de que a guarda pega o que deve (G5b: as mutações da revisão — a leitura das bandeiras dentro de um desvio, o
+    // textureLod do impostor virando texture2D dentro do ternário, o fwidth da torcida no ramo do quadro e uma derivada numa
+    // função — reprovam); G6 o `?gfx=antigo` com o texto da main, bit a bit (o sha256 do JSON {vert, frag} da main e41aa791,
+    // tirado UMA vez na revisão do bloco 3 dos módulos da main, sem mexer neles); G7 a troca do recorte com o #ifdef
+    // USE_ALPHATEST do r170 e o alfa limitado a [0, 1], e o aplicarTrocas avisando quando não acha o trecho.
+    let SS = null, ID = null, erroSS = null;
+    try { SS = await imp('render/silhuetas-shader.js'); ID = await imp('render/impostor-dados.js'); } catch (e) { erroSS = e; }
+    if (!SS || typeof SS.shaderTorcida !== 'function' || !ID?.GLSL_IMPOSTOR || !SH.SHADER_FINOS) {
+      reg('G5 os shaders das silhuetas e dos finos (render/silhuetas-shader.js, impostor-dados.js, gramado-shader.js SHADER_FINOS)', `sem o módulo (${String(erroSS?.message ?? erroSS ?? 'faltam exportações').slice(0, 80)})`, 'os módulos', false);
+    } else {
+      // a regra num fragment shader inteiro: as funções (antes do `void main()`) sem derivada; no main(), nenhuma depois do 1º desvio
+      const conferirFrag = frag => {
+        const t = semComent(frag).replace(/#include <[^>]+>/g, '');
+        const k = t.search(/\bvoid\s+main\s*\(\s*\)\s*\{/);
+        if (k < 0) return { ok: false, txt: 'sem main()' };
+        const pars = t.slice(0, k), corpo = t.slice(k).replace(/^[^{]*\{/, '');
+        const nf = [...pars.matchAll(RE_DERIV)].length, derivs = [...corpo.matchAll(RE_DERIV)].map(m => m.index);
+        const desvio = corpo.search(RE_DESVIO), depois = desvio >= 0 ? derivs.filter(i => i > desvio).length : 0;
+        return { ok: nf === 0 && depois === 0, txt: `funções ${nf} · main ${derivs.length} derivada(s)/leitura(s), ${desvio >= 0 ? `${depois} depois do 1º desvio` : 'sem desvio'}` };
+      };
+      // a regra num conjunto de trocas (como a G1): por bloco do main(), e o #include <common> sem nenhuma
+      const conferirTrocas = trocas => {
+        let ok = true; const partes = [];
+        for (const [de, para] of trocas) {
+          const t = semComent(para).replace(/#include <[^>]+>/g, '');
+          const derivs = [...t.matchAll(RE_DERIV)].map(m => m.index);
+          if (de === '#include <common>') { if (derivs.length) ok = false; partes.push(`funções ${derivs.length}`); continue; }
+          const desvio = t.search(RE_DESVIO), depois = desvio >= 0 ? derivs.filter(i => i > desvio).length : 0;
+          if (depois) ok = false;
+          partes.push(`${de.replace('#include ', '')} ${derivs.length}${depois ? ` (${depois} depois do desvio)` : ''}`);
+        }
+        return { ok, txt: partes.join(', ') };
+      };
+      const imp0 = ID.GLSL_IMPOSTOR;
+      const fragsNovos = {
+        bandeiras: SS.shaderBandeiras().frag,
+        torcida: SS.shaderTorcida(null).frag,
+        'torcida com o impostor': SS.shaderTorcida(imp0).frag,
+      };
+      const g5 = Object.entries(fragsNovos).map(([nome, fr]) => ({ nome, ...conferirFrag(fr) }));
+      const fin = conferirTrocas(SH.SHADER_FINOS.fragment), rec = conferirTrocas(SS.TROCA_RECORTE);
+      g5.push({ nome: 'finos do gol', ...fin }, { nome: 'recorte dos letreiros', ...rec });
+      reg('G5 os outros shaders do item 45 (finos, torcida com e sem o impostor, bandeiras, recorte): as derivadas e as leituras com mip antes do 1º desvio do main(); nenhuma nas funções',
+        g5.map(x => `${x.nome}: ${x.txt}`).join(' · '), 'nenhuma depois de desvio; 0 nas funções', g5.every(x => x.ok));
+      // G5b: as mutações (a guarda que passa com o defeito não protege nada)
+      const mut = (txt, de, para) => (txt.includes(de) ? txt.replace(de, para) : null);
+      const fb = fragsNovos.bandeiras, fti = fragsNovos['torcida com o impostor'];
+      const mutacoes = {
+        'a leitura das bandeiras dentro de um desvio': mut(fb, '  vec2 gx = dFdx(vUv), gy = dFdy(vUv);\n  vec4 t = textureGrad(uAtlas, vUvC, gx, gy);',
+          '  vec4 t = vec4(1.0);\n  if (vLuz > 0.0) { vec2 gx = dFdx(vUv), gy = dFdy(vUv); t = textureGrad(uAtlas, vUvC, gx, gy); }\n  vec2 gx = vec2(0.0), gy = vec2(0.0);'),
+        'o textureLod do impostor virando texture2D no ternário': mut(fti, 'textureLod(uImpA, iC0, iLod)', 'texture2D(uImpA, iC0)'),
+        // (no programa COM o impostor o quadro é o ramo `else`; sem ele é um bloco sem desvio, e a derivada ali valeria)
+        'o fwidth da torcida no ramo do quadro': (x => x && mut(x, '    vec4 t = tSdf;', '    vec4 t = tSdf;\n    d = fwidth(vUv * uTamAtlas);'))(mut(fti, '  vec2 d = fwidth(vUv * uTamAtlas);', '  vec2 d = vec2(1.0);')),
+        'uma derivada numa função': mut(fb, 'void main() {', 'float largura(vec2 p) { return fwidth(p.x); }\nvoid main() {'),
+      };
+      const g5b = Object.entries(mutacoes).map(([nome, m]) => ({ nome, pega: m !== null && !conferirFrag(m).ok }));
+      reg('G5b a guarda reprova as mutações da revisão (as 4 acima)', g5b.map(x => `${x.nome}: ${x.pega ? 'reprova' : 'PASSA'}`).join(' · '), 'as 4 reprovam', g5b.every(x => x.pega));
+      // G6: o ?gfx=antigo = a main, bit a bit
+      const HASH_MAIN_SIL = {
+        bandeiras: 'ede9772967e720e53c39a8b948b2423c98dd8e88b13fb9d47d6ef63cd0260387',
+        torcida: '09ebd7a52544896600d5f49760966ab00b0b73d84d03388222583ea712a62638',
+        'torcida com o impostor': '8984e0755da8cfcba86967212615932b2f5a6c4c2adc957d27857f56aff78cf6',
+      };
+      const antigos2 = {
+        bandeiras: SS.shaderBandeiras({ antigo: true }),
+        torcida: SS.shaderTorcida(null, { antigo: true }),
+        'torcida com o impostor': SS.shaderTorcida(imp0, { antigo: true }),
+      };
+      const g6 = Object.entries(antigos2).map(([nome, S]) => ({ nome, ok: hash({ vert: S.vert, frag: S.frag }) === HASH_MAIN_SIL[nome] }));
+      const semCentroid = Object.values(antigos2).every(S => !/centroid/.test(S.vert + S.frag)) && !('fragTopo' in imp0.antigo);
+      reg('G6 o ?gfx=antigo = a main nas silhuetas: o texto do vertex e do fragment das bandeiras e do quadro da torcida, com e sem o ramo do impostor (o de antes), pelo hash da main e41aa791',
+        `${g6.map(x => `${x.nome} ${x.ok ? 'igual' : 'DIFERENTE'}`).join(' · ')} · sem centroid nem o fragTopo no antigo: ${semCentroid ? 'sim' : 'NÃO'}`, 'os 3 iguais; sim', g6.every(x => x.ok) && semCentroid);
+      // G7: o recorte com o #ifdef do r170 e o alfa limitado; o aplicarTrocas avisa sem o trecho
+      const para = SS.TROCA_RECORTE[0][1];
+      const okIfdef = /^#ifdef USE_ALPHATEST\b/.test(para.trim()) && /#endif\s*$/.test(para.trim()) && /clamp\(/.test(para);
+      const av7 = [];
+      SH.aplicarTrocas('void main() {}', SS.TROCA_RECORTE, 'teste', m => av7.push(m));
+      reg('G7 o recorte dos letreiros: dentro do #ifdef USE_ALPHATEST (sem alphaTest o uniform nem existe), o alfa da A2C limitado a [0, 1], e a troca sem o trecho avisa',
+        `${okIfdef ? '#ifdef e clamp' : 'SEM o #ifdef ou o clamp'} · sem o trecho: ${av7.length} aviso(s)`, '#ifdef e clamp · 1 aviso', okIfdef && av7.length === 1);
+    }
   }
 }
 

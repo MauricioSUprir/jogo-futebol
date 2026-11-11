@@ -9,9 +9,10 @@
 // Qualidade: o que desenhar é um prefixo da malha (Baixa ⊂ Média ⊂ Alta: 8/10/12 faixas, 6/16/32 bandeiras); na Baixa
 // nada mexe (sem onda nem balanço). Luz dos refletores à noite e a luz falsa dos sinalizadores (luz-falsa.js).
 import * as THREE from 'three';
-import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL, SOB_GLSL, LENTE_GLSL } from './bandeiras-dados.js';
+import { BANDEIRAS, faixas, bandeiras, bandeiroes } from './bandeiras-dados.js';
+import { shaderBandeiras } from './silhuetas-shader.js';
 import { aberturaBandeirao } from './festa.js';
-import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
+import { UNIFORMS_LUZ } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas } from './util.js';
 import { desenharEscudo, imagemEscudo } from './escudo-desenho.js';
 
@@ -21,114 +22,9 @@ const Y_BANDEIRA = 576, BAND_W = 182, BAND_H = 128;
 const Y_BANDEIRAO = 704;
 const BANDEIRAO_PX = [[0, Y_BANDEIRAO, 512, 128], [512, Y_BANDEIRAO, 512, 298]];
 const MASTRO_PX = [8, 1012, 8, 8];
-// quanto o alfa sobe por nível do mip (a cobertura de longe): o MESMO da torcida (render/torcida.js, o shader do quadro, lê daqui)
-export const COMPENSA_MIP = 0.22;
-
-const VERT = /* glsl */`
-#include <common>
-#include <fog_pars_vertex>
-attribute vec2 aLocal;
-attribute vec4 aMeta;
-uniform float uTempo;
-uniform float uAnimada;
-uniform vec2 uAbre;
-uniform vec3 uBandA[2];
-uniform vec3 uBandU[2];
-uniform vec3 uBandV[2];
-uniform vec3 uBandN[2];
-uniform vec2 uBandLarg;
-uniform vec3 uSol;
-uniform vec2 uLuz;
-uniform vec4 uLente;
-varying vec2 vUv;
-centroid varying vec2 vUvC;
-varying float vLuz;
-varying vec3 vFlare;
-${BANDEIRA_GLSL}
-${BANDEIRAO_GLSL}
-${SOB_GLSL}
-${LENTE_GLSL}
-${LUZ_FALSA_GLSL}
-void main() {
-  float tipo = aMeta.x;
-  vec3 p;
-  vec3 n;
-  if (tipo < 0.5) {
-    p = position;
-    n = vec3(aMeta.z, 0.0, aMeta.w);
-  } else if (tipo < 2.5) {
-    vec3 e = vec3(aMeta.z, 0.0, aMeta.w);
-    n = vec3(-e.z, 0.0, e.x);
-    vec3 l;
-    if (tipo < 1.5) l = bandeiraPonto(aLocal.x, aLocal.y, aMeta.y, uTempo, uAnimada);
-    else {
-      float th = uAnimada > 0.5 ? ${BANDEIRAS.onda.bal.toFixed(3)} * sin(${(2 * Math.PI * BANDEIRAS.onda.balHz).toFixed(5)} * uTempo + aMeta.y) : 0.0;
-      float c = cos(th), s = sin(th);
-      l = vec3(c * aLocal.x - s * aLocal.y, s * aLocal.x + c * aLocal.y, 0.0);
-    }
-    // debaixo do bandeirão aberto a bandeira abaixa (some na mão): nada de mastro furando o pano
-    vec2 mb = vec2(${BANDEIRAS.sob.bandeira.map(v => v.toFixed(2)).join(', ')});
-    float sob = max(sobBandeirao(position, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mb), sobBandeirao(position, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mb));
-    // perto da lente da câmera da bola parada ela também abaixa (bandeiras-dados.js alturaPelaLente; uLente.w 0 fora dela)
-    l *= (1.0 - sob) * alturaPelaLente(position, uLente);
-    p = position + e * l.x + vec3(0.0, l.y, 0.0) + n * l.z;
-  } else {
-    bool k0 = tipo < 3.5;
-    float ab = k0 ? uAbre.x : uAbre.y;
-    float v = min(aLocal.y, ab);
-    float larg = k0 ? uBandLarg.x : uBandLarg.y;
-    n = k0 ? uBandN[0] : uBandN[1];
-    float dz = ondaBandeirao(aLocal.x, v, larg, uTempo, uAnimada) * ab;
-    p = (k0 ? uBandA[0] : uBandA[1]) + (k0 ? uBandU[0] : uBandU[1]) * aLocal.x + (k0 ? uBandV[0] : uBandV[1]) * v + n * dz;
-  }
-  vec4 mvPosition = viewMatrix * vec4(p, 1.0);
-  gl_Position = projectionMatrix * mvPosition;
-  vUv = uv;
-  vUvC = uv;
-  vLuz = uLuz.x + uLuz.y * abs(dot(n, uSol));
-  vFlare = luzFalsa(p);
-  #include <fog_vertex>
-}
-`;
-
-// (item 45, C10; PLANO-GRAFICOS.md passo 5) A SILHUETA com MSAA: o pixel da borda é sombreado no CENTRO dele, que pode ficar
-// fora do triângulo — a UV de lá sai do retângulo da peça e lia a célula vizinha do atlas (a linha verde-clara no alto das faixas
-// da mureta: o N11). A UV da AMOSTRA vem num varying `centroid` (dentro da parte coberta do pixel; GLSL ES 3.00 §4.3) e as
-// DERIVADAS (a da leitura e o nível do mip da compensação) da cópia SEM centroid. Medido (teste-graficos-pagina K1, as franjas
-// da borda na TV na bola): 13,4% sem centroid; 11,8% com a UV centroid lida pela derivada IMPLÍCITA dela (o quadro de 2×2 com
-// um pixel de borda deslocado erra o mip: a faixa ganhava uma linha escura em cima); 2,2% com a derivada da cópia sem centroid.
-// textureGrad (e não textureLod): o atlas tem anisotropia 4 (as faixas dos fundos vistas de lado). A leitura com mip e as
-// derivadas no TOPO, fora de qualquer desvio (a lição do PR #631). A COBERTURA de longe: como a torcida
-// (render/torcida.js), o alfa sobe pelo nível do mip (Castaño, "Computing Alpha Mipmaps"; Golus, "Anti-aliased Alpha Test") —
-// sem isso a bandeira e o mastro somem aos pedaços de longe — e a cor sai da média do mip sem o preto das células vazias do
-// atlas (o canvas guarda o transparente como preto: o mip da borda é a cor × a cobertura). uCompensa 0 = a peça "física" (o
-// gancho dos testes: graficos.fisico, as referências SSAA). O alfa escrito é o da cobertura (o canvas é opaco: alpha false).
-// O alfa para cobertura (a fórmula do Golus, como na torcida) NÃO entrou aqui: medido na K, as franjas da borda subiam (2,2 →
-// 2,4% na TV na bola, 0,26 → 0,61% com o gol no foco) e a cobertura de longe (K2) não mudava — as bordas destas peças são
-// as do retângulo (a geometria, que o MSAA já trata), não recortes finos dentro dele.
-const FRAG = /* glsl */`
-#include <common>
-#include <fog_pars_fragment>
-uniform sampler2D uAtlas;
-uniform vec2 uTamAtlas;
-uniform float uCompensa;
-varying vec2 vUv;
-centroid varying vec2 vUvC;
-varying float vLuz;
-varying vec3 vFlare;
-void main() {
-  vec2 gx = dFdx(vUv), gy = dFdy(vUv);
-  vec4 t = textureGrad(uAtlas, vUvC, gx, gy);
-  vec2 d = abs(gx * uTamAtlas) + abs(gy * uTamAtlas);
-  float nivel = max(0.0, log2(max(max(d.x, d.y), 1e-4)));
-  float a = t.a * (1.0 + ${COMPENSA_MIP.toFixed(2)} * nivel * uCompensa);
-  if (a < 0.5) discard;
-  gl_FragColor = vec4(t.rgb / max(t.a, 0.004) * (vLuz + vFlare), min(a, 1.0));
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-  #include <fog_fragment>
-}
-`;
+// os shaders (a onda, o mastro, os bandeirões no vertex; o recorte com a cobertura de longe e a UV centroid no fragment): os
+// TEXTOS em render/silhuetas-shader.js shaderBandeiras (puro: o tools/teste-gramado confere o shader montado e o ?gfx=antigo bit
+// a bit; a revisão do bloco 3 do item 45)
 
 /**
  * Atlas (1024²): as faixas (uma linha de 48 px cada), 4 desenhos de bandeira, os 2 bandeirões e o mastro. festa (só com
@@ -217,7 +113,8 @@ function atlasFesta(lista, festa = null, escudo = null) {
 const u = x => x / ATLAS, v = y => 1 - y / ATLAS;   // canvas → uv (flipY)
 
 /**
- * Cria a malha. opc = {qualidade, hora, identidade (identidade.js; só a do Total Match muda os textos e as cores)}.
+ * Cria a malha. opc = {qualidade, hora, identidade (identidade.js; só a do Total Match muda os textos e as cores), antigo (o
+ * `?gfx=antigo` do item 45: o shader de antes, sem a UV centroid nem a compensação de alfa; render/torcida.js o passa)}.
  * Devolve {mesh, atualizar(festa, t), definirQualidade(q), definirHora(h), contagem}.
  */
 export function criarBandeiras(cena, opc = {}) {
@@ -294,7 +191,8 @@ export function criarBandeiras(cena, opc = {}) {
     uLente: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
   };
-  const material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true, side: THREE.DoubleSide });
+  const sh = shaderBandeiras({ antigo: !!opc.antigo });
+  const material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'festa-bandeiras';
   mesh.frustumCulled = false;   // a mureta do lado de lá está em todo quadro do jogo; o resto mexe no shader

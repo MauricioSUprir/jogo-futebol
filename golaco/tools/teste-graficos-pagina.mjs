@@ -41,8 +41,9 @@
 //      REPLAY não contavam, e a camada transparente de tela inteira contaria); o qps mostrado na tela = os desenhos de verdade
 //      (0,8–1,25 ×, com um rAF falso a 60 Hz: a tela desenha 30; na main o painel soma o dt de 1 quadro do navegador por
 //      desenho e mostra 60).
-//   P3 ?gfx=antigo: SAMPLES 0 na Média e o gramado da página (G1–G5 da página, só o gramado e as linhas na pose do meio) = a
-//      referência da main; ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
+//   P3 ?gfx=antigo: SAMPLES 0 na Média, o gramado da página (G1–G5 da página, só o gramado e as linhas na pose do meio) = a
+//      referência da main e o TEXTO dos programas da torcida e das bandeiras = o da main (FNV-1a; a revisão do bloco 3: o C10
+//      não lia o ?gfx=antigo); ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
 //      definirHora e de uma recriação (Média → Alta → Baixa recria nas duas versões).
 //   R  recriação e contexto. (1) celular com a tela antes do jogo, pelo ≡ → Opções: Média → Baixa → Média com SAMPLES 4 → 0 →
 //      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois.
@@ -407,6 +408,18 @@ async function instalarPagina() {
       if (!desenharCap()) return null;
       const r = renderIsolado(sel, { corDe: true });
       return { W: r.W, H: r.H, n: r.n, cor: b64(r.px) };
+    },
+    /**
+     * O TEXTO dos programas da torcida (o quadro) e das bandeiras, pelo FNV-1a de 32 bits do vertex + fragment do material (a
+     * revisão do bloco 3: o ?gfx=antigo tem de devolver o texto da main bit a bit; o número vai à referência gravada da main).
+     */
+    fontes() {
+      const fnv = t => { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; };
+      const T = g.estadio?.torcidaObj;
+      const mats = (T?.mesh?.children ?? []).map(m => m.material).filter(m => m && m.isShaderMaterial);
+      const quadro = mats.find(m => m.name !== 'torcida-impostor') ?? null, band = T?.bandeiras?.mesh?.material ?? null;
+      const h = m => (m ? fnv(m.vertexShader + '\n/*frag*/\n' + m.fragmentShader) : null);
+      return { torcida: h(quadro), bandeiras: h(band), a2c: !!quadro?.alphaToCoverage };
     },
     /** O tom do renderizador agora (pego no desenho). */
     tom() {
@@ -856,6 +869,10 @@ try {
         await pg.evaluate(() => window.__golaco.definirHora('dia'));
         exposicaoBase = { dia: dia.exposicao, noite: noite.exposicao, tom: dia.tom, ACES: dia.ACES };
         guarda('P3.exposicao.dia', dia.exposicao); guarda('P3.exposicao.noite', noite.exposicao);
+        // o texto dos programas da torcida e das bandeiras (o da main é a referência do ?gfx=antigo; a revisão do bloco 3)
+        const fo = await P(pg, 'fontes');
+        guarda('P3.fonte.torcida', fo?.torcida); guarda('P3.fonte.bandeiras', fo?.bandeiras);
+        meta('P3', 'O texto dos programas da torcida e das bandeiras, build (FNV-1a; o da main é a referência do ?gfx=antigo)', `torcida ${fo?.torcida ?? '—'} · bandeiras ${fo?.bandeiras ?? '—'}${Number.isFinite(ref('P3.fonte.torcida')) ? ` · main ${ref('P3.fonte.torcida')} / ${ref('P3.fonte.bandeiras')}` : ''}`, '—', null, 'info');
         marcar('P3 (base)');
       }
       // ---- Z: o redimensionar
@@ -1300,6 +1317,13 @@ try {
       meta('P3', '?gfx=antigo: o gramado da página = o da main (G1–G5 da página)',
         `L ${f(Gp.L)} C ${f(Gp.C)} h ${f(Gp.h, 1)}° · ΔL ${f(Gp.dL)} · ${Gp.bordas} bordas · longe − perto ${f(Gp.dLonge, 4)} · linha ${f(Gp.linha)}${tem ? ` · desvios ${desv.map(([k, d]) => `${k} ${f(d, 4)}`).join(', ')}` : ' · sem referência'}`,
         'cada um a ± tolerância da referência', tem ? desv.every(([, d, t]) => Math.abs(d) <= t + 1e-9) : null, tem ? 'meta' : 'info');
+      // (a revisão do bloco 3) o ?gfx=antigo desfaz também o C10: o texto dos programas da torcida e das bandeiras = o da main
+      // (o ramo do impostor e o recorte dos letreiros pelo teste-gramado G6 e pelo render/util.js recorteAA), sem a A2C
+      const fo = await P(s.pagina, 'fontes'), rT = ref('P3.fonte.torcida'), rB = ref('P3.fonte.bandeiras');
+      const temF = Number.isFinite(rT) && Number.isFinite(rB);
+      meta('P3', '?gfx=antigo: o texto dos programas da torcida e das bandeiras = o da main (e a torcida sem A2C)',
+        `torcida ${fo?.torcida ?? '—'} · bandeiras ${fo?.bandeiras ?? '—'} · A2C ${fo?.a2c ? 'LIGADA' : 'não'}${temF ? ` · main ${rT} / ${rB}` : ' · sem referência'}`,
+        'iguais à main; sem A2C', temF ? fo?.torcida === rT && fo?.bandeiras === rB && !fo?.a2c : null, temF ? 'meta' : 'info');
     } catch (e) { meta('P3', '?gfx=antigo: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
     s = await carga(CEL, `${URL_CEL}&tom=neutro`);
     try {
