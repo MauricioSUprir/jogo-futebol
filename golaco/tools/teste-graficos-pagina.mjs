@@ -17,20 +17,27 @@
 //   S2 sonda na página: o contexto com antialias pedido dá true/4 (senão o TESTE É INVÁLIDO). O build: celular 844×390 dpr 2
 //      Média 4; tablet 1366×1024 com toque e dpr 2 na Média 0 (o teto de ~1,2 MP); ?aa=1 no tablet 4; PC 1280×720 Média 4.
 //   A2 serrilhado do quadro inteiro (jogadores, bola, torcida, placas) em duas poses da TV do celular ('jogo' na bola e 'area'
-//      com o gol no foco): máscara geométrica |MSAA − sem AA| > 0,01 (o build × a carga oposta), E = RMS(quadro − SSAA 3×3
-//      reduzido por caixa) só na máscara, razão E_build / E_semAA. Meta Média ≤ 0,6 (na main a Média é a sem AA: 1).
+//      com o gol no foco): máscara geométrica |MSAA − sem AA| > 0,01 (o build × a carga oposta; dos quadros FÍSICOS pelo gancho
+//      `__golaco.graficos.fisico` do C9/C10, quando existir), E = RMS(quadro − SSAA 3×3) só na máscara, com o SSAA do MESMO LOD
+//      (9 desenhos 1× com a câmera a −⅓, 0, +⅓ px) e físico, razão E_build / E_semAA. Meta Média ≤ 0,6 (na main a Média é a
+//      sem AA: 1).
 //   K  recortes e silhuetas. (1) franjas: os pixels de borda (a máscara da A2) dentro da torcida, das bandeiras (as de mastro, as
 //      faixas da mureta, os bandeirões e as do escanteio), das placas e, no pré-jogo, do letreiro da fachada, cuja cor no quadro
 //      com MSAA não é mistura (no espaço da cor guardada) das cores vizinhas (5×5) do quadro sem AA — distância OKLab > 0,03.
-//      Meta ≤ 0,2% das bordas e ≤ o da main com o MSAA forçado (a referência). (2) a cobertura das bandeiras de mastro a 50 e a
+//      A meta conta só as bordas com o centro do pixel FORA da região (a amostra extrapolada, o N11, o que o `centroid` muda):
+//      ≤ 0,2% delas e ≤ o da main com o MSAA forçado (a referência); com o centro DENTRO, a franja é o fundo escondido na mistura
+//      do MSAA (o piso da medida) e fica informativa. (2) a cobertura das bandeiras de mastro a 50 e a
 //      100 m (só a malha delas, sobre magenta, com o bandeirão da saída já fechado): pixels visivelmente cobertos (> 40/255 do
 //      fundo) no build ÷ no SSAA reduzido, nas caixas das 16 bandeiras da Média. Meta ≥ 0,8. (3) a A2C da torcida
 //      (informativa): cobertura ÷ SSAA e a cintilação da silhueta em dois quadros com a câmera andando 0,25 px.
 //   P  chamadas e triângulos no quadro fixo da TV ('jogo') = a referência (+0; triângulos ≤ +1%); CPU do quadro (medirQuadro
-//      sem a GPU, CPU 4×, com a demo, como o teste-desempenho-celular; a mediana dos p95 de 3 janelas de 400 quadros): p95 ≤ 6
-//      ms e ≤ a referência + 0,2 ms; o desenho (a parte JS do render) informativo.
+//      sem a GPU, CPU 4×, com a demo, como o teste-desempenho-celular) PAREADA: com `--base <pasta golaco>`, a versão medida e
+//      a base abertas juntas e ≥ 5 janelas de 400 quadros de cada, alternadas; meta: a mediana das diferenças por par ≤ +0,2
+//      ms. O "≤ 6 ms" absoluto e o desenho (a parte JS do render) informativos. A CPU NÃO vai à referência (é da máquina).
 //   P2 ?perf=1 e ?qps=1 na tela antes do jogo (?prepartida=1): __golaco.perf(); o painel com p95, fase, AA, buffer, GPU e
-//      refresh; visível POR CIMA na tela antes do jogo, na pausa e no replay; o qps mostrado na tela = os desenhos de verdade
+//      refresh; visível POR CIMA na tela antes do jogo, na pausa e no replay (a pilha do ponto — elementsFromPoint — com toda
+//      camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada que PINTA ali: sem isso o véu e a marca
+//      REPLAY não contavam, e a camada transparente de tela inteira contaria); o qps mostrado na tela = os desenhos de verdade
 //      (0,8–1,25 ×, com um rAF falso a 60 Hz: a tela desenha 30; na main o painel soma o dt de 1 quadro do navegador por
 //      desenho e mostra 60).
 //   P3 ?gfx=antigo: SAMPLES 0 na Média e o gramado da página (G1–G5 da página, só o gramado e as linhas na pose do meio) = a
@@ -40,13 +47,14 @@
 //      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois.
 //      (2) PC Alta → Baixa com ?prejogo=1 (o vão das placas aberto): localClippingEnabled do vão e o aria-label continuam. (3)
 //      __golaco.definirQualidade troca e desenha no mesmo evaluate (o quadro não preto; SAMPLES pela tabela). (4)
-//      WEBGL_lose_context: perde e restaura — o quadro desenha, os ganchos rodam (A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer =
-//      drawingBufferHeight), a mira desenha. 0 erro no console.
+//      WEBGL_lose_context: os ganchos ESTRAGADOS antes (a A2C ao contrário, o uAlturaBuffer em −1), perde e restaura — o quadro
+//      desenha, os ganchos rodam de novo (A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira desenha. As
+//      trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); __golaco.quedaDeTeste(): o mesmo canvas, 'baixa', SAMPLES continua 4, a queda nas preferências e na linha da
 //      pausa; a recarga em Automática abre na Baixa com SAMPLES 0; escolher a Média apaga.
 //   Z  redimensionar: atribuições a canvas.width/height do #tela (contadas pelo addInitScript) com o mesmo tamanho (resize e
-//      visualViewport) e com um tamanho novo. Metas 0 e 2 (main: 8 e até 8).
+//      visualViewport) e com um tamanho novo (espera a janela e o buffer mudarem). Metas 0 e 2 (main: 8 e até 8).
 //   T  teto: um rAF falso (tempo virtual) a 90, 120, 144 e 165 Hz conta os desenhos do #tela por segundo: celular 90 / 60 / 72
 //      / 82,5 ± 1 em intervalos regulares; PC sem toque a 144 Hz, sem teto. (Em T, na queda natural e no qps da P2 o render do
 //      #tela só conta — o que se mede é quantas vezes a página desenha.)
@@ -56,13 +64,15 @@
 //
 // A referência (`--gravar-referencia`) grava em tools/dados/graficos-ref.json, chave "pagina" (a do teste-graficos-celular é
 // "celular"), os valores AGREGADOS — nunca o hash dos pixels — com a versão do Chromium e o renderizador. As guardas "nada pior"
-// comparam com ela; com versão diferente da gravada ganham +50% de tolerância e avisam. As metas absolutas valem sempre.
+// comparam com ela; com OUTRO renderizador ganham +50% de tolerância e avisam; outra versão do Chromium só avisa. A referência
+// é gravada com o Chromium do CI (o Playwright do `golaco-testes.yml`). As metas absolutas valem sempre.
 //
 // Informativo por enquanto (até o C14 do plano; `--informativo` é o padrão): imprime as metas e o estado e sai 0 (a sonda
 // inválida e as falhas de estrutura — a página não abriu, as cargas não dão o mesmo quadro, erro no console — saem 1 sempre).
 // `--valendo` faz as metas contarem.
-//   node tools/teste-graficos-pagina.mjs [--raiz <pasta golaco>] [--so S2,A2,K,P,P2,P3,R,Q,Z,T] [--gravar-referencia]
-//                                        [--informativo | --valendo] [--prints <pasta>] [--json <arquivo>]
+//   node tools/teste-graficos-pagina.mjs [--raiz <pasta golaco>] [--base <pasta golaco da base>] [--janelas-cpu N]
+//                                        [--so S2,A2,K,P,P2,P3,R,Q,Z,T] [--gravar-referencia] [--informativo | --valendo]
+//                                        [--prints <pasta>] [--json <arquivo>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -75,6 +85,9 @@ const args = process.argv.slice(2);
 const tem = n => args.includes(n);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const raiz = path.resolve(arg('--raiz', RAIZ));
+// --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas)
+const raizBase = arg('--base', '') ? path.resolve(arg('--base', '')) : null;
+const JANELAS_CPU = Math.max(5, +arg('--janelas-cpu', 6) || 6);
 const SECOES = ['S2', 'A2', 'K', 'P', 'P2', 'P3', 'R', 'Q', 'Z', 'T'];
 const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
 for (const s of so) if (!SECOES.includes(s)) { console.error(`teste-graficos-pagina: seção desconhecida "${s}" (${SECOES.join(', ')})`); process.exit(2); }
@@ -94,6 +107,8 @@ const BD = await doJogo('js/render/bandeiras-dados.js');
 // ------------------------------------------------------------------ resultados
 const res = [];
 const valores = {};
+// as medidas que dependem da MÁQUINA (a CPU): só na saída e no --json, nunca na referência
+const medidas = {};
 /** Uma meta: tipo 'meta' (conta com --valendo), 'info' (só mostra), 'estrutura' (conta sempre: o teste valeu). */
 function meta(secao, nome, medido, alvo, ok, tipo = 'meta') { res.push({ secao, nome, medido: String(medido), alvo, ok: ok === null ? null : !!ok, tipo }); }
 const guarda = (k, v) => { if (Number.isFinite(v)) valores[k] = +(+v).toFixed(5); return v; };
@@ -107,7 +122,10 @@ const espera = ms => new Promise(ok => setTimeout(ok, ms));
 let REF = null;
 try { REF = JSON.parse(fs.readFileSync(ARQ_REF, 'utf8'))[CHAVE_REF] ?? null; } catch (_) { REF = null; }
 const cond = { chromium: '', renderer: '' };
-const tolRef = () => (REF && (REF.chromium !== cond.chromium || REF.renderer !== cond.renderer) ? 1.5 : 1);
+// a tolerância das guardas "nada pior" só abre com OUTRO renderizador; a versão do Chromium só avisa (os valores não dependem
+// dela: 141 do CI × 153 — a revisão do C3)
+const tolRef = () => (REF && REF.renderer !== cond.renderer ? 1.5 : 1);
+const versaoDif = () => !!REF && REF.chromium !== cond.chromium;
 const ref = k => REF?.valores?.[k];
 
 // ------------------------------------------------------------------ o que entra na página antes do jogo (cada carga)
@@ -122,7 +140,11 @@ function INIT(forca) {
   const gc = HTMLCanvasElement.prototype.getContext;
   HTMLCanvasElement.prototype.getContext = function (tipo, attr) {
     if (this.id === 'tela' && /webgl/.test(String(tipo)) && (window.__forcaAA === true || window.__forcaAA === false)) attr = { ...(attr || {}), antialias: window.__forcaAA };
-    return gc.call(this, tipo, attr);
+    const ctx = gc.call(this, tipo, attr);
+    // (o contexto WebGL fica guardado no canvas: o teste o lê sem chamar o getContext, que CRIARIA um com o antialias padrão
+    // num canvas ainda sem contexto)
+    if (ctx && /webgl/.test(String(tipo)) && !this.__ctx) this.__ctx = ctx;
+    return ctx;
   };
   window.__atrib = { width: 0, height: 0 };
   for (const k of ['width', 'height']) {
@@ -144,6 +166,9 @@ function INIT(forca) {
     if (!R.hz) { for (const cb of fila) nativo(cb); return; }
     R.t += (R.tremor ? TREMOR[R.n % TREMOR.length] : 1) * 1000 / R.hz; R.n++;
     for (const cb of fila) { try { cb(R.t); } catch (e) { setTimeout(() => { throw e; }); } }
+    // (a seção Q anota o quadro virtual em que a qualidade caiu)
+    const V = window.__vigiaQ, q = window.__golaco?.qualidade;
+    if (V && V.n == null && q && q !== V.q0) { V.n = R.n; V.t = R.t; V.q = q; }
     if (R.fila.length) agendar();
   }
   window.requestAnimationFrame = cb => { if (!R.hz) return nativo(cb); R.fila.push(cb); agendar(); return 0; };
@@ -159,7 +184,8 @@ async function instalarPagina() {
   const THREE = await import('three');
   const g = window.__golaco;
   const b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
-  const glTela = () => document.getElementById('tela')?.getContext('webgl2') ?? null;
+  // (o contexto que a PÁGINA criou, guardado pelo INIT: nunca cria um — o getContext num canvas sem contexto criaria)
+  const glTela = () => document.getElementById('tela')?.__ctx ?? null;
   const infoGl = gl => {
     if (!gl) return null;
     const dbg = gl.getExtension('WEBGL_debug_renderer_info');
@@ -196,6 +222,26 @@ async function instalarPagina() {
     });
     return { n: alvo.size, restaurar: () => { for (const [o, v] of vis) o.visible = v; } };
   };
+  // o gancho dos finos do C9/C10 (`__golaco.graficos.fisico(bool)`: os truques dos finos desligados): a referência e as máscaras
+  // FÍSICAS (sem ele, o contexto sem AA deixa de ser "o mesmo build menos o MSAA"); na main não existe e nada muda
+  const temFisico = () => typeof g.graficos?.fisico === 'function';
+  const comFisico = fn => { const t = temFisico(); if (t) g.graficos.fisico(true); try { return fn(); } finally { if (t) g.graficos.fisico(false); } };
+  /**
+   * O SSAA 3×3 com o MESMO LOD do quadro 1× (item 8 da revisão: o 3× desce o mip em log2 3 e põe um piso de textura no E): 9
+   * desenhos no buffer 1× com a câmera deslocada −⅓, 0 e +⅓ px nos dois eixos (os pontos de amostra do 3×3). A soma (Uint16).
+   */
+  const renderLod = (r, s, c, W, H) => {
+    const gl = r.getContext(), soma = new Uint16Array(W * H * 4), v = c.view && c.view.enabled ? { ...c.view } : null;
+    try {
+      for (const oy of [-1 / 3, 0, 1 / 3]) for (const ox of [-1 / 3, 0, 1 / 3]) {
+        c.setViewOffset(W, H, ox, oy, W, H);
+        r.render(s, c);
+        const px = lerBuf(gl, W, H);
+        for (let i = 0; i < soma.length; i++) soma[i] += px[i];
+      }
+    } finally { if (v) c.setViewOffset(v.fullWidth, v.fullHeight, v.offsetX, v.offsetY, v.width, v.height); else c.clearViewOffset(); }
+    return soma;
+  };
   /** O mesmo quadro 3× maior (pixel ratio 1), lido inteiro, e a soma de cada bloco 3×3 (Uint16, ÷ 9 = o SSAA). */
   const render3 = (r, s, c, W, H) => {
     const pr = r.getPixelRatio(), tam = r.getSize(new THREE.Vector2());
@@ -230,7 +276,7 @@ async function instalarPagina() {
     const gl = r.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
     try {
       if (escala === 3) {
-        const soma = render3(r, s, c, W, H);
+        const soma = comFisico(() => render3(r, s, c, W, H));
         const fundo = [soma[0] / 9, soma[1] / 9, soma[2] / 9];
         return { n: iso.n, W, H, m: mascara(soma, W, H, 9, [255, 0, 255], limiar), fundo };
       }
@@ -245,19 +291,52 @@ async function instalarPagina() {
     if (!el) return { existe: false, visivel: false, topo: 0, texto: '', qps: NaN, fixo: false };
     const r = el.getBoundingClientRect();
     const vis = !el.hidden && r.width >= 4 && r.height >= 4 && (el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true);
-    let topo = 0;
+    let topo = 0, tapado = '';
     if (vis) {
-      // (pointer-events: auto só para o teste de empilhamento: o #qps mora no .hud, que não recebe toque)
-      const pe = el.style.pointerEvents; el.style.pointerEvents = 'auto';
-      for (const [fx, fy] of [[0.5, 0.5], [0.15, 0.25], [0.85, 0.75]]) {
-        const e = document.elementFromPoint(r.left + fx * r.width, r.top + fy * r.height);
-        if (e && (e === el || el.contains(e))) topo++;
-      }
-      el.style.pointerEvents = pe;
+      // o elementFromPoint pula as camadas com pointer-events: none (o véu, a marca REPLAY, as cortinas) e as `inert` (o fundo
+      // da pausa): só durante a leitura, todas recebem toque e ninguém fica inerte (item 10 da revisão; síncrono, sem evento no
+      // meio), e a PILHA inteira do ponto (elementsFromPoint) é lida. Cobre o painel só a camada acima dele que PINTA ali: à
+      // vista (checkVisibility com a opacidade e a visibilidade, também dos pais) e com fundo, imagem de fundo, conteúdo
+      // substituído, forma de SVG ou texto próprio — a camada transparente de tela inteira (o #toque, a tela antes do jogo
+      // saindo com opacidade 0) não tapa nada
+      const st = document.createElement('style');
+      st.textContent = '*, *::before, *::after { pointer-events: auto !important; }';
+      document.head.appendChild(st);
+      const inertes = [...document.querySelectorAll('[inert]')];
+      for (const e of inertes) e.inert = false;
+      const pinta = e => {
+        if (e.checkVisibility && !e.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+        const cs = getComputedStyle(e);
+        const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/), a = m ? (m[1].split(',').map(Number)[3] ?? 1) : 0;
+        if (a > 0.02 || cs.backgroundImage !== 'none') return true;
+        if (/^(IMG|CANVAS|VIDEO|IFRAME|INPUT|BUTTON|SELECT|TEXTAREA)$/.test(e.tagName)) return true;
+        if (e instanceof SVGGraphicsElement && !(e instanceof SVGSVGElement) && e.tagName !== 'g') return true;
+        return [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+      };
+      const cobertos = [];
+      try {
+        for (const [fx, fy] of [[0.5, 0.5], [0.15, 0.25], [0.85, 0.75]]) {
+          let livre = false;
+          for (const e of document.elementsFromPoint(r.left + fx * r.width, r.top + fy * r.height)) {
+            if (e === el || el.contains(e)) { livre = true; break; }
+            if (e.contains(el)) continue;
+            if (pinta(e)) { cobertos.push(`${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}${typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : ''}`); break; }
+          }
+          if (livre) topo++;
+        }
+      } finally { for (const e of inertes) e.inert = true; st.remove(); }
+      tapado = [...new Set(cobertos)].join(', ');
     }
     const texto = (el.innerText || el.textContent || '').trim();
     const m = texto.match(/(\d+(?:[.,]\d+)?)\s*qps/i);
-    return { existe: true, visivel: vis, topo: topo / 3, texto, qps: m ? +m[1].replace(',', '.') : NaN, fixo: el.classList.contains('perf-fixo'), pai: el.parentElement?.id || el.parentElement?.tagName };
+    return { existe: true, visivel: vis, topo: topo / 3, tapado, texto, qps: m ? +m[1].replace(',', '.') : NaN, fixo: el.classList.contains('perf-fixo'), pai: el.parentElement?.id || el.parentElement?.tagName };
+  };
+  const matGols = () => {
+    const k = cap ?? desenharCap();
+    const gols = k?.s.getObjectByName('gols');
+    const mat = gols ? (Array.isArray(gols.material) ? gols.material[0] : gols.material) : null;
+    const uni = mat?.uniforms?.uAlturaBuffer ?? mat?.userData?.uAlturaBuffer ?? mat?.userData?.uniforms?.uAlturaBuffer ?? mat?.userData?.shader?.uniforms?.uAlturaBuffer ?? null;
+    return { gols, mat, uni, gl: k?.r.getContext() ?? null };
   };
   let idCv = 0;
   const canvasInfo = () => {
@@ -287,7 +366,8 @@ async function instalarPagina() {
     },
     /**
      * Um quadro do jogo (pose {de, para, fov} pela câmera livre; null = a câmera de agora, como no pré-jogo), lido no mesmo
-     * evaluate do desenho. opc: {cor (o quadro, padrão true), ssaa, mascaras: {nome: [nomes]}, limiar, png}.
+     * evaluate do desenho. opc: {cor (o quadro, padrão true), corFisico (o mesmo quadro com o gancho físico, quando existir),
+     * ssaa (o SSAA do mesmo LOD, físico), mascaras: {nome: [nomes]}, limiar, png}.
      */
     quadro(pose, opc = {}) {
       if (pose) g.cameraLivre(pose);
@@ -297,7 +377,9 @@ async function instalarPagina() {
       const e = g.estado();
       const out = { W, H, info: infoGl(gl), chamadas: e.desenhoChamadas, triangulos: e.desenhoTriangulos };
       if (opc.cor !== false) { const px = lerBuf(gl, W, H); out.cor = b64(px); if (opc.png) out.png = png(px, W, H); }
-      if (opc.ssaa) out.ssaa = b64(new Uint8Array(render3(k.r, k.s, k.c, W, H).buffer));
+      // (o quadro físico para a máscara, só com o gancho: sem ele é o próprio `cor`)
+      if (opc.corFisico && temFisico()) out.corFisico = b64(comFisico(() => { k.r.render(k.s, k.c); return lerBuf(gl, W, H); }));
+      if (opc.ssaa) out.ssaa = b64(new Uint8Array(comFisico(() => renderLod(k.r, k.s, k.c, W, H)).buffer));
       if (opc.mascaras) {
         out.mascaras = {}; out.nObj = {};
         for (const [nome, sel] of Object.entries(opc.mascaras)) { const r = renderIsolado(sel, { limiar: opc.limiar ?? 8 }); out.mascaras[nome] = b64(r.m); out.nObj[nome] = r.n; }
@@ -376,12 +458,21 @@ async function instalarPagina() {
     },
     /** Os ganchos do item 45 nos finos (o material da malha 'gols'): a A2C e o uAlturaBuffer, onde estiverem. */
     ganchos() {
-      const k = cap ?? desenharCap();
-      const gols = k?.s.getObjectByName('gols');
-      const mat = gols ? (Array.isArray(gols.material) ? gols.material[0] : gols.material) : null;
-      const uni = mat?.uniforms?.uAlturaBuffer ?? mat?.userData?.uAlturaBuffer ?? mat?.userData?.uniforms?.uAlturaBuffer ?? mat?.userData?.shader?.uniforms?.uAlturaBuffer ?? null;
-      const gl = k?.r.getContext();
+      const { gols, mat, uni, gl } = matGols();
       return { temGols: !!gols, a2c: mat ? !!mat.alphaToCoverage : null, uAltura: uni ? (typeof uni === 'object' && 'value' in uni ? uni.value : uni) : null, H: gl?.drawingBufferHeight ?? null, samples: gl ? gl.getParameter(gl.SAMPLES) : null };
+    },
+    /**
+     * Estraga os ganchos ANTES de perder o contexto (item 3 da revisão: a A2C e o uAlturaBuffer são estado JS do material, o
+     * loseContext/restoreContext não mexe neles — postos já na criação, a guarda passava sem o ouvinte do contexto restaurado):
+     * a A2C ao contrário do certo e o uAlturaBuffer em −1. Depois da volta do contexto, só os ganchos rodando os acertam.
+     */
+    sabotarGanchos() {
+      const { mat, uni, gl } = matGols();
+      const certoA2c = gl ? gl.getParameter(gl.SAMPLES) >= 2 : null;
+      if (mat && certoA2c !== null) mat.alphaToCoverage = !certoA2c;
+      const temU = !!(uni && typeof uni === 'object' && 'value' in uni);
+      if (temU) uni.value = -1;
+      return { a2c: mat ? mat.alphaToCoverage : null, uAltura: temU ? -1 : null };
     },
   };
   return { w: innerWidth, h: innerHeight, dpr: devicePixelRatio, versao: g.versao };
@@ -430,12 +521,16 @@ const labDe = s => (s[3] > 0 ? oklab([s[0] / s[3], s[1] / s[3], s[2] / s[3]]) : 
 const contar = m => { let n = 0; for (let i = 0; i < m.length; i++) n += m[i]; return n; };
 function difPx(a, b) { if (!a || !b || a.length !== b.length) return Infinity; let n = 0; for (let i = 0; i < a.length; i += 4) if (a[i] !== b[i] || a[i + 1] !== b[i + 1] || a[i + 2] !== b[i + 2]) n++; return n; }
 
-/** A2: {E1 (com MSAA), E0 (sem), mascara} pela máscara geométrica |MSAA − sem| > 0,01, contra o SSAA somado (÷ 9). */
-function serrilhado(I1, I0, S, N) {
+/**
+ * A2: {E1 (com MSAA), E0 (sem), mascara} pela máscara geométrica |MSAA − sem| > 0,01 (dos quadros físicos M1/M0, quando o
+ * gancho existe), contra o SSAA somado (÷ 9; o do mesmo LOD, físico).
+ */
+function serrilhado(I1, I0, S, N, M1 = null, M0 = null) {
   let n = 0, s1 = 0, s0 = 0;
+  const A = M1 ?? I1, Z = M0 ?? I0;
   for (let i = 0; i < N; i++) {
     let m = 0;
-    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(I1[4 * i + c] - I0[4 * i + c]));
+    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(A[4 * i + c] - Z[4 * i + c]));
     if (m <= 2.55) continue;
     n++;
     for (let c = 0; c < 3; c++) { const ss = S[4 * i + c] / 9; s1 += ((I1[4 * i + c] - ss) / 255) ** 2; s0 += ((I0[4 * i + c] - ss) / 255) ** 2; }
@@ -470,6 +565,9 @@ function pertoTri(p, a, b, c) {
  * OKLab da mistura mais perto (pontos, segmentos e triângulos) das cores VIZINHAS (5×5) do quadro sem AA. (Com 3×3, o mastro
  * de menos de 1 px, que o quadro sem AA pega aos pedaços, contava como franja na torcida; a franja de verdade — a cor da célula
  * vizinha do atlas na borda sem `centroid`, N11: a linha verde-clara no alto das faixas da mureta — fica igual com 5×5.)
+ * As bordas se separam pelo CENTRO do pixel (a máscara M do quadro sem AA): com o centro DENTRO do objeto o MSAA sombreia a
+ * mesma amostra do quadro sem AA e a franja é o fundo escondido que entra na mistura (o `centroid` não muda nada ali: um piso
+ * da medida, 0,7% das bordas da torcida); com o centro FORA a amostra é extrapolada, a franja do N11 — a classe que a meta conta.
  */
 function franjas(I1, I0, M, W, H, R = 2) {
   const D = new Uint8Array(W * H);
@@ -477,7 +575,7 @@ function franjas(I1, I0, M, W, H, R = 2) {
     if (!M[y * W + x]) continue;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && xx >= 0 && yy < H && xx < W) D[yy * W + xx] = 1; }
   }
-  let bordas = 0, nf = 0;
+  let bordas = 0, nf = 0, bFora = 0, fFora = 0;
   for (let y = R; y < H - R; y++) for (let x = R; x < W - R; x++) {
     const i = y * W + x;
     if (!D[i]) continue;
@@ -496,10 +594,13 @@ function franjas(I1, I0, M, W, H, R = 2) {
     for (const a of viz) tenta(a);
     for (let a = 0; a < viz.length && melhor > 0.03; a++) for (let b = a + 1; b < viz.length; b++) tenta(pertoSeg(p, viz[a], viz[b]));
     for (let a = 0; a < viz.length && melhor > 0.03; a++) for (let b = a + 1; b < viz.length && melhor > 0.03; b++) for (let c = b + 1; c < viz.length; c++) tenta(pertoTri(p, viz[a], viz[b], viz[c]));
-    if (melhor > 0.03) nf++;
+    const fora = !M[i];
+    if (fora) bFora++;
+    if (melhor > 0.03) { nf++; if (fora) fFora++; }
   }
   // (0 px de borda: o MSAA não mexe na região — o letreiro com alphaTest sem A2C — e não há franja)
-  return { bordas, franjas: nf, frac: bordas ? nf / bordas : 0 };
+  const bDentro = bordas - bFora, fDentro = nf - fFora;
+  return { bordas, franjas: nf, frac: bordas ? nf / bordas : 0, bFora, fFora, fracFora: bFora ? fFora / bFora : 0, bDentro, fDentro, fracDentro: bDentro ? fDentro / bDentro : 0 };
 }
 
 /**
@@ -543,14 +644,15 @@ const PC = { w: 1280, h: 720, dpr: 1, toque: false };
 const URL_CEL = 'prints=1&demo=1&q=media&hora=dia&toque=1&entalhe=1&semente=4&replay=0&comemoracao=0';
 const URL_PC = 'prints=1&demo=1&hora=dia&semente=4&replay=0&comemoracao=0';
 const srv = await servidor(0, raiz);
+const srvBase = raizBase ? await servidor(0, raizBase) : null;
 const sessoes = [];
 const errosConsole = [];
 let invalido = null;
 
-async function carga(cfg, busca, { forca = null } = {}) {
+async function carga(cfg, busca, { forca = null, servidor: sv = srv } = {}) {
   const s = await abrir({ largura: cfg.w, altura: cfg.h, dpr: cfg.dpr, toque: cfg.toque });
   sessoes.push(s);
-  s.busca = busca;
+  s.busca = busca; s.srv = sv;
   await s.contexto.addInitScript(INIT, forca);
   s.pagina.setDefaultTimeout(240000);
   s.r404 = [];
@@ -561,7 +663,7 @@ async function carga(cfg, busca, { forca = null } = {}) {
 }
 async function irPara(s, recarregar = false) {
   const t0 = Date.now();
-  if (recarregar) await s.pagina.reload({ waitUntil: 'load' }); else await s.pagina.goto(`${srv.url}?${s.busca}`, { waitUntil: 'load' });
+  if (recarregar) await s.pagina.reload({ waitUntil: 'load' }); else await s.pagina.goto(`${s.srv.url}?${s.busca}`, { waitUntil: 'load' });
   if (s.busca.includes('segurar3d=1')) await s.pagina.waitForFunction(() => window.__golaco && (window.__golaco.carga === 'segurada' || window.__golaco.pronto), null, { timeout: 240000 });
   else await s.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 240000 });
   s.tCarga = (Date.now() - t0) / 1000;
@@ -586,7 +688,8 @@ async function esperarRaf(pg, alvo, tetoMs = 90000) {
   while (Date.now() - t0 < tetoMs) { if ((await pg.evaluate(() => window.__raf.t)) >= alvo) return true; await espera(40); }
   return false;
 }
-const quadrosReais = (pg, n = 2) => pg.evaluate(n => new Promise(ok => { let k = 0; const f = () => (++k >= n ? ok() : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(ok, 8000); }), n);
+/** n quadros de verdade (rAF); true se vieram, false se o teto (30 s) chegou antes. */
+const quadrosReais = (pg, n = 2) => pg.evaluate(n => new Promise(ok => { let k = 0; const f = () => (++k >= n ? ok(true) : requestAnimationFrame(f)); requestAnimationFrame(f); setTimeout(() => ok(false), 30000); }), n);
 function salvarPng(nome, b64) { if (pastaPrints && b64) fs.writeFileSync(path.join(pastaPrints, `${nome}.png`), Buffer.from(b64, 'base64')); }
 
 // ------------------------------------------------------------------ as poses (a TV do celular)
@@ -662,7 +765,7 @@ async function sequenciaCel(s, papel, semAA) {
   r.poses = posesJogo(r.bola);
   r.quadros = {};
   for (const [nome, pose] of Object.entries(r.poses)) {
-    r.quadros[nome] = await P(pg, 'quadro', pose, { ssaa: semAA && so.has('A2'), mascaras: semAA && precisaK ? CATS : null, png: !!pastaPrints });
+    r.quadros[nome] = await P(pg, 'quadro', pose, { ssaa: semAA && so.has('A2'), corFisico: so.has('A2'), mascaras: semAA && precisaK ? CATS : null, png: !!pastaPrints });
     salvarPng(`cel-${papel}-${nome}`, r.quadros[nome]?.png);
   }
   return r;
@@ -744,15 +847,17 @@ try {
       // ---- Z: o redimensionar
       if (so.has('Z')) try {
         const z1 = await pg.evaluate(() => { window.__atrib.width = 0; window.__atrib.height = 0; window.dispatchEvent(new Event('resize')); window.visualViewport?.dispatchEvent(new Event('resize')); return { ...window.__atrib }; });
-        await pg.evaluate(() => { window.__atrib.width = 0; window.__atrib.height = 0; });
+        const W0 = await pg.evaluate(() => { window.__atrib.width = 0; window.__atrib.height = 0; return document.getElementById('tela').width; });
         // (o tamanho novo pelo CDP: o setViewportSize do Playwright no contexto de celular cai no Browser.setWindowBounds e falha)
+        // (espera a janela E o buffer mudarem, não um tempo fixo: com o MSAA no SwiftShader um quadro passa de 0,5 s — item 11)
         const cdp = await s.contexto.newCDPSession(pg);
         await cdp.send('Emulation.setDeviceMetricsOverride', { width: 800, height: CEL.h, deviceScaleFactor: CEL.dpr, mobile: true });
-        await espera(500);
+        const mudou = await pg.waitForFunction(w0 => innerWidth === 800 && document.getElementById('tela').width !== w0, W0, { timeout: 30000 }).then(() => true, () => false);
         const z2 = await pg.evaluate(() => ({ ...window.__atrib, w: innerWidth, h: innerHeight, W: document.getElementById('tela').width, H: document.getElementById('tela').height }));
         await cdp.send('Emulation.setDeviceMetricsOverride', { width: CEL.w, height: CEL.h, deviceScaleFactor: CEL.dpr, mobile: true });
-        await espera(400);
+        const voltou = await pg.waitForFunction(([w, w0]) => innerWidth === w && document.getElementById('tela').width === w0, [CEL.w, W0], { timeout: 30000 }).then(() => true, () => false);
         await cdp.detach().catch(() => {});
+        if (!mudou || !voltou) meta('Z', 'Redimensionar: a janela e o buffer mudaram e voltaram', `${mudou ? 'mudou' : 'NÃO mudou em 30 s'} · ${voltou ? 'voltou' : 'NÃO voltou em 30 s'}`, 'os dois', false, 'estrutura');
         const n1 = z1.width + z1.height, n2 = z2.width + z2.height;
         guarda('Z.mesmo', n1); guarda('Z.novo', n2);
         meta('Z', 'Redimensionar com o MESMO tamanho (resize + visualViewport)', `${n1} atribuições a canvas.width/height (${z1.width} + ${z1.height})`, '0 (main: 8)', n1 === 0);
@@ -784,45 +889,15 @@ try {
       } finally { await fechar(s); }
       marcar('celular (oposta)');
     }
-    if (celBuild && (precisaPar || so.has('P'))) {
+    if (celBuild && precisaPar) {
       s = await carga(CEL, `${URL_CEL}&prejogo=1&aa=${buildAA ? 1 : 0}`, { forca: buildAA });
       try {
         celIgual = await sequenciaCel(s, 'igual', false);
-        if (precisaPar) {
-          const dif = [['pre', celBuild.pre?.cor, celIgual.pre?.cor], ...Object.keys(celBuild.quadros).map(k => [k, celBuild.quadros[k]?.cor, celIgual.quadros[k]?.cor])]
-            .map(([k, a, b]) => [k, a && b ? difPx(u8(a), u8(b)) : NaN]);
-          const okDif = dif.every(([, n]) => n === 0) && celIgual.bola.hash === celBuild.bola.hash;
-          meta('A2', 'Determinismo: a carga forçada IGUAL ao build dá o mesmo quadro, bit a bit', `${dif.map(([k, n]) => `${k} ${n} px`).join(' · ')} · hash ${celIgual.bola.hash === celBuild.bola.hash ? 'igual' : 'DIFERENTE'} (${celBuild.bola.passos} passos)`,
-            '0 px em todos (senão a A2 e a K não medem nada)', okDif, 'estrutura');
-        }
-        // ---- P: a CPU do quadro (medirQuadro sem a GPU, CPU 4×, 20 s da demo; como o teste-desempenho-celular)
-        if (so.has('P')) {
-          const pg = s.pagina;
-          await pg.evaluate(() => { const g = window.__golaco; g.cameraLivre(null); for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false }); });
-          const cdp = await s.contexto.newCDPSession(pg);
-          await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
-          // (3 janelas de 400 quadros e a mediana dos p95: uma janela só de 600 variava ±0,4 ms entre rodadas do mesmo código)
-          const med = await pg.evaluate(n => {
-            const g = window.__golaco, js = [];
-            for (let k = 0; k < 3; k++) {
-              g.medirQuadro({ zerar: true });
-              for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
-              js.push(g.medirQuadro({ zerar: true }));
-            }
-            for (let i = 0; i < 120; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
-            const d = g.medirQuadro({ zerar: true });
-            const ord = [...js].sort((a, b) => a.cpu.p95 - b.cpu.p95), m = ord[1];
-            return { cpu: { p95: m.cpu.p95, media: js.reduce((a, j) => a + j.cpu.media, 0) / 3 }, p95s: js.map(j => j.cpu.p95), quadros: js.reduce((a, j) => a + j.quadros, 0), passos: js.reduce((a, j) => a + j.passos, 0), desenho: d.desenho, cpuD: d.cpu };
-          }, 400);
-          await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
-          guarda('P.cpuP95', med.cpu.p95); guarda('P.cpuMedia', med.cpu.media); guarda('P.desenhoP95', med.desenho.p95);
-          const rp = ref('P.cpuP95');
-          const tol = 0.2 * tolRef();
-          meta('P', 'CPU do quadro sem a GPU (CPU 4×, 20 s da demo): p95 (a mediana de 3 janelas)', `p95 ${f(med.cpu.p95, 2)} (janelas ${med.p95s.map(v => f(v, 2)).join(' / ')}) · méd ${f(med.cpu.media, 2)} ms em ${med.quadros} quadros (${med.passos} passos)${Number.isFinite(rp) ? ` · ref ${f(rp, 2)}` : ' · sem referência'}`,
-            `≤ 6 ms${Number.isFinite(rp) ? ` e ≤ ref + ${f(tol, 1)}` : ''}`, med.cpu.p95 <= 6 && (!Number.isFinite(rp) || med.cpu.p95 <= rp + tol));
-          meta('P', 'O desenho (a parte JS do render, CPU 4×, 120 quadros)', `p95 ${f(med.desenho.p95, 2)} · méd ${f(med.desenho.media, 2)} ms · CPU sem ele p95 ${f(med.cpuD.p95, 2)}${Number.isFinite(ref('P.desenhoP95')) ? ` · ref ${f(ref('P.desenhoP95'), 2)}` : ''}`, '(informativo: a parte que o item muda)', null, 'info');
-          marcar('P (CPU)');
-        }
+        const dif = [['pre', celBuild.pre?.cor, celIgual.pre?.cor], ...Object.keys(celBuild.quadros).map(k => [k, celBuild.quadros[k]?.cor, celIgual.quadros[k]?.cor])]
+          .map(([k, a, b]) => [k, a && b ? difPx(u8(a), u8(b)) : NaN]);
+        const okDif = dif.every(([, n]) => n === 0) && celIgual.bola.hash === celBuild.bola.hash;
+        meta('A2', 'Determinismo: a carga forçada IGUAL ao build dá o mesmo quadro, bit a bit', `${dif.map(([k, n]) => `${k} ${n} px`).join(' · ')} · hash ${celIgual.bola.hash === celBuild.bola.hash ? 'igual' : 'DIFERENTE'} (${celBuild.bola.passos} passos)`,
+          '0 px em todos (senão a A2 e a K não medem nada)', okDif, 'estrutura');
       } catch (e) {
         meta('—', 'Rodou (celular, carga igual)', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura');
       } finally { await fechar(s); }
@@ -835,7 +910,7 @@ try {
       if (so.has('A2')) for (const nome of Object.keys(sem.quadros)) {
         const qs = sem.quadros[nome], qc = com.quadros[nome];
         if (!qs?.ssaa || !qc?.cor) { meta('A2', `A2 serrilhado (${nome})`, 'sem quadro', '—', false, 'estrutura'); continue; }
-        const N = qs.W * qs.H, r = serrilhado(u8(qc.cor), u8(qs.cor), u16(qs.ssaa), N);
+        const N = qs.W * qs.H, r = serrilhado(u8(qc.cor), u8(qs.cor), u16(qs.ssaa), N, qc.corFisico ? u8(qc.corFisico) : null, qs.corFisico ? u8(qs.corFisico) : null);
         const Eb = buildAA ? r.E1 : r.E0, raz = Eb / r.E0;
         guarda(`A2.${nome}.Ebuild`, Eb); guarda(`A2.${nome}.Esem`, r.E0); guarda(`A2.${nome}.Emsaa`, r.E1); guarda(`A2.${nome}.razao`, raz); guarda(`A2.${nome}.mascara`, r.mascara);
         meta('A2', `A2 serrilhado do quadro inteiro (${nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco'}): razão E_build / E_semAA`,
@@ -857,11 +932,15 @@ try {
         for (const l of linhas) {
           if (!('frac' in l)) { meta('K', `K1 franjas: ${l.k}`, l.txt, '—', null, 'info'); continue; }
           guarda(`K.franjas.${l.k}`, l.frac); guarda(`K.bordas.${l.k}`, l.bordas);
-          const rf = ref(`K.franjas.${l.k}`);
+          guarda(`K.franjasFora.${l.k}`, l.fracFora); guarda(`K.bordasFora.${l.k}`, l.bFora); guarda(`K.franjasDentro.${l.k}`, l.fracDentro);
+          const rf = ref(`K.franjasFora.${l.k}`);
           const tolF = Math.max(0.0005, (rf ?? 0) * 0.25) * tolRef();
-          meta('K', `K1 franjas na silhueta: ${l.cat} (${l.nome === 'prejogo' ? 'pré-jogo, fachada' : l.nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco'})`,
-            `${pct(l.frac, 2)} de ${l.bordas} px de borda (${l.franjas})${l.bordas ? '' : ' (o MSAA não muda a região)'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
-            '≤ 0,2% e ≤ a da main com o MSAA forçado', l.frac <= 0.002 && (!Number.isFinite(rf) || l.frac <= rf + tolF));
+          const onde = l.nome === 'prejogo' ? 'pré-jogo, fachada' : l.nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco';
+          meta('K', `K1 franjas na silhueta, centro do pixel FORA da região (a amostra extrapolada, N11): ${l.cat} (${onde})`,
+            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
+            '≤ 0,2% e ≤ a da main com o MSAA forçado', l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF));
+          meta('K', `K1 franjas, centro DENTRO da região (o fundo escondido na mistura: o piso da medida): ${l.cat} (${onde})`,
+            `${pct(l.fracDentro, 2)} de ${l.bDentro} px (${l.fDentro}) · todas as bordas ${pct(l.frac, 2)} de ${l.bordas}`, 'informativa', null, 'info');
         }
         // (2) as bandeiras de mastro a 50 e 100 m
         for (const [rot, cel] of [['build', celBuild], ['outra', celOposta]]) {
@@ -892,6 +971,9 @@ try {
       marcar('A2 e K (contas)');
     }
   }
+
+  // ================================================================== P: a CPU do quadro, PAREADA com a base
+  if (so.has('P')) await medirCpu();
 
   // ================================================================== S2: o tablet e o PC
   if (so.has('S2') || so.has('T')) {
@@ -968,6 +1050,8 @@ try {
     const pg = s.pagina;
     try {
       await pg.waitForFunction(() => window.__golaco.prepartida?.aberta, null, { timeout: 60000 }).catch(() => {});
+      // (a tela cedo, item 106, abre com o fundo 2D antes do 3D: o qps atrás da tela só existe com o fundo 3D no ar)
+      await pg.waitForFunction(() => { const f = document.getElementById('prepartida')?.dataset.fundo; return !!f && f !== '2d'; }, null, { timeout: 120000 }).catch(() => {});
       const perfApi = () => pg.evaluate(() => {
         const g = window.__golaco;
         if (typeof g.perf !== 'function') return null;
@@ -993,7 +1077,7 @@ try {
         const txt = pn.texto.replace(/\s+/g, ' ');
         const falta = [['p95', /p95/i], ['fase', /fase|tela|jogo|replay|pausa|pré-jogo|cena/i], ['AA', /\bAA\b|MSAA|SAMPLES|amostras/i], ['buffer', /\d+\s*[×x]\s*\d+/], ['GPU', /SwiftShader|ANGLE|GPU|Mali|Adreno|Apple/i], ['refresh', /Hz/i]].filter(([, re]) => !re.test(txt)).map(([k]) => k);
         meta('P2', 'O painel mostra p95, fase, AA, buffer, GPU e refresh', `"${txt.slice(0, 110)}"${falta.length ? ` · falta: ${falta.join(', ')}` : ''}`, 'tudo', pn.existe && !falta.length);
-        meta('P2', 'O painel à vista POR CIMA da tela antes do jogo', `${pn.existe ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima` : 'escondido') : 'não existe'}${pn.fixo ? ' (.perf-fixo)' : ` (no #${pn.pai})`}`, '100% por cima', pn.visivel && pn.topo === 1);
+        meta('P2', 'O painel à vista POR CIMA da tela antes do jogo', `${pn.existe ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima${pn.tapado ? ` (tapa: ${pn.tapado})` : ''}` : 'escondido') : 'não existe'}${pn.fixo ? ' (.perf-fixo)' : ` (no #${pn.pai})`}`, '100% por cima', pn.visivel && pn.topo === 1);
         // (a régua é a razão mostrado ÷ desenhado: ~1 com o intervalo entre DESENHOS; na main o painel mostra o ritmo do rAF, 60)
         meta('P2', 'O qps do painel na tela antes do jogo = os desenhos de verdade (N3; rAF falso a 60 Hz)', `mostra ${f(mostrado, 1)} · desenhou ${f(real, 1)} por segundo atrás da tela (× ${f(mostrado / real, 2)})`, '0,8–1,25 × os desenhos e ≤ 32',
           Number.isFinite(mostrado) && real > 0 && mostrado / real >= 0.8 && mostrado / real <= 1.25 && mostrado <= 32);
@@ -1007,7 +1091,7 @@ try {
         const menu = await pg.evaluate(() => window.__golaco.estado().menuAberto);
         if (so.has('P2')) {
           const pn = await P(pg, 'painel');
-          meta('P2', 'O painel à vista POR CIMA da pausa', menu ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima` : 'escondido') : 'a pausa não abriu', '100% por cima', menu && pn.visivel && pn.topo === 1);
+          meta('P2', 'O painel à vista POR CIMA da pausa', menu ? (pn.visivel ? `visível, ${pct(pn.topo, 0)} dos pontos por cima${pn.tapado ? ` (tapa: ${pn.tapado})` : ''}` : 'escondido') : 'a pausa não abriu', '100% por cima', menu && pn.visivel && pn.topo === 1);
         }
         if (so.has('R')) {
           await pg.evaluate(() => document.getElementById('btn-opcoes')?.click());
@@ -1020,15 +1104,19 @@ try {
             const antes = await P(pg, 'canvasInfo');
             const v0 = await pg.evaluate(() => window.__ajuste.visto);
             const ok = await pg.evaluate(q => { const b = document.querySelector(`[data-grupo="qualidade"] [data-valor="${q}"]`); if (!b || !b.getClientRects().length) return false; b.click(); return true; }, q);
+            // (a recriação com o MSAA compila tudo no SwiftShader: teto alto, e a troca que não termina REPROVA — nunca lê no meio)
             const t0 = Date.now();
-            while (Date.now() - t0 < 10000) { const e = await pg.evaluate(() => ({ q: window.__golaco.qualidade, aj: window.__P.ajustando() })); if (e.q === q && !e.aj) break; await espera(40); }
-            await quadrosReais(pg, 3);
+            let terminou = false;
+            while (ok && Date.now() - t0 < 90000) { const e = await pg.evaluate(() => ({ q: window.__golaco.qualidade, aj: window.__P.ajustando() })); if (e.q === q && !e.aj) { terminou = true; break; } await espera(40); }
+            const qr = await quadrosReais(pg, 3);
             const depois = await P(pg, 'canvasInfo');
             const v1 = await pg.evaluate(() => window.__ajuste.visto);
-            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando') };
+            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1) };
           };
           const b = await troca('baixa'), m = await troca('media');
           await pg.evaluate(() => clearInterval(window.__ajuste.id));
+          meta('R', 'R1 as trocas terminam (a qualidade pedida, sem "Ajustando…", e 3 quadros depois)', `Baixa ${b.terminou ? 'terminou' : 'NÃO terminou'} em ${b.s} s · Média ${m.terminou ? 'terminou' : 'NÃO terminou'} em ${m.s} s`, 'as duas em ≤ 90 s',
+            b.terminou && m.terminou, 'estrutura');
           const sam = [b.antes?.info?.samples, b.depois?.info?.samples, m.depois?.info?.samples];
           meta('R', 'R1 pelo ≡ → Opções: Média → Baixa → Média (SAMPLES)', `${menu ? '' : 'a pausa NÃO abriu · '}${b.ok && m.ok ? '' : 'botão não achado · '}${sam.join(' → ')}${b.depois?.id !== b.antes?.id ? ' (recriou)' : ' (mesmo canvas)'}${m.depois?.id !== m.antes?.id ? ' (recriou)' : ' (mesmo canvas)'}`,
             '4 → 0 → 4', sam[0] === 4 && sam[1] === 0 && sam[2] === 4);
@@ -1062,7 +1150,7 @@ try {
         });
         const noReplay = await P(pg, 'painel');
         await pg.evaluate(() => { const g = window.__golaco; g.replay.pular(); g.relogio.avancar(1000 / 60); });
-        const dz = p => (p.existe ? (p.visivel ? `visível, ${pct(p.topo, 0)} por cima` : 'escondido') : 'não existe');
+        const dz = p => (p.existe ? (p.visivel ? `visível, ${pct(p.topo, 0)} por cima${p.tapado ? ` (tapa: ${p.tapado})` : ''}` : 'escondido') : 'não existe');
         meta('P2', 'O painel no jogo, na pausa (no jogo) e no replay', `jogo: ${dz(noJogo)} · pausa: ${dz(naPausa)} · replay${rep.ativo ? '' : ' (NÃO começou)'}: ${dz(noReplay)}`,
           'visível e por cima nos três', rep.ativo && [noJogo, naPausa, noReplay].every(p => p.visivel && p.topo === 1));
         const api = await perfApi();
@@ -1087,13 +1175,14 @@ try {
         });
         const m1 = await P(pg, 'mira');
         meta('R', 'R1 a mira da falta desenha depois das trocas de qualidade', `${montada.tipo ?? 'sem parada'} (câmera da cobrança ${m1.ativa ? 'ativa' : 'NÃO ativa'}) · ${m1.n} px com × sem a linha`, '≥ 150 px', m1.n >= 150);
-        // R(4): perde e restaura o contexto
+        // R(4): estraga os ganchos, perde e restaura o contexto
         const r4 = await pg.evaluate(async () => {
-          const cv = document.getElementById('tela'), gl = cv.getContext('webgl2'), ext = gl.getExtension('WEBGL_lose_context');
+          const cv = document.getElementById('tela'), gl = cv.__ctx, ext = gl?.getExtension('WEBGL_lose_context');
           if (!ext) return { ext: false };
           const ev = { perdeu: 0, voltou: 0 };
           cv.addEventListener('webglcontextlost', () => { ev.perdeu++; });
           cv.addEventListener('webglcontextrestored', () => { ev.voltou++; });
+          ev.sabotado = window.__P.sabotarGanchos();
           ext.loseContext();
           await new Promise(ok => setTimeout(ok, 150));
           const perdido = gl.isContextLost();
@@ -1107,8 +1196,8 @@ try {
         const m2 = await P(pg, 'mira');
         meta('R', 'R4 WEBGL_lose_context: perde, restaura e o quadro desenha', r4.ext ? `perdeu ${r4.perdido} (${r4.perdeu} evento) · restaurou ${r4.restaurado} (${r4.voltou} evento) · ${pct(np)} não preto` : 'sem a extensão',
           'restaurado e ≥ 50% não preto', r4.ext && r4.restaurado && np >= 0.5, 'estrutura');
-        meta('R', 'R4 os ganchos depois do contexto restaurado (A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight)',
-          `gols ${gan.temGols} · A2C ${gan.a2c} (SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'como ao lado',
+        meta('R', 'R4 os ganchos depois do contexto restaurado (estragados antes de perder: A2C dos finos = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight)',
+          `estragados: A2C ${r4.sabotado?.a2c}, uAlturaBuffer ${r4.sabotado?.uAltura ?? 'não existe'} · depois: gols ${gan.temGols} · A2C ${gan.a2c} (SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'os ganchos refazem os dois',
           gan.temGols && gan.a2c === (gan.samples >= 2) && gan.uAltura === gan.H);
         meta('R', 'R4 a mira desenha depois do contexto restaurado', `${m2.n} px com × sem a linha`, '≥ 150 px', m2.n >= 150);
         marcar('R1 (mira) e R4 (contexto)');
@@ -1133,12 +1222,12 @@ try {
       // a guarda do webdriver não seria testada) por 8,6 s — duas janelas lentas depois dos 3 s — cai na sessão e não grava (o
       // render só conta: a queda olha o ritmo dos quadros, não os pixels)
       const q0 = await pg.evaluate(() => ({ q: window.__golaco.qualidade, escolha: window.__golaco.estado().escolhaQualidade }));
-      const t0 = await pg.evaluate(() => { window.__P.soContar(true); window.__rafLigar(20, true); return window.__raf.t; });
+      const t0 = await pg.evaluate(() => { const q0 = window.__golaco.qualidade; window.__P.soContar(true); window.__rafLigar(20, true); window.__vigiaQ = { q0, n0: window.__raf.n, t0: window.__raf.t }; return window.__raf.t; });
       const chegou = await esperarRaf(pg, t0 + 8600, 120000);
-      const q1 = await pg.evaluate(() => ({ q: window.__golaco.qualidade, n: window.__raf.n }));
+      const q1 = await pg.evaluate(() => { const V = window.__vigiaQ; return { q: window.__golaco.qualidade, n: window.__raf.n - V.n0, nQueda: V.n == null ? null : V.n - V.n0, sQueda: V.t == null ? null : (V.t - V.t0) / 1000 }; });
       await pg.evaluate(() => { window.__rafLigar(0); window.__P.soContar(false); });
       const p1 = await prefs();
-      meta('Q', 'Q queda natural com webdriver (rAF falso a 20 Hz com tremor, Automática): cai na sessão', `${q0.q} (${q0.escolha}) → ${q1.q} em ${q1.n} quadros virtuais${chegou ? '' : ' (o relógio virtual NÃO chegou a 8,6 s)'}`, 'media → baixa', q0.q === 'media' && q1.q === 'baixa');
+      meta('Q', 'Q queda natural com webdriver (rAF falso a 20 Hz com tremor, Automática): cai na sessão', `${q0.q} (${q0.escolha}) → ${q1.q}${q1.nQueda != null ? ` no quadro virtual ${q1.nQueda} (${f(q1.sQueda, 1)} s)` : ' (não caiu)'} · ${q1.n} quadros em 8,6 s${chegou ? '' : ' (o relógio virtual NÃO chegou a 8,6 s)'}`, 'media → baixa', q0.q === 'media' && q1.q === 'baixa');
       meta('Q', 'Q queda natural com webdriver: NÃO grava', `preferências: ${JSON.stringify(p1).slice(0, 120)}`, 'sem qualidadeQueda', !('qualidadeQueda' in p1));
       // (2) a recarga: abre na Média (nada gravado); __golaco.quedaDeTeste()
       await irPara(s, true);
@@ -1222,6 +1311,76 @@ try {
 } finally {
   for (const s of sessoes.splice(0)) { anotarErros(s); await s.navegador.close().catch(() => {}); }
   await srv.fechar();
+  if (srvBase) await srvBase.fechar();
+}
+
+/**
+ * P: a CPU do quadro (medirQuadro sem a GPU, CPU 4×, a demo; como o teste-desempenho-celular), PAREADA (item 4 da revisão: a
+ * referência guardava números DESTA máquina e o CI comparava os dele com eles; aqui a base varia 5,4–6,8 ms entre rodadas e
+ * 4,5–7,3 entre janelas da mesma rodada). A versão medida e a de base (`--base`) abertas JUNTAS, cada uma com o relógio
+ * manual (a outra fica parada: o laço não desenha), e as janelas de 400 quadros ALTERNADAS (medida, base, base, medida, …): a
+ * meta é a mediana das diferenças por par ≤ +0,2 ms. Sem `--base`, só a medida, informativa. Nada disso vai à referência.
+ */
+async function medirCpu() {
+  const versoes = [{ rot: 'medida', sv: srv }, ...(srvBase ? [{ rot: 'base', sv: srvBase }] : [])];
+  const abertas = [];
+  try {
+    for (const v of versoes) {
+      const s = await carga(CEL, URL_CEL, { servidor: v.sv });
+      const pg = s.pagina;
+      await pg.waitForFunction(() => window.__golaco.sobDemanda?.ja() ?? true, null, { timeout: 120000 });
+      await pg.evaluate(() => {
+        const g = window.__golaco;
+        g.relogio.usarManual(true);
+        for (let i = 0; i < 300; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+        g.cameraLivre(null);
+        for (let i = 0; i < 240; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      });
+      abertas.push({ ...v, s, pg, cdp: await s.contexto.newCDPSession(pg), p95: [], media: [] });
+    }
+    const janela = async a => {
+      await a.cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      try {
+        return await a.pg.evaluate(n => {
+          const g = window.__golaco;
+          g.medirQuadro({ zerar: true });
+          for (let i = 0; i < n; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+          const r = g.medirQuadro({ zerar: true });
+          return { p95: r.cpu.p95, media: r.cpu.media, quadros: r.quadros };
+        }, 400);
+      } finally { await a.cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); }
+    };
+    for (let k = 0; k < JANELAS_CPU; k++) {
+      // a ordem alterna a cada par (a deriva da máquina cai nos dois lados)
+      for (const a of k % 2 ? [...abertas].reverse() : abertas) { const r = await janela(a); a.p95.push(r.p95); a.media.push(r.media); }
+    }
+    // o desenho (a parte JS do render): 120 quadros desenhados, informativo (6 janelas do mesmo código deram 7,4–15,2 ms: o ruído
+    // não separa nada — item 17 da revisão)
+    for (const a of abertas) {
+      await a.cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+      try { a.desenho = await a.pg.evaluate(() => { const g = window.__golaco; g.medirQuadro({ zerar: true }); for (let i = 0; i < 120; i++) g.relogio.avancar(1000 / 60, { desenhar: true }); return g.medirQuadro({ zerar: true }).desenho; }); } finally { await a.cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 }); }
+    }
+  } catch (e) {
+    meta('P', 'CPU do quadro: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura');
+    for (const a of abertas) await fechar(a.s);
+    marcar('P (CPU)');
+    return;
+  }
+  for (const a of abertas) await fechar(a.s);
+  const med = a => percentil(a.p95, 0.5);
+  const [M, B] = abertas;
+  const lista = a => a.p95.map(v => f(v, 2)).join(' / ');
+  medidas['P.cpuP95'] = med(M); medidas['P.cpuMedia'] = media(M.media); medidas['P.desenhoP95'] = M.desenho?.p95;
+  meta('P', `CPU do quadro sem a GPU (CPU 4×, a demo): p95, a mediana de ${JANELAS_CPU} janelas de 400 quadros (a versão medida)`,
+    `${f(med(M), 2)} ms (janelas ${lista(M)}) · méd ${f(media(M.media), 2)} ms`, '≤ 6 ms (informativo: a base já passa dele, "Depende do dono" 30)', med(M) <= 6, 'info');
+  if (B) {
+    const d = M.p95.map((v, i) => v - B.p95[i]), dm = percentil(d, 0.5);
+    medidas['P.cpuP95base'] = med(B); medidas['P.cpuDifPar'] = dm;
+    meta('P', 'CPU do quadro: nada pior que a base, PAREADO (a mediana das diferenças por par de janelas)',
+      `${dm >= 0 ? '+' : ''}${f(dm, 2)} ms · medida ${f(med(M), 2)} (${lista(M)}) · base ${f(med(B), 2)} (${lista(B)})`, '≤ +0,2 ms', dm <= 0.2);
+  } else meta('P', 'CPU do quadro: nada pior que a base (pareado)', 'sem --base: não medido', '≤ +0,2 ms (com --base <pasta golaco da base>)', null, 'info');
+  meta('P', 'O desenho (a parte JS do render, CPU 4×, 120 quadros)', abertas.map(a => `${a.rot} p95 ${f(a.desenho?.p95, 2)} · méd ${f(a.desenho?.media, 2)} ms`).join(' · '), 'informativo (o ruído não separa versões)', null, 'info');
+  marcar('P (CPU pareada)');
 }
 
 /**
@@ -1265,15 +1424,18 @@ if (gravar && !invalido) {
   // com --so parcial, junta com o que já estava gravado (as outras seções ficam)
   const antes = so.size < SECOES.length ? tudo[CHAVE_REF] : null;
   const secoes = new Set([...(antes?.secoes ? antes.secoes.split(',') : []), ...so]);
+  // (os outros campos do registro — notas à mão, histórico — ficam em toda gravação, também com --so: item 14 da revisão)
+  const extras = Object.fromEntries(Object.entries(tudo[CHAVE_REF] ?? {}).filter(([k]) => !['gravado', 'commit', 'secoes', 'chromium', 'renderer', 'nota', 'valores'].includes(k)));
   tudo[CHAVE_REF] = {
     gravado: new Date().toISOString().slice(0, 10), commit, secoes: SECOES.filter(x => secoes.has(x)).join(','), chromium: cond.chromium, renderer: cond.renderer,
-    nota: 'valores AGREGADOS do teste-graficos-pagina (nunca hash de pixels); as guardas "nada pior" comparam com eles',
+    nota: 'valores AGREGADOS do teste-graficos-pagina (nunca hash de pixels); as guardas "nada pior" comparam com eles. A CPU (seção P) não entra: é medida pareada com --base',
     valores: { ...(antes?.valores ?? {}), ...valores },
+    ...extras,
   };
   fs.mkdirSync(path.dirname(ARQ_REF), { recursive: true });
   fs.writeFileSync(ARQ_REF, JSON.stringify(tudo, null, 2) + '\n');
 }
-if (arqJson) fs.writeFileSync(arqJson, JSON.stringify({ cond, valores, res }, null, 2) + '\n');
+if (arqJson) fs.writeFileSync(arqJson, JSON.stringify({ cond, valores, medidas, res }, null, 2) + '\n');
 
 // ------------------------------------------------------------------ a tabela
 const est = m => (m.ok === null ? 'INFO    ' : m.ok ? 'PASSOU  ' : m.tipo === 'estrutura' || valendo ? 'REPROVOU' : 'FORA    ');
@@ -1282,7 +1444,7 @@ for (const m of res) console.log(`${est(m)} | ${m.secao.padEnd(2)} | ${m.nome.pa
 const fora = res.filter(m => m.ok === false && m.tipo === 'meta').length;
 const estrutura = res.filter(m => m.ok === false && m.tipo === 'estrutura').length;
 console.log(`\nChromium ${cond.chromium} · ${cond.renderer}`);
-if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — VERSÃO DIFERENTE da gravada: as guardas "nada pior" com +50% de tolerância' : ''}`);
+if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — RENDERIZADOR DIFERENTE do gravado: as guardas "nada pior" com +50% de tolerância' : versaoDif() ? ' — Chromium diferente do gravado (só aviso: a tolerância não muda)' : ''}`);
 else console.log('referência: nenhuma gravada (as guardas "nada pior" ficam informativas; grave com --gravar-referencia na main)');
 if (gravar && !invalido) console.log(`referência gravada em ${ARQ_REF}, chave "${CHAVE_REF}" (${Object.keys(valores).length} valores)`);
 console.log(`tempos: ${tempos.join(' · ')} · total ${((Date.now() - T0) / 1000).toFixed(0)} s`);
