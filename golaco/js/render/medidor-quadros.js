@@ -327,27 +327,27 @@ const NOME_Q = { auto: 'automática', baixa: 'Baixa', media: 'Média', alta: 'Al
 const num = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : '—');
 const queda = q => (q && q.de && q.para ? `${NOME_Q[q.de] ?? q.de} → ${NOME_Q[q.para] ?? q.para}` : '—');
 
-/** O texto do painel (linhas com \n; vírgula decimal) a partir do relatorio(). */
+/**
+ * O texto do painel (linhas com \n; vírgula decimal) a partir do relatorio(). Linhas curtas (≤ ~58 letras): no 568×320 o painel
+ * cabe na largura e, com as 7 fases, na altura (11 px por letra, 1,4 de entrelinha).
+ */
 export function textoPainel(r) {
   const L = [];
   L.push(`${num(r.qps, 0)} qps · p50 ${num(r.ms?.p50)} · p95 ${num(r.ms?.p95)} · pior 1% ${num(r.ms?.pior1)} ms`);
   const gpuP95 = r.gpu?.timer && Number.isFinite(r.gpu?.p95) ? `${num(r.gpu.p95)} ms` : r.gpu?.timer && r.gpu?.invalidos > 0 ? '— (o cronômetro devolve lixo)' : '—';
   L.push(`CPU p95 ${num(r.cpu?.p95)} ms · GPU p95 ${gpuP95}`);
-  L.push(`${Number.isFinite(r.chamadas) ? r.chamadas : '—'} chamadas · ${Number.isFinite(r.triangulos) ? Math.round(r.triangulos / 1000) : '—'} mil tri`);
-  const esc = r.qualidade?.escolha, atu = r.qualidade?.atual;
-  L.push(`qualidade ${NOME_Q[esc] ?? esc ?? '—'}${esc === 'auto' || esc !== atu ? ` · agora ${NOME_Q[atu] ?? atu ?? '—'}` : ''}`);
-  const aa = r.aa ?? {};
-  L.push(`AA ${aa.antialias && aa.amostras >= 2 ? `MSAA ${aa.amostras}×` : 'não'} (antialias ${aa.antialias == null ? '—' : aa.antialias ? 'sim' : 'não'} · SAMPLES ${aa.amostras ?? '—'}) · ${aa.modo ?? '—'}`);
-  const b = r.buffer ?? {};
-  L.push(`buffer ${b.w ?? '—'}×${b.h ?? '—'} · pr ${num(b.pixelRatio, 2)}${b.tetoTablet ? ' · sem MSAA pelo teto dos tablets' : ''}`);
+  L.push(`${Number.isFinite(r.chamadas) ? r.chamadas : '—'} chamadas · ${Number.isFinite(r.triangulos) ? Math.round(r.triangulos / 1000) : '—'} mil tri · fase ${r.faseRotulo ?? '—'}`);
+  const esc = r.qualidade?.escolha, atu = r.qualidade?.atual, b = r.buffer ?? {};
+  L.push(`qualidade ${NOME_Q[esc] ?? esc ?? '—'}${esc === 'auto' || esc !== atu ? ` → ${NOME_Q[atu] ?? atu ?? '—'}` : ''} · buffer ${b.w ?? '—'}×${b.h ?? '—'} · pr ${num(b.pixelRatio, 2)}`);
+  const aa = r.aa ?? {}, msaa = aa.antialias && aa.amostras >= 2;
+  L.push(`AA ${msaa ? `MSAA ${aa.amostras}×` : aa.antialias ? 'pedido, sem amostras' : 'não'} (SAMPLES ${aa.amostras ?? '—'})${msaa ? ` · ${aa.modo ?? '—'}` : ''}${b.tetoTablet ? ' · teto dos tablets' : ''}`);
   L.push(`GPU ${r.gpu?.curto ?? '—'}`);
   L.push(`tela ${num(r.refresh?.hz, 0)} Hz · teto ${Number.isFinite(r.refresh?.teto) ? `1 a cada ${r.refresh.teto}` : '—'}`);
   L.push(`queda: sessão ${queda(r.queda?.sessao)} · gravada ${queda(r.queda?.gravada)}`);
-  L.push(`fase ${r.faseRotulo ?? '—'}`);
   for (const f of FASES) {
     const a = r.fases?.[f];
     if (!a) continue;
-    L.push(`  ${ROTULO_FASE[f]}: ${num(a.qps, 0)} qps · p95 ${num(a.p95)} · CPU ${num(a.cpuP95)}${Number.isFinite(a.gpuP95) ? ` · GPU ${num(a.gpuP95)}` : ''} (${a.desenhos})`);
+    L.push(` ${ROTULO_FASE[f]}: ${num(a.qps, 0)} qps · p95 ${num(a.p95)} · CPU ${num(a.cpuP95)}${Number.isFinite(a.gpuP95) ? ` · GPU ${num(a.gpuP95)}` : ''} (${a.desenhos})`);
   }
   return L.join('\n');
 }

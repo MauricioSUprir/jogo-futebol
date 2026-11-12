@@ -353,8 +353,9 @@ if (!M) {
     const falta = [['p95', /p95/i], ['fase', /fase|tela|jogo|replay|pausa|pré-jogo|cena/i], ['AA', /\bAA\b|MSAA|SAMPLES|amostras/i], ['buffer', /\d+\s*[×x]\s*\d+/], ['GPU', /SwiftShader|ANGLE|GPU|Mali|Adreno|Apple/i], ['refresh', /Hz/i]].filter(([, re]) => !re.test(linha)).map(([k]) => k);
     const qps = (txt.match(/(\d+(?:[.,]\d+)?)\s*qps/i) || [])[1];
     meta('M8 o texto: o qps primeiro, p95, a fase, o AA (MSAA 4×, SAMPLES, o modo), o buffer 1266×585, a GPU, o refresh em Hz; vírgula decimal',
-      `"${linha.slice(0, 150)}…"${falta.length ? ` · falta: ${falta.join(', ')}` : ''}`, `tudo; o qps 30; "MSAA 4×"; "1266×585"; "pr 1,50"; "60 Hz"; "fase tela antes do jogo"`,
-      !falta.length && +qps === 30 && /MSAA 4×/.test(txt) && /1266×585/.test(txt) && /pr 1,50/.test(txt) && /60 Hz/.test(txt) && /fase tela antes do jogo/.test(txt) && /SwiftShader/.test(txt) && /implícito emulado/.test(txt));
+      `"${linha.slice(0, 150)}…"${falta.length ? ` · falta: ${falta.join(', ')}` : ''}`, `tudo; o qps 30; "MSAA 4×"; "1266×585"; "pr 1,50"; "60 Hz"; "fase tela antes do jogo"; cada linha ≤ 60 letras (o 568×320)`,
+      !falta.length && +qps === 30 && /MSAA 4×/.test(txt) && /1266×585/.test(txt) && /pr 1,50/.test(txt) && /60 Hz/.test(txt) && /fase tela antes do jogo/.test(txt) && /SwiftShader/.test(txt) && /implícito emulado/.test(txt)
+      && txt.split('\n').every(l => l.length <= 60));
     meta('M8 os campos dos outros passos com "—": o teto (C13), a queda (C12), a GPU sem cronômetro',
       txt.split('\n').filter(l => /teto|queda|GPU p95/.test(l)).join(' | '), '"teto —", "sessão — · gravada —", "GPU p95 —"',
       /teto —/.test(txt) && /sessão — · gravada —/.test(txt) && /GPU p95 —/.test(txt));
@@ -362,7 +363,7 @@ if (!M) {
     const txt2 = textoPainel(rel2);
     meta('M8 com eles: "1 a cada 2", o refresh do ritmo (120 Hz) por cima do medido, "Média → Baixa" nas duas quedas, o teto dos tablets, "AA não", a qualidade fixa sem o "agora"',
       txt2.split('\n').filter(l => /teto|queda|AA|buffer|qualidade/.test(l)).join(' | '),
-      'tudo ao lado', /tela 120 Hz · teto 1 a cada 2/.test(txt2) && /sessão Média → Baixa · gravada Média → Baixa/.test(txt2) && /teto dos tablets/.test(txt2) && /AA não/.test(txt2) && /qualidade Média\n/.test(txt2));
+      'tudo ao lado', /tela 120 Hz · teto 1 a cada 2/.test(txt2) && /sessão Média → Baixa · gravada Média → Baixa/.test(txt2) && /teto dos tablets/.test(txt2) && /AA não/.test(txt2) && /qualidade Média · buffer/.test(txt2));
     let json = null;
     try { json = JSON.parse(JSON.stringify(rel)); } catch (_) { json = null; }
     const chaves = json ? JSON.stringify(json).toLowerCase() : '';
