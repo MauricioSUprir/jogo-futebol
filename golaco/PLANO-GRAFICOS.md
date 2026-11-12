@@ -1297,6 +1297,12 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
     `--publica` (0,822 s uma vez sob carga; 0,019–0,025 s nas outras) → medir de novo sob carga;
   - `teste-bola-parada-tela` L5 (o classificador do C15 do bloco 2): sem mudança de régua aqui;
   - a guarda do leitor de tela (o anúncio do "Ajustando…") não tem teste: o CI não tem leitor de tela (dito no PR).
+  - **o CI deste bloco** (os commits até o `a44f0145`): três vermelhos, todos de navegador e nenhum do que o bloco mexeu —
+    `teste-replay-paradas-tela` V7 no `e6f6df30` e no `a44f0145`: a parte da CPU ("o p95 do quadro do replay ≤ o do jogo + 1 ms",
+    377 quadros) com um pico num dos dois replays (faltaPerto 3,30 ms contra 2,40; espalmada 2,70 contra 2,30), as chamadas dentro;
+    o `e6f6df30` só mexeu na decisão da queda (nada de desenho) e o `c37f5587`/`b6be7508` passaram. Aqui, base × HEAD: 0,70 / 0,30
+    contra 1,70 e 0,40 / 0,30 contra 1,10 ms, os dois passam (325 → 336 s). C15: a CPU do V7 pareada ou pela mediana de janelas,
+    como a P. E o `teste-substituicao-tela` T9 (programas 36 → 37) no `2abed4b3`, a flutuação já anotada no C11; aqui 37 → 37.
 - **Lições:**
   - **A regra da queda que "exige duas janelas lentas" media a coisa errada:** a 2ª janela já roda no nível de baixo — exigir que
     ela também fique lenta é exigir que o nível de baixo NÃO resolva. Um aparelho no vsync desenha preso também quando é lento
