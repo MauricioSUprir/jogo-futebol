@@ -78,6 +78,10 @@ compensado, o letreiro opaco com A2C e as silhuetas com `centroid` (C10, `a2561f
   destino em 1; a cor sai igual bit a bit) e guardado pelo `teste-estadio` 10b (o alfa 255 em todo pixel).
 - **`?gfx=antigo`** desfaz também o C10 (a torcida, as bandeiras e o ramo do impostor = o texto da main pelo FNV-1a, P3).
 
+**O C11 (12/11; `3d5202df`, `56bf6fd2`): o painel `?perf` / `?qps`.** A P2 inteira passa (7 metas fora → 0); a P igual (31
+chamadas, 92 044 triângulos, a CPU pareada +0,00 ms); o medido e o que o C12 e o C13 precisam saber estão na seção 6 ("Medido no
+C11").
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -837,14 +841,15 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
   | `ritmo-desenho.js` | ~1,5 KB | (C12/C13) |
   | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
-  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11–C13) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+77 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3; nosso 2859 → 2902 → 2936 KB) |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12–C13) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+82 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11; nosso 2859 → 2902 → 2936 → 2941 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
   `shaderGramadoAntigo`) pode ir sob demanda se a folga apertar (precisa do `main.js` esperar o import antes do `criarCampo`).
 
-  O `medidor-quadros.js` vai sob demanda (lista nova no `teste-carga.mjs`).
+  O `medidor-quadros.js` (18,8 KB) vai sob demanda: a lista `SO_COM_PAINEL` do `teste-carga.mjs` (nunca no inicial, sem
+  pré-carga; a mutação "o medidor sempre" reprova as duas linhas dela).
 - **Memória na GPU (Média):** −10 MB do gramado; +~12 MB de cor 4× e +~12 MB de profundidade 4× no 844×390 (a média na GPU do Ganesh descarta a profundidade no fim do quadro; no Safari e no Graphite é memória real). O teto de 1,2 MP limita isso a ~38 MB no pior celular com MSAA; os tablets ficam como hoje.
 
 ---
@@ -963,6 +968,51 @@ referência — a K e a A2 regravadas com a cena assentada no `35f967c5` —; o 
 - `teste-carga` — o nosso 2902 → 2936 KB, a folga 518,4 → 484,9 KB (seção 5); o hash Node = Chromium. Nada.
 - **O CI do PR:** o do C9 (`52896f71`) passou inteiro; o do C10 não rodou (a pane do GitHub); os do `4792e0c6` e do `3c4b5719`
   reprovaram só no V8 (o navegador 3 de 3) e no `teste-desempenho-celular` informativo; o do `bc01cece` passou o navegador 3 de 3.
+
+**Medido no C11** (o painel `?perf` / `?qps`, 12/11; Chromium 141 do CI, SwiftShader; antes = o HEAD do fecho do bloco 3,
+`7fe3a1ab`, numa worktree; depois = `56bf6fd2`):
+
+| Meta | Antes | Depois |
+|---|---|---|
+| P2 `__golaco.perf()` com p95, fase, AA, buffer, GPU, refresh | não existe | o objeto (qps, ms, cpu, gpu, fases, chamadas, triângulos, qualidade, aa, buffer, refresh, queda) |
+| P2 o painel com p95, fase, AA, buffer, GPU e refresh | "60 qps · 16.7 ms 25 chamadas · 92 mil tri qualidade media" | "30 qps · p50 33,3 · p95 33,3 · pior 1% 34,3 ms / CPU p95 … / 25 chamadas · 92 mil tri · fase tela antes do jogo / …" |
+| P2 por cima da tela antes do jogo / da pausa | escondido (no `#hud`) / escondido | 100% / 100% (`.perf-fixo`) |
+| P2 no jogo, na pausa e no replay | jogo 100%; pausa e replay escondido | 100% nos três |
+| P2 o qps da tela antes do jogo = os desenhos (N3) | mostra 60,0, desenhou 30,4 (× 1,97) | mostra 30,0, desenhou 30,0–30,4 (× 0,99–1,00) |
+| P2 a fase no jogo | não existe | "jogo" |
+| P chamadas / triângulos | 31 / 92 044 | 31 / 92 044 (o painel não desenha nada) |
+| P a CPU pareada com a main (`--base` a worktree `e41aa791`) | — | +0,00 ms (medida 5,80, base 5,40 ms) |
+| R (com o painel na mesma carga) | o R1 "Ajustando…" fora | igual (o R1 "Ajustando…" é do C12; o resto passa) |
+| `teste-carga` nosso / folga | 2936 KB / 484,9 KB | 2941 KB / 479,2 KB; o medidor nunca pedido sem o painel |
+| `teste-hud-minimo` H1 (o orçamento do HUD) | — | a linha do H1 idêntica antes × depois (pior 8,81 / 10,81 / 11,65 / 10,77%); o painel não aparece |
+
+- **Provado por mutação:** sem o `z-index` do `.perf-fixo`, a P2 reprova "por cima da tela antes do jogo" (0%, tapa o
+  `.pp-veu`) e "da pausa"; contando todo quadro do rAF (o jeito de antes), a N3 reprova (× 2,00); sem o `:not(.perf-fixo)` no
+  replay, "no replay" reprova (escondido); o medidor carregado sem o painel reprova as duas linhas do `teste-carga`; no
+  `teste-medidor-quadros`, sem o filtro do lixo da GPU o M6 reprova e com o intervalo pelo rAF o M1 reprova (p50 16,7 ms).
+- **O cronômetro da GPU no SwiftShader:** a extensão existe e responde ~300 ms por quadro, às vezes 2^63 ns (lixo: descartado e
+  contado em `invalidos`; o painel diz "o cronômetro devolve lixo" quando só há lixo).
+- **Flutuações vistas (não são do C11):** o `teste-prepartida-tela` E7* ("depois do Pular: pré-jogo true", a máquina com quadros
+  de segundos: 0 desenho/s atrás da tela no E15) reprovou na base 1 em 13 rodadas e no HEAD 6 em 15 (as 3 primeiras rodadas
+  seguidas do HEAD reprovaram 2; nas 6 alternadas do fim, 1 a 1); sem o painel o quadro é o mesmo de antes (o invólucro só chama o
+  `quadroCorpo`), e o navegador 2 de 3 do CI (com ele) passou. O `teste-substituicao-tela` T9 (programas 36 → 37) reprovou no
+  navegador 1 de 3 do CI do `3d5202df` e passou no do `56bf6fd2` e aqui (37 → 37).
+- **Para o C12 (a troca, a queda gravada e o contexto):**
+  - o painel lê `info.queda = {sessao, gravada}` (cada uma `{de, para}` ou null) no `main.js infoPainel()`; o texto já mostra
+    "Média → Baixa" com os dois preenchidos (`medidor-quadros.js textoPainel`, coberto pelo M8);
+  - a decisão da queda pede o ritmo dos DESENHOS: o medidor tem os intervalos entre desenhos (`MED.resumo().ms`, o anel), mas só
+    existe com o painel; a decisão da queda vale sem ele, então mora no `render/ritmo-desenho.js` (o plano) com a mesma conta
+    (mediana e p90 − p10 dos intervalos), alimentada pelo `quadro()`;
+  - a recriação troca o contexto: o cronômetro da GPU descarta as consultas do velho sozinho (`criarCronometroGpu`, M6) e o nome
+    da GPU é relido quando o `gl` muda (`medGl`); o `aa`/`buffer` do painel vêm do `cena3d` a cada 0,5 s.
+- **Para o C13 (o teto):**
+  - o painel lê `info.teto` (o *n*: desenha 1 a cada *n* quadros da tela; null = "—") e `info.refreshHz` (o refresh do ritmo,
+    que passa por cima do medido no medidor) no `main.js infoPainel()`;
+  - o refresh do medidor é a mediana dos últimos 30 intervalos do rAF, todos (`MED.raf(t)` no `aoQuadro`, ANTES do `quadro()`);
+    com o teto no `aoQuadro`, o `MED.raf` tem de continuar vendo todo quadro do navegador e o `quadro()` só os desenhados — os
+    intervalos do painel já são entre DESENHOS (o instante do rAF de cada desenho), então o teto aparece no qps sem mudar nada;
+  - o `teste-graficos-pagina` T conta os desenhos pelo `renderer.render` (o `soContar`); o painel conta pelo `cena3d.desenhar`
+    envolto (`nDesenhos`): os dois veem os mesmos desenhos.
 
 ---
 
