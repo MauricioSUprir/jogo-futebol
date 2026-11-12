@@ -749,7 +749,8 @@ if (EM) {
       // a pose do 3D é a do quadro: o MESMO ESTADO_GLSL nos dois shaders (e nada de pose escrita à mão no quadro); a ola
       // levanta quem está na crista; debaixo do bandeirão aberto, braços em V sem pular
       const fonte = f => fs.readFileSync(path.join(pastaJs, f), 'utf8');
-      const tq = fonte('render/torcida.js'), t3 = fonte('render/torcedor3d.js');
+      // (o texto do shader do quadro mora em render/silhuetas-shader.js desde a revisão do bloco 3 do item 45; antes, no torcida.js)
+      const tq = fs.existsSync(path.join(pastaJs, 'render/silhuetas-shader.js')) ? fonte('render/silhuetas-shader.js') : fonte('render/torcida.js'), t3 = fonte('render/torcedor3d.js');
       const usaMesmo = [tq, t3].every(t => /import \{[^}]*ESTADO_GLSL[^}]*\} from '\.\/torcedor-pose\.js'/.test(t) && t.includes('${ESTADO_GLSL}') && t.includes('torcedorEstado(aPos.xyz, h, aInfo)')) && !/torcidaPose\(/.test(tq);
       const BD = await imp('render/bandeiras-dados.js'), FE = await imp('render/festa.js');
       const B = BD.bandeiroes();
@@ -805,9 +806,11 @@ if (EM) {
     // H1 pureza: nada de three.js nem DOM no módulo puro; a torcida monta o MESMO programa de hoje sem o impostor (o ramo só
     // existe com ele) e o ramo do impostor usa o MESMO estado do torcedor (torcedorEstado: a pose do quadro e do 3D)
     {
-      const s = fonte('render/impostor-dados.js'), tq = fonte('render/torcida.js'), ti = fonte('render/impostor.js');
-      const ruins = ["from 'three'", 'document.', 'window.', 'navigator.', 'getContext('].filter(t => s.includes(t));
-      const ramo = /function shaders\(imp = null\)/.test(tq) && /\$\{imp \? `vImpModo = step\(0\.5, aLod\);/.test(tq) && /\$\{imp \? imp\.vertPars : ''\}/.test(tq);
+      // (os textos dos shaders moram em render/silhuetas-shader.js e render/impostor-dados.js desde a revisão do bloco 3 do item 45)
+      const temSil = fs.existsSync(path.join(pastaJs, 'render/silhuetas-shader.js'));
+      const s = fonte('render/impostor-dados.js'), tq = temSil ? fonte('render/silhuetas-shader.js') : fonte('render/torcida.js'), ti = fonte('render/impostor.js') + s;
+      const ruins = ["from 'three'", 'document.', 'window.', 'navigator.', 'getContext('].filter(t => s.includes(t) || (temSil && tq.includes(t)));
+      const ramo = /function (shaders|shaderTorcida)\(imp = null/.test(tq) && /\$\{imp \? `vImpModo = step\(0\.5, aLod\);/.test(tq) && /\$\{imp \? imp\.vertPars : ''\}/.test(tq);
       const mesmoEstado = /vec3 est = torcedorEstado\(aPos\.xyz, h, aInfo\);/.test(tq) && /float iPose = floor\(pose \+ 0\.5\);/.test(ti) && /iSent \? 0\.0 : pulo/.test(ti) && /bal \* clamp/.test(ti);
       reg('H1 impostor: puro (sem three.js nem DOM); o programa de hoje sem ele; o ramo dele com a pose do quadro (torcedorEstado)',
         `${ruins.length ? 'usa ' + ruins.join(', ') : 'puro'}; ramo só com o impostor: ${ramo ? 'sim' : 'NÃO'}; a mesma pose, o pulo e o balanço: ${mesmoEstado ? 'sim' : 'NÃO'}`, 'puro; sim; sim', !ruins.length && ramo && mesmoEstado);

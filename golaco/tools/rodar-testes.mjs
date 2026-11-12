@@ -89,6 +89,14 @@ const LISTA = [
   // Estádio: rede que balança, torcida e som (contas puras do desenho)
   ['rede que balança: bolsa, onda, batidas com a física da bola, bola desenhada no bojo', 'teste-rede.mjs'],
   ['rede véu de noiva: forma pela física, morre no fundo, nada atravessa, gol pelo véu, desenho', 'teste-rede-veu.mjs'],
+  // Item 45 (gráficos do celular, C4): as faixas de corte da UEFA puras (render/gramado.js), o GLSL = o JS, as cores
+  ['gramado: as 18 faixas da UEFA (Fig. 15), faixaEm, o filtro do degrau, o GLSL interpretado = o JS (double e float32), as cores', 'teste-gramado.mjs'],
+  // Item 45 (C11): o medidor do painel ?perf / ?qps (render/medidor-quadros.js, puro e sob demanda)
+  ['painel ?perf: os intervalos entre desenhos (N3: 30 num rAF de 60), p50/p95/pior 1% = o oráculo, o acumulado por fase, a quebra, o cronômetro da GPU, o modo do AA, o texto, a pureza', 'teste-medidor-quadros.mjs'],
+  // Item 45 (C12 e C13): a decisão da queda automática da qualidade e o teto de quadros (render/ritmo-desenho.js, puro): a sessão
+  // = a regra de antes, a gravação só com duas janelas lentas seguidas, fora do ritmo preso num divisor da tela e fora dos testes
+  // automáticos; o teto de 60 desenhos só no celular, em ritmo regular, nunca abaixo de 60 numa troca de refresh
+  ['queda da qualidade e teto de quadros: o 30 preso cai e não grava, 25 qps com tremor em duas janelas grava, com webdriver nunca, a sessão = a regra de antes; 120/144/165/240 Hz dão 60/72/82,5/60 regulares, a troca de refresh, o PC sem teto, a pureza', 'teste-ritmo-desenho.mjs'],
   // Item 66 (dono, 23/10: "a câmera não acompanha a bola e não dá pra ver a área completamente"): a TV nova em Node (a mola, a
   // geometria da área e da bola parada, 10 partidas com o legado lado a lado; 2 processos)
   ['câmera de TV: acompanha a bola (atraso, miolo, espaço à frente), a área inteira no último terço e na bola parada, a bola com prioridade (a alta sem tirar o chão do quadro), sem tranco, jogadores ≥ 34 px, o travado do Rumo ao Estrelato no quadro', 'teste-camera.mjs', [], 'padrao', 2],
