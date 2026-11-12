@@ -59,8 +59,8 @@
 //      estrutura: o onBeforeRender o refaz a cada desenho), a mira com programa no contexto restaurado antes de ser desenhada (a
 //      linha escondida durante a perda; C12) e depois desenha. (5) o KHR_parallel_shader_compile FALSO (a GPU nunca diz
 //      "pronto": o compileAsync nunca resolve, como com o contexto perdido): a carga com a tela cedo chega ao pronto e a troca
-//      pela pausa no jogo termina (o prazo de 3 s do compilarAntesDoDesenho); no meio dela, Esc, Esc e P não fecham a pausa nem
-//      andam o tick (a revisão do bloco 4). As trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no
+//      pela pausa no jogo termina (o prazo de 3 s do compilarAntesDoDesenho); no meio dela, Esc e Esc (uma troca) e P (a outra)
+//      não fecham a pausa nem andam o tick (a revisão do bloco 4). As trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no
 //      console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); com o teto (C13), a 120 Hz por 8,6 s (60 desenhos) não cai; __golaco.quedaDeTeste(): o mesmo canvas, 'baixa',
@@ -1491,31 +1491,38 @@ try {
         await pg.waitForFunction(() => !window.__golaco.prepartida.aberta, null, { timeout: 30000 }).catch(() => {});
         await pg.waitForFunction(() => { const pp = document.getElementById('prepartida'); return !pp || pp.hidden || !pp.checkVisibility({ opacityProperty: true, visibilityProperty: true }); }, null, { timeout: 30000 }).catch(() => {});
         await quadrosReais(pg, 3);
-        // a pausa no jogo (o relógio de verdade: fechada, a partida andaria) → Opções → Baixa; no meio da troca, Esc, Esc e P
+        // a pausa no jogo (o relógio de verdade: fechada, a partida andaria) → Opções → Baixa com Esc e Esc no meio da troca (das
+        // Opções à lista e a pausa fechada), depois → Média com o P (fecharia) — uma tecla que fecha por troca: a que reabre
+        // esconderia o tick andando
         await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-opcoes')?.click(); });
         await quadrosReais(pg, 3);
-        const e0 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick, menu: window.__golaco.estado().menuAberto, q: window.__golaco.qualidade }));
-        const ok = await pg.evaluate(() => { const b = document.querySelector('[data-grupo="qualidade"] [data-valor="baixa"]'); if (!b || !b.getClientRects().length) return false; b.click(); return true; });
-        const tT = Date.now();
-        const amostras = [];
-        let teclas = 0, terminou = false;
-        while (ok && Date.now() - tT < 40000) {
-          const e = await pg.evaluate(() => { const g = window.__golaco, st = g.estado(); return { t: st.tick, menu: st.menuAberto, trocando: g.qualidadeEstado?.trocando, q: g.qualidade, inert: !!document.getElementById('menu')?.inert, aj: window.__P.ajustando() }; });
-          amostras.push(e);
-          if (e.q === 'baixa' && !e.trocando) { terminou = true; break; }
-          if (e.trocando && teclas < 3) { await pg.keyboard.press(['Escape', 'Escape', 'KeyP'][teclas]); teclas++; }
-          await espera(120);
-        }
-        const sT = (Date.now() - tT) / 1000;
-        await quadrosReais(pg, 3);
-        const e1 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick, menu: window.__golaco.estado().menuAberto, aj: window.__P.ajustando(), inert: !!document.getElementById('menu')?.inert }));
-        const durante = amostras.filter(a => a.trocando);
-        meta('R', 'R5 a troca pela pausa com o compileAsync que nunca resolve termina (o prazo de 3 s; depois o 1º desenho compila)', ok ? `${terminou ? 'terminou' : 'NÃO terminou'} em ${f(sT, 1)} s · "Ajustando…" no fim: ${e1.aj ? 'SIM' : 'não'}` : 'o botão da Baixa não achado',
-          'termina em ≤ 40 s e a tela sai', ok && terminou && !e1.aj);
-        meta('R', 'R5 no meio da troca, Esc, Esc e P não fecham a pausa nem andam o jogo (a pausa inert; a revisão do bloco 4)',
-          `${teclas} teclas em ${durante.length} amostras da troca · a pausa aberta em ${durante.filter(a => a.menu).length}, inert em ${durante.filter(a => a.inert).length} · tick ${e0.tick} → ${[...new Set(durante.map(a => a.t))].join('/')} → ${e1.tick} · no fim: pausa ${e1.menu ? 'aberta' : 'FECHADA'}, inert ${e1.inert}`,
-          '3 teclas; a pausa aberta e inert em toda amostra; o tick parado; no fim a pausa aberta sem inert',
-          teclas === 3 && durante.length >= 3 && durante.every(a => a.menu && a.inert && a.t === e0.tick) && e1.menu && !e1.inert && e1.tick === e0.tick);
+        const trocaComTeclas = async (q, teclas) => {
+          const e0 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick }));
+          const ok = await pg.evaluate(q => { const b = document.querySelector(`[data-grupo="qualidade"] [data-valor="${q}"]`); if (!b || !b.getClientRects().length) return false; b.click(); return true; }, q);
+          const tT = Date.now();
+          const amostras = [];
+          let k = 0, terminou = false;
+          while (ok && Date.now() - tT < 40000) {
+            const e = await pg.evaluate(() => { const g = window.__golaco, st = g.estado(); return { t: st.tick, menu: st.menuAberto, trocando: g.qualidadeEstado?.trocando, q: g.qualidade, inert: !!document.getElementById('menu')?.inert }; });
+            amostras.push(e);
+            if (e.q === q && !e.trocando) { terminou = true; break; }
+            if (e.trocando && k < teclas.length) { await pg.keyboard.press(teclas[k]); k++; }
+            await espera(120);
+          }
+          const sT = (Date.now() - tT) / 1000;
+          await quadrosReais(pg, 3);
+          const e1 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick, menu: window.__golaco.estado().menuAberto, aj: window.__P.ajustando(), inert: !!document.getElementById('menu')?.inert }));
+          return { q, ok, terminou, sT, teclas: k, de: teclas.length, durante: amostras.filter(a => a.trocando), e0, e1 };
+        };
+        const tb = await trocaComTeclas('baixa', ['Escape', 'Escape']);
+        const tm = await trocaComTeclas('media', ['KeyP']);
+        meta('R', 'R5 a troca pela pausa com o compileAsync que nunca resolve termina (o prazo de 3 s; depois o 1º desenho compila)',
+          [tb, tm].map(x => (x.ok ? `${x.q}: ${x.terminou ? 'terminou' : 'NÃO terminou'} em ${f(x.sT, 1)} s${x.e1.aj ? ' ("Ajustando…" no fim)' : ''}` : `${x.q}: o botão não achado`)).join(' · '),
+          'as duas em ≤ 40 s e a tela sai', [tb, tm].every(x => x.ok && x.terminou && !x.e1.aj));
+        const dt = x => `${x.q} com ${x.de === 2 ? 'Esc, Esc' : 'P'}: ${x.teclas} tecla(s) em ${x.durante.length} amostras · a pausa aberta em ${x.durante.filter(a => a.menu).length}, inert em ${x.durante.filter(a => a.inert).length} · tick ${x.e0.tick} → ${x.e1.tick} · no fim: pausa ${x.e1.menu ? 'aberta' : 'FECHADA'}, inert ${x.e1.inert}`;
+        meta('R', 'R5 no meio da troca, Esc, Esc (uma troca) e P (a outra) não fecham a pausa nem andam o jogo (a pausa inert; a revisão do bloco 4)',
+          [tb, tm].map(dt).join(' · '), 'as teclas no meio; a pausa aberta e inert em toda amostra; o tick parado; no fim a pausa aberta sem inert',
+          [tb, tm].every(x => x.teclas === x.de && x.durante.length >= 3 && x.durante.every(a => a.menu && a.inert) && x.e1.menu && !x.e1.inert && x.e1.tick === x.e0.tick));
       }
     } catch (e) { meta('R', 'R5 o KHR falso: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
     marcar('R5 (o compileAsync que nunca resolve)');
