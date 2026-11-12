@@ -108,6 +108,20 @@ o que ficou recusado e a lista do C15 estão na seção 6 ("Medido no bloco 4").
 - **Recusadas (com o motivo, seção 6):** a queda gravada que expira (decisão de produto: vai ao "Depende do dono" 30); a queda
   automática "só no pixel ratio" (já na main, e tirar as sombras é o que a queda quer; o texto do plano foi corrigido).
 
+**O C14a (12/11; `77073fd3`, `0ab75a89`, `a39c0673`): as metas que estavam FORA antes de valerem.** O medido, as provas e o que
+fica fora estão na seção 6 ("Medido no C14a").
+- **A F da queda fecha:** a Baixa desenha os finos na mistura analítica também com as 4 amostras que a queda deixa (corda do
+  fundo ×2,26 → ×1,35, mastro ×1,97 → ×0,46; a pose do limiar na queda ×2,67 → ×0,91, que passa a contar). A Média e a Alta
+  seguem com a A2C, iguais bit a bit. A guarda nova é a Q (os finos na mistura depois do `quedaDeTeste`); o R4 não muda (roda na
+  Média, onde a A2C continua de propósito).
+- **A haste ganhou uma pose** (o gol de lado, 25 pontos na Média e 13 na Baixa): main ×4,24 / ×4,03 (fora), agora ×0,93 / ×0,21
+  (queda ×0,26).
+- **A A2 da TV na bola fecha pela régua:** a referência SSAA 3×3 errava as bordas alinhadas com a tela (a de cima das placas:
+  ×6,46); contra o SSAA 8×8, 0,69 → 0,48 (a main com MSAA forçado 0,70 → 0,53, pelo mesmo defeito do teste).
+- **A K1 continua fora** (a régua ganhou a verdade SSAA no mesmo pixel: a torcida na bola 0,33% → 0,09% na semente 4, mas 0,22%
+  na semente 7; as bandeiras 1,74% / 0,43%; 1 px de torcida e de placas com o gol no foco). Vai informativa ao C14 e ao
+  "Depende do dono" 30.
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -616,9 +630,10 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | F | Média: cintilação ≤ 1,5× o SSAA e soma 0,7–1,3 em toda peça (foco / lá) | reprova | pior peça ×12,6 (mastro) / ×5,84 (mastro); a soma, pior 0,96 / 0,91, passa; forçado ×3,22 (mastro) / ×1,33 (corda do fundo), soma 0,93 / 0,88 | vale (com o MSAA o mastro do foco fica em ×3,22: o C9 tem de fechar) |
 | F | Baixa: buracos (foco / lá) | reprova | 57,1% / 62,5% (a corda do pé nos dois) | vale |
 | F | Baixa: cintilação e soma (foco / lá) | reprova | ×6,49 (corda do pé) / ×6,02 (mastro); soma 0,90 / 1,03 | vale |
-| F | Baixa com MSAA (a queda): buracos (foco / lá) | reprova | 0% / 0% (forçado) | **informativa** |
+| F | Baixa com MSAA (a queda): buracos (foco / lá) | reprova | 0% / 0% (forçado) | **informativa** (desde o C14a a Baixa fica na mistura também com as amostras da queda: a cintilação e a soma contam como na Baixa, também a pose do limiar) |
 | F | Baixa com MSAA: cintilação e soma, gol no foco | reprova | ×1,69 (corda do pé), soma 0,88 | vale (era informativa com a câmera só em x: ×1,28) |
 | F | Baixa com MSAA: cintilação e soma, gol de lá | reprova | ×2,56 (corda do fundo), soma 0,74 | vale |
+| F | A haste de perto (o gol de lado, C14a): cintilação e soma (Média / Baixa / a queda) | reprova | ×4,24 / ×4,03 / ×1,17 (forçado); soma 1,00 / 0,99 / 1,01 | vale |
 | G1 | L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3° | reprova (C 0,128, h 134,8°) | L 0,582 (passa), C 0,127, h 134,7° | vale (C e h; o L é guarda) |
 | G2 | ΔL 0,056 ± 0,008; ao longe ≥ 0,6× | reprova (0,104) | 0,099 perto, 0,102 longe (×1,03 passa) | vale |
 | G3 | 18 faixas; bordas ≤ max(0,10 m; 1 px); o meio separa | reprova (20; 0,75 m) | 20; a pior borda a 2,59 m (x = 18,3); o meio separa (0,541 \| 0,639) | vale (as faixas e as bordas; o meio é guarda) |
@@ -659,9 +674,9 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | S2 | Celular 844×390 dpr 2, Média = 4 | reprova | 0 (1266×585) | vale |
 | S2 | Tablet 1366×1024 com toque, dpr 2, Média = 0 | — (o teto) | 0 (2049×1536, 3,15 MP) | guarda |
 | S2 | Tablet com `?aa=1` = 4 / PC 1280×720 Média = 4 | reprova | 0 / 0 | vale |
-| A2 | Razão ≤ 0,6 (TV na bola / gol no foco) | reprova | 1,00 / 1,00 (forçado ×0,70 / ×0,47 contra o SSAA do mesmo LOD; com o 3× era ×0,70 / ×0,55); máscara 1,41% / 0,97% | vale (na pose da bola, só o MSAA fica fora: 0,70; o C10 tem de baixar, senão a meta se revê no C14) |
+| A2 | Razão ≤ 0,6 (TV na bola / gol no foco) | reprova | 1,00 / 1,00 (forçado ×0,70 / ×0,47 contra o SSAA do mesmo LOD; com o 3× era ×0,70 / ×0,55); máscara 1,41% / 0,97%. Desde o C14a contra o SSAA 8×8 (o 3×3 errava as bordas alinhadas com a tela): forçado ×0,53 / ×0,42 | vale |
 | A2 | Carga oposta forçada; carga igual = o mesmo quadro | estrutura | `SAMPLES` 4; 0 px nos 3 quadros, o hash igual | estrutura |
-| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83% | vale |
+| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83%. Desde o C14a a franja também a mais de 0,03 da verdade (o SSAA 8×8): 1,74% (14); as bandeiras 13,32% / 4,17% | vale |
 | K | K1 franjas ≤ 0,2% com o centro FORA: torcida, gol no foco | — | 0% (0 de 611). O centro dentro: 1,24% (11 de 890), todas 0,73%: era 100% piso, a meta antiga reprovava mesmo com o `centroid` certo | guarda |
 | K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | vale |
 | K | K1 franjas: placas (bola / gol no foco) | — | 0 px de borda fora / 0% de 366; o centro dentro 0% de 1262 / 219 | guarda |
@@ -689,6 +704,7 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | R | R1 as trocas terminam (≤ 90 s, a que não termina reprova) | estrutura | Baixa 1,4 s · Média 0,6 s | estrutura |
 | Q | A queda natural com webdriver: cai, NÃO grava, a recarga abre na Média | guarda | media → baixa no quadro virtual 100 (5,0 s do rAF falso a 20 Hz); preferências `{}`; media | guarda |
 | Q | `quedaDeTeste()`; a recarga depois da queda gravada abre na Baixa | reprova | não existe; media | vale |
+| Q | `quedaDeTeste()`: os finos do gol na mistura com SAMPLES 4 (C14a) | reprova | não existe (o HEAD antes do C14a: `a2c`) | vale |
 | Q | Escolher a Média apaga a queda | — | nada a apagar | guarda a partir do C12 (na main não há como medir) |
 | Z | Mesmo tamanho 0; tamanho novo 2 | reprova | 8 (4 + 4); 8 | vale |
 | T | Celular a 90 Hz = 90; PC a 144 Hz sem teto | — | 90,0; 144,0 | guarda |
@@ -883,7 +899,7 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `ritmo-desenho.js` | ~1,5 KB | 7,9 KB no C12 (a decisão da queda e os comentários); 13,9 KB no C13 (+6,0: o teto e os comentários) |
   | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
   | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13: main.js +1,2 KB; a revisão do bloco 4: +6 KB — a espera dos programas, a pausa travada, o `ritmo-desenho.js` e os comentários) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+114 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12 → 454,0 KB no C13 → 447,8 KB na revisão do bloco 4; nosso 2859 → 2902 → 2936 → 2941 → 2960 → 2967 → 2973 KB) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+114 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12 → 454,0 KB no C13 → 447,8 KB na revisão do bloco 4 → 446,6 KB no C14a; nosso 2859 → 2902 → 2936 → 2941 → 2960 → 2967 → 2973 → 2974 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
@@ -1315,6 +1331,99 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
     camadas) não vê isso; a guarda do toque é o `elementFromPoint` sem forçar nada, nos alvos de verdade.
   - **Teste com várias teclas que se desfazem esconde o defeito:** o P depois do Esc reabria a pausa; uma tecla que fecha por troca.
 
+**Medido no C14a** (as metas que estavam fora, 12/11; Chromium 141 do CI, SwiftShader, um teste de navegador por vez, carga 0,1–3,0;
+antes = o HEAD `38d6b243`; a main `e41aa791` pela worktree de leitura; logs em `scratchpad/f45/fech/c14a/`). Sem mudar o hash
+(`fecho-hash` 0; só `js/render/campo.js` fora dos testes).
+
+*1. A F da queda.* Quatro modos medidos para os finos com as amostras (F, A e a A do PC; `cel-var*.txt`):
+
+| Modo dos finos com MSAA | F queda, gol de lá (pior peça) | F Média (foco / lá) | A Média (dia lá; noite foco / lá) | A PC Alta, × a main (dia foco / lá; noite foco / lá) |
+|---|---|---|---|---|
+| A2C de 1 px (o HEAD) | ×2,26 corda do fundo, ×1,97 mastro (fora) | ×1,42 / ×1,31 | 0,50; 0,46 / 0,46 | ×1,017 / ×1,019; ×1,076 / ×1,017 |
+| M: mistura em todo contexto | ×1,35 | ×1,16 / ×1,23 | 0,46; 0,49 / 0,43 | ×0,978 / **×1,148**; ×1,013 / **×1,164** (fora) |
+| M2: M depois da rede | ×1,35 | ×1,16 / ×1,23 | —; 0,48 / 0,43 | ×0,975 / ×1,053; ×0,997 / ×1,062 |
+| M3: M sem gravar a profundidade | ×1,35 | ×1,16 / ×1,23 | —; 0,51 / 0,44 | ×0,964 / ×1,046; ×1,036 / ×1,078 |
+| B: a geometria de 1 px com mistura no lugar da A2C | **×1,56 mastro** (fora) | ×1,26 / ×0,99 | 0,50; 0,44 / 0,46 | ×0,983 / ×1,061; ×1,023 / ×1,050 |
+| **A escolhida: a mistura só na Baixa** (com ou sem as amostras) | **×1,35** (mastro ×0,46) | ×1,42 / ×1,31 (igual) | igual | igual bit a bit |
+
+- Por que não a mistura em todo lugar: a franja de 1 px grava a profundidade e APAGA a rede atrás da peça (no PC, ×1,15 da
+  main no gol de lá); desenhar depois da rede (M2) põe o poste por cima da rede na câmera de trás do gol (branco sobre branco,
+  mas errado), e sem gravar a profundidade (M3) a rede de trás passa por cima do poste. A "B" tira o degrau da A2C e deixa o
+  sombreado do prisma crescido variar entre os dois pixels (o mastro ×1,56). Na Baixa a mistura já era o modo (renderOrder 1,
+  a profundidade gravada): a queda só passa a desenhar como ela.
+- A queda: foco ×1,16 → ×1,12 (soma 1,19 → 1,08); gol de lá ×2,26 → ×1,35 (a corda do fundo; soma 0,70 → 1,06; a pior soma
+  agora a da corda do pé, 1,25), mastro ×1,97 → ×0,46; a pose do limiar ×2,67 → ×0,91 (era informativa: passa a contar).
+- Média, Baixa sem MSAA e PC: os mesmos números até o último dígito (A, F, N).
+- Página: K, A2, P (31 chamadas, 92 044 triângulos), P3, R (o R4 passa: na Média a A2C continua) e Q iguais; a Q nova (os finos
+  na mistura depois do `quedaDeTeste`, SAMPLES 4) passa e reprova sem o repasse da qualidade (`modo a2c`).
+
+*2. A haste* (a pose nova da F: o gol de +x de lado, a 30 m e 7 m de altura, lente de 22°, um ponto por px e só a haste):
+
+| | Média (25 pontos; 2,4–3,1 px) | Baixa (13 pontos; 1,6–2,1 px) | a queda |
+|---|---|---|---|
+| main | ×4,24 (fora); soma 1,00 | ×4,03 (fora); soma 0,99 | ×1,17 (o MSAA forçado) |
+| agora | ×0,93; soma 1,00 | ×0,21; soma 0,97 | ×0,26 |
+
+A pose custa +4 s na F da Média (61 → 65 s). Os pontos da TV continuam 4 (a haste da TV tem ~13 px, quase toda a ≤ 5 px do
+poste e do travessão).
+
+*3. A A2 e a K1.* A A2 por peça (linha informativa nova; as máscaras da K dilatadas 2 px, `serrilhadoPorPeca`) mostrou que o resto
+da TV na bola vinha de UMA linha da tela: a de cima das placas do lado de lá, horizontal na TV, com a borda a 13–17% do pixel —
+1 amostra de 4 no MSAA (o certo é ~0,15) e 0 de 3 no SSAA 3×3 da referência. A régua estava errada, não o desenho:
+
+| A2, razão | 3×3 (antes) | n-torres de 9 | 8×8 (64 amostras) |
+|---|---|---|---|
+| HEAD, TV na bola (placas / bandeiras) | 0,69 (×6,46 / ×1,54) | 0,55 (×1,12 / ×0,74) | **0,48** (×0,92 / ×0,65) |
+| HEAD, gol no foco | 0,47 | 0,43 | **0,41** |
+| main, MSAA forçado (bola / foco) | ×0,70 / ×0,47 | ×0,59 / ×0,43 | ×0,53 / ×0,42 |
+| semente 7 (bola / foco): HEAD; main forçada | — | — | 0,41 / 0,41; ×0,44 / ×0,42 |
+
+- A A2 passa a usar o 8×8 (o mesmo LOD, 64 desenhos com a câmera a ±1/16 … ±7/16 px; +36 s na carga oposta, o teste da página
+  232 → 258 s). A main sem AA continua 1,00 (a régua reprova o que não tem AA). `--ssaa grade3 | torres9` refaz as outras.
+- A K1 ganhou a verdade: franja = fora das misturas dos vizinhos do quadro sem AA (a régua de antes) **e** a mais de 0,03 da cor do
+  SSAA 8×8 no mesmo pixel (o quadro sem AA amostra só o centro e perde a linha mais fina que o pixel que o MSAA pega certo). Provas
+  (`--lista-franjas`): na TV na bola, 5 das 7 franjas da torcida do HEAD ficavam a 0,005 (mediana) da verdade, todas em y = 528 (a
+  borda da faixa verde da mureta); as da main, a 0,057 (14 de 19) e, nas bandeiras, 172 de 173 a 0,064. A régua nova reprova a
+  main com folga (torcida 2,36% → 1,74%, bandeiras 13,40% → 13,32%, 4,17% → 4,17%). Sem a binomial. A referência da página foi
+  regravada da main SÓ nas chaves A2 e K (a K2 e a K3 iguais; `historicoReferencia` no JSON).
+
+| K1, centro FORA (≤ 0,2% e ≤ a main) | antes (só a mistura) | agora (com a verdade) | semente 7 | situação |
+|---|---|---|---|---|
+| torcida, TV na bola | 0,33% (7 de 2134) | **0,09%** (2) | **0,22%** (5 de 2310; antes 0,56%; a main 0%) | fora (não fecha nas duas sementes) |
+| bandeiras, TV na bola | 2,43% (35 de 1439) | 1,74% (25) | 0,57% (3 de 528; a main 0,29%) | fora |
+| torcida, gol no foco | 0,06% (1 de 1737) | 0,06% (1) | igual | fora por 1 px (a main 0) |
+| bandeiras, gol no foco | 0,65% (3 de 463) | 0,43% (2) | igual | fora |
+| placas, gol no foco | 0,27% (1 de 366) | 0,27% (1) | igual | fora por 1 px (a main 0) |
+| placas, TV na bola | 0 px de borda | 0 | 0% de 340 | passa |
+
+- As 25 das bandeiras na bola: na linha de cima das faixas da mureta (y = 505, em trechos de 5 px), a 0,041 (mediana) da verdade —
+  defeito de verdade, do desenho (a amostra do MSAA no alto da faixa pega uma cor que o SSAA não tem). As da torcida na semente 7
+  devem vir da A2C da torcida do C10 (a main forçada, sem A2C, dá 0; não medido com a A2C desligada nessa semente): a troca que
+  o C10 fez pela K3 (a cintilação ×1,20 → ×0,88).
+- **Fica fora (C14 informativa; "Depende do dono" 30):** a K1 da torcida (0,09–0,22% entre sementes, meta 0,2%; proposta: medir em
+  2 sementes e aceitar a troca da A2C, ou tirar a A2C da torcida e perder a K3), das bandeiras (1,74% / 0,43%; proposta: a borda
+  de cima das faixas da mureta com a mesma cobertura analítica dos finos, ou sangria de 1 texel no atlas — não coube na caixa de
+  tempo) e as duas de 1 px (torcida e placas com o gol no foco: a main tem 0; proposta: a linha conta com ≥ 3 px ou fica guarda
+  "≤ main + 2 px" — só com prova em mais poses).
+
+*Download* (`teste-carga`): o nosso 2973 → 2974 KB, a folga 447,8 → 446,6 KB (os comentários do `campo.js`).
+
+- **Para o C14:**
+  - a F inteira vale (Média, Baixa, a queda com a pose do limiar e a da haste);
+  - a A2 vale com o 8×8 (0,48 / 0,41; a semente 7 0,41 / 0,41);
+  - da K1, vale a das placas na bola; a da torcida na bola passa na semente do teste (4: 0,09%) e reprova na 7 (0,22%): fica
+    informativa até a decisão do dono, com as outras 4 (ditas);
+  - o R4 não muda (a A2C dos finos continua na Média); a Q ganhou uma linha que vale.
+- **Lições:**
+  - **A referência tem de ser mais fina que o que ela julga:** o SSAA 3×3 tem 3 níveis numa borda alinhada com a tela, menos que
+    os 4 do MSAA; uma linha só da tela (as placas de lá, horizontais na TV) fazia a A2 inteira reprovar. Antes de mexer no desenho,
+    decompor por peça e conferir a régua contra uma referência densa (o 8×8).
+  - **A K1 pela mistura dos vizinhos do quadro sem AA acusa o MSAA certo** quando o centro do pixel perde uma linha mais fina que
+    ele: conferir a franja contra a verdade no mesmo pixel.
+  - **Um modo de desenho que fecha uma meta pode abrir outra longe dela:** a mistura dos finos apaga a rede atrás da franja (a A
+    do PC); medir a A e a F juntas em toda variante.
+  - **Linha decidida por poucos px muda com a semente:** a torcida na bola 0,09% numa, 0,22% na outra.
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1401,6 +1510,7 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
 | C12 | "Item 45: troca de qualidade com a tela de carregar, queda gravada e contexto restaurado" | `main.js`, `hud.js`, `render/cena.js`, `js/render/ritmo-desenho.js` (a decisão da queda), `tools/teste-ritmo-desenho.mjs` | sim |
 | C13 | "Item 45: teto de 60 desenhos no celular de 100 Hz para cima" | `js/render/ritmo-desenho.js`, `tools/teste-ritmo-desenho.mjs`, `main.js` | sim |
 | B4 | a revisão do bloco 4: `e6f6df30` (a queda gravada pela mediana), `2abed4b3` (a troca com prazo, a pausa travada, o online), `c37f5587` (o painel sem toque, as linhas, o rAF, o cronômetro), `b6be7508` (a espera própria dos programas), os testes `a44f0145`, `a4b9df80`, `5ff4db63` e o plano | `js/render/ritmo-desenho.js`, `main.js`, `hud.js`, `css/estilo.css`, `js/render/medidor-quadros.js`, `js/render/bola-parada.js` (comentário), `tools/teste-ritmo-desenho.mjs`, `tools/teste-medidor-quadros.mjs`, `tools/teste-graficos-pagina.mjs` | sim |
+| C14a | as metas que estavam fora: `77073fd3` (os finos na mistura na Baixa com as amostras da queda; a guarda na Q), `0ab75a89` (a pose da haste na F), `a39c0673` (a A2 contra o SSAA 8×8, a A2 por peça, a K1 com a verdade, a referência da página regravada só na A2 e na K) e o plano | `js/render/campo.js`, `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/dados/graficos-ref.json` | não |
 | C14 | "Item 45 (teste): metas valendo e os dois testes na lista do CI" | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs` | não |
 | C15 | "Item 45 (testes): recalibração medida dos testes afetados" (só os que mudaram de propósito; tabela no PR) | testes da seção 6, `tempos-ci.mjs` | não |
 | C16 | "Item 45 (docs): contrato, FILA, CATEGORIAS, CLAUDE.md e o Depende do dono 30" | `golaco/CONTRATOS.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md` | não |
