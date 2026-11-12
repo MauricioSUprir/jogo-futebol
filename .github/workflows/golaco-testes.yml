@@ -55,6 +55,24 @@ jobs:
         run: |
           npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
           "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: A base do PR para a CPU pareada (teste-graficos-pagina), parte ${{ matrix.parte }} de 3
+        # A CPU do quadro do PR contra a da BASE, na mesma máquina e na mesma rodada (o teste-graficos-pagina, seção P; item 45,
+        # PLANO-GRAFICOS.md §3 passo 9). Só num PR — no deploy (workflow_call) e no workflow_dispatch não há base: a P pareada só
+        # informa — e só na parte que roda o teste. O checkout é raso: busca só o commit da base, monta uma worktree dele e passa a
+        # pasta ao teste pela GOLACO_BASE.
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          parte=$(node golaco/tools/rodar-navegador.mjs --parte ${{ matrix.parte }} --de 3 --lista)
+          case "$parte" in
+            *teste-graficos-pagina.mjs*)
+              for k in 1 2 3; do git fetch --no-tags --depth=1 origin "$BASE_SHA" && break; test "$k" = 3 && exit 1; sleep $((k * 5)); done
+              git worktree add --detach "$RUNNER_TEMP/base" "$BASE_SHA"
+              echo "GOLACO_BASE=$RUNNER_TEMP/base/golaco" >> "$GITHUB_ENV"
+              echo "A base do PR para a CPU pareada: $BASE_SHA em $RUNNER_TEMP/base" ;;
+            *) echo "O teste-graficos-pagina não está nesta parte: sem a base." ;;
+          esac
       - name: Testes no navegador, parte ${{ matrix.parte }} de 3
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules

@@ -164,7 +164,8 @@ export const TEMPOS_NAVEGADOR = {
   // o online em 6 telas da revisão, 390 s aqui dividindo a máquina com outro teste de navegador (carga ~9) e 33–71 s por parte
   // sozinho; acertar pelo log do CI)
   // (item 93: 242,8 s no log do CI do #613)
-  'teste-pausa-tela.mjs': 250, // 249,5 s no log do 1º CI do #618 (item 114)
+  // (item 45, revisão do bloco 4: + o P14, a sessão nova com a queda gravada — base 306 → 328 s aqui)
+  'teste-pausa-tela.mjs': 261, // 260,8 s no log do CI do 38d6b243 (item 45, run 43187534503); era 249,5 no 1º CI do #618 (item 114)
   // (item 30: + o P8, dois pares de abas a 568×320 com a cena de substituição — 96 s aqui com a máquina livre; 442 s o teste
   // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
   // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro
@@ -182,5 +183,10 @@ export const TEMPOS_NAVEGADOR = {
   // 188 s — reprova cedo —, o teste inteiro ~280 s aqui com a máquina dividida; acertar pelo log do CI)
   // (item 92: 286,5 s no log do CI do #613)
   'teste-bola-parada-tela.mjs': 287, // (+ o escanteio de lá e as bandeiras em pixels; + os sinalizadores de noite em 3 escanteios: revisão R2 do item 65)
+  // (item 45, C14: os dois testes dos gráficos do celular entram no CI; medidos aqui inteiros, um teste de navegador por vez, com o
+  // Chromium 141 do CI: o celular 126 s com a carga 0,1–2,3; a página 339 s com a carga 1,7–3,5, com a CPU pareada contra a base —
+  // a P 49 s (sem a base, ~20 s), o R5 26 s, a P2 do toque 11 s; acertar pelo log do CI)
+  'teste-graficos-celular.mjs': 126,
+  'teste-graficos-pagina.mjs': 339,
   'teste-desempenho-celular.mjs': 35,
 };

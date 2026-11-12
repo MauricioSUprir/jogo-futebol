@@ -43,6 +43,11 @@ const LISTA = [
   ['pausa do FC 24 com o campinho (lista à esquerda, cartão do time à direita, sem rolar em 4 telas do celular e no PC, o jogo à vista, teclado/controle/toque, leitor de tela, ?tm e online)', 'teste-pausa-tela.mjs', { deploy: true }],
   ['corpo humano no jogo (?corpo=humano: todos desenhados, chamadas, teto de triângulos, nada baixado sem ele, a nuca até a gola, as máscaras e as bordas dos patrocínios)', 'teste-corpo-tela.mjs'],
   ['mira pelo que se vê na tela (o meio e os paus vistos → a mira no alvo, PC e celular, pênalti, câmera aproximada e as do Livre)', 'teste-mira-tela.mjs'],
+  // Item 45 (FILA: "Urgente: melhora extrema dos gráficos no celular — qualidade baixa/média"; PLANO-GRAFICOS.md §4): a régua dos
+  // gráficos com as metas valendo desde o C14. Fora do deploy: o CI do PR já os roda em toda mudança do golaco/ e no deploy a CPU
+  // pareada não tem a base (só informaria), com ~8 min de testes a mais na publicação
+  ['gráficos do celular pelos módulos (item 45: a sonda do MSAA, o serrilhado do campo, os finos do gol na Média, na Baixa e na queda, o gramado UEFA e as linhas, de dia e de noite, e o PC Alta)', 'teste-graficos-celular.mjs'],
+  ['gráficos do celular pela página (item 45: o MSAA no celular, no tablet e no PC, o serrilhado do quadro inteiro, as franjas, as chamadas, a CPU pareada com a base do PR, o painel ?perf, ?gfx=antigo e ?tom, a troca de qualidade, o contexto perdido, a queda, o redimensionar e o teto)', 'teste-graficos-pagina.mjs'],
   // informativo até passar 5 vezes seguidas (a CPU da simulação no celular simulado ainda passa do teto do plano 4.1)
   ['desempenho no celular simulado (CPU 4×, informativo)', 'teste-desempenho-celular.mjs', { informativo: true }],
 ];
