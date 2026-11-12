@@ -1,5 +1,6 @@
 // O ritmo dos desenhos (item 45, `golaco/PLANO-GRAFICOS.md` passos 7 e 8). PURO — sem three.js, sem DOM, sem relógio próprio: o
-// main.js passa cada intervalo entre DESENHOS e o instante dele —, fora do fecho do hash (só desenho; a simulação não muda).
+// main.js passa cada intervalo entre DESENHOS e o instante dele (a queda) e o instante de cada quadro do navegador (o teto) —, fora
+// do fecho do hash (só desenho; a simulação não muda).
 //
 // A QUEDA AUTOMÁTICA da qualidade (passo 7, o C12; D15, N9; a escolha D5 do dono: a queda GRAVADA):
 //  - na SESSÃO, a regra de antes do item 45 (era o main.js adaptarQualidade): depois de QUEDA.esperaMs do começo, janelas de
@@ -18,7 +19,22 @@
 //    Uma janela inativa no meio (a pausa, a aba escondida, outra escolha que não a Automática, a troca de qualidade) desfaz o
 //    "seguidas".
 //
-// O TETO de quadros (passo 8, o C13) entra neste módulo depois.
+// O TETO de quadros (passo 8, o C13; D16; a escolha D6 do dono: teto de 60 desenhos, nunca abaixo de 60), só no celular (o main.js
+// passa `ligado` = ehCelular; o PC não muda: Alta em monitor de 144 Hz é jogo de PC):
+//  - o refresh da tela pela mediana dos últimos TETO.amostras intervalos do rAF — TODOS os quadros do navegador, desenhados ou
+//    não —, refeita a cada TETO.refazMs (o período é a média dos intervalos a ± TETO.faixa da mediana: o tremor do carimbo some
+//    na média e os quadros perdidos ficam fora; com tremor de ±0,5 ms, só a mediana de 30 dava 231–248 Hz numa tela de 240 — o
+//    n em 3 em 4% das contas — e a média na faixa dá 237–243);
+//  - n = max(1, floor(Hz/60 + 0,1)): 60 e 90 Hz → 1 (sem teto; 45 regulares ou 60 aos trancos seriam piores), 120 → 2 (60),
+//    144 → 2 (72), 165 → 2 (82,5: o round dava 3, 55, abaixo de 60), 240 → 4 (60);
+//  - o quadro do ritmo: desenha quando já passaram (n − 0,5) períodos desde o último desenho — com o rAF regular, 1 a cada n
+//    quadros; um quadro que a página perdeu (o desenho que passou do vsync) não faz esperar um quadro a mais; a tela que caiu de
+//    120 para 60 Hz desenha todo quadro na hora;
+//  - a descida rápida: com n > 1, a mediana dos últimos TETO.rapidas intervalos acima de TETO.rapidaRazao × o período baixa o n na
+//    hora (a tela que foi de 120 para 90 Hz desenharia 45 até a próxima conta, 2 s depois); subir o n só na conta de 2 s;
+//  - n = 1 é o laço de antes, bit a bit: todo quadro desenha.
+// O main.js chama `quadro(t)` em TODO quadro do navegador (o aoQuadro, antes do quadro() dele) e só roda o quadro() quando ele dá
+// true; nunca dentro do quadro(): o relógio manual dos testes (api.relogio.avancar) e o laço (teste-laco) não passam por aqui.
 
 export const QUEDA = Object.freeze({
   esperaMs: 3000,       // do começo (o pronto, o fim do pré-jogo, a saída da tela antes do jogo) até a 1ª janela que conta
@@ -133,5 +149,86 @@ export function criarQueda(opc = {}) {
     estado() {
       return { n, soma, inicio, ultimaTroca, ultimaJanela, pendente: pendente ? { ...pendente } : null, podeGravar };
     },
+  };
+}
+
+export const TETO = Object.freeze({
+  alvoHz: 60,          // o teto: 60 desenhos por segundo (D6)
+  folga: 0.1,          // n = max(1, floor(Hz/alvoHz + folga)): 165 Hz → 2 (82,5), não 3 (55)
+  amostras: 30,        // intervalos do rAF na conta do refresh (todos os quadros, desenhados ou não)
+  refazMs: 2000,       // a conta do refresh refeita a cada 2 s
+  faixa: 0.25,         // o período = a média dos intervalos a ± 25% da mediana (os perdidos, 2 períodos, ficam fora)
+  quebraMs: 1000,      // intervalo maior não entra (a aba escondida, o celular em pé, a carga)
+  meioQuadro: 0.5,     // desenha quando já passaram (n − 0,5) períodos desde o último desenho
+  rapidas: 8,          // a descida rápida: a mediana dos últimos 8 intervalos...
+  rapidaRazao: 1.2,    // ... acima de 1,2 × o período baixa o n na hora (nunca abaixo de 60 numa troca de refresh)
+});
+
+/** O n do teto para um refresh (Hz): desenha 1 a cada n quadros da tela; 1 sem refresh medido. */
+export function nDoTeto(hz, cfg = TETO) {
+  return Number.isFinite(hz) && hz > 0 ? Math.max(1, Math.floor(hz / cfg.alvoHz + cfg.folga)) : 1;
+}
+
+/**
+ * O período da tela (ms) a partir de intervalos do rAF (os n primeiros de `ivs`, numa ordem qualquer; `tmp` do mesmo tamanho ou
+ * maior, para não alocar): a mediana e, dela, a média dos que ficam a ± faixa. NaN sem intervalos.
+ */
+export function periodoDaTela(ivs, n, tmp, cfg = TETO) {
+  if (n <= 0) return NaN;
+  for (let i = 0; i < n; i++) tmp[i] = ivs[i];
+  // (ordenação por inserção: n ≤ 30 e sem alocar por quadro — o sort pediria uma lista ou um subarray novo)
+  for (let i = 1; i < n; i++) { const v = tmp[i]; let k = i - 1; while (k >= 0 && tmp[k] > v) { tmp[k + 1] = tmp[k]; k--; } tmp[k + 1] = v; }
+  const med = percentilOrdenado(tmp, n, 0.5);
+  let soma = 0, c = 0;
+  for (let i = 0; i < n; i++) if (Math.abs(tmp[i] - med) <= cfg.faixa * med) { soma += tmp[i]; c++; }
+  return c > 0 ? soma / c : med;
+}
+
+/**
+ * O teto. opc = {ligado (só no celular), cfg (TETO)}. `quadro(t, forcar)` a cada quadro do navegador, com o instante do rAF (ms):
+ * true = este quadro desenha (o main.js roda o quadro()); `forcar` true desenha sempre (a tela antes do jogo, que tem o próprio
+ * ritmo de 30). Desligado, mede o refresh (o painel) e devolve sempre true. `estado()` = {ligado, hz, n, periodo}: o n é o que a
+ * conta dá (aplicado só ligado).
+ */
+export function criarTeto(opc = {}) {
+  const cfg = opc.cfg ?? TETO;
+  const ligado = opc.ligado === true;
+  const N = cfg.amostras, R = cfg.rapidas;
+  const ivs = new Float64Array(N), tmp = new Float64Array(N), ult = new Float64Array(R), tmpR = new Float64Array(R);
+  let ni = 0, ii = 0, ant = null, ultimaConta = -Infinity;
+  let hz = NaN, periodo = NaN, n = 1, ultimoDesenho = -Infinity;
+  /** Os últimos R intervalos guardados (do mais novo para trás) em `ult`; devolve quantos. */
+  const ultimos = () => {
+    const k = Math.min(R, ni);
+    for (let j = 0; j < k; j++) ult[j] = ivs[(ii - 1 - j + N) % N];
+    return k;
+  };
+  return {
+    quadro(t, forcar = false) {
+      if (ant !== null) {
+        const d = t - ant;
+        if (d > 0 && d <= cfg.quebraMs) { ivs[ii] = d; ii = (ii + 1) % N; ni = Math.min(N, ni + 1); }
+      }
+      ant = t;
+      if (ni >= N && t - ultimaConta >= cfg.refazMs) {
+        // a conta do refresh (a cada 2 s, com a fila cheia)
+        ultimaConta = t;
+        periodo = periodoDaTela(ivs, ni, tmp, cfg);
+        hz = 1000 / periodo;
+        n = nDoTeto(hz, cfg);
+      } else if (n > 1 && ni >= R) {
+        // a descida rápida: a tela ficou mais lenta (120 → 90 ou 60 Hz) — o n baixa já, subir só na conta de 2 s
+        const k = ultimos();
+        const p = periodoDaTela(ult, k, tmpR, cfg);
+        if (p > cfg.rapidaRazao * periodo) {
+          const nr = nDoTeto(1000 / p, cfg);
+          if (nr < n) { n = nr; periodo = p; hz = 1000 / p; }
+        }
+      }
+      if (!ligado || n <= 1 || forcar) { ultimoDesenho = t; return true; }
+      if (t - ultimoDesenho >= (n - cfg.meioQuadro) * periodo) { ultimoDesenho = t; return true; }
+      return false;
+    },
+    estado() { return { ligado, hz, n, periodo }; },
   };
 }
