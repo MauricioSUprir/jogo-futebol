@@ -218,6 +218,9 @@ export function criarCena(opc) {
   // o contexto restaurado (o ouvinte em todo canvas da cena; depois do ouvinte do three, posto no construtor do renderizador:
   // o dele refaz o estado da GPU antes; o setClearColor mora no WebGLBackground, que o initGLContext refaz — a hora repõe)
   function aoRestaurar() { lerContexto(); aplicarHora(hora); rodarGanchos('contexto'); }
+  // recriar para a qualidade `nome`: o antisserrilhado PEDIDO para ela é outro que o do CONTEXTO, e este contexto não foi pedido
+  // assim (o navegador recusou o MSAA: recriar daria o mesmo)
+  const precisaRecriar = nome => { const aa = aaPedido(nome); return aa !== ctx.aa && aa !== ctx.pedido; };
   opc.canvas.addEventListener('webglcontextrestored', aoRestaurar);
 
   return {
@@ -241,7 +244,7 @@ export function criarCena(opc) {
       if (!nova) return false;
       const aa = aaPedido(nome);
       let recriou = false;
-      if (recriarSePreciso && aa !== ctx.aa && aa !== ctx.pedido) {
+      if (recriarSePreciso && precisaRecriar(nome)) {
         const velho = renderer;
         const cv = velho.domElement;
         const novo = document.createElement('canvas');
@@ -270,6 +273,8 @@ export function criarCena(opc) {
       if (recriou) rodarGanchos('recriacao');
       return recriou;
     },
+    /** A troca para a qualidade `nome` recriaria o renderizador (a pausa mostra a tela "Ajustando…" antes; o main.js C12). */
+    precisaRecriar,
     /**
      * Os ganchos do contexto novo: fn({motivo: 'recriacao' | 'contexto', renderer, aa, amostras}) roda depois da recriação do
      * renderizador (definirQualidade) e no contexto restaurado (webglcontextrestored). Devolve a função que o tira.

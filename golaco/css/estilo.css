@@ -830,6 +830,9 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   #menu .opcoes-col { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   #menu .opcao { min-height: 34px; }
   #menu .opcao-info { display: none; }
+  /* (item 45, C12) a queda automática da qualidade é dita também aqui: "Agora: Baixa (o aparelho não segurou a Média; …)" — numa
+     linha só (com duas, as Opções rolavam 12 px em 568×320) */
+  #menu .opcao-info.queda { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   #menu #menu-modos:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 12px; align-content: start; }
   #menu #menu-modos > .sub-topo { grid-column: 1 / -1; margin-bottom: 2px; }
   #menu #menu-modos > .linha-cenas.tres { grid-column: 1 / -1; }
@@ -838,6 +841,8 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
   /* (o par do Livre em 568×320: "Bola no meu pé" entrava 2,4 px no padding da direita — com o "…" de segurança do .item-txt ele
      cortaria; 3 px a menos de cada lado dão a folga sem tirar a barra do foco de perto do texto) */
   #menu .linha-par > .btn { padding: 0 3px 0 8px; }
+  /* (item 45, C12) a linha da queda inteira em 444 px (a faixa de 568×320 com o entalhe): 474 px a 12 px, 434 a 11 */
+  #menu .opcao-info.queda { font-size: 11px; }
   /* (a linha "Duração | Dificuldade" do item 33: em 568×320 o "Dificuldade" — 78 px de texto — não cabia nos 73,5 px de dentro
      do botão com o padding de 16 px; com 11 px sobram 83,5. Os 4 botões das duas linhas de pares — Partida | Pênaltis, Ataque |
      Condução e ela — com o MESMO padding: o texto alinhado com o do vizinho (revisão A5); as setas ‹ › ficam no padding) */

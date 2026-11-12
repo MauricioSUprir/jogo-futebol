@@ -46,11 +46,13 @@
 //      não lia o ?gfx=antigo); ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
 //      definirHora e de uma recriação (Média → Alta → Baixa recria nas duas versões).
 //   R  recriação e contexto. (1) celular com a tela antes do jogo, pelo ≡ → Opções: Média → Baixa → Média com SAMPLES 4 → 0 →
-//      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois.
+//      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois;
+//      com o módulo da mira baixado ANTES das trocas, o programa dela já está no renderizador novo sem ela ser desenhada (C12).
 //      (2) PC Alta → Baixa com ?prejogo=1 (o vão das placas aberto): localClippingEnabled do vão e o aria-label continuam. (3)
 //      __golaco.definirQualidade troca e desenha no mesmo evaluate (o quadro não preto; SAMPLES pela tabela). (4)
 //      WEBGL_lose_context: os ganchos ESTRAGADOS antes (a A2C ao contrário, o uAlturaBuffer em −1), perde e restaura — o quadro
-//      desenha, os ganchos rodam de novo (A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira desenha. As
+//      desenha, os ganchos rodam de novo (A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira com
+//      programa no contexto restaurado antes de ser desenhada (a linha escondida durante a perda; C12) e depois desenha. As
 //      trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); __golaco.quedaDeTeste(): o mesmo canvas, 'baixa', SAMPLES continua 4, a queda nas preferências e na linha da
@@ -488,6 +490,17 @@ async function instalarPagina() {
       const { gols, mat, uni, gl } = matGols();
       const tor = g.estadio?.torcidaObj?.mesh?.children?.[0]?.material ?? null;
       return { temGols: !!gols, a2c: mat ? !!mat.alphaToCoverage : null, a2cTorcida: tor ? !!tor.alphaToCoverage : null, uAltura: uni ? (typeof uni === 'object' && 'value' in uni ? uni.value : uni) : null, H: gl?.drawingBufferHeight ?? null, samples: gl ? gl.getParameter(gl.SAMPLES) : null };
+    },
+    /**
+     * A mira (a malha 'linha-mira' de render/bola-parada.js) já tem programa no renderizador de AGORA? Lido depois de um desenho com
+     * ela escondida (visivel false: o desenho não a compilou) — o C12 aquece o programa dela a cada contexto novo (a recriação e o
+     * contexto restaurado). null sem o módulo.
+     */
+    miraCompilada() {
+      const k = desenharCap();
+      const m = k?.s.getObjectByName('linha-mira');
+      if (!m) return null;
+      return { programa: !!k.r.properties.get(m.material).currentProgram, visivel: !!m.visible };
     },
     /**
      * Estraga os ganchos ANTES de perder o contexto (item 3 da revisão: a A2C e o uAlturaBuffer são estado JS do material, o
@@ -1163,6 +1176,9 @@ try {
         if (so.has('R')) {
           await pg.evaluate(() => document.getElementById('btn-opcoes')?.click());
           await quadrosReais(pg, 2);
+          // (a mira já baixada antes das trocas: o programa dela tem de estar no renderizador novo sem esperar a 1ª bola parada — C12)
+          await pg.evaluate(() => window.__golaco.bolaParada.carregar()).catch(() => {});
+          await quadrosReais(pg, 2);
           await pg.evaluate(() => {
             const o = window.__ajuste = { visto: 0 };
             o.id = setInterval(() => { if (window.__P.ajustando()) o.visto++; }, 8);
@@ -1178,7 +1194,8 @@ try {
             const qr = await quadrosReais(pg, 3);
             const depois = await P(pg, 'canvasInfo');
             const v1 = await pg.evaluate(() => window.__ajuste.visto);
-            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1) };
+            const mira = await P(pg, 'miraCompilada');
+            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1), mira };
           };
           const b = await troca('baixa'), m = await troca('media');
           await pg.evaluate(() => clearInterval(window.__ajuste.id));
@@ -1191,6 +1208,9 @@ try {
             'os de antes', b.depois?.aria === b.antes?.aria && m.depois?.aria === b.antes?.aria && b.depois?.inert === b.antes?.inert && m.depois?.inert === b.antes?.inert && b.antes?.aria === 'Campo 3D');
           meta('R', 'R1 a tela "Ajustando…" aparece e some em cada troca', `vista ${b.ajustando}× e ${m.ajustando}× (amostras de 8 ms) · à vista no fim: ${b.aindaAjustando || m.aindaAjustando ? 'SIM' : 'não'}`,
             'vista nas duas e fora no fim', b.ajustando > 0 && m.ajustando > 0 && !b.aindaAjustando && !m.aindaAjustando);
+          const mz = x => (x.mira ? `${x.mira.programa ? 'com programa' : 'SEM programa'}${x.mira.visivel ? ' (à vista: não vale)' : ''}` : 'sem o módulo');
+          meta('R', 'R1 a mira (o módulo baixado antes) com programa no renderizador NOVO depois de cada troca, sem ser desenhada (C12)', `Baixa: ${mz(b)} · Média: ${mz(m)}`,
+            'com programa nas duas', [b, m].every(x => x.mira?.programa && !x.mira.visivel));
         }
         // de volta à tela (Esc: Opções → lista → fecha)
         await pg.keyboard.press('Escape'); await quadrosReais(pg, 2);
@@ -1253,12 +1273,16 @@ try {
           cv.addEventListener('webglcontextlost', () => { ev.perdeu++; });
           cv.addEventListener('webglcontextrestored', () => { ev.voltou++; });
           ev.sabotado = window.__P.sabotarGanchos();
+          // (a linha da mira escondida: o desenho depois da volta não a compila — só o aquecimento do contexto novo, C12)
+          window.__golaco.bolaParada.linha(false);
           ext.loseContext();
           await new Promise(ok => setTimeout(ok, 150));
           const perdido = gl.isContextLost();
           ext.restoreContext();
           for (let i = 0; i < 100 && (gl.isContextLost() || !ev.voltou); i++) await new Promise(ok => setTimeout(ok, 30));
-          return { ext: true, perdido, restaurado: !gl.isContextLost(), ...ev };
+          const mira = window.__P.miraCompilada();
+          window.__golaco.bolaParada.linha(true);
+          return { ext: true, perdido, restaurado: !gl.isContextLost(), mira, ...ev };
         });
         await quadrosReais(pg, 2);
         const np = await P(pg, 'naoPreto');
@@ -1270,6 +1294,8 @@ try {
           `estragados: A2C ${r4.sabotado?.a2c} (torcida ${r4.sabotado?.a2cTorcida}), uAlturaBuffer ${r4.sabotado?.uAltura ?? 'não existe'} · depois: gols ${gan.temGols} · A2C ${gan.a2c} (torcida ${gan.a2cTorcida}; SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'os ganchos refazem os três',
           gan.temGols && gan.a2c === (gan.samples >= 2) && gan.a2cTorcida === (gan.samples >= 2) && gan.uAltura === gan.H);
         meta('R', 'R4 a mira desenha depois do contexto restaurado', `${m2.n} px com × sem a linha`, '≥ 150 px', m2.n >= 150);
+        meta('R', 'R4 a mira com programa no contexto restaurado antes de ser desenhada (o aquecimento do C12; a linha escondida)', r4.mira ? `${r4.mira.programa ? 'com programa' : 'SEM programa'}${r4.mira.visivel ? ' (à vista: não vale)' : ''}` : 'sem o módulo',
+          'com programa', !!r4.mira?.programa && !r4.mira.visivel);
         marcar('R1 (mira) e R4 (contexto)');
       }
     } catch (e) {

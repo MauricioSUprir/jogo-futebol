@@ -146,6 +146,7 @@ import { criarEntrada } from './entrada.js';
 import { cameraDaMatriz } from './controle.js';
 import { criarHud } from './hud.js';
 import { criarCena, aaPedido } from './render/cena.js';
+import { criarQueda, quedaValida, nivelInicial, QUEDA } from './render/ritmo-desenho.js';
 import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
@@ -345,12 +346,16 @@ function aplicarTelaLimpa() {
 const minimapaLigado = () => (prefs.minimapa ? prefs.minimapa === 'ligado' : !document.documentElement.classList.contains('com-toque'));
 aplicarTelaLimpa();
 
-// qualidade: ?q força; senão a escolha salva; senão automática (celular = média, PC = alta)
+// qualidade: ?q força; senão a escolha salva; senão automática (celular = média, PC = alta — ou a da queda GRAVADA, item 45: a
+// carga em "Automática" depois de o aparelho não segurar o nível dele abre no de baixo; render/ritmo-desenho.js)
 const ehCelular = (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) || Math.min(screen.width, screen.height) < 600;
 const qAutoInicial = ehCelular ? 'media' : 'alta';
 const qParam = params.get('q');
 let escolhaQ = QUALIDADE[qParam] ? qParam : (QUALIDADE[prefs.qualidade] || prefs.qualidade === 'auto' ? prefs.qualidade : 'auto');
-let qAtual = escolhaQ === 'auto' ? qAutoInicial : escolhaQ;
+// as quedas automáticas (item 45, C12): a gravada nas preferências ({de, para}; a escolha à mão a apaga) e a desta sessão
+let quedaGravada = quedaValida(prefs.qualidadeQueda);
+let quedaSessao = null;
+let qAtual = escolhaQ === 'auto' ? nivelInicial(qAutoInicial, quedaGravada) : escolhaQ;
 let hora = ['dia', 'noite'].includes(params.get('hora')) ? params.get('hora') : (prefs.hora === 'noite' ? 'noite' : 'dia');
 const camInicial = ['tv', 'aproximada'].includes(params.get('camera')) ? params.get('camera') : (prefs.camera === 'aproximada' ? 'aproximada' : 'tv');
 
@@ -442,8 +447,17 @@ function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(m
 const bp = { tela: null, carga: null, yaw: null, plano: null, linha: true };
 const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => {
   bp.tela = md.criarTelaBolaParada(cena3d.cena);
-  try { cena3d.renderer.compileAsync(bp.tela.malha, cam.camera, cena3d.cena).catch(() => {}); } catch (_) { /* sem compileAsync: compila no 1º desenho */ }
+  aquecerMira();
 }));
+/**
+ * O programa da mira no renderizador de AGORA (sem esperar): na carga do módulo e a cada contexto novo — a troca de qualidade que
+ * recria o renderizador (desde o C5 do item 45, também a Média ↔ Baixa) e o contexto restaurado (os ganchos cena3d.aoRecriar).
+ * Sem isso o programa ficava no contexto velho e compilava na 1ª bola parada depois da troca (um engasgo).
+ */
+function aquecerMira() {
+  if (!bp.tela || !cena3d || !cam) return;
+  try { cena3d.renderer.compileAsync(bp.tela.malha, cam.camera, cena3d.cena).catch(() => {}); } catch (_) { /* sem compileAsync: compila no 1º desenho */ }
+}
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
   return criarMundoTreino({ ...ini, marcador: params.get('marcador') === '1', ...opc });
@@ -1261,7 +1275,9 @@ function posDesenhada(id) {
   return null;
 }
 const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
-const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
+// a queda automática da qualidade (item 45, C12; a decisão em render/ritmo-desenho.js): GRAVA só fora dos testes automáticos — o
+// resto (as duas janelas lentas seguidas, o ritmo preso num divisor da tela) o módulo decide
+const RITMO = criarQueda({ podeGravar: !(navigator.webdriver || PRINTS || DEMO_ON) });
 const _qd = new THREE.Quaternion();
 const _bp = { x: 0, y: 0, z: 0 };
 const _bpDes = { x: 0, y: 0, z: 0 }, _emp = { x: 0, y: 0, z: 0 };
@@ -3143,7 +3159,7 @@ function faseDoQuadro() {
   if (cenaGol) return 'comemoracao';
   return 'jogo';
 }
-/** O que só a página sabe (o medidor junta: medidor-quadros.js relatorio). O teto (C13) e a queda (C12) chegam aqui depois. */
+/** O que só a página sabe (o medidor junta: medidor-quadros.js relatorio). O teto (C13) chega aqui depois. */
 function infoPainel() {
   const r = cena3d.renderer, gl = r.getContext(), ri = r.info.render;
   if (gl !== medGl) { medGl = gl; medGpuNome = MOD_MED.lerGpu(gl, navigator.userAgent); }
@@ -3156,7 +3172,8 @@ function infoPainel() {
     gpu: { nome: medGpuNome, timer: !!CRONO?.disponivel, invalidos: CRONO?.invalidos ?? 0 },
     ua: navigator.userAgent,
     teto: null, // o C13 (render/ritmo-desenho.js): o n do teto de quadros
-    queda: { sessao: null, gravada: null }, // o C12: a queda automática na sessão e a gravada nas preferências
+    // a queda automática na sessão e a gravada nas preferências (C12; cada uma {de, para} ou null)
+    queda: { sessao: quedaSessao, gravada: quedaGravada },
   };
 }
 const medGpu = (ms, fase) => MED.gpu(ms, fase);
@@ -3180,32 +3197,129 @@ function medirQuadroPainel(agoraMs, desenhar) {
   }
 }
 
-/** Qualidade automática: cai um nível se ficar abaixo de ~48 qps (alta) ou ~30 qps (média). */
+// ------------------------------------------------------------------ a qualidade (item 45, PLANO-GRAFICOS.md passo 7)
+/**
+ * A queda automática (a decisão em render/ritmo-desenho.js): na sessão, a regra de antes — Alta abaixo de ~48 qps ou Média abaixo
+ * de ~30, medidos pelos DESENHOS (no jogo cada quadro desenha; com o teto do C13 o quadro() só roda nos desenhados) —, caindo SEM
+ * recriar o contexto (o MSAA fica até a próxima carga: recompilar no meio da partida trava a tela sem o KHR_parallel_shader_compile);
+ * a GRAVAÇÃO nas preferências só com duas janelas lentas seguidas, fora do ritmo preso num divisor da tela e fora dos testes
+ * automáticos. Mede só na "Automática", com a página à vista, fora da pausa, do relógio manual e da troca em andamento.
+ */
 function adaptarQualidade(dt, agora) {
-  if (escolhaQ !== 'auto' || PRINTS || relogioManual || pausado() || document.hidden) { adapt.n = 0; adapt.soma = 0; return; }
-  if (agora - adapt.inicio < 3000) return;
-  adapt.n++; adapt.soma += dt;
-  if (adapt.soma < 2.5) return;
-  const qps = adapt.n / adapt.soma;
-  adapt.n = 0; adapt.soma = 0;
-  if (agora - adapt.ultimaTroca < 4000) return;
-  const minimo = qAtual === 'alta' ? 48 : qAtual === 'media' ? 30 : 0;
-  if (qps < minimo) {
-    qAtual = qAtual === 'alta' ? 'media' : 'baixa';
-    aplicarQualidade(false);
-    adapt.ultimaTroca = agora;
-  }
+  const ativo = escolhaQ === 'auto' && !PRINTS && !relogioManual && !pausado() && !document.hidden && !trocandoQ;
+  const r = RITMO.quadro(dt, agora, qAtual, ativo);
+  if (!r) return;
+  if (r.cai) cairQualidade(r.cai);
+  if (r.grava) gravarQueda(r.grava);
+}
+/** A queda na sessão: o nível de baixo sem recriar o contexto (a pausa diz "o aparelho não segurou…"). */
+function cairQualidade(q) {
+  quedaSessao = { de: q.de, para: q.para };
+  qAtual = q.para;
+  aplicarQualidade(false);
+}
+/** Grava a queda nas preferências (golaco.prefs.v1, qualidadeQueda): a próxima carga em "Automática" abre no nível dela. */
+function gravarQueda(q) {
+  quedaGravada = { de: q.de, para: q.para };
+  prefs.qualidadeQueda = { de: q.de, para: q.para, v: 1 };
+  salvarPrefs(prefs);
+  marcarQualidade();
+}
+/**
+ * A queda que vale agora, para a linha da pausa: só na "Automática"; a desta sessão, ou a gravada que abriu esta carga num nível
+ * abaixo do do aparelho (a gravada {alta, media} num celular, que já abre na Média, não conta).
+ */
+function quedaAgora() {
+  if (escolhaQ !== 'auto') return null;
+  const gravada = quedaGravada && nivelInicial(qAutoInicial, quedaGravada) !== qAutoInicial ? quedaGravada : null;
+  const q = quedaSessao ?? gravada;
+  return q && q.para === qAtual ? q : null;
+}
+/** A escolha, o nível de agora, a queda e o antisserrilhado do contexto na linha "Qualidade" da pausa. */
+function marcarQualidade() {
+  hud.definirEstado({ qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, qualidadeQueda: quedaAgora(), qualidadeAA: !!cena3d?.aaContexto });
 }
 
+/** Aplica o qAtual (recriar: o renderizador pode ser recriado — o antisserrilhado pedido mudou). Devolve se recriou. */
 function aplicarQualidade(recriar) {
-  cena3d.definirQualidade(qAtual, recriar);
+  const recriou = cena3d.definirQualidade(qAtual, recriar);
   torcida.definirQualidade(qAtual);
   campo.definirQualidade(qAtual);
   const sombras = QUALIDADE[qAtual].sombras;
   bola3d.definirSombras(sombras);
   jog3d.definirSombras(sombras);
   redimensionar();
-  hud.definirEstado({ qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual });
+  marcarQualidade();
+  return recriou;
+}
+/** A escolha à mão (a pausa ou a API): a qualidade ou a "Automática", salva; apaga a queda gravada e a da sessão. */
+function escolherQualidade(v) {
+  escolhaQ = v;
+  qAtual = v === 'auto' ? qAutoInicial : v;
+  quedaSessao = null;
+  quedaGravada = null;
+  delete prefs.qualidadeQueda;
+  prefs.qualidade = v; salvarPrefs(prefs);
+}
+/**
+ * A troca IMEDIATA (o __golaco.definirQualidade, a API dos testes): recria se preciso, os ganchos do contexto novo (cena.aoRecriar:
+ * os finos, a torcida, a mira), compila a cena INTEIRA já (o compile() do r170 percorre todos os objetos da cena, também os
+ * escondidos; só as luzes pelo visível) e volta — quem chama troca e desenha no mesmo evaluate (o teste-estadio).
+ */
+function trocarQualidadeJa(v) {
+  if (v !== 'auto' && !QUALIDADE[v]) return;
+  escolherQualidade(v);
+  RITMO.marcarTroca(performance.now());
+  // (antes do 3D: ele nasce com a escolha)
+  if (!cena3d) { marcarQualidade(); return; }
+  if (aplicarQualidade(true)) compilarJa();
+}
+function compilarJa() {
+  try { cena3d.renderer.compile(cena3d.cena, cam.camera); } catch (_) { /* compila no 1º desenho */ }
+}
+// a troca pela pausa em andamento (o quadro não desenha enquanto ela vale: aoQuadro) e a qualidade pedida no meio dela
+let trocandoQ = false, qPedida = null;
+/**
+ * A troca pela PAUSA (≡ → Opções): a tela de carregar por cima ("Ajustando os gráficos…", à vista SEM a transição de 0,35 s — o
+ * fio trava logo depois), dois quadros (a tela pintada), recria, os ganchos, compila antes do desenho (com o
+ * KHR_parallel_shader_compile sem segurar o fio), um quadro desenhado (a pausa mostra o jogo congelado atrás) e a tela sai. Sem
+ * nada a mudar (o mesmo nível e o mesmo contexto), só a escolha. Pedida no meio de outra, entra quando ela acaba.
+ */
+async function trocarQualidadePelaPausa(v) {
+  if (v !== 'auto' && !QUALIDADE[v]) return;
+  if (!cena3d) { trocarQualidadeJa(v); return; }
+  qPedida = v;
+  if (trocandoQ) return;
+  trocandoQ = true;
+  try {
+    while (qPedida !== null) {
+      const v1 = qPedida;
+      qPedida = null;
+      escolherQualidade(v1);
+      if (cena3d.qualidade === qAtual && !cena3d.precisaRecriar(qAtual)) { marcarQualidade(); continue; }
+      hud.ocupado('Ajustando os gráficos…');
+      await proximoQuadro();
+      await proximoQuadro();
+      aplicarQualidade(true);
+      await compilarAntesDoDesenho();
+      desenharAgora();
+    }
+  } catch (e) {
+    console.error('qualidade: a troca pela pausa falhou', e);
+  } finally {
+    trocandoQ = false;
+    qPedida = null;
+    hud.livre();
+    RITMO.marcarTroca(performance.now());
+  }
+}
+/** Um quadro desenhado já, sem avançar nada: o pré-jogo, o replay ou o jogo (como o laço; em pé no celular, nada). */
+function desenharAgora() {
+  if (!pronto3d || retratoBloqueado()) return;
+  const t = relogioManual ? tempoManual : performance.now();
+  if (prejogo && prejogo.ativo) prejogo.quadro(0, t, true);
+  else if (diretor && diretor.ativo && !cenaSub && !cenaCartao) desenharReplay(0, t);
+  else desenharQuadro(0, t);
 }
 
 function redimensionar() {
@@ -3515,7 +3629,7 @@ function fimDoPrejogo() {
   entrada?.bloquear?.(false);
   corteCamera = true;
   laco.ultimo = null; ultimoQuadro = null;
-  adapt.inicio = performance.now(); adapt.n = 0; adapt.soma = 0;
+  RITMO.reiniciar(performance.now());
   hud.ajustarTopo();
   eventosIniciais();
 }
@@ -3804,7 +3918,7 @@ function jogarPrepartida() {
   else {
     entrada?.bloquear?.(false);
     laco.ultimo = null; ultimoQuadro = null; corteCamera = true;
-    adapt.inicio = performance.now(); adapt.n = 0; adapt.soma = 0;
+    RITMO.reiniciar(performance.now());
     pedirTelaCheia();
     eventosIniciais();
   }
@@ -4143,7 +4257,7 @@ function rotuloModoLivre() {
   } catch (_) { /* sem armazenamento */ }
 }
 
-function comando(c, v) {
+function comando(c, v, opc) {
   // (os testes: cada comando que chega, e os "secos" só registrados — a pausa do item 58 confere os 3 meios)
   comandosVistos.push([c, v ?? null]);
   if (comandosVistos.length > 400) comandosVistos.splice(0, 200);
@@ -4257,14 +4371,8 @@ function comando(c, v) {
       }
       break;
     case 'fechar-ajuda': hud.fecharAjuda(); break;
-    case 'qualidade':
-      if (v !== 'auto' && !QUALIDADE[v]) break;
-      escolhaQ = v;
-      qAtual = v === 'auto' ? qAutoInicial : v;
-      adapt.ultimaTroca = performance.now();
-      aplicarQualidade(true);
-      prefs.qualidade = v; salvarPrefs(prefs);
-      break;
+    // a qualidade (item 45, C12): pela pausa com a tela "Ajustando os gráficos…"; a API dos testes (opc.imediato) troca já
+    case 'qualidade': if (opc?.imediato) trocarQualidadeJa(v); else trocarQualidadePelaPausa(v); break;
     case 'hora':
       if (v !== 'dia' && v !== 'noite') break;
       hora = v; cena3d.definirHora(v); campo.definirHora(v); torcida.definirHora(v);
@@ -4492,6 +4600,12 @@ async function iniciar() {
   // o alfa para cobertura da torcida (item 45, C10) pelo MSAA do contexto, como os finos do gol: agora e nos ganchos do cena.js
   torcida.definirAA(cena3d.amostras);
   cena3d.aoRecriar(() => torcida.definirAA(cena3d.amostras));
+  // o contexto novo (item 45, C12): a mira no renderizador de agora (os ganchos rodam na recriação e no contexto restaurado) e, no
+  // contexto restaurado, um quadro já — com a pausa aberta ou o relógio manual ninguém mais desenharia
+  cena3d.aoRecriar(ev => {
+    aquecerMira();
+    if (ev.motivo === 'contexto') { try { desenharAgora(); } catch (e) { console.error('contexto restaurado: o quadro falhou', e); } }
+  });
   // o torcedor 3D de perto (item 69, PR 2) senta nas cadeiras 3D quando elas chegam (render/torcedor3d.js)
   campo.ligarTorcida(torcida);
   hud.progresso('Montando os jogadores…');
@@ -4540,7 +4654,8 @@ async function iniciar() {
     else { laco.ultimo = null; ultimoQuadro = null; }
   });
   hud.definirEstado({
-    qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
+    qualidadeEscolha: escolhaQ, qualidadeAtual: qAtual, qualidadeQueda: quedaAgora(), qualidadeAA: cena3d.aaContexto,
+    hora, camera: cam.modo, marcador: marcadorLigado(mundo), modoTreino: mundo.modo,
     toqueTamanho: entrada.ajustes.tamanho, toqueOpacidade: entrada.ajustes.opacidade, fim: false, replayAuto,
     minimapa: minimapaLigado(), nomes: nomesLigados(),
   });
@@ -4604,7 +4719,7 @@ async function iniciar() {
   // primeiro quadro (compila os shaders) e some a tela de carregamento
   if (prejogo.ativo) prejogo.quadro(0, performance.now(), true);
   else desenharQuadro(PASSO, performance.now());
-  adapt.inicio = performance.now();
+  RITMO.reiniciar(performance.now());
   hud.pronto();
   api.pronto = true;
   // as fotos da edição pro do TM (item 31): pedidas ociosas DEPOIS do pronto
@@ -4621,7 +4736,8 @@ async function iniciar() {
     requestAnimationFrame(aoQuadro);
     // (o painel ?perf: o refresh da tela por todo quadro do navegador, desenhado ou não)
     if (MED) MED.raf(t);
-    if (!relogioManual) quadro(t);
+    // (a troca de qualidade pela pausa em andamento: a lógica roda, o 3D não desenha — a tela "Ajustando…" está por cima)
+    if (!relogioManual) quadro(t, !trocandoQ);
   };
   requestAnimationFrame(aoQuadro);
 }
@@ -5037,7 +5153,22 @@ const api = {
     return { tipo, x, z };
   },
   acao(a) { tratarAcao(a); },
-  definirQualidade(nome) { comando('qualidade', nome); },
+  /** A qualidade já (a troca IMEDIATA: recria, os ganchos e compila no mesmo evaluate; a pausa usa a tela "Ajustando…"). */
+  definirQualidade(nome) { comando('qualidade', nome, { imediato: true }); },
+  /**
+   * A queda automática de propósito (testes; item 45, C12): o nível de baixo SEM recriar o contexto (o MSAA fica), gravada nas
+   * preferências como a natural (também com webdriver) e dita na pausa. Devolve {de, para, gravada} ou null (já na Baixa).
+   */
+  quedaDeTeste() {
+    const de = qAtual, para = QUEDA.abaixo[de];
+    if (!para || !cena3d) return null;
+    cairQualidade({ de, para });
+    RITMO.marcarTroca(performance.now());
+    gravarQueda({ de, para });
+    return { de, para, gravada: { ...prefs.qualidadeQueda } };
+  },
+  /** A qualidade (testes): escolha, nível, a queda da sessão e a gravada, se a troca pela pausa está em andamento. */
+  get qualidadeEstado() { return { escolha: escolhaQ, atual: qAtual, sessao: quedaSessao, gravada: quedaGravada, agora: quedaAgora(), trocando: trocandoQ }; },
   /**
    * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques (a referência SSAA e a máscara
    * geométrica dos testes de gráficos): os dos finos (render/campo.js graficos.fisico), a A2C da torcida e a compensação de alfa

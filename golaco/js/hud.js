@@ -135,6 +135,7 @@ export function criarHud(opc) {
   // o "GOL!" dura o mesmo que a animação do CSS (2,4 s: some antes da saída de bola, PARTIDA.golPausa 2,5 s)
   const golDuracaoMs = 2400;
   let prints = false;
+  let msgAntes = ''; // o texto da tela de carregar antes do ocupado() (item 45, C12)
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
   // o relógio escrito no DOM (item 32): a chave do quadro anterior (segundo, estado, anúncio; o {minuto} de antes) e o texto,
@@ -1258,9 +1259,15 @@ export function criarHud(opc) {
       }
       if (e.qualidadeEscolha) marcarGrupo('qualidade', e.qualidadeEscolha);
       if (e.qualidadeAtual && el.infoQ) {
+        // (item 45, C12) a queda automática: o nível que o aparelho não segurou e como tentar de novo — a linha à vista também no
+        // celular (.queda; sem ela, a linha some lá para a pausa caber sem rolar); a Média com o antisserrilhado do contexto (N5)
+        const q = e.qualidadeQueda;
         el.infoQ.textContent = e.qualidadeEscolha === 'auto'
-          ? `Agora: ${NOMES_Q[e.qualidadeAtual]} (ajusta sozinha pelo desempenho)`
-          : `${NOMES_Q[e.qualidadeAtual]} — ${e.qualidadeAtual === 'alta' ? 'antisserrilhado e sombras finas' : e.qualidadeAtual === 'baixa' ? 'sem sombras, para celular mais simples' : 'sombras simples, boa para celular'}`;
+          ? (q ? `Agora: ${NOMES_Q[e.qualidadeAtual]} (o aparelho não segurou a ${NOMES_Q[q.de]}; escolha ${NOMES_Q[q.de]} para tentar de novo)`
+            : `Agora: ${NOMES_Q[e.qualidadeAtual]} (ajusta sozinha pelo desempenho)`)
+          : `${NOMES_Q[e.qualidadeAtual]} — ${e.qualidadeAtual === 'alta' ? 'antisserrilhado e sombras finas' : e.qualidadeAtual === 'baixa' ? 'sem sombras, para celular mais simples'
+            : e.qualidadeAA ? 'antisserrilhado e sombras simples, boa para celular' : 'sombras simples, boa para celular'}`;
+        el.infoQ.classList.toggle('queda', e.qualidadeEscolha === 'auto' && !!q);
       }
       if (e.hora) marcarGrupo('hora', e.hora);
       if (e.camera) marcarGrupo('camera', e.camera);
@@ -1309,11 +1316,38 @@ export function criarHud(opc) {
     pronto() {
       mostrarDica(); // os 8 s da dica contam a partir de quando o jogo aparece
       el.carregando.classList.add('sumir');
-      setTimeout(() => { el.carregando.hidden = true; }, 400);
+      setTimeout(() => { if (!el.carregando.classList.contains('ocupado')) el.carregando.hidden = true; }, 400);
+    },
+    /**
+     * A tela de carregar POR CIMA de tudo (z 60: a pausa, a tela antes do jogo) com o texto, já opaca — SEM a transição de 0,35 s
+     * do .carregando: quem chama trava o fio logo depois (a troca de qualidade recria o renderizador e compila; item 45, C12) e um
+     * véu ainda transparente ficaria na tela parada. livre() a tira na hora.
+     */
+    ocupado(texto) {
+      const c = el.carregando;
+      if (!c.classList.contains('ocupado')) msgAntes = el.msg ? el.msg.textContent : '';
+      c.style.transition = 'none';
+      c.classList.remove('sumir', 'erro');
+      c.classList.add('ocupado');
+      c.hidden = false;
+      c.setAttribute('aria-busy', 'true');
+      if (el.msg) el.msg.textContent = texto;
+      void c.offsetWidth; // (o estilo já: a opacidade 1 sem passar pela transição)
+    },
+    livre() {
+      const c = el.carregando;
+      if (!c.classList.contains('ocupado')) return;
+      c.classList.remove('ocupado');
+      c.classList.add('sumir');
+      c.hidden = true;
+      c.removeAttribute('aria-busy');
+      if (el.msg) el.msg.textContent = msgAntes;
+      void c.offsetWidth;
+      c.style.transition = '';
     },
     /** A tela antes do jogo à vista antes do 3D (item 106, a tela cedo): a tela de carregar sai sem o "pronto" (a dica dele fica). */
     carregandoAtras() {
-      if (el.carregando.classList.contains('sumir') || el.carregando.classList.contains('erro')) return;
+      if (el.carregando.classList.contains('sumir') || el.carregando.classList.contains('erro') || el.carregando.classList.contains('ocupado')) return;
       el.carregando.classList.add('sumir');
       setTimeout(() => { if (el.carregando.classList.contains('sumir')) el.carregando.hidden = true; }, 400);
     },
