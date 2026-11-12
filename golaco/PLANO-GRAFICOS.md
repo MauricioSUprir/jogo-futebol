@@ -882,14 +882,14 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
   | `ritmo-desenho.js` | ~1,5 KB | 7,9 KB no C12 (a decisão da queda e os comentários); 13,9 KB no C13 (+6,0: o teto e os comentários) |
   | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
-  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13: main.js +1,2 KB) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+108 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12 → 454,0 KB no C13; nosso 2859 → 2902 → 2936 → 2941 → 2960 → 2967 KB) |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13: main.js +1,2 KB; a revisão do bloco 4: +6 KB — a espera dos programas, a pausa travada, o `ritmo-desenho.js` e os comentários) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+114 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12 → 454,0 KB no C13 → 447,8 KB na revisão do bloco 4; nosso 2859 → 2902 → 2936 → 2941 → 2960 → 2967 → 2973 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
   `shaderGramadoAntigo`) pode ir sob demanda se a folga apertar (precisa do `main.js` esperar o import antes do `criarCampo`).
 
-  O `medidor-quadros.js` (18,8 KB) vai sob demanda: a lista `SO_COM_PAINEL` do `teste-carga.mjs` (nunca no inicial, sem
+  O `medidor-quadros.js` (18,8 KB; 21,1 KB depois da revisão do bloco 4) vai sob demanda: a lista `SO_COM_PAINEL` do `teste-carga.mjs` (nunca no inicial, sem
   pré-carga; a mutação "o medidor sempre" reprova as duas linhas dela).
 - **Memória na GPU (Média):** −10 MB do gramado; +~12 MB de cor 4× e +~12 MB de profundidade 4× no 844×390 (a média na GPU do Ganesh descarta a profundidade no fim do quadro; no Safari e no Graphite é memória real). O teto de 1,2 MP limita isso a ~38 MB no pior celular com MSAA; os tablets ficam como hoje.
 
