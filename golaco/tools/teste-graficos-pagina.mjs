@@ -34,7 +34,7 @@
 //      ≤ 0,2% delas e ≤ o da main com o MSAA forçado (a referência); com o centro DENTRO, a franja é o fundo escondido na mistura
 //      do MSAA (o piso da medida) e fica informativa. (2) a cobertura das bandeiras de mastro a 50 e a
 //      100 m (só a malha delas, sobre magenta, com o bandeirão da saída já fechado): pixels visivelmente cobertos (> 40/255 do
-//      fundo) no build ÷ no SSAA reduzido, nas caixas das 16 bandeiras da Média. Meta ≥ 0,8. (3) a A2C da torcida
+//      fundo) no build ÷ no SSAA reduzido, nas caixas das 16 bandeiras da Média. Meta ≥ 0,8, informativa (a main já cumpre). (3) a A2C da torcida
 //      (informativa): cobertura ÷ SSAA e a cintilação da silhueta em dois quadros com a câmera andando 0,25 px.
 //   P  chamadas e triângulos no quadro fixo da TV ('jogo') = a referência (+0; triângulos ≤ +1%); CPU do quadro (medirQuadro
 //      sem a GPU, CPU 4×, com a demo, como o teste-desempenho-celular) PAREADA: com `--base <pasta golaco>`, a versão medida e
@@ -80,19 +80,22 @@
 //      a 144 e a 165 Hz: 28,8 e 33 desenhos por segundo, como sem o teto (pelo teto seriam 24 e 27,5). (Em T, na queda natural e no qps da P2 o render do
 //      #tela só conta — o que se mede é quantas vezes a página desenha.)
 //
-// As seções que dependem de peças que ainda não existem (?aa, ?gfx, ?tom, ?perf, __golaco.perf, quedaDeTeste, o teto) RODAM na
-// main e registram o estado de hoje, reprovando a meta como informativa.
+// As seções que dependem de peças que a main não tem (?aa, ?gfx, ?tom, ?perf, __golaco.perf, quedaDeTeste, o teto) RODAM na
+// main e registram o estado dela, reprovando as metas de melhoria (para medir a main sem sair 1: `--informativo`).
 //
 // A referência (`--gravar-referencia`) grava em tools/dados/graficos-ref.json, chave "pagina" (a do teste-graficos-celular é
 // "celular"), os valores AGREGADOS — nunca o hash dos pixels — com a versão do Chromium e o renderizador. As guardas "nada pior"
 // comparam com ela; com OUTRO renderizador ganham +50% de tolerância e avisam; outra versão do Chromium só avisa. A referência
 // é gravada com o Chromium do CI (o Playwright do `golaco-testes.yml`). As metas absolutas valem sempre.
 //
-// Informativo por enquanto (até o C14 do plano; `--informativo` é o padrão): imprime as metas e o estado e sai 0 (a sonda
-// inválida e as falhas de estrutura — a página não abriu, as cargas não dão o mesmo quadro, erro no console — saem 1 sempre).
-// `--valendo` faz as metas contarem.
+// As metas VALEM desde o C14 do plano (no CI, a lista do rodar-navegador.mjs): cada linha é "vale" ou "guarda" (reprova) ou
+// informativa — `info` no código, com o MOTIVO na própria linha da saída (a classificação do plano §4). `--informativo` mostra
+// as metas sem reprovar (para medir a main, que reprova as de melhoria); a sonda inválida e as falhas de estrutura — a página
+// não abriu, as cargas não dão o mesmo quadro, erro no console — saem 1 sempre. A base da CPU pareada vem do `--base` ou, sem
+// ele, da variável de ambiente GOLACO_BASE (a pasta golaco da base: o CI do PR a monta com `git worktree add` do commit da base;
+// sem base — o deploy, o workflow_dispatch —, a P pareada só informa).
 //   node tools/teste-graficos-pagina.mjs [--raiz <pasta golaco>] [--base <pasta golaco da base>] [--janelas-cpu N]
-//                                        [--so S2,A2,K,P,P2,P3,R,Q,Z,T] [--gravar-referencia] [--informativo | --valendo]
+//                                        [--so S2,A2,K,P,P2,P3,R,Q,Z,T] [--gravar-referencia] [--informativo]
 //                                        [--ssaa grade8|grade3|torres9] [--prints <pasta>] [--json <arquivo>]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -106,8 +109,12 @@ const args = process.argv.slice(2);
 const tem = n => args.includes(n);
 const arg = (n, d) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : d; };
 const raiz = path.resolve(arg('--raiz', RAIZ));
-// --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas)
-const raizBase = arg('--base', '') ? path.resolve(arg('--base', '')) : null;
+// --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas); sem ele,
+// a variável de ambiente GOLACO_BASE (o CI do PR: a worktree do commit da base). A pasta tem de ter o index.html do jogo.
+const pastaBase = arg('--base', '') || process.env.GOLACO_BASE || '';
+const raizBase = pastaBase ? path.resolve(pastaBase) : null;
+const origemBase = arg('--base', '') ? '--base' : 'GOLACO_BASE';
+if (raizBase && !fs.existsSync(path.join(raizBase, 'index.html'))) { console.error(`teste-graficos-pagina: a base ${raizBase} (${origemBase}) não tem o index.html do jogo`); process.exit(2); }
 const JANELAS_CPU = Math.max(5, +arg('--janelas-cpu', 6) || 6);
 // --ssaa grade8 | grade3 | torres9: os pontos da referência SSAA da A2 (o 8×8 desde o C14a; os outros, diagnóstico)
 const SSAA_PADRAO = arg('--ssaa', 'grade8');
@@ -120,7 +127,8 @@ const SECOES = ['S2', 'A2', 'K', 'P', 'P2', 'P3', 'R', 'Q', 'Z', 'T'];
 const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
 for (const s of so) if (!SECOES.includes(s)) { console.error(`teste-graficos-pagina: seção desconhecida "${s}" (${SECOES.join(', ')})`); process.exit(2); }
 const gravar = tem('--gravar-referencia');
-const valendo = tem('--valendo') && !tem('--informativo');
+// (desde o C14 as metas valem; o `--valendo` de antes continua aceito e não muda nada)
+const valendo = !tem('--informativo');
 const pastaPrints = arg('--prints', '') ? path.resolve(arg('--prints', '')) : null;
 const arqJson = arg('--json', '') ? path.resolve(arg('--json', '')) : null;
 if (pastaPrints) fs.mkdirSync(pastaPrints, { recursive: true });
@@ -137,8 +145,15 @@ const res = [];
 const valores = {};
 // as medidas que dependem da MÁQUINA (a CPU): só na saída e no --json, nunca na referência
 const medidas = {};
-/** Uma meta: tipo 'meta' (conta com --valendo), 'info' (só mostra), 'estrutura' (conta sempre: o teste valeu). */
-function meta(secao, nome, medido, alvo, ok, tipo = 'meta') { res.push({ secao, nome, medido: String(medido), alvo, ok: ok === null ? null : !!ok, tipo }); }
+/**
+ * Uma meta: tipo 'meta' (vale ou guarda: reprova; com --informativo só mostra), 'info' (só mostra; o "passaria"/"fora" vai para
+ * o texto e o motivo de ser informativa fica no alvo), 'estrutura' (conta sempre: o teste valeu).
+ */
+function meta(secao, nome, medido, alvo, ok, tipo = 'meta') {
+  let m = String(medido);
+  if (tipo === 'info' && ok !== null) { m = `[${ok ? 'passaria' : 'fora'}] ${m}`; ok = null; }
+  res.push({ secao, nome, medido: m, alvo, ok: ok === null ? null : !!ok, tipo });
+}
 const guarda = (k, v) => { if (Number.isFinite(v)) valores[k] = +(+v).toFixed(5); return v; };
 const f = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : String(v));
 const pct = (v, d = 1) => (Number.isFinite(v) ? (v * 100).toFixed(d).replace('.', ',') + '%' : String(v));
@@ -897,6 +912,15 @@ function contarCaixas(m, W, caixas) {
 
 const CATS = { torcida: ['torcida*'], bandeiras: ['festa-bandeiras', 'bandeiras'], placas: ['placas'] };
 const CATS_PRE = { letreiro: ['fora-placa'] };
+// As linhas da K1 (centro FORA) que ficam INFORMATIVAS desde o C14, cada uma com o motivo (o medido do C14a, plano §6; as
+// propostas vão ao "Depende do dono" 30). Vale a das placas na TV na bola; o letreiro do pré-jogo não mede nada (abaixo).
+const K1_INFO = {
+  'jogo.torcida': 'passa na semente do teste (4: 0,09%) e reprova na 7 (0,22%; a main 0%): a A2C da torcida do C10, trocada pela K3 (a cintilação × 1,20 → × 0,88); o dono decide ("Depende do dono" 30)',
+  'jogo.bandeiras': '1,74% no C14a: a borda de cima das faixas da mureta (y = 505), a 0,041 da verdade — defeito do desenho; a cobertura analítica nessa borda ou a sangria de 1 texel no atlas vão ao "Depende do dono" 30',
+  'area.bandeiras': '0,43% no C14a (2 px; a mesma borda das faixas da mureta): "Depende do dono" 30',
+  'area.torcida': 'fora por 1 px (1 de 1737; a main 0): uma linha decidida por 1 px muda com a semente — a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30)',
+  'area.placas': 'fora por 1 px (1 de 366; a main 0): uma linha decidida por 1 px muda com a semente — a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30)',
+};
 
 // ================================================================== as cargas do celular (build, oposta, igual)
 /**
@@ -1020,7 +1044,7 @@ try {
         const Gp = gramadoPagina(u8(gr.cor), u8(gl.cor), POSE_MEIO, gr.W, gr.H);
         celBuild.Gp = Gp;
         for (const k of ['L', 'C', 'h', 'dL', 'bordas', 'dLonge', 'linha']) guarda(`Gp.${k}`, Gp[k]);
-        meta('P3', 'Gramado da página, build (pose do meio; a referência da ?gfx=antigo)', `L ${f(Gp.L)} C ${f(Gp.C)} h ${f(Gp.h, 1)}° · ΔL ${f(Gp.dL)} · ${Gp.bordas} bordas em |x| ≤ 20 · longe − perto ${f(Gp.dLonge, 4)} · linha p95 ${f(Gp.linha)}`, '—', null, 'info');
+        meta('P3', 'Gramado da página, build (pose do meio; a referência da ?gfx=antigo)', `L ${f(Gp.L)} C ${f(Gp.C)} h ${f(Gp.h, 1)}° · ΔL ${f(Gp.dL)} · ${Gp.bordas} bordas em |x| ≤ 20 · longe − perto ${f(Gp.dLonge, 4)} · linha p95 ${f(Gp.linha)}`, 'informativa: o valor do build (a régua da ?gfx=antigo é o da main, na referência)', null, 'info');
         const dia = await P(pg, 'tom');
         await pg.evaluate(() => window.__golaco.definirHora('noite'));
         const noite = await P(pg, 'tom');
@@ -1030,7 +1054,7 @@ try {
         // o texto dos programas da torcida e das bandeiras (o da main é a referência do ?gfx=antigo; a revisão do bloco 3)
         const fo = await P(pg, 'fontes');
         guarda('P3.fonte.torcida', fo?.torcida); guarda('P3.fonte.bandeiras', fo?.bandeiras);
-        meta('P3', 'O texto dos programas da torcida e das bandeiras, build (FNV-1a; o da main é a referência do ?gfx=antigo)', `torcida ${fo?.torcida ?? '—'} · bandeiras ${fo?.bandeiras ?? '—'}${Number.isFinite(ref('P3.fonte.torcida')) ? ` · main ${ref('P3.fonte.torcida')} / ${ref('P3.fonte.bandeiras')}` : ''}`, '—', null, 'info');
+        meta('P3', 'O texto dos programas da torcida e das bandeiras, build (FNV-1a; o da main é a referência do ?gfx=antigo)', `torcida ${fo?.torcida ?? '—'} · bandeiras ${fo?.bandeiras ?? '—'}${Number.isFinite(ref('P3.fonte.torcida')) ? ` · main ${ref('P3.fonte.torcida')} / ${ref('P3.fonte.bandeiras')}` : ''}`, 'informativa: o texto do build (a régua da ?gfx=antigo é o da main)', null, 'info');
         marcar('P3 (base)');
       }
       // ---- Z: o redimensionar
@@ -1139,11 +1163,13 @@ try {
           const onde = l.nome === 'prejogo' ? 'pré-jogo, fachada' : l.nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco';
           // (a revisão do bloco 3) o letreiro do Estádio Golaço é TRANSPARENTE (a borda pela mistura): a A2C do C10 não o pega e a
           // linha não mede nada (0 px de borda na main e agora); o letreiro OPACO (o dos pórticos do Maracanã, só no pré-jogo da
-          // edição pro com o estádio real) foi medido à parte no C10 — fica informativa até o C14 decidir se mede o pro aqui
+          // edição pro com o estádio real) foi medido à parte no C10 — o C14 a deixa informativa: a página do teste não abre a pro
+          // (o Maracanã pede o pedido do TM com a edição pro) e o letreiro de cá não muda com o MSAA
           const naoMede = l.nome === 'prejogo';
+          const motivo = naoMede ? 'o letreiro do Estádio Golaço é transparente: a A2C não o pega e a linha não mede nada (o opaco é só da edição pro)' : K1_INFO[`${l.nome}.${l.cat}`];
           meta('K', `K1 franjas na silhueta, centro do pixel FORA da região (a amostra extrapolada, N11): ${l.cat} (${onde})`,
-            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'}${l.comVerdade ? ` · só pela mistura (a régua de antes do C14a) ${pct(l.fracForaMistura, 2)} (${l.fForaMistura})` : ' · sem a verdade SSAA'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}${naoMede ? ' · o letreiro do Estádio Golaço é transparente: a A2C não o pega (não mede)' : ''}`,
-            '≤ 0,2% e ≤ a da main com o MSAA forçado', naoMede ? null : l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF), naoMede ? 'info' : 'meta');
+            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'}${l.comVerdade ? ` · só pela mistura (a régua de antes do C14a) ${pct(l.fracForaMistura, 2)} (${l.fForaMistura})` : ' · sem a verdade SSAA'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
+            `≤ 0,2% e ≤ a da main com o MSAA forçado${motivo ? ` · informativa: ${motivo}` : ''}`, naoMede ? null : l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF), motivo ? 'info' : 'meta');
           meta('K', `K1 franjas, centro DENTRO da região (o fundo escondido na mistura: o piso da medida): ${l.cat} (${onde})`,
             `${pct(l.fracDentro, 2)} de ${l.bDentro} px (${l.fDentro}) · todas as bordas ${pct(l.frac, 2)} de ${l.bordas}`, 'informativa', null, 'info');
         }
@@ -1158,7 +1184,8 @@ try {
             const aaRot = rot === 'build' ? (buildAA ? 'com MSAA' : 'sem AA') : (buildAA ? 'sem AA' : 'MSAA forçado');
             const areaCx = cx.reduce((a, b) => a + (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1), 0);
             meta('K', `K2 cobertura das bandeiras de mastro a ${d} m (${rot === 'build' ? 'o build' : 'a carga oposta'}, ${aaRot})`, `${f(raz, 3)} do SSAA (${n1} × ${n3} px em ${cx.length} caixas, ${pct(n3 / areaCx, 0)} delas; bandeirão ${f(cel.bandeirao?.abre, 2)} depois de ${cel.bandeirao?.passos} passos)`,
-              rot === 'build' ? '≥ 0,8' : '—', rot === 'build' ? raz >= 0.8 : null, rot === 'build' ? 'meta' : 'info');
+              // (informativa desde o C3: a main já cumpre — 0,966 / 0,935 sem AA —, plano §4)
+              rot === 'build' ? '≥ 0,8 · informativa: a main já cumpre (0,966 / 0,935 sem AA)' : '—', rot === 'build' ? raz >= 0.8 : null, 'info');
           }
         }
         // (3) a torcida: cobertura e cintilação da silhueta (a A2C só entra com ganho medido)
@@ -1795,8 +1822,8 @@ async function medirCpu() {
     const d = M.p95.map((v, i) => v - B.p95[i]), dm = percentil(d, 0.5);
     medidas['P.cpuP95base'] = med(B); medidas['P.cpuDifPar'] = dm;
     meta('P', 'CPU do quadro: nada pior que a base, PAREADO (a mediana das diferenças por par de janelas)',
-      `${dm >= 0 ? '+' : ''}${f(dm, 2)} ms · medida ${f(med(M), 2)} (${lista(M)}) · base ${f(med(B), 2)} (${lista(B)})`, `≤ +${f(TOL_CPU, 1)} ms (o mesmo código varia até +0,7 entre instâncias)`, dm <= TOL_CPU);
-  } else meta('P', 'CPU do quadro: nada pior que a base (pareado)', 'sem --base: não medido', `≤ +${f(TOL_CPU, 1)} ms (com --base <pasta golaco da base>)`, null, 'info');
+      `${dm >= 0 ? '+' : ''}${f(dm, 2)} ms · medida ${f(med(M), 2)} (${lista(M)}) · base ${f(med(B), 2)} (${lista(B)}) · a base de ${origemBase}: ${raizBase}`, `≤ +${f(TOL_CPU, 1)} ms (o mesmo código varia até +0,7 entre instâncias)`, dm <= TOL_CPU);
+  } else meta('P', 'CPU do quadro: nada pior que a base (pareado)', 'sem a base: não medido', `≤ +${f(TOL_CPU, 1)} ms com a base (--base ou GOLACO_BASE) · informativa sem ela (o deploy e o workflow_dispatch não têm PR)`, null, 'info');
   meta('P', 'O desenho (a parte JS do render, CPU 4×, 120 quadros)', abertas.map(a => `${a.rot} p95 ${f(a.desenho?.p95, 2)} · méd ${f(a.desenho?.media, 2)} ms`).join(' · '), 'informativo (o ruído não separa versões)', null, 'info');
   marcar('P (CPU pareada)');
 }
@@ -1874,9 +1901,11 @@ console.log(`\nChromium ${cond.chromium} · ${cond.renderer}`);
 if (REF) console.log(`referência: ${ARQ_REF} (${REF.gravado}, ${REF.commit || 'sem commit'}; Chromium ${REF.chromium})${tolRef() > 1 ? ' — RENDERIZADOR DIFERENTE do gravado: as guardas "nada pior" com +50% de tolerância' : versaoDif() ? ' — Chromium diferente do gravado (só aviso: a tolerância não muda)' : ''}`);
 else console.log('referência: nenhuma gravada (as guardas "nada pior" ficam informativas; grave com --gravar-referencia na main)');
 if (gravar && !invalido) console.log(`referência gravada em ${ARQ_REF}, chave "${CHAVE_REF}" (${Object.keys(valores).length} valores)`);
+if (so.has('P')) console.log(raizBase ? `a base da CPU pareada: ${raizBase} (${origemBase})` : 'a base da CPU pareada: nenhuma (sem --base nem GOLACO_BASE: a P pareada só informa)');
 console.log(`tempos: ${tempos.join(' · ')} · total ${((Date.now() - T0) / 1000).toFixed(0)} s`);
 if (invalido) { console.log(`\nteste-graficos-pagina: TESTE INVÁLIDO (${invalido})`); process.exit(1); }
 if (estrutura) { console.log(`\nteste-graficos-pagina: REPROVOU (${estrutura} falha(s) de estrutura)`); process.exit(1); }
-if (valendo) { console.log(fora ? `\nteste-graficos-pagina: REPROVOU (${fora})` : '\nteste-graficos-pagina: PASSOU'); process.exit(fora ? 1 : 0); }
-console.log(`\nteste-graficos-pagina: INFORMATIVO (${fora} meta(s) fora; as metas valem com --valendo, a partir do C14)`);
+const nInfo = res.filter(m => m.tipo === 'info').length;
+if (valendo) { console.log(fora ? `\nteste-graficos-pagina: REPROVOU (${fora})` : `\nteste-graficos-pagina: PASSOU (${nInfo} linha(s) informativa(s))`); process.exit(fora ? 1 : 0); }
+console.log(`\nteste-graficos-pagina: --informativo (${fora} meta(s) fora; sem ele, reprovariam)`);
 process.exit(0);

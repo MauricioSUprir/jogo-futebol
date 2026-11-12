@@ -59,9 +59,11 @@
 // de tolerância e avisam; outra versão do Chromium só avisa (os valores não dependem dela: 141 do CI × 153). A referência é
 // gravada com o Chromium do CI (o Playwright do `golaco-testes.yml`). As metas absolutas valem sempre.
 //
-// Informativo por enquanto (até o C14 do plano): imprime as metas e o estado, mas sai 0 (a sonda inválida e um erro no
-// console saem 1 sempre). `--valendo` faz as metas contarem.
-//   node tools/teste-graficos-celular.mjs [--raiz <pasta golaco>] [--so S,A,F,G,D,N] [--gravar-referencia] [--valendo]
+// As metas VALEM desde o C14 do plano (no CI, a lista do rodar-navegador.mjs): cada linha é "vale" ou "guarda" (reprova) ou
+// informativa — `info` no código, com o MOTIVO na própria linha da saída (a classificação do plano §4). `--informativo` mostra
+// as metas sem reprovar (para medir a main, que reprova as de melhoria); a sonda inválida, as falhas de estrutura e um erro no
+// console saem 1 sempre.
+//   node tools/teste-graficos-celular.mjs [--raiz <pasta golaco>] [--so S,A,F,G,D,N] [--gravar-referencia] [--informativo]
 //                                         [--prints <pasta>] [--json <arquivo>]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -78,7 +80,8 @@ const raiz = path.resolve(arg('--raiz', RAIZ));
 const SECOES = ['S', 'A', 'F', 'G', 'D', 'N'];
 const so = new Set((arg('--so', '') || SECOES.join(',')).split(',').map(s => s.trim().toUpperCase()).filter(Boolean));
 const gravar = tem('--gravar-referencia');
-const valendo = tem('--valendo');
+// (desde o C14 as metas valem; o `--valendo` de antes continua aceito e não muda nada)
+const valendo = !tem('--informativo');
 const pastaPrints = arg('--prints', '') ? path.resolve(arg('--prints', '')) : null;
 const arqJson = arg('--json', '') ? path.resolve(arg('--json', '')) : null;
 if (pastaPrints) fs.mkdirSync(pastaPrints, { recursive: true });
@@ -100,14 +103,26 @@ if (fs.existsSync(path.join(raiz, 'js', 'render', 'gramado.js'))) { try { GR_NOD
 // ------------------------------------------------------------------ resultados
 const res = [];
 const valores = {};
-/** Uma meta: tipo 'meta' (conta com --valendo), 'info' (só mostra), 'estrutura' (conta sempre: o teste valeu). */
-function meta(secao, nome, medido, alvo, ok, tipo = 'meta') { res.push({ secao, nome, medido, alvo, ok: ok === null ? null : !!ok, tipo }); }
+/**
+ * Uma meta: tipo 'meta' (vale ou guarda: reprova; com --informativo só mostra), 'info' (só mostra; o "passaria"/"fora" vai para
+ * o texto e o motivo de ser informativa fica no alvo), 'estrutura' (conta sempre: o teste valeu).
+ */
+function meta(secao, nome, medido, alvo, ok, tipo = 'meta') {
+  if (tipo === 'info' && ok !== null) { medido = `[${ok ? 'passaria' : 'fora'}] ${medido}`; ok = null; }
+  res.push({ secao, nome, medido, alvo, ok: ok === null ? null : !!ok, tipo });
+}
 const guarda = (k, v) => { if (Number.isFinite(v)) valores[k] = +v.toFixed(5); return v; };
-/** Roda `fn` e passa as metas que ela registrou a informativas (o "passaria"/"fora" fica no texto). */
-function comoInfo(fn) {
+/** Roda `fn` e passa as metas que ela registrou a informativas (o "passaria"/"fora" fica no texto; o motivo, no alvo). */
+function comoInfo(fn, motivo) {
   const n0 = res.length;
   fn();
-  for (let i = n0; i < res.length; i++) { const m = res[i]; if (m.ok !== null) m.medido = `[${m.ok ? 'passaria' : 'fora'}] ${m.medido}`; m.ok = null; m.tipo = 'info'; }
+  for (let i = n0; i < res.length; i++) {
+    const m = res[i];
+    if (m.tipo === 'estrutura') continue;
+    if (m.ok !== null) m.medido = `[${m.ok ? 'passaria' : 'fora'}] ${m.medido}`;
+    m.ok = null; m.tipo = 'info';
+    if (motivo) m.alvo = `${m.alvo} · informativa: ${motivo}`;
+  }
 }
 const f = (v, d = 3) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : String(v));
 const pct = (v, d = 1) => (Number.isFinite(v) ? (v * 100).toFixed(d).replace('.', ',') + '%' : String(v));
@@ -945,6 +960,8 @@ function termoModelo(pose) {
   const dif = com => regiao(-32, -22, com).L - regiao(8, 18, com).L;
   return dif(true) - dif(false);
 }
+// (a G1 da noite é informativa: a mesma cor do dia é impossível com a luz fria — conta o Δh contra a previsão, seção N)
+const ALVO_G1_NOITE = 'informativa à noite: a luz fria gira a matiz; conta o Δh (noite − dia) contra a previsão do cor-aces';
 function metasG(rotulo, chave, M, opc = {}) {
   const { g3, gm, g5 } = M;
   const sec = opc.secao ?? 'G';
@@ -954,9 +971,9 @@ function metasG(rotulo, chave, M, opc = {}) {
   const g1 = gc?.g1;
   if (g1) {
     guarda(`G1.${chave}.L`, g1.L); guarda(`G1.${chave}.C`, g1.C); guarda(`G1.${chave}.h`, g1.h);
-    meta(sec, `G1 cor na faixa do foco (${rotulo}${semMan})`, `L ${f(g1.L)} C ${f(g1.C)} h ${f(g1.h, 1)}° (clara L ${f(g1.claro.L)} · escura L ${f(g1.escuro.L)})`, 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°',
+    meta(sec, `G1 cor na faixa do foco (${rotulo}${semMan})`, `L ${f(g1.L)} C ${f(g1.C)} h ${f(g1.h, 1)}° (clara L ${f(g1.claro.L)} · escura L ${f(g1.escuro.L)})`, opc.semG1 ? ALVO_G1_NOITE : 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°',
       opc.semG1 ? null : Math.abs(g1.L - 0.58) <= 0.02 && Math.abs(g1.C - 0.10) <= 0.01 && Math.abs(difMatiz(g1.h, 124)) <= 3, opc.semG1 ? 'info' : 'meta');
-  } else meta(sec, `G1 cor na faixa do foco (${rotulo})`, 'não medido (faixas não achadas)', 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°', false, opc.semG1 ? 'info' : 'meta');
+  } else meta(sec, `G1 cor na faixa do foco (${rotulo})`, 'não medido (faixas não achadas)', opc.semG1 ? ALVO_G1_NOITE : 'L 0,58 ± 0,02; C 0,10 ± 0,01; h 124 ± 3°', false, opc.semG1 ? 'info' : 'meta');
   // G2
   const g2 = gc?.g2;
   if (g2) {
@@ -1023,7 +1040,7 @@ async function secaoA(pg, rotulo, chave, cena1, cena0, campo, P, buildAA, opc = 
       const nomeV = buildAA ? 'razão E_build / E_semAA' : 'E ÷ contraste';
       meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): nada pior que a referência, pela ${nomeV}`,
         `${nomeV} ${f(v, 4)}${Number.isFinite(ref) ? ` · ref ${f(ref, 4)} (× ${f(v / ref, 3)})` : ' · sem referência'} · ${base}${Number.isFinite(refE) ? ` · E absoluto ref ${f(refE, 4)} (× ${f(Eb / refE, 3)})` : ''}`,
-        `${nomeV} ≤ ref × ${f(1 + tol, 2)}`, Number.isFinite(ref) ? v <= ref * (1 + tol) : null, Number.isFinite(ref) ? (opc.tipo ?? 'meta') : 'info');
+        `${nomeV} ≤ ref × ${f(1 + tol, 2)}${opc.motivoInfo ? ` · informativa: ${opc.motivoInfo}` : ''}`, Number.isFinite(ref) ? v <= ref * (1 + tol) : null, Number.isFinite(ref) ? (opc.tipo ?? 'meta') : 'info');
     } else {
       meta(opc.secao ?? 'A', `A serrilhado (${rotulo}, ${nomeCam}): razão E_build / E_semAA`, `${f(raz, 2)} · ${base}`, opc.alvo ?? '≤ 0,6', opc.alvoFn ? opc.alvoFn(raz) : raz <= 0.6, opc.tipo ?? 'meta');
     }
@@ -1175,7 +1192,7 @@ try {
       const saltoTermo = (L1p - tv.Lc.L) - (Lsem['replay-1a-pessoa'] - tv.Ls.L);
       guarda('G4b.media.dia.salto', salto); guarda('G4b.media.dia.saltoTermo', saltoTermo);
       const refSalto = REF?.valores?.['G4b.media.dia.salto'];
-      meta('G', 'G4b salto do L no corte TV → 1ª pessoa, bruto', `${f(salto, 4)} (TV ${f(tv.Lc.L)} → 1ª pessoa ${f(L1p)})${Number.isFinite(refSalto) ? ` · ref ${f(refSalto, 4)}` : ''}`, 'informativo', null, 'info');
+      meta('G', 'G4b salto do L no corte TV → 1ª pessoa, bruto', `${f(salto, 4)} (TV ${f(tv.Lc.L)} → 1ª pessoa ${f(L1p)})${Number.isFinite(refSalto) ? ` · ref ${f(refSalto, 4)}` : ''}`, 'informativo: oscila com as manchas; conta a parte do termo (a linha de baixo)', null, 'info');
       meta('G', 'G4b a parte do termo no salto TV → 1ª pessoa (com − sem o termo)', `${f(saltoTermo, 4)}${temGancho ? '' : ' (sem o gancho: a versão não tem o termo, 0)'}`, '|com − sem| ≤ 0,01',
         Math.abs(saltoTermo) <= 0.01);
       marcar('G (Média, dia)');
@@ -1192,10 +1209,10 @@ try {
       const F = await secaoF(pg, 'cel-media', mb, 'm0', 'cm', { ...P, haste: poseHaste() }, W, H, mb === 'm1' ? 'm0' : 'm1', ['foco', 'la', 'haste']);
       metasF('celular Média', F, 'media');
       // o outro contexto (na main, o MSAA forçado: o que a Média ganha no C5), informativo
-      comoInfo(() => metasF(`celular Média, o outro contexto: ${mb === 'm1' ? 'sem AA' : 'MSAA forçado'}`, F, 'mediaOutro', 'extra'));
+      comoInfo(() => metasF(`celular Média, o outro contexto: ${mb === 'm1' ? 'sem AA' : 'MSAA forçado'}`, F, 'mediaOutro', 'extra'), 'o contexto que o build da Média não usa (o lado de lá da comparação)');
       // sobre o gramado (informativa; a revisão do bloco 3): a guarda continua a do preto
       const Fg = await secaoF(pg, 'cel-media-grama', mb, 'm0', 'cm', P, W, H, null, ['foco', 'la'], true);
-      comoInfo(() => metasF('celular Média, sobre o gramado: o grão e a sombra atrás da peça entram na conta', Fg, 'mediaGrama'));
+      comoInfo(() => metasF('celular Média, sobre o gramado: o grão e a sombra atrás da peça entram na conta', Fg, 'mediaGrama'), 'o grão e a sombra atrás da peça entram na soma — a guarda é a do preto (a revisão do bloco 3)');
       marcar('F (Média)');
     }
 
@@ -1269,7 +1286,8 @@ try {
       const Mb = await medirG(pg, 'cel-baixa-dia', bb, 'cb', P, topo);
       metasG('celular Baixa, dia', 'baixa.dia', Mb, { secao: 'N' });
       // a Baixa sem MSAA: a razão é 1 por construção; o "nada pior" contra a referência fica informativo (plano §4)
-      await secaoA(pg, 'cel-baixa-dia', 'baixa.dia', 'b1', 'b0', 'cb', P, build.baixa.antialias, { secao: 'N', nadaPior: true, tipo: 'info' });
+      await secaoA(pg, 'cel-baixa-dia', 'baixa.dia', 'b1', 'b0', 'cb', P, build.baixa.antialias, { secao: 'N', nadaPior: true, tipo: 'info',
+        motivoInfo: 'a Baixa não tem MSAA (a razão é 1 por construção); o "nada pior" de verdade é pareado com a base (--raiz) na máscara dela (plano §4 A)' });
       // + a pose do LIMIAR (a revisão do bloco 3): a corda do pé de perto, com a meia largura de 1 px (o limiar que a mistura
       // tinha) caindo DENTRO da peça — o caso que abria o buraco onde a meia interpolada passava por 0 (a TV fica abaixo do
       // limiar nas duas pontas e não o via)
@@ -1283,7 +1301,9 @@ try {
       // finos na MISTURA também com as amostras da queda (render/campo.js larguraMinima: o campo criado com a qualidade Baixa);
       // com a A2C de 1 px, o gol de lá cintilava ×2,26 (a corda do fundo) e ×1,97 (o mastro), e a pose do limiar — as cordas a
       // 1,2–2,3 px, o MSAA 4× numa peça de 1–2 px contra o SSAA 3×3 — ×2,67 (a corda do fundo); com a mistura, ×1,35, ×0,46 e
-      // ×0,91, e a pose do limiar passou a contar como na Baixa
+      // ×0,91, e a pose do limiar passou a contar como na Baixa. Os buracos da queda (a main com o MSAA forçado já dava 0%: no C3
+      // eram informativos) valem desde o C14 como GUARDA: a queda desenha agora pelo caminho da mistura, o que abria os buracos
+      // na Baixa da main (57% / 62%), e a linha vigia esse caminho com as amostras
       metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la, ...(Fb.limiar ? { limiar: Fb.limiar } : {}), ...(Fb.haste ? { haste: Fb.haste } : {}) }, 'baixaMsaa', 'extra');
       await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
       marcar('N (Baixa)');
@@ -1369,6 +1389,7 @@ if (gravar && !invalido) console.log(`referência gravada em ${ARQ_REF} (${Objec
 console.log(`tempos: ${tempos.join(' · ')} · total ${((Date.now() - T0) / 1000).toFixed(0)} s`);
 if (invalido) { console.log(`\nteste-graficos-celular: TESTE INVÁLIDO (${invalido})`); process.exit(1); }
 if (estrutura) { console.log(`\nteste-graficos-celular: REPROVOU (${estrutura} falha(s) de estrutura)`); process.exit(1); }
-if (valendo) { console.log(fora ? `\nteste-graficos-celular: REPROVOU (${fora})` : '\nteste-graficos-celular: PASSOU'); process.exit(fora ? 1 : 0); }
-console.log(`\nteste-graficos-celular: INFORMATIVO (${fora} meta(s) fora; as metas valem com --valendo, a partir do C14)`);
+const nInfo = res.filter(m => m.tipo === 'info').length;
+if (valendo) { console.log(fora ? `\nteste-graficos-celular: REPROVOU (${fora})` : `\nteste-graficos-celular: PASSOU (${nInfo} linha(s) informativa(s))`); process.exit(fora ? 1 : 0); }
+console.log(`\nteste-graficos-celular: --informativo (${fora} meta(s) fora; sem ele, reprovariam)`);
 process.exit(0);
