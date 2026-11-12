@@ -2,22 +2,34 @@
 // decisão da QUEDA automática da qualidade (C12) e o TETO de quadros (C13):
 //  R1 rAF a 30 "regular" (o iPhone em pouca energia, o economizador do Android: 33,3 ms ± 0,5 com 1 quadro perdido a cada 20,
 //     ~28,6 qps) na Média: CAI na sessão (como antes: o limiar é qps < 30) e NÃO grava — o ritmo está preso no divisor da tela
-//     com pouco tremor (a mediana a ± 1 ms de 33,3 e p90 − p10 ≤ 2 ms); o 30 exato (1000/30 em ponto flutuante dá 29,999… qps)
-//     cai como antes e também não grava
-//  R2 25 qps com tremor (40 ms × 0,6 1,4 1,0 0,8 1,2) em duas janelas: CAI na 1ª (Média → Baixa) e GRAVA na 2ª ({media, baixa})
-//  R3 uma janela só lenta (depois 60 qps): cai e NÃO grava
-//  R4 com webdriver (podeGravar false; o main.js passa false com navigator.webdriver, ?prints=1 e ?demo=1): o R2 e o 20 Hz com o
-//     tremor do teste-graficos-pagina Q por 20 s caem e NUNCA gravam
-//  R5 o PC: 40 qps com tremor na Alta cai para a Média (40 < 48) e grava {alta, media} na 2ª janela; depois, na Média (40 ≥ 30),
-//     nada
-//  R6 uma janela inativa entre a queda e a seguinte (a pausa, a aba escondida, a troca na pausa) desfaz o "seguidas": não grava;
-//     marcarTroca() segura a queda por 4 s e desfaz o "seguidas"; reiniciar() espera 3 s
-//  R7 o 20 Hz preso (50 ms ± 0,4) cai e não grava; o mesmo 20 Hz com o tremor da seção Q (50 ms × 0,6–1,4) não está preso: grava
+//     com pouco tremor (a mediana a ± 1 ms de 33,3 e p90 − p10 ≤ 2 ms) e a janela seguinte, já na Baixa, segue presa na mesma
+//     cadência (o limite do sistema, não a carga); o 30 exato (1000/30 em ponto flutuante dá 29,999… qps) cai como antes e
+//     também não grava
+//  R2 25 qps com tremor (40 ms × 0,6 1,4 1,0 0,8 1,2): CAI e GRAVA na mesma janela ({media, baixa}, ~5,5 s): a mediana (40 ms)
+//     acima do intervalo do mínimo (33,3) — a maioria dos desenhos não segurou a Média (a revisão do bloco 4: antes pedia uma 2ª
+//     janela lenta já na Baixa, e quando a Baixa resolve, nada ficava)
+//  R3 soluços: 60 qps com 1 quadro de 300 ms a cada 10 (~22 qps na janela): cai na sessão (como antes) e NÃO grava — a mediana
+//     (16,7 ms) é a de quem segura o nível; e o caso de antes do bloco 4 (uma janela lenta de verdade e depois 60 qps) GRAVA
+//  R4 com webdriver (podeGravar false; o main.js passa false com navigator.webdriver, ?prints=1 e ?demo=1): o R2, o 20 Hz com o
+//     tremor do teste-graficos-pagina Q por 20 s e a presa que a Baixa resolve caem e NUNCA gravam
+//  R5 o PC: 40 qps com tremor na Alta cai para a Média (40 < 48) e grava {alta, media} (a mediana 25 ms ≥ 20,8 − 1); depois, na
+//     Média (40 ≥ 30), nada
+//  R6 a presa (30 regular) que a Baixa resolve (60): grava na janela seguinte; um quadro inativo entre as duas (a pausa, a aba
+//     escondida, a troca na pausa) ou um marcarTroca() desfaz a espera: não grava; marcarTroca() segura a queda por 4 s;
+//     reiniciar() espera 3 s
+//  R7 o 20 Hz preso (50 ms ± 0,4) não é mais "preso" (o 20 saiu dos divisores na revisão do bloco 4: sem fonte de sistema que
+//     limite a 20; um aparelho lento pela GPU desenha a 50,0 ms exatos no vsync): cai e GRAVA; com o tremor da seção Q também
 //  R8 a sessão = a regra de ANTES do item 45 (o main.js adaptarQualidade da main, copiada aqui como oráculo): 8 sequências
 //     sorteadas (ritmos de 12 a 75 qps, com e sem tremor, pausas, recomeços) dão as MESMAS quedas, no mesmo quadro e para o mesmo
 //     nível
-//  R9 as contas: resumoJanela (mediana, p10, p90, preso em 33,3 e 50, não preso em 40 ou com tremor), quedaValida (só {de, para}
+//  R9 as contas: resumoJanela (mediana, p10, p90, preso em 33,3; não preso em 50, 40 ou com tremor), quedaValida (só {de, para}
 //     de cima para baixo), nivelInicial (a gravada mais baixa que a do aparelho vale; nunca sobe; lixo = a do aparelho)
+//  R11 o aparelho no vsync (a revisão do bloco 4: o rAF sai no carimbo da tela; o intervalo = ceil(custo / 16,67) × 16,67 ±
+//     0,05 ms; 8 sementes por caso; o nível segue as quedas): (a) Média irregular 22–45 ms e a Baixa 10–20: grava; (b) a Média
+//     lenta pela GPU (36–48 ms: 50,0 ms exatos) e a Baixa 26–32: grava; (c) o PC na Alta de 20–30 ms (33,3 exatos, preso) e a
+//     Média 8–15 (16,7): grava {alta, media} na janela seguinte; (d) o PC na Alta de 20–30 e a Média 18–26 (as duas a 33,3):
+//     NÃO grava (o nível de baixo não ajudou); (e) o iPhone em pouca energia (o sistema segura 30 em todo nível; o custo de 8–14
+//     ms): cai e NÃO grava; (f) a Média irregular 22–45 e a Baixa igual (não ajuda): grava (como antes)
 //  R10 pureza: o módulo sem import, DOM, three nem relógio próprio e fora do fecho do hash
 // O teto (C13; os carimbos do rAF na grade da tela com tremor de ±0,5 ms, 8 sementes por caso):
 //  T1 n = max(1, floor(Hz/60 + 0,1)): 60, 90 e 100 Hz → 1; 120, 144 e 165 → 2; 240 → 4; sem refresh → 1; a conta do refresh
@@ -122,7 +134,7 @@ if (!M) {
     const j = r.janelas[0] ?? {};
     meta('R1 rAF a 30 "regular" (33,3 ms ± 0,5, 1 perdido em 20) na Média: cai na sessão, NÃO grava (ritmo preso no divisor)',
       `${resumoQ(r)} · 1ª janela ${f(j.qps, 1)} qps, mediana ${f(j.mediana, 2)} ms, p90 − p10 ${f(j.tremor, 2)} ms, presa ${j.presa}`,
-      'media → baixa; nada gravado; presa', r.quedas.length === 1 && r.quedas[0].para === 'baixa' && r.gravadas.length === 0 && j.presa === true);
+      'media → baixa; nada gravado; presa', r.quedas.length === 1 && r.quedas[0].para === 'baixa' && r.gravadas.length === 0 && j.presa === true && r.estado.pendente === null);
     // (o 30 "exato": 1000/30 em ponto flutuante soma 29,999… qps na janela — abaixo do limiar de < 30: cai, como antes, o N9 do
     // plano; e não grava)
     const ex = rodar(serie(1000 / 30, 12));
@@ -131,31 +143,42 @@ if (!M) {
       J(ex.quedas.map(x => `${x.de}→${x.para}`)) === J(exA) && ex.gravadas.length === 0 && ex.janelas[0]?.presa === true);
   }
 
-  // ---------------------------------------------------------------- R2: 25 qps com tremor em duas janelas: cai e grava
+  // ---------------------------------------------------------------- R2: 25 qps com tremor: cai e grava na mesma janela
   let r2 = null;
   {
     r2 = rodar(serie(40, 12, { tremor: TREMOR_Q }));
     const j = r2.janelas[0] ?? {};
-    meta('R2 25 qps com tremor (40 ms × 0,6–1,4) em duas janelas: cai na 1ª e GRAVA na 2ª',
+    meta('R2 25 qps com tremor (40 ms × 0,6–1,4): cai e GRAVA na mesma janela (a mediana acima do intervalo do mínimo)',
       `${resumoQ(r2)} · 1ª janela ${f(j.qps, 1)} qps, mediana ${f(j.mediana, 1)} ms, presa ${j.presa}`,
-      'media → baixa (~5,5 s); gravada {media, baixa} (~8 s)',
+      'media → baixa e gravada {media, baixa} no mesmo quadro (~5,5 s)',
       r2.quedas.length === 1 && r2.quedas[0].de === 'media' && r2.quedas[0].para === 'baixa' && r2.gravadas.length === 1 && r2.gravadas[0].de === 'media' && r2.gravadas[0].para === 'baixa'
-        && r2.gravadas[0].k > r2.quedas[0].k && r2.quedas[0].s >= 5.4 && r2.quedas[0].s <= 5.7 && r2.gravadas[0].s >= 7.9 && r2.gravadas[0].s <= 8.3);
+        && r2.gravadas[0].k === r2.quedas[0].k && r2.quedas[0].s >= 5.4 && r2.quedas[0].s <= 5.7 && j.mediana >= 1000 / 30);
   }
 
-  // ---------------------------------------------------------------- R3: uma janela só
+  // ---------------------------------------------------------------- R3: soluços não gravam; uma janela lenta de verdade grava
   {
+    // 60 qps com 1 quadro de 300 ms a cada 10: (9 × 16,7 + 300) / 10 = 45 ms em média, ~22 qps; a mediana 16,7
+    const soluco = []; for (let k = 0; k < 600; k++) soluco.push(k % 10 === 9 ? 300 : 1000 / 60);
+    const r = rodar(soluco);
+    const j = r.janelas[0] ?? {};
+    meta('R3 soluços (60 qps com 1 quadro de 300 ms a cada 10, ~22 qps na janela): cai na sessão e NÃO grava (a mediana é de quem segura)',
+      `${resumoQ(r)} · 1ª janela ${f(j.qps, 1)} qps, mediana ${f(j.mediana, 1)} ms`, 'media → baixa; nada gravado',
+      r.quedas.length === 1 && r.quedas[0].para === 'baixa' && r.gravadas.length === 0 && j.qps < 30 && j.mediana < 20);
     const a = serie(40, 5.6, { tremor: TREMOR_Q });
-    const r = rodar([...a, ...serie(1000 / 60, 10)]);
-    meta('R3 uma janela só lenta (25 qps com tremor; depois 60 qps): cai, NÃO grava', resumoQ(r), 'media → baixa; nada gravado', r.quedas.length === 1 && r.gravadas.length === 0 && r.estado.pendente === null);
+    const u = rodar([...a, ...serie(1000 / 60, 10)]);
+    meta('R3 uma janela lenta de verdade (25 qps com tremor) e depois 60 qps (a Baixa resolveu): cai e GRAVA', resumoQ(u), 'media → baixa; gravada {media, baixa}',
+      u.quedas.length === 1 && u.gravadas.length === 1 && u.gravadas[0].k === u.quedas[0].k && u.estado.pendente === null);
   }
 
   // ---------------------------------------------------------------- R4: com webdriver, nunca grava
   {
     const r = rodar(serie(40, 12, { tremor: TREMOR_Q }), { podeGravar: false });
     const q = rodar(serie(50, 20, { tremor: TREMOR_Q }), { podeGravar: false });
-    meta('R4 com webdriver (podeGravar false): o R2 e o 20 Hz com o tremor da seção Q por 20 s caem e NUNCA gravam', `R2: ${resumoQ(r)} · 20 Hz: ${resumoQ(q)}`,
-      'cai nos dois; nada gravado', r.quedas.length === 1 && q.quedas.length === 1 && r.gravadas.length === 0 && q.gravadas.length === 0 && r.estado.podeGravar === false);
+    const p = rodar([...serie(1000 / 30, 5.6, { soma: [0.3, -0.3, 0.5, -0.5, 0], perde: 20 }), ...serie(1000 / 60, 6)], { podeGravar: false });
+    meta('R4 com webdriver (podeGravar false): o R2, o 20 Hz com o tremor da seção Q por 20 s e a presa que a Baixa resolve caem e NUNCA gravam',
+      `R2: ${resumoQ(r)} · 20 Hz: ${resumoQ(q)} · presa: ${resumoQ(p)}`,
+      'cai nos três; nada gravado', r.quedas.length === 1 && q.quedas.length === 1 && p.quedas.length === 1 && r.gravadas.length === 0 && q.gravadas.length === 0 && p.gravadas.length === 0
+        && r.estado.podeGravar === false);
   }
 
   // ---------------------------------------------------------------- R5: o PC (Alta → Média)
@@ -166,21 +189,27 @@ if (!M) {
       r.quedas.length === 1 && r.quedas[0].de === 'alta' && r.quedas[0].para === 'media' && r.gravadas.length === 1 && r.gravadas[0].de === 'alta' && r.nivel === 'media');
   }
 
-  // ---------------------------------------------------------------- R6: inativo no meio, marcarTroca, reiniciar
+  // ---------------------------------------------------------------- R6: a presa que a Baixa resolve; inativo no meio, marcarTroca, reiniciar
   {
+    // o 30 "regular" (preso: cai) e, na Baixa, 60 regulares: a janela seguinte desenha mais rápido (a carga, não o sistema)
+    const presa = [...serie(1000 / 30, 5.6, { soma: [0.3, -0.3, 0.5, -0.5, 0], perde: 20 }), ...serie(1000 / 60, 6)];
+    const p = rodar(presa);
+    const kP = p.quedas[0]?.k ?? -1;
+    meta('R6 a presa (30 regular) que a Baixa resolve (60): cai e GRAVA na janela seguinte (~2,5 s depois)',
+      `${resumoQ(p)} · presa ${p.janelas[0]?.presa}, a seguinte ${f(p.janelas[1]?.mediana, 1)} ms`, 'media → baixa; gravada {media, baixa} na janela seguinte',
+      p.quedas.length === 1 && p.janelas[0]?.presa === true && p.gravadas.length === 1 && p.gravadas[0].k > kP && p.gravadas[0].s - p.quedas[0].s >= 2.4 && p.gravadas[0].s - p.quedas[0].s <= 2.7);
+    const r = rodar(presa, { ativo: k => k !== kP + 10 });
+    meta('R6 um quadro inativo entre a presa e a janela seguinte (a pausa): não grava', resumoQ(r), 'cai; nada gravado', r.quedas.length === 1 && r.gravadas.length === 0 && r.estado.pendente === null);
+    const d = rodar(presa, { eventos: { [kP + 10]: (q, t) => q.marcarTroca(t) } });
+    meta('R6 marcarTroca() entre a presa e a janela seguinte: não grava', resumoQ(d), 'cai; nada gravado', d.quedas.length === 1 && d.gravadas.length === 0);
+    // marcarTroca 1 s antes da queda do R2: nenhuma queda por 4 s (a janela recomeça e a queda vem depois)
     const ivs = serie(40, 12, { tremor: TREMOR_Q });
     const kQueda = r2.quedas[0].k;
-    const r = rodar(ivs, { ativo: k => k !== kQueda + 10 });
-    meta('R6 um quadro inativo entre a queda e a janela seguinte (a pausa): não grava', resumoQ(r), 'cai; nada gravado', r.quedas.length === 1 && r.gravadas.length === 0);
-    // marcarTroca 1 s antes da queda do R2: nenhuma queda por 4 s (a janela recomeça e a queda vem depois)
     const kTroca = kQueda - 25;
     const m = rodar(ivs, { eventos: { [kTroca]: (q, t) => q.marcarTroca(t) } });
     const tTroca = ivs.slice(0, kTroca + 1).reduce((a, b) => a + b, 0) / 1000;
     meta('R6 marcarTroca() (a escolha na pausa): nenhuma queda por 4 s depois dela', `troca em ${f(tTroca, 1)} s · ${resumoQ(m)}`, 'a queda ≥ 4 s depois da troca',
       m.quedas.length >= 1 && m.quedas[0].s - tTroca >= 4 - 1e-9);
-    // marcarTroca entre a queda e a seguinte: desfaz o "seguidas"
-    const d = rodar(ivs, { eventos: { [kQueda + 10]: (q, t) => q.marcarTroca(t) } });
-    meta('R6 marcarTroca() entre a queda e a janela seguinte: não grava', resumoQ(d), 'cai; nada gravado', d.quedas.length === 1 && d.gravadas.length === 0);
     // reiniciar: nada nos 3 s seguintes, a 1ª janela fecha 2,5 s depois deles
     const q = criarQueda();
     q.reiniciar(10000);
@@ -189,14 +218,14 @@ if (!M) {
     meta('R6 reiniciar(): a 1ª janela que conta começa 3 s depois (a queda em ~5,5 s)', `a 1ª decisão em ${f(primeira, 2)} s`, '5,4–5,7 s', primeira >= 5.4 && primeira <= 5.7);
   }
 
-  // ---------------------------------------------------------------- R7: o 20 Hz preso × com tremor
+  // ---------------------------------------------------------------- R7: o 20 Hz não é mais "preso"
   {
     const preso = rodar(serie(50, 12, { soma: [0.4, -0.4, 0.2, -0.2, 0] }));
     const solto = rodar(serie(50, 12, { tremor: TREMOR_Q }));
-    meta('R7 o 20 Hz preso (50 ms ± 0,4) cai e não grava; com o tremor da seção Q (50 ms × 0,6–1,4) grava',
-      `preso: ${resumoQ(preso)} (presa ${preso.janelas[0]?.presa}) · com tremor: ${resumoQ(solto)} (presa ${solto.janelas[0]?.presa}, p90 − p10 ${f(solto.janelas[0]?.tremor, 1)} ms)`,
-      'preso: cai, nada; com tremor: cai, grava',
-      preso.quedas.length === 1 && preso.gravadas.length === 0 && preso.janelas[0]?.presa === true && solto.quedas.length === 1 && solto.gravadas.length === 1 && solto.janelas[0]?.presa === false);
+    meta('R7 o 20 Hz regular (50 ms ± 0,4; o aparelho lento no vsync) cai e GRAVA (o 20 saiu dos divisores); com o tremor da seção Q (50 ms × 0,6–1,4) também',
+      `regular: ${resumoQ(preso)} (presa ${preso.janelas[0]?.presa}) · com tremor: ${resumoQ(solto)} (presa ${solto.janelas[0]?.presa}, p90 − p10 ${f(solto.janelas[0]?.tremor, 1)} ms)`,
+      'os dois: cai e grava; presa false',
+      preso.quedas.length === 1 && preso.gravadas.length === 1 && preso.janelas[0]?.presa === false && solto.quedas.length === 1 && solto.gravadas.length === 1 && solto.janelas[0]?.presa === false);
   }
 
   // ---------------------------------------------------------------- R8: a sessão = a regra de antes (o oráculo)
@@ -246,10 +275,10 @@ if (!M) {
     const vazia = resumoJanela([], 0);
     const lista = [3, 1, 2];
     resumoJanela(lista, 3);
-    meta('R9 resumoJanela: preso em 33,3 e 50 com pouco tremor; não preso em 40 nem com tremor; a lista do chamador fica',
+    meta('R9 resumoJanela: preso em 33,3 com pouco tremor; não preso em 50 (o 20 saiu), em 40 nem com tremor; a lista do chamador fica',
       `33,3: mediana ${f(a.mediana)} p10 ${f(a.p10)} p90 ${f(a.p90)} presa ${a.presa} · 50: ${b.presa} · 40: ${c.presa} · tremor ${f(d.tremor, 1)} ms: ${d.presa} · vazia: ${vazia.presa} · lista ${J(lista)}`,
-      'true, true, false, false, false; [3,1,2]',
-      a.presa && b.presa && !c.presa && !d.presa && !vazia.presa && J(lista) === '[3,1,2]' && Math.abs(a.mediana - 33.3) < 1e-9 && a.p90 < 34);
+      'true, false, false, false, false; [3,1,2]',
+      a.presa && !b.presa && !c.presa && !d.presa && !vazia.presa && J(lista) === '[3,1,2]' && Math.abs(a.mediana - 33.3) < 1e-9 && a.p90 < 34);
     const v = [quedaValida({ de: 'media', para: 'baixa', v: 1 }), quedaValida({ de: 'alta', para: 'baixa' }), quedaValida({ de: 'baixa', para: 'media' }),
       quedaValida({ de: 'media', para: 'media' }), quedaValida({ de: 'x', para: 'baixa' }), quedaValida(null), quedaValida('baixa')];
     meta('R9 quedaValida: só {de, para} de cima para baixo', J(v), '[{media,baixa},{alta,baixa},null,null,null,null,null]',
@@ -258,9 +287,11 @@ if (!M) {
       nivelInicial('baixa', { de: 'media', para: 'baixa' }), nivelInicial('media', { de: 'baixa', para: 'alta' }), nivelInicial('alta', null), nivelInicial('media', 'lixo')];
     meta('R9 nivelInicial: a gravada mais baixa vale; nunca sobe; lixo = a do aparelho', J(n), '[baixa, media, media, baixa, media, alta, media]',
       J(n) === J(['baixa', 'media', 'media', 'baixa', 'media', 'alta', 'media']));
-    meta('R9 as constantes de antes (3 s, janelas de 2,5 s, 4 s entre trocas, Alta 48, Média 30) e 2 janelas para gravar',
-      `${QUEDA.esperaMs} ms, ${QUEDA.janelaS} s, ${QUEDA.entreTrocasMs} ms, ${QUEDA.minimo.alta}/${QUEDA.minimo.media}, ${QUEDA.janelasGravar}`, '3000, 2,5, 4000, 48/30, 2',
-      QUEDA.esperaMs === 3000 && QUEDA.janelaS === 2.5 && QUEDA.entreTrocasMs === 4000 && QUEDA.minimo.alta === 48 && QUEDA.minimo.media === 30 && QUEDA.janelasGravar === 2);
+    meta('R9 as constantes de antes (3 s, janelas de 2,5 s, 4 s entre trocas, Alta 48, Média 30); a gravação: folga da mediana 1 ms, ajuda 1 ms, preso só no 33,3',
+      `${QUEDA.esperaMs} ms, ${QUEDA.janelaS} s, ${QUEDA.entreTrocasMs} ms, ${QUEDA.minimo.alta}/${QUEDA.minimo.media}; ${QUEDA.folgaMedianaMs}, ${QUEDA.ajudaMs}, ${(QUEDA.divisoresMs ?? []).map(v => f(v, 1)).join('/')}`,
+      '3000, 2,5, 4000, 48/30; 1, 1, 33,3',
+      QUEDA.esperaMs === 3000 && QUEDA.janelaS === 2.5 && QUEDA.entreTrocasMs === 4000 && QUEDA.minimo.alta === 48 && QUEDA.minimo.media === 30
+        && QUEDA.folgaMedianaMs === 1 && QUEDA.ajudaMs === 1 && QUEDA.divisoresMs?.length === 1 && Math.abs(QUEDA.divisoresMs[0] - 1000 / 30) < 1e-9);
   }
 
   // ---------------------------------------------------------------- R10: pureza
@@ -273,6 +304,47 @@ if (!M) {
     meta('R10 pureza: o módulo sem import, DOM, three nem relógio próprio e fora do fecho do hash',
       `import ${importa ? 'SIM' : 'nenhum'}; DOM/three/relógio ${dom ? 'SIM' : 'não'}; no fecho ${noFecho === null ? '(sem a ferramenta)' : noFecho ? 'SIM' : 'não'}`,
       'nenhum; não; não', !importa && !dom && noFecho === false);
+  }
+
+  // ---------------------------------------------------------------- R11: o aparelho no vsync (a revisão do bloco 4)
+  {
+    const V = 1000 / 60;
+    // custo(nivel, r) em ms; o intervalo = ceil(custo / V) × V ± 0,05 (o rAF sai no carimbo do vsync); 40 s por semente
+    const vsync = (nivel0, custo, semente) => {
+      const r = rng(semente), q = criarQueda();
+      q.reiniciar(0);
+      let t = 0, nv = nivel0;
+      const quedas = [], gravadas = [], janelas = [];
+      while (t < 40000) {
+        const iv = Math.max(1, Math.ceil(custo(nv, r) / V)) * V + (r() - 0.5) * 0.1;
+        t += iv;
+        const d = q.quadro(iv / 1000, t, nv, true);
+        if (d?.janela) janelas.push(d.janela);
+        if (d?.cai) { quedas.push(d.cai); nv = d.cai.para; }
+        if (d?.grava) gravadas.push(d.grava);
+      }
+      return { quedas, gravadas, janelas };
+    };
+    const casos = [
+      ['a', 'Média irregular 22–45 ms, a Baixa 10–20 (resolve)', 'media', (nv, r) => (nv === 'media' ? 22 + 23 * r() : 10 + 10 * r()), ['media→baixa']],
+      ['b', 'a Média lenta pela GPU 36–48 ms (50,0 exatos), a Baixa 26–32', 'media', (nv, r) => (nv === 'media' ? 36 + 12 * r() : 26 + 6 * r()), ['media→baixa']],
+      ['c', 'o PC: a Alta 20–30 ms (33,3 exatos, preso), a Média 8–15 (16,7)', 'alta', (nv, r) => (nv === 'alta' ? 20 + 10 * r() : 8 + 7 * r()), ['alta→media']],
+      ['d', 'o PC: a Alta 20–30 ms e a Média 18–26 (as duas a 33,3)', 'alta', (nv, r) => (nv === 'alta' ? 20 + 10 * r() : 18 + 8 * r()), []],
+      ['e', 'o iPhone em pouca energia (o sistema segura 30; o custo 8–14 ms em todo nível)', 'media', (nv, r) => Math.max(17, 8 + 6 * r()), []],
+      ['f', 'Média irregular 22–45 ms e a Baixa igual (não ajuda)', 'media', (nv, r) => 22 + 23 * r(), ['media→baixa']],
+    ];
+    for (const [id, nome, nivel0, custo, espera] of casos) {
+      const linhas = [];
+      let ok = true;
+      for (let sem = 1; sem <= 8; sem++) {
+        const v = vsync(nivel0, custo, sem * 104729);
+        const g = v.gravadas.map(x => `${x.de}→${x.para}`);
+        if (J(g) !== J(espera)) ok = false;
+        if (sem <= 2) linhas.push(`semente ${sem}: quedas ${v.quedas.map(x => `${x.de}→${x.para}`).join(', ') || 'nenhuma'}; gravou ${g.join(', ') || 'nada'} (1ª janela ${f(v.janelas[0]?.mediana, 1)} ms, presa ${v.janelas[0]?.presa})`);
+        else if (J(g) !== J(espera)) linhas.push(`semente ${sem}: gravou ${g.join(', ') || 'nada'}`);
+      }
+      meta(`R11${id} no vsync, ${nome}: ${espera.length ? `grava ${espera.join(', ')}` : 'NÃO grava'} (8 sementes)`, linhas.join(' · '), espera.length ? `gravada ${espera.join(', ')} nas 8` : 'nada gravado nas 8', ok);
+    }
   }
 
   // ================================================================ o TETO (C13)

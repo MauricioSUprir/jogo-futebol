@@ -7,17 +7,25 @@
 //    QUEDA.janelaS segundos de desenhos; o qps da janela (desenhos ÷ a soma dos intervalos) abaixo do mínimo do nível (Alta 48,
 //    Média 30) cai um nível — no máximo uma queda a cada QUEDA.entreTrocasMs. O main.js cai SEM recriar o contexto (o MSAA fica
 //    até a próxima carga: recompilar no meio da partida trava a tela sem o KHR_parallel_shader_compile, 0,23% dos Android);
-//  - a GRAVAÇÃO (a próxima carga em "Automática" já abre no nível de baixo) só quando:
-//      1. QUEDA.janelasGravar janelas lentas SEGUIDAS: a que caiu e a(s) seguinte(s), pelo mínimo do nível DE ONDE caiu (a
-//         seguinte já roda no nível de baixo: se nem ele segura o ritmo do de cima, não foi um soluço de uma janela só);
-//      2. nenhuma delas com o ritmo PRESO num divisor da tela com pouco tremor: a mediana dos intervalos a ± QUEDA.tolDivisorMs de
-//         33,3 ou 50 ms e p90 − p10 ≤ QUEDA.tremorMaxMs. É o iPhone em pouca energia (o WebKit limita o rAF a ~30, o teste do
-//         WebKit com intervalo de 30 ms; Motion; o fórum da GreenSock) e o economizador do Android: caem na sessão, como antes,
-//         mas não ficam na Baixa para sempre;
+//  - a GRAVAÇÃO (a próxima carga em "Automática" já abre no nível de baixo; a revisão do bloco 4 — a regra do C12, "duas janelas
+//    lentas seguidas pelo mínimo do nível de cima", quase nunca gravava: a 2ª janela já roda no nível de baixo, e quando ele
+//    resolve, que é o caso que a queda gravada existe para lembrar, nada ficava; 0 de 20 com a Média a ~25 qps e a Baixa a ~50):
+//      1. a janela que caiu LENTA DE VERDADE: a mediana dos intervalos a até QUEDA.folgaMedianaMs abaixo do intervalo do mínimo
+//         do nível (Média 33,3 ms; Alta 20,8): a maioria dos desenhos não segurou o nível. Alguns soluços longos (o lixo, uma
+//         compilação, uma foto chegando) baixam o qps da janela — e a queda na sessão vem, como antes — mas não a mediana: não
+//         grava;
+//      2. o ritmo PRESO num divisor da tela com pouco tremor (a mediana a ± QUEDA.tolDivisorMs de 33,3 ms e p90 − p10 ≤
+//         QUEDA.tremorMaxMs: o iPhone em pouca energia — o WebKit limita o rAF a ~30, o teste do WebKit com intervalo de 30 ms;
+//         Motion; o fórum da GreenSock — e o economizador do Android) só grava se a janela SEGUINTE, já no nível de baixo,
+//         desenhar mais rápido (a mediana ≥ QUEDA.ajudaMs abaixo): a mesma cadência presa no nível de baixo é o limite do
+//         sistema, que não responde à carga (cai na sessão, como antes, mas não fica na Baixa para sempre). O aparelho lento de
+//         verdade também desenha preso no vsync (o rAF sai no carimbo dele: a Média que leva 36–48 ms desenha a cada 50,0 ms
+//         exatos, a Alta do PC de 20–30 ms a cada 33,3): a cadência do nível de baixo é o que separa os dois. Só o 30 conta: o 20
+//         (50 ms) saiu — nenhuma fonte de sistema que limite a 20;
 //      3. fora dos testes automáticos (`podeGravar` false com navigator.webdriver, ?prints=1 e ?demo=1): o 3D do Total Match no
 //         quadro do testar-3d e o teste-graficos-pagina Q (um rAF falso a 20 Hz) caem e não gravam.
-//    Uma janela inativa no meio (a pausa, a aba escondida, outra escolha que não a Automática, a troca de qualidade) desfaz o
-//    "seguidas".
+//    Uma janela inativa entre a presa e a seguinte (a pausa, a aba escondida, outra escolha que não a Automática, a troca de
+//    qualidade) desfaz a espera.
 //
 // O TETO de quadros (passo 8, o C13; D16; a escolha D6 do dono: teto de 60 desenhos, nunca abaixo de 60), só no celular (o main.js
 // passa `ligado` = ehCelular; o PC não muda: Alta em monitor de 144 Hz é jogo de PC):
@@ -42,10 +50,11 @@ export const QUEDA = Object.freeze({
   entreTrocasMs: 4000,  // depois de uma troca (a queda, a escolha na pausa), nenhuma queda nova
   minimo: Object.freeze({ alta: 48, media: 30, baixa: 0 }),
   abaixo: Object.freeze({ alta: 'media', media: 'baixa' }),
-  janelasGravar: 2,     // janelas lentas seguidas para gravar (a que caiu + a seguinte)
-  divisoresMs: Object.freeze([1000 / 30, 1000 / 20]), // o ritmo preso: 30 e 20 qps (60 Hz ÷ 2 e ÷ 3)
+  folgaMedianaMs: 1,    // a janela que caiu é lenta de verdade com a mediana ≥ o intervalo do mínimo − 1 ms (Média 32,3 ms)
+  divisoresMs: Object.freeze([1000 / 30]), // o ritmo preso: 30 qps (60 Hz ÷ 2; o 20, 60 Hz ÷ 3, saiu na revisão do bloco 4)
   tolDivisorMs: 1,      // a mediana a até 1 ms do divisor
   tremorMaxMs: 2,       // e p90 − p10 até 2 ms
+  ajudaMs: 1,           // a presa grava se a janela seguinte (o nível de baixo) tem a mediana ≥ 1 ms abaixo da dela
   maxIntervalos: 1024,  // intervalos guardados por janela (2,5 s a 400 qps; além disso, contam no qps e não na mediana)
 });
 
@@ -99,7 +108,7 @@ export function criarQueda(opc = {}) {
   const ivs = new Float64Array(cfg.maxIntervalos);
   let n = 0, soma = 0, nGuardados = 0;
   let inicio = 0, ultimaTroca = -Infinity;
-  // a queda desta sessão esperando a(s) janela(s) seguinte(s) para gravar: {de, para, minimo, seguidas, presa}
+  // a queda presa desta sessão esperando a janela seguinte (o nível de baixo) para decidir a gravação: {de, para, mediana}
   let pendente = null;
   let ultimaJanela = null;
   const zerarJanela = () => { n = 0; soma = 0; nGuardados = 0; };
@@ -119,33 +128,27 @@ export function criarQueda(opc = {}) {
       ultimaJanela = { qps, mediana: r.mediana, tremor: r.tremor, presa: r.presa };
       zerarJanela();
       let grava = null, cai = null;
-      // a gravação: a(s) janela(s) depois da queda, pelo mínimo do nível de onde ela caiu
+      // a presa da queda anterior: grava se o nível de baixo desenhou mais rápido (a carga, não o limite do sistema)
       if (pendente) {
-        if (qps < pendente.minimo) {
-          pendente.seguidas++;
-          pendente.presa ||= r.presa;
-          if (pendente.seguidas >= cfg.janelasGravar) {
-            if (podeGravar && !pendente.presa) grava = { de: pendente.de, para: pendente.para };
-            pendente = null;
-          }
-        } else pendente = null;
+        if (podeGravar && r.mediana <= pendente.mediana - cfg.ajudaMs) grava = { de: pendente.de, para: pendente.para };
+        pendente = null;
       }
       // a queda na sessão (a regra de antes)
       if (agora - ultimaTroca >= cfg.entreTrocasMs) {
         const para = cfg.abaixo[nivel];
-        if (para && qps < (cfg.minimo[nivel] ?? 0)) {
+        const minimo = cfg.minimo[nivel] ?? 0;
+        if (para && qps < minimo) {
           cai = { de: nivel, para };
           ultimaTroca = agora;
-          pendente = { de: nivel, para, minimo: cfg.minimo[nivel], seguidas: 1, presa: r.presa };
-          if (pendente.seguidas >= cfg.janelasGravar) {
-            if (podeGravar && !pendente.presa) grava = { de: nivel, para };
-            pendente = null;
-          }
+          // lenta de verdade: a maioria dos desenhos abaixo do mínimo (alguns soluços longos não gravam)
+          const lenta = r.mediana >= 1000 / minimo - cfg.folgaMedianaMs;
+          if (lenta && r.presa) pendente = { de: nivel, para, mediana: r.mediana };
+          else if (lenta && podeGravar) grava = { de: nivel, para };
         }
       }
       return cai || grava ? { cai, grava, janela: ultimaJanela } : null;
     },
-    /** O estado (testes e o painel): a janela em andamento, a última fechada e a queda esperando para gravar. */
+    /** O estado (testes e o painel): a janela em andamento, a última fechada e a queda presa esperando a janela seguinte. */
     estado() {
       return { n, soma, inicio, ultimaTroca, ultimaJanela, pendente: pendente ? { ...pendente } : null, podeGravar };
     },

@@ -3210,8 +3210,9 @@ function medirQuadroPainel(agoraMs, desenhar) {
  * A queda automática (a decisão em render/ritmo-desenho.js): na sessão, a regra de antes — Alta abaixo de ~48 qps ou Média abaixo
  * de ~30, medidos pelos DESENHOS (no jogo cada quadro desenha; com o teto do C13 o quadro() só roda nos desenhados) —, caindo SEM
  * recriar o contexto (o MSAA fica até a próxima carga: recompilar no meio da partida trava a tela sem o KHR_parallel_shader_compile);
- * a GRAVAÇÃO nas preferências só com duas janelas lentas seguidas, fora do ritmo preso num divisor da tela e fora dos testes
- * automáticos. Mede só na "Automática", com a página à vista, fora da pausa, do relógio manual e da troca em andamento.
+ * a GRAVAÇÃO nas preferências só com a janela que caiu lenta de verdade (a mediana dos intervalos, não alguns soluços), o ritmo preso
+ * em 30 só quando o nível de baixo desenha mais rápido (a revisão do bloco 4) e fora dos testes automáticos. Mede só na
+ * "Automática", com a página à vista, fora da pausa, do relógio manual e da troca em andamento.
  */
 function adaptarQualidade(dt, agora) {
   const ativo = escolhaQ === 'auto' && !PRINTS && !relogioManual && !pausado() && !document.hidden && !trocandoQ;
