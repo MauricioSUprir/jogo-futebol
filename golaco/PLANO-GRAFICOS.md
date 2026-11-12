@@ -122,6 +122,16 @@ fica fora estão na seção 6 ("Medido no C14a").
   na semente 7; as bandeiras 1,74% / 0,43%; 1 px de torcida e de placas com o gol no foco). Vai informativa ao C14 e ao
   "Depende do dono" 30.
 
+**O C14 (12/11; `632326b2`, `964a2efd`): as metas valendo e os dois testes no CI.** O medido, a classificação e o CI estão na seção
+6 ("Medido no C14").
+- **Os dois testes reprovam por padrão** (vale, guarda e estrutura); `--informativo` só mostra. Toda linha informativa sai como
+  `INFO`, com o motivo no alvo. Viraram informativas as 5 linhas da K1 que o C14a deixou fora e a K2 (a main já cumpre); os
+  buracos da queda viraram guarda. Nenhuma linha fora: o celular 64 passam e 26 informativas, a página 73 e 25.
+- **No CI:** os dois na lista do `rodar-navegador.mjs`, fora do deploy. Num PR, a parte que roda o `teste-graficos-pagina` busca o
+  commit da base, monta uma worktree dele e passa a pasta pela `GOLACO_BASE`: a CPU pareada vale. No deploy, sem base, só informa.
+- **Os tempos:** o celular 126–133 s e a página 339 s (com a base). Continua em 3 partes: a mais longa fica em ~39 min de testes.
+- **O CI do `964a2efd` passou inteiro** (os dois testes rodaram, a P pareada com a base do PR: +0,20 ms).
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -593,6 +603,10 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 - **vale**: a main reprova, e a mudança tem de levar a meta para dentro. É a prova antes → depois.
 - **guarda**: passa na main por construção (a peça ainda não existe; é "nada pior", "chave de volta" ou estrutura). Vale a partir do C14 para nada piorar, mas não conta como prova de melhoria.
 - **informativa**: meta de melhoria que a main já cumpre, ou que na main não mede nada. Fica na saída do teste, não reprova, e o PR diz. O C14 passa essas linhas a `info` no código.
+- **Desde o C14** os dois testes reprovam por padrão (vale, guarda e estrutura); `--informativo` só mostra (para medir a main, que
+  reprova as de melhoria). Toda linha informativa sai como `INFO`, com "[passaria]" ou "[fora]" no medido e o MOTIVO no alvo.
+  Além das desta tabela, ficaram informativas as linhas que o C14a deixou fora (as 5 da K1 abaixo); os buracos da queda passaram
+  de informativos a guarda.
 
 **`teste-graficos-celular` (módulos):**
 
@@ -630,7 +644,7 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | F | Média: cintilação ≤ 1,5× o SSAA e soma 0,7–1,3 em toda peça (foco / lá) | reprova | pior peça ×12,6 (mastro) / ×5,84 (mastro); a soma, pior 0,96 / 0,91, passa; forçado ×3,22 (mastro) / ×1,33 (corda do fundo), soma 0,93 / 0,88 | vale (com o MSAA o mastro do foco fica em ×3,22: o C9 tem de fechar) |
 | F | Baixa: buracos (foco / lá) | reprova | 57,1% / 62,5% (a corda do pé nos dois) | vale |
 | F | Baixa: cintilação e soma (foco / lá) | reprova | ×6,49 (corda do pé) / ×6,02 (mastro); soma 0,90 / 1,03 | vale |
-| F | Baixa com MSAA (a queda): buracos (foco / lá) | reprova | 0% / 0% (forçado) | **informativa** (desde o C14a a Baixa fica na mistura também com as amostras da queda: a cintilação e a soma contam como na Baixa, também a pose do limiar) |
+| F | Baixa com MSAA (a queda): buracos (foco / lá) | reprova | 0% / 0% (forçado) | ~~informativa~~ **guarda desde o C14**: desde o C14a a queda desenha os finos pela mistura (a cintilação, a soma e a pose do limiar contam como na Baixa), o caminho que abria os buracos na Baixa da main (57% / 62%); a linha vigia esse caminho com as amostras |
 | F | Baixa com MSAA: cintilação e soma, gol no foco | reprova | ×1,69 (corda do pé), soma 0,88 | vale (era informativa com a câmera só em x: ×1,28) |
 | F | Baixa com MSAA: cintilação e soma, gol de lá | reprova | ×2,56 (corda do fundo), soma 0,74 | vale |
 | F | A haste de perto (o gol de lado, C14a): cintilação e soma (Média / Baixa / a queda) | reprova | ×4,24 / ×4,03 / ×1,17 (forçado); soma 1,00 / 0,99 / 1,01 | vale |
@@ -676,10 +690,10 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | S2 | Tablet com `?aa=1` = 4 / PC 1280×720 Média = 4 | reprova | 0 / 0 | vale |
 | A2 | Razão ≤ 0,6 (TV na bola / gol no foco) | reprova | 1,00 / 1,00 (forçado ×0,70 / ×0,47 contra o SSAA do mesmo LOD; com o 3× era ×0,70 / ×0,55); máscara 1,41% / 0,97%. Desde o C14a contra o SSAA 8×8 (o 3×3 errava as bordas alinhadas com a tela): forçado ×0,53 / ×0,42 | vale |
 | A2 | Carga oposta forçada; carga igual = o mesmo quadro | estrutura | `SAMPLES` 4; 0 px nos 3 quadros, o hash igual | estrutura |
-| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83%. Desde o C14a a franja também a mais de 0,03 da verdade (o SSAA 8×8): 1,74% (14); as bandeiras 13,32% / 4,17% | vale |
-| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, gol no foco | — | 0% (0 de 611). O centro dentro: 1,24% (11 de 890), todas 0,73%: era 100% piso, a meta antiga reprovava mesmo com o `centroid` certo | guarda |
-| K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | vale |
-| K | K1 franjas: placas (bola / gol no foco) | — | 0 px de borda fora / 0% de 366; o centro dentro 0% de 1262 / 219 | guarda |
+| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83%. Desde o C14a a franja também a mais de 0,03 da verdade (o SSAA 8×8): 1,74% (14); as bandeiras 13,32% / 4,17% | ~~vale~~ **informativa desde o C14**: passa na semente do teste (4: 0,09%) e reprova na 7 (0,22%; a main 0%) — a A2C da torcida do C10, trocada pela K3; "Depende do dono" 30 |
+| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, gol no foco | — | 0% (0 de 611). O centro dentro: 1,24% (11 de 890), todas 0,73%: era 100% piso, a meta antiga reprovava mesmo com o `centroid` certo | ~~guarda~~ **informativa desde o C14**: fora por 1 px desde o C10 (1 de 1737; a main 0); a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30) |
+| K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | ~~vale~~ **informativa desde o C14**: 1,74% / 0,43% no C14a, a borda de cima das faixas da mureta (defeito do desenho); a cobertura analítica nessa borda ou a sangria de 1 texel vão ao "Depende do dono" 30 |
+| K | K1 franjas: placas (bola / gol no foco) | — | 0 px de borda fora / 0% de 366; o centro dentro 0% de 1262 / 219 | bola: guarda (vale no C14); gol no foco: **informativa desde o C14**, fora por 1 px desde o C9 (1 de 366; a main 0), como a da torcida |
 | K | K1 franjas: letreiro do pré-jogo | reprova | 0 px de borda (sem a A2C o MSAA não muda um `alphaTest`) | **informativa** (na main não mede nada; ~~com a A2C do C10 vira guarda ≤ 0,2%~~ — o letreiro do Estádio Golaço é TRANSPARENTE e a A2C do C10 não o pega: continua 0 px; o opaco, o do Maracanã, só na edição pro, medido à parte no C10. O C14 decide se mede o pro aqui) |
 | K | K2 cobertura das bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | reprova (as de longe) | 0,966 / 0,935 sem AA; forçado 1,006 / 1,004 | **informativa** |
 | K | K3 A2C da torcida | informativa | ~~sem AA: cobertura 0,986, cintilação ×1,16 (no Chromium 153: 0,926 e ×1,32); forçado 0,987 e ×1,23~~ regravada com a cena assentada (`35f967c5`): sem AA 0,926 e 6,05% (SSAA 4,60%, ×1,32); forçado 0,926 e ×1,32 | informativa |
@@ -1424,6 +1438,64 @@ da TV na bola vinha de UMA linha da tela: a de cima das placas do lado de lá, h
     do PC); medir a A e a F juntas em toda variante.
   - **Linha decidida por poucos px muda com a semente:** a torcida na bola 0,09% numa, 0,22% na outra.
 
+**Medido no C14** (as metas valendo e os dois testes no CI, 12/11; Chromium 141 do CI, SwiftShader, um teste de navegador por vez;
+antes = o HEAD do C14a, `35b9ec6e`; agora = `964a2efd`; a main `e41aa791` pela worktree de leitura; logs em
+`scratchpad/f45/fech/c14/`). Só os testes, a lista do CI e o YAML: `fecho-hash` 0.
+
+| | Antes (C14a) | Agora |
+|---|---|---|
+| `teste-graficos-celular` sem argumentos | sai 0 sempre; com `--valendo`: 66 passam, 24 informativas, 0 fora (126 s, carga 0,1–2,3) | reprova: 64 passam, 26 informativas, 0 fora (133 s, carga 2,5–2,8) |
+| `teste-graficos-pagina` sem argumentos | sai 0 sempre; com `--valendo`: 4 fora (as K1 de 1–25 px) | reprova: 73 passam, 25 informativas, 0 fora (339 s com a base, carga 1,7–3,5) |
+| A CPU pareada (a P, contra a main pela `GOLACO_BASE`) | não medida no C14a (sem `--base`: 5,90 ms, informativa) | −0,10 ms (medida 5,90 × base 6,00 ms; a meta ≤ +1,0) |
+| A main sem argumentos (a prova de que as metas contam) | — | reprova: o celular `--so S` 2 (Média 0, `?aa=1` 0); a página `--so S2` 3 (celular, tablet com `?aa=1`, PC); com `--informativo`, sai 0 |
+| As partes do navegador no CI | 3 (24 testes; o maior job 39 min no CI do `38d6b243`) | 3 (26 testes); pelo tempo real daquele CI e os dois novos medidos aqui: 38,9 / 34,3 / 38,3 min de testes, mais ~2,5 min de instalação (4 partes dariam 29,7 / 28,1 / 28,8 / 24,9) |
+
+- **A classificação** (seção 4), linha por linha no código:
+  - vale e guarda reprovam; estrutura reprova sempre; `info` mostra, com "[passaria]" ou "[fora]" no medido e o motivo no alvo;
+  - viraram informativas, com o motivo: as 5 linhas da K1 (centro fora) que o C14a deixou fora — a torcida na bola (passa na
+    semente 4, reprova na 7), as bandeiras na bola e com o gol no foco, a torcida e as placas com o gol no foco (1 px) — e a K2 do
+    build (a main já cumpre, 0,966 / 0,935);
+  - virou guarda: os buracos da queda (a queda desenha pela mistura desde o C14a, o caminho que abria os buracos na Baixa da main);
+  - nenhuma linha que passava ficou informativa sem motivo. As que passam e ficam `INFO` são a K1 da torcida na bola e a K2. A A da
+    Baixa ("nada pior") já era informativa no código, mas a tabela mostrava "PASSOU" (o `tipo: 'info'` com o resultado); agora sai
+    `INFO`, com o motivo (a Baixa não tem MSAA; o "nada pior" de verdade é pareado com a base);
+  - a T e a Q valem como estão (absolutas; a Q de 120 Hz no fim da Q).
+- **O CI:**
+  - os dois testes na `LISTA` do `rodar-navegador.mjs`, fora do deploy — o CI do PR os roda em toda mudança do `golaco/`, e no
+    deploy a CPU pareada não teria base (seriam ~6–8 min de testes a mais na publicação, a P só informando);
+  - o job `navegador` do `golaco-testes.yml`: num PR, a parte que tem o `teste-graficos-pagina` (pelo `--lista` dela) busca só o
+    commit da base (`git fetch --depth=1`, o checkout é raso), monta uma worktree dele e passa a pasta pela `GOLACO_BASE`, que o
+    teste lê quando não há `--base`. No deploy (`workflow_call` de um push) e no `workflow_dispatch` o passo não roda e a P pareada
+    só informa. Conferido num clone raso daqui (o mesmo script com `bash -eo pipefail`): a parte 1 monta a base, as outras duas não;
+  - o `mudancas` do `deploy-pages.yml` compara a árvore do `golaco-testes.yml`: a próxima publicação depois do merge roda a bateria
+    inteira (esperado).
+- **Os tempos** (`tempos-ci.mjs`): o celular 126 s e a página 339 s (a P 49 s com a base, ~20 sem ela; o R5 26 s; a P2 do toque 11
+  s), medidos aqui; o `teste-pausa-tela` com o P14, 250 → 261 s (260,8 s no log do CI do `38d6b243`). Os outros continuam como
+  estavam: alguns estão longe do CI (o `teste-cenas-tela` 1020 × 1191 s, o `teste-estadio` 290 × 377 s), mas a divisão já sai
+  equilibrada.
+- **O CI do `964a2efd`** ([run 43200911500](https://github.com/MauricioSUprir/jogo-futebol/actions/runs/43200911500); o painel de
+  equilíbrio, os 4 Node e os 3 navegadores): **tudo passou**, em ~35 min.
+  - [navegador 1 de 3](https://github.com/MauricioSUprir/jogo-futebol/actions/runs/43200911500/job/131123799082): o passo da base
+    montou a `e41aa791` em `/home/runner/work/_temp/base` (1 s); o `teste-graficos-pagina` passou em 239 s (73 passam, 25
+    informativas), com "a base da CPU pareada: …/_temp/base/golaco (GOLACO_BASE)" e a P pareada **+0,20 ms** (medida 3,80 × base
+    3,50 ms; ≤ +1,0). O "≤ 6 ms" absoluto, informativo, passaria no CI: 3,80 (aqui 5,90). A parte: 1439 s de testes, 24,6 min.
+  - navegador 3 de 3 (sem a base: "não está nesta parte"): o `teste-graficos-celular` passou em 120,5 s (26 informativas). A parte:
+    2058 s de testes, 34,9 min.
+  - navegador 2 de 3 (sem a base): 1839 s de testes, 31,3 min; o `teste-desempenho-celular` informativo como sempre.
+  - Os runners deste CI andaram mais rápido que os do `38d6b243` (o `teste-cenas-tela` 1191 → 689 s, o `teste-prejogo` 637 → 518
+    s): a projeção de ~39 min por parte é a do runner lento. Os tempos novos do `tempos-ci` ficam os medidos aqui (126 e 339 s; no
+    CI 120,5 e 239 s), a mesma ordem dos outros.
+- **Para o C15 e o C16:**
+  - o `tempos-ci` dos testes de navegador que não são deste item (o `teste-cenas-tela` 1020 × 1191 / 689 s, o `teste-estadio` 290 ×
+    377 / 303 s): dois logs do CI agora (o `38d6b243` e o `964a2efd`); a divisão já sai equilibrada, só se o C15 mexer nos tempos;
+  - ao "Depende do dono" 30 (C16): as 5 linhas da K1 com as propostas (a A2C da torcida × a K3; a borda das faixas da mureta; a
+    régua de 1 px) e a CPU do quadro — o "≤ 6 ms" passa no runner do CI (3,80) e não aqui (5,90): a medida depende da máquina,
+    como já dito; a guarda que vale é a pareada;
+  - o deploy não roda os dois testes (fora da marca `deploy`): se o dono quiser a régua também antes de publicar, é marcar as duas
+    linhas (~6–8 min de testes a mais por publicação, a CPU pareada só informativa lá).
+- **Lição:** o runner do CI muda de velocidade entre rodadas (o `teste-cenas-tela` 1191 s num, 689 s noutro): a divisão em partes se
+  decide pelo runner LENTO (a soma da parte mais cheia + a instalação), não pela média.
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1511,7 +1583,7 @@ da TV na bola vinha de UMA linha da tela: a de cima das placas do lado de lá, h
 | C13 | "Item 45: teto de 60 desenhos no celular de 100 Hz para cima" | `js/render/ritmo-desenho.js`, `tools/teste-ritmo-desenho.mjs`, `main.js` | sim |
 | B4 | a revisão do bloco 4: `e6f6df30` (a queda gravada pela mediana), `2abed4b3` (a troca com prazo, a pausa travada, o online), `c37f5587` (o painel sem toque, as linhas, o rAF, o cronômetro), `b6be7508` (a espera própria dos programas), os testes `a44f0145`, `a4b9df80`, `5ff4db63` e o plano | `js/render/ritmo-desenho.js`, `main.js`, `hud.js`, `css/estilo.css`, `js/render/medidor-quadros.js`, `js/render/bola-parada.js` (comentário), `tools/teste-ritmo-desenho.mjs`, `tools/teste-medidor-quadros.mjs`, `tools/teste-graficos-pagina.mjs` | sim |
 | C14a | as metas que estavam fora: `77073fd3` (os finos na mistura na Baixa com as amostras da queda; a guarda na Q), `0ab75a89` (a pose da haste na F), `a39c0673` (a A2 contra o SSAA 8×8, a A2 por peça, a K1 com a verdade, a referência da página regravada só na A2 e na K) e o plano | `js/render/campo.js`, `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/dados/graficos-ref.json` | não |
-| C14 | "Item 45 (teste): metas valendo e os dois testes na lista do CI" | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs` | não |
+| C14 | as metas valendo e os dois testes no CI: `632326b2` (as metas por padrão, o motivo nas informativas, a base pela `GOLACO_BASE`), `964a2efd` (a lista do navegador, a base do PR no job e os tempos) e o plano | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs`, `.github/workflows/golaco-testes.yml` | não |
 | C15 | "Item 45 (testes): recalibração medida dos testes afetados" (só os que mudaram de propósito; tabela no PR) | testes da seção 6, `tempos-ci.mjs` | não |
 | C16 | "Item 45 (docs): contrato, FILA, CATEGORIAS, CLAUDE.md e o Depende do dono 30" | `golaco/CONTRATOS.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md` | não |
 
