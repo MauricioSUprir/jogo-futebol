@@ -996,7 +996,9 @@ referência — a K e a A2 regravadas com a cena assentada no `35f967c5` —; o 
   de segundos: 0 desenho/s atrás da tela no E15) reprovou na base 1 em 13 rodadas e no HEAD 6 em 15 (as 3 primeiras rodadas
   seguidas do HEAD reprovaram 2; nas 6 alternadas do fim, 1 a 1); sem o painel o quadro é o mesmo de antes (o invólucro só chama o
   `quadroCorpo`), e o navegador 2 de 3 do CI (com ele) passou. O `teste-substituicao-tela` T9 (programas 36 → 37) reprovou no
-  navegador 1 de 3 do CI do `3d5202df` e passou no do `56bf6fd2` e aqui (37 → 37).
+  navegador 1 de 3 do CI do `3d5202df` e passou no do `56bf6fd2` e aqui (37 → 37); o `teste-online-tela` P8g (o aviso "ainda está
+  vendo a cena" com B em pé) reprovou no navegador 3 de 3 do `3d5202df` e passou no do `56bf6fd2` (o código das páginas sem o
+  painel é o mesmo nos dois commits).
 - **Para o C12 (a troca, a queda gravada e o contexto):**
   - o painel lê `info.queda = {sessao, gravada}` (cada uma `{de, para}` ou null) no `main.js infoPainel()`; o texto já mostra
     "Média → Baixa" com os dois preenchidos (`medidor-quadros.js textoPainel`, coberto pelo M8);
