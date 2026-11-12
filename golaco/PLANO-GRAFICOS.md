@@ -390,6 +390,11 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - Os testes desenham com ele as referências (SSAA) e os quadros da máscara geométrica das seções A, A2 e F, e as referências da K.
   - Sem ele, o contexto "sem AA" deixa de ser "o mesmo build menos o MSAA" (o build lê o `SAMPLES`), e a máscara deixa de ser só geometria.
   - Sem ele, o SSAA também sai com a largura mínima do buffer 1×: o render 3× é feito por `setSize` direto, sem o `redimensionar` nem o `uAlturaBuffer`. A referência passaria a depender do código medido.
+- **O canvas opaco com a A2C** (o fecho do bloco 3; a regressão do V8): a A2C escreve no buffer o MESMO alfa que usa para a
+  cobertura, e o three r170 pede o contexto sempre com `alpha: true` (o `alpha: false` do renderizador só vale para a limpeza).
+  Todo material com A2C passa pelo `render/util.js alfaDoCanvas(m, a2c)`: a mistura própria só do canal alfa (a cor substituída,
+  o alfa do destino mantido em 1). A cor sai igual bit a bit; o `teste-estadio` 10b confere o alfa 255 em todo pixel. Material
+  novo com A2C (C11 em diante) chama a mesma função.
 - **Os ganchos do contexto restaurado:** o R4 estraga a A2C e o `uAlturaBuffer` ANTES do `loseContext()` (a A2C ao contrário, o uniform em −1) e só passa se o `webglcontextrestored` (ou o `onBeforeRender`) os refizer. Postos só na criação, eles NÃO passam.
 - **Fontes:** Humus, Phone-wire AA; Golus, Anti-aliased Alpha Test; Castaño, Computing Alpha Mipmaps; GLSL ES 3.00 (o qualificador `centroid`); three r170 `WebGLProgram.js:744`, `WebGLPrograms.js:564` e o `alphatest_fragment`.
 - **Pode quebrar:**
@@ -831,9 +836,9 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `gramado-shader.js` (novo na revisão) | — | 8,5 KB |
   | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
   | `ritmo-desenho.js` | ~1,5 KB | (C12/C13) |
-  | `torcida.js`/`bandeiras.js`/`impostor.js` | +~1 KB | (C10) |
-  | `main.js`/`hud.js` | +~2,5 KB | (C9, C11–C13) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+43 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB; nosso 2859 → 2902 KB) |
+  | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11–C13) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+77 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3; nosso 2859 → 2902 → 2936 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
@@ -854,7 +859,7 @@ Medir base × PR com as mesmas sementes antes de qualquer recalibração. Recali
 | `teste-bola-parada-tela` §7, `teste-mira-tela` | a máscara da mira com × sem e o contraste contra o gramado; a mira depois da troca | medir dia e noite |
 | `teste-corpo-tela` C9–C11 | bordas tracejadas, a nuca (estatística de borda com MSAA), as franjas dos decalques | medir; o C9b compara variantes no mesmo quadro (deve ficar) |
 | `teste-estadio` | `definirQualidade` em 112 e 1131-1133 (troca e desenha no mesmo `evaluate`: o caminho imediato); torcida ≥ 12 por print; o gol roteirizado com a rede | tem de passar sem mudar o teste |
-| `teste-camera-tela`, `teste-cenas-tela`, `teste-comemoracao-tela`, `teste-prejogo` (35 chamadas / 122 mil tri ≤ 40 / 130 mil), `teste-tecnicos-tela`, `teste-replay` (G1–G6 chamadas e CPU por plano), `teste-substituicao-tela`, `teste-replay-paradas-tela`, `teste-livre-tela`, `teste-prepartida-tela`, `teste-som-jogo` | abrem na Média: MSAA no SwiftShader = mais tempo; prints | chamadas +0; tempo no `tempos-ci`; `?aa=0` só se passar de +20% |
+| `teste-camera-tela`, `teste-cenas-tela`, `teste-comemoracao-tela`, `teste-prejogo` (a main: 40 chamadas / 128,1 mil tri, metas ≤ 40 / 130 mil — folga 0 nas chamadas; o "35 / 122 mil" era de antes), `teste-tecnicos-tela`, `teste-replay` (G1–G6 chamadas e CPU por plano), `teste-substituicao-tela`, `teste-replay-paradas-tela`, `teste-livre-tela`, `teste-prepartida-tela`, `teste-som-jogo` | abrem na Média: MSAA no SwiftShader = mais tempo; prints | chamadas +0; tempo no `tempos-ci`; `?aa=0` só se passar de +20% |
 | `teste-hud-minimo` | o painel e o orçamento do HUD | nada visível sem F3/`?qps`/`?perf` |
 | `teste-pausa-tela` | o texto da Média e a troca pelas Opções (agora com a tela "Ajustando…") | medir |
 | `teste-carga` | download, lista sob demanda, hash Node = Chromium, 1º quadro | +~15 KB; a lista nova |
@@ -891,6 +896,73 @@ mexida agora):
 - **O CI do PR**: os jobs de navegador dos commits do C4–C8 caíram na instalação (`playwright install --with-deps`: o apt sem
   DNS) antes de qualquer teste — a única evidência deles é a rodada local acima. As rodadas dos commits da revisão foram
   conferidas no fim (o relato da revisão).
+
+**Medido no bloco 3** (C9–C10 com a revisão e o fecho, 12/11; Chromium 141 do CI, SwiftShader; a main `e41aa791` pela
+referência — a K e a A2 regravadas com a cena assentada no `35f967c5` —; o HEAD do fecho; `teste-graficos-celular --so F,A,N`
+1 min 52 s, `teste-graficos-pagina --so K,A2,P,P3,R` 2 min 48 s). Fora: 1 meta da F (a queda), a A2 da bola e 5 linhas da K1.
+
+| Meta | Main | Agora |
+|---|---|---|
+| F Média, buracos ≤ 5% (foco / lá) | 33,3% (mastro) / 55,0% (corda do pé) | 0% / 0% |
+| F Média, cintilação ≤ 1,5× o SSAA e soma 0,7–1,3, a pior peça (foco / lá) | ×12,6 / ×5,84 (mastro); soma 0,96 / 0,91 | ×1,42 (mastro) / ×1,31 (corda do fundo); soma 1,13 / 0,84 |
+| F Baixa, buracos (foco / lá) | 57,1% / 62,5% | 0% / 0% |
+| F Baixa, cintilação e soma (foco / lá) | ×6,49 / ×6,02; 0,90 / 1,03 | ×1,17 / ×1,38 (corda do fundo); 1,07 / 1,24 |
+| F Baixa, a pose do LIMIAR (nova; 1,09 / 0,89 px nas pontas): buracos / cintilação / soma | — (a pose é da revisão; no C10: 3,9% / ×4,76 / 1,34) | 0% / ×1,12 / 1,11 |
+| F Baixa com MSAA (a queda), cintilação e soma (foco / lá) | ×1,69 / ×2,56; 0,88 / 0,74 | ×1,16 / **×2,26 (corda do fundo; o mastro ×1,97)**; 1,19 / 0,70 — **fora no gol de lá** (o C14) |
+| F Média sobre o gramado (informativa; foco / lá) | — | ×2,91 (a haste, 4 pontos) / ×1,37; a soma da corda do pé 1,14 / **1,36** |
+| A Média, razão ≤ 0,6 (dia foco / lá; noite foco / lá) | 1,00 / 1,00 · 1,00 / 1,00 | 0,53 / 0,50 · 0,46 / 0,46 |
+| A Baixa, nada pior (E ÷ contraste; foco / lá) | 0,590 / 0,751 | 0,598 / 0,712 (×1,015 / ×0,947) |
+| A PC Alta, nada pior (a razão; teto × 1,10; dia foco / lá, noite foco / lá) | 0,566 / 0,514 · 0,451 / 0,525 | 0,576 / 0,524 · 0,486 / 0,535 (×1,017 / ×1,019 · **×1,076** / ×1,017) |
+| A2 razão ≤ 0,6 (TV na bola / gol no foco) | 1,00 / 1,00 (forçado ×0,70 / ×0,47) | **0,69** / 0,47 (E 0,0624 / 0,0534) |
+| K1 torcida, centro fora ≤ 0,2% e ≤ a main forçada (bola / gol no foco) | 2,36% (19 de 804) / 0% (0 de 632) | **0,33%** (7 de 2134) / **0,06%** (1 de 1737) |
+| K1 bandeiras (bola / gol no foco) | 13,40% (173 de 1291) / 4,17% (15 de 360) | **2,43%** (35 de 1439) / **0,65%** (3 de 463) |
+| K1 placas (bola / gol no foco) | 0 px de borda / 0% de 366 | 0 px / **0,27%** (1 de 366; já no C9) |
+| K1 letreiro (informativa: o do Estádio Golaço é transparente) | 0 px de borda | 0 px |
+| K2 bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | 0,966 / 0,935 sem AA (forçado 1,006 / 1,004) | 1,006 / 1,011 |
+| K3 torcida (informativa): cobertura e cintilação ÷ SSAA | 0,926; 6,05% (×1,32) | 0,934; 5,87% (×1,28); a oposta 0,925 e ×1,33 |
+| K3 a cena parada (estrutura nova) | — | 0 px no 1× e no SSAA, nas duas cargas |
+| P chamadas = ref; triângulos ≤ ref + 1% | 31; 91 524 | 31; 92 044 (+0,57%: os finos de 16 lados +200, as pontas fechadas +320) |
+| P3 `?gfx=antigo`: o texto da torcida e das bandeiras = a main (FNV-1a) | 3046274822 / 2295424622 | iguais (o build: 3205256957 / 3759878488) |
+| R4 os ganchos depois do contexto restaurado (A2C dos finos e da torcida) | o restaurado sem os ganchos | passa |
+| O canvas opaco (`teste-estadio` 10b, nova): px com alfa < 255 em 20 instantes da TV do celular Média | 0 (sem A2C) | 0 (no C10: ~15 mil por quadro; com o `alfaDoCanvas` desligado, 470 443 nos 20, mínimo 144) |
+
+**A lista do C15 (o bloco 3)** — base `e41aa791` × o HEAD do fecho, um teste de navegador por vez (o HEAD do C10 pela revisão
+"regressões", `a2561f8f`, quando dito). Nenhuma meta mexida agora:
+- `teste-tecnicos-tela` V8 — **a regressão do C10, corrigida no CÓDIGO** (`bc01cece`, o canvas opaco; seção 0): o 211 de costas
+  0 (base) → 207–228 px (C10, o CI do `4792e0c6` e do `3c4b5719`) → 0 px; de frente 255 / 216 (= o C9). A mediana do V1 193 (C9)
+  → 209 (C10: as bordas clareadas pela cópia translúcida) → 189–193 (de uma rodada para outra). O teste inteiro PASSOU (V1–V8,
+  3 min 17 s) e o navegador 3 de 3 do CI do `bc01cece` também. A correção reprova por mutação (o `alfaDoCanvas` desligado: o 211
+  de costas 165 px). Nada a recalibrar.
+- `teste-estadio` — o 10b novo (o canvas opaco, acima) e o item 1 esperando o 3D (`3c4b5719`). A torcida visível de dia 34,94 /
+  35,03 (base) → 34,70 / 34,58 (C10: o mesmo artefato do alfa) → 35,77; à noite 25,17 → 25,33; no celular 10,45 → 10,43%; a
+  memória da troca de qualidade 30 → 30 e 17 → 17. 66 de 66 (4 min 56 s). Nada.
+- `teste-rede-tela` — **mudou o teste de propósito** (`4792e0c6`: o campo pelo `definirAA`, como o jogo; a A2C nos finos da
+  Média): "clareia o gol na TV" do celular de dia ΔL* 17,4 em 25,9% (a mistura, como o teste montava) → 17,1 em 26,7% (base 17,1);
+  no PC 15,4 → 15,3; "mexe na TV" 3,2–3,9% → 3,1–3,9%. Feito.
+- `teste-graficos-pagina` — **a régua da K3 mudou** (a cena assentada e o quadro a de novo): a referência regravada só na K e na
+  A2 (19 valores; a K3 da main 0,986 / 2,13% → 0,926 / 6,05%) e a P3 com o FNV-1a (2 chaves novas). Feito.
+- `teste-graficos-celular` — a F ganhou a pose do limiar (estrutura e metas) e a linha sobre o gramado (informativa); as chaves
+  novas sem referência. Feito.
+- `teste-gramado` G5–G7 e `teste-torcida` (os regex nos módulos novos) — feito; os dois PASSARAM.
+- `teste-prejogo` — os triângulos do pior plano +0,5–0,6 mil (os finos de 16 lados e as pontas fechadas): Estádio Golaço 128,1 →
+  128,7 mil (≤ 130 mil: sobra 1,3 mil), Suppici 92,1 → 92,6, BUKO 88,2 → 88,8, Maracanã 125,3 → 125,8, Aflitos 104,3 → 104,8;
+  as chamadas iguais (40 / 38 / 38 / 38). PASSOU (9 min 18 s). Nada; **o pré-jogo não tem folga de chamada (40 de 40, já na
+  main)**: o C11 em diante não pode pôr nada desenhado no pré-jogo do celular.
+- `teste-corpo-tela` — PASSOU; o C9b (a emenda, informativo) 424 (base) → 116 (C10) → 93 colunas (o MSAA do bloco 2, já na lista);
+  o C11a de costas 10 → 21 → 3 px (meta ≤ ~92); o C11b frente / lado 11 / 22 → 11 / 24 → 44 / 7 (≥ 5). Os números andam entre
+  rodadas (a cena não é a mesma a cada abertura). Nada.
+- `teste-camera-tela`, `teste-replay` — as chamadas iguais (J5 28,0; E7 29 / 32; G4 TV 26, atrás 31–32); os triângulos +200 no C10
+  pela revisão (as pontas fechadas, +320, não medidas aqui: a P da página mede +520 no quadro da TV). Nada.
+- `teste-desempenho-celular` (informativo) — **não é do bloco**: o "Sem vazamento" dá geometrias 33 → 37 e texturas 15 → 16 na
+  main e no HEAD (os mesmos números, também no CI). Sondado (uma cópia com o renderizador à mão): a memória cresce na 1ª vez que
+  uma peça aparece — o torcedor 3D e o impostor chegando, uma geometria nova no passo 541, antes de qualquer substituição — e fica
+  parada depois (600 passos a mais: 39 → 39). Com a espera do 3D do `teste-estadio` ainda sobram +3 geometrias nos dois lados: o
+  teste pede uma régua nova (duas rodadas iguais, comparar a 2ª) → C15, fora do bloco. A CPU, ruído do SwiftShader nos dois lados:
+  o jogo p95 6,10 / 6,20 ms e 6,20 / 6,00 (base / HEAD, duas rodadas; meta 6, informativa: "Depende do dono" 30); a comemoração
+  p95 7,20 / 5,40 e 8,20 / 7,00 (meta: o jogo + 1).
+- `teste-carga` — o nosso 2902 → 2936 KB, a folga 518,4 → 484,9 KB (seção 5); o hash Node = Chromium. Nada.
+- **O CI do PR:** o do C9 (`52896f71`) passou inteiro; o do C10 não rodou (a pane do GitHub); os do `4792e0c6` e do `3c4b5719`
+  reprovaram só no V8 (o navegador 3 de 3) e no `teste-desempenho-celular` informativo; o do `bc01cece` passou o navegador 3 de 3.
 
 ---
 
