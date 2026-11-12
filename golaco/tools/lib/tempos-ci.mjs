@@ -50,6 +50,7 @@ export const TEMPOS_NODE = {
   'teste-rede.mjs': 1,
   'teste-rede-veu.mjs': 3,
   'teste-gramado.mjs': 5, // item 45, C4: medido 4,5 s aqui sozinho (a maior parte no GLSL interpretado em 140 mil x)
+  'teste-ritmo-desenho.mjs': 1, // item 45, C12: medido 0,2 s aqui sozinho
   'teste-camera.mjs': 186, // item 66: S ~1 s, G ~17 s (o G5 com as 32 bandeiras de mastro e os sinalizadores — a fumaça de toda a queima — nos 106 estádios: revisão R2 do item 65), P 10 partidas inteiras em 2 processos (~56 s aqui numa máquina de 4 vCPU sozinha), T 8 do Rumo ao Estrelato (~40 s), L 3 do Livre (~20 s)
   'teste-torcida.mjs': 12, // item 69, PR 3: + H (o assamento 2×, o Banorte: ~+1,5 s aqui)
   'teste-replay-anel.mjs': 715, // (C3: + G18, o canhão de 60 cruzamentos gravado no anel: ~25 s)
