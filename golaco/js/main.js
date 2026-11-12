@@ -3126,7 +3126,7 @@ function quadroOnline(dt, ent, agoraMs) {
 
 // ------------------------------------------------------------------ o painel ?perf / ?qps (item 45, PLANO-GRAFICOS.md passo 6)
 // F3 liga e desliga (dentro do HUD, escondido no replay e nas cenas, como antes); ?qps=1 ou ?perf=1 o põem no body POR CIMA de
-// tudo, em todas as fases e selecionável (o .perf-fixo do estilo.css: o dono copia o texto). O medidor (render/medidor-quadros.js,
+// tudo, em todas as fases e sem pegar toque (o .perf-fixo do estilo.css; o dono manda o print). O medidor (render/medidor-quadros.js,
 // puro) só baixa com o painel à vista ou com o __golaco.perf(): nunca no download inicial nem na pré-carga (teste-carga). Ele
 // recebe o instante de cada DESENHO do 3D (o cena3d.desenhar envolto conta: o quadro, o replay e o pré-jogo passam por ele) —
 // os intervalos entre desenhos, não os do rAF: a tela antes do jogo desenha 30 num rAF de 60 (N3) —, a CPU do quadro inteiro, a
@@ -3156,6 +3156,9 @@ function envolverDesenho() {
   desenhoEnvolto = true;
   const des = cena3d.desenhar;
   cena3d.desenhar = c => { nDesenhos++; return des(c); };
+  // (o contexto restaurado é o mesmo objeto: as consultas do cronômetro da GPU da geração perdida nunca respondem e trancavam a
+  // fila — descartadas aqui; a revisão do bloco 4)
+  cena3d.aoRecriar(ev => { if (ev.motivo === 'contexto') CRONO?.reiniciar(); });
 }
 /** A fase do quadro para o medidor (a pausa por cima de tudo; o replay é o do diretor desenhando). */
 function faseDoQuadro() {

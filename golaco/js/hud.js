@@ -1307,7 +1307,7 @@ export function criarHud(opc) {
       else if (typeof e.duracao === 'string' || typeof e.dificuldade === 'string') aplicarModoNoMenu();
     },
     /** O painel de quadros (F3; item 45: com fixo — o ?qps=1 / ?perf=1 — vai para o body com o .perf-fixo, por cima de tudo, em
-     *  todas as fases, selecionável). */
+     *  todas as fases; nunca pega toque — a revisão do bloco 4). */
     mostrarQps(v, fixo = false) {
       if (fixo && !el.qps.classList.contains('perf-fixo')) { document.body.append(el.qps); el.qps.classList.add('perf-fixo'); }
       el.qps.hidden = !v;

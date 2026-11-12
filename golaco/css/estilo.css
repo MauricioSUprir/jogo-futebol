@@ -378,9 +378,11 @@ html.em-partida .carga-barra { width: 44px; height: 6px; }
   background: rgba(7, 9, 10, 0.7); padding: 4px 8px; border-radius: 6px; white-space: pre;
 }
 /* o painel com ?qps=1 ou ?perf=1 (item 45): no body, POR CIMA de tudo — da tela antes do jogo (35), da pausa (40), do replay
-   (30) e da tela de carregar (60); abaixo do "Gire o celular" (70) — em todas as fases (as regras do replay, da comemoração, da
-   substituição e das cenas que escondem o .qps não o pegam) e selecionável (o dono copia o texto) */
-.qps.perf-fixo { position: fixed; z-index: 62; pointer-events: auto; user-select: text; -webkit-user-select: text; cursor: text; }
+   (30) e da tela de carregar da carga (60); abaixo dela na troca de qualidade e no erro (63) e do "Gire o celular" (70) — em todas
+   as fases (as regras do replay, da comemoração, da substituição e das cenas que escondem o .qps não o pegam). NUNCA pega toque
+   nem clique (a revisão do bloco 4: com pointer-events o painel tapava o LANÇAMENTO, a ENFIADA, a DIVIDIDA e o analógico no
+   celular e os botões das Opções da pausa); o dono manda o print, e o __golaco.perf() tem o objeto inteiro */
+.qps.perf-fixo { position: fixed; z-index: 62; pointer-events: none; user-select: none; -webkit-user-select: none; }
 .dica {
   position: absolute; left: calc(var(--sa-l) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
   display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-2);
@@ -964,6 +966,8 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 }
 .carregando.sumir { opacity: 0; pointer-events: none; }
 .carregando[hidden] { display: none; }
+/* a troca de qualidade pela pausa ("Ajustando os gráficos…") e o erro: por cima do painel ?perf (62) — a mensagem legível */
+.carregando.ocupado, .carregando.erro { z-index: 63; }
 .carregando-marca { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: 0.08em; }
 .carregando-marca::after { content: ""; display: block; height: 4px; margin-top: 6px; background: var(--verde); border-radius: 2px; }
 .carregando-barra { width: 180px; height: 3px; background: var(--preto-3); border-radius: 2px; overflow: hidden; }

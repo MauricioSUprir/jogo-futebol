@@ -1078,8 +1078,8 @@ try {
         guarda('T.pc144', r?.porSeg);
         meta('T', 'Teto no PC sem toque, rAF a 144 Hz: sem teto', r ? `${f(r.porSeg, 1)} desenhos/s · intervalo mediano ${f(r.mediana, 2)} ms` : 'não mediu', '144 ± 1', r && Math.abs(r.porSeg - 144) <= 1);
         // (o painel: a tela medida e o teto "—" no PC)
-        meta('T', 'O painel no PC a 144 Hz: a tela e o teto "—"', r ? `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}` : 'não mediu', 'hz 144 ± 1, teto null; ligado false',
-          !!r?.painel && Math.abs(r.painel.hz - 144) <= 1 && r.painel.teto === null && r.estado?.ligado === false);
+        meta('T', 'O painel no PC a 144 Hz: o rAF e o teto "—"', r ? `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}` : 'não mediu', 'hz e rafHz 144 ± 1, teto null; ligado false',
+          !!r?.painel && Math.abs(r.painel.hz - 144) <= 1 && Math.abs(r.painel.rafHz - 144) <= 1 && r.painel.teto === null && r.estado?.ligado === false);
       }
     } catch (e) { meta('S2', 'PC Média: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
     marcar('S2 (tablet e PC)');
@@ -1098,9 +1098,10 @@ try {
         guarda(`T.cel${hz}`, r.porSeg);
         meta('T', `Teto no celular, rAF a ${hz} Hz: desenhos por segundo e ritmo`, `${f(r.porSeg, 1)} desenhos/s · intervalos ${f(r.mediana, 2)} ms (mediana), desvio máx ${f(r.desvio, 2)} ms`,
           `${String(ALVO[hz]).replace('.', ',')} ± 1, regulares (desvio ≤ 1 ms)`, Math.abs(r.porSeg - ALVO[hz]) <= 1 && r.desvio <= 1);
-        // (o painel do C11 mostra a tela e o n do teto: "tela 120 Hz · teto 1 a cada 2")
-        meta('T', `O painel no celular a ${hz} Hz: a tela e o n do teto`, `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}`, `hz ${hz} ± 1, teto ${N_ALVO[hz]}`,
-          !!r.painel && Math.abs(r.painel.hz - hz) <= 1 && r.painel.teto === N_ALVO[hz] && r.estado?.n === N_ALVO[hz]);
+        // (o painel do C11 mostra o rAF e o n do teto: "rAF 120 Hz · teto 1 a cada 2"; o hz é o do ritmo do C13 e o rafHz, a mediana
+        // do medidor — duas contas independentes do mesmo rAF; a revisão do bloco 4)
+        meta('T', `O painel no celular a ${hz} Hz: o rAF (o ritmo do C13 e a mediana do medidor) e o n do teto`, `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}`, `hz e rafHz ${hz} ± 1, teto ${N_ALVO[hz]}`,
+          !!r.painel && Math.abs(r.painel.hz - hz) <= 1 && Math.abs(r.painel.rafHz - hz) <= 1 && r.painel.teto === N_ALVO[hz] && r.estado?.n === N_ALVO[hz]);
       }
     } catch (e) { meta('T', 'Teto no celular: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
     // a tela antes do jogo tem o próprio ritmo de 30 pelo instante do rAF (o PP_QPS) e passa por cima do teto, como antes: a 144 e
@@ -1572,7 +1573,7 @@ async function medirTeto(pg, taxas, { aquece = 2600, janela = 1000 } = {}) {
       const d = await pg.evaluate(() => {
         const d = window.__desenhos; window.__desenhos = null;
         let painel = null;
-        try { const p = window.__golaco.perf?.(); painel = p ? { hz: p.refresh?.hz ?? null, teto: p.refresh?.teto ?? null } : null; } catch (_) { painel = null; }
+        try { const p = window.__golaco.perf?.(); painel = p ? { hz: p.refresh?.hz ?? null, rafHz: p.refresh?.rafHz ?? null, teto: p.refresh?.teto ?? null } : null; } catch (_) { painel = null; }
         const e = window.__golaco.teto;
         return { d, painel, estado: e ? { ligado: e.ligado, hz: e.hz, n: e.n } : null };
       });

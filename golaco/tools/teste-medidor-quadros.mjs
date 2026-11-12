@@ -15,13 +15,17 @@
 //  M6 o cronômetro da GPU (um contexto WebGL de mentira): sem a extensão, nada (disponível false, nenhuma consulta, resumo.gpu
 //     null); com ela, o resultado chega quadros depois com a fase do quadro, o GPU_DISJOINT descarta, o quadro que não desenhou não
 //     guarda, no máximo 4 consultas no ar (sem criar uma por quadro), o contexto trocado zera, o fechar com o contexto trocado não
-//     quebra
+//     quebra; o contexto RESTAURADO (o mesmo objeto: as consultas da geração perdida nunca respondem) volta a medir depois do
+//     reiniciar() (a revisão do bloco 4: sem ele, 0 resultados em 200 quadros)
 //  M7 o modo provável do AA (sem MSAA, SwiftShader, iPhone/Safari, Firefox, Android, Mac, Windows, o resto), o nome curto da GPU
 //     (ANGLE do CI, Adreno, Mali, Apple, NVIDIA no Windows, vazio) e a leitura da GPU (o UNMASKED_RENDERER_WEBGL; o gl.RENDERER no
 //     Firefox e sem a extensão)
 //  M8 o texto do painel: o qps, p95, a fase, o AA, o buffer W×H, a GPU, o refresh em Hz (os mesmos padrões do teste-graficos-
 //     pagina P2), o "—" do teto (C13), da queda (C12) e da GPU sem cronômetro; com eles, "1 a cada 2" e "Média → Baixa"; vírgula
-//     decimal; o relatorio() serializa (JSON) e leva p95, fase, aa, buffer, gpu e refresh
+//     decimal; o relatorio() serializa (JSON) e leva p95, fase, aa, buffer, gpu e refresh (o do rAF medido aqui em rafHz); o
+//     refresh dito "rAF" (numa página lenta é o ritmo dela, não o da tela); as 7 fases com a GPU e os números grandes (a página
+//     lenta do SwiftShader) em linhas ≤ 60 letras, e o percentil que cai na caixa de cima do histograma dito "> 51" / "> 128"
+//     (a revisão do bloco 4)
 //  M9 pureza e sob demanda: o módulo sem import, sem DOM, sem three e fora do fecho do hash; o main.js o importa só por import()
 //     (nunca estático) e não soma mais o dt do rAF por desenho (o medirQps antigo saiu); o zerar()
 // Sem o módulo REPROVA (o import dentro de try/catch vira REPROVOU, não exceção).
@@ -275,6 +279,21 @@ if (!M) {
     meta('M6 o contexto trocado no meio do quadro fecha no velho e descarta; o novo começa limpo; o contexto perdido não abre consulta',
       `velho: abertas ${ga.abertas}, colhidos ${n4} · novo: ${col.join(', ')} · perdido: ${perdido.criadas} consultas`, '0; 0; 6; 0',
       ga.abertas === 0 && n4 === 0 && col.length === 1 && col[0] === 6 && perdido.criadas === 0 && gb.abertas === 0);
+    // o contexto RESTAURADO (a revisão do bloco 4): o mesmo objeto; as consultas da geração perdida nunca respondem
+    const gR = glFalso(), cR = criarCronometroGpu(() => gR);
+    let antesPerda = 0;
+    for (let k = 0; k < 20; k++) { cR.antes(); cR.depois(true, 'jogo'); gR.terminar(5); cR.colher(() => { antesPerda++; }); }
+    cR.antes(); cR.depois(true, 'jogo'); cR.antes(); cR.depois(true, 'jogo'); // (2 no ar quando o contexto se perde)
+    gR.perdido = true;
+    for (let k = 0; k < 5; k++) { cR.antes(); cR.depois(true, 'jogo'); cR.colher(() => {}); }
+    gR.perdido = false; gR.fila = []; // (restaurado: as consultas velhas nunca ficam prontas)
+    const depoisSem = (() => { let n = 0; for (let k = 0; k < 200; k++) { cR.antes(); cR.depois(true, 'jogo'); gR.terminar(5); cR.colher(() => { n++; }); } return n; })();
+    const temReiniciar = typeof cR.reiniciar === 'function';
+    if (temReiniciar) cR.reiniciar();
+    const depoisCom = (() => { let n = 0; for (let k = 0; k < 20; k++) { cR.antes(); cR.depois(true, 'jogo'); gR.terminar(5); cR.colher(() => { n++; }); } return n; })();
+    meta('M6 o contexto RESTAURADO (o mesmo objeto, as consultas velhas nunca respondem): volta a medir depois do reiniciar() (o gancho do main.js)',
+      `antes da perda ${antesPerda} em 20 · restaurado sem reiniciar ${depoisSem} em 200 · ${temReiniciar ? `com o reiniciar() ${depoisCom} em 20` : 'sem o reiniciar()'}`,
+      '20; (informativo); ≥ 15 em 20', antesPerda === 20 && temReiniciar && depoisCom >= 15);
     // o SwiftShader do CI: a extensão existe e toda consulta devolve 2^63 ns — lixo, descartado e contado
     const gl5 = glFalso(), c5 = criarCronometroGpu(() => gl5);
     let n5 = 0;
@@ -363,13 +382,37 @@ if (!M) {
     const txt2 = textoPainel(rel2);
     meta('M8 com eles: "1 a cada 2", o refresh do ritmo (120 Hz) por cima do medido, "Média → Baixa" nas duas quedas, o teto dos tablets, "AA não", a qualidade fixa sem o "agora"',
       txt2.split('\n').filter(l => /teto|queda|AA|buffer|qualidade/.test(l)).join(' | '),
-      'tudo ao lado', /tela 120 Hz · teto 1 a cada 2/.test(txt2) && /sessão Média → Baixa · gravada Média → Baixa/.test(txt2) && /teto dos tablets/.test(txt2) && /AA não/.test(txt2) && /qualidade Média · buffer/.test(txt2));
+      'tudo ao lado', /rAF 120 Hz · teto 1 a cada 2/.test(txt2) && /sessão Média → Baixa · gravada Média → Baixa/.test(txt2) && /teto dos tablets/.test(txt2) && /AA não/.test(txt2) && /qualidade Média · buffer/.test(txt2));
     let json = null;
     try { json = JSON.parse(JSON.stringify(rel)); } catch (_) { json = null; }
     const chaves = json ? JSON.stringify(json).toLowerCase() : '';
     meta('M8 o relatorio() (o __golaco.perf()) serializa e leva p95, fase, aa, buffer, gpu e refresh (as chaves da P2), o acumulado da fase',
       json ? `chaves: ${Object.keys(json).join(', ')} · fases: ${Object.keys(json.fases).join(', ')}` : 'não serializa',
       'tudo', !!json && ['p95', 'fase', 'aa', 'buffer', 'gpu', 'refresh'].every(k => chaves.includes(k)) && json.fase === 'tela' && json.fases.tela?.desenhos === 100 && json.aa.modo && json.gpu.curto && json.refresh.teto === null);
+    meta('M8 o refresh do rAF medido aqui fica em rafHz (o do ritmo do C13 passa por cima no hz); o texto diz "rAF", não "tela"',
+      `hz ${rel2.refresh.hz} · rafHz ${rel2.refresh.rafHz} · "${txt2.split('\n').find(l => /Hz/.test(l))}"`, 'hz 120; rafHz 60; "rAF 120 Hz"',
+      rel2.refresh.hz === 120 && Math.abs(rel2.refresh.rafHz - 60) <= 1 && /^rAF 120 Hz/m.test(txt2) && !/^tela \d/m.test(txt2));
+    // a página lenta (o SwiftShader com o render de verdade, a 120 Hz): as 7 fases, a GPU, os números grandes; o percentil acima do
+    // teto do histograma (51,2 ms na CPU e na GPU, 128 no intervalo) dito "> 51" / "> 128", nunca o maior visto (39651,3)
+    const lento = criarMedidor();
+    let tl = 0;
+    const fasesL = ['jogo', 'replay', 'comemoracao', 'cena', 'prejogo', 'tela', 'pausa'];
+    for (let k = 0; k < 700; k++) {
+      tl += k % 7 === 0 ? 799.9 : 333.3;
+      lento.raf(tl);
+      const fz = fasesL[k % 7];
+      lento.desenho(tl, k % 5 === 0 ? 39651.3 : 348.4, fz);
+      lento.gpu(k % 3 === 0 ? 582.1 : 99.9, fz);
+    }
+    const relL = lento.relatorio(tl, { ...info, chamadas: 9999, triangulos: 1234567, gpu: { nome: 'ANGLE (Qualcomm, Adreno (TM) 740 OpenGL ES 3.2 V@0615.0 (GIT@1c8bd5b, I6ba4eb47d4, 1699971547) (Date:11/14/23), OpenGL ES 3.2)', timer: true },
+      qualidade: { escolha: 'auto', atual: 'baixa' }, teto: 2, refreshHz: 119.5, queda: { sessao: { de: 'media', para: 'baixa' }, gravada: { de: 'media', para: 'baixa' } } }, 'comemoracao');
+    const txtL = textoPainel(relL), linhasL = txtL.split('\n');
+    const maior = linhasL.reduce((a, l) => (l.length > a.length ? l : a), '');
+    const porFase = linhasL.filter(l => /^ \S.*qps/.test(l));
+    meta('M8 a página lenta (7 fases, a GPU, números grandes): cada linha ≤ 60 letras; nas fases, a CPU e a GPU acima do teto do histograma ditas "> 51", nunca o maior visto',
+      `${linhasL.length} linhas, a maior ${maior.length} letras ("${maior}") · ${porFase.length} linhas de fase · "${porFase.find(l => /comemor/.test(l)) ?? ''}"`,
+      '≤ 60 em todas; 7 de fase; "> 51"; sem 39651',
+      linhasL.every(l => l.length <= 60) && porFase.length === 7 && porFase.every(l => /CPU > 51/.test(l) && /GPU > 51/.test(l) && !/39651/.test(l)));
   }
 
   // ---------------------------------------------------------------- M9: pureza e sob demanda; zerar

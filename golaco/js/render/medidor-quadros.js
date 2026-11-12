@@ -41,6 +41,10 @@ export const FASES = Object.freeze(['jogo', 'replay', 'comemoracao', 'cena', 'pr
 export const ROTULO_FASE = Object.freeze({
   jogo: 'jogo', replay: 'replay', comemoracao: 'comemoração', cena: 'cena', prejogo: 'pré-jogo', tela: 'tela antes do jogo', pausa: 'pausa',
 });
+/** O rótulo curto de cada fase nas linhas por fase do painel (a revisão do bloco 4: as linhas passavam de 60 letras). */
+export const ROTULO_CURTO = Object.freeze({
+  jogo: 'jogo', replay: 'replay', comemoracao: 'comemor.', cena: 'cena', prejogo: 'pré-jogo', tela: 'tela', pausa: 'pausa',
+});
 
 /** O percentil p (0–1) dos `n` primeiros valores FINITOS de `v` (ordena uma cópia em `tmp`); NaN sem valores. Interpolado. */
 export function percentil(v, n, p, tmp = null) {
@@ -165,6 +169,12 @@ export function criarCronometroGpu(obterGl, maxVoando = MEDIDOR.gpuVoando) {
     return !!ext;
   };
   return {
+    /**
+     * Descarta tudo (as consultas voando, as livres e a aberta) e relê a extensão no próximo quadro: o contexto RESTAURADO é o
+     * mesmo objeto (o preparar() só percebe a troca de objeto) e as consultas da geração perdida nunca respondem — a da frente
+     * trancava a fila (a revisão do bloco 4). O main.js chama no gancho do contexto restaurado.
+     */
+    reiniciar() { gl = null; ext = null; livres = []; voando = []; aberta = null; },
     /** Há cronômetro neste contexto. */
     get disponivel() { return preparar(); },
     /** Resultados descartados por estarem fora de (0, MEDIDOR.gpuMaxMs] (desde o começo). */
@@ -310,6 +320,9 @@ export function criarMedidor(opc = {}) {
       r.aa = { pedido: aa.pedido ?? null, antialias: aa.antialias ?? null, amostras: aa.amostras ?? null, modo: modoAA({ antialias: aa.antialias, amostras: aa.amostras, gpu: gpu.nome ?? '', ua: info.ua ?? '' }) };
       r.buffer = { w: info.buffer?.w ?? null, h: info.buffer?.h ?? null, pixelRatio: info.buffer?.pixelRatio ?? null, tetoTablet: !!info.buffer?.tetoTablet };
       r.gpu = { nome: gpu.nome ?? '', curto: nomeCurtoGpu(gpu.nome), timer: !!gpu.timer, invalidos: gpu.invalidos ?? 0, p50: r.gpu?.p50 ?? null, p95: r.gpu?.p95 ?? null };
+      // (o refresh do rAF medido AQUI fica em rafHz: o do ritmo do C13 passa por cima no hz — os dois são o ritmo do rAF, que numa
+      // página lenta é o ritmo dela, não o da tela: o painel diz "rAF", a revisão do bloco 4)
+      r.refresh.rafHz = r.refresh.hz;
       if (Number.isFinite(info.refreshHz)) r.refresh.hz = r1(info.refreshHz);
       r.refresh.teto = Number.isFinite(info.teto) ? info.teto : null;
       r.queda = { sessao: info.queda?.sessao ?? null, gravada: info.queda?.gravada ?? null };
@@ -324,12 +337,19 @@ export function criarMedidor(opc = {}) {
 }
 
 const NOME_Q = { auto: 'automática', baixa: 'Baixa', media: 'Média', alta: 'Alta' };
-const num = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d).replace('.', ',') : '—');
+// (de 100 para cima sem a casa decimal: as linhas ficam curtas com as fases lentas — a revisão do bloco 4)
+const num = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(Math.abs(v) >= 100 ? 0 : d).replace('.', ',') : '—');
 const queda = q => (q && q.de && q.para ? `${NOME_Q[q.de] ?? q.de} → ${NOME_Q[q.para] ?? q.para}` : '—');
+// os tetos dos histogramas das fases (ms): o percentil que cai na caixa de cima é o maior visto — o painel diz "> teto" (a revisão
+// do bloco 4: a 120 Hz com o render de verdade saía "CPU 39651,3")
+const TETO_IVL = MEDIDOR.passoIvl * MEDIDOR.caixas, TETO_CPU = MEDIDOR.passoCpu * MEDIDOR.caixas;
+const numT = (v, teto) => (Number.isFinite(v) && v >= teto ? `> ${num(teto, 0)}` : num(v));
 
 /**
- * O texto do painel (linhas com \n; vírgula decimal) a partir do relatorio(). Linhas curtas (≤ ~58 letras): no 568×320 o painel
- * cabe na largura e, com as 7 fases, na altura (11 px por letra, 1,4 de entrelinha).
+ * O texto do painel (linhas com \n; vírgula decimal) a partir do relatorio(). Linhas curtas (≤ 60 letras, também com as 7 fases,
+ * o cronômetro da GPU e os números grandes: o teste-medidor-quadros M8): no 568×320 o painel cabe na largura e, com as 7 fases,
+ * na altura (11 px por letra, 1,4 de entrelinha). O refresh é o do rAF ("rAF N Hz"): numa página lenta é o ritmo dela, não o da
+ * tela.
  */
 export function textoPainel(r) {
   const L = [];
@@ -342,12 +362,12 @@ export function textoPainel(r) {
   const aa = r.aa ?? {}, msaa = aa.antialias && aa.amostras >= 2;
   L.push(`AA ${msaa ? `MSAA ${aa.amostras}×` : aa.antialias ? 'pedido, sem amostras' : 'não'} (SAMPLES ${aa.amostras ?? '—'})${msaa ? ` · ${aa.modo ?? '—'}` : ''}${b.tetoTablet ? ' · teto dos tablets' : ''}`);
   L.push(`GPU ${r.gpu?.curto ?? '—'}`);
-  L.push(`tela ${num(r.refresh?.hz, 0)} Hz · teto ${Number.isFinite(r.refresh?.teto) ? `1 a cada ${r.refresh.teto}` : '—'}`);
+  L.push(`rAF ${num(r.refresh?.hz, 0)} Hz · teto ${Number.isFinite(r.refresh?.teto) ? `1 a cada ${r.refresh.teto}` : '—'}`);
   L.push(`queda: sessão ${queda(r.queda?.sessao)} · gravada ${queda(r.queda?.gravada)}`);
   for (const f of FASES) {
     const a = r.fases?.[f];
     if (!a) continue;
-    L.push(` ${ROTULO_FASE[f]}: ${num(a.qps, 0)} qps · p95 ${num(a.p95)} · CPU ${num(a.cpuP95)}${Number.isFinite(a.gpuP95) ? ` · GPU ${num(a.gpuP95)}` : ''} (${a.desenhos})`);
+    L.push(` ${ROTULO_CURTO[f]}: ${num(a.qps, 0)} qps · p95 ${numT(a.p95, TETO_IVL)} · CPU ${numT(a.cpuP95, TETO_CPU)}${Number.isFinite(a.gpuP95) ? ` · GPU ${numT(a.gpuP95, TETO_CPU)}` : ''} (${a.desenhos})`);
   }
   return L.join('\n');
 }
