@@ -712,16 +712,18 @@ const distSeg = (p, a, b) => { const vx = b.x - a.x, vy = b.y - a.y, l2 = vx * v
  * virava o tracejado parado lido em 8 pontos (o SSAA dava CV 0 na corda do pé: a revisão do C3).
  */
 function prepararFinos(pose, W, H, nq, cRef) {
-  const pecas = pecasGol();
+  // (a pose pode medir só algumas peças — `soTipos` — e com outro passo entre os pontos, em px da peça na tela — `passo`, padrão 2:
+  // a pose da haste, C14a)
+  const pecas = pecasGol(), tiposPose = pose.soTipos ?? FINOS, passoPx = pose.passo ?? 2;
   const B = baseCam(pose, W, H);
   const proj = pecas.map(p => ({ ...p, A: projetar(B, p.a), Bp: projetar(B, p.b) }));
   const dentro = q => q.c > 0.5 && q.x > 4 && q.x < W - 5 && q.y > 4 && q.y < H - 5;
   const pontos = [];
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const p of proj) {
-    if (!FINOS.includes(p.tipo) || !dentro(p.A) || !dentro(p.Bp)) continue;
+    if (!FINOS.includes(p.tipo) || !tiposPose.includes(p.tipo) || !dentro(p.A) || !dentro(p.Bp)) continue;
     const comp = Math.hypot(p.Bp.x - p.A.x, p.Bp.y - p.A.y);
-    const n = Math.max(1, Math.floor((comp * 0.7) / 2));
+    const n = Math.max(1, Math.floor((comp * 0.7) / passoPx));
     for (let j = 0; j < n; j++) {
       const t = 0.15 + (0.7 * (j + 0.5)) / n;
       const pt = { x: p.A.x + t * (p.Bp.x - p.A.x), y: p.A.y + t * (p.Bp.y - p.A.y) };
@@ -797,6 +799,18 @@ function poseLimiar() {
   const MX = CAMPO.meioX, zl = CAMPO.gol.largura / 2;
   return { de: [MX - 3.5, 1.6, 10], para: [MX + 1.5, 0.3, zl], fov: 32 };
 }
+/**
+ * F, a pose da HASTE (o fechamento, C14a; a revisão do bloco 3, achado 8 das medidas: na TV a haste do véu tem ~13 px de
+ * comprimento, quase tudo a ≤ 5 px do poste e do travessão, e contava 4 pontos com o gol no foco e "poucos pontos" no gol de lá):
+ * o gol de +x DE LADO, a 30 m e 7 m de altura com a lente fechada (22°), as duas hastes perpendiculares à vista — 2,4–3,1 px na
+ * Média e 1,6–2,1 px na Baixa (a largura da haste da TV da Média, 1,6–1,8 px, e acima), 20–25 px de comprimento — e um ponto
+ * por px de peça (o passo 2 da TV deixava 6 na Baixa). Só a haste conta nela (as cordas do pé, deitadas de lado a 140 px, e os
+ * mastros já são medidos pela TV e pelo limiar).
+ */
+function poseHaste() {
+  const MX = CAMPO.meioX;
+  return { de: [MX + 0.25, 7, -30], para: [MX + 0.25, 2.3, 0], fov: 22, soTipos: ['haste'], passo: 1 };
+}
 /** A meia largura na tela (px) nas duas pontas da corda do pé de +x pela conta do shader (render/campo.js: P[1][1]·H/2/w). */
 function meiaNasPontas(pose, W, H) {
   const pe = pecasGol().find(p => p.nome === 'pe11'), B = baseCam(pose, W, H);
@@ -856,7 +870,7 @@ const slugPeca = t => ({ haste: 'haste', 'corda do pé': 'cordaPe', 'corda do fu
  * buracos ≤ 5% em toda peça; cintilação ≤ 1,5 × a do SSAA (com o piso PISO_CV no denominador) e soma 0,7–1,3 em toda peça.
  * `qual`: 'build' (as somas do quadro medido) ou 'extra' (o outro contexto).
  */
-const NOME_CAM_F = { foco: 'gol no foco', la: 'gol de lá', limiar: 'o limiar de 1 px dentro da corda do pé' };
+const NOME_CAM_F = { foco: 'gol no foco', la: 'gol de lá', limiar: 'o limiar de 1 px dentro da corda do pé', haste: 'a haste de perto, o gol de lado' };
 function metasF(rotulo, F, chave, qual = 'build', tipo = 'meta') {
   for (const cn of Object.keys(F)) {
     const r0 = F[cn], r = r0?.[qual];
@@ -1175,7 +1189,7 @@ try {
 
     // ---- F (Média)
     if (so.has('F')) {
-      const F = await secaoF(pg, 'cel-media', mb, 'm0', 'cm', P, W, H, mb === 'm1' ? 'm0' : 'm1');
+      const F = await secaoF(pg, 'cel-media', mb, 'm0', 'cm', { ...P, haste: poseHaste() }, W, H, mb === 'm1' ? 'm0' : 'm1', ['foco', 'la', 'haste']);
       metasF('celular Média', F, 'media');
       // o outro contexto (na main, o MSAA forçado: o que a Média ganha no C5), informativo
       comoInfo(() => metasF(`celular Média, o outro contexto: ${mb === 'm1' ? 'sem AA' : 'MSAA forçado'}`, F, 'mediaOutro', 'extra'));
@@ -1260,7 +1274,7 @@ try {
       // tinha) caindo DENTRO da peça — o caso que abria o buraco onde a meia interpolada passava por 0 (a TV fica abaixo do
       // limiar nas duas pontas e não o via)
       const pl = poseLimiar(), mp = meiaNasPontas(pl, Wb, Hb);
-      const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', { ...P, limiar: pl }, Wb, Hb, 'b1', ['foco', 'la', 'limiar']);
+      const Fb = await secaoF(pg, 'cel-baixa', bb, 'b0', 'cb', { ...P, limiar: pl, haste: poseHaste() }, Wb, Hb, 'b1', ['foco', 'la', 'limiar', 'haste']);
       if (Fb.limiar) Fb.limiar.nota = `meia largura nas pontas da corda ${f(mp[0], 2)} / ${f(mp[1], 2)} px`;
       meta('F', 'Finos (celular Baixa): a pose do limiar cruza 1 px dentro da corda do pé', `meia largura nas pontas ${f(mp[0], 2)} / ${f(mp[1], 2)} px`,
         'uma ponta acima de 1 px e a outra abaixo', Math.max(...mp) > 1 && Math.min(...mp) < 1, 'estrutura');
@@ -1270,7 +1284,7 @@ try {
       // com a A2C de 1 px, o gol de lá cintilava ×2,26 (a corda do fundo) e ×1,97 (o mastro), e a pose do limiar — as cordas a
       // 1,2–2,3 px, o MSAA 4× numa peça de 1–2 px contra o SSAA 3×3 — ×2,67 (a corda do fundo); com a mistura, ×1,35, ×0,46 e
       // ×0,91, e a pose do limiar passou a contar como na Baixa
-      metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la, ...(Fb.limiar ? { limiar: Fb.limiar } : {}) }, 'baixaMsaa', 'extra');
+      metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la, ...(Fb.limiar ? { limiar: Fb.limiar } : {}), ...(Fb.haste ? { haste: Fb.haste } : {}) }, 'baixaMsaa', 'extra');
       await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
       marcar('N (Baixa)');
     }
