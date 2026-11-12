@@ -88,6 +88,12 @@ metas fora → 0; as guardas novas (a mira aquecida no R1 e no R4, a tela já op
 `compile()` do r170 percorre todos os objetos da cena (seção 1.2). O medido, o que mudou além do plano e o que o C13 precisa saber
 estão na seção 6 ("Medido no C12").
 
+**O C13 (12/11; `8ed33e48`, `ec4349ad`): o teto de quadros.** A T passa inteira (3 metas fora → 0; e as linhas novas: o painel
+diz a tela e o n, a tela antes do jogo segue no ritmo dela); a Q igual, com uma linha nova (a 120 Hz o teto desenha 60 e a queda
+não cai). Além do plano: o período pela média dos intervalos na faixa da mediana, o quadro do ritmo pelo TEMPO (não pelo
+contador), a descida rápida do n numa troca de refresh e a tela antes do jogo por cima do teto. O medido e o que o C14 precisa
+saber estão na seção 6 ("Medido no C13").
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -193,6 +199,10 @@ Detalhes que eu decido dentro das escolhas (escritos no PR e no "Depende do dono
   | 240 Hz | 4 | 60 |
 
   O PC não muda (Alta em monitor de 144 Hz é jogo de PC; "nada pior").
+  A fórmula põe o *n* em 2 a partir de ~114 Hz (a folga de 0,1 segura no 2 a tela de 120 medida em 119,5): de 114 a 119 Hz e de
+  174 a 179 Hz o teto fica em 57–59,9 desenhos por segundo (nenhuma tela de celular conhecida nessas faixas). O C13 desenha pelo
+  TEMPO (n − 0,5 períodos desde o último desenho), não pelo contador, e baixa o *n* na hora quando a tela fica mais lenta; a tela
+  antes do jogo (30 pelo relógio) passa por cima dele (seção 6, "Medido no C13").
 - **O painel com `?perf=1` fica visível em TODAS as fases** e por cima de tudo, para o minuto do dono cobrir a tela antes do jogo, o replay e as cenas. Com F3, como hoje.
 - **Na queda automática não se recria o contexto no meio da partida.** Sem o `KHR_parallel_shader_compile` (0,23% dos Android) a recompilação trava a tela. Cai o pixel ratio (1,5 → 1) e saem as sombras; o MSAA fica até a próxima carga, que já abre na Baixa por causa da queda gravada.
 - **A queda na sessão continua como hoje; só a GRAVAÇÃO é exigente:**
@@ -619,9 +629,9 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | P2 | `?perf=1` e `?qps=1`: o painel tem p95, fase, AA, buffer, GPU, refresh; visível no replay, na tela antes do jogo (`?prepartida=1`) e na pausa (o "por cima" pela pilha do ponto, `elementsFromPoint`, com toda camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada à vista que PINTA ali: senão o véu, a marca REPLAY e o fundo da pausa não contavam, e a camada transparente de tela inteira contaria — item 10); a tela antes do jogo mostra ~30 (N3); `__golaco.perf()` | como ao lado | sim (não existe; 60 em vez de 30) |
 | P3 | `?gfx=antigo` = a ref da main em G1–G5 (± tolerância) e `SAMPLES` 0 na Média; `?tom=neutro`: `NeutralToneMapping` e a exposição = `H.exposicao` × 1,40 de dia e de noite, também depois de `definirHora` e de uma recriação | como ao lado | — (chave de volta) |
 | R | Recriação e contexto. (1) Celular, `?prepartida=1`, depois do `pronto3d`, pelo ≡ → Opções: Média → Baixa → Média: `SAMPLES` 4 → 0 → 4, o canvas novo com `aria-label` e `inert`, a tela "Ajustando…" aparece e some, a mira cobra (`bolaParadaDeTeste`). (2) **PC 1280×720, Alta → Baixa** com `?prejogo=1` no plano do vão aberto: o `local` do vão true, o `aria-label`. (3) `__golaco.definirQualidade` imediato: troca e desenha no mesmo `evaluate`. (4) `WEBGL_lose_context`: os ganchos ESTRAGADOS antes (a A2C ao contrário, o `uAlturaBuffer` em −1: postos só na criação, eles passavam sem o ouvinte — item 3), `loseContext()` → `restoreContext()`: os ganchos rodam de novo (A2C = `SAMPLES`, `uAlturaBuffer` = `drawingBufferHeight`), a mira cobra, o quadro desenha (pixels ≠ preto). As trocas esperam terminar (teto de 90 s; a que não termina reprova — item 12). 0 erro no console em tudo | como ao lado | sim (aria-label, inert e clipping na Alta → Baixa; `SAMPLES`; o contexto restaurado sem os ganchos) |
-| Q | Queda: `__golaco.quedaDeTeste()`: mesmo canvas (sem recriar), `qAtual` 'baixa', `SAMPLES` continua 4, a queda nas preferências, a linha da pausa; recarregar em Automática abre na Baixa com `SAMPLES` 0; escolher a Média apaga. A queda natural com webdriver (um rAF falso a 20 Hz, sem `?q`): cai na sessão e NÃO grava | como ao lado | sim |
+| Q | Queda: `__golaco.quedaDeTeste()`: mesmo canvas (sem recriar), `qAtual` 'baixa', `SAMPLES` continua 4, a queda nas preferências, a linha da pausa; recarregar em Automática abre na Baixa com `SAMPLES` 0; escolher a Média apaga. A queda natural com webdriver (um rAF falso a 20 Hz, sem `?q`): cai na sessão e NÃO grava. Desde o C13, no fim: um rAF falso a 120 Hz por 8,6 s de volta na Automática (o teto desenha 60) NÃO cai | como ao lado | sim |
 | Z | Redimensionar: atribuições a `canvas.width/height` (instrumentadas pelo `addInitScript`) com o mesmo tamanho (`resize` + `visualViewport`) e com um tamanho novo | mesmo tamanho: 0 (main: 8); tamanho novo: 2 (main: até 8) | sim |
-| T | Teto: um `addInitScript` com um rAF falso a 90, 120, 144 e 165 Hz (o headless roda o rAF a 60); conta os desenhos pelo `renderer.info.render.frame` | celular: 90 / 60 / 72 / 82,5 por segundo ± 1, intervalos regulares; PC sem toque: sem teto | sim (desenha todos) |
+| T | Teto: um `addInitScript` com um rAF falso a 90, 120, 144 e 165 Hz (o headless roda o rAF a 60); conta os desenhos pelo `renderer.render` (o `soContar`). Desde o C13 também: o painel (`__golaco.perf().refresh`) diz a tela e o *n*; a tela antes do jogo (`?prepartida=1`) a 144 e a 165 Hz no ritmo dela | celular: 90 / 60 / 72 / 82,5 por segundo ± 1, intervalos regulares; PC sem toque: sem teto; o painel: a tela ± 1 Hz e o *n* 1 / 2 / 2 / 2 (PC null); a tela antes do jogo 28,8 e 33 ± 1 (como sem o teto) | sim (desenha todos) |
 
 **`teste-graficos-pagina`, medido na main (C3):** "forçado" é a carga com o MSAA pelo `addInitScript`.
 
@@ -846,10 +856,10 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `gramado.js` | ~3 KB | 19,1 KB (a maior parte, os comentários com as fontes e as medidas) |
   | `gramado-shader.js` (novo na revisão) | — | 8,5 KB |
   | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
-  | `ritmo-desenho.js` | ~1,5 KB | 7,9 KB no C12 (a decisão da queda e os comentários; o teto do C13 entra nele) |
+  | `ritmo-desenho.js` | ~1,5 KB | 7,9 KB no C12 (a decisão da queda e os comentários); 13,9 KB no C13 (+6,0: o teto e os comentários) |
   | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
-  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+101 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12; nosso 2859 → 2902 → 2936 → 2941 → 2960 KB) |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13: main.js +1,2 KB) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+108 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12 → 454,0 KB no C13; nosso 2859 → 2902 → 2936 → 2941 → 2960 → 2967 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
@@ -1093,6 +1103,54 @@ o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos 
   - o `proximoQuadro()` da troca pela pausa usa o rAF cru (não passa pelo teto);
   - o painel: `info.teto` e `info.refreshHz` no `infoPainel()` (a queda já vai: `info.queda = {sessao, gravada}`).
 
+**Medido no C13** (o teto de quadros, 12/11; Chromium 141 do CI, SwiftShader; antes = o HEAD do C12, `1a81f585`, numa worktree;
+depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
+
+| Meta | Antes | Depois |
+|---|---|---|
+| T celular a 90 Hz (rAF falso, regular) | 90,0 | 90,0 |
+| T celular a 120 / 144 / 165 Hz = 60 / 72 / 82,5 ± 1, regulares | 120,0 / 144,0 / 165,0 (3 fora) | 60,0 / 72,0 / 82,5, desvio 0,00 ms |
+| T PC sem toque a 144 Hz: sem teto | 144,0 | 144,0 |
+| T o painel (`perf().refresh`): a tela ± 1 Hz e o *n* (90 → 1, 120/144/165 → 2; PC null) (nova) | o *n* null em todos | 90/1, 120/2, 144/2, 165/2; PC 144/null |
+| T a tela antes do jogo a 144 / 165 Hz no ritmo dela, 28,8 / 33 ± 1 (nova) | 28,7 / 32,9 (sem teto) | 28,7 / 32,9 |
+| Q a queda natural a 20 Hz com tremor: cai, não grava; `quedaDeTeste`; as recargas; escolher apaga | passa (cai no quadro virtual 82, 4,1 s) | passa (84–89, 4,2–4,4 s) |
+| Q a 120 Hz por 8,6 s de volta na Automática: NÃO cai (nova; no fim da Q) | — | media → media, 60,0 desenhos/s (*n* 2) |
+| `teste-ritmo-desenho` T1–T7 (Node, novos) | — | passa (abaixo) |
+| `teste-carga`: nosso / folga; os passos a 60/120/144 Hz pelo relógio manual | 2960 KB / 461,0 KB; 60/60/60 | 2967 KB / 454,0 KB; 60/60/60 (a interpolação e a câmera a 144 Hz iguais) |
+| `hash-igual` / `hash-partida` (contra a main) / fecho | IGUAIS / 0 | IGUAIS / 0 |
+| `teste-laco` / `teste-resposta` (Node: não passam pelo `aoQuadro`) | passam | passam (o pior 0,050 s, meta ≤ 0,1) |
+
+- **O `teste-ritmo-desenho` do teto** (os carimbos na grade da tela com tremor de ±0,5 ms, 8 sementes por caso):
+  - 60/90/120/144/165/240 Hz: 60,0–60,1 / 89,9–90,0 / 60,0 / 72,0 / 82,4–82,6 / 60,0 desenhos por segundo, os intervalos a ≤ 0,99
+    ms de *n* períodos, o *n* certo;
+  - a conta do refresh em 200 janelas de 30 intervalos: 59,9–60,1 / 89,7–90,3 / 119,5–120,5 / 143,3–144,7 / 164,1–165,9 /
+    237,4–242,8 Hz (só a mediana dava 231,4–248,1 a 240 Hz, o *n* em 3 em 4% das contas);
+  - as trocas de refresh: 120 → 60 desenha todo quadro na hora (o maior intervalo 17,65 ms); 120 → 90 e 240 → 144 acertam o *n* em
+    ≤ 56 e ≤ 35 ms pela descida rápida; 144 → 165 vira 82,5 na hora; 60 → 120 nunca abaixo de 60 (17,61 ms) e o teto em ≤ 2017 ms;
+  - a página que perde o vsync num desenho em 3 (10 ms num quadro de 8,33): pelo TEMPO 59,9/s e o maior intervalo 17,65 ms; pelo
+    contador "1 a cada *n* quadros" seriam 51,4/s e 25,95 ms (sem teto, 89,9/s);
+  - n = 1 = o laço de antes (60 e 90 Hz com perdidos e a aba escondida, desligado a 240 Hz, `forcar`): todo quadro desenha;
+  - a queda do C12 com o teto: 30 s na Média a 120 e a 240 Hz (60/s) e na Alta a 144 e a 165 Hz (72 e 82,5/s): nenhuma queda.
+- **Provado por mutação:** no `teste-ritmo-desenho`, o contador no lugar do tempo (T4 120 → 60 e T5), sem a descida rápida (T4
+  120 → 90), só a mediana (T1 e T3), folga 0 (T1, T2, T4), ligado sempre (T3, T6), `forcar` ignorado (T6), sem o atalho do *n* = 1
+  (T4, T6) e a conta a cada 20 s (T1, T4) — cada uma reprova. Na página: o teto ligado também no PC (a T do PC: 72 desenhos), a tela
+  antes do jogo passando pelo teto (23,6 e 27,9 por segundo, a previsão era 24 e 27,5) e um teto que desenharia 24 a 120 Hz (a Q
+  nova: cai no quadro virtual 659) — cada uma reprova.
+- **O que mudou de propósito além do plano:**
+  - o período da tela é a MÉDIA dos intervalos a ± 25% da mediana (a mediana sozinha virava o *n* de 240 Hz em 3: acima);
+  - o quadro do ritmo é pelo TEMPO: desenha quando já passaram (*n* − 0,5) períodos desde o último desenho — com o rAF regular, 1
+    a cada *n* quadros; um vsync perdido não faz esperar um quadro a mais (o T5) e a tela que cai para 60 Hz desenha todo quadro;
+  - a descida rápida: com *n* > 1, a média na faixa dos últimos 8 intervalos acima de 1,2 × o período baixa o *n* já (a regra "a
+    cada 2 s" sozinha deixava 45 desenhos por ~2 s numa troca de 120 para 90 Hz; D6: "nunca abaixo de 60"); subir o *n* só na
+    conta de 2 s;
+  - a tela antes do jogo passa por cima do teto (`forcar` com `pp.aberta`): ela já desenha 30 pelo relógio; pelo teto cairia a 24
+    a 144 Hz e a 27,5 a 165 ("a tela antes do jogo a 30 qps segue igual");
+  - `__golaco.teto` (testes) e o refresh do teto no painel (`info.refreshHz`, por cima do medido pelo medidor; NaN antes da 1ª
+    conta), o *n* em `info.teto` (null no PC: "—").
+- **Uma armadilha da Q** (dita no teste): a linha nova da 120 Hz no MEIO da Q fazia a página, de volta ao render de verdade do
+  SwiftShader (3–6 quadros por segundo), cair sozinha 5,5 s depois da recarga — o `quedaDeTeste` achava a Baixa e devolvia null. Ela
+  fica no fim, depois de voltar à Automática.
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1122,7 +1180,10 @@ o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos 
 10. **Pedir ao dono:**
    - 1 minuto com `?perf=1&aa=0` e `?perf=1&aa=1` num Android (Adreno ou Mali) e num iPhone, de dia, na partida;
    - o print do painel;
-   - a impressão do gramado novo contra o `?gfx=antigo`.
+   - a impressão do gramado novo contra o `?gfx=antigo`;
+   - o teto (C13) num celular de 120 Hz de verdade (o rAF falso do teste não tem o vsync nem a taxa adaptativa do Android): no
+     minuto com `?perf=1`, a linha "tela 120 Hz · teto 1 a cada 2" e ~60 qps no jogo (num de 90 Hz, "teto 1 a cada 1" e ~90; o
+     iPhone já segura o Safari perto de 60).
 
 ---
 
