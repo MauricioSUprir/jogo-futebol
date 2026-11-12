@@ -55,12 +55,15 @@
 //      programa no contexto restaurado antes de ser desenhada (a linha escondida durante a perda; C12) e depois desenha. As
 //      trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
-//      na Média); __golaco.quedaDeTeste(): o mesmo canvas, 'baixa', SAMPLES continua 4, a queda nas preferências e na linha da
-//      pausa; a recarga em Automática abre na Baixa com SAMPLES 0; escolher a Média apaga.
+//      na Média); com o teto (C13), a 120 Hz por 8,6 s (60 desenhos) não cai; __golaco.quedaDeTeste(): o mesmo canvas, 'baixa',
+//      SAMPLES continua 4, a queda nas preferências e na linha da pausa; a recarga em Automática abre na Baixa com SAMPLES 0;
+//      escolher a Média apaga.
 //   Z  redimensionar: atribuições a canvas.width/height do #tela (contadas pelo addInitScript) com o mesmo tamanho (resize e
 //      visualViewport) e com um tamanho novo (espera a janela e o buffer mudarem). Metas 0 e 2 (main: 8 e até 8).
 //   T  teto: um rAF falso (tempo virtual) a 90, 120, 144 e 165 Hz conta os desenhos do #tela por segundo: celular 90 / 60 / 72
-//      / 82,5 ± 1 em intervalos regulares; PC sem toque a 144 Hz, sem teto. (Em T, na queda natural e no qps da P2 o render do
+//      / 82,5 ± 1 em intervalos regulares; PC sem toque a 144 Hz, sem teto. O painel (__golaco.perf().refresh, o C11) diz a tela
+//      medida e o n do teto (90 → 1, 120/144/165 → 2; no PC null, "—"). A tela antes do jogo (?prepartida=1) segue no ritmo dela
+//      a 144 e a 165 Hz: 28,8 e 33 desenhos por segundo, como sem o teto (pelo teto seriam 24 e 27,5). (Em T, na queda natural e no qps da P2 o render do
 //      #tela só conta — o que se mede é quantas vezes a página desenha.)
 //
 // As seções que dependem de peças que ainda não existem (?aa, ?gfx, ?tom, ?perf, __golaco.perf, quedaDeTeste, o teto) RODAM na
@@ -1074,6 +1077,9 @@ try {
         const r = t[144];
         guarda('T.pc144', r?.porSeg);
         meta('T', 'Teto no PC sem toque, rAF a 144 Hz: sem teto', r ? `${f(r.porSeg, 1)} desenhos/s · intervalo mediano ${f(r.mediana, 2)} ms` : 'não mediu', '144 ± 1', r && Math.abs(r.porSeg - 144) <= 1);
+        // (o painel: a tela medida e o teto "—" no PC)
+        meta('T', 'O painel no PC a 144 Hz: a tela e o teto "—"', r ? `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}` : 'não mediu', 'hz 144 ± 1, teto null; ligado false',
+          !!r?.painel && Math.abs(r.painel.hz - 144) <= 1 && r.painel.teto === null && r.estado?.ligado === false);
       }
     } catch (e) { meta('S2', 'PC Média: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
     marcar('S2 (tablet e PC)');
@@ -1084,7 +1090,7 @@ try {
     // (um celular barato de desenhar: 640×300, dpr 1, Baixa — o teto não depende da qualidade)
     const s = await carga({ w: 640, h: 300, dpr: 1, toque: true }, 'prints=1&demo=1&q=baixa&hora=dia&toque=1&semente=4&replay=0&comemoracao=0');
     try {
-      const ALVO = { 90: 90, 120: 60, 144: 72, 165: 82.5 };
+      const ALVO = { 90: 90, 120: 60, 144: 72, 165: 82.5 }, N_ALVO = { 90: 1, 120: 2, 144: 2, 165: 2 };
       const t = await medirTeto(s.pagina, [90, 120, 144, 165], { aquece: 2600, janela: 2000 });
       for (const hz of [90, 120, 144, 165]) {
         const r = t[hz];
@@ -1092,8 +1098,38 @@ try {
         guarda(`T.cel${hz}`, r.porSeg);
         meta('T', `Teto no celular, rAF a ${hz} Hz: desenhos por segundo e ritmo`, `${f(r.porSeg, 1)} desenhos/s · intervalos ${f(r.mediana, 2)} ms (mediana), desvio máx ${f(r.desvio, 2)} ms`,
           `${String(ALVO[hz]).replace('.', ',')} ± 1, regulares (desvio ≤ 1 ms)`, Math.abs(r.porSeg - ALVO[hz]) <= 1 && r.desvio <= 1);
+        // (o painel do C11 mostra a tela e o n do teto: "tela 120 Hz · teto 1 a cada 2")
+        meta('T', `O painel no celular a ${hz} Hz: a tela e o n do teto`, `perf().refresh ${JSON.stringify(r.painel)} · __golaco.teto ${JSON.stringify(r.estado)}`, `hz ${hz} ± 1, teto ${N_ALVO[hz]}`,
+          !!r.painel && Math.abs(r.painel.hz - hz) <= 1 && r.painel.teto === N_ALVO[hz] && r.estado?.n === N_ALVO[hz]);
       }
     } catch (e) { meta('T', 'Teto no celular: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
+    // a tela antes do jogo tem o próprio ritmo de 30 pelo instante do rAF (o PP_QPS) e passa por cima do teto, como antes: a 144 e
+    // a 165 Hz ela desenha a cada 5 quadros da tela (o 1º com ≥ 29,3 ms), 28,8 e 33 por segundo; passando pelo teto (72 e 82,5
+    // quadros), a cada 3 quadros dele: 24 e 27,5
+    const s2 = await carga({ w: 640, h: 300, dpr: 1, toque: true }, 'prepartida=1&q=baixa&hora=dia&toque=1&semente=4&replay=0&comemoracao=0');
+    try {
+      const pg = s2.pagina;
+      await pg.waitForFunction(() => window.__golaco.prepartida?.aberta, null, { timeout: 60000 }).catch(() => {});
+      await pg.waitForFunction(() => { const fu = document.getElementById('prepartida')?.dataset.fundo; return !!fu && fu !== '2d'; }, null, { timeout: 120000 }).catch(() => {});
+      await espera(500);
+      await P(pg, 'drenarGpu');
+      const ALVO_PP = { 144: 144 / 5, 165: 165 / 5 };
+      for (const hz of [144, 165]) {
+        const a = await pg.evaluate(hz => { window.__P.soContar(true); window.__rafLigar(hz); return { t: window.__raf.t }; }, hz);
+        // (aquece: a conta do teto, como na T)
+        const ok1 = await esperarRaf(pg, a.t + 2600);
+        const b = await pg.evaluate(() => ({ d: window.__golaco.prepartida.desenhos, t: window.__raf.t, aberta: !!window.__golaco.prepartida.aberta, n: window.__golaco.teto?.n ?? null }));
+        const ok2 = await esperarRaf(pg, b.t + 2000);
+        const c = await pg.evaluate(() => { const r = { d: window.__golaco.prepartida.desenhos, t: window.__raf.t, aberta: !!window.__golaco.prepartida.aberta }; window.__rafLigar(0); window.__P.soContar(false); return r; });
+        // (a tela desenha pelo instante do rAF: o relógio de verdade alcança o virtual antes de seguir)
+        await pg.waitForFunction(t => performance.now() > t + 50, c.t, { timeout: 20000 }).catch(() => {});
+        const porSeg = (c.d - b.d) / ((c.t - b.t) / 1000);
+        guarda(`T.tela${hz}`, porSeg);
+        meta('T', `A tela antes do jogo a ${hz} Hz no celular: o ritmo dela (30 pelo relógio), sem o teto por cima`,
+          `${f(porSeg, 1)} desenhos/s (teto n ${b.n ?? '—'})${ok1 && ok2 ? '' : ' (o relógio virtual NÃO chegou)'}${b.aberta && c.aberta ? '' : ' (a tela fechou)'}`,
+          `${f(ALVO_PP[hz], 1)} ± 1 (pelo teto seria ${f(hz / 2 / 3, 1)})`, ok1 && ok2 && b.aberta && c.aberta && Math.abs(porSeg - ALVO_PP[hz]) <= 1);
+      }
+    } catch (e) { meta('T', 'A tela antes do jogo com o teto: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s2); }
     marcar('T (celular)');
   }
 
@@ -1356,7 +1392,7 @@ try {
       } else {
         meta('Q', 'Q quedaDeTeste: o mesmo canvas, Baixa, SAMPLES continua 4', `${dt.depois?.id === dt.antes?.id ? 'mesmo canvas' : 'RECRIOU'} · ${dt.q} · SAMPLES ${dt.antes?.info?.samples} → ${dt.depois?.info?.samples}`, 'mesmo canvas, baixa, 4',
           dt.depois?.id === dt.antes?.id && dt.q === 'baixa' && dt.depois?.info?.samples === 4);
-        meta('Q', 'Q quedaDeTeste: gravada nas preferências e dita na pausa', `preferências: ${JSON.stringify(p2.qualidadeQueda ?? null)} · pausa: "${dt.linha}"`, 'qualidadeQueda e a linha da pausa',
+        meta('Q', 'Q quedaDeTeste: gravada nas preferências e dita na pausa', `preferências: ${JSON.stringify(p2.qualidadeQueda ?? null)} · pausa: "${dt.linha}"${dt.ret?.erro ? ` · ERRO: ${dt.ret.erro.slice(0, 160)}` : ''}`, 'qualidadeQueda e a linha da pausa',
           !!p2.qualidadeQueda && /segurou|queda|caiu/i.test(dt.linha || ''));
       }
       // (3) a recarga em Automática abre na Baixa com SAMPLES 0; escolher a Média apaga a queda
@@ -1367,6 +1403,21 @@ try {
       const p3 = await prefs();
       meta('Q', 'Q escolher a Média apaga a queda', `preferências: qualidade ${JSON.stringify(p3.qualidade)} · qualidadeQueda ${JSON.stringify(p3.qualidadeQueda ?? null)}`, 'sem qualidadeQueda',
         dt ? !('qualidadeQueda' in p3) : null, dt ? 'meta' : 'info');
+      // (4) o teto, C13: a 120 Hz o celular desenha 60 — a queda mede os quadros DESENHADOS e 60 ≥ 30 não é "o aparelho não segura":
+      // um rAF falso a 120 Hz por 8,6 s de volta na Automática não cai. No FIM da Q: com o render de verdade do SwiftShader (3–6
+      // quadros por segundo) a página cai sozinha depois de 3 + 2,5 s, e no meio da Q isso tirava a Média do quedaDeTeste
+      await pg.evaluate(() => window.__golaco.definirQualidade('auto'));
+      const t120 = await pg.evaluate(() => { window.__P.soContar(true); window.__desenhos = []; window.__rafLigar(120); window.__vigiaQ = { q0: window.__golaco.qualidade, n0: window.__raf.n, t0: window.__raf.t }; return window.__raf.t; });
+      const chegou120 = await esperarRaf(pg, t120 + 8600, 120000);
+      const q120 = await pg.evaluate(() => {
+        const V = window.__vigiaQ, d = window.__desenhos ?? [];
+        const fim = window.__raf.t, ult = d.filter(t => t > fim - 5000);
+        const r = { q0: V.q0, q: window.__golaco.qualidade, porSeg: ult.length / 5, nQueda: V.n == null ? null : V.n - V.n0, n: window.__golaco.teto?.n ?? null };
+        window.__rafLigar(0); window.__P.soContar(false); window.__desenhos = null; window.__vigiaQ = null;
+        return r;
+      });
+      meta('Q', 'Q com o teto: rAF falso a 120 Hz por 8,6 s na Automática, a queda NÃO cai', `${q120.q0} → ${q120.q}${q120.nQueda != null ? ` (caiu no quadro virtual ${q120.nQueda})` : ''} · ${f(q120.porSeg, 1)} desenhos/s nos últimos 5 s (teto n ${q120.n ?? '—'})${chegou120 ? '' : ' (o relógio virtual NÃO chegou a 8,6 s)'}`,
+        'media', chegou120 && q120.q0 === 'media' && q120.q === 'media');
     } catch (e) {
       meta('—', 'Rodou (a queda)', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura');
     } finally { await fechar(s); }
@@ -1498,8 +1549,9 @@ async function medirCpu() {
 }
 
 /**
- * T: liga o rAF falso a cada taxa, aquece (o teto do item 45 mede o refresh pela mediana dos últimos 30 intervalos e refaz a
- * cada 2 s) e conta os desenhos do #tela numa janela do relógio virtual. Devolve {hz: {porSeg, mediana, desvio}}.
+ * T: liga o rAF falso a cada taxa, aquece (o teto do item 45 mede o refresh pelos últimos 30 intervalos e refaz a conta a cada
+ * 2 s) e conta os desenhos do #tela numa janela do relógio virtual. Devolve {hz: {porSeg, mediana, desvio, painel, estado}}: o
+ * painel = o refresh e o teto do __golaco.perf() (o C11; null sem ele), o estado = o __golaco.teto (o C13; null sem ele).
  */
 async function medirTeto(pg, taxas, { aquece = 2600, janela = 1000 } = {}) {
   await pg.evaluate(() => {
@@ -1507,6 +1559,8 @@ async function medirTeto(pg, taxas, { aquece = 2600, janela = 1000 } = {}) {
     window.__P.soContar(true);
     // (o ?prints=1 abre com o relógio manual: o laço de verdade, pelo rAF, só com ele desligado)
     window.__golaco.relogio.usarManual(false);
+    // (a 1ª chamada pede o medidor do painel)
+    try { window.__golaco.perf?.(); } catch (_) { /* sem o painel */ }
   });
   const out = {};
   try {
@@ -1515,11 +1569,17 @@ async function medirTeto(pg, taxas, { aquece = 2600, janela = 1000 } = {}) {
       if (!(await esperarRaf(pg, t0 + aquece))) continue;
       const tA = await pg.evaluate(() => { window.__desenhos = []; return window.__raf.t; });
       if (!(await esperarRaf(pg, tA + janela))) continue;
-      const d = await pg.evaluate(() => { const d = window.__desenhos; window.__desenhos = null; return d; });
-      const v = d.filter(t => t > tA && t <= tA + janela + 1e-6);
+      const d = await pg.evaluate(() => {
+        const d = window.__desenhos; window.__desenhos = null;
+        let painel = null;
+        try { const p = window.__golaco.perf?.(); painel = p ? { hz: p.refresh?.hz ?? null, teto: p.refresh?.teto ?? null } : null; } catch (_) { painel = null; }
+        const e = window.__golaco.teto;
+        return { d, painel, estado: e ? { ligado: e.ligado, hz: e.hz, n: e.n } : null };
+      });
+      const v = d.d.filter(t => t > tA && t <= tA + janela + 1e-6);
       const iv = []; for (let i = 1; i < v.length; i++) iv.push(v[i] - v[i - 1]);
       const md = percentil(iv, 0.5);
-      out[hz] = { porSeg: (v.length * 1000) / janela, mediana: md, desvio: iv.length ? Math.max(...iv.map(x => Math.abs(x - md))) : NaN };
+      out[hz] = { porSeg: (v.length * 1000) / janela, mediana: md, desvio: iv.length ? Math.max(...iv.map(x => Math.abs(x - md))) : NaN, painel: d.painel, estado: d.estado };
     }
   } finally {
     await pg.evaluate(() => { window.__rafLigar(0); window.__P.soContar(false); window.__desenhos = null; }).catch(() => {});

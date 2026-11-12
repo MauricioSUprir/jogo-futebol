@@ -146,7 +146,7 @@ import { criarEntrada } from './entrada.js';
 import { cameraDaMatriz } from './controle.js';
 import { criarHud } from './hud.js';
 import { criarCena, aaPedido } from './render/cena.js';
-import { criarQueda, quedaValida, nivelInicial, QUEDA } from './render/ritmo-desenho.js';
+import { criarQueda, quedaValida, nivelInicial, QUEDA, criarTeto } from './render/ritmo-desenho.js';
 import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
@@ -1278,6 +1278,10 @@ const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { 
 // a queda automática da qualidade (item 45, C12; a decisão em render/ritmo-desenho.js): GRAVA só fora dos testes automáticos — o
 // resto (as duas janelas lentas seguidas, o ritmo preso num divisor da tela) o módulo decide
 const RITMO = criarQueda({ podeGravar: !(navigator.webdriver || PRINTS || DEMO_ON) });
+// o teto de quadros (item 45, C13; render/ritmo-desenho.js; a escolha D6 do dono): só no celular, o quadro() roda 1 a cada n
+// quadros da tela — 120 Hz desenha 60, 144 → 72, 165 → 82,5, 240 → 60; 60 e 90 Hz como antes. Decide no aoQuadro, nunca dentro
+// do quadro(): o relógio manual dos testes (api.relogio.avancar) não passa por ele. O PC não muda
+const TETO_QUADROS = criarTeto({ ligado: ehCelular });
 const _qd = new THREE.Quaternion();
 const _bp = { x: 0, y: 0, z: 0 };
 const _bpDes = { x: 0, y: 0, z: 0 }, _emp = { x: 0, y: 0, z: 0 };
@@ -3159,11 +3163,12 @@ function faseDoQuadro() {
   if (cenaGol) return 'comemoracao';
   return 'jogo';
 }
-/** O que só a página sabe (o medidor junta: medidor-quadros.js relatorio). O teto (C13) chega aqui depois. */
+/** O que só a página sabe (o medidor junta: medidor-quadros.js relatorio). */
 function infoPainel() {
   const r = cena3d.renderer, gl = r.getContext(), ri = r.info.render;
   if (gl !== medGl) { medGl = gl; medGpuNome = MOD_MED.lerGpu(gl, navigator.userAgent); }
   const pedido = aaPedido(qAtual);
+  const teto = TETO_QUADROS.estado();
   return {
     chamadas: ri.calls, triangulos: ri.triangles,
     qualidade: { escolha: escolhaQ, atual: qAtual },
@@ -3171,7 +3176,10 @@ function infoPainel() {
     buffer: { w: gl.drawingBufferWidth, h: gl.drawingBufferHeight, pixelRatio: r.getPixelRatio(), tetoTablet: !pedido && aaPedido(qAtual, undefined, SEM_TOQUE) },
     gpu: { nome: medGpuNome, timer: !!CRONO?.disponivel, invalidos: CRONO?.invalidos ?? 0 },
     ua: navigator.userAgent,
-    teto: null, // o C13 (render/ritmo-desenho.js): o n do teto de quadros
+    // o teto de quadros (C13): o n (desenha 1 a cada n quadros da tela; null no PC, sem teto) e o refresh que ele mediu (NaN antes
+    // da 1ª conta: o painel usa o do medidor)
+    teto: teto.ligado ? teto.n : null,
+    refreshHz: teto.hz,
     // a queda automática na sessão e a gravada nas preferências (C12; cada uma {de, para} ou null)
     queda: { sessao: quedaSessao, gravada: quedaGravada },
   };
@@ -4736,6 +4744,10 @@ async function iniciar() {
     requestAnimationFrame(aoQuadro);
     // (o painel ?perf: o refresh da tela por todo quadro do navegador, desenhado ou não)
     if (MED) MED.raf(t);
+    // o teto (item 45, C13): no celular de 120 Hz para cima, o quadro() — a lógica, a entrada e o desenho — só nos quadros do
+    // ritmo (o dtReal dele vira o intervalo entre desenhos; o laço anda pelo relógio, nada se perde). A tela antes do jogo tem o
+    // próprio ritmo de 30 (PP_QPS) e passa sempre, como antes. O teto vê todo quadro (o refresh), também com o relógio manual
+    if (!TETO_QUADROS.quadro(t, !!pp?.aberta)) return;
     // (a troca de qualidade pela pausa em andamento: a lógica roda, o 3D não desenha — a tela "Ajustando…" está por cima)
     if (!relogioManual) quadro(t, !trocandoQ);
   };
@@ -5169,6 +5181,8 @@ const api = {
   },
   /** A qualidade (testes): escolha, nível, a queda da sessão e a gravada, se a troca pela pausa está em andamento. */
   get qualidadeEstado() { return { escolha: escolhaQ, atual: qAtual, sessao: quedaSessao, gravada: quedaGravada, agora: quedaAgora(), trocando: trocandoQ }; },
+  /** O teto de quadros (item 45, C13; testes): {ligado (só no celular), hz (o refresh medido), n, periodo}. */
+  get teto() { return TETO_QUADROS.estado(); },
   /**
    * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques (a referência SSAA e a máscara
    * geométrica dos testes de gráficos): os dos finos (render/campo.js graficos.fisico), a A2C da torcida e a compensação de alfa
