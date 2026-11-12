@@ -377,6 +377,10 @@ html.em-partida .carga-barra { width: 44px; height: 6px; }
   font: 600 11px/1.4 ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; color: var(--texto-2);
   background: rgba(7, 9, 10, 0.7); padding: 4px 8px; border-radius: 6px; white-space: pre;
 }
+/* o painel com ?qps=1 ou ?perf=1 (item 45): no body, POR CIMA de tudo — da tela antes do jogo (35), da pausa (40), do replay
+   (30) e da tela de carregar (60); abaixo do "Gire o celular" (70) — em todas as fases (as regras do replay, da comemoração, da
+   substituição e das cenas que escondem o .qps não o pegam) e selecionável (o dono copia o texto) */
+.qps.perf-fixo { position: fixed; z-index: 62; pointer-events: auto; user-select: text; -webkit-user-select: text; cursor: text; }
 .dica {
   position: absolute; left: calc(var(--sa-l) + var(--m)); bottom: calc(var(--sa-b) + var(--m));
   display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-2);
@@ -987,12 +991,12 @@ html:not(.com-toque) #menu .chip-nomes { display: none; }
 html.com-toque .btn-replay-pular { display: flex; }
 html.em-replay .minimapa, html.em-replay .btn-menu, html.em-replay .aviso, html.em-replay .carga, html.em-replay .cartao-icone,
 html.em-replay .dica, html.em-replay .painel-jogo, html.em-replay .gol-tela, html.em-replay .faixa, html.em-replay .toque,
-html.em-replay .qps, html.em-replay .nome-condutor { display: none; }
+html.em-replay .qps:not(.perf-fixo), html.em-replay .nome-condutor { display: none; }
 /* comemoração do gol (js/comemoracao.js): a mesma camada do replay (qualquer toque pula depois de 0,5 s); do HUD fica só o
    placar e o "GOL!" até o 1º corte — no celular os botões de toque cobriam o autor */
 html.em-comemoracao .minimapa, html.em-comemoracao .btn-menu, html.em-comemoracao .aviso, html.em-comemoracao .carga,
 html.em-comemoracao .cartao-icone, html.em-comemoracao .dica, html.em-comemoracao .painel-jogo, html.em-comemoracao .faixa,
-html.em-comemoracao .toque, html.em-comemoracao .qps, html.em-comemoracao .nome-condutor { display: none; }
+html.em-comemoracao .toque, html.em-comemoracao .qps:not(.perf-fixo), html.em-comemoracao .nome-condutor { display: none; }
 /* a faixa do fim de jogo (hud.faixa final): sem os controles de toque — depois do apito final eles não comandam nada, e no
    celular o arco encostava nos botões da faixa e a zona do analógico ficava com o toque da metade esquerda deles */
 html.fim-faixa .toque, html.fim-faixa .nome-condutor { display: none; }
@@ -1000,13 +1004,13 @@ html.fim-faixa .toque, html.fim-faixa .nome-condutor { display: none; }
    a faixa ENTRA/SAI */
 html.em-substituicao .minimapa, html.em-substituicao .btn-menu, html.em-substituicao .aviso, html.em-substituicao .carga,
 html.em-substituicao .cartao-icone, html.em-substituicao .dica, html.em-substituicao .painel-jogo, html.em-substituicao .faixa,
-html.em-substituicao .toque, html.em-substituicao .qps, html.em-substituicao .gol-tela, html.em-substituicao .nome-condutor { display: none; }
+html.em-substituicao .toque, html.em-substituicao .qps:not(.perf-fixo), html.em-substituicao .gol-tela, html.em-substituicao .nome-condutor { display: none; }
 /* cena do cartão (js/cena-cartao.js; cenas das paradas, 22/10): a mesma camada (qualquer toque pula depois de 0,5 s); do
    HUD fica só o placar (a tarja de identificação é da tela das cenas, css/cenas.css). O ícone do cartão não aparece: o
    cartão está na mão do árbitro (3D). A faixa "Você foi expulso" espera a cena (e o replay) acabar. */
 html.em-cena .minimapa, html.em-cena .btn-menu, html.em-cena .aviso, html.em-cena .carga, html.em-cena .cartao-icone,
 html.em-cena .dica, html.em-cena .painel-jogo, html.em-cena .gol-tela, html.em-cena .faixa, html.em-cena .toque,
-html.em-cena .qps, html.em-cena .faixa-subst, html.em-cena .nome-condutor { display: none; }
+html.em-cena .qps:not(.perf-fixo), html.em-cena .faixa-subst, html.em-cena .nome-condutor { display: none; }
 
 /* faixa ENTRA/SAI (lower third de TV; pedido do dono de 12/10). Só sigla, ▲/▼, ENTRA/SAI, número e nome: a palavra e o
    triângulo sempre escritos (a cor não é a única pista). Na cena: embaixo à esquerda, a linha de quem está no quadro em

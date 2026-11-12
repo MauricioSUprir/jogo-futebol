@@ -127,7 +127,8 @@
 //
 // Parâmetros: ?semente=N ?q=baixa|media|alta ?hora=dia|noite ?camera=tv|aproximada ?demo=1
 // ?modo=partida|ataque|conducao (padrão da página: partida) ?min=N (minutos reais por tempo)
-// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ?toque=1 ?entalhe=1 ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
+// ?marcador=1 ?prints=1 (cena limpa) ?qps=1 ou ?perf=1 (o painel de quadros por cima de tudo; item 45) ?toque=1 ?entalhe=1
+// ?replay=0|1 ?comemoracao=0|1 ?substituicao=0|1
 // ?prejogo=0|1|curto|escalacao ?tecnicos=0|1 ?replayParada=0|1 ?cenas=0|1 ?troca=0 (sem a troca de camisa do pós-jogo)
 // ?dif=facil|normal|dificil|lenda (a dificuldade da IA contra a pessoa, item 33; como o ?min, o valor do começo da página).
 // Pré-jogo (pedido de 11/10; render/prejogo.js): antes do 1º passo da partida — a simulação fica no tick 0 e o apito da
@@ -144,7 +145,7 @@ import * as S from './sessao.js';
 import { criarEntrada } from './entrada.js';
 import { cameraDaMatriz } from './controle.js';
 import { criarHud } from './hud.js';
-import { criarCena } from './render/cena.js';
+import { criarCena, aaPedido } from './render/cena.js';
 import { criarCampo } from './render/campo.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
@@ -1260,7 +1261,6 @@ function posDesenhada(id) {
   return null;
 }
 const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
-const qpsMed = { t0: 0, n: 0, soma: 0 };
 const adapt = { n: 0, soma: 0, ultimaTroca: 0, inicio: 0 };
 const _qd = new THREE.Quaternion();
 const _bp = { x: 0, y: 0, z: 0 };
@@ -2866,7 +2866,11 @@ function lerRelogio() {
 }
 
 let pausaAntes = false; // pausado() no quadro anterior (a volta da pausa solta a entrada)
+/** Um quadro: o corpo (quadroCorpo) e, só com o medidor do painel ?perf (item 45), a medida dele (medirQuadroPainel). */
 function quadro(agoraMs, desenhar = true) {
+  if (MED) medirQuadroPainel(agoraMs, desenhar); else quadroCorpo(agoraMs, desenhar);
+}
+function quadroCorpo(agoraMs, desenhar = true) {
   const dtReal = ultimoQuadro === null ? PASSO : Math.max(0, (agoraMs - ultimoQuadro) / 1000);
   ultimoQuadro = agoraMs;
   // (TM: o "Simular partida" na tela "Gire o celular" e na abertura de texto, antes do jogo — item 124, revisões A1/A6)
@@ -2994,7 +2998,6 @@ function quadro(agoraMs, desenhar = true) {
   // em pé no celular a tela "Gire o celular" cobre tudo: não gasta bateria desenhando por baixo
   if (diretor && diretor.ativo && !cenaSub && !cenaCartao) desenharReplay(dt, agoraMs, desenhar && !retratoBloqueado());
   else desenharQuadro(dt, agoraMs, desenhar && !retratoBloqueado());
-  medirQps(dtReal, agoraMs);
   adaptarQualidade(dtReal, agoraMs);
 }
 
@@ -3097,14 +3100,83 @@ function quadroOnline(dt, ent, agoraMs) {
   PAG_ONLINE.enviarPacote(agoraMs, (trintaQps() ? MOD_ON.E_30QPS : 0) | (ia ? MOD_ON.E_MENU : 0) | (emCena ? MOD_PAG_ON.E_CENA : 0));
 }
 
-function medirQps(dt, agora) {
-  if (!hud.qpsVisivel) return;
-  qpsMed.n++; qpsMed.soma += dt;
-  if (agora - qpsMed.t0 > 500) {
-    const qps = qpsMed.soma > 0 ? qpsMed.n / qpsMed.soma : 0;
-    const info = cena3d.info();
-    hud.qps(`${qps.toFixed(0)} qps · ${(1000 * qpsMed.soma / Math.max(1, qpsMed.n)).toFixed(1)} ms\n${info.render.calls} chamadas · ${(info.render.triangles / 1000).toFixed(0)} mil tri\nqualidade ${qAtual}`);
-    qpsMed.t0 = agora; qpsMed.n = 0; qpsMed.soma = 0;
+// ------------------------------------------------------------------ o painel ?perf / ?qps (item 45, PLANO-GRAFICOS.md passo 6)
+// F3 liga e desliga (dentro do HUD, escondido no replay e nas cenas, como antes); ?qps=1 ou ?perf=1 o põem no body POR CIMA de
+// tudo, em todas as fases e selecionável (o .perf-fixo do estilo.css: o dono copia o texto). O medidor (render/medidor-quadros.js,
+// puro) só baixa com o painel à vista ou com o __golaco.perf(): nunca no download inicial nem na pré-carga (teste-carga). Ele
+// recebe o instante de cada DESENHO do 3D (o cena3d.desenhar envolto conta: o quadro, o replay e o pré-jogo passam por ele) —
+// os intervalos entre desenhos, não os do rAF: a tela antes do jogo desenha 30 num rAF de 60 (N3) —, a CPU do quadro inteiro, a
+// GPU (só com o EXT_disjoint_timer_query_webgl2) e o refresh (todo rAF, no aoQuadro). Sem o medidor, o quadro é o de sempre.
+const PAINEL_URL = params.get('qps') === '1' || params.get('perf') === '1';
+let MOD_MED = null, MED = null, CRONO = null, medCarga = null, medPainel = -1e9, medAgora = null, nDesenhos = 0, desenhoEnvolto = false;
+let medGl = null, medGpuNome = '';
+// (o teto dos tablets: o MSAA que a tabela daria sem o toque — render/cena.js aaPedido)
+const SEM_TOQUE = { toque: false, dpr: 1, telaW: 0, telaH: 0 };
+function mostrarPainel(v) {
+  hud.mostrarQps(v, PAINEL_URL);
+  if (!v) return;
+  if (!MED) hud.qps('medindo…');
+  ligarMedidor();
+}
+function ligarMedidor() {
+  return (medCarga ??= import('./render/medidor-quadros.js').then(md => {
+    MOD_MED = md;
+    MED = md.criarMedidor();
+    CRONO = md.criarCronometroGpu(() => cena3d?.renderer?.getContext() ?? null);
+    envolverDesenho();
+  }, e => { medCarga = null; console.warn('painel: o medidor não carregou', e); }));
+}
+/** Cada desenho do 3D conta (uma vez só; o cena3d nasce uma vez por página). */
+function envolverDesenho() {
+  if (desenhoEnvolto || !cena3d) return;
+  desenhoEnvolto = true;
+  const des = cena3d.desenhar;
+  cena3d.desenhar = c => { nDesenhos++; return des(c); };
+}
+/** A fase do quadro para o medidor (a pausa por cima de tudo; o replay é o do diretor desenhando). */
+function faseDoQuadro() {
+  if (hud.menuAberto || hud.ajudaAberta || editor?.aberto) return 'pausa';
+  if (pp?.aberta) return 'tela';
+  if (prejogo?.ativo) return 'prejogo';
+  if (diretor?.ativo && !cenaSub && !cenaCartao) return 'replay';
+  if (cenaSub || cenaCartao || cenaFim) return 'cena';
+  if (cenaGol) return 'comemoracao';
+  return 'jogo';
+}
+/** O que só a página sabe (o medidor junta: medidor-quadros.js relatorio). O teto (C13) e a queda (C12) chegam aqui depois. */
+function infoPainel() {
+  const r = cena3d.renderer, gl = r.getContext(), ri = r.info.render;
+  if (gl !== medGl) { medGl = gl; medGpuNome = MOD_MED.lerGpu(gl, navigator.userAgent); }
+  const pedido = aaPedido(qAtual);
+  return {
+    chamadas: ri.calls, triangulos: ri.triangles,
+    qualidade: { escolha: escolhaQ, atual: qAtual },
+    aa: { pedido, antialias: cena3d.aaContexto, amostras: cena3d.amostras },
+    buffer: { w: gl.drawingBufferWidth, h: gl.drawingBufferHeight, pixelRatio: r.getPixelRatio(), tetoTablet: !pedido && aaPedido(qAtual, undefined, SEM_TOQUE) },
+    gpu: { nome: medGpuNome, timer: !!CRONO?.disponivel, invalidos: CRONO?.invalidos ?? 0 },
+    ua: navigator.userAgent,
+    teto: null, // o C13 (render/ritmo-desenho.js): o n do teto de quadros
+    queda: { sessao: null, gravada: null }, // o C12: a queda automática na sessão e a gravada nas preferências
+  };
+}
+const medGpu = (ms, fase) => MED.gpu(ms, fase);
+/** O quadro com o medidor: a CPU do quadro inteiro, os desenhos dele, a GPU e o texto do painel a cada 0,5 s. */
+function medirQuadroPainel(agoraMs, desenhar) {
+  if (!desenhoEnvolto) envolverDesenho();
+  const t0 = performance.now(), n0 = nDesenhos;
+  CRONO.antes();
+  let desenhou = false, fase = 'jogo';
+  try { quadroCorpo(agoraMs, desenhar); } finally {
+    desenhou = nDesenhos > n0;
+    fase = faseDoQuadro();
+    CRONO.depois(desenhou, fase);
+  }
+  if (desenhou) MED.desenho(agoraMs, performance.now() - t0, fase);
+  CRONO.colher(medGpu);
+  medAgora = agoraMs;
+  if (hud.qpsVisivel && cena3d && Math.abs(agoraMs - medPainel) >= 500) {
+    medPainel = agoraMs;
+    hud.qps(MOD_MED.textoPainel(MED.relatorio(agoraMs, infoPainel(), fase)));
   }
 }
 
@@ -3160,7 +3232,7 @@ function tratarAcao(a) {
     if (editor?.aberto) { if (a === 'pausa') editor.voltar(); return; }
     if (hud.ajudaAberta) { if (a === 'pausa' || a === 'ajuda') { hud.fecharAjuda(); voltarParaTela(); } return; }
     if (hud.menuAberto) { if (a === 'pausa') { hud.fecharMenu(); voltarParaTela(); } return; }
-    if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
+    if (a === 'qps') { mostrarPainel(!hud.qpsVisivel); return; }
     pp.acao(a);
     return;
   }
@@ -3195,7 +3267,7 @@ function tratarAcao(a) {
     if (hud.ajudaAberta) hud.fecharAjuda(); else { entrada.soltarTudo(); hud.abrirAjuda(); }
     return;
   }
-  if (a === 'qps') { hud.mostrarQps(!hud.qpsVisivel); return; }
+  if (a === 'qps') { mostrarPainel(!hud.qpsVisivel); return; }
   if (pausado()) return;
   // (no Livre a C/R3 passa pelas 6 câmeras dele)
   if (a === 'camera') { comando('camera', mundo.livre ? 'proxima' : cam.modo === 'tv' ? 'aproximada' : 'tv'); return; }
@@ -3921,7 +3993,6 @@ function quadroPrepartida(dtReal, agoraMs, desenhar) {
   ppDt = 0;
   if (prejogo && prejogo.ativo) prejogo.quadro(dt, agoraMs, desenhar, false);
   else desenharQuadro(dt, agoraMs, desenhar);
-  medirQps(dtReal, agoraMs);
 }
 const PP_QPS = 30;
 /**
@@ -4528,7 +4599,7 @@ async function iniciar() {
   api.carga = 'pronta';
   const comTela = pp?.aberta ? ligarFundo3D() : prepartidaLigada() && !!MOD_PP && abrirPrepartida();
   if (!comTela && !comecarPrejogo(modoPrejogo(), true)) eventosIniciais();
-  if (params.get('qps') === '1') hud.mostrarQps(true);
+  if (PAINEL_URL) mostrarPainel(true);
   hud.ajustarTopo();
   // primeiro quadro (compila os shaders) e some a tela de carregamento
   if (prejogo.ativo) prejogo.quadro(0, performance.now(), true);
@@ -4548,6 +4619,8 @@ async function iniciar() {
   if (mundo.livre && !PRINTS && !DEMO_ON && !pp?.aberta) paginaLivre().abrirJogadores();
   const aoQuadro = t => {
     requestAnimationFrame(aoQuadro);
+    // (o painel ?perf: o refresh da tela por todo quadro do navegador, desenhado ou não)
+    if (MED) MED.raf(t);
     if (!relogioManual) quadro(t);
   };
   requestAnimationFrame(aoQuadro);
@@ -4797,6 +4870,17 @@ const api = {
     };
     if (opc.zerar) { mq.n = 0; mq.i = 0; mq.aSim = 0; mq.aPose = 0; mq.aPassos = 0; mq.aCena = 0; }
     return r;
+  },
+  /**
+   * O painel ?perf / ?qps (item 45): o mesmo objeto que ele mostra — qps (o último segundo), ms {p50, p95, pior1} dos intervalos
+   * entre desenhos, cpu {p50, p95}, gpu {nome, curto, timer, p50, p95}, chamadas, triangulos, qualidade {escolha, atual}, aa
+   * {pedido, antialias, amostras, modo}, buffer {w, h, pixelRatio, tetoTablet}, refresh {hz, teto}, queda {sessao, gravada}, fase
+   * e fases (o acumulado por fase desde a carga) —, para os testes e para o dono colar. null antes do medidor chegar (a 1ª
+   * chamada o pede; com o painel à vista ele já veio).
+   */
+  perf() {
+    if (!MED) { if (cena3d) ligarMedidor(); return null; }
+    return MED.relatorio(medAgora ?? performance.now(), cena3d ? infoPainel() : {}, faseDoQuadro());
   },
   /** Troca o mundo inteiro (testes e prints de conferência montam um mundo à parte). */
   trocarMundo(m) { return trocarMundo(m); },

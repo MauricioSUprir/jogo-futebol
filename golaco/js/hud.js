@@ -1297,7 +1297,12 @@ export function criarHud(opc) {
       if (typeof e.ajustesFixos === 'boolean' && e.ajustesFixos !== ajustesFixos) { ajustesFixos = e.ajustesFixos; aplicarModoNoMenu(); }
       else if (typeof e.duracao === 'string' || typeof e.dificuldade === 'string') aplicarModoNoMenu();
     },
-    mostrarQps(v) { el.qps.hidden = !v; },
+    /** O painel de quadros (F3; item 45: com fixo — o ?qps=1 / ?perf=1 — vai para o body com o .perf-fixo, por cima de tudo, em
+     *  todas as fases, selecionável). */
+    mostrarQps(v, fixo = false) {
+      if (fixo && !el.qps.classList.contains('perf-fixo')) { document.body.append(el.qps); el.qps.classList.add('perf-fixo'); }
+      el.qps.hidden = !v;
+    },
     get qpsVisivel() { return !el.qps.hidden; },
     qps(texto) { if (!el.qps.hidden) el.qps.textContent = texto; },
     progresso(msg) { if (el.msg) el.msg.textContent = msg; },
