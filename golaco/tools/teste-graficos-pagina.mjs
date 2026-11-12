@@ -371,7 +371,11 @@ async function instalarPagina() {
     const el = document.getElementById('carregando-msg');
     if (!el || !/Ajustando/i.test(el.textContent || '') || (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true }))) return null;
     const pc = pintaPorCima(el, [[0.1, 0.5], [0.3, 0.5], [0.5, 0.5], [0.7, 0.5], [0.9, 0.5]]);
-    return { livres: pc.livres, de: 5, cobertos: pc.cobertos };
+    // (e o painel ?perf INTEIRO debaixo da tela de carregar — a mensagem pode cair fora da caixa dele, e a guarda acima não veria
+    // a ordem das camadas: 3 pontos do painel, nenhum livre)
+    const pn = document.querySelector('.perf-fixo');
+    const pp = pn && !pn.hidden && pn.getClientRects().length ? pintaPorCima(pn, [[0.5, 0.5], [0.15, 0.25], [0.85, 0.75]]) : null;
+    return { livres: pc.livres, de: 5, cobertos: pc.cobertos, painelLivres: pp ? pp.livres : null, painelSob: pp ? pp.cobertos : [] };
   };
   /**
    * O painel ?perf NÃO pega toque (a revisão do bloco 4): em 5 pontos de cada alvo à vista (`seletor`), o elementFromPoint de
@@ -1277,14 +1281,17 @@ try {
             // 'transition: none' do hud.ocupado: a mutação dele passa aqui, ele cobre só a tela ainda saindo depois do pronto)
             // (a revisão do bloco 4: a mensagem POR CIMA do painel ?perf — a pilha do ponto, não só o checkVisibility —, a pausa inert
             // e o foco na tela de carregar em cada amostra com a mensagem à vista)
-            const o = window.__ajuste = { visto: 0, opMin: 1, msgVista: 0, msgLivreMin: 5, msgTapa: [], inertNao: 0, focoFora: 0, focos: [] };
+            const o = window.__ajuste = { visto: 0, opMin: 1, msgVista: 0, msgLivreMin: 5, msgTapa: [], painelVisto: 0, painelLivreMax: 0, painelSob: [], inertNao: 0, focoFora: 0, focos: [] };
             o.id = setInterval(() => {
               if (!window.__P.ajustando()) return;
               o.visto++;
               const c = document.getElementById('carregando');
               if (c) o.opMin = Math.min(o.opMin, +getComputedStyle(c).opacity);
               const m = window.__P.msgAjustando();
-              if (m) { o.msgVista++; o.msgLivreMin = Math.min(o.msgLivreMin, m.livres); for (const t of m.cobertos) if (!o.msgTapa.includes(t)) o.msgTapa.push(t); }
+              if (m) {
+                o.msgVista++; o.msgLivreMin = Math.min(o.msgLivreMin, m.livres); for (const t of m.cobertos) if (!o.msgTapa.includes(t)) o.msgTapa.push(t);
+                if (m.painelLivres != null) { o.painelVisto++; o.painelLivreMax = Math.max(o.painelLivreMax, m.painelLivres); for (const t of m.painelSob) if (!o.painelSob.includes(t)) o.painelSob.push(t); }
+              }
               if (!document.getElementById('menu')?.inert) o.inertNao++;
               const a = document.activeElement;
               if (a !== c) { o.focoFora++; const n = a ? `${a.tagName.toLowerCase()}${a.id ? '#' + a.id : ''}` : 'nada'; if (!o.focos.includes(n)) o.focos.push(n); }
@@ -1320,9 +1327,10 @@ try {
             'vista nas duas e fora no fim', b.ajustando > 0 && m.ajustando > 0 && !b.aindaAjustando && !m.aindaAjustando);
           meta('R', 'R1 a tela "Ajustando…" já opaca em toda amostra à vista (sem a transição de 0,35 s do .carregando; C12)', `a menor opacidade vista ${f(opMin, 3)} em ${b.ajustando + m.ajustando} amostras`,
             '≥ 0,99', b.ajustando + m.ajustando > 0 && opMin >= 0.99);
-          const aj = await pg.evaluate(() => { const o = window.__ajuste; return { msgVista: o.msgVista, msgLivreMin: o.msgLivreMin, msgTapa: o.msgTapa, inertNao: o.inertNao, focoFora: o.focoFora, focos: o.focos }; });
-          meta('R', 'R1 a mensagem "Ajustando…" POR CIMA de tudo, também do painel ?perf (5 pontos na linha dela, a pilha do ponto; a revisão do bloco 4)',
-            `${aj.msgVista} amostras com a mensagem · a pior com ${aj.msgLivreMin} de 5 pontos livres${aj.msgTapa.length ? ` (tapa: ${aj.msgTapa.join(', ')})` : ''}`, '5 de 5 em toda amostra', aj.msgVista > 0 && aj.msgLivreMin === 5);
+          const aj = await pg.evaluate(() => { const o = window.__ajuste; return { msgVista: o.msgVista, msgLivreMin: o.msgLivreMin, msgTapa: o.msgTapa, painelVisto: o.painelVisto, painelLivreMax: o.painelLivreMax, painelSob: o.painelSob, inertNao: o.inertNao, focoFora: o.focoFora, focos: o.focos }; });
+          meta('R', 'R1 a mensagem "Ajustando…" POR CIMA de tudo e o painel ?perf debaixo da tela (5 pontos na linha dela e 3 do painel, a pilha do ponto; a revisão do bloco 4)',
+            `${aj.msgVista} amostras com a mensagem · a pior com ${aj.msgLivreMin} de 5 pontos livres${aj.msgTapa.length ? ` (tapa: ${aj.msgTapa.join(', ')})` : ''} · o painel em ${aj.painelVisto}: no máximo ${aj.painelLivreMax} de 3 pontos à vista${aj.painelSob.length ? ` (por cima dele: ${aj.painelSob.join(', ')})` : ''}`,
+            '5 de 5 e o painel 0 de 3 em toda amostra', aj.msgVista > 0 && aj.msgLivreMin === 5 && aj.painelVisto > 0 && aj.painelLivreMax === 0);
           meta('R', 'R1 durante a troca a pausa fica inert e o foco na tela de carregar; no fim, a pausa sem o inert e o foco de volta nela (a revisão do bloco 4)',
             `amostras: pausa sem inert ${aj.inertNao}, foco fora ${aj.focoFora}${aj.focos.length ? ` (${aj.focos.join(', ')})` : ''} · fim: Baixa inert ${b.fim?.inert}, foco ${b.fim?.foco}; Média inert ${m.fim?.inert}, foco ${m.fim?.foco}`,
             '0; 0; inert false e o foco na pausa nas duas', b.ajustando + m.ajustando > 0 && aj.inertNao === 0 && aj.focoFora === 0 && [b, m].every(x => x.fim && !x.fim.inert && x.fim.naPausa));
