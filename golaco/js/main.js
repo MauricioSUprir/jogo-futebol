@@ -445,8 +445,8 @@ const ehJogo = m => m.modo === 'partida' || m.modo === 'penaltis' || m.modo === 
 /** Rumo da câmera no chão para o analógico: na disputa, o da câmera atrás do cobrador (esquerda/direita da tela). */
 function yawEntrada() { return mundo.disputa && MOD_DISP ? MOD_DISP.yawDisputa(mundo) : (bp.yaw ?? cam.yaw); }
 // bola parada no estilo FIFA (render/bola-parada.js, sob demanda): câmera atrás do cobrador (bp.yaw) e a mira (a linha, o anel
-// do alvo e o arco da curva). O programa da mira (um ShaderMaterial) compila na CARGA do módulo (renderer.compileAsync; item
-// 65): a 1ª cobrança mirada da pessoa não paga a compilação
+// do alvo e o arco da curva). O programa da mira (um ShaderMaterial) compila na CARGA do módulo (renderer.compile, sem esperar;
+// item 65): a 1ª cobrança mirada da pessoa não paga a compilação
 const bp = { tela: null, carga: null, yaw: null, plano: null, linha: true };
 const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md => {
   bp.tela = md.criarTelaBolaParada(cena3d.cena);
@@ -459,7 +459,9 @@ const carregarBP = () => (bp.carga ??= import('./render/bola-parada.js').then(md
  */
 function aquecerMira() {
   if (!bp.tela || !cena3d || !cam) return;
-  try { cena3d.renderer.compileAsync(bp.tela.malha, cam.camera, cena3d.cena).catch(() => {}); } catch (_) { /* sem compileAsync: compila no 1º desenho */ }
+  // (o compile() manda compilar e cria o programa já; ninguém espera ficar pronto — o compileAsync de antes deixava uma sonda a
+  // cada 10 ms que, com o renderizador recriado no meio, jogava um TypeError sem dono no console: a revisão do bloco 4)
+  try { cena3d.renderer.compile(bp.tela.malha, cam.camera, cena3d.cena); } catch (_) { /* compila no 1º desenho */ }
 }
 function novoMundo(opc) {
   const ini = DEMO_ON && S.DEMO && modoPagina === 'conducao' ? S.DEMO.inicio : { x: 0, z: 0, rumo: 0 };
@@ -3879,14 +3881,34 @@ function ligarFundo3D() {
 function progressoCedo(f) { if (pp?.aberta && !pronto3d) pp.progresso?.(f); }
 // (item 45, a revisão do bloco 4) o compileAsync do r170 sonda o isReady de cada programa a cada 10 ms e só resolve quando todos
 // ficam prontos: com o contexto perdido (o getProgramParameter dá null) nunca resolve, e com as propriedades refeitas (o contexto
-// restaurado) ou um material descartado no meio (o fim do pré-jogo, o impostor da torcida) o erro sai dentro do setTimeout e a
-// promessa fica pendente — a troca pela pausa (e a carga com a tela cedo) esperaria para sempre. O prazo e a perda do contexto
-// encerram a espera; o que faltar compila no 1º desenho, como sem o KHR
+// restaurado), um material descartado no meio (o fim do pré-jogo, o impostor da torcida) ou o renderizador recriado o erro sai
+// dentro do setTimeout (sem dono, no console) e a promessa fica pendente — a troca pela pausa (e a carga com a tela cedo)
+// esperaria para sempre. A mesma conta aqui, com fim: o prazo, a perda do contexto, o renderizador trocado e o material sem
+// programa encerram a espera; o que faltar compila no 1º desenho, como sem o KHR
 const COMPILAR_PRAZO_MS = 3000;
+/** Espera os programas de `mats` (o Set do renderer.compile) prontos, a cada 10 ms, até o fim (acima); nunca rejeita. */
+function esperarProgramas(r, mats, prazoMs) {
+  return new Promise(ok => {
+    const t0 = performance.now(), cv = r.domElement;
+    let fim = false;
+    const sair = () => { if (fim) return; fim = true; cv.removeEventListener('webglcontextlost', sair); ok(); };
+    cv.addEventListener('webglcontextlost', sair);
+    const passo = () => {
+      if (fim) return;
+      try {
+        if (cena3d?.renderer !== r || r.getContext().isContextLost()) { sair(); return; }
+        for (const m of mats) { const p = r.properties.get(m)?.currentProgram; if (!p || p.isReady()) mats.delete(m); }
+      } catch (_) { sair(); return; }
+      if (!mats.size || performance.now() - t0 >= prazoMs) { sair(); return; }
+      setTimeout(passo, 10);
+    };
+    passo();
+  });
+}
 /**
  * A tela cedo: os programas (shaders) do 1º desenho mandados compilar ANTES dele, com o fio livre — no 1º desenho o fio esperava a
  * compilação inteira, com a tela à vista e parada (0,6–2 s no Chromium sem GPU dos testes). Com o KHR_parallel_shader_compile (uma GPU
- * de verdade) o compileAsync espera os programas prontos sem segurar o fio; sem ele, o compile() manda compilar e o fio cede dois
+ * de verdade) os programas são esperados prontos sem segurar o fio (esperarProgramas, com o prazo); sem ele, o compile() manda compilar e o fio cede dois
  * quadros (o processo da GPU compila enquanto isso: o toque no "Simular partida" é atendido). Só desenho (o hash não muda); um erro
  * aqui só deixa a compilação para o 1º desenho, como antes.
  */
@@ -3897,14 +3919,7 @@ async function compilarAntesDoDesenho() {
     const gl = r.getContext();
     if (!gl || gl.isContextLost()) return;
     if (r.extensions?.has?.('KHR_parallel_shader_compile')) {
-      const cv = r.domElement;
-      let soltar = () => {};
-      const fim = new Promise(ok => {
-        const prazo = setTimeout(ok, COMPILAR_PRAZO_MS);
-        cv.addEventListener('webglcontextlost', ok, { once: true });
-        soltar = () => { clearTimeout(prazo); cv.removeEventListener('webglcontextlost', ok); };
-      });
-      try { await Promise.race([r.compileAsync(cena3d.cena, cam.camera), fim]); } finally { soltar(); }
+      await esperarProgramas(r, r.compile(cena3d.cena, cam.camera), COMPILAR_PRAZO_MS);
     } else { r.compile(cena3d.cena, cam.camera); await proximoQuadro(); await proximoQuadro(); }
   } catch (_) { /* compila no 1º desenho */ }
 }
