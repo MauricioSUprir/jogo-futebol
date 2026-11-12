@@ -1180,8 +1180,16 @@ try {
           await pg.evaluate(() => window.__golaco.bolaParada.carregar()).catch(() => {});
           await quadrosReais(pg, 2);
           await pg.evaluate(() => {
-            const o = window.__ajuste = { visto: 0 };
-            o.id = setInterval(() => { if (window.__P.ajustando()) o.visto++; }, 8);
+            // (a opacidade de cada amostra à vista: ela já nasce 1 — com o fio travado logo depois, um véu ainda transparente ficaria
+            // na tela parada; C12. Escondida antes — display none —, a transição de 0,35 s do .carregando não roda nem sem o
+            // 'transition: none' do hud.ocupado: a mutação dele passa aqui, ele cobre só a tela ainda saindo depois do pronto)
+            const o = window.__ajuste = { visto: 0, opMin: 1 };
+            o.id = setInterval(() => {
+              if (!window.__P.ajustando()) return;
+              o.visto++;
+              const c = document.getElementById('carregando');
+              if (c) o.opMin = Math.min(o.opMin, +getComputedStyle(c).opacity);
+            }, 8);
           });
           const troca = async q => {
             const antes = await P(pg, 'canvasInfo');
@@ -1206,8 +1214,11 @@ try {
             '4 → 0 → 4', sam[0] === 4 && sam[1] === 0 && sam[2] === 4);
           meta('R', 'R1 o canvas depois das trocas: aria-label e inert de antes', `aria "${b.antes?.aria}" → "${b.depois?.aria}" → "${m.depois?.aria}" · inert ${b.antes?.inert} → ${b.depois?.inert} → ${m.depois?.inert}`,
             'os de antes', b.depois?.aria === b.antes?.aria && m.depois?.aria === b.antes?.aria && b.depois?.inert === b.antes?.inert && m.depois?.inert === b.antes?.inert && b.antes?.aria === 'Campo 3D');
+          const opMin = await pg.evaluate(() => window.__ajuste.opMin);
           meta('R', 'R1 a tela "Ajustando…" aparece e some em cada troca', `vista ${b.ajustando}× e ${m.ajustando}× (amostras de 8 ms) · à vista no fim: ${b.aindaAjustando || m.aindaAjustando ? 'SIM' : 'não'}`,
             'vista nas duas e fora no fim', b.ajustando > 0 && m.ajustando > 0 && !b.aindaAjustando && !m.aindaAjustando);
+          meta('R', 'R1 a tela "Ajustando…" já opaca em toda amostra à vista (sem a transição de 0,35 s do .carregando; C12)', `a menor opacidade vista ${f(opMin, 3)} em ${b.ajustando + m.ajustando} amostras`,
+            '≥ 0,99', b.ajustando + m.ajustando > 0 && opMin >= 0.99);
           const mz = x => (x.mira ? `${x.mira.programa ? 'com programa' : 'SEM programa'}${x.mira.visivel ? ' (à vista: não vale)' : ''}` : 'sem o módulo');
           meta('R', 'R1 a mira (o módulo baixado antes) com programa no renderizador NOVO depois de cada troca, sem ser desenhada (C12)', `Baixa: ${mz(b)} · Média: ${mz(m)}`,
             'com programa nas duas', [b, m].every(x => x.mira?.programa && !x.mira.visivel));

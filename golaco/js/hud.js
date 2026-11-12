@@ -1321,7 +1321,8 @@ export function criarHud(opc) {
     /**
      * A tela de carregar POR CIMA de tudo (z 60: a pausa, a tela antes do jogo) com o texto, já opaca — SEM a transição de 0,35 s
      * do .carregando: quem chama trava o fio logo depois (a troca de qualidade recria o renderizador e compila; item 45, C12) e um
-     * véu ainda transparente ficaria na tela parada. livre() a tira na hora.
+     * véu ainda transparente ficaria na tela parada. (Escondida — display none — o navegador não faz a transição de qualquer jeito;
+     * o 'transition: none' cobre a tela ainda saindo, os 400 ms depois do pronto.) livre() a tira na hora.
      */
     ocupado(texto) {
       const c = el.carregando;
