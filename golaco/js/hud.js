@@ -136,6 +136,8 @@ export function criarHud(opc) {
   const golDuracaoMs = 2400;
   let prints = false;
   let msgAntes = ''; // o texto da tela de carregar antes do ocupado() (item 45, C12)
+  // o foco e o inert da pausa antes do ocupado() (a revisão do bloco 4): devolvidos no livre()
+  let focoAntes = null, menuInertAntes = false;
   const placarVisto = [null, null];
   let times = TIMES_TREINO;
   // o relógio escrito no DOM (item 32): a chave do quadro anterior (segundo, estado, anúncio; o {minuto} de antes) e o texto,
@@ -1323,17 +1325,29 @@ export function criarHud(opc) {
      * do .carregando: quem chama trava o fio logo depois (a troca de qualidade recria o renderizador e compila; item 45, C12) e um
      * véu ainda transparente ficaria na tela parada. (Escondida — display none — o navegador não faz a transição de qualquer jeito;
      * o 'transition: none' cobre a tela ainda saindo, os 400 ms depois do pronto.) livre() a tira na hora.
+     * A revisão do bloco 4: a pausa por baixo fica inert (o teclado e o controle não a operam: o Esc fechava a pausa e o jogo andava
+     * debaixo da tela) e o foco vai para a tela (os dois voltam no livre()); o texto entra numa tarefa DEPOIS de a região estar à
+     * vista — o role="status" anuncia a mudança do texto de uma região que já está na árvore (com o aria-busy e o texto junto com o
+     * hidden, o leitor de tela nunca o dizia).
      */
     ocupado(texto) {
       const c = el.carregando;
-      if (!c.classList.contains('ocupado')) msgAntes = el.msg ? el.msg.textContent : '';
+      if (!c.classList.contains('ocupado')) {
+        msgAntes = el.msg ? el.msg.textContent : '';
+        focoAntes = document.activeElement;
+        menuInertAntes = el.menu.inert;
+      }
+      el.menu.inert = true;
       c.style.transition = 'none';
       c.classList.remove('sumir', 'erro');
       c.classList.add('ocupado');
       c.hidden = false;
-      c.setAttribute('aria-busy', 'true');
-      if (el.msg) el.msg.textContent = texto;
+      c.removeAttribute('aria-busy');
+      c.tabIndex = -1;
+      if (el.msg) el.msg.textContent = '';
       void c.offsetWidth; // (o estilo já: a opacidade 1 sem passar pela transição)
+      try { c.focus({ preventScroll: true }); } catch (_) { /* sem foco: nada */ }
+      setTimeout(() => { if (c.classList.contains('ocupado') && el.msg) el.msg.textContent = texto; }, 0);
     },
     livre() {
       const c = el.carregando;
@@ -1341,10 +1355,14 @@ export function criarHud(opc) {
       c.classList.remove('ocupado');
       c.classList.add('sumir');
       c.hidden = true;
-      c.removeAttribute('aria-busy');
+      c.removeAttribute('tabindex');
       if (el.msg) el.msg.textContent = msgAntes;
       void c.offsetWidth;
       c.style.transition = '';
+      el.menu.inert = menuInertAntes;
+      const f = focoAntes;
+      focoAntes = null;
+      if (f && f.isConnected && f !== document.body && !f.closest('[inert]')) { try { f.focus({ preventScroll: true }); } catch (_) { /* nada */ } }
     },
     /** A tela antes do jogo à vista antes do 3D (item 106, a tela cedo): a tela de carregar sai sem o "pronto" (a dica dele fica). */
     carregandoAtras() {

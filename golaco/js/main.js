@@ -355,6 +355,9 @@ let escolhaQ = QUALIDADE[qParam] ? qParam : (QUALIDADE[prefs.qualidade] || prefs
 // as quedas automáticas (item 45, C12): a gravada nas preferências ({de, para}; a escolha à mão a apaga) e a desta sessão
 let quedaGravada = quedaValida(prefs.qualidadeQueda);
 let quedaSessao = null;
+// a troca pela pausa em andamento (o quadro não desenha enquanto ela vale: aoQuadro; a pausa fica travada: tratarAcao, pausado) e
+// a qualidade pedida no meio dela
+let trocandoQ = false, qPedida = null;
 let qAtual = escolhaQ === 'auto' ? nivelInicial(qAutoInicial, quedaGravada) : escolhaQ;
 let hora = ['dia', 'noite'].includes(params.get('hora')) ? params.get('hora') : (prefs.hora === 'noite' ? 'noite' : 'dia');
 const camInicial = ['tv', 'aproximada'].includes(params.get('camera')) ? params.get('camera') : (prefs.camera === 'aproximada' ? 'aproximada' : 'tv');
@@ -1351,8 +1354,9 @@ function retratoBloqueado() { return mqRetrato.matches && document.documentEleme
 
 function pausado() {
   if (mundo.online) return retratoBloqueado() || !!PAG_ONLINE?.pausado;
-  // (a tela antes do jogo também: o mundo fica no tick 0 — item 64)
-  return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado() || !!pp?.aberta;
+  // (a tela antes do jogo também: o mundo fica no tick 0 — item 64; a troca de qualidade pela pausa também — a revisão do bloco 4
+  // do item 45: nada fecha a pausa no meio dela, e se fechasse, o jogo andaria debaixo da tela "Ajustando…")
+  return hud.menuAberto || hud.ajudaAberta || !!editor?.aberto || retratoBloqueado() || !!pp?.aberta || trocandoQ;
 }
 
 // uniforme de cada jogador pelo elenco (partida); null no treino (o desenho usa o do time)
@@ -3286,8 +3290,6 @@ function trocarQualidadeJa(v) {
 function compilarJa() {
   try { cena3d.renderer.compile(cena3d.cena, cam.camera); } catch (_) { /* compila no 1º desenho */ }
 }
-// a troca pela pausa em andamento (o quadro não desenha enquanto ela vale: aoQuadro) e a qualidade pedida no meio dela
-let trocandoQ = false, qPedida = null;
 /**
  * A troca pela PAUSA (≡ → Opções): a tela de carregar por cima ("Ajustando os gráficos…", à vista SEM a transição de 0,35 s — o
  * fio trava logo depois), dois quadros (a tela pintada), recria, os ganchos, compila antes do desenho (com o
@@ -3310,7 +3312,15 @@ async function trocarQualidadePelaPausa(v) {
       await proximoQuadro();
       await proximoQuadro();
       aplicarQualidade(true);
-      await compilarAntesDoDesenho();
+      // (no online, só o que está à vista compila, no 1º desenho: o fio parado não manda pacote e o outro aparelho fica em
+      // "instável" — compilar a cena inteira, também os escondidos, levava 3–4 s no Chromium sem GPU; o resto compila quando
+      // aparecer)
+      if (!mundo.online) {
+        const r = cena3d.renderer;
+        await compilarAntesDoDesenho();
+        // (o renderizador trocado no meio da espera — a troca imediata da API — já desenha pelo laço)
+        if (cena3d.renderer !== r) continue;
+      }
       desenharAgora();
     }
   } catch (e) {
@@ -3348,6 +3358,9 @@ function redimensionar() {
 function tratarAcao(a) {
   // "Simular o resto" (Total Match) rodando: nada chega ao jogo nem abre a pausa
   if (simulandoTM) return;
+  // a troca de qualidade pela pausa (item 45; a revisão do bloco 4): a pausa fica como está até a tela "Ajustando…" sair — o Esc, o
+  // P, o Start e o B do controle não a fecham nem navegam nela (a pausa está inert: hud.ocupado)
+  if (trocandoQ && (a === 'pausa' || a === 'ajuda' || a.startsWith('menu-'))) return;
   // a tela antes do jogo (item 64): tudo vai a ela — menos o que é da pausa, da Ajuda e do editor abertos por cima dela (o Esc
   // ali volta à tela; nunca pula o pré-jogo nem começa o jogo)
   if (pp && pp.aberta) {
@@ -3861,6 +3874,12 @@ function ligarFundo3D() {
 }
 /** A barra de carga dentro das abas que esperam (as etapas do iniciar(): 0 a 1). */
 function progressoCedo(f) { if (pp?.aberta && !pronto3d) pp.progresso?.(f); }
+// (item 45, a revisão do bloco 4) o compileAsync do r170 sonda o isReady de cada programa a cada 10 ms e só resolve quando todos
+// ficam prontos: com o contexto perdido (o getProgramParameter dá null) nunca resolve, e com as propriedades refeitas (o contexto
+// restaurado) ou um material descartado no meio (o fim do pré-jogo, o impostor da torcida) o erro sai dentro do setTimeout e a
+// promessa fica pendente — a troca pela pausa (e a carga com a tela cedo) esperaria para sempre. O prazo e a perda do contexto
+// encerram a espera; o que faltar compila no 1º desenho, como sem o KHR
+const COMPILAR_PRAZO_MS = 3000;
 /**
  * A tela cedo: os programas (shaders) do 1º desenho mandados compilar ANTES dele, com o fio livre — no 1º desenho o fio esperava a
  * compilação inteira, com a tela à vista e parada (0,6–2 s no Chromium sem GPU dos testes). Com o KHR_parallel_shader_compile (uma GPU
@@ -3872,8 +3891,18 @@ async function compilarAntesDoDesenho() {
   const r = cena3d?.renderer;
   if (!r || !cam) return;
   try {
-    if (r.extensions?.has?.('KHR_parallel_shader_compile')) await r.compileAsync(cena3d.cena, cam.camera);
-    else { r.compile(cena3d.cena, cam.camera); await proximoQuadro(); await proximoQuadro(); }
+    const gl = r.getContext();
+    if (!gl || gl.isContextLost()) return;
+    if (r.extensions?.has?.('KHR_parallel_shader_compile')) {
+      const cv = r.domElement;
+      let soltar = () => {};
+      const fim = new Promise(ok => {
+        const prazo = setTimeout(ok, COMPILAR_PRAZO_MS);
+        cv.addEventListener('webglcontextlost', ok, { once: true });
+        soltar = () => { clearTimeout(prazo); cv.removeEventListener('webglcontextlost', ok); };
+      });
+      try { await Promise.race([r.compileAsync(cena3d.cena, cam.camera), fim]); } finally { soltar(); }
+    } else { r.compile(cena3d.cena, cam.camera); await proximoQuadro(); await proximoQuadro(); }
   } catch (_) { /* compila no 1º desenho */ }
 }
 /** Saiu antes do 3D (no TM o quadro fecha): a carga para no próximo await do iniciar(). */
