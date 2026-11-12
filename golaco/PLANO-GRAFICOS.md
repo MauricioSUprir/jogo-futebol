@@ -1150,6 +1150,20 @@ depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
 - **Uma armadilha da Q** (dita no teste): a linha nova da 120 Hz no MEIO da Q fazia a página, de volta ao render de verdade do
   SwiftShader (3–6 quadros por segundo), cair sozinha 5,5 s depois da recarga — o `quedaDeTeste` achava a Baixa e devolvia null. Ela
   fica no fim, depois de voltar à Automática.
+- **Os testes de navegador da seção 6 que tocam o que mudou** (o `aoQuadro` do `main.js`; base × HEAD, um por vez, os scripts do
+  HEAD): `teste-carga` (acima), `teste-online-tela` (21 de 21 nos dois; 438 → 450 s) e `teste-prepartida-tela` (115 de 115 nos
+  dois, as mesmas linhas; 766 → 791 s). No headless o rAF anda a 60 Hz: o teto fica em *n* = 1 (o laço de antes, bit a bit) em todo
+  teste de navegador que não liga o rAF falso — só a T e a Q o exercitam. O CI do `8ed33e48` passou inteiro (os testes e o painel
+  de equilíbrio); o do `ec4349ad`, os 3 navegadores e 3 dos 4 Node no fim desta medida.
+- **Para o C14 (as metas valendo):**
+  - a T e a Q passam a valer como estão: a T é absoluta (90 / 60 / 72 / 82,5 ± 1, o painel, a tela antes do jogo 28,8 / 33 ± 1),
+    não "nada pior" — as `T.cel*` da referência são as da main (120 / 144 / 165) e não servem de régua; as `T.tela144/165` só
+    entram na referência se ela for regravada (na main seriam as mesmas 28,7 / 32,9);
+  - a Q nova (120 Hz, a queda não cai) fica no FIM da Q (a armadilha acima);
+  - o `teste-ritmo-desenho` já está no CI (padrão, 0,35 s);
+  - fora do teto (rAF próprio, como antes): a tela cedo (`quadroTelaCedo`), o "Simular o resto" (`fatia`) e a troca de qualidade
+    pela pausa (`proximoQuadro`); com o relógio manual (`api.relogio.avancar`) o teto não entra — ele só observa os quadros do
+    navegador.
 
 ---
 
