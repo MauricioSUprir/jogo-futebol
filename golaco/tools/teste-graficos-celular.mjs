@@ -25,7 +25,7 @@
 //      da projeção de cada peça, a intensidade SOMADA no corte transversal (±3 px). Buraco = soma < 15% da do SSAA (físico) no
 //      mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8 quadros. Metas POR PEÇA, valendo a pior: buracos ≤ 5%;
 //      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
-//      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1). Na Baixa, também a pose do LIMIAR (a corda
+//      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1). Na Baixa e na queda, também a pose do LIMIAR (a corda
 //      do pé de perto, com a meia largura de 1 px caindo entre as pontas: a revisão do bloco 3). Na Média, informativa, a F
 //      SOBRE O GRAMADO (a revisão do bloco 3, achado 6 das medidas): as peças com o gramado atrás e as somas do quadro só com
 //      o gramado descontadas (no build e no SSAA) — o quadro real; o grão e a sombra atrás da peça entram na conta.
@@ -1265,12 +1265,12 @@ try {
       meta('F', 'Finos (celular Baixa): a pose do limiar cruza 1 px dentro da corda do pé', `meia largura nas pontas ${f(mp[0], 2)} / ${f(mp[1], 2)} px`,
         'uma ponta acima de 1 px e a outra abaixo', Math.max(...mp) > 1 && Math.min(...mp) < 1, 'estrutura');
       metasF('celular Baixa', Fb, 'baixa');
-      // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto (a TV); a pose do limiar ali é INFORMATIVA — a A2C não tem
-      // limiar (contínua em k = 1) e as cordas dessa pose têm 1,2–2,3 px (não crescem): o que ela mede é o MSAA 4× numa peça de
-      // 1–2 px contra o SSAA 3×3 (×2,67 a corda do fundo, igual no HEAD do C10; a escolha da mistura analítica também com MSAA
-      // é do C14, com a do gol de lá)
-      metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la }, 'baixaMsaa', 'extra');
-      if (Fb.limiar) comoInfo(() => metasF('celular Baixa com MSAA (a queda), sem limiar na A2C', { limiar: Fb.limiar }, 'baixaMsaa', 'extra'));
+      // a "Baixa com MSAA" da queda: as mesmas metas no outro contexto (a TV e a pose do limiar). Desde o C14a a Baixa desenha os
+      // finos na MISTURA também com as amostras da queda (render/campo.js larguraMinima: o campo criado com a qualidade Baixa);
+      // com a A2C de 1 px, o gol de lá cintilava ×2,26 (a corda do fundo) e ×1,97 (o mastro), e a pose do limiar — as cordas a
+      // 1,2–2,3 px, o MSAA 4× numa peça de 1–2 px contra o SSAA 3×3 — ×2,67 (a corda do fundo); com a mistura, ×1,35, ×0,46 e
+      // ×0,91, e a pose do limiar passou a contar como na Baixa
+      metasF('celular Baixa com MSAA (a queda)', { foco: Fb.foco, la: Fb.la, ...(Fb.limiar ? { limiar: Fb.limiar } : {}) }, 'baixaMsaa', 'extra');
       await G(pg, 'liberar', 'b0'); await G(pg, 'liberar', 'b1');
       marcar('N (Baixa)');
     }

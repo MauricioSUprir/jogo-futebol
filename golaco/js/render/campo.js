@@ -228,10 +228,16 @@ function criarLinhas(detalhe, uGramado = null) {
  * (abaixo de 1 px a peça cai entre os centros dos pixels ou das amostras e some aos pedaços). No vértice a peça cresce no corte
  * (crescer o raio do círculo por k cresce a silhueta na tela por k em qualquer direção da câmera) e a COBERTURA esmaece o que
  * cresceu, pelo MSAA do contexto que desenha:
- * - com MSAA: até `largMin` px EXATO, alfa = largura real ÷ largura nova, em alfa para cobertura (A2C, sem ordenar). Com 1 px
- *   exato as 4 amostras cobrem a faixa uma vez cada, e a A2C (no SwiftShader por degraus fixos, alfa ≥ 0,2 / 0,4 / 0,6 / 0,8,
- *   sem pontilhado) mostra o mesmo tanto com a câmera andando; a corda deitada cresce a partir do contato com o chão (aChao);
- * - sem MSAA (a Baixa): mistura com cobertura ANALÍTICA, como as linhas do campo: a peça cresce até a meia largura + `franja`
+ * - com MSAA na Média e na Alta: até `largMin` px EXATO, alfa = largura real ÷ largura nova, em alfa para cobertura (A2C, sem
+ *   ordenar). Com 1 px exato as 4 amostras cobrem a faixa uma vez cada, e a A2C (no SwiftShader por degraus fixos, alfa ≥ 0,2 /
+ *   0,4 / 0,6 / 0,8, sem pontilhado) mostra o mesmo tanto com a câmera andando; a corda deitada cresce a partir do contato com o
+ *   chão (aChao);
+ * - sem MSAA, e na BAIXA também com ele (a queda automática deixa a Baixa no contexto da Média, com as 4 amostras; e o `?aa=1`):
+ *   mistura com cobertura ANALÍTICA, como as linhas do campo. Na Baixa (pixel ratio 1) as cordas do gol de lá ficam a ~0,4 px e
+ *   a A2C de 1 px saltava entre 1 e 2 amostras de 4: na F do teste-graficos-celular, a "Baixa com MSAA" no gol de lá cintilava
+ *   ×2,26 o SSAA na corda do fundo e ×1,97 no mastro; com a mistura, ×1,35 e ×0,46 (o fechamento, C14a). A Média e a Alta seguem
+ *   com a A2C: a mistura nelas fecha a F também, mas a franja de 1 px grava a profundidade e apaga a rede atrás da peça — no PC
+ *   Alta a razão da seção A no gol de lá ia de ×1,02 a ×1,15 da main (meta ≤ ×1,10). A peça cresce até a meia largura + `franja`
  *   px e cada pixel leva a fração da faixa de verdade na caixa dele, no eixo menor da tela (a soma por coluna é a largura da
  *   faixa). Com 1 px e o alfa constante, cada coluna acendia 1 ou 2 pixels inteiros e a corda do fundo, em diagonal, cintilava
  *   ×2,2 o SSAA. Em TODO vértice fino, com qualquer largura (a revisão do bloco 3): com um limiar (só abaixo de 2 px), a peça
@@ -293,8 +299,9 @@ function criarGols(antigo = false) {
 
 /**
  * O shader e o esmaecimento da largura mínima numa malha de finos (render/util.js atributosFino). Controles: definirAA(amostras)
- * = o modo pelo SAMPLES do contexto que desenha (nunca o nome da qualidade: a queda deixa a Baixa num contexto com MSAA) — ≥ 2:
- * A2C (lista opaca); < 2: mistura (transparente, escrevendo a profundidade, renderOrder 1; a rede continua no 2: a franja quase
+ * = o SAMPLES do contexto que desenha e definirQualidade(nome) = a qualidade de agora; o modo sai dos dois: A2C (lista opaca) só
+ * com SAMPLES ≥ 2 e fora da Baixa (nunca a A2C sem amostras; a Baixa na mistura com ou sem as amostras que a queda deixa); senão
+ * mistura (transparente, escrevendo a profundidade, renderOrder 1; a rede continua no 2: a franja quase
  * transparente esconde a rede atrás dela — medido na Baixa com o teste-rede-tela, os finos depois da rede mudavam o "clareia o gol
  * na TV" de ΔL* 17,4 a 17,6 de dia e 18,2 a 18,5 à noite, e nada nas câmeras de perto: não pesa, fica); fisico(bool) =
  * os desenhos seguintes SEM os truques (a peça de verdade, opaca: as referências e as máscaras dos testes). Os dois mudam o
@@ -304,7 +311,7 @@ function criarGols(antigo = false) {
  */
 function larguraMinima(mesh, antigo = false) {
   const mat = mesh.material;
-  if (antigo) return { definirAA() {}, fisico() {}, get estado() { return { modo: 'antigo', amostras: null, largMin: null }; } };
+  if (antigo) return { definirAA() {}, definirQualidade() {}, fisico() {}, get estado() { return { modo: 'antigo', amostras: null, largMin: null }; } };
   const U = { uAlturaBuffer: { value: 1 }, uLargMin: { value: FINOS.largMin }, uFranja: { value: FINOS.franja }, uModoFino: { value: 0 } };
   mat.onBeforeCompile = sh => {
     Object.assign(sh.uniforms, U);
@@ -318,9 +325,9 @@ function larguraMinima(mesh, antigo = false) {
     const alvo = renderer.getRenderTarget();
     U.uAlturaBuffer.value = alvo ? alvo.height : renderer.getContext().drawingBufferHeight;
   };
-  let amostras = 0, fisico = false;
+  let amostras = 0, fisico = false, baixa = false;
   const aplicar = () => {
-    const a2c = !fisico && amostras >= 2, mistura = !fisico && amostras < 2;
+    const a2c = !fisico && amostras >= 2 && !baixa, mistura = !fisico && !a2c;
     const mudou = mat.alphaToCoverage !== a2c || mat.transparent !== mistura;
     mat.alphaToCoverage = a2c;
     mat.transparent = mistura;
@@ -334,8 +341,9 @@ function larguraMinima(mesh, antigo = false) {
   aplicar();
   return {
     definirAA(n) { amostras = n | 0; aplicar(); },
+    definirQualidade(nome) { baixa = nome === 'baixa'; aplicar(); },
     fisico(v) { fisico = !!v; aplicar(); },
-    get estado() { return { modo: fisico ? 'fisico' : amostras >= 2 ? 'a2c' : 'mistura', amostras, largMin: U.uLargMin.value }; },
+    get estado() { return { modo: fisico ? 'fisico' : U.uModoFino.value === 1 ? 'a2c' : 'mistura', amostras, largMin: U.uLargMin.value }; },
   };
 }
 
@@ -923,6 +931,7 @@ export function criarCampo(opc) {
   const manchas = () => { if (uGramado) uGramado.uManchas.value = semMan ? 0 : valoresGramado(horaG).uManchas; };
   grupo.add(criarLinhas(detalhe, uGramado));
   const gols = criarGols(antigo);
+  gols.finos.definirQualidade(opc.qualidade ?? 'media');
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
@@ -949,8 +958,9 @@ export function criarCampo(opc) {
     rede: { a: uRede.uRedeA.value, b: uRede.uRedeB.value, mesh: gols.rede },
     /**
      * O antisserrilhado dos finos do gol (item 45, C9: FINOS) pelas AMOSTRAS do contexto que desenha (o SAMPLES: o
-     * `cena.amostras`, nunca o nome da qualidade): ≥ 2 = alfa para cobertura, < 2 = mistura. O main.js chama na criação e no
-     * `cena.aoRecriar` (a recriação do renderizador e o contexto restaurado); sem chamada, a mistura (certa em qualquer contexto).
+     * `cena.amostras`) e pela qualidade (o definirQualidade abaixo): ≥ 2 fora da Baixa = alfa para cobertura; < 2, ou na Baixa
+     * (a queda: o contexto da Média com as 4 amostras), mistura. O main.js chama na criação e no `cena.aoRecriar` (a recriação do
+     * renderizador e o contexto restaurado); sem chamada, a mistura (certa em qualquer contexto).
      */
     definirAA(amostras) { gols.finos.definirAA(amostras); },
     /**
@@ -1030,7 +1040,8 @@ export function criarCampo(opc) {
     definirMedidor(fn) { medidorCad = fn ?? null; cad3d?.definirMedidor(medidorCad); },
     /** Altura da tela em px CSS (a escolha dos blocos de perto é pelos px da cadeira). */
     definirAlturaTela(px) { if (px > 0) alturaTela = px; },
-    definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); },
+    // (os finos do gol também: a Baixa desenha na mistura com ou sem as amostras da queda — C14a do item 45)
+    definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); gols.finos.definirQualidade(q); },
     /** Mostra/esconde as cadeiras 3D (testes; escondidas, a cadeira pintada volta em todo bloco). */
     mostrarCadeiras(v) { cad3d?.ligar(v); },
     /** As cadeiras 3D neste quadro (testes): {carregado, blocos, instancias, teto, mascara, torcedores, orcamento}. */

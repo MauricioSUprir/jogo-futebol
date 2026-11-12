@@ -1559,7 +1559,8 @@ try {
         try { ret = g.quedaDeTeste(); } catch (e) { ret = { erro: String(e) }; }
         g.relogio.avancar(1000 / 60);
         const info = document.getElementById('info-qualidade');
-        return { antes, depois: window.__P.canvasInfo(), q: g.qualidade, ret: ret && typeof ret === 'object' ? JSON.parse(JSON.stringify(ret)) : ret, linha: info ? info.textContent : null };
+        const finos = g.graficos?.finos ?? null;
+        return { antes, depois: window.__P.canvasInfo(), q: g.qualidade, ret: ret && typeof ret === 'object' ? JSON.parse(JSON.stringify(ret)) : ret, linha: info ? info.textContent : null, finos: finos ? { ...finos } : null };
       });
       const p2 = await prefs();
       if (!dt) {
@@ -1567,6 +1568,10 @@ try {
       } else {
         meta('Q', 'Q quedaDeTeste: o mesmo canvas, Baixa, SAMPLES continua 4', `${dt.depois?.id === dt.antes?.id ? 'mesmo canvas' : 'RECRIOU'} · ${dt.q} · SAMPLES ${dt.antes?.info?.samples} → ${dt.depois?.info?.samples}`, 'mesmo canvas, baixa, 4',
           dt.depois?.id === dt.antes?.id && dt.q === 'baixa' && dt.depois?.info?.samples === 4);
+        // (o C14a: na queda a Baixa fica no contexto da Média, com as 4 amostras, e os finos do gol vão para a MISTURA — a A2C de 1 px
+        // saltava entre 1 e 2 amostras de 4 nas cordas de ~0,4 px: a F da queda no teste-graficos-celular)
+        meta('Q', 'Q quedaDeTeste: os finos do gol na mistura (a Baixa com as 4 amostras da queda; C14a)', dt.finos ? `modo ${dt.finos.modo} · SAMPLES ${dt.finos.amostras}` : 'sem o estado dos finos',
+          'mistura com SAMPLES 4', dt.finos?.modo === 'mistura' && dt.finos?.amostras === 4);
         meta('Q', 'Q quedaDeTeste: gravada nas preferências e dita na pausa', `preferências: ${JSON.stringify(p2.qualidadeQueda ?? null)} · pausa: "${dt.linha}"${dt.ret?.erro ? ` · ERRO: ${dt.ret.erro.slice(0, 160)}` : ''}`, 'qualidadeQueda e a linha da pausa',
           !!p2.qualidadeQueda && /segurou|queda|caiu/i.test(dt.linha || ''));
       }
