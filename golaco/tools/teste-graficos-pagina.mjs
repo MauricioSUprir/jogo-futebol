@@ -18,12 +18,18 @@
 //      Média 4; tablet 1366×1024 com toque e dpr 2 na Média 0 (o teto de ~1,2 MP); ?aa=1 no tablet 4; PC 1280×720 Média 4.
 //   A2 serrilhado do quadro inteiro (jogadores, bola, torcida, placas) em duas poses da TV do celular ('jogo' na bola e 'area'
 //      com o gol no foco): máscara geométrica |MSAA − sem AA| > 0,01 (o build × a carga oposta; dos quadros FÍSICOS pelo gancho
-//      `__golaco.graficos.fisico` do C9/C10, quando existir), E = RMS(quadro − SSAA 3×3) só na máscara, com o SSAA do MESMO LOD
-//      (9 desenhos 1× com a câmera a −⅓, 0, +⅓ px) e físico, razão E_build / E_semAA. Meta Média ≤ 0,6 (na main a Média é a
-//      sem AA: 1).
+//      `__golaco.graficos.fisico` do C9/C10, quando existir), E = RMS(quadro − SSAA 8×8) só na máscara, com o SSAA do MESMO LOD
+//      (64 desenhos 1× com a câmera a ±1/16, ±3/16, ±5/16 e ±7/16 px) e físico, razão E_build / E_semAA. Meta Média ≤ 0,6 (na
+//      main a Média é a sem AA: 1). Até o C14a a referência era o SSAA 3×3 (−⅓, 0, +⅓ px): 3 níveis numa borda alinhada com a
+//      tela, e a de cima das placas do lado de lá (horizontal na TV, a 13–17% do pixel) saía com 0 de cobertura no SSAA e 1/4 no
+//      MSAA 4× — as placas pesavam × 6,46 e a TV na bola dava 0,69; contra o 8×8, 0,48 (e o MSAA forçado da main 0,70 → 0,53).
+//      `--ssaa grade3 | torres9` refaz a de antes ou 9 amostras em n-torres (diagnóstico). Por peça (informativa, com a K): as
+//      máscaras da K dilatadas 2 px e o resto.
 //   K  recortes e silhuetas. (1) franjas: os pixels de borda (a máscara da A2) dentro da torcida, das bandeiras (as de mastro, as
 //      faixas da mureta, os bandeirões e as do escanteio), das placas e, no pré-jogo, do letreiro da fachada, cuja cor no quadro
-//      com MSAA não é mistura (no espaço da cor guardada) das cores vizinhas (5×5) do quadro sem AA — distância OKLab > 0,03.
+//      com MSAA não é mistura (no espaço da cor guardada) das cores vizinhas (5×5) do quadro sem AA — distância OKLab > 0,03 — e
+//      está a mais de 0,03 da VERDADE no mesmo pixel (a referência SSAA 8×8 da A2, física; o C14a: o quadro sem AA perde a linha
+//      mais fina que o pixel que o MSAA pega certo — nos quadros sem a verdade, o pré-jogo, só a mistura).
 //      A meta conta só as bordas com o centro do pixel FORA da região (a amostra extrapolada, o N11, o que o `centroid` muda):
 //      ≤ 0,2% delas e ≤ o da main com o MSAA forçado (a referência); com o centro DENTRO, a franja é o fundo escondido na mistura
 //      do MSAA (o piso da medida) e fica informativa. (2) a cobertura das bandeiras de mastro a 50 e a
@@ -87,7 +93,7 @@
 // `--valendo` faz as metas contarem.
 //   node tools/teste-graficos-pagina.mjs [--raiz <pasta golaco>] [--base <pasta golaco da base>] [--janelas-cpu N]
 //                                        [--so S2,A2,K,P,P2,P3,R,Q,Z,T] [--gravar-referencia] [--informativo | --valendo]
-//                                        [--prints <pasta>] [--json <arquivo>]
+//                                        [--ssaa grade8|grade3|torres9] [--prints <pasta>] [--json <arquivo>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
@@ -103,6 +109,8 @@ const raiz = path.resolve(arg('--raiz', RAIZ));
 // --base <pasta golaco>: a versão de base da CPU PAREADA (seção P: base e medida na mesma rodada, janelas alternadas)
 const raizBase = arg('--base', '') ? path.resolve(arg('--base', '')) : null;
 const JANELAS_CPU = Math.max(5, +arg('--janelas-cpu', 6) || 6);
+// --ssaa grade8 | grade3 | torres9: os pontos da referência SSAA da A2 (o 8×8 desde o C14a; os outros, diagnóstico)
+const SSAA_PADRAO = arg('--ssaa', 'grade8');
 // a folga do "nada pior" da CPU pareada: a main contra ela mesma deu +0,10, +0,30, +0,70, 0,00 e +0,20 ms (5 rodadas de 6
 // pares, Chromium 141 do CI; uma rodada com os 6 pares ≥ 0 — o efeito é da INSTÂNCIA do navegador, não da janela, e alternar
 // não o tira): o +0,2 ms do plano reprovava o mesmo código em 2 de 5 rodadas. Com +1,0 a guarda pega só a piora de ~15% para
@@ -250,19 +258,28 @@ async function instalarPagina() {
   const temFisico = () => typeof g.graficos?.fisico === 'function';
   const comFisico = fn => { const t = temFisico(); if (t) g.graficos.fisico(true); try { return fn(); } finally { if (t) g.graficos.fisico(false); } };
   /**
-   * O SSAA 3×3 com o MESMO LOD do quadro 1× (item 8 da revisão: o 3× desce o mip em log2 3 e põe um piso de textura no E): 9
-   * desenhos no buffer 1× com a câmera deslocada −⅓, 0 e +⅓ px nos dois eixos (os pontos de amostra do 3×3). A soma (Uint16).
+   * O SSAA com o MESMO LOD do quadro 1× (item 8 da revisão: o 3× desce o mip em log2 3 e põe um piso de textura no E): os
+   * desenhos no buffer 1× com a câmera deslocada nos pontos de amostra — 8×8 (o C14a; a grade 3×3 dava 3 níveis numa borda
+   * alinhada com a tela, menos que os 4 do MSAA que ela julga). A soma em Uint16, na escala de 9 amostras (÷ 9 = o SSAA).
    */
   const renderLod = (r, s, c, W, H) => {
-    const gl = r.getContext(), soma = new Uint16Array(W * H * 4), v = c.view && c.view.enabled ? { ...c.view } : null;
+    const gl = r.getContext(), v = c.view && c.view.enabled ? { ...c.view } : null;
+    // (`--ssaa`: 'grade8' 64 amostras, o padrão desde o C14a; 'grade3' o 3×3 de antes; 'torres9' 9 amostras em n-torres)
+    const padrao = globalThis.__ssaaPadrao ?? 'grade8', offs = [];
+    if (padrao === 'grade8') { for (let j = 0; j < 8; j++) for (let i = 0; i < 8; i++) offs.push([(i + 0.5) / 8 - 0.5, (j + 0.5) / 8 - 0.5]); }
+    else if (padrao === 'torres9') { for (let a = 0; a < 3; a++) for (let b = 0; b < 3; b++) offs.push([(3 * a + b + 0.5) / 9 - 0.5, (3 * b + a + 0.5) / 9 - 0.5]); }
+    else for (const oy of [-1 / 3, 0, 1 / 3]) for (const ox of [-1 / 3, 0, 1 / 3]) offs.push([ox, oy]);
+    const acc = new Float64Array(W * H * 4);
     try {
-      for (const oy of [-1 / 3, 0, 1 / 3]) for (const ox of [-1 / 3, 0, 1 / 3]) {
+      for (const [ox, oy] of offs) {
         c.setViewOffset(W, H, ox, oy, W, H);
         r.render(s, c);
         const px = lerBuf(gl, W, H);
-        for (let i = 0; i < soma.length; i++) soma[i] += px[i];
+        for (let i = 0; i < acc.length; i++) acc[i] += px[i];
       }
     } finally { if (v) c.setViewOffset(v.fullWidth, v.fullHeight, v.offsetX, v.offsetY, v.width, v.height); else c.clearViewOffset(); }
+    const soma = new Uint16Array(W * H * 4), k = 9 / offs.length;
+    for (let i = 0; i < acc.length; i++) soma[i] = Math.round(acc[i] * k);
     return soma;
   };
   /** O mesmo quadro 3× maior (pixel ratio 1), lido inteiro, e a soma de cada bloco 3×3 (Uint16, ÷ 9 = o SSAA). */
@@ -640,6 +657,38 @@ function serrilhado(I1, I0, S, N, M1 = null, M0 = null) {
   return { E1: Math.sqrt(s1 / Math.max(1, 3 * n)), E0: Math.sqrt(s0 / Math.max(1, 3 * n)), mascara: n / N };
 }
 
+/**
+ * A2 por peça (informativa; o fechamento, C14a): a mesma conta do `serrilhado` repartida pelas máscaras das categorias da K (a
+ * região de cada uma dilatada 2 px, a 1ª que pega o pixel; o resto — jogadores, bola, gramado, linhas, gols — à parte). Por peça:
+ * os pixels da máscara geométrica, E com e sem MSAA, a razão e a PARTE de cada uma na soma dos quadrados do build (o que a razão
+ * do quadro inteiro deve a ela).
+ */
+function serrilhadoPorPeca(I1, I0, S, W, H, mascaras, M1 = null, M0 = null) {
+  const N = W * H, A = M1 ?? I1, Z = M0 ?? I0;
+  const cats = Object.entries(mascaras ?? {}).map(([cat, M]) => {
+    const D = new Uint8Array(N);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      if (!M[y * W + x]) continue;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && xx >= 0 && yy < H && xx < W) D[yy * W + xx] = 1; }
+    }
+    return [cat, D];
+  });
+  const acc = {};
+  let s1t = 0, s0t = 0;
+  for (let i = 0; i < N; i++) {
+    let m = 0;
+    for (let c = 0; c < 3; c++) m = Math.max(m, Math.abs(A[4 * i + c] - Z[4 * i + c]));
+    if (m <= 2.55) continue;
+    let e1 = 0, e0 = 0;
+    for (let c = 0; c < 3; c++) { const ss = S[4 * i + c] / 9; e1 += ((I1[4 * i + c] - ss) / 255) ** 2; e0 += ((I0[4 * i + c] - ss) / 255) ** 2; }
+    let k = 'resto';
+    for (const [cat, D] of cats) if (D[i]) { k = cat; break; }
+    const a = acc[k] ??= { n: 0, s1: 0, s0: 0 };
+    a.n++; a.s1 += e1; a.s0 += e0; s1t += e1; s0t += e0;
+  }
+  return Object.fromEntries(Object.entries(acc).map(([k, a]) => [k, { n: a.n, E1: Math.sqrt(a.s1 / (3 * a.n)), E0: Math.sqrt(a.s0 / (3 * a.n)), raz: Math.sqrt(a.s1 / Math.max(a.s0, 1e-12)), parte1: a.s1 / Math.max(s1t, 1e-12), parte0: a.s0 / Math.max(s0t, 1e-12) }]));
+}
+
 // o ponto mais perto de p num triângulo (Ericson, Real-Time Collision Detection §5.1.5), no espaço da cor guardada
 const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const mul = (a, k) => [a[0] * k, a[1] * k, a[2] * k];
@@ -671,13 +720,13 @@ function pertoTri(p, a, b, c) {
  * mesma amostra do quadro sem AA e a franja é o fundo escondido que entra na mistura (o `centroid` não muda nada ali: um piso
  * da medida, 0,7% das bordas da torcida); com o centro FORA a amostra é extrapolada, a franja do N11 — a classe que a meta conta.
  */
-function franjas(I1, I0, M, W, H, R = 2) {
+function franjas(I1, I0, M, W, H, R = 2, lista = null, S = null) {
   const D = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     if (!M[y * W + x]) continue;
     for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = y + dy, xx = x + dx; if (yy >= 0 && xx >= 0 && yy < H && xx < W) D[yy * W + xx] = 1; }
   }
-  let bordas = 0, nf = 0, bFora = 0, fFora = 0;
+  let bordas = 0, nf = 0, bFora = 0, fFora = 0, fForaMistura = 0;
   for (let y = R; y < H - R; y++) for (let x = R; x < W - R; x++) {
     const i = y * W + x;
     if (!D[i]) continue;
@@ -698,11 +747,22 @@ function franjas(I1, I0, M, W, H, R = 2) {
     for (let a = 0; a < viz.length && melhor > 0.03; a++) for (let b = a + 1; b < viz.length && melhor > 0.03; b++) for (let c = b + 1; c < viz.length; c++) tenta(pertoTri(p, viz[a], viz[b], viz[c]));
     const fora = !M[i];
     if (fora) bFora++;
-    if (melhor > 0.03) { nf++; if (fora) fFora++; }
+    if (melhor <= 0.03) continue;
+    // (o C14a) e a cor do MSAA a mais de 0,03 da VERDADE no mesmo pixel (a referência SSAA 8×8, física), quando há: o quadro sem
+    // AA amostra só o centro, e uma linha mais fina que o pixel (a de cima das faixas da mureta) que ele perde e o MSAA pega com
+    // uma amostra não é mistura dos vizinhos dele, mas é a cor certa — 5 das 7 franjas da torcida na TV na bola ficavam a 0,005
+    // (mediana) da verdade; as do N11 da main, a 0,057 (14 de 19) e 0,064 (172 de 173 nas bandeiras)
+    const verdade = S ? distLab(lp, labCor([S[4 * i] / 9, S[4 * i + 1] / 9, S[4 * i + 2] / 9])) : Infinity;
+    if (fora) fForaMistura++;
+    if (lista && fora) lista.push({ x, y, d: +melhor.toFixed(3), cor: p, sem: [I0[4 * i], I0[4 * i + 1], I0[4 * i + 2]], ...(S ? { ssaa: +verdade.toFixed(3) } : {}) });
+    if (verdade <= 0.03) continue;
+    nf++;
+    if (fora) fFora++;
   }
   // (0 px de borda: o MSAA não mexe na região — o letreiro com alphaTest sem A2C — e não há franja)
   const bDentro = bordas - bFora, fDentro = nf - fFora;
-  return { bordas, franjas: nf, frac: bordas ? nf / bordas : 0, bFora, fFora, fracFora: bFora ? fFora / bFora : 0, bDentro, fDentro, fracDentro: bDentro ? fDentro / bDentro : 0 };
+  return { bordas, franjas: nf, frac: bordas ? nf / bordas : 0, bFora, fFora, fracFora: bFora ? fFora / bFora : 0, bDentro, fDentro, fracDentro: bDentro ? fDentro / bDentro : 0,
+    comVerdade: !!S, fForaMistura, fracForaMistura: bFora ? fForaMistura / bFora : 0 };
 }
 
 /**
@@ -756,6 +816,7 @@ async function carga(cfg, busca, { forca = null, servidor: sv = srv, init2 = nul
   sessoes.push(s);
   s.busca = busca; s.srv = sv;
   await s.contexto.addInitScript(INIT, forca);
+  if (SSAA_PADRAO !== 'grade8') await s.contexto.addInitScript(v => { globalThis.__ssaaPadrao = v; }, SSAA_PADRAO);
   // (um script a mais antes da página: o R5, o KHR_parallel_shader_compile falso)
   if (init2) await s.contexto.addInitScript(init2);
   s.pagina.setDefaultTimeout(240000);
@@ -886,7 +947,7 @@ async function sequenciaCel(s, papel, semAA) {
   r.poses = posesJogo(r.bola);
   r.quadros = {};
   for (const [nome, pose] of Object.entries(r.poses)) {
-    r.quadros[nome] = await P(pg, 'quadro', pose, { ssaa: semAA && so.has('A2'), corFisico: so.has('A2'), mascaras: semAA && precisaK ? CATS : null, png: !!pastaPrints });
+    r.quadros[nome] = await P(pg, 'quadro', pose, { ssaa: semAA && (so.has('A2') || so.has('K')), corFisico: so.has('A2'), mascaras: semAA && precisaK ? CATS : null, png: !!pastaPrints });
     salvarPng(`cel-${papel}-${nome}`, r.quadros[nome]?.png);
   }
   return r;
@@ -1043,6 +1104,14 @@ try {
         guarda(`A2.${nome}.Ebuild`, Eb); guarda(`A2.${nome}.Esem`, r.E0); guarda(`A2.${nome}.Emsaa`, r.E1); guarda(`A2.${nome}.razao`, raz); guarda(`A2.${nome}.mascara`, r.mascara);
         meta('A2', `A2 serrilhado do quadro inteiro (${nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco'}): razão E_build / E_semAA`,
           `${f(raz, 2)} · E build ${f(Eb, 4)} · sem AA ${f(r.E0, 4)} · MSAA ${f(r.E1, 4)} (× ${f(r.E1 / r.E0, 2)}) · máscara ${pct(r.mascara, 2)} · build ${buildAA ? 'com' : 'sem'} MSAA`, '≤ 0,6', raz <= 0.6);
+        // (por peça, informativa: com as máscaras da K, quando a seção K também roda)
+        if (qs.mascaras) {
+          const pp = serrilhadoPorPeca(u8(qc.cor), u8(qs.cor), u16(qs.ssaa), qs.W, qs.H, Object.fromEntries(Object.entries(qs.mascaras).map(([k, v]) => [k, u8(v)])),
+            qc.corFisico ? u8(qc.corFisico) : null, qs.corFisico ? u8(qs.corFisico) : null);
+          for (const [k, v] of Object.entries(pp)) { guarda(`A2.${nome}.peca.${k}.razao`, v.raz); guarda(`A2.${nome}.peca.${k}.parte`, v.parte1); }
+          meta('A2', `A2 por peça (${nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco'}; informativa): razão MSAA / sem AA e a parte na soma do MSAA`,
+            Object.entries(pp).sort((a, b) => b[1].parte1 - a[1].parte1).map(([k, v]) => `${k} ${f(v.raz, 2)} (${pct(v.parte1, 0)} do MSAA, ${pct(v.parte0, 0)} do sem; ${v.n} px, E ${f(v.E1, 4)} / ${f(v.E0, 4)})`).join(' · '), 'informativa', null, 'info');
+        }
       }
       if (so.has('K')) {
         // (1) as franjas: o quadro com MSAA × o sem, nas máscaras das categorias (da carga sem AA)
@@ -1051,7 +1120,10 @@ try {
           for (const [cat, mb] of Object.entries(qs?.mascaras ?? {})) {
             const M = u8(mb);
             if (!contar(M)) { linhas.push({ k: `${nome}.${cat}`, txt: `${cat} (${nome}) fora do quadro` }); continue; }
-            const r = franjas(u8(qc.cor), u8(qs.cor), M, qs.W, qs.H);
+            // (`--lista-franjas`: as franjas de centro FORA, pixel a pixel — o diagnóstico do C14a)
+            const lista = tem('--lista-franjas') ? [] : null;
+            const r = franjas(u8(qc.cor), u8(qs.cor), M, qs.W, qs.H, 2, lista, qs.ssaa ? u16(qs.ssaa) : null);
+            if (lista?.length) console.log(`franjas de centro fora, ${nome}.${cat}: ${JSON.stringify(lista)}`);
             linhas.push({ k: `${nome}.${cat}`, cat, nome, ...r, area: contar(M) / (qs.W * qs.H), cats });
           }
         };
@@ -1061,6 +1133,7 @@ try {
           if (!('frac' in l)) { meta('K', `K1 franjas: ${l.k}`, l.txt, '—', null, 'info'); continue; }
           guarda(`K.franjas.${l.k}`, l.frac); guarda(`K.bordas.${l.k}`, l.bordas);
           guarda(`K.franjasFora.${l.k}`, l.fracFora); guarda(`K.bordasFora.${l.k}`, l.bFora); guarda(`K.franjasDentro.${l.k}`, l.fracDentro);
+          if (l.comVerdade) guarda(`K.franjasForaMistura.${l.k}`, l.fracForaMistura);
           const rf = ref(`K.franjasFora.${l.k}`);
           const tolF = Math.max(0.0005, (rf ?? 0) * 0.25) * tolRef();
           const onde = l.nome === 'prejogo' ? 'pré-jogo, fachada' : l.nome === 'jogo' ? 'TV na bola' : 'TV com o gol no foco';
@@ -1069,7 +1142,7 @@ try {
           // edição pro com o estádio real) foi medido à parte no C10 — fica informativa até o C14 decidir se mede o pro aqui
           const naoMede = l.nome === 'prejogo';
           meta('K', `K1 franjas na silhueta, centro do pixel FORA da região (a amostra extrapolada, N11): ${l.cat} (${onde})`,
-            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}${naoMede ? ' · o letreiro do Estádio Golaço é transparente: a A2C não o pega (não mede)' : ''}`,
+            `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'}${l.comVerdade ? ` · só pela mistura (a régua de antes do C14a) ${pct(l.fracForaMistura, 2)} (${l.fForaMistura})` : ' · sem a verdade SSAA'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}${naoMede ? ' · o letreiro do Estádio Golaço é transparente: a A2C não o pega (não mede)' : ''}`,
             '≤ 0,2% e ≤ a da main com o MSAA forçado', naoMede ? null : l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF), naoMede ? 'info' : 'meta');
           meta('K', `K1 franjas, centro DENTRO da região (o fundo escondido na mistura: o piso da medida): ${l.cat} (${onde})`,
             `${pct(l.fracDentro, 2)} de ${l.bDentro} px (${l.fDentro}) · todas as bordas ${pct(l.frac, 2)} de ${l.bordas}`, 'informativa', null, 'info');
