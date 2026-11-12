@@ -94,6 +94,20 @@ não cai). Além do plano: o período pela média dos intervalos na faixa da med
 contador), a descida rápida do n numa troca de refresh e a tela antes do jogo por cima do teto. O medido e o que o C14 precisa
 saber estão na seção 6 ("Medido no C13").
 
+**A revisão do bloco 4 (C11–C13; 12/11; `e6f6df30`, `2abed4b3`, `c37f5587`, `b6be7508` e os testes `a44f0145`, `a4b9df80`,
+`5ff4db63`).** Três lentes (código e estados, as medidas P2/R/Q/Z/T, regressões); cada achado conferido no código antes. O medido,
+o que ficou recusado e a lista do C15 estão na seção 6 ("Medido no bloco 4").
+- **Aplicadas:** a troca pela pausa com prazo (o `compileAsync` do r170 nunca resolvia com o contexto perdido: a troca e a carga
+  com a tela cedo esperariam para sempre — agora uma espera própria com fim, sem a sonda que jogava um `TypeError` sem dono); a
+  pausa travada debaixo do "Ajustando…" (o Esc fechava a pausa e o jogo andava sem desenho; também o foco e o anúncio do leitor de
+  tela); no online a troca não compila o escondido; a queda gravada pela MEDIANA da janela que caiu e o ritmo preso só com a mesma
+  cadência no nível de baixo (a regra das duas janelas quase nunca gravava: 0 de 20 com a Baixa resolvendo; o 20 saiu dos
+  divisores); o painel `?perf` sem pegar toque (tapava o LANÇAMENTO, a ENFIADA, a DIVIDIDA e os botões das Opções) e debaixo da
+  tela "Ajustando…"; as linhas por fase ≤ 60 letras com "> 51" acima do teto do histograma; o rótulo "rAF"; o cronômetro da GPU
+  no contexto restaurado.
+- **Recusadas (com o motivo, seção 6):** a queda gravada que expira (decisão de produto: vai ao "Depende do dono" 30); a queda
+  automática "só no pixel ratio" (já na main, e tirar as sombras é o que a queda quer; o texto do plano foi corrigido).
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -203,11 +217,11 @@ Detalhes que eu decido dentro das escolhas (escritos no PR e no "Depende do dono
   174 a 179 Hz o teto fica em 57–59,9 desenhos por segundo (nenhuma tela de celular conhecida nessas faixas). O C13 desenha pelo
   TEMPO (n − 0,5 períodos desde o último desenho), não pelo contador, e baixa o *n* na hora quando a tela fica mais lenta; a tela
   antes do jogo (30 pelo relógio) passa por cima dele (seção 6, "Medido no C13").
-- **O painel com `?perf=1` fica visível em TODAS as fases** e por cima de tudo, para o minuto do dono cobrir a tela antes do jogo, o replay e as cenas. Com F3, como hoje.
-- **Na queda automática não se recria o contexto no meio da partida.** Sem o `KHR_parallel_shader_compile` (0,23% dos Android) a recompilação trava a tela. Cai o pixel ratio (1,5 → 1) e saem as sombras; o MSAA fica até a próxima carga, que já abre na Baixa por causa da queda gravada.
-- **A queda na sessão continua como hoje; só a GRAVAÇÃO é exigente:**
-  - duas janelas lentas seguidas (2 × 2,5 s);
-  - o ritmo NÃO preso num divisor da tela com pouco tremor (o rAF a 30 regular do iPhone em pouca energia ou do economizador do Android cai na sessão, como hoje, mas não grava);
+- **O painel com `?perf=1` fica visível em TODAS as fases** e por cima de tudo, para o minuto do dono cobrir a tela antes do jogo, o replay e as cenas. Com F3, como hoje. **Nunca pega toque** (a revisão do bloco 4: com `pointer-events: auto` ele tapava os botões de toque e os das Opções; o dono manda o print) e fica debaixo da tela "Ajustando…" e da de erro (z 63), que precisam ser lidas.
+- **Na queda automática não se recria o contexto no meio da partida** (recriar descarta o renderizador e compila tudo de novo). Cai o pixel ratio (1,5 → 1) e saem as sombras; o MSAA fica até a próxima carga, que já abre na Baixa por causa da queda gravada. ~~Sem o `KHR_parallel_shader_compile` a recompilação trava a tela~~ — inexato (a revisão do bloco 4): tirar as sombras troca as defines dos shaders e recompila os programas no quadro seguinte de qualquer jeito (o `configurarSombra` marca os materiais; já na main); o que a queda evita é recriar o contexto.
+- **A queda na sessão continua como hoje; só a GRAVAÇÃO é exigente** (a revisão do bloco 4 trocou a regra: a de "duas janelas lentas seguidas pelo mínimo do nível de cima" quase nunca gravava — a 2ª janela já roda no nível de baixo, e quando ele resolve nada ficava):
+  - a janela que caiu lenta DE VERDADE: a mediana dos intervalos a até 1 ms abaixo do intervalo do mínimo do nível (Média 33,3 ms; Alta 20,8) — alguns soluços longos baixam o qps e a queda na sessão vem, mas não gravam;
+  - o ritmo PRESO em 30 regular (a mediana a ± 1 ms de 33,3 e p90 − p10 ≤ 2 ms: o iPhone em pouca energia, o economizador do Android) só grava se a janela SEGUINTE, já no nível de baixo, desenhar mais rápido (a mediana ≥ 1 ms abaixo): a mesma cadência presa é o limite do sistema. O aparelho lento de verdade também desenha preso no vsync (a Média de 36–48 ms a cada 50,0 ms exatos); o 20 (50 ms) saiu dos divisores (nenhuma fonte de sistema que limite a 20);
   - fora de `navigator.webdriver`, `?prints=1` e `?demo=1`; o `__golaco.quedaDeTeste()` grava de propósito.
 - **O xadrez da Ligue 1 fica de fora** (opção futura por liga). Vale a UEFA.
 - **A profundidade nas câmeras baixas (D9; a revisão do C4–C8):** o termo se APAGA pela altura da câmera (`gramado.js
@@ -433,7 +447,7 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - `css/estilo.css:375-379` e 990-1009.
 - **Por cima de tudo (crítica 24):**
   - o `.qps` mora dentro do `.hud`, que é `position: fixed; z-index: 10; pointer-events: none` (`estilo.css:86`) e abre contexto de empilhamento: nenhum z-index do filho passa da tela antes do jogo (35), do replay (30) ou da pausa (40);
-  - com `?perf=1`, o painel vai para o `body` (`document.body.append`) com a classe `perf-fixo`: `position: fixed`, `z-index: 62` (acima do `.carregando`, 60), `pointer-events: auto`, `user-select: text` (o dono seleciona e copia);
+  - com `?perf=1`, o painel vai para o `body` (`document.body.append`) com a classe `perf-fixo`: `position: fixed`, `z-index: 62` (acima do `.carregando` da carga, 60; abaixo dele na troca e no erro, 63), `pointer-events: none` e `user-select: none` (a revisão do bloco 4: com `auto` e `text` ele roubava os toques dos botões do jogo e das Opções; a seleção nem funcionava, o texto é trocado a cada 0,5 s — o dono manda o print);
   - as regras que o escondem no replay, na comemoração e nas cenas (`estilo.css:990-1009`) não pegam o `.perf-fixo`.
 - **O painel mostra:**
   - qps desenhados e ms (p50/p95);
@@ -443,7 +457,7 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - AA: `antialias`, `SAMPLES` e o modo provável (implícito no Chrome Android/Ganesh; separado no Safari, no Mac e no Graphite; implícito emulado no SwiftShader), deduzido da GPU e do navegador;
   - buffer W×H e pixel ratio (o teto dos tablets, se aplicado);
   - GPU: `UNMASKED_RENDERER_WEBGL` pelo `WEBGL_debug_renderer_info`; no Firefox, o `gl.RENDERER` comum (lá a extensão avisa no console que está obsoleta);
-  - refresh medido e teto (*n*);
+  - o ritmo do rAF ("rAF N Hz", não "tela": numa página lenta é o ritmo dela) e o teto (*n*);
   - queda (na sessão e gravada);
   - a fase.
 - **Tempo de GPU:** só com `EXT_disjoint_timer_query_webgl2` (0,43% dos Android, 0,22% dos iOS); sem ela, "—".
@@ -461,12 +475,16 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
   - **Pela pausa** (≡ → Opções): marca `trocandoQ` (o `quadro` não desenha enquanto ela vale) → `hud.ocupado('Ajustando os gráficos…')` à vista sem transição → `await proximoQuadro()` duas vezes (a tela pintada) → recria → os ganchos (`campo.definirAA`, a mira) → `compilarAntesDoDesenho()` e o aquecimento da mira se o módulo dela estiver carregado → desenha 1 quadro (a pausa mostra o jogo congelado atrás) → `hud.livre()` → tira a marca.
   - ~~O `compile()` só percorre o visível (N8)~~ — corrigido no C12: ele percorre a cena inteira (seção 1.2); o que está nela compila junto.
 - **Feito no C12** (`234ba552`, `e8fcb651`, `9f3eb26f`): o medido e o que mudou além deste passo na seção 6, "Medido no C12".
+- **A revisão do bloco 4** (seção 6, "Medido no bloco 4"): a espera dos programas com prazo de 3 s e fim na perda do contexto e no
+  renderizador trocado (`main.js esperarProgramas`; o `compileAsync` do r170 nunca resolvia com o contexto perdido); a pausa inert
+  e travada (`tratarAcao`, `pausado()`) e o foco na tela durante a troca; no online a troca não compila a cena inteira; a regra da
+  gravação pela mediana.
 - **Queda automática:**
   - na sessão, a MESMA regra de hoje (3 s, janela de 2,5 s, `qps < 30` na Média), medindo os quadros DESENHADOS (vale com o teto do passo 8);
   - `cena3d.definirQualidade('baixa', false)`: o contexto fica, então o MSAA fica; cai o pixel ratio e as sombras;
-  - **grava** `prefs.qualidadeQueda = {de, para, v: 1}` (`golaco.prefs.v1`, `main.js:302`) só se:
-    - houve duas janelas lentas seguidas;
-    - o ritmo não estava preso num divisor da tela com pouco tremor (a mediana dos intervalos a ±1 ms de 33,3 ou 50 ms e p90 − p10 ≤ 2 ms: o iPhone em pouca energia, o economizador do Android);
+  - **grava** `prefs.qualidadeQueda = {de, para, v: 1}` (`golaco.prefs.v1`, `main.js:302`) só se (a regra da revisão do bloco 4; seção 2):
+    - a janela que caiu foi lenta de verdade (a mediana dos intervalos ≥ o intervalo do mínimo − 1 ms);
+    - com o ritmo preso em 30 regular (a mediana a ±1 ms de 33,3 e p90 − p10 ≤ 2 ms: o iPhone em pouca energia, o economizador do Android), só se a janela seguinte, no nível de baixo, desenhou mais rápido;
     - e fora de `navigator.webdriver`, `PRINTS` e `DEMO_ON`;
   - o `__golaco.quedaDeTeste()` grava de propósito;
   - na próxima carga com "Automática", `qAutoInicial` vira a qualidade gravada (`main.js:349-352`);
@@ -626,12 +644,12 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | A2 | Serrilhado do quadro inteiro (jogadores, bola, torcida, placas) com `?aa=0` × `?aa=1` (na main, o `addInitScript`): a mesma máscara geométrica (física, com o gancho), a mesma referência do mesmo LOD e a mesma razão da A | Média ≤ 0,6 | sim |
 | K | Recortes e silhuetas: (1) franjas — pixels da borda no MSAA cuja cor não é mistura das cores vizinhas do quadro sem AA (distância OKLab > 0,03), na torcida, nas bandeiras, nas placas e escudos e, no pré-jogo, nos letreiros; (2) a cobertura das bandeiras a 50 e a 100 m contra o SSAA; (3) a A2C da torcida e das bandeiras: só entra se a cintilação da silhueta cair em dois quadros seguidos com a câmera andando, sem a cobertura média do torcedor cair > 10% contra o SSAA | franjas ≤ 0,2% das bordas com o **centro do pixel FORA** da região (a amostra extrapolada: o N11, o que o `centroid` muda) e ≤ o da main com o MSAA forçado; com o centro DENTRO, a franja é o fundo escondido na mistura do MSAA, um piso da medida que o `centroid` não muda (0,7% na torcida): informativa (revisão do C1–C3, item 1). Cobertura das bandeiras ≥ 0,8 × SSAA (o 3×, de propósito: o mip mais fino é a cobertura de verdade, e o afinamento do alfa no mip é o que a K2 procura); a A2C só com ganho medido | sim (bandeiras de longe) |
 | P | Chamadas e triângulos no quadro fixo da TV; CPU do quadro p95 (o `medirQuadro`, sem a GPU, CPU 4×, 10 s de `?demo=1`, como o `teste-desempenho-celular`) | chamadas = ref (+0; a FILA admite ≤ +2); triângulos ≤ ref + 1%; **CPU p95 ≤ 6 ms e nada pior que a base** (PAREADO: `--base <pasta golaco da base>` abre a base junto e alterna ≥ 5 janelas de 400 quadros de cada; a mediana das diferenças por par ≤ +1,0 ms — o +0,2 reprovava o mesmo código em 2 de 5 rodadas; a CPU não vai à referência — revisão do C1–C3, item 4). A base já passa de 6 ms nessa medida (o motivo de o `teste-desempenho-celular` ser informativo): o PR mostra o número da base e vai ao "Depende do dono" 30. O `desenho` do `medirQuadro` NÃO serve de régua para os 6 ms (o ruído não separa versões: item 17) | — (guarda) |
-| P2 | `?perf=1` e `?qps=1`: o painel tem p95, fase, AA, buffer, GPU, refresh; visível no replay, na tela antes do jogo (`?prepartida=1`) e na pausa (o "por cima" pela pilha do ponto, `elementsFromPoint`, com toda camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada à vista que PINTA ali: senão o véu, a marca REPLAY e o fundo da pausa não contavam, e a camada transparente de tela inteira contaria — item 10); a tela antes do jogo mostra ~30 (N3); `__golaco.perf()` | como ao lado | sim (não existe; 60 em vez de 30) |
+| P2 | `?perf=1` e `?qps=1`: o painel tem p95, fase, AA, buffer, GPU, refresh; visível no replay, na tela antes do jogo (`?prepartida=1`) e na pausa (o "por cima" pela pilha do ponto, `elementsFromPoint`, com toda camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada à vista que PINTA ali: senão o véu, a marca REPLAY e o fundo da pausa não contavam, e a camada transparente de tela inteira contaria — item 10); a tela antes do jogo mostra ~30 (N3); `__golaco.perf()`. Desde a revisão do bloco 4: o painel NÃO pega toque — em 5 pontos de cada botão de toque e do analógico no jogo (844×390, 667×375, 568×320) e de cada controle das Opções da pausa (844×390, 568×320), o `elementFromPoint` de verdade nunca é ele (e ele passa por cima de algum alvo) | como ao lado | sim (não existe; 60 em vez de 30) |
 | P3 | `?gfx=antigo` = a ref da main em G1–G5 (± tolerância) e `SAMPLES` 0 na Média; `?tom=neutro`: `NeutralToneMapping` e a exposição = `H.exposicao` × 1,40 de dia e de noite, também depois de `definirHora` e de uma recriação | como ao lado | — (chave de volta) |
-| R | Recriação e contexto. (1) Celular, `?prepartida=1`, depois do `pronto3d`, pelo ≡ → Opções: Média → Baixa → Média: `SAMPLES` 4 → 0 → 4, o canvas novo com `aria-label` e `inert`, a tela "Ajustando…" aparece e some, a mira cobra (`bolaParadaDeTeste`). (2) **PC 1280×720, Alta → Baixa** com `?prejogo=1` no plano do vão aberto: o `local` do vão true, o `aria-label`. (3) `__golaco.definirQualidade` imediato: troca e desenha no mesmo `evaluate`. (4) `WEBGL_lose_context`: os ganchos ESTRAGADOS antes (a A2C ao contrário, o `uAlturaBuffer` em −1: postos só na criação, eles passavam sem o ouvinte — item 3), `loseContext()` → `restoreContext()`: os ganchos rodam de novo (A2C = `SAMPLES`, `uAlturaBuffer` = `drawingBufferHeight`), a mira cobra, o quadro desenha (pixels ≠ preto). As trocas esperam terminar (teto de 90 s; a que não termina reprova — item 12). 0 erro no console em tudo | como ao lado | sim (aria-label, inert e clipping na Alta → Baixa; `SAMPLES`; o contexto restaurado sem os ganchos) |
+| R | Recriação e contexto. (1) Celular, `?prepartida=1`, depois do `pronto3d`, pelo ≡ → Opções: Média → Baixa → Média: `SAMPLES` 4 → 0 → 4, o canvas novo com `aria-label` e `inert`, a tela "Ajustando…" aparece e some, a mira cobra (`bolaParadaDeTeste`). (2) **PC 1280×720, Alta → Baixa** com `?prejogo=1` no plano do vão aberto: o `local` do vão true, o `aria-label`. (3) `__golaco.definirQualidade` imediato: troca e desenha no mesmo `evaluate`. (4) `WEBGL_lose_context`: os ganchos ESTRAGADOS antes (a A2C ao contrário, o `uAlturaBuffer` em −1: postos só na criação, eles passavam sem o ouvinte — item 3), `loseContext()` → `restoreContext()`: os ganchos rodam de novo (A2C = `SAMPLES`, `uAlturaBuffer` = `drawingBufferHeight`), a mira cobra, o quadro desenha (pixels ≠ preto). As trocas esperam terminar (teto de 90 s; a que não termina reprova — item 12). 0 erro no console em tudo. Desde a revisão do bloco 4: no (1) a mensagem "Ajustando…" por cima de tudo e o painel `?perf` inteiro debaixo dela (a pilha do ponto: 5 pontos da mensagem, 3 do painel), a pausa `inert` e o foco na tela durante a troca, de volta na pausa no fim; no (4) o `uAlturaBuffer` é estrutura (o `onBeforeRender` o refaz a cada desenho; só a A2C prova o gancho); (5) o `KHR_parallel_shader_compile` FALSO (a GPU nunca diz "pronto": o `compileAsync` nunca resolve, como com o contexto perdido): a carga com a tela cedo chega ao pronto e as duas trocas pela pausa no jogo terminam (o prazo de 3 s); no meio delas, Esc e Esc (uma) e P (a outra) não fecham a pausa nem andam o tick | como ao lado | sim (aria-label, inert e clipping na Alta → Baixa; `SAMPLES`; o contexto restaurado sem os ganchos) |
 | Q | Queda: `__golaco.quedaDeTeste()`: mesmo canvas (sem recriar), `qAtual` 'baixa', `SAMPLES` continua 4, a queda nas preferências, a linha da pausa; recarregar em Automática abre na Baixa com `SAMPLES` 0; escolher a Média apaga. A queda natural com webdriver (um rAF falso a 20 Hz, sem `?q`): cai na sessão e NÃO grava. Desde o C13, no fim: um rAF falso a 120 Hz por 8,6 s de volta na Automática (o teto desenha 60) NÃO cai | como ao lado | sim |
 | Z | Redimensionar: atribuições a `canvas.width/height` (instrumentadas pelo `addInitScript`) com o mesmo tamanho (`resize` + `visualViewport`) e com um tamanho novo | mesmo tamanho: 0 (main: 8); tamanho novo: 2 (main: até 8) | sim |
-| T | Teto: um `addInitScript` com um rAF falso a 90, 120, 144 e 165 Hz (o headless roda o rAF a 60); conta os desenhos pelo `renderer.render` (o `soContar`). Desde o C13 também: o painel (`__golaco.perf().refresh`) diz a tela e o *n*; a tela antes do jogo (`?prepartida=1`) a 144 e a 165 Hz no ritmo dela | celular: 90 / 60 / 72 / 82,5 por segundo ± 1, intervalos regulares; PC sem toque: sem teto; o painel: a tela ± 1 Hz e o *n* 1 / 2 / 2 / 2 (PC null); a tela antes do jogo 28,8 e 33 ± 1 (como sem o teto) | sim (desenha todos) |
+| T | Teto: um `addInitScript` com um rAF falso a 90, 120, 144 e 165 Hz (o headless roda o rAF a 60); conta os desenhos pelo `renderer.render` (o `soContar`). Desde o C13 também: o painel (`__golaco.perf().refresh`) diz o rAF (o `hz` do ritmo do C13 e, desde a revisão do bloco 4, o `rafHz`, a mediana do medidor: duas contas do mesmo rAF) e o *n*; a tela antes do jogo (`?prepartida=1`) a 144 e a 165 Hz no ritmo dela | celular: 90 / 60 / 72 / 82,5 por segundo ± 1, intervalos regulares; PC sem toque: sem teto; o painel: a tela ± 1 Hz e o *n* 1 / 2 / 2 / 2 (PC null); a tela antes do jogo 28,8 e 33 ± 1 (como sem o teto) | sim (desenha todos) |
 
 **`teste-graficos-pagina`, medido na main (C3):** "forçado" é a carga com o MSAA pelo `addInitScript`.
 
@@ -675,6 +693,12 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | Z | Mesmo tamanho 0; tamanho novo 2 | reprova | 8 (4 + 4); 8 | vale |
 | T | Celular a 90 Hz = 90; PC a 144 Hz sem teto | — | 90,0; 144,0 | guarda |
 | T | Celular a 120 / 144 / 165 Hz = 60 / 72 / 82,5 | reprova | 120,0 / 144,0 / 165,0 (regulares) | vale |
+| P2 | O painel não pega toque no jogo (844×390, 667×375, 568×320; revisão do bloco 4) | reprova | 0 pontos tomados, mas 0 sob a caixa do painel (3 linhas no `#hud`): a guarda não prova nada lá | vale |
+| P2 | O painel não pega toque nas Opções da pausa (844×390, 568×320) | — | 0 de 100 nas duas (23 e 28 sob a caixa; `pointer-events: none` herdado do `#hud`) | guarda |
+| R | R1 a mensagem "Ajustando…" por cima e o painel debaixo dela; a pausa `inert` e o foco na tela durante a troca (revisão do bloco 4) | reprova | 0 amostras (a main não tem a tela) | vale |
+| R | R4 o `uAlturaBuffer` = a altura do buffer (estrutura) | — | não existe | estrutura |
+| R | R5 o KHR falso: a carga com a tela cedo chega ao pronto; as trocas terminam; Esc, Esc e P travados (revisão do bloco 4) | reprova | NÃO chegou ao pronto em 90 s (o `await compileAsync` do item 106 sem prazo) | vale |
+| T | O painel: o `rafHz` do medidor ± 1 Hz (revisão do bloco 4) | reprova | `perf()` não existe | vale |
 
 **O que o C3 mudou no plano:**
 - **7 metas de melhoria viraram informativas** porque a main já as cumpre ou nelas não mede nada (depois da revisão do C1–C3 ficam 5: a cintilação da Baixa com MSAA no foco voltou a "vale"):
@@ -1165,6 +1189,83 @@ depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
     pela pausa (`proximoQuadro`); com o relógio manual (`api.relogio.avancar`) o teto não entra — ele só observa os quadros do
     navegador.
 
+
+**Medido no bloco 4** (a revisão do C11–C13 e as correções, 12/11; Chromium 141 do CI, SwiftShader; a main `e41aa791` pela worktree
+de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; os scripts do HEAD nos dois lados,
+`teste-graficos-pagina --so P2,R,Q,Z,T`: o HEAD 177 s, a main 227 s — os 90 s do R5 que não chega ao pronto). Nada fora no HEAD.
+
+| Meta | Main | C13 | Agora |
+|---|---|---|---|
+| P2 `__golaco.perf()`; o painel com p95, fase, AA, buffer, GPU e o rAF | não existe; "60 qps · 16.7 ms…" | passa | passa ("30 qps · p50 33,3 · p95 33,3 · pior 1% 34,3 ms…") |
+| P2 por cima da tela antes do jogo / da pausa / no jogo, na pausa e no replay | escondido / escondido / jogo 100%, pausa e replay escondido | 100% em todos | 100% em todos |
+| P2 o qps da tela antes do jogo = os desenhos (N3) | mostra 60,0, desenhou 30,2 (× 1,99) | 30,0 / 30,4 (× 0,99) | 30,0 / 30,4 (× 0,99) |
+| P2 o painel não pega toque no jogo (844 / 667 / 568; nova) | 0 tomados, 0 sob a caixa (o guarda não prova: reprova) | (sem a guarda; a revisão: ENFIADA e LANÇAMENTO 0 toques em 568×320) | 0 de 30 nas três (8 / 9 / 30 pontos sob a caixa) |
+| P2 o painel não pega toque nas Opções da pausa (844 / 568; nova) | 0 de 100 (23 / 28 sob a caixa; o `#hud`) | (a revisão: o toque na "Baixa" não trocava) | 0 de 100 (47 / 86 sob a caixa) |
+| R1 Média → Baixa → Média pelo ≡ (`SAMPLES`), `aria-label`, `inert` | 0 → 0 → 0, mesmo canvas | 4 → 0 → 4 | 4 → 0 → 4, "Campo 3D", inert true |
+| R1 a tela "Ajustando…" à vista e fora; opaca | 0× e 0× | 43× e 3×; 1,000 | 1× e 4× (outra rodada 8× e 4×); 1,000 |
+| R1 a mensagem por cima de tudo e o painel debaixo dela (nova) | 0 amostras | (a revisão: o painel cobria a mensagem) | 5 de 5 pontos livres; o painel 0 de 3 à vista |
+| R1 durante a troca a pausa `inert` e o foco na tela; no fim de volta (nova) | 0 amostras | (a revisão: `inert` false, o foco no `btn-opcoes`) | 0 amostras fora; no fim `inert` false e o foco no botão |
+| R1 as trocas terminam | 1,4 / 0,6 s | 4,4 / 4,0 s | 4,0 / 5,0 s |
+| R1 / R4 a mira com programa no renderizador novo / no contexto restaurado | (sem programa) | com programa | com programa (o `compile()`, sem o `compileAsync`) |
+| R2 Alta → Baixa no pré-jogo: o vão e o `aria-label` | false; null | passa | passa |
+| R3 a troca imediata desenha; `SAMPLES` 4 → 0 → 4 | 0 → 0 → 0 | passa | 94,5% / 95,6% não preto; 4 → 0 → 4 |
+| R4 perde, restaura e desenha; a A2C dos finos e da torcida | o restaurado sem os ganchos | passa | 95,2% não preto; A2C true (SAMPLES 4) |
+| R4 o `uAlturaBuffer` (agora estrutura) | não existe | 585 (passava também sem os ganchos) | 585 |
+| R5 o KHR falso: a carga com a tela cedo chega ao pronto (nova) | NÃO em 90 s | (não medido: o SwiftShader não tem a extensão; a prova em Node da revisão: nunca resolve) | 5,2–6,0 s |
+| R5 as duas trocas pela pausa terminam; Esc, Esc e P travados (nova) | — | — | 6,2–6,4 s; a pausa aberta e `inert` em 40 e 26 amostras, o tick parado (8 → 8) |
+| Q a queda natural com webdriver: cai, NÃO grava, a recarga abre na Média | cai no quadro 100 | cai no 98 | cai no 97 (4,8 s); `{}`; media, `SAMPLES` 4 |
+| Q `quedaDeTeste()`, a recarga na Baixa, escolher apaga; 120 Hz não cai | não existe; media | passa | passa (o mesmo canvas, 4 → 4; baixa, 0; apagada; media → media a 60,0/s) |
+| Z o mesmo tamanho / um tamanho novo | 8 / 8 | 0 / 2 | 0 / 2 |
+| T celular 90 / 120 / 144 / 165 Hz; PC 144 | 90 / 120 / 144 / 165; 144 | 90 / 60 / 72 / 82,5; 144 | 90,0 / 60,0 / 72,0 / 82,5, desvio 0,00 ms; 144,0 |
+| T o painel: o `hz` do ritmo e o `rafHz` do medidor ± 1 Hz e o *n* (o `rafHz` é novo) | `perf()` não existe | hz certo (o rafHz não existia) | hz e rafHz 90/120/144/165, *n* 1/2/2/2; PC 144/144, null |
+| T a tela antes do jogo a 144 / 165 Hz | 28,7 / 32,9 | 28,7 / 32,9 | 28,6 / 32,8 |
+
+- **O que mudou, aplicado** (cada um com a guarda que reprova sem ele; as mutações em cópias do HEAD, a página com `--raiz`):
+  - **A espera dos programas com fim** (`main.js esperarProgramas` + `COMPILAR_PRAZO_MS` 3 s; código 1). O `compileAsync` do r170
+    sonda o `isReady` a cada 10 ms e nunca resolve com o contexto perdido; depois do prazo a sonda continuava e, com o renderizador
+    recriado, jogava um `TypeError` sem dono no console (achado pelo R5). A mesma conta, com fim no prazo, na perda do contexto, no
+    renderizador trocado e no material sem programa. O aquecimento da mira passou ao `compile()` (cria o programa já; ninguém
+    esperava). Mutação: sem o prazo, o R5 reprova ("NÃO chegou ao pronto em 90 s"; a main igual).
+  - **A pausa travada debaixo do "Ajustando…"** (código 4, regressões 2): o `hud.ocupado` põe a pausa `inert` e o foco na tela
+    (devolvidos no `livre`), o `tratarAcao` ignora 'pausa', 'ajuda' e 'menu-*' durante a troca e o `pausado()` vale com ela fora
+    do online. Mutação (os três tirados): a pausa fecha e o tick vai de 8 a 213 debaixo da tela; o R1 vê o `inert` false e o foco
+    no botão em 37–65 amostras.
+  - **O leitor de tela** (código 8): o texto entra numa tarefa depois de a região estar à vista, sem o `aria-busy` (que calava o
+    anúncio). Não há leitor de tela no CI: dito, não medido.
+  - **O online sem compilar o escondido** (código 10): a troca pela pausa no online não chama o `compilarAntesDoDesenho` (só o que
+    está à vista compila, no 1º desenho). Medido só pelo `teste-prepartida-tela --so online` (abaixo); a duração da trava no online
+    com uma GPU de verdade fica para o minuto do dono.
+  - **A queda gravada pela mediana e o ritmo preso só com a mesma cadência** (código 2 e 3, medidas 3): `teste-ritmo-desenho` R2,
+    R3, R6, R7 e R9 refeitos e o R11 novo (o aparelho no vsync, 6 casos × 8 sementes: a Média irregular com a Baixa resolvendo, a
+    Média lenta pela GPU a 50,0 ms, o PC na Alta presa a 33,3 com a Média a 16,7 gravam; o PC com as duas a 33,3 e o iPhone em
+    pouca energia não). As provas da revisão: 0 → 20 de 20 sementes nos dois casos que não gravavam. Mutações: sem a mediana (R3),
+    o 50 de volta (R7, R9), a presa gravando direto (R1, R6, R11d, R11e), a presa nunca gravando (R6, R11c), o inativo sem desfazer
+    a espera (R6) — cada uma reprova.
+  - **O painel sem pegar toque e debaixo da tela "Ajustando…"** (código 5, medidas 1 e 2, regressões 1): `pointer-events: none`,
+    `user-select: none`; a tela de carregar na troca e no erro a z 63. Mutação (o `auto` de volta e o z 63 tirado): a P2 do toque
+    reprova (844×390: o ENFIADA e o LANÇAMENTO, 8 de 30 pontos; 568×320: 30 de 30; nas Opções 47 e 86 de 100: Baixa, Média, Alta,
+    Automática, a hora, o som, o volume, os nomes e o tamanho) e o R1 do painel debaixo da tela (3 de 3 à vista).
+  - **As linhas por fase** (medidas 6 e 7, código 6): o rótulo curto, de 100 para cima sem a casa decimal e o percentil na caixa de
+    cima do histograma como "> 51" / "> 128" (o "CPU 39651,3" da revisão): a maior linha 56 letras com as 7 fases, a GPU e os
+    números grandes (`teste-medidor-quadros` M8 novo; mutações: o número sem o teto, o rótulo longo).
+  - **O rótulo "rAF"** (medidas 5): "rAF 120 Hz · teto 1 a cada 2"; o `rafHz` do medidor no `perf()` e na T (as duas contas do
+    mesmo rAF). Mutação: o "tela" de volta reprova o M8.
+  - **O cronômetro da GPU no contexto restaurado** (código 7): `reiniciar()` no gancho `aoRecriar` com o motivo 'contexto'
+    (`teste-medidor-quadros` M6 novo: 20 de 20 antes da perda; restaurado sem o reiniciar 1 em 200; com ele 20 de 20; a mutação
+    do reiniciar vazio reprova).
+  - **O R4 do `uAlturaBuffer` virou estrutura** (medidas 4): o `onBeforeRender` da malha o refaz a cada desenho; a A2C prova o gancho.
+- **Recusadas, com o motivo:**
+  - **A queda gravada que expira** (código 11): é escolha de produto (a escolha D5 do dono só diz "escolher uma qualidade à mão
+    apaga a queda"); quantas cargas, e se a pessoa vê a Média engasgar de novo, é decisão dele. Vai ao "Depende do dono" 30 com a
+    proposta (tentar de novo o nível do aparelho a cada ~10 cargas; uma queda nova grava de novo).
+  - **A queda automática só no pixel ratio** (código 9): já é assim na main (o `configurarSombra` marca os materiais e a troca das
+    defines recompila); tirar as sombras é metade do que a queda quer, e "manter as sombras na Baixa da queda" faria a queda não
+    aliviar a GPU. Corrigido só o texto do plano (seção 2): o motivo "sem o KHR a recompilação trava" era inexato. Medir o engasgo
+    da queda numa GPU de verdade fica com o minuto do dono.
+  - **"Copiar o texto do painel"** (código 6): a seleção nunca funcionou (o texto é trocado a cada 0,5 s) e, com o painel sem pegar
+    toque, não há como selecionar. O dono manda o print (o §7 item 10 já pedia o print) e o `__golaco.perf()` tem o objeto inteiro.
+    Um botão "Copiar" nas Opções (só com `?perf`) é opção futura: uma linha a mais nas Opções pede rever a conta da pausa sem rolar.
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1179,7 +1280,7 @@ depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
 5. **`readPixels` com o MSAA implícito falha em alguns Adreno** (entrada 280): só importa para ferramenta no aparelho.
 6. **Perda de contexto no iOS** com os +24 MB: coberta pelos ganchos (passo 7, seção R); o que não volta sozinho aparece na seção R.
 7. **Franjas na silhueta** dos atlas que não são nossos (o corpo novo, os patrocínios): a seção K acusa; a sangria no atlas é da frente do corpo, e o PR diz se ficou algo.
-8. **Um celular que só segura 30 regulares** cai na sessão como hoje, mas não grava a queda (a regra do ritmo preso não distingue do iPhone em pouca energia). Vai ao "Depende do dono" 30.
+8. **Um celular que só segura 30 regulares** cai na sessão como hoje; desde a revisão do bloco 4 grava a queda quando a Baixa desenha mais rápido que os 30 (a carga era a causa) e não grava quando a Baixa fica nos mesmos 30 (o limite do sistema, como o iPhone em pouca energia — ou um aparelho lento em todo nível, que a medida não separa). O 20 regular (50 ms) grava sempre que a janela é lenta. A queda gravada não expira: só a escolha à mão a apaga (a proposta de tentar de novo a cada ~10 cargas vai ao "Depende do dono" 30).
 9. **O que vai ao dono junto do "Depende do dono" 30** (a revisão do C4–C8; sem meta que meça, ou decisão de gosto):
    - **A profundidade nas câmeras baixas** (decidido, seção 2): a 1ª pessoa, a lateral do replay, a comemoração, a câmera do gol,
      a falta, o pré-jogo de perto e as cenas ficam sem o gradiente de vista (como antes do item 45); a TV, o escanteio, o Atrás do
@@ -1196,8 +1297,11 @@ depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
    - o print do painel;
    - a impressão do gramado novo contra o `?gfx=antigo`;
    - o teto (C13) num celular de 120 Hz de verdade (o rAF falso do teste não tem o vsync nem a taxa adaptativa do Android): no
-     minuto com `?perf=1`, a linha "tela 120 Hz · teto 1 a cada 2" e ~60 qps no jogo (num de 90 Hz, "teto 1 a cada 1" e ~90; o
-     iPhone já segura o Safari perto de 60).
+     minuto com `?perf=1`, a linha "rAF 120 Hz · teto 1 a cada 2" e ~60 qps no jogo (num de 90 Hz, "teto 1 a cada 1" e ~90; o
+     iPhone já segura o Safari perto de 60). O "rAF" é o ritmo em que o navegador chama a página: num aparelho que não segura o
+     desenho ele fica abaixo da tela (a revisão do bloco 4 trocou o "tela" por "rAF");
+   - o painel não pega toque (o dono joga com ele à vista) e fica debaixo da tela "Ajustando os gráficos…": o print é o jeito de
+     mandar os números.
 
 ---
 
@@ -1247,6 +1351,7 @@ depois = o C13; os testes do HEAD nos dois lados, um de navegador por vez):
 | C11 | "Item 45: painel ?perf/?qps por fase com p95, AA, buffer e GPU (e o qps certo na tela antes do jogo)" | `js/render/medidor-quadros.js`, `tools/teste-medidor-quadros.mjs`, `main.js`, `hud.js`, `css/estilo.css`, `tools/teste-carga.mjs` (lista) | sim |
 | C12 | "Item 45: troca de qualidade com a tela de carregar, queda gravada e contexto restaurado" | `main.js`, `hud.js`, `render/cena.js`, `js/render/ritmo-desenho.js` (a decisão da queda), `tools/teste-ritmo-desenho.mjs` | sim |
 | C13 | "Item 45: teto de 60 desenhos no celular de 100 Hz para cima" | `js/render/ritmo-desenho.js`, `tools/teste-ritmo-desenho.mjs`, `main.js` | sim |
+| B4 | a revisão do bloco 4: `e6f6df30` (a queda gravada pela mediana), `2abed4b3` (a troca com prazo, a pausa travada, o online), `c37f5587` (o painel sem toque, as linhas, o rAF, o cronômetro), `b6be7508` (a espera própria dos programas), os testes `a44f0145`, `a4b9df80`, `5ff4db63` e o plano | `js/render/ritmo-desenho.js`, `main.js`, `hud.js`, `css/estilo.css`, `js/render/medidor-quadros.js`, `js/render/bola-parada.js` (comentário), `tools/teste-ritmo-desenho.mjs`, `tools/teste-medidor-quadros.mjs`, `tools/teste-graficos-pagina.mjs` | sim |
 | C14 | "Item 45 (teste): metas valendo e os dois testes na lista do CI" | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs` | não |
 | C15 | "Item 45 (testes): recalibração medida dos testes afetados" (só os que mudaram de propósito; tabela no PR) | testes da seção 6, `tempos-ci.mjs` | não |
 | C16 | "Item 45 (docs): contrato, FILA, CATEGORIAS, CLAUDE.md e o Depende do dono 30" | `golaco/CONTRATOS.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md` | não |
