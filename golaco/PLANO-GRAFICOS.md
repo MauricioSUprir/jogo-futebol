@@ -82,6 +82,12 @@ compensado, o letreiro opaco com A2C e as silhuetas com `centroid` (C10, `a2561f
 chamadas, 92 044 triângulos, a CPU pareada +0,00 ms); o medido e o que o C12 e o C13 precisam saber estão na seção 6 ("Medido no
 C11").
 
+**O C12 (12/11; `234ba552`, `e8fcb651`, `9f3eb26f`): a troca de qualidade, a queda gravada e o contexto restaurado.** R, Q e Z: 3
+metas fora → 0; as guardas novas (a mira aquecida no R1 e no R4, a tela já opaca no R1, o P14 do `teste-pausa-tela`, o
+`teste-ritmo-desenho`) reprovam na base e por mutação, menos o `transition: none` do `hud.ocupado` (dito). O N8 estava errado: o
+`compile()` do r170 percorre todos os objetos da cena (seção 1.2). O medido, o que mudou além do plano e o que o C13 precisa saber
+estão na seção 6 ("Medido no C12").
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -131,7 +137,7 @@ C11").
 - **N5: textos.** A linha da pausa diz "Média — sombras simples, boa para celular" (`hud.js:1263`): passa a dizer o antisserrilhado.
 - **N6: duas fontes de verdade.** O `QUALIDADE.antialias` do `config.js` fica sem uso (a tabela nova mora no render). Isso vai escrito no contrato.
 - **N7: nenhum ouvinte de perda de contexto.** Não há `webglcontextlost`/`webglcontextrestored` em lugar nenhum. O three se recupera sozinho, mas os ganchos de quem precisa saber (a A2C dos finos, a mira) não rodam. A perda fica mais provável com os +24 MB do MSAA no iOS.
-- **N8: o `compile()` do r170 só percorre o visível** (`three.module.js:29801-29830`, `traverseVisible`). Depois de uma recriação, o cartão 3D, a placa da substituição, a linha do impedimento, os sinalizadores e a fumaça compilam quando aparecem, como já acontece na 1ª carga.
+- **N8 (corrigido no C12): o `compile()` do r170 percorre TODOS os objetos da cena** (`three.module.js:29801-29893`: só as luzes pelo `traverseVisible`; os materiais pelo `scene.traverse`, também os escondidos). O que já está na cena na hora da troca, escondido ou não (a mira, a placa da substituição, a linha do impedimento e o resto criado na carga), compila junto — a troca pela pausa leva mais, atrás da tela "Ajustando…", e nada engasga quando aparece depois; só o que entra na cena mais tarde (um módulo sob demanda que chega depois) compila quando aparece. ~~A versão de antes dizia "só percorre o visível".~~
 - **N9: o iPhone em pouca energia limita o rAF a ~30 qps** (teste do WebKit com intervalo de 30 ms). O limiar da Média é `qps < 30` (`main.js:3120`): a queda dispara por acaso. Gravada, deixaria o aparelho na Baixa para sempre.
 - **N10: tablets.** O iPad entra como celular (`pointer: coarse`, `main.js:348`) e cai na Média. Com MSAA são 2049×1536 × 4 amostras (~100 MB no Safari, mais o resolve).
 - **N11: a silhueta com MSAA, sem `centroid`.** No MSAA o pixel da borda é sombreado no centro, mesmo fora do triângulo. A UV sai do quadro e lê o vizinho no atlas: torcida, bandeiras, placas, escudos, letreiros, números e patrocínios. O resultado são franjas e pixels soltos que passam no recorte, um artefato novo.
@@ -443,7 +449,8 @@ Ordem de risco: primeiro a régua, depois o render, por último o `main.js`. Com
 - **Dois caminhos para a troca manual (crítica 4):**
   - **Imediato** (`__golaco.definirQualidade`, a API dos testes): recria, roda os ganchos, `renderer.compile()` síncrono e volta. É o comportamento de hoje mais as cópias. O `teste-estadio:112` e o `:1131-1133` (trocam e desenham no mesmo `evaluate`) continuam valendo.
   - **Pela pausa** (≡ → Opções): marca `trocandoQ` (o `quadro` não desenha enquanto ela vale) → `hud.ocupado('Ajustando os gráficos…')` à vista sem transição → `await proximoQuadro()` duas vezes (a tela pintada) → recria → os ganchos (`campo.definirAA`, a mira) → `compilarAntesDoDesenho()` e o aquecimento da mira se o módulo dela estiver carregado → desenha 1 quadro (a pausa mostra o jogo congelado atrás) → `hud.livre()` → tira a marca.
-  - O `compile()` só percorre o visível (N8): o cartão 3D, a placa da substituição, a linha do impedimento, os sinalizadores e a fumaça compilam quando aparecem, como na 1ª carga. Vai escrito no PR.
+  - ~~O `compile()` só percorre o visível (N8)~~ — corrigido no C12: ele percorre a cena inteira (seção 1.2); o que está nela compila junto.
+- **Feito no C12** (`234ba552`, `e8fcb651`, `9f3eb26f`): o medido e o que mudou além deste passo na seção 6, "Medido no C12".
 - **Queda automática:**
   - na sessão, a MESMA regra de hoje (3 s, janela de 2,5 s, `qps < 30` na Média), medindo os quadros DESENHADOS (vale com o teto do passo 8);
   - `cena3d.definirQualidade('baixa', false)`: o contexto fica, então o MSAA fica; cai o pixel ratio e as sombras;
@@ -839,10 +846,10 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
   | `gramado.js` | ~3 KB | 19,1 KB (a maior parte, os comentários com as fontes e as medidas) |
   | `gramado-shader.js` (novo na revisão) | — | 8,5 KB |
   | `graficos-opcoes.js` | ~1 KB | 1,3 KB |
-  | `ritmo-desenho.js` | ~1,5 KB | (C12/C13) |
+  | `ritmo-desenho.js` | ~1,5 KB | 7,9 KB no C12 (a decisão da queda e os comentários; o teto do C13 entra nele) |
   | `torcida.js`/`bandeiras.js`/`impostor.js` + `silhuetas-shader.js` (novo na revisão do bloco 3) | +~1 KB | o bloco 3 inteiro (C9, C10, a revisão e o fecho): +34 KB, quase tudo texto de shader e comentário |
-  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12–C13) |
-  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+82 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11; nosso 2859 → 2902 → 2936 → 2941 KB) |
+  | `main.js`/`hud.js` | +~2,5 KB | (C9: 2 linhas; C11: +5,7 KB com o CSS — o painel, o invólucro do quadro e os comentários; C12: +10,6 KB com o `cena.js` e o CSS — main.js +7,6, hud.js +2,1; C13) |
+  | **Total** | ~**+15 KB** (folga ~565 → ~550 KB) | **+101 KB até aqui** (o `teste-carga`: folga 561,5 → 518,4 KB no bloco 2 → 484,9 KB no fecho do bloco 3 → 479,2 KB no C11 → 461,0 KB no C12; nosso 2859 → 2902 → 2936 → 2941 → 2960 KB) |
 
   O bloco 2 sozinho já passou do previsto para o item inteiro (a revisão do C4–C8, regressões 4): o resto (C9–C13) pede ~+6 KB
   pela previsão de antes, e a folga mínima é 120 KB — sobra. O código só do `?gfx=antigo` (`texGramadoAntigo`, o
@@ -1015,6 +1022,76 @@ referência — a K e a A2 regravadas com a cena assentada no `35f967c5` —; o 
     intervalos do painel já são entre DESENHOS (o instante do rAF de cada desenho), então o teto aparece no qps sem mudar nada;
   - o `teste-graficos-pagina` T conta os desenhos pelo `renderer.render` (o `soContar`); o painel conta pelo `cena3d.desenhar`
     envolto (`nDesenhos`): os dois veem os mesmos desenhos.
+
+**Medido no C12** (a troca de qualidade, a queda gravada e o contexto restaurado, 12/11; Chromium 141 do CI, SwiftShader; antes =
+o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos dois lados):
+
+| Meta | Antes | Depois |
+|---|---|---|
+| Z mesmo tamanho / tamanho novo (atribuições a `canvas.width/height`) | 0 / 2 (já desde o C5) | 0 / 2 |
+| R1 pelo ≡ → Opções: Média → Baixa → Média (`SAMPLES`), o `aria-label` e o `inert` | 4 → 0 → 4; "Campo 3D", inert true | iguais |
+| R1 a tela "Ajustando…" à vista e fora | vista 0× e 0× | vista 45× e 3× (outra rodada 81× e 4×); fora no fim |
+| R1 a tela já opaca em toda amostra à vista (nova) | — | a menor opacidade 1,000 |
+| R1 a mira (o módulo baixado antes) com programa no renderizador NOVO, sem ser desenhada (nova) | (sem programa: reprova) | com programa nas duas trocas |
+| R1 as trocas terminam (SwiftShader) | 0,4 / 0,6 s | 3,2–3,8 s (compila a cena inteira, também os escondidos, antes do 1º desenho) |
+| R2 Alta → Baixa no pré-jogo: o recorte do vão e o `aria-label` | passa (desde o C5) | passa |
+| R3 a troca imediata desenha no mesmo `evaluate`; `SAMPLES` 4 → 0 → 4 | 94,5% / 95,6% não preto | 94,5% / 94,4–95,6% |
+| R4 perde e restaura: o quadro, os ganchos estragados antes, a mira desenha | passa | passa |
+| R4 a mira com programa no contexto restaurado antes de ser desenhada (nova; a linha escondida) | (sem programa: reprova) | com programa |
+| Q a queda natural com webdriver (rAF falso a 20 Hz com tremor): cai, NÃO grava, a recarga abre na Média | passa | passa (cai no quadro virtual 101, 5,0 s) |
+| Q `__golaco.quedaDeTeste()`: o mesmo canvas, Baixa, `SAMPLES` continua 4, gravada e dita na pausa | não existe | mesmo canvas, 4 → 4, `{media, baixa, v: 1}`, "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar de novo)" |
+| Q a recarga depois da queda gravada abre na Baixa (`SAMPLES` 0) | media, 4 | baixa, 0 |
+| Q escolher a Média apaga a queda | nada a apagar | apagada |
+| `teste-pausa-tela` P14 (novo): a linha da queda à vista, uma linha inteira no celular, sem rolar | não existe a queda: reprova | passa de 844×390 a 568×320 (11 px no 568) e no PC (1280×720 e as janelas baixas); 318 → 327 medidas no P2, nenhuma rola |
+| `teste-ritmo-desenho` (Node, novo) | — | passa (R1–R10) |
+| `teste-carga` nosso / folga | 2941 KB / 479,2 KB | 2960 KB / 461,0 KB |
+
+- **Provado por mutação:** sem o `aquecerMira()` no gancho, o R4 da mira reprova (sem programa); sem o `compilarAntesDoDesenho()`
+  da troca pela pausa e sem o gancho, o R1 da mira também; o `podeGravar` sem o `navigator.webdriver`, a queda natural da Q grava
+  (e a recarga abre na Baixa); sem o `display` da `.opcao-info.queda` o P14 reprova (escondida no celular) e sem os 11 px também
+  (cortada em 568×320); no `teste-ritmo-desenho`, sem o ritmo preso, sem o `podeGravar`, com uma janela só, a pausa que não
+  desfaz o "seguidas" e sem a espera de 3 s: cada uma reprova.
+- **Não provado por mutação (dito):** o `transition: none` do `hud.ocupado`. Escondida (display none), a tela de carregar não faz
+  a transição de 0,35 s de qualquer jeito — a mutação dele passa no R1 (a menor opacidade 1,000) —; ele cobre só a tela ainda
+  saindo nos 400 ms depois do pronto, um caso que a pessoa não alcança pela pausa.
+- **Correção do N8** (seção 1.2): o `compile()` do r170 percorre TODOS os objetos da cena (as luzes pelo `traverseVisible`, os
+  materiais pelo `scene.traverse`). O que está na cena na hora da troca, escondido ou não, compila junto; por isso a troca pela
+  pausa leva mais (o tempo da tela "Ajustando…") e nada engasga quando aparece depois.
+- **O que mudou de propósito além do plano:**
+  - a troca pela pausa sem nada a mudar (o mesmo nível e o mesmo contexto: `cena3d.precisaRecriar`) só marca a escolha, sem a
+    tela e sem reaplicar (antes reaplicava e marcava todos os materiais para recompilar);
+  - a troca imediata compila a cena (`renderer.compile`, síncrono) só quando recriou (a API dos testes: o `teste-estadio` 280 →
+    278 s);
+  - escolher a "Automática" também conta como "à mão": apaga a queda (e tenta de novo o nível do aparelho);
+  - a linha da pausa no celular: a `.opcao-info` some no celular desde o item 58 (a pausa cabe sem rolar); com a queda ela
+    aparece (`.queda`), numa linha (`nowrap` com o "…" de segurança) e com 11 px até 600 px de largura — 474 px a 12 px não
+    cabiam nos 444 px de 568×320 (as Opções rolavam 12 px), 434 a 11 (S5: ≥ 11);
+  - a gravada que não baixou o nível desta carga (a `{alta, media}` num celular, que já abre na Média) não vai à linha;
+  - a Média com o antisserrilhado (N5) só quando o contexto o tem: "Média — antisserrilhado e sombras simples, boa para celular";
+    o tablet com o teto e o `?aa=0` ficam com o texto de antes.
+- **Os testes de navegador da seção 6 que tocam o que mudou** (base × HEAD, um por vez, a ordem sorteada; todos com os scripts
+  do HEAD): `teste-carga`, `teste-hud-minimo` (as linhas iguais, menos ruído de 1 px de torcida e a barra de força à vista num
+  instante do H5 — a mesma área, 1,9%), `teste-estadio` (66 de 66 nos dois, 280 → 278 s; a memória da troca de qualidade sem
+  vazamento nos dois: 30 → 30 geometrias na base, 29 → 29 no HEAD), `teste-bola-parada-tela` (55 de 55 nos dois; ± 1 px na mira),
+  `teste-mira-tela` (19 de 19, as mesmas linhas; o tempo 180 → 40 s não é do C12: com `--raiz` noutra pasta o teste DESENHA cada
+  posição — `DESENHAR` —, e a base ia por ela), `teste-pausa-tela` (a base reprova só no P14 novo), `teste-prepartida-tela` (115
+  de 115 nos dois; 765 → 753 s; o E7* não apareceu), `teste-tm-tela` (passa nos dois) e o TM de ponta a ponta (`testar-3d` pro em 105 s e `--publica` em 124 s, nenhum erro
+  de página; o `testar-3d` grava `{qualidade: "baixa"}` antes — a queda nem mede lá; com webdriver ela não gravaria de qualquer
+  jeito). O painel `?perf` com a `quedaDeTeste()`: "queda: sessão Média → Baixa · gravada Média → Baixa" e "AA MSAA 4× (SAMPLES 4)"
+  na Baixa da queda (o contexto fica).
+- **Para o C13 (o teto):**
+  - o `render/ritmo-desenho.js` já existe (o C12): `criarQueda`, `QUEDA`, `NIVEIS`, `resumoJanela`, `percentilOrdenado`,
+    `quedaValida`, `nivelInicial`; o teto entra no MESMO módulo (o cabeçalho já diz) e o `teste-ritmo-desenho` ganha os casos do
+    teto (o R10 cobre a pureza do módulo inteiro: sem `performance`, `Date.now`, `navigator` nem `requestAnimationFrame` — o
+    instante vem do `aoQuadro`);
+  - o `aoQuadro` hoje: `if (MED) MED.raf(t); if (!relogioManual) quadro(t, !trocandoQ);` — o teto pula o `quadro()` nos quadros
+    fora do ritmo ENTRE os dois (o `MED.raf` continua vendo todo quadro do navegador). O `trocandoQ` (a troca pela pausa) só
+    tira o desenho, a lógica e o online seguem: com o teto, ele continua valendo só nos quadros do ritmo;
+  - a queda já mede os DESENHOS: o `adaptarQualidade(dtReal, …)` roda no fim do `quadroCorpo` do jogo, e o `dtReal` é o
+    intervalo desde o último `quadro()` — com o teto, o intervalo entre desenhos, sem mudar nada nela. Um ritmo do teto
+    (60 regulares num rAF de 120) não é "preso" (só 33,3 e 50 ms contam);
+  - o `proximoQuadro()` da troca pela pausa usa o rAF cru (não passa pelo teto);
+  - o painel: `info.teto` e `info.refreshHz` no `infoPainel()` (a queda já vai: `info.queda = {sessao, gravada}`).
 
 ---
 
