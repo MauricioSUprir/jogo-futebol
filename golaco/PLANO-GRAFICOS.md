@@ -1265,6 +1265,49 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
   - **"Copiar o texto do painel"** (código 6): a seleção nunca funcionou (o texto é trocado a cada 0,5 s) e, com o painel sem pegar
     toque, não há como selecionar. O dono manda o print (o §7 item 10 já pedia o print) e o `__golaco.perf()` tem o objeto inteiro.
     Um botão "Copiar" nas Opções (só com `?perf`) é opção futura: uma linha a mais nas Opções pede rever a conta da pausa sem rolar.
+- **Os testes de navegador da seção 6 que tocam o que mudou** (o `main.js` da troca, do `pausado()`, do `tratarAcao` e da mira, o
+  `hud.js` da tela de carregar, o CSS do painel e da tela; base `e41aa791` × HEAD `5ff4db63`, cópias por `git archive` com os
+  scripts do HEAD, um teste de navegador por vez, a carga da máquina 2,6–4,6). Nenhuma meta que já existia mudou:
+
+  | Teste | Base | HEAD | Diferença | Tempo (base → HEAD) |
+  |---|---|---|---|---|
+  | `teste-carga` | — | passa | nosso 2967 → 2973 KB, folga 454,0 → 447,8 KB (do C13); o medidor nunca baixado | 36 s |
+  | `teste-pausa-tela` | reprova só o P14 (novo: sem a `quedaDeTeste()`) | passa | 318 → 327 medidas sem rolar; S1 online 19/49 e 28/28 → 14/38, 15/46, 42/23 (ruído, a lição abaixo) | 306 → 328 s (+7%) |
+  | `teste-mira-tela` | 19/19 | 19/19 | as mesmas linhas (a mira pelo `compile()` no HEAD) | 199 → 42 s (a base desenha cada posição: `DESENHAR`) |
+  | `teste-bola-parada-tela` | 55/55 | 55/55 | "nenhum programa novo quando a mira aparece" nos dois (o `compile()` cria o programa como o `compileAsync`); o L5 do escanteio de dia no 844×390 95% de 20 → 100% de 18 (o classificador do C15 do bloco 2) | 276 → 293 s (+6%) |
+  | `teste-tm-tela` | 14/14 | 14/14 | só o que depende do relógio real ("Simular o resto" 7708 → 7713 passos; a nota do travado 6 → 7,1) | 41 → 41 s |
+  | `teste-prepartida-tela --so cedo,online` | 35/35 | 35/35 | as mesmas linhas (E26 da tela cedo; O1*–O3 do online, a troca de qualidade de A no O3 sem a compilação inteira) | 380 → 416 s (+9%) |
+  | `testar-3d` (pro / `--publica`, o golaco do HEAD) | — | passa / passa, nenhum erro de página | — | 105 s / 120 s |
+
+- **Para o C15** (nada mexido agora; nenhuma meta existente mudou de propósito neste bloco — as que mudaram são dos testes do
+  próprio item: o `teste-ritmo-desenho` e o `teste-medidor-quadros`, refeitos aqui, e as linhas novas do `teste-graficos-pagina`):
+  - `tools/lib/tempos-ci.mjs`: o `teste-pausa-tela` sobe com o P14 (a sessão nova; base 306 → HEAD 328 s aqui, 296 → 378 s na
+    revisão com a máquina carregada) e o `teste-graficos-pagina` entra no C14 com o R5 (+20–26 s) e a P2 do toque (+12–14 s):
+    177 s para P2, R, Q, Z e T aqui;
+  - `teste-pausa-tela` S1 online (regressões 3, não é do bloco): reprovou no CI do `7fe3a1ab` (15/52, 8/31, 15/41) e pede a 2ª
+    medida na main também (`048b278f` 20/54, `4eb76747` 10/42, `0fed6ebc` 15/54); o que limita é o rAF da aba B (1 a 5 por
+    segundo, ~1 com a pausa aberta) — a régua nova: "≥ 1 passo com a pausa aberta" (o defeito que ele guarda dá 0) ou a razão
+    por quadro do rAF, não por segundo;
+  - `teste-prepartida-tela` O1* (regressões 4, já na base: 1 de 3 rodadas nos dois): o `avisos` acumulado desde o O3 (a troca
+    de qualidade de A, uma tarefa longa de ~40 s com duas abas no SwiftShader, B em "aguardando") reprova o O1 — zerar o
+    `avisos` antes do "A pronto" ou esperar a conexão 'ok' nas duas abas. A troca do online não compila mais a cena inteira (este
+    bloco): medir a duração dessa tarefa longa de novo no C15;
+  - `legacy-total-match/ferramentas/testar-3d.mjs` (regressões 5, não é do bloco): "prontas ≥ 9" no Estrelato com o adversário
+    sorteado (7 pedidas e 7 prontas numa rodada) → "prontas = pedidas" ou um adversário fixo; "o quadro some ≤ 0,5 s" na
+    `--publica` (0,822 s uma vez sob carga; 0,019–0,025 s nas outras) → medir de novo sob carga;
+  - `teste-bola-parada-tela` L5 (o classificador do C15 do bloco 2): sem mudança de régua aqui;
+  - a guarda do leitor de tela (o anúncio do "Ajustando…") não tem teste: o CI não tem leitor de tela (dito no PR).
+- **Lições:**
+  - **A regra da queda que "exige duas janelas lentas" media a coisa errada:** a 2ª janela já roda no nível de baixo — exigir que
+    ela também fique lenta é exigir que o nível de baixo NÃO resolva. Um aparelho no vsync desenha preso também quando é lento
+    de verdade: a assinatura "preso" só separa o limite do sistema quando o nível de baixo mantém a mesma cadência.
+  - **`compileAsync` sem prazo é uma espera sem fim** (contexto perdido, material descartado, renderizador recriado): a sonda
+    dele continua depois de quem esperava desistir e joga erro sem dono. Esperar com uma conta própria, com fim.
+  - **O SwiftShader do CI não tem o `KHR_parallel_shader_compile`:** sem a extensão falsa (o R5), nenhum teste passava pelo
+    caminho assíncrono — o caminho das GPUs de verdade.
+  - **Camada "por cima de tudo" com `pointer-events: auto` rouba toque:** a régua de "por cima" (forçar o toque em todas as
+    camadas) não vê isso; a guarda do toque é o `elementFromPoint` sem forçar nada, nos alvos de verdade.
+  - **Teste com várias teclas que se desfazem esconde o defeito:** o P depois do Esc reabria a pausa; uma tecla que fecha por troca.
 
 ---
 
