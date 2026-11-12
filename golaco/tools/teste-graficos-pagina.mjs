@@ -40,20 +40,28 @@
 //      camada recebendo toque e nenhuma `inert` durante a leitura, e só tapa a camada que PINTA ali: sem isso o véu e a marca
 //      REPLAY não contavam, e a camada transparente de tela inteira contaria); o qps mostrado na tela = os desenhos de verdade
 //      (0,8–1,25 ×, com um rAF falso a 60 Hz: a tela desenha 30; na main o painel soma o dt de 1 quadro do navegador por
-//      desenho e mostra 60).
+//      desenho e mostra 60). O painel NÃO pega toque (a revisão do bloco 4): em 5 pontos de cada botão de toque e do analógico
+//      no jogo (844×390, 667×375, 568×320) e de cada controle das Opções da pausa (844×390, 568×320), o elementFromPoint de
+//      verdade nunca é ele (e ele passa por cima de algum alvo: senão a guarda não prova nada).
 //   P3 ?gfx=antigo: SAMPLES 0 na Média, o gramado da página (G1–G5 da página, só o gramado e as linhas na pose do meio) = a
 //      referência da main e o TEXTO dos programas da torcida e das bandeiras = o da main (FNV-1a; a revisão do bloco 3: o C10
 //      não lia o ?gfx=antigo); ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
 //      definirHora e de uma recriação (Média → Alta → Baixa recria nas duas versões).
 //   R  recriação e contexto. (1) celular com a tela antes do jogo, pelo ≡ → Opções: Média → Baixa → Média com SAMPLES 4 → 0 →
 //      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois;
-//      com o módulo da mira baixado ANTES das trocas, o programa dela já está no renderizador novo sem ela ser desenhada (C12).
+//      com o módulo da mira baixado ANTES das trocas, o programa dela já está no renderizador novo sem ela ser desenhada (C12);
+//      a mensagem POR CIMA do painel ?perf (a pilha do ponto em 5 pontos da linha dela) e, durante a troca, a pausa inert e o
+//      foco na tela de carregar, de volta na pausa no fim (a revisão do bloco 4).
 //      (2) PC Alta → Baixa com ?prejogo=1 (o vão das placas aberto): localClippingEnabled do vão e o aria-label continuam. (3)
 //      __golaco.definirQualidade troca e desenha no mesmo evaluate (o quadro não preto; SAMPLES pela tabela). (4)
 //      WEBGL_lose_context: os ganchos ESTRAGADOS antes (a A2C ao contrário, o uAlturaBuffer em −1), perde e restaura — o quadro
-//      desenha, os ganchos rodam de novo (A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight), a mira com
-//      programa no contexto restaurado antes de ser desenhada (a linha escondida durante a perda; C12) e depois desenha. As
-//      trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no console.
+//      desenha, os ganchos rodam de novo (A2C dos finos e da torcida = SAMPLES ≥ 2; o uAlturaBuffer = drawingBufferHeight é
+//      estrutura: o onBeforeRender o refaz a cada desenho), a mira com programa no contexto restaurado antes de ser desenhada (a
+//      linha escondida durante a perda; C12) e depois desenha. (5) o KHR_parallel_shader_compile FALSO (a GPU nunca diz
+//      "pronto": o compileAsync nunca resolve, como com o contexto perdido): a carga com a tela cedo chega ao pronto e a troca
+//      pela pausa no jogo termina (o prazo de 3 s do compilarAntesDoDesenho); no meio dela, Esc, Esc e P não fecham a pausa nem
+//      andam o tick (a revisão do bloco 4). As trocas esperam terminar (teto de 90 s; a que não termina reprova). 0 erro no
+//      console.
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); com o teto (C13), a 120 Hz por 8,6 s (60 desenhos) não cai; __golaco.quedaDeTeste(): o mesmo canvas, 'baixa',
 //      SAMPLES continua 4, a queda nas preferências e na linha da pausa; a recarga em Automática abre na Baixa com SAMPLES 0;
@@ -301,6 +309,45 @@ async function instalarPagina() {
     } finally { iso.restaurar(); r.setClearColor(corAntes, aAntes); }
   };
   /** O painel (o .perf-fixo do item 45 ou o #qps de hoje): existe, à vista, por cima de tudo, o texto e o número de qps. */
+  /**
+   * O que PINTA por cima de `el` em cada ponto [fx, fy] da caixa dele: o elementFromPoint pula as camadas com pointer-events: none
+   * (o véu, a marca REPLAY, as cortinas, o painel ?perf desde a revisão do bloco 4) e as `inert` (o fundo da pausa): só durante a
+   * leitura, todas recebem toque e ninguém fica inerte (item 10 da revisão; síncrono, sem evento no meio), e a PILHA inteira do
+   * ponto (elementsFromPoint) é lida. Cobre só a camada acima que PINTA ali: à vista (checkVisibility com a opacidade e a
+   * visibilidade, também dos pais) e com fundo, imagem de fundo, conteúdo substituído, forma de SVG ou texto próprio — a camada
+   * transparente de tela inteira (o #toque, a tela antes do jogo saindo com opacidade 0) não tapa nada. {livres, cobertos: [nome]}.
+   */
+  const pintaPorCima = (el, pontos) => {
+    const r = el.getBoundingClientRect();
+    const st = document.createElement('style');
+    st.textContent = '*, *::before, *::after { pointer-events: auto !important; }';
+    document.head.appendChild(st);
+    const inertes = [...document.querySelectorAll('[inert]')];
+    for (const e of inertes) e.inert = false;
+    const pinta = e => {
+      if (e.checkVisibility && !e.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+      const cs = getComputedStyle(e);
+      const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/), a = m ? (m[1].split(',').map(Number)[3] ?? 1) : 0;
+      if (a > 0.02 || cs.backgroundImage !== 'none') return true;
+      if (/^(IMG|CANVAS|VIDEO|IFRAME|INPUT|BUTTON|SELECT|TEXTAREA)$/.test(e.tagName)) return true;
+      if (e instanceof SVGGraphicsElement && !(e instanceof SVGSVGElement) && e.tagName !== 'g') return true;
+      return [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+    };
+    const cobertos = [];
+    let livres = 0;
+    try {
+      for (const [fx, fy] of pontos) {
+        let livre = false;
+        for (const e of document.elementsFromPoint(r.left + fx * r.width, r.top + fy * r.height)) {
+          if (e === el || el.contains(e)) { livre = true; break; }
+          if (e.contains(el)) continue;
+          if (pinta(e)) { cobertos.push(`${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}${typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : ''}`); break; }
+        }
+        if (livre) livres++;
+      }
+    } finally { for (const e of inertes) e.inert = true; st.remove(); }
+    return { livres, cobertos: [...new Set(cobertos)] };
+  };
   const painel = () => {
     const el = document.querySelector('.perf-fixo') || document.getElementById('qps');
     if (!el) return { existe: false, visivel: false, topo: 0, texto: '', qps: NaN, fixo: false };
@@ -308,43 +355,48 @@ async function instalarPagina() {
     const vis = !el.hidden && r.width >= 4 && r.height >= 4 && (el.checkVisibility ? el.checkVisibility({ opacityProperty: true, visibilityProperty: true }) : true);
     let topo = 0, tapado = '';
     if (vis) {
-      // o elementFromPoint pula as camadas com pointer-events: none (o véu, a marca REPLAY, as cortinas) e as `inert` (o fundo
-      // da pausa): só durante a leitura, todas recebem toque e ninguém fica inerte (item 10 da revisão; síncrono, sem evento no
-      // meio), e a PILHA inteira do ponto (elementsFromPoint) é lida. Cobre o painel só a camada acima dele que PINTA ali: à
-      // vista (checkVisibility com a opacidade e a visibilidade, também dos pais) e com fundo, imagem de fundo, conteúdo
-      // substituído, forma de SVG ou texto próprio — a camada transparente de tela inteira (o #toque, a tela antes do jogo
-      // saindo com opacidade 0) não tapa nada
-      const st = document.createElement('style');
-      st.textContent = '*, *::before, *::after { pointer-events: auto !important; }';
-      document.head.appendChild(st);
-      const inertes = [...document.querySelectorAll('[inert]')];
-      for (const e of inertes) e.inert = false;
-      const pinta = e => {
-        if (e.checkVisibility && !e.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
-        const cs = getComputedStyle(e);
-        const m = cs.backgroundColor.match(/rgba?\(([^)]+)\)/), a = m ? (m[1].split(',').map(Number)[3] ?? 1) : 0;
-        if (a > 0.02 || cs.backgroundImage !== 'none') return true;
-        if (/^(IMG|CANVAS|VIDEO|IFRAME|INPUT|BUTTON|SELECT|TEXTAREA)$/.test(e.tagName)) return true;
-        if (e instanceof SVGGraphicsElement && !(e instanceof SVGSVGElement) && e.tagName !== 'g') return true;
-        return [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-      };
-      const cobertos = [];
-      try {
-        for (const [fx, fy] of [[0.5, 0.5], [0.15, 0.25], [0.85, 0.75]]) {
-          let livre = false;
-          for (const e of document.elementsFromPoint(r.left + fx * r.width, r.top + fy * r.height)) {
-            if (e === el || el.contains(e)) { livre = true; break; }
-            if (e.contains(el)) continue;
-            if (pinta(e)) { cobertos.push(`${e.tagName.toLowerCase()}${e.id ? '#' + e.id : ''}${typeof e.className === 'string' && e.className ? '.' + e.className.trim().split(/\s+/)[0] : ''}`); break; }
-          }
-          if (livre) topo++;
-        }
-      } finally { for (const e of inertes) e.inert = true; st.remove(); }
-      tapado = [...new Set(cobertos)].join(', ');
+      const pc = pintaPorCima(el, [[0.5, 0.5], [0.15, 0.25], [0.85, 0.75]]);
+      topo = pc.livres;
+      tapado = pc.cobertos.join(', ');
     }
     const texto = (el.innerText || el.textContent || '').trim();
     const m = texto.match(/(\d+(?:[.,]\d+)?)\s*qps/i);
     return { existe: true, visivel: vis, topo: topo / 3, tapado, texto, qps: m ? +m[1].replace(',', '.') : NaN, fixo: el.classList.contains('perf-fixo'), pai: el.parentElement?.id || el.parentElement?.tagName };
+  };
+  /**
+   * A mensagem da tela "Ajustando…" à vista e POR CIMA de tudo (a revisão do bloco 4: o checkVisibility só olha o DOM — com o
+   * painel ?perf por cima, ela ficava tapada e o R1 passava): 5 pontos ao longo da linha dela. null sem a mensagem à vista.
+   */
+  const msgAjustando = () => {
+    const el = document.getElementById('carregando-msg');
+    if (!el || !/Ajustando/i.test(el.textContent || '') || (el.checkVisibility && !el.checkVisibility({ opacityProperty: true, visibilityProperty: true }))) return null;
+    const pc = pintaPorCima(el, [[0.1, 0.5], [0.3, 0.5], [0.5, 0.5], [0.7, 0.5], [0.9, 0.5]]);
+    return { livres: pc.livres, de: 5, cobertos: pc.cobertos };
+  };
+  /**
+   * O painel ?perf NÃO pega toque (a revisão do bloco 4): em 5 pontos de cada alvo à vista (`seletor`), o elementFromPoint de
+   * verdade (sem forçar nada) nunca é o painel. `sobPainel` conta os pontos dentro da caixa dele (a guarda só prova algo onde ele
+   * passa por cima de um alvo).
+   */
+  const toqueLivre = seletor => {
+    const pn = document.querySelector('.perf-fixo') || document.getElementById('qps');
+    const pr = pn && !pn.hidden ? pn.getBoundingClientRect() : null;
+    const alvos = [...document.querySelectorAll(seletor)].filter(a => a.getClientRects().length && (!a.checkVisibility || a.checkVisibility({ visibilityProperty: true })));
+    let pontos = 0, sobPainel = 0;
+    const roubados = [];
+    for (const a of alvos) {
+      const b = a.getBoundingClientRect();
+      if (b.width < 2 || b.height < 2) continue;
+      for (const [fx, fy] of [[0.5, 0.5], [0.25, 0.25], [0.75, 0.25], [0.25, 0.75], [0.75, 0.75]]) {
+        const x = b.left + fx * b.width, y = b.top + fy * b.height;
+        if (x < 0 || y < 0 || x >= innerWidth || y >= innerHeight) continue;
+        pontos++;
+        if (pr && x >= pr.left && x <= pr.right && y >= pr.top && y <= pr.bottom) sobPainel++;
+        const e = document.elementFromPoint(x, y);
+        if (pn && e && (e === pn || pn.contains(e))) roubados.push(a.id || a.dataset?.valor || (a.textContent || '').trim().slice(0, 16));
+      }
+    }
+    return { alvos: alvos.length, pontos, sobPainel, roubados: [...new Set(roubados)], nRoubados: roubados.length, painel: pr ? [Math.round(pr.left), Math.round(pr.top), Math.round(pr.right), Math.round(pr.bottom)] : null };
   };
   const matGols = () => {
     const k = cap ?? desenharCap();
@@ -370,7 +422,7 @@ async function instalarPagina() {
     info: () => infoGl(glTela()),
     /** Espera a GPU acabar o que está na fila (gl.finish e as leituras do contexto, que sincronizam com o processo da GPU). */
     drenarGpu() { const gl = glTela(); if (!gl) return null; gl.finish(); return infoGl(gl); },
-    canvasInfo, painel, ajustando,
+    canvasInfo, painel, ajustando, msgAjustando, toqueLivre,
     sonda() {
       const r = {};
       for (const aa of [true, false]) {
@@ -695,16 +747,19 @@ const sessoes = [];
 const errosConsole = [];
 let invalido = null;
 
-async function carga(cfg, busca, { forca = null, servidor: sv = srv } = {}) {
+async function carga(cfg, busca, { forca = null, servidor: sv = srv, init2 = null, esperar = true } = {}) {
   const s = await abrir({ largura: cfg.w, altura: cfg.h, dpr: cfg.dpr, toque: cfg.toque });
   sessoes.push(s);
   s.busca = busca; s.srv = sv;
   await s.contexto.addInitScript(INIT, forca);
+  // (um script a mais antes da página: o R5, o KHR_parallel_shader_compile falso)
+  if (init2) await s.contexto.addInitScript(init2);
   s.pagina.setDefaultTimeout(240000);
   s.r404 = [];
   s.pagina.on('response', r => { if (r.status() === 404) s.r404.push(r.url()); });
   if (!cond.chromium) cond.chromium = s.navegador.version();
-  await irPara(s);
+  // (sem esperar: quem chama navega e espera o pronto com o prazo dele — o R5 mede se ele chega)
+  if (esperar) await irPara(s); else await s.pagina.goto(`${s.srv.url}?${s.busca}`, { waitUntil: 'load' });
   return s;
 }
 async function irPara(s, recarregar = false) {
@@ -1220,12 +1275,19 @@ try {
             // (a opacidade de cada amostra à vista: ela já nasce 1 — com o fio travado logo depois, um véu ainda transparente ficaria
             // na tela parada; C12. Escondida antes — display none —, a transição de 0,35 s do .carregando não roda nem sem o
             // 'transition: none' do hud.ocupado: a mutação dele passa aqui, ele cobre só a tela ainda saindo depois do pronto)
-            const o = window.__ajuste = { visto: 0, opMin: 1 };
+            // (a revisão do bloco 4: a mensagem POR CIMA do painel ?perf — a pilha do ponto, não só o checkVisibility —, a pausa inert
+            // e o foco na tela de carregar em cada amostra com a mensagem à vista)
+            const o = window.__ajuste = { visto: 0, opMin: 1, msgVista: 0, msgLivreMin: 5, msgTapa: [], inertNao: 0, focoFora: 0, focos: [] };
             o.id = setInterval(() => {
               if (!window.__P.ajustando()) return;
               o.visto++;
               const c = document.getElementById('carregando');
               if (c) o.opMin = Math.min(o.opMin, +getComputedStyle(c).opacity);
+              const m = window.__P.msgAjustando();
+              if (m) { o.msgVista++; o.msgLivreMin = Math.min(o.msgLivreMin, m.livres); for (const t of m.cobertos) if (!o.msgTapa.includes(t)) o.msgTapa.push(t); }
+              if (!document.getElementById('menu')?.inert) o.inertNao++;
+              const a = document.activeElement;
+              if (a !== c) { o.focoFora++; const n = a ? `${a.tagName.toLowerCase()}${a.id ? '#' + a.id : ''}` : 'nada'; if (!o.focos.includes(n)) o.focos.push(n); }
             }, 8);
           });
           const troca = async q => {
@@ -1237,10 +1299,12 @@ try {
             let terminou = false;
             while (ok && Date.now() - t0 < 90000) { const e = await pg.evaluate(() => ({ q: window.__golaco.qualidade, aj: window.__P.ajustando() })); if (e.q === q && !e.aj) { terminou = true; break; } await espera(40); }
             const qr = await quadrosReais(pg, 3);
+            // (o foco de volta na pausa — no botão da qualidade — e a pausa sem o inert)
+            const fim = await pg.evaluate(() => { const a = document.activeElement, mn = document.getElementById('menu'); return { inert: !!mn?.inert, foco: a ? `${a.tagName.toLowerCase()}${a.id ? '#' + a.id : ''}${a.dataset?.valor ? `[${a.dataset.valor}]` : ''}` : 'nada', naPausa: !!(a && mn?.contains(a)) }; });
             const depois = await P(pg, 'canvasInfo');
             const v1 = await pg.evaluate(() => window.__ajuste.visto);
             const mira = await P(pg, 'miraCompilada');
-            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1), mira };
+            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1), mira, fim };
           };
           const b = await troca('baixa'), m = await troca('media');
           await pg.evaluate(() => clearInterval(window.__ajuste.id));
@@ -1256,6 +1320,12 @@ try {
             'vista nas duas e fora no fim', b.ajustando > 0 && m.ajustando > 0 && !b.aindaAjustando && !m.aindaAjustando);
           meta('R', 'R1 a tela "Ajustando…" já opaca em toda amostra à vista (sem a transição de 0,35 s do .carregando; C12)', `a menor opacidade vista ${f(opMin, 3)} em ${b.ajustando + m.ajustando} amostras`,
             '≥ 0,99', b.ajustando + m.ajustando > 0 && opMin >= 0.99);
+          const aj = await pg.evaluate(() => { const o = window.__ajuste; return { msgVista: o.msgVista, msgLivreMin: o.msgLivreMin, msgTapa: o.msgTapa, inertNao: o.inertNao, focoFora: o.focoFora, focos: o.focos }; });
+          meta('R', 'R1 a mensagem "Ajustando…" POR CIMA de tudo, também do painel ?perf (5 pontos na linha dela, a pilha do ponto; a revisão do bloco 4)',
+            `${aj.msgVista} amostras com a mensagem · a pior com ${aj.msgLivreMin} de 5 pontos livres${aj.msgTapa.length ? ` (tapa: ${aj.msgTapa.join(', ')})` : ''}`, '5 de 5 em toda amostra', aj.msgVista > 0 && aj.msgLivreMin === 5);
+          meta('R', 'R1 durante a troca a pausa fica inert e o foco na tela de carregar; no fim, a pausa sem o inert e o foco de volta nela (a revisão do bloco 4)',
+            `amostras: pausa sem inert ${aj.inertNao}, foco fora ${aj.focoFora}${aj.focos.length ? ` (${aj.focos.join(', ')})` : ''} · fim: Baixa inert ${b.fim?.inert}, foco ${b.fim?.foco}; Média inert ${m.fim?.inert}, foco ${m.fim?.foco}`,
+            '0; 0; inert false e o foco na pausa nas duas', b.ajustando + m.ajustando > 0 && aj.inertNao === 0 && aj.focoFora === 0 && [b, m].every(x => x.fim && !x.fim.inert && x.fim.naPausa));
           const mz = x => (x.mira ? `${x.mira.programa ? 'com programa' : 'SEM programa'}${x.mira.visivel ? ' (à vista: não vale)' : ''}` : 'sem o módulo');
           meta('R', 'R1 a mira (o módulo baixado antes) com programa no renderizador NOVO depois de cada troca, sem ser desenhada (C12)', `Baixa: ${mz(b)} · Média: ${mz(m)}`,
             'com programa nas duas', [b, m].every(x => x.mira?.programa && !x.mira.visivel));
@@ -1294,6 +1364,35 @@ try {
         const api = await perfApi();
         meta('P2', '__golaco.perf() no jogo: a fase', api ? `fase ${JSON.stringify(api.fase ?? null)}` : 'não existe', 'a fase do jogo', !!api && /jogo/i.test(String(api.fase ?? '')));
         marcar('P2 (jogo, pausa, replay)');
+        // ---- o painel NÃO pega toque (a revisão do bloco 4: com pointer-events: auto ele tapava o LANÇAMENTO, a ENFIADA, a
+        // DIVIDIDA e o analógico no celular e os botões das Opções da pausa): os botões de toque e o analógico no jogo em 844×390,
+        // 667×375 e 568×320 e os controles das Opções da pausa em 844×390 e 568×320 — o elementFromPoint de verdade nunca é ele
+        const dim0 = pg.viewportSize();
+        const quadro = () => pg.evaluate(() => { const g = window.__golaco; for (let i = 0; i < 3; i++) g.relogio.avancar(1000 / 60, { desenhar: i === 2 }); });
+        const toque = [], opcoes = [];
+        try {
+          for (const [w, h] of [[844, 390], [667, 375], [568, 320]]) {
+            await pg.setViewportSize({ width: w, height: h });
+            await quadrosReais(pg, 2); await quadro(); await quadrosReais(pg, 2);
+            toque.push({ tela: `${w}×${h}`, ...(await P(pg, 'toqueLivre', '#toque .btn-toque, #zona-analogico')) });
+            if (w !== 667) {
+              await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-opcoes')?.click(); });
+              await quadrosReais(pg, 2); await quadro();
+              opcoes.push({ tela: `${w}×${h}`, ...(await P(pg, 'toqueLivre', '#menu button, #menu input, #menu select, #menu [role="slider"]')) });
+              await pg.evaluate(() => window.__golaco.fecharMenu());
+              await quadro();
+            }
+          }
+        } finally {
+          await pg.setViewportSize(dim0).catch(() => {});
+          await quadrosReais(pg, 2); await quadro();
+        }
+        const dt = x => `${x.tela}: ${x.nRoubados} de ${x.pontos} pontos (${x.sobPainel} sob a caixa do painel ${JSON.stringify(x.painel)})${x.roubados.length ? ` — ${x.roubados.join(', ')}` : ''}`;
+        meta('P2', 'O painel ?perf não pega toque: os botões de toque e o analógico no jogo (5 pontos de cada; 844×390, 667×375, 568×320)', toque.map(dt).join(' · '),
+          '0 pontos tomados pelo painel; o painel sobre algum alvo', toque.length === 3 && toque.every(x => x.alvos > 0 && x.nRoubados === 0) && toque.some(x => x.sobPainel > 0));
+        meta('P2', 'O painel ?perf não pega toque: os controles das Opções da pausa (844×390, 568×320)', opcoes.map(dt).join(' · '),
+          '0 pontos tomados pelo painel; o painel sobre algum controle', opcoes.length === 2 && opcoes.every(x => x.alvos > 0 && x.nRoubados === 0) && opcoes.some(x => x.sobPainel > 0));
+        marcar('P2 (o toque livre)');
       }
       if (so.has('R')) {
         // a mira da falta (o módulo sob demanda; a cobrança do humano), depois das trocas do R1
@@ -1338,9 +1437,13 @@ try {
         const m2 = await P(pg, 'mira');
         meta('R', 'R4 WEBGL_lose_context: perde, restaura e o quadro desenha', r4.ext ? `perdeu ${r4.perdido} (${r4.perdeu} evento) · restaurou ${r4.restaurado} (${r4.voltou} evento) · ${pct(np)} não preto` : 'sem a extensão',
           'restaurado e ≥ 50% não preto', r4.ext && r4.restaurado && np >= 0.5, 'estrutura');
-        meta('R', 'R4 os ganchos depois do contexto restaurado (estragados antes de perder: A2C dos finos e da torcida = SAMPLES ≥ 2, uAlturaBuffer = drawingBufferHeight)',
-          `estragados: A2C ${r4.sabotado?.a2c} (torcida ${r4.sabotado?.a2cTorcida}), uAlturaBuffer ${r4.sabotado?.uAltura ?? 'não existe'} · depois: gols ${gan.temGols} · A2C ${gan.a2c} (torcida ${gan.a2cTorcida}; SAMPLES ${gan.samples}) · uAlturaBuffer ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, 'os ganchos refazem os três',
-          gan.temGols && gan.a2c === (gan.samples >= 2) && gan.a2cTorcida === (gan.samples >= 2) && gan.uAltura === gan.H);
+        meta('R', 'R4 os ganchos depois do contexto restaurado (estragados antes de perder: a A2C dos finos e da torcida = SAMPLES ≥ 2)',
+          `estragados: A2C ${r4.sabotado?.a2c} (torcida ${r4.sabotado?.a2cTorcida}) · depois: gols ${gan.temGols} · A2C ${gan.a2c} (torcida ${gan.a2cTorcida}; SAMPLES ${gan.samples})`, 'os ganchos refazem as duas',
+          gan.temGols && gan.a2c === (gan.samples >= 2) && gan.a2cTorcida === (gan.samples >= 2));
+        // (a revisão do bloco 4: o uAlturaBuffer é refeito a cada desenho pelo onBeforeRender da malha — campo.js —, não pelo gancho;
+        // sem os ganchos ele ainda dá a altura: estrutura)
+        meta('R', 'R4 o uAlturaBuffer = drawingBufferHeight depois do contexto restaurado (estragado antes; o onBeforeRender o refaz a cada desenho)',
+          `estragado ${r4.sabotado?.uAltura ?? 'não existe'} · depois ${gan.uAltura ?? 'não existe'} (buffer ${gan.H})`, '= a altura do buffer', gan.uAltura === gan.H, 'estrutura');
         meta('R', 'R4 a mira desenha depois do contexto restaurado', `${m2.n} px com × sem a linha`, '≥ 150 px', m2.n >= 150);
         meta('R', 'R4 a mira com programa no contexto restaurado antes de ser desenhada (o aquecimento do C12; a linha escondida)', r4.mira ? `${r4.mira.programa ? 'com programa' : 'SEM programa'}${r4.mira.visivel ? ' (à vista: não vale)' : ''}` : 'sem o módulo',
           'com programa', !!r4.mira?.programa && !r4.mira.visivel);
@@ -1352,6 +1455,62 @@ try {
       anotarErros(s);
       await fechar(s);
     }
+  }
+
+  // ================================================================== R5: o compileAsync que nunca resolve (a revisão do bloco 4)
+  if (so.has('R')) {
+    // O KHR_parallel_shader_compile FALSO: a extensão existe e a GPU nunca diz "pronto" (o COMPLETION_STATUS_KHR sempre false) — o
+    // compileAsync do r170 sonda a cada 10 ms e nunca resolve, como com o contexto perdido. O SwiftShader do CI não tem a extensão:
+    // sem isto, nenhum teste passa pelo caminho dele. Sem o prazo do compilarAntesDoDesenho, a carga com a tela cedo nunca chega ao
+    // pronto (também na main: o await vem do item 106) e a troca pela pausa nunca termina, com o 3D sem desenhar
+    const INIT_KHR = () => {
+      const PR = WebGL2RenderingContext.prototype, ge = PR.getExtension, gpp = PR.getProgramParameter;
+      PR.getExtension = function (n) { return n === 'KHR_parallel_shader_compile' ? { COMPLETION_STATUS_KHR: 0x91b1, maxShaderCompilerThreadsKHR() {} } : ge.call(this, n); };
+      PR.getProgramParameter = function (p, n) { return n === 0x91b1 ? false : gpp.call(this, p, n); };
+    };
+    const s = await carga(CEL, 'prepartida=1&q=media&semente=4&replay=0&comemoracao=0&toque=1&entalhe=1', { init2: INIT_KHR, esperar: false });
+    const pg = s.pagina;
+    try {
+      const t0 = Date.now();
+      const pronto = await pg.waitForFunction(() => window.__golaco?.pronto, null, { timeout: 90000 }).then(() => true, () => false);
+      const tPronto = (Date.now() - t0) / 1000;
+      const khr = pronto ? await pg.evaluate(() => !!document.getElementById('tela')?.__ctx?.getExtension('KHR_parallel_shader_compile')) : null;
+      meta('R', 'R5 o compileAsync que nunca resolve (o KHR falso): a carga com a tela cedo chega ao pronto (o prazo de 3 s)', pronto ? `pronto em ${f(tPronto, 1)} s (KHR ${khr ? 'falso no ar' : 'NÃO'})` : 'NÃO chegou ao pronto em 90 s',
+        'pronto em ≤ 90 s', pronto && khr);
+      if (pronto) {
+        s.inst = await pg.evaluate(instalarPagina);
+        await pg.evaluate(() => window.__golaco.prepartida.jogar());
+        await pg.waitForFunction(() => !window.__golaco.prepartida.aberta, null, { timeout: 30000 }).catch(() => {});
+        await pg.waitForFunction(() => { const pp = document.getElementById('prepartida'); return !pp || pp.hidden || !pp.checkVisibility({ opacityProperty: true, visibilityProperty: true }); }, null, { timeout: 30000 }).catch(() => {});
+        await quadrosReais(pg, 3);
+        // a pausa no jogo (o relógio de verdade: fechada, a partida andaria) → Opções → Baixa; no meio da troca, Esc, Esc e P
+        await pg.evaluate(() => { window.__golaco.abrirMenu(); document.getElementById('btn-opcoes')?.click(); });
+        await quadrosReais(pg, 3);
+        const e0 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick, menu: window.__golaco.estado().menuAberto, q: window.__golaco.qualidade }));
+        const ok = await pg.evaluate(() => { const b = document.querySelector('[data-grupo="qualidade"] [data-valor="baixa"]'); if (!b || !b.getClientRects().length) return false; b.click(); return true; });
+        const tT = Date.now();
+        const amostras = [];
+        let teclas = 0, terminou = false;
+        while (ok && Date.now() - tT < 40000) {
+          const e = await pg.evaluate(() => { const g = window.__golaco, st = g.estado(); return { t: st.tick, menu: st.menuAberto, trocando: g.qualidadeEstado?.trocando, q: g.qualidade, inert: !!document.getElementById('menu')?.inert, aj: window.__P.ajustando() }; });
+          amostras.push(e);
+          if (e.q === 'baixa' && !e.trocando) { terminou = true; break; }
+          if (e.trocando && teclas < 3) { await pg.keyboard.press(['Escape', 'Escape', 'KeyP'][teclas]); teclas++; }
+          await espera(120);
+        }
+        const sT = (Date.now() - tT) / 1000;
+        await quadrosReais(pg, 3);
+        const e1 = await pg.evaluate(() => ({ tick: window.__golaco.estado().tick, menu: window.__golaco.estado().menuAberto, aj: window.__P.ajustando(), inert: !!document.getElementById('menu')?.inert }));
+        const durante = amostras.filter(a => a.trocando);
+        meta('R', 'R5 a troca pela pausa com o compileAsync que nunca resolve termina (o prazo de 3 s; depois o 1º desenho compila)', ok ? `${terminou ? 'terminou' : 'NÃO terminou'} em ${f(sT, 1)} s · "Ajustando…" no fim: ${e1.aj ? 'SIM' : 'não'}` : 'o botão da Baixa não achado',
+          'termina em ≤ 40 s e a tela sai', ok && terminou && !e1.aj);
+        meta('R', 'R5 no meio da troca, Esc, Esc e P não fecham a pausa nem andam o jogo (a pausa inert; a revisão do bloco 4)',
+          `${teclas} teclas em ${durante.length} amostras da troca · a pausa aberta em ${durante.filter(a => a.menu).length}, inert em ${durante.filter(a => a.inert).length} · tick ${e0.tick} → ${[...new Set(durante.map(a => a.t))].join('/')} → ${e1.tick} · no fim: pausa ${e1.menu ? 'aberta' : 'FECHADA'}, inert ${e1.inert}`,
+          '3 teclas; a pausa aberta e inert em toda amostra; o tick parado; no fim a pausa aberta sem inert',
+          teclas === 3 && durante.length >= 3 && durante.every(a => a.menu && a.inert && a.t === e0.tick) && e1.menu && !e1.inert && e1.tick === e0.tick);
+      }
+    } catch (e) { meta('R', 'R5 o KHR falso: rodou', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura'); } finally { await fechar(s); }
+    marcar('R5 (o compileAsync que nunca resolve)');
   }
 
   // ================================================================== Q: a queda
