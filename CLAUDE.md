@@ -138,6 +138,15 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   tipográfico do 3D (ver "Sistema tipográfico" abaixo), a pausa com o campinho ~1,5× maior no PC e as outras telas; (126) "a foto
   com o nome tem que ser mais embaixo e menor, no canto inferior" — o cartão do autor embaixo à DIREITA (no celular, logo acima
   do "Pular"), ~4× menor no PC e ~2× no celular.
+- **Modo Leilão (dono, 14/11)**: "consegue criar um modo de leilão? com os jogadores da liga escolhida?". Respostas dele:
+  com AMIGOS ONLINE; depois do leilão, "leilão e mata a mata, nas configurações pré jogo eles escolhem ou jogar ou simular"
+  (a tela antes do jogo do 3D); lances de cada um em +1, +5, +10 ou Tudo, todos começam com R$ 100 (dinheiro do jogo);
+  "pode começar agora". Regras: sala SÓ PRIVADA (código/convite, o dono aceita quem entra), sem chat, sem estranhos; as
+  fotos que ele mandou (site de terceiros) dão só a mecânica — NÃO copiar o nome, a arte nem o visual do site de
+  referência; a cara é a do TM (verde e preto, Inter, ícones `TM.ic`, sem emoji, modo claro, "nada sobre nada"); nada de
+  Pix, doação nem Total Coins; testes nunca com o Firebase de verdade; modo novo em "Mais modos". Branch `claude/leilao`
+  (o item 45 do golaco segue pausado em outro branch); plano em `legacy-total-match/PLANO-LEILAO.md` (6 PRs, ~111 h; as
+  decisões dele na seção 7).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
