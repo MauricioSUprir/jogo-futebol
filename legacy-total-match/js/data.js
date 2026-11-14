@@ -19349,7 +19349,9 @@
     });
   }
 
-  function generateWorld() {
+  // opc.base: o mundo-base da edição, SEM o clube criado (applyCustomClub) e SEM o Editor (applyEdits) — TM.data.mundoBase
+  function generateWorld(opc) {
+    var base = !!(opc && opc.base);
     var rng = R.make(WORLD_SEED);
     var leagues = [], clubs = [], playersById = {}, pid = 1;
 
@@ -19538,9 +19540,12 @@
     });
 
     // ---- clube personalizado do jogador (carreira "Criar meu clube") ----
-    applyCustomClub(clubs, playersById, rng);
     // ---- edições do jogador (Editor: editar/criar/transferir) ----
-    applyEdits(clubs, playersById, rng);
+    // (o mundo-base fica sem os dois: são os ÚLTIMOS a usar o rng, então o resto do mundo sai igual ao da carreira)
+    if (!base) {
+      applyCustomClub(clubs, playersById, rng);
+      applyEdits(clubs, playersById, rng);
+    }
     // liga/clube DE ORIGEM (chave dos arquivos de escudo, uniforme, estádio e fotos): não muda com acesso,
     // rebaixamento ou transferência — evita o escudo "genérico" ao trocar de divisão e a foto sumir ao trocar de clube
     clubs.forEach(function (cl) {
@@ -20402,6 +20407,22 @@
 
   TM.data = {
     world: function () { return _world || (_world = generateWorld()); },
+    // O mundo-base da edição em uso (Modo Leilão): o mesmo generateWorld SEM o clube criado da carreira (nem o Viverde
+    // no lugar de um clube) e SEM o Editor, FORA do cache — não mexe no mundo da carreira (TM.data.world). Gera de novo a
+    // cada chamada (~0,2–0,3 s no Node): quem usa guarda o que precisa (os retratos dos lotes). As seleções (`nations`)
+    // são as do módulo, compartilhadas com o mundo da carreira: a geração escreve nelas (e empurra jogadores na lista de
+    // antes), então a lista e o técnico de cada uma voltam ao que eram, no mesmo objeto.
+    mundoBase: function () {
+      var antes = NATIONS.map(function (n) { return [n.players, (n.players || []).slice(), n.coach, n.coachPhotoKey]; });
+      try { return generateWorld({ base: true }); }
+      finally {
+        NATIONS.forEach(function (n, i) {
+          var a = antes[i];
+          if (a[0]) { a[0].length = 0; Array.prototype.push.apply(a[0], a[1]); }
+          n.players = a[0]; n.coach = a[2]; n.coachPhotoKey = a[3];
+        });
+      }
+    },
     resetWorld: function () { _world = null; _rivalCache = null; },
     rivalsOf: function (clubId) { return (rivalMap()[clubId] || []).slice(); },
     areRivals: function (aId, bId) { return !!aId && !!bId && (rivalMap()[aId] || []).indexOf(bId) >= 0; },
