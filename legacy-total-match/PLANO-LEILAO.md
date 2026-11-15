@@ -1031,3 +1031,60 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   - **Testes novos**: O7 (o vivo apagado, também ao recarregar; os lotes trocados no saguão; a edição trocada antes do
     Começar; o bate a caminho depois de encerrar) e O8 (a volta com o socket bom não reconecta e a sala de outro modo
     continua; com o socket preso, só sem outra sala aberta) no bloco O; o caso `telas` (um job a mais no CI do TM).
+
+**Durante o PR 3** (o que o código real pediu de diferente do plano):
+- **O núcleo e o motor** (o passo 1: `js/engine.js`, `js/leilao-camp.js`, o bloco C do `testar-leilao.mjs`):
+  - **O motor sorteia só com `Math.floor/max/min/round/random`** (nem o `abs` do §1.7; nada de `exp/log/pow/sin`) e não
+    percorre chaves de objeto; os dois `sort` (as substituições e os batedores dos pênaltis) têm comparador e o `sort` é
+    estável em todo navegador desde 2019 (com 11 e sem banco nem há substituição). As contas são em ponto flutuante IEEE (o
+    JS não funde operações): o mesmo resultado em todo aparelho, e o C5 confere num TM carregado do zero.
+  - **`semLesao`** pula o sorteio da lesão inteiro (`!opts.semLesao && Math.random() < …`): sem a opção, o motor é o de
+    antes — 960 casos (60 sementes × 8 conjuntos de opções × elencos de 11 e de 18) iguais aos da main, eventos inclusive.
+    O C7 compara com a `origin/main` quando o git a tem e SEMPRE com a referência gravada `ferramentas/dados/motor-ref.json`
+    (o CI faz o checkout raso, sem a `origin/main`); mudança de propósito no motor = `--gravar-motor` e dizer no PR.
+  - **O gol de ouro não mexe no motor**, que já aceita `startMinute/endMinute/startScore` (e o `excludeIds/yellowIds` do
+    `resimRest`): os 91'–120' com os expulsos dos 90' fora e os amarelos valendo, cortados no 1º gol (o lance do gol e um
+    "full" no mesmo minuto). A estatística é a dos 90' (a prorrogação guarda só o placar e os lances). Os pênaltis vão sem
+    os expulsos (a prorrogação do TM de hoje deixa o expulso bater). Em 1500 jogos de dois times do leilão: 33% vão à
+    prorrogação, 59% delas acabam no gol de ouro (em 85% desses a prorrogação do motor seguiria até os 120') e o resto nos
+    pênaltis.
+  - **O nó `jogos/{id}`** ganhou `ab` (os técnicos), `motivo` ('pedido' = a pessoa tocou em Simular, 'prazo', 'abertura',
+    'dono' = Simular os pendentes) e, no `aberto`, um relógio que para: `{ e: 'aberto', ini, resta, parado? }`. O "só corre
+    com alguém do jogo presente" é `pausar` (pela hora do último batimento dela, não pela de quem percebeu) e `retomar`. O
+    `aberto` só existe no jogo de uma pessoa contra um bot; bot × bot e, até o PR 5, pessoa × pessoa vão direto a
+    `reservado` ('abertura'). O reservado simulado qualquer aparelho completa (todos calculam o mesmo; a transação só grava
+    sobre o reservado com a MESMA trava). O 3D já tem o `inicio`, o prazo de 2 × duração × 1,3 + 8 min e o W.O. de quem
+    reservou nas funções puras; quem os usa é o PR 4.
+  - **Os ids** dizem a fase e o lugar: `r{rodada}j{k}` na fase de pontos e `m{rodada do mata-mata}j{par}` no mata-mata (o
+    par é o lugar na chave: `m2j0` = o vencedor de `m1j0` × o de `m1j1`). Nenhum nó de chaves 0..n (o Firebase devolveria
+    lista).
+  - **O resultado gravado** (`res`): o do motor nos 90' (`score`, `events`, `stats`; `sentOff` só se houver; sem
+    `injuries`) e, no mata-mata empatado, `pror` (`score`, `events`, `ouro`) e `pen` (`score`, `winner`, `kicks` sem o
+    objeto do jogador: `{ side, name, scored, id }`); `placar` (o que conta) e `v` (o vencedor; -1 = empate, só na fase de
+    pontos). ~2,6–3,2 KB por jogo: os 56 jogos dos pontos corridos com 8 técnicos somam ~170 KB, baixados por página. A
+    conferência recalcula o simulado e compara pelo texto canônico (`canon`: sem vazios, chaves em ordem, como o Firebase
+    guarda).
+  - **O mando alternado** pelo método do círculo: o mandante é quem está na posição ímpar (cada técnico desce uma posição por
+    rodada). Dentro de cada turno ninguém faz 3 jogos seguidos com o mesmo mando; |casa − fora| ≤ 1 no turno único e igual
+    no turno e returno. O returno espelha o turno NA MESMA ORDEM (ninguém joga contra o mesmo duas vezes seguidas): entre o
+    fim de um turno e o começo do outro pode haver 3 seguidos (o mando é neutro de qualquer jeito). Os técnicos entram nas
+    vagas do círculo pela semente.
+  - **As folgas do mata-mata** ficam nos pares espalhados pela chave (a inversão dos bits): duas folgas só se encontram na
+    2ª rodada quando falta jogo (5 técnicos: 3 folgas e 1 jogo).
+  - **O confronto direto é recursivo** (os empatados num grupo menor voltam ao confronto só entre si); o grupo que não
+    diminui vai ao sorteio (uma permutação dos técnicos pela semente da sala) e por fim ao técnico. Tudo pela ordem do
+    calendário: o C2 embaralha as chaves do objeto e a vista sai igual.
+  - **A classificação final** do mata-mata e do misto: até onde cada um chegou; dentro disso, a campanha nos jogos que fez
+    (mata-mata) ou a posição na fase de pontos (misto). **O misto com 2 técnicos** é um jogo de pontos e a final entre os
+    mesmos dois (a regra "até 4, os 2 primeiros"). **O melhor time** = a soma dos overall dos 11 do leilão (sem o −1/−2
+    da função).
+  - **O `.validate` opcional** já aceita o fluxo honesto dos jogos (só `jogos/$j/res` grava uma vez). As regras da hora
+    (`ini`, `trava`, `inicio` e `ts` iguais a `now`) e das transições (o feito não muda, o reservado só do aberto ou do nada,
+    o 'prazo' só com `now ≥ ini + resta`) ficam para o passo da sessão, conferidas com as gravações de verdade.
+  - **testar-leilao C** (~5 s; o arquivo inteiro ~52 s): C1 105 calendários, C2 600 tabelas contra a conta do teste (o
+    confronto direto decidiu 44 vezes, 1 recursivo, o sorteio 62) e 1800 com as chaves embaralhadas, C3/C6 280 chaves, C4
+    1500 jogos, C5 120 jogos iguais noutro aparelho, C7 o motor, C8 a máquina e o campeonato inteiro por 3 aparelhos ao
+    mesmo tempo na rede em memória (cada jogo reservado e gravado uma vez, o prazo parando e voltando, a mesma vista em
+    todos, as adulterações acusadas). Dez mutações reprovam: sem o corte do gol de ouro, sem o confronto direto, sem o
+    recursivo, gravar duas vezes, o motor sem o `semLesao`, o motor mudado sem a opção, pessoa × bot sem o prazo, a camisa
+    fora da vaga, sem o mando alternado e as folgas sem espalhar.
