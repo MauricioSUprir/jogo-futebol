@@ -3538,7 +3538,7 @@ async function testeCamp3d() {
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 4 (o par; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
+      ok(Lx.REGRAS === 5 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 5 (as notas escondidas, PR 6; o par desde as 4; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -3726,10 +3726,10 @@ async function testeCamp3d() {
     ok(!ok3.length, "PAR3 a vez do jogo de duas pessoas e do par: " + JSON.stringify(ok3));
 
     /* ---- PAR4 as regras: 4 (o par), as salas de regras 1, 2 e 3 aceitas (sem ele), a de 5 só olhar; o Jogar contra um bot não é o par ---- */
-    ok(Lx.REGRAS === 4 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5), "PAR4 as regras 4 e as aceitas");
+    ok(Lx.REGRAS === 5 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6), "PAR4 as regras 5 (as notas escondidas, PR 6; o par desde as 4) e as aceitas");
     A.retomar();
     const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
-    ok(A.sala.meta.regras === 4 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
+    ok(A.sala.meta.regras === Lx.REGRAS && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
     // (as salas de regras 3 — os 20 lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
     const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
     ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));

@@ -39,6 +39,8 @@
    Modo Leilão (PR 4; seção 7): o Jogar do jogo contra um bot de um treino abre o GOLAÇO com o time do leilão — 11 SEM banco
    (o pedido 11 + 11 e o mundo 11 × 11) —, a duração e a dificuldade da sala travadas e os escudos desenhados; o "Simular o resto"
    grava o feito '3d' antes de o 2D mostrar o placar, sem pausa. A página de ensaio da seção 6 mora em ferramentas/lib/ensaio-3d.mjs.
+   Notas escondidas do Modo Leilão (PR 6; seção 8): o treino com o Overall escondido leva partida.notasOcultas ao GOLAÇO e o 3D
+   mostra a tela antes do jogo, o Editar time e a pausa sem nota (o pedido do treino à mostra, seção 7, sem o campo).
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -806,10 +808,79 @@ if (fr) {
   await print("07-leilao-2d");
   confere("Leilão (PR 4): o Jogar abre o GOLAÇO com o time de 11 sem banco — o pedido 11 + 11 e o mundo 11 × 11 —, 3 min por tempo (10 800 ticks) e Difícil travados, mando neutro, o empate que continua no mata-mata, os escudos desenhados; o 3D aberto marca o abriu",
     esc && podeJ && !!ped && ped.n.join() === "11,11" && ped.jogadores.join() === "11,11" && ped.ticks === 10800 && ped.dif === "dificil" && ped.partida.minutosPorTempo === 3 && ped.partida.dificuldade === "dificil"
-    && ped.partida.ajustesFixos === true && ped.partida.neutro === true && ped.partida.empateContinua === true && ped.escudos.every(t => t === "ultimate") && abriu, { esc, podeJ, ped, abriu });
+    && ped.partida.ajustesFixos === true && ped.partida.neutro === true && ped.partida.empateContinua === true && ped.escudos.every(t => t === "ultimate") && abriu
+    // (o Overall à mostra: o pedido sem o campo das notas escondidas — PR 6)
+    && ped.partida.notasOcultas === undefined, { esc, podeJ, ped, abriu });
   confere("Leilão (PR 4): \"Simular o resto\" → o apito → o resultado do 3D gravado JÁ NO APITO (antes do tm3d:fim do \"Voltar ao Total Match\"; feito '3d', o placar do 3D) e antes de o 2D mostrar o placar, sem o botão de pausa; a sala confere (não congela)",
     !!r && feito && !!g && g.fim === "3d" && g.em3d && g.score[0] === r.res.homeGoals && g.score[1] === r.res.awayGoals && !g.alterada
     && W.gravados.length >= 1 && W.gravados.every(x => x.origem === "3d" && x.e === "feito") && W.fim != null && W.gravados[0].t < W.fim && W.gravados[0].t <= W.vista.t && !W.vista.pausa, { feito, g, res3d: r && { h: r.res.homeGoals, a: r.res.awayGoals }, W });
+  await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
+}
+
+// 8) as notas escondidas do Modo Leilão (PR 6; PLANO-LEILAO.md §3.6): um treino com o Overall escondido; o Jogar abre o GOLAÇO de
+// verdade com partida.notasOcultas no pedido e o 3D esconde as notas SÓ na tela — a tela antes do jogo (as fichas com "?" e a
+// raridade neutra, o canto sem o GERAL, a lista do leitor de tela sem nota nem geral), o Editar time do Personalizar (as cartas com
+// "?", sem a nota do time nem os números da carta) e a pausa (nada de nota) —; o resultado volta e é gravado como sempre (com 1 bot
+// o jogo é a final: no fim dele o campeonato acaba e as notas aparecem — a revelação da decisão 13)
+{
+  await p.evaluate(async () => {
+    TM.leilaoSessao.acelerar(40);
+    window.__SL = await TM.leilaoSessao.criarTreino({ liga: "it", bots: 1, formato: "mata", tempo: 10, duracao3d: 3, overall: "escondido", mundo: TM.data.mundoBase() });
+    TM.ui.go("leilao-lote");
+  });
+  const esc = await ate(() => !!(window.__SL.sala && window.__SL.sala.meta.estado === "escalacao"), null, 240);
+  await p.evaluate(() => { window.__SL.acelerar(1); return window.__SL.prontoEscalacao(true); });
+  await p.evaluate(() => TM.ui.go("leilao-camp"));
+  const podeJ = await ate(() => { const c = window.__SL.ver().camp; return !!(c && c.meuJogo && c.meuJogo.podeJogar && document.querySelector(".lei-jogar:not([disabled])")); }, null, 60);
+  const id = await p.evaluate(() => { const id = window.__leiId = window.__SL.ver().camp.meuJogo.id, b = document.querySelector(".lei-jogar"); if (b) b.click(); return id; });
+  const fr = podeJ ? await espera3d() : null;
+  let tela = null, ed = null, pausa = null, r = null;
+  // o texto que entrega a nota: "nota 78", "geral 81", "GERAL 81", "Nota do time" com número
+  const VAZA = "/\\b(nota|geral)\\s*\\d/i";
+  if (fr) {
+    await fr.waitForFunction(() => window.__golaco.prepartida && window.__golaco.prepartida.aberta && document.querySelectorAll("#prepartida .pp-ficha").length >= 11, null, { timeout: 30000 }).catch(() => {});
+    tela = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)(), g = window.__golaco, fs = [...document.querySelectorAll("#prepartida .pp-ficha")];
+      return { pedido: g.tm.pedido.partida.notasOcultas, pagina: g.notasOcultas, fichas: fs.length, notas: [...new Set(fs.map(f => f.querySelector(".pp-nota").textContent))], raridades: [...new Set(fs.map(f => [...f.classList].find(c => /^r-/.test(c))))],
+        geral: document.querySelectorAll("#prepartida .pp-geral, #prepartida .pp-est").length, lista: rx.test((document.querySelector("#prepartida .pp-lista") || {}).textContent || ""),
+        texto: rx.test(document.getElementById("prepartida").innerText) };
+    }, VAZA);
+    await print("08-leilao-oculto-tela");
+    // o Personalizar abre o Editar time (antes do jogo)
+    await abaDaTela(fr, "personalizar");
+    await fr.waitForFunction(() => document.querySelectorAll("#editar-time .carta").length >= 11, null, { timeout: 30000 }).catch(() => {});
+    await fr.waitForTimeout(400);
+    ed = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)(), raiz = document.getElementById("editar-time"), cs = [...raiz.querySelectorAll(".carta")];
+      const c0 = raiz.querySelector(".carta.no-campo"); if (c0) c0.click();
+      const info = (raiz.querySelector(".ed-info") || raiz).innerText;
+      const aria = cs.map(c => c.getAttribute("aria-label") || "").join(" | ");
+      return { cartas: cs.length, notas: [...new Set(cs.map(c => (c.querySelector(".c-nota") || {}).textContent.replace(/[°]/g, "")))], cab: (raiz.querySelector("[data-ed-nota]") || {}).innerHTML,
+        numeros: raiz.querySelectorAll(".ed-numeros").length, texto: rx.test(raiz.innerText) || rx.test(info), aria: rx.test(aria) };
+    }, VAZA);
+    await print("08-leilao-oculto-editor");
+    await fr.evaluate(() => { const b = document.querySelector('#editar-time [data-ed="voltar"]'); if (b) b.click(); });
+    await fr.waitForTimeout(600);
+    await abaDaTela(fr, "jogar");
+    await fr.waitForFunction(() => !window.__golaco.prepartida.aberta && window.__golaco.mundo.tick > 0, null, { timeout: 30000 }).catch(() => {});
+    await fr.waitForTimeout(500);
+    pausa = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)();
+      window.__golaco.abrirMenu();
+      const m = document.getElementById("menu"), txt = m ? m.innerText : "";
+      const c = document.querySelector('#menu [data-cmd="continuar"]'); if (c) c.click();
+      return { aberto: !!txt, texto: rx.test(txt), notas: document.querySelectorAll("#menu .pp-nota, #menu .c-nota").length };
+    }, VAZA);
+    r = await simulaEVolta(fr);
+  }
+  const feito = await ate(() => { const j = window.__SL.jogos[window.__leiId]; return !!(j && j.e === "feito"); }, null, 60);
+  const g = await p.evaluate(i => { const j = window.__SL.jogos[i], V = window.__SL.ver(); return j ? { e: j.e, fim: j.fim, alterada: !!V.alterada, oc: V.notasOcultas, campFim: !!(V.camp && V.camp.fim), rev: V.revelados } : null; }, id);
+  confere("Leilão (PR 6): o Overall escondido vai ao GOLAÇO (partida.notasOcultas) e a tela antes do jogo mostra as 11 fichas com '?' e a raridade neutra, sem o GERAL nem as estrelas e sem nota na lista do leitor de tela",
+    esc && podeJ && !!tela && tela.pedido === true && tela.pagina === true && tela.fichas === 11 && tela.notas.join() === "?" && tela.raridades.join() === "r-n" && tela.geral === 0 && !tela.lista && !tela.texto, { esc, podeJ, tela });
+  confere("Leilão (PR 6): o Editar time (o Personalizar) com as cartas em '?', sem a nota do time, os números da carta e nota nenhuma no texto e nos rótulos; a pausa sem nota",
+    !!ed && ed.cartas >= 11 && ed.notas.join() === "?" && !ed.cab && !ed.numeros && !ed.texto && !ed.aria && !!pausa && pausa.aberto && !pausa.texto && !pausa.notas, { ed, pausa });
+  confere("Leilão (PR 6): o jogo do 3D com as notas escondidas volta e é gravado como sempre (feito '3d'); era a final: o campeonato acabou e as notas aparecem",
+    !!r && feito && !!g && g.fim === "3d" && !g.alterada && g.campFim && g.oc === false && Array.isArray(g.rev) && g.rev.every(Boolean), { g, res: r && r.res && [r.res.homeGoals, r.res.awayGoals] });
   await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
 }
 

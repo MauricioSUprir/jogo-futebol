@@ -1043,6 +1043,10 @@ async function casoDois() {
   await espera(400);
   Object.assign(d6f, { prontoB1: await prontoB(), etq1: await etqB(), etqA1: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-res .lei-etq")].map(e => e.textContent)),
     vB: await B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { o: V.overall, oc: V.notasOcultas, cfg: V.cfg.overall }; }),
+    resB: await B.p.evaluate(() => (document.querySelector(".lei-sag-resumo") || {}).textContent || ""),
+    // nada sobre nada no Saguão escondido (o segmentado do Overall no dono, a etiqueta e a frase a mais nos dois)
+    nsA: await nadaSobreNada(A, "saguao-oculto-dono", () => !!document.querySelector(".lei-sagbar")),
+    nsB: await nadaSobreNada(B, "saguao-oculto-convidado", () => !!document.querySelector(".lei-sagbar")),
     ativo: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-cfg .lei-overall .seg-btn")].filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()).join()) });
   await clicaSel(A, '.lei-sag-cfg .lei-overall [data-foco="overall-mostra"]');
   await ate(A.p, () => TM.leilaoSessao.atual().ver().overall === "mostra", null, 10000);
@@ -1051,10 +1055,11 @@ async function casoDois() {
   await espera(300);
   d6f.etq2 = await etqB();
   d6f.vB2 = await B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { o: V.overall, oc: V.notasOcultas }; });
-  confere(`${ID}6f o Overall pela tela do dono (À mostra · Escondido em Sala e clube; o convidado só vê a etiqueta): Escondido zera o Pronto do convidado, "Overall escondido" no resumo dos dois e as notas escondidas na vista; À mostra de novo tira a etiqueta`,
+  confere(`${ID}6f o Overall pela tela do dono (À mostra · Escondido em Sala e clube; o convidado só vê a etiqueta): Escondido zera o Pronto do convidado, "Overall escondido" e a frase no resumo dos dois, as notas escondidas na vista e nada sobre nada (os dois, 3 tamanhos, escuro e claro); À mostra de novo tira a etiqueta`,
     d6f.pronto0 && d6f.opA && d6f.opA.join("|") === "À mostra*|Escondido" && !d6f.opB && !d6f.etq0.includes("Overall escondido")
-      && !d6f.prontoB1 && d6f.etq1.includes("Overall escondido") && d6f.etqA1.includes("Overall escondido") && d6f.vB.o === "escondido" && d6f.vB.oc && d6f.vB.cfg === "escondido" && d6f.ativo === "Escondido"
-      && !d6f.etq2.includes("Overall escondido") && d6f.vB2.o === "mostra" && !d6f.vB2.oc, d6f);
+      && !d6f.prontoB1 && d6f.etq1.includes("Overall escondido") && d6f.etqA1.includes("Overall escondido") && /notas ficam escondidas até o fim do campeonato/.test(d6f.resB) && d6f.vB.o === "escondido" && d6f.vB.oc && d6f.vB.cfg === "escondido" && d6f.ativo === "Escondido"
+      && !d6f.nsA.ruins.length && !d6f.nsB.ruins.length && d6f.nsA.medidas.length === 6
+      && !d6f.etq2.includes("Overall escondido") && d6f.vB2.o === "mostra" && !d6f.vB2.oc, Object.assign({}, d6f, { nsA: d6f.nsA.ruins.slice(0, 3), nsB: d6f.nsB.ruins.slice(0, 3) }));
 
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");

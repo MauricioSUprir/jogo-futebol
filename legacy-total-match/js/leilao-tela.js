@@ -2642,7 +2642,7 @@
     var lg = (V.liga && V.liga.nome) || "";
     b.appendChild(el("h2", { class: "lei-sag-res-tit", id: "lei-sag-res-t", text: "Cada técnico entra com " + rs(L().SALDO).replace(" ", "\u00a0") + "." }));
     b.appendChild(el("p", { class: "lei-sag-resumo", text: "Dinheiro do jogo para comprar os " + L().VAGAS + " do time no leilão dos melhores da " + (lg || "liga") +
-      ". O que sobrar no bolso não vale nada no campeonato." }));
+      ". O que sobrar no bolso não vale nada no campeonato." + (V.overall === "escondido" ? " As notas ficam escondidas até o fim do campeonato." : "") }));
     // (as etiquetas das fotos: os jogadores, o tempo e o formato; os bots só quando há bots e o 3D sempre que há jogo em 3D — sem
     // bots, só a duração: o 3D entre amigos, o par do PR 5. A liga está na frase e os
     // técnicos na contagem "N/M participantes": repetidas aqui, o cartão ficava com o dobro da altura do das fotos)
