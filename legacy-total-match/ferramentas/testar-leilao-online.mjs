@@ -403,7 +403,7 @@ const sobreposicao = p => p.evaluate(() => {
   const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
   // no fim da rolagem, o último da página termina acima da barra fixa (a de lance ou a do saguão)
   let atras = null;
-  const barra = document.querySelector(".lei-lance:not([hidden]), .lei-sagbar:not([hidden])");
+  const barra = document.querySelector(".lei-lance:not([hidden]), .lei-sagbar:not([hidden]), .lei-criarbar");
   if (barra) {
     const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
     const topo = barra.getBoundingClientRect().top;
@@ -687,6 +687,20 @@ async function casoDois() {
   // o formato Pontos + mata-mata (o campeonato misto com 2: a rodada de pontos e a Final)
   await clicaSel(A, ".lei-fmt[data-fmt='misto']");
   const fmtD = await ate(A.p, () => { const b = document.querySelector(".lei-fmt[data-fmt='misto']"); return !!(b && b.getAttribute("aria-pressed") === "true"); }, null, 5000);
+  // a Criar das fotos com a conta online: o passo com o deslizante (2 técnicos e nenhum bot), o formato marcado no cartão com o
+  // desenho, as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada (escuro e claro)
+  const criarD = await A.p.evaluate(() => {
+    const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]'), dv = d => d ? [+d.min, +d.max, +d.value].join() : null;
+    const fm = q(".lei-fmt[data-fmt='misto']"), sv = fm && fm.querySelector("svg.lei-fmt-svg");
+    return { dT: dv(g("Técnicos na sala").querySelector(".lei-passo-desl")), dB: dv(g("Bots de treino").querySelector(".lei-passo-desl")), aviso: !!q(".lei-criar .lei-aviso-sala"),
+      des: sv ? sv.getAttribute("data-desenho") : null, check: !!q(".lei-criar .lei-fmt-ok"), sem3d: q('.lei-criar [data-secao="3d"]').hidden,
+      fixa: getComputedStyle(q(".lei-criarbar")).position, resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
+  });
+  const nsCriar = await nadaSobreNada(A, "dois-criar", () => !!document.querySelector(".lei-criarbar"));
+  confere(`${ID}1b a Criar sala das fotos com a conta online: sem o aviso, 2 técnicos e nenhum bot no − e + com o deslizante (2–8 e 0–1), o Pontos + mata-mata marcado no cartão com o desenho (sem o check), as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada nem atrás da barra (${nsCriar.medidas.length} telas)`,
+    !criarD.aviso && criarD.dT === "2,8,2" && criarD.dB === "0,1,0" && criarD.des === "tabela-chave" && !criarD.check && criarD.sem3d && criarD.fixa === "fixed"
+      && /\. Até 2 técnicos, pontos \+ mata-mata, 4-4-2, com a sala cheia, /.test(criarD.resumo) && criarD.bt === "Criar sala" && !nsCriar.ruins.length,
+    { criarD, ruins: nsCriar.ruins.slice(0, 3) });
   await clicaSel(A, ".lei-comecar");
   await ate(A.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-conv-cod") && TM.leilaoSessao.atual(), null, 30000);
   const cod = await A.p.evaluate(() => TM.leilaoSessao.atual().codigo);
