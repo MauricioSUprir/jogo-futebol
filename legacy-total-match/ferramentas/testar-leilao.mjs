@@ -34,8 +34,11 @@
    --tela: o navegador num aparelho (§4.2; o Chromium do Playwright, o TM servido daqui, o relógio do treino acelerado pelo
    gancho da sessão): "Mais modos" com 13 atalhos, o treino inteiro com 3 bots (os botões, os apagados com o motivo, o Tudo
    de dois toques, passar, outro valor), recarregar no meio, a escalação, nada sobre nada nos 8 tamanhos, a barra de lance à
-   vista com o relógio rodando, o tema claro e nenhum erro no console. Uso: node ferramentas/testar-leilao.mjs --tela
-   [--prints <pasta>] (o campeonato entra no PR 3). Nenhum teste usa o Firebase: o SDK do gstatic é trocado por um vazio. */
+   vista com o relógio rodando, o tema claro, o Formato na Criar, o campeonato no treino pela tela (os 3 formatos até o
+   campeão: Seu jogo com o prazo, o Simular partida que grava antes de mostrar, o Ver o jogo no 2D sem pausa com a
+   prorrogação do gol de ouro e os pênaltis gravados, a tabela, a chave com folgas, o fim) nos 8 tamanhos, no escuro e no
+   claro, e nenhum erro no console. Uso: node ferramentas/testar-leilao.mjs --tela [--prints <pasta>]. Nenhum teste usa o
+   Firebase: o SDK do gstatic é trocado por um vazio. */
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
@@ -3496,7 +3499,7 @@ async function testeTela() {
   // nada sobre nada: o critério do testar-online3d.mjs (sobreposicao), com a barra de lance (fixa) numa camada própria — o
   // que rola por baixo dela não "encosta" nela; no fim da rolagem, nada fica atrás dela (o espaço do fim da página)
   const sobreposicao = p => p.evaluate(() => {
-    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa";
+    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l";
     const visivel = e => {
       const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
       const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
@@ -3558,6 +3561,82 @@ async function testeTela() {
     await p.setViewportSize({ width: 390, height: 844 });
     await espera(250);
   }
+  // os 8 tamanhos no escuro e no claro (o tema volta ao escuro no fim)
+  async function nadaSobreNadaTemas(p, rotulo, extra) {
+    await nadaSobreNada(p, rotulo, extra);
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await nadaSobreNada(p, rotulo + "-claro", extra);
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+  }
+  // o campeonato no tema claro: caixas e jogos claros, texto escuro (o pôster do campeão fica escuro, como o do fim de jogo)
+  const temaClaroCamp = p => p.evaluate(() => {
+    TM.ui.applyTheme("light");
+    const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+    const q = s => document.querySelector(s), cs = s => q(s) ? getComputedStyle(q(s)) : null;
+    const out = { caixa: cs(".lei-rodada") && lum(cs(".lei-rodada").backgroundColor), jogo: cs(".lei-jogo") && lum(cs(".lei-jogo").backgroundColor),
+      texto: cs(".lei-rod-n") && lum(cs(".lei-rod-n").color), seu: cs(".lei-seujogo") ? lum(cs(".lei-seujogo").backgroundColor) : null };
+    TM.ui.applyTheme("dark");
+    return out;
+  });
+  // os extras medidos no campeonato: a tabela não rola de lado dentro da caixa e os escudos são os desenhados
+  const extraCamp = async p => p.evaluate(() => {
+    const r = document.querySelector(".lei-tab-rola");
+    return { tabelaRola: r ? r.scrollWidth > r.clientWidth + 1 : false, escudosReais: document.querySelectorAll(".lei-corpo-camp img").length };
+  });
+  // o campeonato pela tela: toca em Simular partida sempre que dá e vê cada jogo no 2D (Pular, Ver resultado, a prorrogação
+  // e os pênaltis gravados), conferindo o que a tela mostra contra o resultado GRAVADO; para no fim ou quando ate(V) diz
+  async function campPelaTela(p, ate0, limiteMs = 300000) {
+    const vis = { simular: 0, jogos: 0, pror: 0, ouro: 0, pen: 0, ruins: [], fim: false };
+    const t0 = Date.now();
+    while (Date.now() - t0 < limiteMs) {
+      const r = await p.evaluate(ate0 => { const S = TM.leilaoSessao.atual(), V = S && S.ver(); return { rota: TM.ui.current(), estado: V && V.estado, ate: !!(ate0 && V && V.camp && new Function("V", "return " + ate0)(V)) }; }, ate0 || null);
+      if (r.estado === "fim" && r.rota === "leilao-camp") { vis.fim = true; break; }
+      if (r.ate && r.rota === "leilao-camp") break;
+      if (r.rota === "leilao-camp") {
+        const clicou = await p.evaluate(() => { const b = document.querySelector(".lei-simular"); if (b && !b.disabled) { b.click(); return true; } return false; });
+        if (clicou) { vis.simular++; await ate(p, () => TM.ui.current() !== "leilao-camp" || !document.querySelector(".lei-simular[aria-busy]"), null, 15000); }
+        await espera(clicou ? 250 : 100);
+        continue;
+      }
+      if (r.rota !== "leilao-jogo") { vis.ruins.push("rota " + r.rota); await p.evaluate(() => TM.ui.go("leilao-camp")); continue; }
+      // no 2D: o gravado, sem pausa; Pular mostra o placar dos 90' gravado; nenhum sorteio novo pelo matchview
+      vis.jogos++;
+      await espera(250);
+      const g = await p.evaluate(() => {
+        const id = TM.leilaoTela.estado().jogo, J = TM.leilaoSessao.atual().partida(id);
+        window.__sims2d = 0;
+        return { id, res: J && { score: J.res.score, pror: J.res.pror ? J.res.pror.score : null, ouro: J.res.pror && J.res.pror.ouro != null, pen: J.res.pen ? { score: J.res.pen.score, n: J.res.pen.kicks.length } : null },
+          pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)), crest: document.querySelectorAll(".bc-crest.utx-escudo").length };
+      });
+      // animando (a velocidade normal): sem o botão de pausa, e o Pular vai adiante; instantâneo: o placar dos 90' já à mostra
+      const f90 = await p.evaluate(() => ({ animando: [...document.querySelectorAll(".screen.is-active .actions button")].some(x => /Pular/.test(x.textContent)),
+        placar: (document.querySelector(".live-score") || {}).textContent, overlay: !!document.querySelector(".pause-overlay"), campo2d: [...document.querySelectorAll(".screen.is-active button")].some(x => /Campo 2D/.test(x.textContent)) }));
+      if (f90.animando) { vis.animados = (vis.animados || 0) + 1; await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active .actions button")].find(x => /Pular/.test(x.textContent)); if (b) b.click(); }); await espera(120); }
+      else vis.placares = (vis.placares || 0) + 1;
+      f90.sims = await p.evaluate(() => window.__sims2d);
+      if (!g.res || g.pausa || g.crest !== 2 || f90.overlay || f90.sims || !f90.campo2d || (!f90.animando && f90.placar !== g.res.score[0] + " - " + g.res.score[1])) vis.ruins.push({ jogo: g.id, g, f90 });
+      // Ver resultado → (a prorrogação → os pênaltis) → o Campeonato
+      for (let k = 0; k < 6; k++) {
+        const rota = await p.evaluate(() => TM.ui.current());
+        if (rota === "leilao-camp") break;
+        if (rota === "prorrogacao") {
+          vis.pror++;
+          const pr = await p.evaluate(() => ({ t: document.querySelector(".pror-t").textContent, num: document.querySelector(".pror-num").textContent, ouro: !!document.querySelector(".pror-ouro"), s: document.querySelector(".pror-s").textContent }));
+          if (g.res.ouro) vis.ouro++;
+          if (!/GOL DE OURO/.test(pr.t) || !/1º gol acaba/.test(pr.s) || !g.res.pror || pr.num !== g.res.pror[0] + " × " + g.res.pror[1] || pr.ouro !== g.res.ouro) vis.ruins.push({ jogo: g.id, pror: pr, res: g.res });
+        }
+        if (rota === "pen-shootout") {
+          vis.pen++;
+          await ate(p, () => [...document.querySelectorAll(".screen.is-active button")].some(b => /^Continuar$/.test(b.textContent.trim())), null, 30000);
+          const pk = await p.evaluate(() => ({ n: document.querySelectorAll(".pk-kick").length, st: document.querySelector(".pk-status").textContent, crest: document.querySelectorAll(".pk-crest.utx-escudo").length }));
+          if (!g.res.pen || pk.n !== g.res.pen.n || pk.st.indexOf(g.res.pen.score[0] + "–" + g.res.pen.score[1]) < 0 || pk.crest !== 2) vis.ruins.push({ jogo: g.id, pen: pk, res: g.res });
+        }
+        await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active button")].find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); });
+        await espera(250);
+      }
+    }
+    return vis;
+  }
   const textoMotivos = await (async () => { const { p } = await aparelho(390, 844, true); const m = await p.evaluate(() => ["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim"].map(k => [k, TM.leilaoSessao.textoMotivo(k, { max: 0 })])); await p.context().close(); return m; })();
 
   try {
@@ -3601,8 +3680,8 @@ async function testeTela() {
     await p.context().addInitScript(vigiaVivo);
     await p.evaluate(vigiaVivo);
     const html = await (await fetch(srv.url + "index.html")).text();
-    confere("T2 a região ao vivo no HTML inicial (#lei-vivo, role=status, aria-live=polite) e os 4 arquivos do leilão no index.html",
-      /<div id="lei-vivo"[^>]*role="status"[^>]*aria-live="polite"/.test(html) && ["leilao.js", "leilao-rede.js", "leilao-sessao.js", "leilao-tela.js"].every(f => html.includes("js/" + f + "?v=")));
+    confere("T2 a região ao vivo no HTML inicial (#lei-vivo, role=status, aria-live=polite) e os 5 arquivos do leilão no index.html",
+      /<div id="lei-vivo"[^>]*role="status"[^>]*aria-live="polite"/.test(html) && ["leilao.js", "leilao-camp.js", "leilao-rede.js", "leilao-sessao.js", "leilao-tela.js"].every(f => html.includes("js/" + f + "?v=")));
     await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(b => b.textContent.trim() === "Leilão").click());
     await espera(400);
     const entrada = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
@@ -3626,6 +3705,19 @@ async function testeTela() {
     });
     confere("T2 técnicos de 2 a 8 (os botões param nas pontas), 'Você e 7 bots', a duração estimada; volta a 4 (3 bots)",
       passo.min === 2 && passo.menosOff && passo.max === 8 && passo.maisOff && /Você e 7 bots/.test(passo.hint) && passo.agora === 4 && /cerca de \d+ a \d+ min/.test(passo.resumo), passo);
+    // o Formato: 3 cartões, o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y min"; o toque troca e o resumo diz
+    const fmt = await p.evaluate(async () => {
+      const cards = () => [...document.querySelectorAll(".lei-criar .lei-fmt")];
+      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent });
+      const a = ler();
+      const out = { a, passos: [] };
+      for (const f of ["pontos", "misto", "mata"]) { document.querySelector('.lei-criar .lei-fmt[data-fmt="' + f + '"]').click(); await new Promise(r => setTimeout(r, 60)); out.passos.push(ler()); }
+      return out;
+    });
+    const linhaOk = (l, n) => new RegExp("^" + n + " rodadas com 4 técnicos · ~\\d+ a \\d+ min$").test(l);
+    confere("T2 o Formato na Criar: Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato e a duração do campeonato",
+      fmt.a.on.join() === "mata" && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4) && /Mata-mata · leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min/.test(fmt.a.resumo)
+      && fmt.passos[0].on.join() === "pontos" && /Pontos corridos/.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /Pontos \+ mata-mata/.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
     // a liga pela folha; a formação 4-3-3; o clube
     await p.click(".lei-liga-bt");
     await espera(300);
@@ -3934,16 +4026,95 @@ async function testeTela() {
       // (o time pode caber numa formação só: então todas as outras estão apagadas com o motivo)
       (forma.alvo ? V.meu.escalacao.formacao === forma.alvo : forma.off.length === 5) && forma.off.every(t => /não cabe/.test(t)), { forma, agora: V.meu.escalacao.formacao });
     await print(p, "8-escalacao");
-    // Pronto → o campeonato (em breve)
+    // Pronto → o campeonato: quem confirmou vai sozinho à aba Campeonato
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
     await clica(p, "^Pronto$");
     await ate(p, () => TM.leilaoSessao.atual().ver().estado === "camp", null, 15000);
-    await p.click('.lei-aba[data-rota="leilao-camp"]');
+    const foiCamp = await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 10000);
     await espera(300);
-    const camp = await p.evaluate(() => ({ rota: TM.ui.current(), estado: TM.leilaoSessao.atual().ver().estado, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
-      feitas: [...document.querySelectorAll(".lei-aba.feita")].map(b => b.dataset.rota) }));
-    confere("T8 'Pronto' leva ao campeonato: a aba Campeonato diz 'Campeonato em breve'; Leilão e Escalação com o check",
-      camp.rota === "leilao-camp" && camp.estado === "camp" && /Campeonato em breve/i.test(camp.txt) && camp.feitas.join() === "leilao-lote,leilao-escalacao", camp);
+    const camp = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { rota: TM.ui.current(), estado: V.estado, formato: V.camp && V.camp.formato, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
+      feitas: [...document.querySelectorAll(".lei-aba.feita")].map(b => b.dataset.rota), seu: !!document.querySelector(".lei-seujogo"), chave: !!document.querySelector(".lei-chave"), tabela: !!document.querySelector(".lei-tabela"),
+      jogos: document.querySelectorAll(".lei-rodada .lei-jogo").length }; });
+    confere("T8 'Pronto' leva ao campeonato sozinho: a aba Campeonato com o Mata-mata (Seu jogo, a rodada com 2 jogos e a chave, sem tabela), sem 'em breve'; Leilão e Escalação com o check",
+      foiCamp && camp.estado === "camp" && camp.formato === "mata" && camp.seu && camp.chave && !camp.tabela && camp.jogos === 2 && !/em breve/i.test(camp.txt) && /Mata-mata/.test(camp.txt) && camp.feitas.join() === "leilao-lote,leilao-escalacao", camp);
     await print(p, "8-campeonato");
+
+    /* T11 o Campeonato no treino: Seu jogo com o prazo, a Escalação que vale no próximo jogo, o Simular partida (grava e só
+       então mostra) e o Ver o jogo no 2D sem pausa */
+    await ate(p, () => { const V = TM.leilaoSessao.atual().ver(); return V.camp && V.camp.meuJogo && V.camp.meuJogo.e === "aberto" && V.camp.meuJogo.podeSimular; }, null, 15000);
+    await espera(300);
+    const pz1 = await p.evaluate(() => TM.leilaoTela.estado().prazo);
+    await espera(1300);
+    const seu = await p.evaluate(() => ({ prazo: TM.leilaoTela.estado().prazo, escudos: document.querySelectorAll(".lei-seujogo .utx-escudo").length, simular: !!document.querySelector(".lei-simular:not([disabled])"),
+      txt: document.querySelector(".lei-seujogo").innerText.replace(/\s+/g, " ") }));
+    confere("T11 Seu jogo: os dois escudos desenhados, 'Simulado sozinho em M:SS' andando pelo relógio da sala e o Simular partida",
+      /^Simulado sozinho em \d:\d\d/.test(pz1 || "") && /^Simulado sozinho em \d:\d\d/.test(seu.prazo || "") && seu.prazo !== pz1 && seu.escudos === 2 && seu.simular && /Seu jogo · Semifinal/i.test(seu.txt), { pz1, seu });
+    await nadaSobreNadaTemas(p, "camp", extraCamp);
+    const claroCamp = await temaClaroCamp(p);
+    confere("T11 o Campeonato no tema claro: as caixas e os jogos claros, o texto escuro", claroCamp.caixa > 0.9 && claroCamp.jogo > 0.9 && claroCamp.seu > 0.9 && claroCamp.texto < 0.3, claroCamp);
+    // a Escalação continua aberta no campeonato e diz que vale a partir do próximo jogo
+    await p.click('.lei-aba[data-rota="leilao-escalacao"]');
+    await espera(300);
+    const escCamp = await p.evaluate(() => ({ txt: document.querySelector(".lei-esc-camp").innerText, vagas: document.querySelectorAll('.lei-pitch-esc .lei-vaga[role="button"]').length }));
+    confere("T11 a Escalação no campeonato: as 11 vagas tocáveis e 'vale a partir do seu próximo jogo que ainda não começou'", escCamp.vagas === 11 && /próximo jogo que ainda não começou/.test(escCamp.txt), escCamp);
+    await p.click('.lei-aba[data-rota="leilao-camp"]');
+    await ate(p, () => !!document.querySelector(".lei-simular"), null, 10000);
+    // o Simular partida: só abre o 2D com o jogo JÁ gravado (feito), e o 2D toca o gravado sem pausa
+    await p.evaluate(() => {
+      const o = TM.engine.simulate; window.__sims2d = 0;
+      // conta só os sorteios feitos pelo 2D (o resimRest da pausa): a conferência da sessão também simula, por outro caminho
+      TM.engine.simulate = function () { if (/matchview\.js/.test(new Error().stack || "")) window.__sims2d++; return o.apply(this, arguments); };
+      window.__feitoAoAbrir = null;
+      const go = TM.ui.go;
+      TM.ui.go = function (r, prm) { if (r === "leilao-jogo") { const S = TM.leilaoSessao.atual(), V = S.ver(); let g = null; V.camp.rodadas.forEach(R => R.jogos.forEach(x => { if (x.id === prm.id) g = x; })); window.__feitoAoAbrir = g ? g.e : "?"; } return go.apply(this, arguments); };
+    });
+    const v1 = await campPelaTela(p, "V.camp.rodadas[0].feita", 60000);
+    const aoAbrir = await p.evaluate(() => window.__feitoAoAbrir);
+    confere("T11 'Simular partida' grava antes de mostrar: o 2D abre com o jogo já feito, anima sem o botão de pausa (pauseSide null) e não sorteia nada",
+      v1.simular >= 1 && v1.jogos >= 1 && v1.animados >= 1 && aoAbrir === "feito" && !v1.ruins.length, { v1, aoAbrir });
+    // o estado de cada jogo na rodada: Simulado com o placar e o Ver o jogo
+    const linhas = await p.evaluate(() => [...document.querySelectorAll(".lei-rodada .lei-jogo")].map(li => ({ e: li.dataset.e, est: li.querySelector(".lei-jg-est").textContent, pl: li.querySelector(".lei-jg-pl").textContent, ver: !!li.querySelector(".lei-jg-ver") })));
+    confere("T11 os jogos da rodada com o estado ('Simulado' com o placar e o Ver o jogo; 'Esperando' sem placar)",
+      linhas.length > 0 && linhas.every(l => (l.e === "feito" && /^Simulado/.test(l.est) && /^\d+ × \d+$/.test(l.pl) && l.ver) || (l.e !== "feito" && /Esperando|Simulando|A definir/.test(l.est) && l.pl === "×" && !l.ver)), linhas);
+    // ‹ › pela rodada mantém o foco no botão
+    const nav1 = await p.evaluate(async () => {
+      const rod = () => document.querySelector(".lei-rodada").dataset.rodada, a = rod();
+      const prox = document.querySelector('.lei-rod-bt[data-foco="rod-prox"]'), ant = document.querySelector('.lei-rod-bt[data-foco="rod-ant"]');
+      const alvo = !prox.disabled ? prox : ant; alvo.focus(); alvo.click();
+      await new Promise(r => setTimeout(r, 120));
+      const b = rod(), foco = document.activeElement && document.activeElement.dataset.foco;
+      document.activeElement.click();
+      await new Promise(r => setTimeout(r, 120));
+      return { a, b, foco, c: rod(), vista: TM.leilaoTela.estado().rodadaVista };
+    });
+    confere("T11 ‹ › mostra as outras rodadas e o foco fica no botão", nav1.a !== nav1.b && /^rod-/.test(nav1.foco || "") && nav1.vista != null, nav1);
+    await p.evaluate(() => { const b = document.querySelector('[data-foco="rod-vez"]'); if (b) b.click(); });
+
+    /* T12 o resto do mata-mata até o campeão pela tela, e o fim (o 2D instantâneo daqui em diante: o placar dos 90' à mostra) */
+    await p.evaluate(() => { TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { matchSpeed: "instantaneo" })); TM.leilaoSessao.acelerar(20); });
+    const v2 = await campPelaTela(p, null, 120000);
+    await espera(400);
+    const fimV = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return { estado: V.estado, campeao: C.campeao, classificacao: C.classificacao, art: C.artilharia[0] ? C.artilharia[0].nome : null, mt: C.melhorTime,
+      nomes: V.tecnicos.map(t => t.clube.nome), eu: V.eu, rota: TM.ui.current(),
+      poster: document.querySelector(".lei-campeao") ? document.querySelector(".lei-campeao").innerText.replace(/\s+/g, " ") : "", escPoster: document.querySelectorAll(".lei-campeao .utx-escudo").length,
+      classe: [...document.querySelectorAll(".lei-class .lei-cl-n")].map(e => e.textContent), dest: [...document.querySelectorAll(".lei-dest .lei-dest-n")].map(e => e.textContent),
+      bts: [...document.querySelectorAll(".lei-fim-acoes button")].map(b => b.textContent.trim()) }; });
+    confere("T12 o mata-mata até o campeão pela tela (cada jogo visto no 2D conferido contra o gravado: o placar dos 90', a prorrogação e os pênaltis)", v2.fim && fimV.estado === "fim" && !v2.ruins.length, { v2, estado: fimV.estado });
+    confere("T12 o fim: o campeão no pôster com o escudo desenhado, a classificação final na ordem, o artilheiro, o melhor time pela soma das notas, Voltar e Criar outra sala",
+      fimV.rota === "leilao-camp" && fimV.escPoster === 1 && fimV.poster.indexOf(fimV.nomes[fimV.campeao]) >= 0 && /Campeão/i.test(fimV.poster)
+      && fimV.classe.join("|") === fimV.classificacao.map(t => fimV.nomes[t]).join("|") && fimV.dest[0] === (fimV.art || "Ninguém marcou") && fimV.dest[1] === fimV.nomes[fimV.mt.t]
+      && fimV.bts.join("|") === "Voltar|Criar outra sala" && (fimV.campeao === fimV.eu ? /Você é o campeão/i.test(fimV.poster) : /Seu lugar: \d+º/i.test(fimV.poster)), fimV);
+    const anCamp = await p.evaluate(() => TM.leilaoTela.anuncios());
+    confere("T12 a região ao vivo falou a rodada que abriu e o campeão", anCamp.some(a => /começou$/.test(a) && /Final|Semifinal|Rodada/.test(a)) && anCamp.some(a => /^O campeonato acabou: campeão .+/.test(a)), anCamp.slice(-8));
+    await nadaSobreNadaTemas(p, "fim", extraCamp);
+    await print(p, "12-fim");
+    // Criar outra sala abre a Criar (o treino); volta à sala para o Sair do T9
+    await clica(p, "^Criar outra sala$");
+    await espera(300);
+    const outra = await p.evaluate(() => TM.ui.current());
+    await p.evaluate(() => TM.ui.go("leilao-camp"));
+    await espera(300);
+    confere("T12 'Criar outra sala' abre a Criar sala", outra === "leilao-criar", outra);
 
     /* T9 Sair da sala (com confirmação) apaga o treino deste aparelho */
     await p.click(".lei-sb.sair");
@@ -3968,6 +4139,89 @@ async function testeTela() {
         r1.rota === "leilao" && r1.convite === "AB2CD3" && r2 === null, { r1, r2 });
       await cx.close();
     }
+
+    /* T13 os outros formatos até o campeão pela tela: Pontos corridos com 8 (a tabela com 8), Pontos + mata-mata com 8 (a
+       tabela e a chave da fase final) e o Mata-mata com 6 (a chave com as folgas); nada sobre nada nos 8 tamanhos, no
+       escuro e no claro. O leilão desses passa em tudo pela sessão (a tela do leilão já foi conferida no T3–T7). */
+    async function treinoAteCamp(T, formato) {
+      await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
+      await espera(400);
+      await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]');
+        for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
+      await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
+      await clica(p, "Começar o treino");
+      await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 30000);
+      // (no fim do leilão o relógio volta ao normal na hora: com ele a ×40, os 60 s da escalação passariam antes de a tela ir até ela)
+      for (let i = 0; i < 4000; i++) {
+        const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(1); return V.estado; });
+        if (e !== "leilao") break;
+        await espera(40);
+      }
+      await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
+      await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+      await clica(p, "^Pronto$");
+      await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
+      await espera(300);
+      const V = await ver(p);
+      return { T: V.T, formato: V.camp && V.camp.formato };
+    }
+    const fimDe = () => p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return { estado: V.estado, n: document.querySelectorAll(".lei-class .lei-cl").length,
+      classe: [...document.querySelectorAll(".lei-class .lei-cl-n")].map(e => e.textContent).join("|"), esperado: C.classificacao.map(t => V.tecnicos[t].clube.nome).join("|"),
+      x: [...document.querySelectorAll(".lei-class .lei-cl-x")].map(e => e.textContent), poster: !!document.querySelector(".lei-campeao .utx-escudo") }; });
+
+    // Pontos corridos com 8
+    const tp = await treinoAteCamp(8, "pontos");
+    const vp1 = await campPelaTela(p, "V.camp.atual >= 3", 120000);
+    const tab = await p.evaluate(() => { const C = TM.leilaoSessao.atual().ver().camp; return { linhas: document.querySelectorAll(".lei-tabela tbody tr").length,
+      pts: [...document.querySelectorAll(".lei-tabela tbody tr td.c7")].map(td => +td.textContent).join(), esperado: C.tabela.map(r => r.pts).join(), eu: document.querySelectorAll(".lei-tabela tbody tr.eu").length,
+      chave: !!document.querySelector(".lei-chave"), sub: document.querySelector(".lei-camp-sub").textContent }; });
+    confere("T13 Pontos corridos com 8: a tabela com os 8 na ordem da sessão, a minha linha marcada, sem chave; 'Rodada N de 14 · 1º turno'",
+      tp.T === 8 && tp.formato === "pontos" && tab.linhas === 8 && tab.pts === tab.esperado && tab.eu === 1 && !tab.chave && /^Rodada \d+ de 14 · [12]º turno$/.test(tab.sub) && !vp1.ruins.length, { tp, tab, ruins: vp1.ruins.slice(0, 3) });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await nadaSobreNadaTemas(p, "camp-pontos8", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const vp2 = await campPelaTela(p, null, 300000);
+    const fp = await fimDe();
+    confere("T13 Pontos corridos até o campeão pela tela: a classificação final com os 8 (na ordem da tabela) e os pontos de cada um",
+      vp2.fim && !vp2.ruins.length && fp.estado === "fim" && fp.n === 8 && fp.classe === fp.esperado && fp.x.every(t => /^\d+ pontos?$/.test(t)) && fp.poster, { fp, ruins: vp2.ruins.slice(0, 3), jogos: vp1.jogos + vp2.jogos });
+    await nadaSobreNadaTemas(p, "fim-pontos8", extraCamp);
+
+    // Pontos + mata-mata com 8: a fase de pontos, depois a chave com os 4 classificados
+    const tm = await treinoAteCamp(8, "misto");
+    const vm1 = await campPelaTela(p, "V.camp.ligaFeita", 240000);
+    const mx = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return {
+      classif: document.querySelectorAll(".lei-tabela tbody tr.classif").length, semis: [...document.querySelectorAll(".lei-ch-col")].map(c => [...c.querySelectorAll(".lei-ch-n")].map(e => e.textContent)),
+      esperado: [[0, 3], [1, 2]].map(pr => pr.map(k => V.tecnicos[C.tabela[k].t].clube.nome)), nota: (document.querySelector(".lei-tab-nota") || {}).textContent }; });
+    confere("T13 Pontos + mata-mata com 8: os 4 primeiros marcados na tabela e a chave com 1º × 4º e 2º × 3º, e a Final",
+      tm.formato === "misto" && mx.classif === 4 && mx.semis.length === 2 && mx.semis[0].join("|") === mx.esperado.map(x => x.join("|")).join("|") && mx.semis[1].length === 2 && /4 primeiros/.test(mx.nota || "") && !vm1.ruins.length, { mx, ruins: vm1.ruins.slice(0, 3) });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await nadaSobreNadaTemas(p, "camp-misto8", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const vm2 = await campPelaTela(p, null, 120000);
+    const fm = await fimDe();
+    confere("T13 Pontos + mata-mata até o campeão pela tela: a classificação final com os 8 (Campeão, Vice, Semifinal e a fase de pontos)",
+      vm2.fim && !vm2.ruins.length && fm.n === 8 && fm.classe === fm.esperado && fm.x[0] === "Campeão" && fm.x[1] === "Vice" && fm.x.slice(2, 4).every(t => t === "Semifinal") && fm.x.slice(4).every(t => /^Fase de pontos · [5-8]º$/.test(t)), { fm, ruins: vm2.ruins.slice(0, 3) });
+
+    // Mata-mata com 6: 2 folgas na 1ª rodada, espalhadas pela chave
+    const t6 = await treinoAteCamp(6, "mata");
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    const ch6 = await p.evaluate(() => { const C = TM.leilaoSessao.atual().ver().camp; return { col: [...document.querySelectorAll(".lei-ch-col")].map(c => ({ tit: c.querySelector(".lei-ch-tit").textContent, jogos: c.querySelectorAll(".lei-ch-jogo:not(.folga)").length, folgas: c.querySelectorAll(".lei-ch-jogo.folga").length })),
+      folgas: C.rodadas[0].folgas.length, rotulos: [...document.querySelectorAll(".lei-ch-g.folga")].map(e => e.textContent) }; });
+    confere("T13 Mata-mata com 6: a chave com as Quartas (2 jogos e 2 folgas), a Semifinal e a Final",
+      t6.formato === "mata" && ch6.folgas === 2 && ch6.col.length === 3 && ch6.col[0].jogos === 2 && ch6.col[0].folgas === 2 && ch6.col[1].tit === "Semifinal" && ch6.col[2].tit === "Final" && ch6.rotulos.every(t => t === "folga"), ch6);
+    await nadaSobreNadaTemas(p, "camp-mata6", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const v6 = await campPelaTela(p, null, 120000);
+    const f6 = await fimDe();
+    confere("T13 Mata-mata com 6 até o campeão pela tela: a classificação final com os 6 (Campeão, Vice, Semifinal, Quartas de final)",
+      v6.fim && !v6.ruins.length && f6.n === 6 && f6.classe === f6.esperado && f6.x[0] === "Campeão" && f6.x[1] === "Vice" && f6.x.every(t => /^(Campeão|Vice|Semifinal|Quartas de final)$/.test(t)), { f6, ruins: v6.ruins.slice(0, 3) });
+    const vistos = [vp1, vp2, vm1, vm2, v6];
+    const soma = k => vistos.reduce((s2, v) => s2 + (v[k] || 0), 0);
+    confere(`T13 os jogos vistos no 2D pela tela (${soma("jogos")}, ${soma("placares")} com o placar dos 90' conferido; ${soma("pror")} prorrogações, ${soma("ouro")} no gol de ouro, ${soma("pen")} pênaltis) batem com o gravado`,
+      soma("jogos") >= 20 && soma("placares") >= 20 && !vistos.some(v => v.ruins.length), { jogos: soma("jogos"), pror: soma("pror"), pen: soma("pen") });
+    const ruinsCamp = nadaSobre.filter(x => /^(camp|fim)/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.tabelaRola || x.escudosReais));
+    confere(`T13 nada sobre nada no Campeonato e no fim (${nadaSobre.filter(x => /^(camp|fim)/.test(x.tela)).length} telas: mata 4, pontos 8, misto 8, mata 6 e os fins, nos 8 tamanhos, escuro e claro): nem encostado, nem texto fora do botão, a tabela sem rolar de lado, só escudos desenhados`,
+      !ruinsCamp.length, ruinsCamp.slice(0, 6));
   } catch (e) {
     confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
   } finally {
