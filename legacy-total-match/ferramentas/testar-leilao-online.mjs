@@ -1175,10 +1175,19 @@ async function casoQuatro() {
   confere(`${ID}13 recarregar no meio do campeonato (P2b, na rodada ${R.antes}): volta pelo ?leilao= à aba Campeonato com a mesma vista e os mesmos jogos das outras`, R.pausou && R.voltou && R.igual, R);
   const P = E.pend;
   confere(`${ID}14 o dono toca em "Simular os pendentes" pela tela: com quem sumiu (P3, a página escondida) parado no prazo e os outros jogos da rodada prontos, o jogo dele é simulado pelo dono e a rodada anda`,
-    !!P.id && P.parou && P.so && P.dono && P.viu && /1 jogo sem resultado/.test(P.txt || "") && P.clicou && P.gravado && motivoDe(P.id) === "dono" && P.voltou,
+    !!P.id && P.parou && P.so && P.dono && P.viu && /1 jogo esperando quem não está aqui/.test(P.txt || "") && ((P.txt || "").match(/não está aqui/g) || []).length === 2 && P.clicou && P.gravado && motivoDe(P.id) === "dono" && P.voltou,
     { id: P.id, parou: P.parou, so: P.so, dono: P.dono, viu: P.viu, txt: P.txt, clicou: P.clicou, gravado: P.gravado, motivo: P.id && motivoDe(P.id), voltou: P.voltou });
   const nsFim4 = await nadaSobreNada(P1, "camp-fim-pontos", () => !!document.querySelector(".lei-campeao") && !!document.querySelector(".lei-tabela"));
   const nsMeio = P.ns || { ruins: [{ tela: "camp-meio", semMedida: true }], medidas: [] };
+  // os clubes com o mesmo nome (o "Meu Clube" de quem não tem o Ultimate) se distinguem pelo técnico na tabela e no 2D
+  const rep4 = await P1.p.evaluate(() => {
+    const S = TM.leilaoSessao.atual(), V = S.ver(), C = V.camp, nome = t => V.tecnicos[t].clube.nome.toLowerCase();
+    const linhas = [...document.querySelectorAll(".lei-tabela tbody .lei-tab-clube")].map(e => e.innerText.replace(/\s+/g, " ").trim());
+    const g = C.rodadas.flatMap(R => R.jogos).find(x => x.e === "feito" && nome(x.a) === nome(x.b)), pt = g ? S.partida(g.id) : null;
+    return { linhas, tags: document.querySelectorAll(".lei-tabela .lei-tec-tag").length, iguais: V.tecnicos.filter(x => x.clube.nome === "Meu Clube").length, d2: pt ? pt.times.map(x => x.name) : null };
+  }).catch(e => ({ erro: String(e) }));
+  confere(`${ID}16 os clubes com o mesmo nome (${rep4.iguais} "Meu Clube") se distinguem pelo técnico na tabela (${(rep4.linhas || []).join(" | ")}) e no placar do 2D (${(rep4.d2 || []).join(" × ")})`,
+    rep4.iguais >= 2 && rep4.linhas && new Set(rep4.linhas).size === rep4.linhas.length && rep4.tags === rep4.iguais && rep4.d2 && rep4.d2[0] !== rep4.d2[1], rep4);
   confere(`${ID}15 nada sobre nada na aba Campeonato no meio (o dono, com a caixa dos pendentes) e no fim (a tabela e o pôster) em 360×740, 844×390 e 1280×800, no escuro e no claro (${nsMeio.medidas.length + nsFim4.medidas.length} medidas; a tabela sem rolar de lado; só escudos desenhados)`,
     !nsMeio.ruins.length && !nsFim4.ruins.length && nsMeio.medidas.length === 6 && nsFim4.medidas.length === 6, nsMeio.ruins.concat(nsFim4.ruins).slice(0, 4));
   for (const ap of [D0, ...vivos]) await ap.cx.close().catch(() => {});

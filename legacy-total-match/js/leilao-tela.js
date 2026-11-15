@@ -369,8 +369,8 @@
     S.on("rodada", function (e) { if (naSala()) { Som.toca("tique"); anuncia((e.nome || "Rodada " + e.n) + " começou"); } });
     S.on("jogo", function (e) {
       if (!naSala() || !e.eu) return;
-      var V = S.ver(), venci = e.venc === V.eu;
-      anuncia("Fim de jogo: " + nomeClube(V, e.a) + " " + e.placar[0] + " × " + e.placar[1] + " " + nomeClube(V, e.b) + (e.venc == null ? "" : venci ? ". Vitória" : ". Derrota"));
+      var V = S.ver();
+      anuncia("Fim de jogo: " + nomeClube(V, e.a) + " " + e.placar[0] + " × " + e.placar[1] + " " + nomeClube(V, e.b) + ". " + resultadoMeu(V, e));
     });
     if (!S.online) return;
     // a sala online: o pedido aceito ou recusado, tirado, o clube passado, a sala encerrada, outra aba, a conexão
@@ -1186,7 +1186,24 @@
     atualizaCamp(M.S, M.V);
   });
   function clubeDe(V, t) { var x = t != null ? V.tecnicos[t] : null; return x ? x.clube : null; }
-  function nomeClube(V, t) { var c = clubeDe(V, t); return c ? c.nome : "A definir"; }
+  // o clube com o nome de outro técnico da sala (o "Meu Clube" de quem não tem o Ultimate): o primeiro nome do técnico
+  // (ou "você") vai junto dele na aba Campeonato; null = o nome é único
+  function chaveNome(n) { return String(n || "").trim().toLowerCase(); }
+  function tecDoRepetido(V, t) {
+    var x = t != null ? V.tecnicos[t] : null;
+    if (!x || !x.clube) return null;
+    var k = chaveNome(x.clube.nome);
+    var rep = V.tecnicos.some(function (y, i) { return i !== t && y && y.clube && chaveNome(y.clube.nome) === k; });
+    return !rep ? null : x.eu ? "você" : primeiroNome(x.nome);
+  }
+  function primeiroNome(n) { var p = String(n || "").trim().split(/\s+/)[0] || "Técnico"; return p.length > 12 ? p.slice(0, 11) + "…" : p; }
+  function nomeClube(V, t) { var c = clubeDe(V, t), q = c ? tecDoRepetido(V, t) : null; return !c ? "A definir" : q ? c.nome + " (" + q + ")" : c.nome; }
+  // o nome do clube numa linha estreita: o clube encolhe com as reticências e o técnico do nome repetido fica inteiro
+  function nomeLinha(V, t, cls, vazio) {
+    var x = t != null ? V.tecnicos[t] : null, q = tecDoRepetido(V, t);
+    var n = el("span", { class: cls, text: x ? x.clube.nome : vazio });
+    return q ? [n, el("span", { class: "lei-tec-tag", text: q })] : [n];
+  }
   function quemTec(V, t) { var x = V.tecnicos[t]; return !x ? "" : x.eu ? "Você" : x.nome; }
   function placarDe(g) { return g.placar ? g.placar[0] + " × " + g.placar[1] : "×"; }
   // o que veio depois dos 90' (o texto curto): "pênaltis 4 × 3", "gol de ouro", "W.O."
@@ -1380,11 +1397,12 @@
       // gravado: só então o 2D (sem pausa) mostra o que ficou gravado — com o jogo feito também na vista desta página (a
       // resposta da transação pode chegar antes do dado novo pelo ouvinte: sem esperar, a rota do 2D não achava o jogo
       // feito e voltava ao Campeonato)
+      function abre() { return sessao() === S && TM.ui.current() === "leilao-camp" && !VIEW.ocupado && !!S.partida(r.id); }
       quandoNaVista(S, r.id, function () {
         VIEW.ocupado = null;
-        if (sessao() === S && TM.ui.current() === "leilao-camp" && S.partida(r.id)) verJogo(r.id);
+        if (abre()) verJogo(r.id);
         else atualiza();
-      });
+      }, function () { if (abre()) verJogo(r.id); });
     }, function (e) {
       VIEW.ocupado = null;
       if (global.console) console.error(e);
@@ -1392,13 +1410,19 @@
       atualiza();
     });
   }
-  // chama fim() quando o jogo gravado já está na vista da sessão (S.partida), ou em 8 s
-  function quandoNaVista(S, id, fim) {
+  // chama fim() quando o jogo gravado já está na vista da sessão (S.partida), ou em 8 s; o que chega depois dos 8 s (a rede
+  // lenta) chama tarde(), até 2 min (a pessoa ainda no Campeonato vê o jogo que pediu)
+  function quandoNaVista(S, id, fim, tarde) {
     if (S.partida(id)) { fim(); return; }
-    var feito = false, off = null, t = null;
-    function acaba() { if (feito) return; feito = true; if (off) off(); clearTimeout(t); fim(); }
-    off = S.aoMudar(function () { if (S.partida(id)) acaba(); });
-    t = setTimeout(acaba, 8000);
+    var feito = false, off = null, t = null, t2 = null;
+    function solta() { if (off) off(); off = null; clearTimeout(t); clearTimeout(t2); }
+    off = S.aoMudar(function () {
+      if (!S.partida(id)) return;
+      solta();
+      if (!feito) { feito = true; fim(); } else if (tarde) tarde();
+    });
+    t = setTimeout(function () { if (feito) return; feito = true; fim(); }, 8000);
+    t2 = setTimeout(solta, 120000);
   }
   function caixaPendentes(S, V, C) {
     var oc = VIEW.ocupado === "pendentes";
@@ -1464,9 +1488,8 @@
   function timeLinha(V, t, lado) {
     var x = t != null ? V.tecnicos[t] : null;
     return el("span", { class: "lei-jg-t " + lado + (x && x.eu ? " eu" : ""), title: x ? x.clube.nome + " · " + (x.eu ? "você" : x.nome) : "A definir" }, [
-      x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" }),
-      el("span", { class: "lei-jg-nome", text: x ? x.clube.nome : "A definir" })
-    ]);
+      x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" })
+    ].concat(nomeLinha(V, t, "lei-jg-nome", "A definir")));
   }
   function linhaJogo(V, C, g, R) {
     var meu = V.eu >= 0 && (g.a === V.eu || g.b === V.eu), est = estadoJogo(g);
@@ -1497,7 +1520,7 @@
       var x = V.tecnicos[r.t], eu = r.t === V.eu, cls = (eu ? "eu" : "") + (misto && r.pos <= nClass ? " classif" : "");
       tbody.appendChild(el("tr", { class: cls.trim() }, [
         el("td", { class: "c0", text: String(r.pos) }),
-        el("td", { class: "c1" }, [el("span", { class: "lei-tab-clube", title: x ? x.clube.nome + " · " + (x.eu ? "você" : x.nome) : "" }, [escudo(x && x.clube, "pp"), el("span", { class: "lei-tab-n", text: x ? x.clube.nome : "" })])]),
+        el("td", { class: "c1" }, [el("span", { class: "lei-tab-clube", title: x ? x.clube.nome + " · " + (x.eu ? "você" : x.nome) : "" }, [escudo(x && x.clube, "pp")].concat(nomeLinha(V, r.t, "lei-tab-n", "")))]),
         el("td", { class: "c2", text: String(r.j) }), el("td", { class: "c3 ved", text: String(r.v) }), el("td", { class: "c4 ved", text: String(r.e) }), el("td", { class: "c5 ved", text: String(r.d) }),
         el("td", { class: "c6", text: (r.sg > 0 ? "+" : "") + r.sg }), el("td", { class: "c7", text: String(r.pts) })
       ]));
@@ -1520,18 +1543,18 @@
         function lado(t, k) {
           var x = t != null ? V.tecnicos[t] : null, venc = g.e === "feito" && g.venc === t && t != null;
           return el("div", { class: "lei-ch-l" + (venc ? " venc" : "") + (x && x.eu ? " eu" : "") + (g.e === "feito" && !venc ? " perdeu" : "") }, [
-            x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" }),
-            el("span", { class: "lei-ch-n", text: x ? x.clube.nome : "A definir" }),
+            x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" })
+          ].concat(nomeLinha(V, t, "lei-ch-n", "A definir"), [
             el("span", { class: "lei-ch-g", text: g.e === "feito" && g.placar ? String(g.placar[k]) + (pen ? " (" + pen[k] + ")" : "") : "" })
-          ]);
+          ]));
         }
         col.appendChild(el("div", { class: "lei-ch-jogo", data: { jogo: g.id } }, [lado(g.a, 0), lado(g.b, 1)]));
       });
       R.folgas.forEach(function (t) {
         var x = V.tecnicos[t];
         col.appendChild(el("div", { class: "lei-ch-jogo folga" }, [el("div", { class: "lei-ch-l" + (x && x.eu ? " eu" : "") }, [
-          escudo(x && x.clube, "pp"), el("span", { class: "lei-ch-n", text: x ? x.clube.nome : "" }), el("span", { class: "lei-ch-g folga", text: "folga" })
-        ])]));
+          escudo(x && x.clube, "pp")].concat(nomeLinha(V, t, "lei-ch-n", ""), [el("span", { class: "lei-ch-g folga", text: "folga" })])
+        )]));
       });
       grade.appendChild(col);
     });
@@ -1548,7 +1571,7 @@
       var cl = clubeDe(V, x.t);
       ol.appendChild(el("li", { class: "lei-art-l" + (x.t === V.eu ? " eu" : "") }, [
         el("span", { class: "lei-art-p", text: pos + "º" }), escudo(cl, "pp"),
-        el("span", { class: "lei-art-txt" }, [el("span", { class: "lei-art-n", text: x.nome }), el("span", { class: "lei-art-s", text: cl ? cl.nome : "" })]),
+        el("span", { class: "lei-art-txt" }, [el("span", { class: "lei-art-n", text: x.nome }), el("span", { class: "lei-art-s", text: cl ? nomeClube(V, x.t) : "" })]),
         el("span", { class: "lei-art-g", text: x.gols + (x.gols === 1 ? " gol" : " gols") })
       ]));
     });

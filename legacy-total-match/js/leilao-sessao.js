@@ -759,7 +759,7 @@
     V.rodadas.forEach(function (R) {
       R.jogos.forEach(function (g) {
         var a = ant[g.id];
-        if (g.e === "feito" && !(a && a.e === "feito")) S._emite("jogo", { id: g.id, a: g.a, b: g.b, placar: g.placar, venc: g.venc, eu: S.eu >= 0 && (g.a === S.eu || g.b === S.eu) });
+        if (g.e === "feito" && !(a && a.e === "feito")) S._emite("jogo", { id: g.id, a: g.a, b: g.b, placar: g.placar, venc: g.venc, res: g.res, eu: S.eu >= 0 && (g.a === S.eu || g.b === S.eu) });
       });
     });
   };
@@ -1596,7 +1596,14 @@
     var S = this, c = S._campCtx(), V = c ? S._vista() : null, g = jogoDaVista(V, id);
     if (!g || g.e !== "feito" || !g.j) return null;
     var ab = Array.isArray(g.j.ab) ? g.j.ab : [g.j.ab[0], g.j.ab[1]], esc = Array.isArray(g.j.esc) ? g.j.esc : [g.j.esc[0], g.j.esc[1]];
-    return { id: g.id, rodada: g.rodada, a: g.a, b: g.b, mata: g.mata, res: g.res, times: [LC().timeDoTecnico(c, ab[0], esc[0]), LC().timeDoTecnico(c, ab[1], esc[1])] };
+    var times = [LC().timeDoTecnico(c, ab[0], esc[0]), LC().timeDoTecnico(c, ab[1], esc[1])];
+    // os dois clubes com o mesmo nome (o "Meu Clube" de quem não tem o Ultimate): o técnico junto do nome no 2D (só o que
+    // se mostra: o resultado gravado e os textos dele não mudam)
+    if (String(times[0].name).trim().toLowerCase() === String(times[1].name).trim().toLowerCase()) times.forEach(function (x) {
+      var p = String(x.tecnico || "").trim().split(/\s+/)[0] || ("Técnico " + (x.t + 1));
+      x.name = x.name + " (" + (x.t === S.eu ? "você" : p.length > 12 ? p.slice(0, 11) + "…" : p) + ")";
+    });
+    return { id: g.id, rodada: g.rodada, a: g.a, b: g.b, mata: g.mata, res: g.res, times: times };
   };
 
   /* ---------- as ações da pessoa ---------- */
