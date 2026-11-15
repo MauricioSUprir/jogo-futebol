@@ -7191,6 +7191,10 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-revela-bt { width: 100%; min-height: 48px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .lei-revela-bt:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 @media (hover: hover) { .lei-revela-bt:hover { border-color: rgba(34,197,94,.45); } }
+.lei-revela-frase { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+/* (o verde só para quem levou mais do que pagou; o zero, o negativo e "sem compras" numa cor neutra; a soma das notas, o texto) */
+.lei-cl-x.neg, .lei-cl-x.nada { color: var(--text-dim); font-weight: 600; }
+.lei-cl-x.soma { color: var(--text); white-space: nowrap; }
 
 /* ---------- Campeonato antes da hora e a Entrada ---------- */
 .lei-embreve-ic { display: inline-flex; color: var(--gold); }

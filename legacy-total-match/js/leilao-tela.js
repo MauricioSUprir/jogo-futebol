@@ -1047,15 +1047,16 @@
       var kids;
       if (r) {
         kids = [
-          // (com as notas escondidas, o "−N" sai: a borda âmbar da foto ainda diz "fora da função", sem o número)
-          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen && !oc ? el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }) : null]),
+          // (o "−N" fica também com as notas escondidas: ele vem do specificPenalty — a posição e os grupos do jogador, nunca a
+          // nota — e não entrega nada; a borda âmbar da foto diz "fora da função")
+          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen ? el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }) : null]),
           el("span", { class: "lei-cv-nome", style: "max-width:" + nw + "cqw", text: u && u.shortNm ? u.shortNm(r.name) : r.name })
         ];
       } else kids = [el("span", { class: "lei-cv-bola vazia" }, [el("span", { class: "lei-cv-sig", text: GRUPO_CURTO[slot[0]] })])];
       var at = { class: "lei-cv-vaga" + (r ? " cheia" : "") + (r && pen ? " fora" : "") + (opc.sel === s ? " sel" : ""), style: "left:" + x + "%;top:" + pos[s].y + "%", data: { vaga: String(s) } };
       if (troca && r) {
         at.role = "button"; at.tabindex = "0";
-        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função" + (oc ? "" : " (−" + pen + ")") : "") + (opc.sel === s ? ", marcado" : "");
+        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função (−" + pen + ")" : "") + (opc.sel === s ? ", marcado" : "");
       }
       var v = el("div", at, kids);
       if (troca && r) {
@@ -1287,8 +1288,7 @@
     var e = V.meu.escalacao, time = V.meu.time.map(function (x) { return x.retrato; }), cheio = e && e.n === L().VAGAS;
     var media = time.length ? Math.round(time.reduce(function (s, r) { return s + r.overall; }, 0) / time.length) : 0;
     var pen = e ? e.pen.reduce(function (s, x) { return s + (x || 0); }, 0) : 0, oc = notaOcultaDe(V.eu, V);
-    // (com as notas escondidas: sem a média e, no lugar do "−N", quantos estão fora da função)
-    var nFora = e ? e.pen.filter(function (x) { return x > 0; }).length : 0;
+    // (com as notas escondidas, sem a média; o "−N" de fora da função fica: vem da posição, não da nota)
     // a ordem no celular: o título, as formações, o campinho, a dica e o Pronto (no PC o campinho vai à esquerda: CSS)
     var b = c;
     b.appendChild(el("div", { class: "lei-esc-cab" }, [
@@ -1296,7 +1296,7 @@
       el("div", { class: "lei-esc-resumo" }, [
         el("span", { class: "lei-esc-n", text: (e ? e.n : 0) + "/" + L().VAGAS }),
         time.length && !oc ? el("span", { text: "Média " + media }) : null,
-        pen ? el("span", { class: "lei-esc-pen", text: oc ? nFora + " fora da função" : "−" + pen + " fora da função" }) : null
+        pen ? el("span", { class: "lei-esc-pen", text: "−" + pen + " fora da função" }) : null
       ])
     ]));
     var cnt = L().contaMascaras(time);
@@ -1317,7 +1317,7 @@
     // o campinho (tocar em dois troca as vagas: só com os 11)
     var campo = campinhoVagas(S, V.eu, { cls: "lei-cv-esc", sel: VIEW.selVaga, troca: cheio && !V.soOlhar && !V.alterada ? tocaVaga : null });
     b.appendChild(el("div", { class: "lei-esc-campo" }, [campo]));
-    var dica = cheio ? "Toque em dois jogadores para trocar de lugar. Cada um só entra numa vaga da posição dele; " + (oc ? "a borda laranja marca quem está fora da função." : "−1 e −2 marcam quem está fora da função.")
+    var dica = cheio ? "Toque em dois jogadores para trocar de lugar. Cada um só entra numa vaga da posição dele; −1 e −2 marcam quem está fora da função."
       : V.estado === "leilao" ? "Durante o leilão, a formação é a sua preferência: se uma compra não couber nela, ela muda sozinha. A troca de lugar abre com os 11."
       : "Escale depois de completar os 11.";
     b.appendChild(el("p", { class: "lei-esc-dica", text: dica }));
@@ -2167,35 +2167,54 @@
     return wrap;
   }
 
-  // a revelação das notas no fim (sala com o Overall escondido): o destaque de quem comprou melhor (quem levou mais nota do que
-  // o preço pagava no leilão da sala: leilao-camp.js compraram) e a lista dos técnicos por essa conta, com a soma das notas dos
-  // 11 (o toque abre o time com as notas)
+  // a revelação das notas no fim (sala com o Overall escondido), em duas listas que não repetem o ranking: "Quem comprou
+  // melhor" (a nota de cada compra contra a nota que o PREÇO pagava no leilão da sala: leilao-camp.js compraram; quem não
+  // comprou nada no fim, com "sem compras") e "As notas, reveladas" (a soma das notas dos 11 de cada time, da maior para a
+  // menor; o toque abre o time com as notas)
   function sinal(x) { var r = Math.round(x); return r > 0 ? "+" + r : r < 0 ? "−" + (-r) : "0"; }
+  function nCompras(n) { return n + (n === 1 ? " compra" : " compras"); }
+  // "Granito EC levou 10 pontos de nota a mais do que pagou (11 compras)"; no negativo, "… a menos do que pagou"
+  function fraseCompra(nome, x) {
+    var r = Math.round(x.acima), p = Math.abs(r) + (Math.abs(r) === 1 ? " ponto" : " pontos");
+    return nome + (r > 0 ? " levou " + p + " de nota a mais do que pagou" : r < 0 ? " levou " + p + " de nota a menos do que pagou" : " levou a nota que pagou") + " (" + nCompras(x.compras) + ")";
+  }
   function revelacao(V, C) {
-    var soma = {}; (C.notas || []).forEach(function (x) { soma[x.t] = x.soma; });
     var lista = LC().compraram(V.vendas.map(function (x) { return { t: x.t, preco: x.preco, nota: x.retrato.overall }; }), V.T);
-    var top = lista[0] && lista[0].compras ? lista[0] : null, cl = top ? clubeDe(V, top.t) : null;
-    var box = el("section", { class: "lei-revela", "aria-labelledby": "lei-revela-t" });
-    if (top) box.appendChild(el("div", { class: "lei-caixa lei-dest lei-dest-compra" }, [el("span", { class: "lei-dest-ic" }, [ic("gavel")]), el("div", { class: "lei-dest-txt" }, [
-      el("span", { class: "lei-rotulo", text: "Quem comprou melhor" }),
-      el("span", { class: "lei-dest-n", text: cl ? cl.nome : "" }),
-      el("span", { class: "lei-dest-s", text: sinal(top.acima) + " de nota acima do preço em " + top.compras + (top.compras === 1 ? " compra" : " compras") + (top.t === V.eu ? " · o seu" : "") })
-    ])]));
-    var ol = el("ol", { class: "lei-class lei-revela-lista" });
+    var top = lista[0] && lista[0].compras ? lista[0] : null, clTop = top ? clubeDe(V, top.t) : null;
+    var box = el("section", { class: "lei-revela", "aria-label": "As notas reveladas" });
+    // quem comprou melhor: a frase do 1º e a lista inteira (os números: positivo em verde, zero e negativo neutros)
+    var olC = el("ol", { class: "lei-class lei-revela-compras-l" });
     lista.forEach(function (x, i) {
-      var y = V.tecnicos[x.t];
-      var bt = el("button", { class: "lei-cl lei-revela-bt" + (x.t === V.eu ? " eu" : ""), type: "button",
-        "aria-label": "Ver o time de " + (y && y.eu ? "você" : y ? y.nome : "") + " com as notas: soma " + (soma[x.t] || 0) + "; " + sinal(x.acima) + " de nota acima do preço em " + x.compras + (x.compras === 1 ? " compra" : " compras"),
+      var y = V.tecnicos[x.t], quem = y ? (y.eu ? "Você" : y.nome) : "", r = Math.round(x.acima);
+      olC.appendChild(el("li", { class: "lei-cl" + (x.t === V.eu ? " eu" : "") }, [
+        el("span", { class: "lei-cl-p", text: (i + 1) + "º" }), escudo(y && y.clube, "pp"),
+        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: x.compras ? quem + " · " + nCompras(x.compras) : quem })]),
+        el("span", { class: "lei-cl-x " + (!x.compras ? "nada" : r > 0 ? "pos" : "neg"), text: x.compras ? sinal(x.acima) : "sem compras" })
+      ]));
+    });
+    box.appendChild(el("div", { class: "lei-caixa lei-class-box lei-revela-compras" }, [
+      el("h3", { class: "lei-rotulo", text: "Quem comprou melhor" }),
+      top ? el("p", { class: "lei-revela-frase", text: fraseCompra((clTop ? clTop.nome : "") + (top.t === V.eu ? " (o seu)" : ""), top) + "." }) : null,
+      el("p", { class: "lei-revela-dica", text: "Cada compra contra a nota que o preço pagava no leilão da sala." }),
+      olC
+    ]));
+    // as notas, reveladas: a soma das notas dos 11 de cada time (o toque abre o time com a nota de cada jogador)
+    var ol = el("ol", { class: "lei-class lei-revela-lista" });
+    (C.notas || []).forEach(function (x, i) {
+      var y = V.tecnicos[x.t], eu = x.t === V.eu, quem = y ? (eu ? "Você" : y.nome) : "", nome = y ? y.clube.nome : "";
+      // (o nome acessível começa pelo texto à vista, na mesma ordem: WCAG 2.5.3)
+      var bt = el("button", { class: "lei-cl lei-revela-bt" + (eu ? " eu" : ""), type: "button",
+        "aria-label": (i + 1) + "º " + nome + ", " + quem + ", soma " + x.soma + ". " + (eu ? "Ver o seu time" : "Ver o time de " + quem) + " com as notas",
         on: { click: function () { folhaVendas(x.t); } } }, [
         el("span", { class: "lei-cl-p", text: (i + 1) + "º" }), escudo(y && y.clube, "pp"),
-        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: (y ? (y.eu ? "Você" : y.nome) : "") + " · soma " + (soma[x.t] || 0) })]),
-        el("span", { class: "lei-cl-x", text: sinal(x.acima) })
+        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: nome }), el("span", { class: "lei-cl-s", text: quem })]),
+        el("span", { class: "lei-cl-x soma", text: "soma " + x.soma })
       ]);
       ol.appendChild(el("li", {}, [bt]));
     });
     box.appendChild(el("div", { class: "lei-caixa lei-class-box" }, [
       el("h3", { class: "lei-rotulo", id: "lei-revela-t", text: "As notas, reveladas" }),
-      el("p", { class: "lei-revela-dica", text: "Cada compra contra a nota que o preço pagava no leilão: quem levou mais nota do que pagou comprou melhor. Toque num time para ver as notas." }),
+      el("p", { class: "lei-revela-dica", text: "A soma das notas dos 11 de cada time. Toque num time para ver a nota de cada jogador." }),
       ol
     ]));
     return box;
@@ -2697,14 +2716,15 @@
       function (t) { muda({ tempo: t }); });
     if (des) [].forEach.call(segT.querySelectorAll("button"), function (x) { x.disabled = true; });
     b.appendChild(opcaoSag("Tempo de cada jogador", [segT]));
-    // (o 3D: contra um bot e, desde o PR 5, contra um amigo — sem bots, só a duração; nas salas de antes do par, só com bots)
-    if (d3 != null) b.appendChild(opcaoSag("Partidas em 3D", [seletor3d(V.duracao3d, V.dificuldade3d, function (m) { muda({ duracao3d: m }); }, function (dd) { muda({ dificuldade3d: dd }); }, { desliga: des, seg: true, semDif: !nb })]));
-    // (o Overall: só nas salas de regras ≥ 5; as de antes ficam à mostra, como foram criadas)
+    // (o Overall: só nas salas de regras ≥ 5 — as de antes ficam à mostra, como foram criadas —, no mesmo lugar da Criar sala:
+    // depois do Tempo e antes das Partidas em 3D)
     if (typeof V.regrasSala === "number" && V.regrasSala >= L().REGRAS_OCULTAS) {
       var segOv = segOverall(V.overall, function (v) { muda({ overall: v }); });
       if (des) [].forEach.call(segOv.querySelectorAll("button"), function (x) { x.disabled = true; });
       b.appendChild(opcaoSag("Overall", [segOv, dicaSag(DICA_OVERALL)]));
     }
+    // (o 3D: contra um bot e, desde o PR 5, contra um amigo — sem bots, só a duração; nas salas de antes do par, só com bots)
+    if (d3 != null) b.appendChild(opcaoSag("Partidas em 3D", [seletor3d(V.duracao3d, V.dificuldade3d, function (m) { muda({ duracao3d: m }); }, function (dd) { muda({ dificuldade3d: dd }); }, { desliga: des, seg: true, semDif: !nb })]));
     b.appendChild(el("p", { class: "lei-sag-nota", text: "Mudar uma opção da sala zera os Pronto de todos." }));
   }
   // o meu clube no saguão (o nome, a sigla e o "Escolher escudo"; Salvar grava) e a formação preferida (vale na hora), com o
@@ -3650,10 +3670,10 @@
       var lg = ligaDe(F.liga), d = duracaoEstimada(F.T, F.tempo), dc = duracaoCamp(F.formato, F.T, F.tempo, d3());
       sec3d.hidden = d3() == null;
       var partes = [online ? "até " + plural(F.T, "técnico", "técnicos") + (F.bots ? " (" + plural(F.bots, "bot", "bots") + ")" : "") : plural(F.T, "técnico", "técnicos"),
-        nomeFormato(F.formato).toLowerCase(), F.formacao,
-        (online ? "com a sala cheia, " : "") + "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min"];
+        // (as notas escondidas logo depois do formato: no fim da linha o "…" as cortava)
+        nomeFormato(F.formato).toLowerCase()].concat(F.overall === "escondido" ? ["notas escondidas"] : []).concat([F.formacao,
+        (online ? "com a sala cheia, " : "") + "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min"]);
       if (d3() != null) partes.push("3D de " + F.duracao3d + " min por tempo" + (semDif() ? "" : " no " + difNome(F.dificuldade3d)));
-      if (F.overall === "escondido") partes.push("notas escondidas");
       var nomeLg = lg ? lg.name + "." : "", txt = partes.join(", ");
       TM.ui.clear(resumo);
       if (nomeLg) { resumo.appendChild(el("b", { text: nomeLg })); resumo.appendChild(doc.createTextNode(" ")); }
