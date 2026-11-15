@@ -55,7 +55,8 @@
     "4-4-2": [1, 4, 4, 2], "4-3-3": [1, 4, 3, 3], "3-5-2": [1, 3, 5, 2],
     "3-4-3": [1, 3, 4, 3], "5-4-1": [1, 5, 4, 1], "4-2-4": [1, 4, 2, 4]
   };
-  // o time-alvo de cada técnico na conta do mercado dos robôs (as cotas por técnico, arredondadas: 1, 4, 4, 2)
+  // o time-alvo de cada técnico na conta do mercado dos robôs (os 11 de um 4-4-2: 1, 4, 4, 2; com 13 lotes por técnico eram
+  // também as cotas por técnico arredondadas)
   var ALVO = [1, 4, 4, 2];
   // jogadores de FORA guardados para completar no fim, por técnico (o máximo de cada grupo numa formação). Nas salas de 20 por
   // técnico a cota nunca come esta reserva: qualquer time completa os 11 de graça no fim, compre o que comprar

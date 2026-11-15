@@ -1547,17 +1547,23 @@ hora de montar o time"; eram 13: 2 técnicos 26 → 40, 4 técnicos 52 → 80, 8
   (as duas contas são honestas para a conferência; nada congela).
 - **A duração estimada** (`leilao-camp.js duracaoEstimada`, agora a única: a tela usava uma cópia): ~0,75 × o relógio por
   lote quando todos passam rápido (medido: 0,73 com 2, 0,79 com 4, 0,77 com 8; era 0,9, a metade com 2) e o relógio + 7 s
-  quando ninguém passa. Com 10 s: 2 técnicos 2–7 → 5–11 min, 4 técnicos 8–15 → 10–23, 8 técnicos 16–29 → 20–45.
-- **Os bytes** (testar-leilao O3, no Node, por aparelho): 2 aparelhos 91 → 114 KB, 4 + 2 bots ~490 → ~915 KB, 8
-  técnicos ~1,1 → ~2,2 MB (o `vivo` leva o `d` com um caractere por lote e há ~1,5× mais lotes abertos). No plano grátis
-  (Spark, 10 GB/mês): ~17–18 MB a sala de 8, ~570 leilões de 8 por mês (eram ~1 100).
+  quando ninguém passa. Com 10 s: 2 técnicos 2–7 → 5–11 min, 4 técnicos 8–15 → 10–23, 8 técnicos 16–29 → 20–45. O pior
+  caso, uma pessoa que nunca toca em nada (nem Passar) com o resto de robôs, 100 leilões por T: 2 técnicos 6,9 → 11,3 min, 4
+  técnicos 15,4 → 24,7, 8 técnicos 29,8 → 48,0 (a repescagem dela, com os lotes que os robôs deixaram, 15 → 29, 19 → 47 e
+  27 → 82 lotes; quem toca em Passar fecha cada um na hora).
+- **Os bytes**: no Node (testar-leilao O3, por aparelho) 2 aparelhos 91 → 114 KB, 4 + 2 bots ~490 → ~915 KB, 8 técnicos
+  ~1,1 → ~2,2 MB; no navegador (`testar-leilao-online --so oito`, O3 e O8) o leilão de 8 com 160 lotes baixa 2,12 MB por
+  página (eram 1,0–1,1; teto do teste 3 MB) e 16,9 MB as 8; com o mata-mata, 2,15 MB e 17,1 MB (o `vivo` leva o `d` com um
+  caractere por lote e há ~1,5× mais lotes abertos). No plano grátis (Spark, 10 GB/mês): ~590 leilões de 8 por mês
+  (eram ~1 100).
 - **Testes**: L1 (20T nas 30 ligas × 2 edições × T 2–8, a conta das cotas feita no teste, a reserva de `fora` inteira, as
   ligas com menos lotes, a sala de regras 2 com os mesmos lotes da conta de antes; na base reprova pelo número de lotes e
   pelas cotas), L5 (a montagem do "pulado" com 10 goleiros), L6 (com 20 e sem a reserva, a Paraguai A pública com 8 e todos
   passando reprovava), K0 (as durações novas), K3 (a liga em que o time de graça da pessoa cabe em 2+ formações), TD10
   (regras 3), S (o treino de regras 2 reabre com 39 lotes e anda até o fim; "Minhas salas" com os lotes da sala), O1 (60
   lotes com 3), O2 (o Começar de uma sala de regras 2 grava 26 com 2) e os totais do `--tela` e do online (40, 80, 120,
-  160).
+  160). Rodados: `testar-leilao.mjs` 18/18 blocos (97 s; o L7 com os 1 000 leilões ~30 s), `--tela` 87/87 (519 s),
+  `testar-leilao-online.mjs --so telas,dois` 31/31 (95 s) e `--so oito` 13/13 (276 s), `conferir-estilos.py` 0.
 
 ---
 

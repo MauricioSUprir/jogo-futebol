@@ -166,7 +166,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
   fora há mais de 5 min, qualquer técnico presente tem o botão — escolha minha); a
   pergunta do plano grátis (Spark): um leilão de 8 técnicos baixa ~1,0–1,1 MB por página com 104 lotes (~9 MB no total; com os
-  160 lotes de 15/11, ~2,2 MB por aparelho no Node, ~17–18 MB a sala) e o
+  160 lotes de 15/11, ~2,1 MB por página e ~17 MB a sala) e o
   campeonato soma ~30 KB no mata-mata e ~0,5 MB nos pontos corridos com 8 (no pior caso ~12,5 MB a sala de 8).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
