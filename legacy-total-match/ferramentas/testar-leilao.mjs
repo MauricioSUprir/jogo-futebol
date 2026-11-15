@@ -3340,11 +3340,12 @@ async function testeCamp3d() {
       ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta", "TD9 o abriu apagado (o W.O. vira simulado) não congelou: " + JSON.stringify(A.alteradaJogo));
       A.parar();
     }
-    /* ---- TD10 as regras 2 (o 3D): a sala de regras 1 segue valendo aqui, sem o Jogar; a de regras 3, só olhar ---- */
+    /* ---- TD10 as regras do 3D (2; desde o PR 5, a sala nova é de regras 4): a sala de regras 1 segue valendo aqui, sem o Jogar;
+       a de regras 5, só olhar ---- */
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 3 && Lx.regrasAceitas(1) && Lx.regrasAceitas(2) && Lx.regrasAceitas(3) && !Lx.regrasAceitas(4) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 3 (20 lotes por técnico) e o Jogar na sala nova");
+      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 4 (o par; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -3435,6 +3436,112 @@ async function testeCamp3d() {
       A._transJogo = orig; A.parar();
     }
     nota(`TD1 ${cont.pror} empates no mata-mata (${cont.ouro} no gol de ouro, ${cont.pen} nos pênaltis); TD6 ${cont.wo} W.O. pelo prazo; TD7 ${cont.naoAbriu} 3D que não abriu = simulado`);
+  });
+
+  /* ============ PAR (PR 5): o jogo contra um amigo no Online 3D — a máquina pura, os prazos, os W.O., o simulado, a conferência,
+     a vez do jogo de duas pessoas e as regras antigas aceitas (o fluxo pela sessão sobre o banco falso: o KO, --caso par) ============ */
+  await blocoAsync("PAR", "o par (PR 5): o jogo contra um amigo no Online 3D — a máquina, os prazos, os W.O., o simulado, a conferência, a vez e as regras antigas", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, LC = TMx.leilaoCamp, Lx = TMx.leilao, mundo = MUNDO.public;
+    const V = relogioVirtual(), arm = armazemFalso();
+    const A = await V.espera(SS.criarTreino({ liga: "br", bots: 1, semente: "PAR-1", codigo: "PARCTX", formato: "mata", tempo: 10, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo }));
+    await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+    await V.espera(A.prontoEscalacao(true));
+    await V.anda(() => A.jogos.m1j0 && A.jogos.m1j0.e === "aberto");
+    A.pausar();
+    // (as contas puras não olham quem é pessoa: o contexto do treino com as duas "pessoas" e o par ligado)
+    const c = Object.assign({}, A._campCtx(), { par: true, tipos: ["pessoa", "pessoa"] }), cSem = Object.assign({}, c, { par: false });
+    const g = { id: "m1j0", a: 0, b: 1, aberta: true, mata: true }, P = LC.PRAZO, D = LC.prazoPar(c.duracao3d);
+    const esc = [LC.escalacaoDoJogo(c, 0), LC.escalacaoDoJogo(c, 1)], T = [LC.timeDoTecnico(c, 0, esc[0]), LC.timeDoTecnico(c, 1, esc[1])];
+    const r3 = (h, a) => ({ homeGoals: h, awayGoals: a, gols: [].concat(Array.from({ length: h }, (_, k) => ({ lado: 0, tmId: T[0].players[10 - k].id, nome: T[0].players[10 - k].name, minuto: 10 + k * 20 })), Array.from({ length: a }, (_, k) => ({ lado: 1, tmId: T[1].players[10 - k].id, nome: T[1].players[10 - k].name, minuto: 15 + k * 20 }))),
+      cartoes: [], stats: { possession: [52, 48], shots: [h + 5, a + 4], onTarget: [h + 2, a + 1] } });
+    const conf = j => LC.conferirJogo(c, g, j);
+
+    /* ---- PAR1 a máquina: reservar (o 1º Jogar), entrar (o 2º), o W.O. de quem não veio, o abriu, o simulado, o W.O. de quem
+       saiu e o resultado do 3D ---- */
+    const r0 = LC.reservarPar(null, { ab: [0, 1], esc, por: 1, ts: 1000 }), j0 = r0.jogo;
+    ok(r0.ok && j0.e === "reservado" && j0.par === true && j0.modo === "3d" && j0.motivo === "pedido" && j0.por === 1 && j0.trava === 1000 && j0.inicio === 1000 && j0.vem1 === 1000 && j0.vem0 == null && conf(j0) === null,
+      "PAR1 o 1º Jogar reserva o par (o lado de quem tocou já veio): " + JSON.stringify(j0 && { e: j0.e, par: j0.par, vem0: j0.vem0, vem1: j0.vem1 }));
+    ok(LC.reservarPar({ e: "aberto", parado: true, resta: 70000 }, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok && LC.reservarPar({ e: "aberto", ini: 500, resta: P }, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok
+      && !LC.reservarPar(j0, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok && !LC.reservarPar(null, { ab: [0, 1], esc, por: 5, ts: 2000 }).ok, "PAR1 reservar: do nada e do aberto (correndo ou parado); nunca do reservado; só quem joga");
+    ok(LC.prazoDe(j0, c) === 1000 + P && !LC.naoVeio(j0, { trava: 1000, hora: 1000 + P - 1, ts: 1 }, c).ok && !LC.marcarAbriu(j0, { trava: 1000, ts: 1500 }).ok
+      && !LC.woPar(j0, { trava: 1000, ts: 1500, perdedor: 0 }).ok && !LC.gravar(j0, { trava: 1000, res: LC.resDo3d(c, "m1j0", j0, r3(1, 0)), ts: 1600, mata: true, fim: "3d" }).ok,
+      "PAR1 com um só no Jogar: o W.O. antes dos 2 min, o abriu, o W.O. de quem saiu e o resultado do 3D recusados");
+    const nv = LC.naoVeio(j0, { trava: 1000, hora: 1000 + P, ts: 1000 + P + 7 }, c);
+    ok(nv.ok && nv.jogo.res.wo === 0 && nv.jogo.woPor === "naoVeio" && nv.jogo.res.placar.join() === "0,3" && conf(nv.jogo) === null, "PAR1 o W.O. de quem não veio na hora do prazo: " + JSON.stringify(nv.ok && nv.jogo.res.placar));
+    // (revisão do PR 5, M2: com um só no Jogar e o outro FORA da sala no fim do prazo, o simulado — a sessão escolhe pelos batimentos)
+    const nu = LC.naoAbriu(j0, { trava: 1000, hora: 1000 + P, ts: 1000 + P + 3, res: LC.resultadoDoJogo(c, "m1j0", j0), mata: true }, c);
+    ok(nu.ok && nu.jogo.fim === "simulado" && nu.jogo.res.wo == null && conf(nu.jogo) === null && !LC.naoAbriu(j0, { trava: 1000, hora: 1000 + P - 1, ts: 1, res: LC.resultadoDoJogo(c, "m1j0", j0), mata: true }, c).ok,
+      "PAR1 com um só no Jogar e o outro fora da sala: o simulado no fim do prazo, não antes (M2)");
+    const s0 = LC.gravar(j0, { trava: 1000, res: LC.resultadoDoJogo(c, "m1j0", j0), ts: 1500, mata: true, fim: "simulado" });
+    ok(s0.ok && s0.jogo.fim === "simulado" && conf(s0.jogo) === null, "PAR1 com um só no Jogar, o outro escolhe Simular: o simulado com a semente");
+    const e1 = LC.entrarPar(j0, { trava: 1000, por: 0, ts: 5000 }), j1 = e1.jogo;
+    ok(e1.ok && j1.vem0 === 5000 && j1.vem1 === 1000 && LC.vieram(j1) && conf(j1) === null && !LC.entrarPar(j1, { trava: 1000, por: 0, ts: 6000 }).ok && !LC.entrarPar(j0, { trava: 999, por: 0, ts: 6000 }).ok && !LC.entrarPar(j0, { trava: 1000, por: 4, ts: 6000 }).ok,
+      "PAR1 o 2º Jogar: o lado dele, uma vez, com a mesma trava");
+    ok(LC.prazoDe(j1, c) === 5000 + P && !LC.naoVeio(j1, { trava: 1000, hora: 1e12, ts: 1 }, c).ok && !LC.wo(j1, { trava: 1000, hora: 1e12, ts: 1 }, c).ok && !LC.desistir(j1, { trava: 1000, ts: 1, por: 1 }).ok,
+      "PAR1 com os dois: 2 min para abrir desde o 2º toque; nem o W.O. de quem não veio nem os do jogo contra um bot");
+    const sim1 = LC.resultadoDoJogo(c, "m1j0", j1);
+    const na = LC.naoAbriu(j1, { trava: 1000, hora: 5000 + P, ts: 5000 + P + 9, res: sim1, mata: true }, c);
+    ok(!LC.naoAbriu(j1, { trava: 1000, hora: 5000 + P - 1, ts: 1, res: sim1, mata: true }, c).ok && na.ok && na.jogo.fim === "simulado" && conf(na.jogo) === null, "PAR1 o 3D que não abriu (a ligação que não deu): o simulado depois de 2 min, não antes");
+    const ab = LC.marcarAbriu(j1, { trava: 1000, ts: 9000 }), j2 = ab.jogo;
+    ok(ab.ok && j2.abriu === 9000 && LC.prazoDe(j2, c) === 9000 + D && D === LC.prazo3d(c.duracao3d) + 6 * 60000 && conf(j2) === null && !LC.naoAbriu(j2, { trava: 1000, hora: 9000 + D - 1, ts: 1, res: sim1, mata: true }, c).ok
+      && LC.naoAbriu(j2, { trava: 1000, hora: 9000 + D, ts: 9000 + D + 1, res: sim1, mata: true }, c).ok, "PAR1 o 3D aberto: o prazo da partida (com as pausas combinadas, 6 min: L3) desde o abriu; sem resultado nele, o simulado");
+    const wp = LC.woPar(j2, { trava: 1000, ts: 9500, perdedor: 1 });
+    ok(wp.ok && wp.jogo.res.wo === 1 && wp.jogo.woPor === "saiu" && conf(wp.jogo) === null && !LC.woPar(j1, { trava: 1000, ts: 6000, perdedor: 0 }).ok && !LC.woPar(j2, { trava: 1000, ts: 9500, perdedor: 2 }).ok,
+      "PAR1 quem sai perde por W.O. com o 3D aberto (de qualquer lado); antes do abriu, não — o simulado (M4)");
+    const d11 = LC.resDo3d(c, "m1j0", j2, r3(1, 1)), g3 = LC.gravar(j2, { trava: 1000, res: d11, ts: 9900, mata: true, fim: "3d" });
+    ok(g3.ok && g3.jogo.fim === "3d" && g3.jogo.res.em3d && g3.jogo.res.pror && conf(g3.jogo) === null && !LC.gravar(j1, { trava: 1000, res: LC.resDo3d(c, "m1j0", j1, r3(2, 0)), ts: 9000, mata: true, fim: "3d" }).ok,
+      "PAR1 o resultado do 3D só com o 3D aberto (M4; o empate do mata-mata segue no gol de ouro e nos pênaltis com a semente)");
+
+    /* ---- PAR2 a conferência acusa o par adulterado ---- */
+    const mexe = (j, f) => { const x = JSON.parse(JSON.stringify(j)); f(x); return x; };
+    const adult = [
+      ["o par numa sala sem ele", () => LC.conferirJogo(cSem, g, j1), "forma"],
+      ["o toque de quem reservou fora do inicio", () => conf(mexe(j1, x => { x.vem1 = 1001; })), "forma"],
+      ["o abriu com um só", () => conf(mexe(j0, x => { x.abriu = 2000; })), "forma"],
+      ["o par fora do 3D", () => conf(mexe(j0, x => { x.modo = "simulado"; })), "forma"],
+      ["o W.O. de quem não veio antes dos 2 min", () => conf(mexe(nv.jogo, x => { x.ts = 1000 + P - 1; })), "wo"],
+      ["o W.O. contra quem veio", () => conf(mexe(nv.jogo, x => { x.res = LC.resultadoWO(1); })), "wo"],
+      ["o W.O. de quem saiu sem os dois", () => conf(mexe(nv.jogo, x => { x.woPor = "saiu"; })), "wo"],
+      ["o W.O. do par sem o motivo", () => conf(mexe(wp.jogo, x => { delete x.woPor; })), "wo"],
+      ["o motivo do W.O. do par num jogo comum", () => LC.conferirJogo(c, g, Object.assign({}, s0.jogo, { par: undefined, vem0: undefined, vem1: undefined, modo: "simulado", fim: undefined, woPor: "saiu", inicio: undefined })), "forma"],
+      ["o placar do 3D mexido", () => conf(mexe(g3.jogo, x => { x.res.score = [2, 1]; })), "resultado"],
+      ["o simulado do par mexido", () => conf(mexe(s0.jogo, x => { x.res.placar = [9, 0]; x.res.score = [9, 0]; x.res.v = 0; })), "resultado"],
+      // (revisão do PR 5, M4: o aparelho adulterado que grava os dois toques na mesma reserva, o W.O. de quem saiu e o 3D sem o abriu)
+      ["o 2º toque na mesma hora da reserva (os dois toques gravados juntos)", () => conf(mexe(j1, x => { x.vem0 = x.inicio; })), "forma"],
+      ["o 2º toque antes da reserva", () => conf(mexe(j1, x => { x.vem0 = x.inicio - 5; })), "forma"],
+      ["o W.O. de quem saiu sem o 3D aberto", () => conf(mexe(wp.jogo, x => { delete x.abriu; })), "wo"],
+      ["o W.O. de quem saiu gravado antes do abriu", () => conf(mexe(wp.jogo, x => { x.ts = x.abriu - 1; })), "wo"],
+      ["o resultado do 3D do par sem o abriu", () => conf(mexe(g3.jogo, x => { delete x.abriu; })), "resultado"],
+      ["o resultado do 3D do par gravado antes do abriu", () => conf(mexe(g3.jogo, x => { x.ts = x.abriu - 1; })), "resultado"]
+    ];
+    const err = adult.filter(([, f, m]) => { const r = f(); return !(r === m || (m === "resultado" && r != null)); }).map(([n, f]) => n + " → " + f());
+    ok(!err.length, "PAR2 a conferência acusa o par adulterado: " + JSON.stringify(err));
+
+    /* ---- PAR3 a vez (proximaAcao): o prazo do jogo de duas pessoas corre com uma delas presente; os prazos do par ---- */
+    const gp = j => ({ id: "m1j0", a: 0, b: 1, aberta: true, mata: true, e: j ? j.e : "livre", j });
+    const info = (pa, pb) => ({ presente: t => (t === 0 ? pa : pb), visto: t => (t === 0 ? 100 : 300) });
+    const PA = (j, i, cx) => JSON.stringify(LC.proximaAcao(cx || c, gp(j), i));
+    const ok3 = [
+      [PA(null, info(false, false)), "null"], [PA(null, info(false, true)), '{"acao":"abrir","quando":0}'],
+      [PA({ e: "aberto", ini: 50, resta: P }, info(false, false)), '{"acao":"pausar","quando":0,"desde":300}'],
+      [PA({ e: "aberto", ini: 50, resta: P }, info(true, false)), JSON.stringify({ acao: "reservar", motivo: "prazo", quando: 50 + P })],
+      [PA({ e: "aberto", parado: true, resta: 5000 }, info(true, false)), '{"acao":"retomar","quando":0}'],
+      [PA(j0, info(true, true)), JSON.stringify({ acao: "naoVeio", quando: 1000 + P })], [PA(j1, info(true, true)), JSON.stringify({ acao: "naoAbriu", quando: 5000 + P })],
+      [PA(j2, info(true, true)), JSON.stringify({ acao: "naoAbriu", quando: 9000 + D })],
+      [PA(null, info(true, true), cSem), '{"acao":"reservar","motivo":"abertura","quando":0}']
+    ].filter(([x, y]) => x !== y);
+    ok(!ok3.length, "PAR3 a vez do jogo de duas pessoas e do par: " + JSON.stringify(ok3));
+
+    /* ---- PAR4 as regras: 4 (o par), as salas de regras 1, 2 e 3 aceitas (sem ele), a de 5 só olhar; o Jogar contra um bot não é o par ---- */
+    ok(Lx.REGRAS === 4 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5), "PAR4 as regras 4 e as aceitas");
+    A.retomar();
+    const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
+    ok(A.sala.meta.regras === 4 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
+    // (as salas de regras 3 — os 20 lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
+    const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
+    ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));
+    A.parar();
+    nota(`PAR1–PAR4: a máquina, ${adult.length} adulterações acusadas, a vez em 9 estados`);
   });
 }
 
@@ -3549,11 +3656,13 @@ async function testeCampOnline() {
     }
     // a sala no fim do leilão, gravada direto no servidor (o leilão de robôs da máquina pura: o bloco O testa o leilão)
     const CORES = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#14b8a6", "#ec4899"];
-    function salaPronta(cod, uids, nb, formato, liga, semente) {
+    // regras: a versão da sala (padrão 2: os casos do KO são de antes do PR 5 — o jogo de duas pessoas simulado ao abrir a rodada;
+    // o par das salas de regras 4 está no caso "par")
+    function salaPronta(cod, uids, nb, formato, liga, semente, regras = 2) {
       const T = uids.length + nb, { lotes, fora } = lotesDe("public", liga, T);
       const ctx = Lx.contexto({ T, lotes, fora, semente }), fim = leilaoRobos(ctx).v;
       const sala = {
-        meta: { dono: uids[0], proto: SS.PROTO, regras: Lx.REGRAS, versaoTM: "", edicao: "public", criada: RT.hora, estado: "escalacao", semente, atividade: RT.hora, fimLeilao: RT.hora },
+        meta: { dono: uids[0], proto: SS.PROTO, regras, versaoTM: "", edicao: "public", criada: RT.hora, estado: "escalacao", semente, atividade: RT.hora, fimLeilao: RT.hora },
         cfg: { liga, ligaNome: liga, vagas: T, bots: nb, tempo: 10000, formato, overall: "mostra", T }, tec: {}
       };
       uids.forEach((u, i) => { sala.tec[u] = { nome: "Pessoa " + u.toUpperCase(), num: "2000-000" + i, papel: i ? "tecnico" : "dono", pronto: true, auth: "auth-" + u, entrou: i, clube: { nome: "Clube " + u.toUpperCase(), sigla: u.toUpperCase().slice(0, 3), cor: CORES[i], escudo: "classico|star" }, formacao: "4-4-2" }; });
@@ -3974,13 +4083,199 @@ async function testeCampOnline() {
         nota(`pendentes: ${JSON.stringify(conta)}`);
         SA.parar(); SB.parar();
       }
+      /* ---------- par (PR 5): o jogo de duas pessoas no Online 3D, numa sala de regras 4 com 3 pessoas (pontos corridos: um jogo
+         por rodada, a 3ª folga e age nos prazos) — cada rodada um caminho: o 3D gravado UMA vez (os dois gravam o mesmo), o W.O.
+         de quem não tocou em Jogar (pela hora do servidor), o simulado do 3D que não abriu, o W.O. de quem saiu, o Simular de um
+         dos dois e o prazo de 2 min sem ninguém tocar; numa sala de regras 2, o jogo contra o amigo é simulado ao abrir a rodada,
+         sem o Jogar ---------- */
+      if (caso("par")) {
+        const id = "KO par", cod = "KOPAR", H0 = Object.keys(HIST).length;
+        salaPronta(cod, ["q0", "q1", "q2"], 0, "pontos", "br", "KOpar", Lx.REGRAS_PAR);
+        const devs = [aparelho("q0", { latencia: 15 }), aparelho("q1", { latencia: 40, desvio: 3000 }), aparelho("q2", { latencia: 25, desvio: -4000 })];
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        ok(Ss.every(S => S._comPar() && S._campCtx().par), `${id}: a sala de regras 4 sem o par`);
+        const jogo = i => banco.ler("leiloes/" + cod + "/jogos/" + i);
+        const r3Par = (T, h, a) => ({ homeGoals: h, awayGoals: a, gols: [].concat(Array.from({ length: h }, (_, k) => ({ lado: 0, tmId: T[0].players[10 - k].id, nome: T[0].players[10 - k].name, minuto: 10 + k * 20 })), Array.from({ length: a }, (_, k) => ({ lado: 1, tmId: T[1].players[10 - k].id, nome: T[1].players[10 - k].name, minuto: 15 + k * 20 }))),
+          cartoes: [], stats: { possession: [52, 48], shots: [h + 5, a + 4], onTarget: [h + 2, a + 1] } });
+        const CAM = ["3d", "naoVeio", "naoAbriu", "saiu", "simular", "prazo"], vistos = {};
+        for (let rod = 0; rod < 6; rod++) {
+          await anda(() => { const c = Ss[0].ver().camp; return !!(c && (c.fim || (c.rodada && c.rodada.aberta && c.rodada.n === rod + 1))); }, 3600_000);
+          const C0 = Ss[0].ver().camp;
+          if (C0.fim) break;
+          const g = C0.rodada.jogos[0], a = g.a, b = g.b, SA = Ss[a], SB = Ss[b], cam = CAM[rod];
+          // o jogo aberto (o prazo correndo: as pessoas estão na sala)
+          await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }, 60_000);
+          const mj0 = SA.ver().camp.meuJogo, X = vistos[cam] = { id: g.id, a, b };
+          X.antes = { contraAmigo: mj0.contraAmigo, comPar: mj0.comPar, podeJogar: mj0.podeJogar, podeSimular: mj0.podeSimular };
+          if (cam === "prazo") {
+            await anda(() => (jogo(g.id) || {}).e === "feito", 600_000);
+          } else if (cam === "simular") {
+            X.ra = await espera(SA.jogarPar(g.id));
+            await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeSimular && mj.podeJogar); }, 30_000);
+            X.rb = await espera(SB.simular(g.id));
+          } else {
+            X.ra = await espera(SA.jogarPar(g.id));
+            if (cam !== "naoVeio") {
+              await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && !mj.par.vemEu && mj.podeJogar); }, 30_000);
+              X.rb = await espera(SB.jogarPar(g.id));
+              await anda(() => Ss.every(S => { const j = S.jogos[g.id]; return !!(j && j.vem0 != null && j.vem1 != null); }), 30_000);
+              const P = SA.par(g.id), PB = SB.par(g.id);
+              X.par = { ladoA: P && P.lado, ladoB: PB && PB.lado, vieram: P && P.vieram, mesmaTrava: !!(P && PB && P.trava === PB.trava) };
+              if (cam === "3d") {
+                await espera(SA.abriu3d(g.id, P.trava, null));
+                const r3 = r3Par(P.times, 2, 1);
+                // os dois aparelhos gravam o mesmo resultado do 3D (o lockstep): fica UM, e a resposta de quem perdeu a corrida é o gravado
+                const [ga, gb] = await espera(Promise.all([SA.gravar3d(g.id, P.trava, "3d", r3), SB.gravar3d(g.id, PB.trava, "3d", r3)]));
+                X.grav = [ga.ok && ga.gravou, gb.ok && gb.gravou, LC.canon(ga.res) === LC.canon(gb.res)];
+              } else if (cam === "saiu") {
+                await espera(SB.abriu3d(g.id, PB.trava, null));
+                // o 3D de B avisou que A saiu: B grava o W.O. de A; A (que saiu) grava o mesmo depois — um só fica
+                X.wb = await espera(SB.woPar(g.id, PB.trava, P.lado));
+                X.wa = await espera(SA.desistir3d(g.id, P.trava));
+              }
+            }
+            await anda(() => (jogo(g.id) || {}).e === "feito", 900_000);
+          }
+          await passa(3000);
+          X.j = jogo(g.id);
+          X.log = (HIST[cod].log[g.id] || []).map(x => ({ hora: x.hora, e: x.j && x.j.e, vem0: x.j && x.j.vem0, vem1: x.j && x.j.vem1, abriu: x.j && x.j.abriu }));
+          X.iguais = Ss.every(S => S.jogos[g.id] && LC.canon(S.jogos[g.id]) === LC.canon(X.j)) && Ss.every(S => !S.alterada);
+        }
+        const feitos = L => L.filter(x => x.e === "feito").length;
+        const V3 = vistos["3d"], VV = vistos.naoVeio, VA = vistos.naoAbriu, VS = vistos.saiu, VM = vistos.simular, VP = vistos.prazo;
+        ok(V3 && V3.antes.contraAmigo && V3.antes.comPar && V3.antes.podeJogar && V3.antes.podeSimular && V3.ra.ok && V3.rb.ok && V3.par.vieram && V3.par.mesmaTrava && V3.par.ladoA === 0 && V3.par.ladoB === 1,
+          `${id}: o Jogar dos dois (o lado 0 é o anfitrião): ${JSON.stringify(V3 && { antes: V3.antes, ra: V3.ra && [V3.ra.ok, V3.ra.motivo], rb: V3.rb && [V3.rb.ok, V3.rb.motivo], par: V3.par })}`);
+        ok(V3 && V3.j.e === "feito" && V3.j.fim === "3d" && V3.j.res.em3d && V3.j.res.score.join() === "2,1" && V3.j.abriu != null && feitos(V3.log) === 1 && V3.grav[0] !== V3.grav[1] && V3.grav[2] && V3.iguais,
+          `${id}: o 3D gravado UMA vez (os dois gravam o mesmo; quem perde a corrida recebe o gravado): ${JSON.stringify(V3 && { fim: V3.j.fim, s: V3.j.res && V3.j.res.score, grav: V3.grav, log: V3.log.map(x => x.e) })}`);
+        ok(VV && VV.ra.ok && VV.j.res.wo === 1 && VV.j.woPor === "naoVeio" && VV.j.vem1 == null && VV.j.ts >= VV.j.inicio + LC.PRAZO && feitos(VV.log) === 1 && VV.iguais,
+          `${id}: quem não tocou em Jogar perde por W.O. só depois de 2 min pela hora do servidor: ${JSON.stringify(VV && VV.j && { wo: VV.j.res.wo, por: VV.j.woPor, dt: VV.j.ts - VV.j.inicio })}`);
+        ok(VA && VA.j.fim === "simulado" && !VA.j.res.em3d && VA.j.abriu == null && VA.j.ts >= Math.max(VA.j.vem0, VA.j.vem1) + LC.PRAZO && feitos(VA.log) === 1 && VA.iguais,
+          `${id}: com os dois e o 3D que não abriu (a ligação que não deu), o simulado depois de 2 min: ${JSON.stringify(VA && VA.j && { fim: VA.j.fim, dt: VA.j.ts - Math.max(VA.j.vem0, VA.j.vem1) })}`);
+        ok(VS && VS.j.res.wo === 0 && VS.j.woPor === "saiu" && VS.wb.ok && VS.wb.gravou && VS.wa.ok && LC.canon(VS.wa.res) === LC.canon(VS.j.res) && feitos(VS.log) === 1 && VS.iguais,
+          `${id}: quem sai no meio perde por W.O. (gravado por quem ficou; o de quem saiu dá no mesmo): ${JSON.stringify(VS && { wo: VS.j.res.wo, por: VS.j.woPor, wb: VS.wb && [VS.wb.ok, VS.wb.gravou], wa: VS.wa && VS.wa.ok })}`);
+        ok(VM && VM.rb.ok && VM.j.fim === "simulado" && VM.j.vem1 == null && VM.j.vem0 != null && feitos(VM.log) === 1 && VM.iguais && LC.canon(VM.rb.res) === LC.canon(VM.j.res),
+          `${id}: um chamou para o 3D e o outro escolheu Simular: o simulado com a semente: ${JSON.stringify(VM && { rb: VM.rb && [VM.rb.ok, VM.rb.motivo], fim: VM.j && VM.j.fim })}`);
+        ok(VP && VP.j.modo === "simulado" && VP.j.motivo === "prazo" && VP.j.par == null && feitos(VP.log) === 1 && VP.iguais,
+          `${id}: ninguém tocou em Jogar nem em Simular: o simulado pelo prazo de 2 min: ${JSON.stringify(VP && VP.j && { modo: VP.j.modo, motivo: VP.j.motivo })}`);
+        // a conferência de cada aparelho aceitou tudo; a mesma vista nos três
+        ok(Ss.every(S => !S.alterada && resumo(S) === resumo(Ss[0])), `${id}: vistas diferentes ou sala congelada (${Ss.map(S => S.alterada)} ${JSON.stringify(Ss.map(S => S.alteradaJogo))})`);
+        Ss.forEach(S => S.parar());
+        // a sala de regras 2 (antes do PR 5): o jogo contra o amigo é simulado ao abrir a rodada, sem o Jogar
+        salaPronta("KOPAR2", ["w0", "w1"], 0, "mata", "br", "KOpar2", 2);
+        const W = [aparelho("w0", { latencia: 15 }), aparelho("w1", { latencia: 30 })], Sw = [];
+        for (const d of W) Sw.push(await d.abrir("KOPAR2"));
+        await anda(() => Sw.every(S => S.sala.meta.estado === "camp"), 200_000);
+        const mjw = Sw[0].ver().camp.meuJogo, rw = await espera(Sw[0].jogarPar());
+        await anda(() => Sw.every(S => S.ver().camp && S.ver().camp.fim), 600_000);
+        const jw = banco.ler("leiloes/KOPAR2/jogos/m1j0");
+        ok(!Sw[0]._comPar() && (!mjw || (!mjw.comPar && !mjw.podeJogar)) && !rw.ok && (rw.motivo === "semPar" || rw.motivo === "jaFeito") && jw && jw.e === "feito" && jw.motivo === "abertura" && jw.par == null && Sw.every(S => !S.alterada),
+          `${id}: a sala de regras 2 sem o par: ${JSON.stringify({ mj: mjw && [mjw.comPar, mjw.podeJogar], rw: [rw.ok, rw.motivo], j: jw && [jw.e, jw.motivo] })}`);
+        Sw.forEach(S => S.parar());
+        nota(`par: 6 caminhos (${Object.keys(vistos).join(", ")}) com ${Object.keys(HIST).length - H0} salas`);
+      }
+      /* ---- a revisão do PR 5 (PLANO-LEILAO.md §8 "A revisão do PR 5"): os casos de prova das duas revisões, agora com as metas ----
+         revsim (M1) os dois tocam em Jogar no mesmo instante; revoculto (M2) quem não tocou saiu da sala; revcaiu (M3) a ligação
+         caiu no meio; revforja (M4) o aparelho adulterado (o 3º técnico) grava os dois toques na mesma reserva e o W.O. */
+      const parRev = async (cod, uids, lat) => {
+        salaPronta(cod, uids, 0, "pontos", "br", "REV" + cod, Lx.REGRAS_PAR);
+        const devs = uids.map((u, k) => aparelho(u, { latencia: lat ? lat[k] : 30 })), Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        await anda(() => { const c = Ss[0].ver().camp; return !!(c && c.rodada && c.rodada.aberta); }, 600_000);
+        const g = Ss[0].ver().camp.rodada.jogos[0];
+        return { devs, Ss, g, SA: Ss[g.a], SB: Ss[g.b], jogoS: () => banco.ler("leiloes/" + cod + "/jogos/" + g.id) };
+      };
+      if (caso("revsim")) {
+        const { Ss, g, SA, SB, jogoS } = await parRev("REVSIM", ["v0", "v1"]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.podeJogar); }, 60_000);
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        // os dois tocam em Jogar ao mesmo tempo (as duas transações a caminho juntas): os dois toques valem (um reserva, o outro
+        // entra — a escolha pelo nó DENTRO da transação); sem o 3D aqui, o par termina no simulado do 3D que não abriu, nunca no W.O.
+        const [ra, rb] = await espera(Promise.all([SA.jogarPar(g.id), SB.jogarPar(g.id)]));
+        const j1 = jogoS();
+        await anda(() => (jogoS() || {}).e === "feito", 600_000);
+        const j2 = jogoS();
+        ok(ra.ok && rb.ok && j1 && j1.vem0 != null && j1.vem1 != null && j1.vem0 !== j1.vem1 && j2.res.wo == null && j2.fim === "simulado" && Ss.every(S => !S.alterada),
+          `KO par revsim (M1): os dois no Jogar no mesmo instante, os dois toques gravados: ${JSON.stringify({ ra: [ra.ok, ra.motivo], rb: [rb.ok, rb.motivo], vem: j1 && [j1.vem0, j1.vem1], wo: j2.res && j2.res.wo, woPor: j2.woPor, fim: j2.fim, alt: Ss.map(S => S.alterada) })}`);
+        Ss.forEach(S => S.parar());
+      }
+      if (caso("revoculto")) {
+        const { devs, Ss, g, SA, SB, jogoS } = await parRev("REVOCU", ["o0", "o1"]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.podeJogar); }, 60_000);
+        // A chama com B na sala; logo depois a tela de B apaga (o celular travou) e B fica fora da sala: ele nem viu o chamado
+        const ra = await espera(SA.jogarPar(g.id));
+        devs[g.b].doc.esconde(true);
+        await passa(15_000);
+        const fora = SA._ausente(g.b, SA.hora());
+        await anda(() => (jogoS() || {}).e === "feito", 600_000);
+        const j2 = jogoS();
+        ok(ra.ok && fora && j2.res.wo == null && j2.woPor == null && j2.fim === "simulado" && j2.ts - j2.inicio >= LC.PRAZO && Ss.every(S => !S.alterada),
+          `KO par revoculto (M2): quem não tocou em Jogar estava fora da sala no fim do prazo: o simulado, não o W.O.: ${JSON.stringify({ ra: ra.ok, fora, wo: j2.res && j2.res.wo, woPor: j2.woPor, fim: j2.fim, dt: j2.ts - j2.inicio })}`);
+        Ss.forEach(S => S.parar());
+      }
+      if (caso("revcaiu")) {
+        const { Ss, g, SA, SB, jogoS } = await parRev("REVCAI", ["c0", "c1"], [60, 20]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        await espera(SA.jogarPar(g.id));
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeJogar); }, 60_000);
+        await espera(SB.jogarPar(g.id));
+        await anda(() => Ss.every(S => { const j = S.jogos[g.id]; return !!(j && j.vem0 != null && j.vem1 != null); }), 30_000);
+        const P = SA.par(g.id), PB = SB.par(g.id);
+        // o abandono ANTES do 3D abrir (o "Sair da partida" sem a tela do 3D à vista): o W.O. recusado, o fimPar dá o simulado (M4) —
+        // conferido no nó sem gravar: o W.O. direto é recusado pela máquina
+        const woCedo = await espera(SA.woPar(g.id, P.trava, PB.lado));
+        await espera(SA.abriu3d(g.id, P.trava, null));
+        // a ligação caiu no meio do jogo: os dois 3D avisam ('caiu') e os dois aparelhos mandam o fim — o simulado, uma vez (M3)
+        const [fa, fb] = await espera(Promise.all([SA.fimPar(g.id, P.trava, PB.lado, "caiu"), SB.fimPar(g.id, PB.trava, P.lado, "caiu")]));
+        await passa(3000);
+        const j = jogoS();
+        ok(!woCedo.ok && ["naoAbriu", "vem"].includes(woCedo.motivo) && fa.ok && fb.ok && j.e === "feito" && j.res.wo == null && j.woPor == null && j.fim === "simulado" && j.abriu != null
+          && LC.canon(fa.res) === LC.canon(fb.res) && (fa.gravou !== fb.gravou) && Ss.every(S => !S.alterada),
+          `KO par revcaiu (M3/M4): a ligação que cai é o simulado (gravado uma vez, por qualquer um), e o W.O. antes do 3D abrir é recusado: ${JSON.stringify({ woCedo: [woCedo.ok, woCedo.motivo], fa: [fa.ok, fa.gravou], fb: [fb.ok, fb.gravou], wo: j.res && j.res.wo, fim: j.fim, alt: Ss.map(S => S.alterada) })}`);
+        Ss.forEach(S => S.parar());
+        // o abandono explícito ('saiu') com o 3D aberto continua o W.O. de quem saiu (o caminho "saiu" acima, pelo woPar) — aqui pelo fimPar
+        const R2 = await parRev("REVSAI", ["s0", "s1"]);
+        await anda(() => { const mj = R2.SA.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        await espera(R2.SA.jogarPar(R2.g.id));
+        await anda(() => { const mj = R2.SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeJogar); }, 60_000);
+        await espera(R2.SB.jogarPar(R2.g.id));
+        await anda(() => R2.Ss.every(S => { const x = S.jogos[R2.g.id]; return !!(x && x.vem0 != null && x.vem1 != null); }), 30_000);
+        const P2 = R2.SA.par(R2.g.id);
+        await espera(R2.SB.abriu3d(R2.g.id, P2.trava, null));
+        const f2 = await espera(R2.SB.fimPar(R2.g.id, P2.trava, P2.lado, "saiu"));
+        await passa(3000);
+        const j3 = R2.jogoS();
+        ok(f2.ok && j3.res.wo === P2.lado && j3.woPor === "saiu" && j3.ts >= j3.abriu && R2.Ss.every(S => !S.alterada),
+          `KO par revcaiu: o "Sair da partida" com o 3D aberto segue o W.O. de quem saiu: ${JSON.stringify({ f2: f2.ok, wo: j3.res && j3.res.wo, woPor: j3.woPor })}`);
+        R2.Ss.forEach(S => S.parar());
+      }
+      if (caso("revforja")) {
+        const { devs, Ss, g, jogoS } = await parRev("REVFOR", ["f0", "f1", "f2"], [20, 20, 20]);
+        const terceiro = [0, 1, 2].find(t => t !== g.a && t !== g.b), SX = Ss[terceiro], c = SX._campCtx(), TS = SX.rede.TS;
+        const esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)];
+        const r0 = recusas.length;
+        // um aparelho ADULTERADO (o 3º técnico, que nem joga este jogo): reserva o par em nome de A já com o "toque" de B (os dois na
+        // mesma reserva) e tenta o W.O. de B
+        const t1 = await espera(SX._transJogo(g.id, cur => { const r = LC.reservarPar(cur, { ab: [g.a, g.b], esc, por: g.a, ts: TS }); if (r.ok) r.jogo.vem1 = TS; return r; }));
+        await passa(2000);
+        const t2 = await espera(SX._transJogo(g.id, cur => LC.woPar(cur, { trava: cur && cur.trava, ts: TS, perdedor: 1 })));
+        await passa(5000);
+        const j = jogoS(), rec = recusas.splice(r0);
+        const honestos = [Ss[g.a], Ss[g.b]];
+        ok(t1.feito && !t2.feito && j.e !== "feito" && honestos.every(S => S.alterada) && rec.length >= 1,
+          `KO par revforja (M4): os dois toques na mesma reserva acusados pela conferência (a sala congela), o W.O. sem o 3D aberto recusado pela máquina e as regras opcionais recusam o toque de outra conta: ${JSON.stringify({ t1: t1.feito, t2: t2.feito, e: j.e, wo: j.res && j.res.wo, alt: honestos.map(S => S.alterada), alteradaJogo: honestos.map(S => S.alteradaJogo && S.alteradaJogo.motivo), regras: rec.length })}`);
+        Ss.forEach(S => S.parar());
+      }
       // as regras opcionais não recusaram nenhuma gravação honesta (e recusam as adulterações do campeonato)
       ok(!recusas.length, `as regras opcionais recusariam ${recusas.length} gravações honestas: ${JSON.stringify(recusas.slice(0, 3))}`);
       {
-        const raiz = { leiloes: { X: { sala: { meta: { estado: "camp" } }, jogos: {
+        // (a ordem e as contas dos técnicos: o toque de cada lado só pela conta dele — revisão do PR 5, M4)
+        const raiz = { leiloes: { X: { sala: { meta: { estado: "camp" }, ordem: ["ua", "ub"], tec: { ua: { auth: "u" }, ub: { auth: "v" } } }, jogos: {
           a: { e: "aberto", ini: 1000, resta: 120000 }, r: { e: "reservado", trava: 500, ab: [0, 1], motivo: "abertura" },
           f: { e: "feito", trava: 500, ts: 600, res: { placar: [1, 0] } }, p: { e: "aberto", parado: true, resta: 90000 } } } } };
-        const TSv = { ".sv": "timestamp" }, recusa = (cam, v, hora) => confereRegras(raiz, ("leiloes/X/" + cam).split("/"), v, hora, "u").length > 0;
+        const TSv = { ".sv": "timestamp" }, recusa = (cam, v, hora, uid = "u") => confereRegras(raiz, ("leiloes/X/" + cam).split("/"), v, hora, uid).length > 0;
         ok(!recusa("jogos/n", { e: "aberto", ini: TSv, resta: 120000 }, 2000) && !recusa("jogos/a", { e: "aberto", parado: true, resta: 90000 }, 31000) &&
           !recusa("jogos/a", { e: "reservado", trava: TSv, motivo: "prazo", ab: [0, 1] }, 121000) && !recusa("jogos/r", { e: "feito", trava: 500, ts: TSv, res: { placar: [2, 0] } }, 9000),
           "as regras opcionais recusaram um passo honesto da máquina do jogo");
@@ -3997,6 +4292,33 @@ async function testeCampOnline() {
           ["o começo do campeonato inventado", "sala/meta/camp", 12345, 9000]
         ];
         adult.forEach(([nome, cam, v, h]) => ok(recusa(cam, v, h), `as regras opcionais deixaram passar ${nome}`));
+        // o par (PR 5): o 1º Jogar (o toque com a hora do servidor), o 2º, o abriu e o W.O. passam; o toque mexido, inventado ou
+        // apagado, e o par que troca quem reservou, não
+        const rp = { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 1, motivo: "pedido", trava: 700, inicio: 700, vem1: 700 };
+        const rp2 = Object.assign({}, rp, { vem0: 800 }), rp3 = Object.assign({}, rp2, { abriu: 900 });
+        raiz.leiloes.X.jogos.p1 = rp; raiz.leiloes.X.jogos.p2 = rp2; raiz.leiloes.X.jogos.p3 = rp3;
+        ok(!recusa("jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000)
+          && !recusa("jogos/a", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000)
+          && !recusa("jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 1, motivo: "pedido", trava: TSv, inicio: TSv, vem1: TSv }, 9000, "v")
+          && !recusa("jogos/p1", Object.assign({}, rp, { vem0: TSv }), 9000) && !recusa("jogos/p2", Object.assign({}, rp2, { abriu: TSv }), 9000, "v")
+          && !recusa("jogos/p3", Object.assign({}, rp3, { e: "feito", ts: TSv, woPor: "saiu", res: { placar: [3, 0] } }), 9000, "v")
+          && !recusa("jogos/p3", Object.assign({}, rp3, { e: "feito", ts: TSv, fim: "3d", res: { placar: [1, 0] } }), 9000, "v")
+          && !recusa("jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, fim: "simulado", res: { placar: [1, 0] } }), 9000, "v"),
+          "as regras opcionais recusaram um passo honesto do par");
+        const adultPar = [
+          ["o toque do outro lado com hora inventada", "jogos/p1", Object.assign({}, rp, { vem0: 5 }), 9000],
+          ["o toque de quem reservou mexido", "jogos/p1", Object.assign({}, rp, { vem1: TSv }), 9000],
+          ["o 2º toque trocando quem reservou", "jogos/p1", Object.assign({}, rp, { vem0: TSv, por: 0 }), 9000],
+          ["o toque apagado", "jogos/p2", Object.assign({}, rp2, { vem0: null, abriu: TSv }), 9000],
+          ["o par desligado no meio", "jogos/p1", Object.assign({}, rp, { par: false, vem0: TSv }), 9000],
+          // (revisão do PR 5, M4: o toque pela conta de outro técnico, a reserva com os dois toques, o W.O. de quem saiu e o 3D sem o abriu)
+          ["o toque do outro lado pela conta de outro técnico", "jogos/p1", Object.assign({}, rp, { vem0: TSv }), 9000, "v"],
+          ["a reserva nova pela conta do outro lado", "jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000, "v"],
+          ["a reserva nova com os dois toques", "jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv, vem1: TSv }, 9000],
+          ["o W.O. de quem saiu sem o 3D aberto", "jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, woPor: "saiu", res: { placar: [3, 0] } }), 9000],
+          ["o resultado do 3D do par sem o 3D aberto", "jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, fim: "3d", res: { placar: [1, 0] } }), 9000]
+        ];
+        adultPar.forEach(([nome, cam, v, h, uid]) => ok(recusa(cam, v, h, uid), `as regras opcionais deixaram passar ${nome}`));
       }
     } finally {
       nota(`${acontecimentos} acontecimentos; as regras opcionais conferidas em ${gravacoes} gravações (${recusas.length} recusas)`);
@@ -4682,7 +5004,8 @@ async function testeTela() {
     confere("T2 tema claro da Criar sala: o texto escuro, o cartão do formato branco e o marcado num verde claro com a borda verde, a escolhida do segmentado branca, a barra clara e o campinho verde",
       claroCriar.tit < 0.3 && claroCriar.fmtOff > 0.95 && claroCriar.fmtOn > 0.85 && claroCriar.fmtOn < claroCriar.fmtOff && claroCriar.bordaOn && claroCriar.segOn > 0.95 && claroCriar.barra > 0.9 && claroCriar.resumo < 0.3 && claroCriar.grama, claroCriar);
     // a Criar da sala online (sem a conta online: a tela abre com o aviso): os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o
-    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D só com bots
+    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D SEMPRE (a revisão do PR 5: o 3D entre
+    // amigos) — a dificuldade só com bots
     await p.evaluate(() => TM.ui.go("leilao-criar", { online: true }));
     await espera(400);
     const onl = await p.evaluate(async () => {
@@ -4690,27 +5013,28 @@ async function testeTela() {
       const nT = () => +g("Técnicos na sala").querySelector(".lei-passo-n").textContent, nB = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
       const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
       const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
+      const dif3d = () => !!q('.lei-criar [data-secao="3d"] .lei-dif3d');
       const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
       const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
       for (let i = 0; i < 10; i++) g("Menos um bot").click();
-      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d(), semDif = !dif3d();
       for (let i = 0; i < 10; i++) g("Menos um técnico").click();
       const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
       for (let i = 0; i < 10; i++) g("Mais um técnico").click();
       const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
       for (let i = 0; i < 10; i++) g("Mais um bot").click();
-      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), dB7 = dv(dB);
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), comDif = dif3d(), dB7 = dv(dB);
       anda(dT, 3);
       const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
       // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
       anda(dT, 4); anda(dB, 0);
-      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(),
+      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, semDif, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, comDif, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(), semDifFim: !dif3d(),
         resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
     });
-    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D só com bots e 'Criar sala' na barra",
-      onl.aviso && onl.b0 === 0 && onl.menosBOff && onl.sem3d && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
-      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && onl.sem3dFim
-      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
+    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D sempre (sem bots, só a duração; a dificuldade com bots) e 'Criar sala' na barra",
+      onl.aviso && onl.b0 === 0 && onl.menosBOff && !onl.sem3d && onl.semDif && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
+      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.comDif && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && !onl.sem3dFim && onl.semDifFim
+      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de .*, 3D de 4 min por tempo$/.test(onl.resumo) && onl.bt === "Criar sala", onl);
     await nadaSobreCriar("criar-online");
     const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
     confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,

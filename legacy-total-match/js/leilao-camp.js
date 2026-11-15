@@ -34,8 +34,20 @@
                 mata-mata empatado — o gol de ouro e os pênaltis — é simulado com a semente) ou 'simulado' (o "Simular partida"
                 da tela do 3D, ou o 3D que nem chegou a abrir no prazo de começar; escSim = as escalações da tela, só quando
                 mudaram)
-   Motivos de reservar: 'pedido' (a pessoa do jogo tocou em Simular), 'prazo' (o prazo venceu pela testemunha da hora),
-   'abertura' (bot × bot; pessoa × pessoa até o PR 5), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
+   O PAR (PR 5; só nas salas de regras ≥ 4, c.par): o jogo de DUAS pessoas no Online 3D, cada uma no seu aparelho. O nó
+   ganha `par: true`, `vem0`/`vem1` (a hora do servidor em que cada lado tocou em "Jogar"; o de quem reservou = o inicio) e o
+   `abriu` (o 1º 3D à vista, de qualquer lado, só com os dois). Antes do toque, como o jogo contra um bot: o prazo de 2 min
+   (aberto) que só corre com uma das duas presente e, vencido, o simulado. O 1º "Jogar" reserva (reservarPar) e o outro tem
+   2 min (desde o inicio) para tocar também (entrarPar; o toque dele vem DEPOIS do inicio): sem ele, W.O. de quem não veio
+   (naoVeio, `woPor: 'naoVeio'`) se ele estava na sala sem buraco desde o chamado; fora dela, o simulado (naoAbriu).
+   Com os dois: 2 min (desde o 2º toque) para o 3D abrir e, aberto, o prazo da partida (2 × duração × 1,3 + 8 min + as
+   pausas combinadas, 6 min, desde o abriu: prazoPar); vencido qualquer um dos dois sem resultado, o simulado (naoAbriu; a
+   ligação que não dá — sem TURN — é isso). O resultado: o do 3D (gravar '3d', de qualquer um dos dois aparelhos: o mesmo
+   jogo nos dois; só com o abriu), o simulado (gravar 'simulado': qualquer um escolheu Simular, a ligação falhou ou caiu no
+   meio, os aparelhos dessincronizaram) ou o W.O. de quem SAIU no meio (woPar, `woPor: 'saiu'`, só com o abriu: o "Sair da
+   partida" dele, avisado pelo 3D do outro, ou ele mesmo saiu/aceitou o W.O.).
+   Motivos de reservar: 'pedido' (a pessoa do jogo tocou em Simular ou em Jogar), 'prazo' (o prazo venceu pela testemunha da
+   hora), 'abertura' (bot × bot; pessoa × pessoa nas salas de regras 1 a 3, antes do par), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
    outro técnico, com o dono fora há mais de 5 min). O 3D reservado que abriu e passa de 2 × duração × 1,3 + 8 min (desde o
    `inicio`) sem resultado é W.O. de quem reservou (decisão 15); o que não chegou a abrir em 2 min é simulado (por qualquer
    aparelho, com a semente). Quem reservou pode aceitar o W.O. antes do prazo (o 3D fechou sem resultado: `desistir`; o feito
@@ -49,7 +61,7 @@
 
    API (TM.leilaoCamp):
      contexto(o)                 o: { codigo, semente, formato, T, ctx (o do TM.leilao), vivo, clubes [t], tipos ['bot'|'pessoa'],
-                                    escal, prefs, inicio, duracao3d, dificuldade3d } → c (o campeonato; as contas abaixo recebem c)
+                                    escal, prefs, inicio, duracao3d, dificuldade3d, par (a sala tem o par: regras ≥ 4) } → c (o campeonato; as contas abaixo recebem c)
      duracao3dDe(x) · dificuldade3dDe(x) (a duração e a dificuldade do 3D da sala; padrões 4 min e 'normal')
      formatoDe(nome) · rodadasDe(formato, T) · jogosDe(formato, T) · duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })
      estrutura(c) · montar(c, jogos) (a vista: rodadas, jogos, tabela, atual, fim, campeão,
@@ -58,7 +70,7 @@
      resultadoDoJogo(c, id, j) (o simulado com a semente do jogo) · resDo3d(c, id, j, r3) (o resultado do 3D → o res) ·
      res3dValido(c, id, j) · escDaTela(c, j, titulares) (as escalações da tela do 3D, se mudaram)
      A máquina (cada uma devolve { ok: true, jogo } ou { ok: false, motivo }): abrir, pausar, retomar, reservar, marcarAbriu,
-     gravar, naoAbriu, wo, desistir
+     gravar, naoAbriu, wo, desistir; o par: reservarPar, entrarPar, naoVeio, woPar (e vieram(j), vemDe(j, lado), ladoDe(j, t))
      proximaAcao(c, g, info) (o que fazer agora com um jogo da vista) · conferirJogo(c, g, j) (o motivo, se a sala foi alterada)
      canon(v) (o texto canônico, como o Firebase guarda) */
 (function (global) {
@@ -584,6 +596,9 @@
     return { placar: p, score: p.slice(), wo: perdedor, v: 1 - perdedor };
   }
   function prazo3d(duracao) { return Math.round((2 * duracao3dDe(duracao) * 1.3 + 8) * 60000); }
+  // o par: o prazo da partida soma as pausas combinadas do Online 3D (3 de até 60 s para cada um dos dois: 6 min)
+  var PAUSAS_PAR = 6 * 60000;
+  function prazoPar(duracao) { return prazo3d(duracao) + PAUSAS_PAR; }
 
   /* ---------- o resultado do 3D (o "Jogar" da pessoa contra um bot; PR 4) ---------- */
   function nomeTxt(x) { var t = String(x == null ? "" : x).replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40); return t || "Jogador"; }
@@ -731,6 +746,13 @@
   function prazoDe(j, c) {
     if (!j) return null;
     if (j.e === "aberto") return j.parado ? null : j.ini + j.resta;
+    // o par: o de tocar em Jogar (desde o inicio), o de abrir (desde o 2º toque) e o da partida (desde o abriu, com as pausas
+    // combinadas dos dois: prazoPar)
+    if (j.e === "reservado" && j.par === true && numero(j.inicio)) {
+      if (!vieram(j)) return j.inicio + PRAZO;
+      if (!numero(j.abriu)) return Math.max(j.vem0, j.vem1) + PRAZO;
+      return j.abriu + prazoPar(c && c.duracao3d);
+    }
     // o 3D reservado: o que abriu tem o prazo da partida (o W.O.); o que não abriu, o de começar (o simulado)
     if (j.e === "reservado" && j.modo === "3d" && numero(j.inicio)) return j.inicio + (numero(j.abriu) ? prazo3d(c && c.duracao3d) : PRAZO);
     return null;
@@ -768,6 +790,7 @@
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (j.modo !== "3d" || !numero(j.trava) || j.trava !== o.trava) return nao("trava");
     if (j.abriu != null) return nao("abriu");
+    if (j.par === true && !vieram(j)) return nao("vem");
     var n = copiaNo(j); n.abriu = o.ts;
     return sim(n);
   }
@@ -781,6 +804,8 @@
     var n = feito(j, o.res, o.ts);
     if (j.modo === "3d") {
       if (FINS.indexOf(o.fim) < 0) return nao("fim");
+      // (o par: o resultado do 3D só depois de o 3D abrir — o que o aparelho adulterado não tem)
+      if (j.par === true && o.fim === "3d" && !numero(j.abriu)) return nao("abriu");
       if ((o.fim === "3d") !== (o.res.em3d === true)) return nao("res");
       n.fim = o.fim;
       if (o.fim === "simulado" && o.escSim) n.escSim = comoLista(o.escSim).map(function (x) { return { formacao: x.formacao, tit: comoLista(x.tit).slice() }; });
@@ -792,7 +817,10 @@
   function naoAbriu(j, o, c) {
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
-    if (j.abriu != null) return nao("abriu");
+    // (o par: com os dois, o 3D que não abriu em 2 min OU que abriu e passou do prazo da partida sem resultado — de quem é a
+    // culpa ninguém sabe: o simulado. Com um só no Jogar e o outro FORA da sala no fim do prazo — revisão do PR 5, M2 —, também
+    // o simulado: o W.O. de quem não veio é só de quem estava na sala e não tocou; quem decide é a sessão, pelos batimentos)
+    if (j.par !== true && j.abriu != null) return nao("abriu");
     var pz = prazoDe(j, c);
     if (pz == null || !numero(o.hora) || o.hora < pz) return nao("cedo");
     if (!resValido(o.res, !!o.mata) || o.res.em3d) return nao("res");
@@ -804,6 +832,7 @@
   function wo(j, o, c) {
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
+    if (j.par === true) return nao("par");
     if (!numero(j.abriu)) return nao("naoAbriu");
     var pz = prazoDe(j, c);
     if (pz == null || !numero(o.hora) || o.hora < pz) return nao("cedo");
@@ -818,11 +847,65 @@
   function desistir(j, o) {
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
+    if (j.par === true) return nao("par");
     if (!numero(j.abriu)) return nao("naoAbriu");
     if (o.por !== j.por) return nao("por");
     var ab = comoLista(j.ab), lado = ab.indexOf(j.por);
     if (lado < 0) return nao("por");
     var n = feito(j, resultadoWO(lado), o.ts); n.desistiu = true;
+    return sim(n);
+  }
+
+  /* ---------- o par (PR 5): duas pessoas no Online 3D ---------- */
+  /** O lado (0|1) do técnico t no jogo (-1: não é dele). */
+  function ladoDe(j, t) { var ab = comoLista(j && j.ab); return ab[0] === t ? 0 : ab[1] === t ? 1 : -1; }
+  /** A hora em que o lado tocou em "Jogar" (null: ainda não). */
+  function vemDe(j, lado) { var v = j && j["vem" + lado]; return numero(v) ? v : null; }
+  /** Os dois tocaram em "Jogar". */
+  function vieram(j) { return vemDe(j, 0) != null && vemDe(j, 1) != null; }
+  /** O 1º "Jogar" do par: reserva no 3D (motivo 'pedido', a trava = o inicio = a hora do servidor) com o lado de quem tocou já
+   *  "veio". o: { ab: [a, b], esc, por (o técnico que tocou), ts }. Do jogo sem nó ou aberto (correndo ou parado). */
+  function reservarPar(j, o) {
+    if (j && j.e !== "aberto") return nao(j.e);
+    var lado = comoLista(o.ab).indexOf(o.por);
+    if (lado < 0) return nao("por");
+    var r = reservar(j, { ab: o.ab, esc: o.esc, modo: "3d", por: o.por, motivo: "pedido", ts: o.ts });
+    if (!r.ok) return r;
+    r.jogo.par = true; r.jogo["vem" + lado] = o.ts;
+    return r;
+  }
+  /** A outra pessoa toca em "Jogar": o lado dela "veio", uma vez, no par reservado com a mesma trava (o prazo de 2 min é da
+   *  sessão: depois dele, o naoVeio). o: { trava, por (o técnico), ts } */
+  function entrarPar(j, o) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.par !== true || j.trava !== o.trava) return nao("trava");
+    var lado = ladoDe(j, o.por);
+    if (lado < 0) return nao("por");
+    if (vemDe(j, lado) != null) return nao("veio");
+    var n = copiaNo(j); n["vem" + lado] = o.ts;
+    return sim(n);
+  }
+  /** O par em que só um tocou em "Jogar" e passou do prazo (2 min desde o inicio): W.O. de quem não veio. o: { trava, hora (a
+   *  testemunha), ts } */
+  function naoVeio(j, o, c) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.par !== true || j.trava !== o.trava) return nao("trava");
+    if (vieram(j)) return nao("vieram");
+    var pz = prazoDe(j, c);
+    if (pz == null || !numero(o.hora) || o.hora < pz) return nao("cedo");
+    var n = feito(j, resultadoWO(vemDe(j, 0) == null ? 0 : 1), o.ts); n.woPor = "naoVeio";
+    return sim(n);
+  }
+  /** O par: W.O. de quem SAIU no meio (o "Sair da partida" dele, avisado pelo 3D do outro; ou ele mesmo saiu ou aceitou o W.O.),
+   *  a qualquer hora depois de o 3D abrir (antes do abriu, o abandono é o simulado: revisão do PR 5, M4). o: { trava, ts,
+   *  perdedor (o lado: 0|1) } */
+  function woPar(j, o) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.par !== true || j.trava !== o.trava) return nao("trava");
+    if (!vieram(j)) return nao("vem");
+    if (!numero(j.abriu)) return nao("naoAbriu");
+    if (o.perdedor !== 0 && o.perdedor !== 1) return nao("lado");
+    var n = feito(j, resultadoWO(o.perdedor), o.ts); n.woPor = "saiu";
     return sim(n);
   }
 
@@ -836,20 +919,34 @@
   /** O que fazer agora com um jogo da vista (g de montar): { acao, motivo?, quando? } ou null. info: { presente(t) → bool,
    *  visto(t) → a hora do último batimento do técnico (ou null), hora (a do servidor, estimada) }. A sessão age na hora
    *  `quando` (os prazos, depois da testemunha) e com o escalonamento de 1,5 s × k.
-   *   — bot × bot e (até o PR 5) pessoa × pessoa: reservar ao abrir a rodada (motivo 'abertura');
+   *   — bot × bot e, sem o par (regras 1 a 3), pessoa × pessoa: reservar ao abrir a rodada (motivo 'abertura');
    *   — pessoa × bot: com a pessoa presente, abrir o prazo; correndo, ninguém do jogo presente = pausar (desde o último
    *     batimento); parado, alguém voltou = retomar; vencido = reservar ('prazo');
+   *   — pessoa × pessoa com o par: o mesmo prazo, correndo com UMA das duas presente;
    *   — reservado e simulado: gravar o resultado (qualquer aparelho: o mesmo resultado); reservado no 3D e vencido: o W.O.
-   *     (abriu) ou o simulado (não abriu: 'naoAbriu') */
+   *     (abriu) ou o simulado (não abriu: 'naoAbriu'); o par vencido: 'naoVeio' (um só tocou em Jogar) ou 'naoAbriu' */
   function proximaAcao(c, g, info) {
     if (!g || !g.aberta || g.a == null || g.b == null || g.e === "feito" || g.invalido) return null;
     var j = g.j;
     if (j && j.e === "reservado") {
       if (j.modo === "simulado") return { acao: "gravar", quando: 0 };
       var pz = prazoDe(j, c);
-      return pz == null ? null : { acao: numero(j.abriu) ? "wo" : "naoAbriu", quando: pz };
+      if (pz == null) return null;
+      if (j.par === true) return { acao: vieram(j) ? "naoAbriu" : "naoVeio", quando: pz };
+      return { acao: numero(j.abriu) ? "wo" : "naoAbriu", quando: pz };
     }
     var tipo = confronto(c, g);
+    if (tipo === "pessoas" && c.par) {
+      var ali = !!(info && info.presente && (info.presente(g.a) || info.presente(g.b)));
+      if (!j) return ali ? { acao: "abrir", quando: 0 } : null;
+      if (j.parado) return ali ? { acao: "retomar", quando: 0 } : null;
+      if (!ali) {
+        var va = info && info.visto ? info.visto(g.a) : null, vb = info && info.visto ? info.visto(g.b) : null;
+        var vm = numero(va) && numero(vb) ? Math.max(va, vb) : numero(va) ? va : numero(vb) ? vb : null;
+        return { acao: "pausar", quando: 0, desde: vm };
+      }
+      return { acao: "reservar", motivo: "prazo", quando: j.ini + j.resta };
+    }
     if (tipo !== "pessoaBot") return { acao: "reservar", motivo: "abertura", quando: 0 };
     var pessoa = tipoDe(c, g.a) === "pessoa" ? g.a : g.b, aqui = !!(info && info.presente && info.presente(pessoa));
     if (!j) return aqui ? { acao: "abrir", quando: 0 } : null;
@@ -891,7 +988,27 @@
     if (esc.length !== 2 || !escValida(c, ab[0], esc[0]) || !escValida(c, ab[1], esc[1])) return "escalacao";
     // o 3D: só pelo "Jogar" da pessoa do jogo (motivo 'pedido', quem reservou é um dos dois), com o `inicio`
     if (j.modo === "3d" && (j.motivo !== "pedido" || ab.indexOf(j.por) < 0 || !numero(j.inicio) || (j.abriu != null && !numero(j.abriu)))) return "forma";
+    // o par: só nas salas com ele, no 3D; quem reservou "veio" no inicio e o outro DEPOIS dele (o 2º toque é outra transação:
+    // o aparelho adulterado que grava os dois toques na mesma reserva fica com os dois iguais — revisão do PR 5, M4); os toques
+    // são horas; o abriu só com os dois
+    if (j.par != null || j.vem0 != null || j.vem1 != null) {
+      if (j.par !== true || !c.par || j.modo !== "3d") return "forma";
+      var lp = ab.indexOf(j.por), vo = vemDe(j, 1 - lp);
+      if (vemDe(j, lp) !== j.inicio || (j.vem0 != null && !numero(j.vem0)) || (j.vem1 != null && !numero(j.vem1))) return "forma";
+      if (vo != null && !(vo > j.inicio)) return "forma";
+      if (j.abriu != null && !vieram(j)) return "forma";
+    }
     if (j.e !== "feito") return null;
+    // o W.O. do par: de quem não veio (depois do prazo de tocar em Jogar, pela hora do servidor) ou de quem saiu (com o 3D aberto,
+    // gravado depois do abriu)
+    if (j.par === true && j.res.wo != null) {
+      if (j.woPor === "naoVeio") return vemDe(j, j.res.wo) == null && vemDe(j, 1 - j.res.wo) != null && numero(j.ts) && j.ts >= j.inicio + PRAZO ? null : "wo";
+      if (j.woPor === "saiu") return vieram(j) && numero(j.abriu) && numero(j.ts) && j.ts >= j.abriu ? null : "wo";
+      return "wo";
+    }
+    // (o resultado do 3D do par: só com o 3D aberto e gravado depois do abriu)
+    if (j.par === true && j.fim === "3d" && !(numero(j.abriu) && numero(j.ts) && j.ts >= j.abriu)) return "resultado";
+    if (j.woPor != null) return "forma";
     // o W.O.: só do 3D que abriu, de quem reservou e gravado depois do prazo da partida (pela hora do servidor) — ou, com o
     // `desistiu`, quando quem reservou aceitou o W.O. antes do prazo (depois do `abriu`)
     if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por && numero(j.abriu) && numero(j.ts) && numero(j.inicio) &&
@@ -916,7 +1033,7 @@
       formato: formatoDe(o.formato), T: T,
       ctx: o.ctx || null, vivo: o.vivo || null, clubes: o.clubes || [], nomes: o.nomes || [], tipos: o.tipos || [],
       escal: o.escal || {}, prefs: o.prefs || [], inicio: numero(o.inicio) ? o.inicio : 0,
-      duracao3d: duracao3dDe(o.duracao3d), dificuldade3d: dificuldade3dDe(o.dificuldade3d), _est: null, _sorteio: null
+      duracao3d: duracao3dDe(o.duracao3d), dificuldade3d: dificuldade3dDe(o.dificuldade3d), par: !!o.par, _est: null, _sorteio: null
     };
   }
 
@@ -929,8 +1046,9 @@
     estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
     somaNotas: somaNotas, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
-    resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoDe: prazoDe,
+    resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoPar: prazoPar, PAUSAS_PAR: PAUSAS_PAR, prazoDe: prazoDe,
     abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo, desistir: desistir,
+    reservarPar: reservarPar, entrarPar: entrarPar, naoVeio: naoVeio, woPar: woPar, vieram: vieram, vemDe: vemDe, ladoDe: ladoDe,
     confronto: confronto, proximaAcao: proximaAcao, conferirJogo: conferirJogo, canon: canon,
     // para os testes
     _turno: turno, _chaveInicial: chaveInicial, _espalha: espalha

@@ -7835,3 +7835,26 @@ body.theme-light .lei-sj-estado.d { color: #b91c1c; }
 body.theme-light .lei-sj-motivo, body.theme-light .lei-jg-est.anda { color: #92400e; }
 body.theme-light .lei-pend { border-color: rgba(146,64,14,.35); }
 body.theme-light .lei-tabela tr.eu td, body.theme-light .lei-cl.eu { background: rgba(15,122,58,.08); }
+
+/* ---------- o par (revisão do PR 5): o Jogar apagado de verdade, o alvo de 44 px e o chamado do amigo ---------- */
+.lei-acoes .btn { min-height: 44px; }
+.lei-acoes .btn:disabled:not([aria-busy="true"]) { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* o chamado do amigo para o 3D nas abas da sala que não são o Campeonato (no fluxo da página, sem cobrir nada) */
+.lei-chamado { width: 100%; max-width: 560px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; padding: 8px 8px 8px 12px;
+  border-radius: 12px; border: 1px solid rgba(34,197,94,.55); background: rgba(34,197,94,.12); color: var(--text); font-size: 13.5px; font-weight: 700; }
+.lei-chamado-ic { display: inline-flex; color: var(--gold); }
+.lei-chamado-txt { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.lei-chamado .btn { flex: 0 0 auto; min-height: 44px; padding: 0 20px; display: inline-flex; align-items: center; gap: 8px; }
+.lei-chamado .btn:disabled:not([aria-busy="true"]) { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* o selo na aba Campeonato: o ponto verde no canto (o chamado esperando o seu toque) */
+.lei-aba-selo { position: absolute; top: 2px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg, #050807); pointer-events: none; }
+.lei-aba.on .lei-aba-selo { background: #fff; }
+@media (min-width: 760px) and (min-height: 521px) {
+  .lei-chamado { max-width: 1040px; }
+  .lei-tela-lote .lei-chamado, .lei-tela-sag .lei-chamado { max-width: 560px; }
+}
+@media (min-width: 1024px) and (min-height: 600px) {
+  .lei-tela-sag .lei-chamado, .lei-tela-lote .lei-chamado { max-width: 1000px; }
+}
+@media (max-height: 520px) and (min-width: 560px) { .lei-chamado { max-width: 900px; } }
+body.theme-light .lei-chamado-ic { color: #15803d; }

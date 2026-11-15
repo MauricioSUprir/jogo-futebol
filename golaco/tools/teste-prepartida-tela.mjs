@@ -90,6 +90,13 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
+//   O8  (o par do Modo Leilão: &simular=1, o pedido com online.simular) as abas [pronto, simular, visao]; o Simular só no 2º toque;
+//       A escolhe Simular e B sai também SÓ pelo bit E_SIMULAR do pacote (a mensagem de controle {tipo:'simular'} descartada de
+//       propósito), com o aviso "{A} escolheu simular a partida."; nenhum passo nos dois, o Pronto depois não começa nada; sem
+//       &simular=1 a aba não existe (o E1)
+//   O8b (a revisão do PR 5 do Leilão) A pronto → A Simular + B Pronto juntos, com 80 ms de latência no que sai de A: o Simular de A
+//       desligado depois do Pronto (aria-disabled, nem arma) e os dois juntos no jogo (antes: A no simulado, B no jogo)
+//   O8c o Simular de A chega a B antes de a tela de B abrir (B entra depois): fica pendente e vale quando a tela abre
 //   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,cedo,carga] [--casos a,c,…] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -1085,9 +1092,25 @@ if (faz('online')) {
     }
     return false;
   }
-  /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável). */
-  async function abrirPar(extra, perda = 0) {
+  /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável);
+   *  semCtrlSimular = descarta a mensagem de controle {tipo:'simular'} (o O8: o outro sai só pelo bit do pacote). */
+  async function abrirPar(extra, perda = 0, semCtrlSimular = false, lat = 0) {
     const ctx = await abrir({ largura: 960, altura: 540, dpr: 1 });
+    // (lat: os pacotes e o controle que SAEM da aba com window.__atraso ligado esperam lat ms — o WebRTC tem ~20–100 ms; o O8b)
+    if (lat) await ctx.contexto.addInitScript(l => {
+      const orig = BroadcastChannel.prototype.postMessage;
+      BroadcastChannel.prototype.postMessage = function (m) {
+        if (window.__atraso) { const self = this; setTimeout(() => orig.call(self, m), l); return undefined; }
+        return orig.call(this, m);
+      };
+    }, lat);
+    if (semCtrlSimular) await ctx.contexto.addInitScript(() => {
+      const orig = BroadcastChannel.prototype.postMessage;
+      BroadcastChannel.prototype.postMessage = function (m) {
+        if (m && m.t === 'c' && m.m && m.m.tipo === 'simular') { window.__ctrlSimularDescartado = (window.__ctrlSimularDescartado || 0) + 1; return undefined; }
+        return orig.call(this, m);
+      };
+    });
     if (perda) await ctx.contexto.addInitScript(f => {
       let k = 0x2545f491, perdidos = 0, total = 0;
       const orig = BroadcastChannel.prototype.postMessage;
@@ -1291,6 +1314,108 @@ if (faz('online')) {
           '≤ 1000 ms; ~20%; sim', sai.ms != null && sai.ms <= 1000 && andou && perda.every(x => x && x.perdidos > 0));
       } else meta('O7 a saída conjunta com 20% de perda', 'sem a tela', 'a tela nos dois lados', false);
       meta('S7 0 erros no console (online, par 3)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 4: O8 o "Simular partida" do par do Modo Leilão (&simular=1), com a mensagem de controle descartada (só o bit)
+  {
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=0&simular=1', 0, true);
+    try {
+      const sim = p => p.evaluate(() => { const o = window.__golaco.online; return o ? { simular: o.simular, remoto: o.simularRemoto, com: o.comSimular, n: o.n, fase: o.fase } : null; });
+      let a = await on(A), b = await on(B);
+      if (a?.aberta && b?.aberta) {
+        const abas = [a.pp.abas.join(), b.pp.abas.join()];
+        // (os toques pelo DOM, como o do Simular do TM: com duas abas sem GPU a ~1 quadro por segundo, o clique do Playwright
+        // esperava quadros estáveis; o armado é esperado pelo estado da tela, não por um tempo fixo)
+        const toca = () => A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]').click());
+        await toca();
+        await A.waitForFunction(() => window.__golaco.prepartida.estado.armado === 'simular', null, { timeout: 10000 }).catch(() => {});
+        const um = await sim(A), umB = await sim(B), arm = (await on(A)).pp.armado;
+        await toca();
+        const t0 = Date.now();
+        const saiu = await B.waitForFunction(() => window.__golaco.online.simular === 'outro', null, { timeout: 10000 }).then(() => Date.now() - t0, () => null);
+        await espera(1500);
+        // (depois de simular, o Pronto não começa nada: os dois na tela, nenhum passo)
+        await B.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="pronto"]').click()).catch(() => {});
+        await espera(2000);
+        const fa = await sim(A), fb = await sim(B), aa = await on(A), bb = await on(B);
+        const descartado = await A.evaluate(() => window.__ctrlSimularDescartado || 0);
+        const avisoB = await B.evaluate(() => [...document.querySelectorAll('#prepartida [aria-live], #prepartida .pp-aviso, #prepartida [role="status"]')].map(e => e.textContent).join(' | '));
+        meta('O8 o par do Leilão (&simular=1): [pronto, simular, visao]; o Simular só no 2º toque; A escolhe e B sai SÓ pelo bit do pacote (o controle descartado), com o aviso; nenhum passo e o Pronto depois não começa nada',
+          `abas ${abas.join(' e ')}; 1º toque: A ${um.simular ?? 'nada'} (armado ${arm}), B ${umB.simular ?? 'nada'}; 2º: B saiu em ${saiu} ms (o controle descartado ${descartado}×); aviso de B "${avisoB.slice(0, 80)}"; depois: A ${fa.simular}/${fa.n} passos/fase ${fa.fase}, B ${fb.simular}/${fb.n} passos/fase ${fb.fase}, telas ${aa.aberta}/${bb.aberta}`,
+          'pronto,simular,visao nos dois; nada e armado; B sai; 0 passos; as telas abertas',
+          abas.every(x => x === 'pronto,simular,visao') && !um.simular && arm === 'simular' && !umB.simular && saiu != null && descartado >= 1
+          && fa.simular === 'eu' && fb.simular === 'outro' && fb.remoto === true && fa.n === 0 && fb.n === 0 && fa.fase === 0 && fb.fase === 0
+          && aa.aberta && bb.aberta && /escolheu simular a partida/.test(avisoB));
+      } else meta('O8 o Simular partida do par do Leilão', 'sem a tela', 'a tela nos dois lados', false);
+      meta('S8 0 erros no console (online, par 4)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 5: O8b (a revisão do PR 5 do Leilão) A pronto → A Simular (2º toque) + B Pronto JUNTOS, com 80 ms de latência no que sai
+  // de A: antes, A saía no simulado e B ia para o jogo (o desencontro); agora o Pronto é final — o Simular de A fica desligado
+  // (aria-disabled) e os dois vão juntos para o jogo
+  {
+    const LAT = 80;
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=0&simular=1', 0, false, LAT);
+    try {
+      const est = p => p.evaluate(() => { const g = window.__golaco, o = g.online; return { aberta: !!g.prepartida?.aberta, simular: o.simular, remoto: o.simularRemoto, fase: o.fase, faseRemota: o.faseRemota, enc: o.encerrado,
+        simDes: document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]')?.getAttribute('aria-disabled') ?? null }; });
+      const a0 = await on(A), b0 = await on(B);
+      if (a0?.aberta && b0?.aberta) {
+        await A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="pronto"]').click());
+        await B.waitForFunction(() => window.__golaco.online.faseRemota >= 1, null, { timeout: 30000 }).catch(() => {});
+        // o 1º toque do Simular depois do Pronto (antes armava: agora nada) e o 2º junto com o Pronto de B
+        await A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]').click());
+        await espera(300);
+        const armado = (await on(A)).pp.armado, antes = await est(A);
+        await A.evaluate(() => { window.__atraso = true; });
+        await Promise.all([
+          A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]').click()),
+          B.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="pronto"]').click()),
+        ]);
+        await espera(LAT + 3000);
+        const da = await est(A), db = await est(B);
+        const desencontro = (da.simular != null) !== (db.simular != null) || da.aberta !== db.aberta;
+        meta('O8b A pronto → A Simular + B Pronto juntos (80 ms de latência): o Simular de A desligado depois do Pronto (aria-disabled, nem arma) e os dois vão juntos para o jogo, sem desencontro',
+          `depois do Pronto: Simular ${antes.simDes === 'true' ? 'desligado' : 'ligado'}, armado ${armado ?? 'nada'}; depois: A ${da.simular ?? 'jogo'} (tela ${da.aberta ? 'aberta' : 'fechada'}), B ${db.simular ?? 'jogo'} (tela ${db.aberta ? 'aberta' : 'fechada'})${desencontro ? ' — DESENCONTRO' : ''}`,
+          'desligado, nada; os dois no jogo', antes.simDes === 'true' && armado !== 'simular' && !desencontro && da.simular == null && db.simular == null && !da.aberta && !db.aberta);
+      } else meta('O8b o Pronto e o Simular juntos', 'sem a tela', 'a tela nos dois lados', false);
+      meta('S8b 0 erros no console (online, par 5)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 6: O8c (a revisão do PR 5 do Leilão) o "Simular partida" de A chega a B ANTES de a tela de B abrir (B entra depois): antes
+  // a página marcava o aviso como visto e o perdia (a tela fechada não agia); agora fica pendente e vale quando a tela abre
+  {
+    const ctx = await abrir({ largura: 960, altura: 540, dpr: 1 });
+    try {
+      const sala = `pp${Date.now()}${Math.floor(Math.random() * 1e6)}`;
+      const url = lado => `${srv.url}index.html?online=${sala}&transporte=bc&lado=${lado}&ia=1&semente=7&min=0.25&${Q}&D=4&prepartida=1&prejogo=0&simular=1`;
+      const A = ctx.pagina, erros = [];
+      A.setDefaultTimeout(20000);
+      A.on('pageerror', e => erros.push(`A: ${e.message}`));
+      await A.goto(url(0), { waitUntil: 'load' });
+      await A.waitForFunction(() => window.__golaco?.pronto && window.__golaco.online && window.__golaco.prepartida?.aberta, null, { timeout: 240000 });
+      const toca = () => A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]').click());
+      await toca();
+      await A.waitForFunction(() => window.__golaco.prepartida.estado.armado === 'simular', null, { timeout: 10000 }).catch(() => {});
+      await toca();
+      const sa = await A.waitForFunction(() => window.__golaco.online.simular === 'eu', null, { timeout: 10000 }).then(() => true, () => false);
+      // B entra agora: os pacotes de A (com o bit) chegam a B antes de a tela dele abrir
+      const B = await ctx.contexto.newPage();
+      B.setDefaultTimeout(20000);
+      B.on('pageerror', e => erros.push(`B: ${e.message}`));
+      // (o 1º pacote de A visto por B ANTES da tela de B: a marca no próprio B)
+      await B.addInitScript(() => { window.__pacoteAntesDaTela = null; const t = setInterval(() => { const g = window.__golaco; if (g?.online && g.online.faseRemota >= 0 && window.__pacoteAntesDaTela == null) { window.__pacoteAntesDaTela = !g.prepartida?.aberta; clearInterval(t); } }, 5); });
+      await B.goto(url(1), { waitUntil: 'load' });
+      await B.waitForFunction(() => window.__golaco?.pronto && window.__golaco.online, null, { timeout: 240000 });
+      const saiuB = await B.waitForFunction(() => window.__golaco.online.simular === 'outro', null, { timeout: 15000 }).then(() => true, () => false);
+      const fb = await B.evaluate(() => { const g = window.__golaco, o = g.online; return { simular: o.simular, remoto: o.simularRemoto, pend: o.simularPendente, n: o.n, aberta: !!g.prepartida?.aberta, antes: window.__pacoteAntesDaTela }; });
+      meta('O8c o Simular de A chega a B antes de a tela de B abrir (B entra depois): vale quando a tela abre (B sai também, nenhum passo)',
+        `A ${sa ? 'escolheu' : 'não escolheu'}; o 1º pacote de A em B ${fb.antes === true ? 'antes da tela' : fb.antes === false ? 'com a tela aberta' : '—'}; B ${fb.simular ?? 'nada'} (remoto ${fb.remoto}, pendente ${fb.pend}), ${fb.n} passos, tela ${fb.aberta ? 'aberta' : 'fechada'}`,
+        'B outro; 0 passos', sa && saiuB && fb.simular === 'outro' && fb.remoto === true && fb.n === 0);
+      meta('S8c 0 erros no console (online, par 6)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
     } finally { await ctx.navegador.close(); }
   }
 }

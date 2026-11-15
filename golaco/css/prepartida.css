@@ -227,6 +227,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .pp-aba.armado:not(.foco) { color: #fde68a; }
 #prepartida .pp-aba[aria-pressed="true"]:not(.foco) { border-color: var(--pp-verde); }
 #prepartida .pp-aba:disabled, #prepartida .pp-aba[aria-disabled="true"] { cursor: default; opacity: 0.85; }
+/* (o online do par do Leilão: o Simular partida depois do Pronto, que é final — apagado de verdade, não só "esperando") */
+#prepartida .pp-aba[data-aba="simular"][aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 #prepartida .pp-aba.aguardando > svg { display: none; }
 /* a aba que espera o 3D (a tela cedo, item 106; prepartida-tela.js marcarAbas: aria-disabled + aria-busy): o mesmo rótulo e a mesma
    medida, um pouco apagada, com a barra de carga DENTRO dela, no pé (absoluta: o layout não muda). A barra anda pelas etapas da carga
