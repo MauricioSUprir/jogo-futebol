@@ -22,9 +22,11 @@
      nos 3 formatos até o campeão (o prazo de 2 min no jogo da pessoa, o Simular que grava antes de responder, cada jogo
      reservado e gravado uma vez e conferido, a mesma vista noutro "aparelho"), K2 recarregar no meio = os mesmos
      resultados, K3 a escalação mudada vale a partir do próximo jogo que não começou, K4 a sala adulterada congela ·
-     KO o campeonato ONLINE pela firebase() sobre o banco falso (2, 4 e 8 aparelhos)
+     KO o campeonato ONLINE pela firebase() sobre o banco falso (2, 4 e 8 aparelhos; a limpeza; as regras opcionais do
+     firebase/regras-leilao-validate.json avaliadas em cada gravação: nenhuma honesta recusada, as adulterações recusadas)
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
    Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v] [--rapido] [--caso O1,O4,quatro]
+   (o --caso também escolhe os do KO: dois, limpeza, quatro, oito)
    --gravar-motor [arquivo]: regrava a referência do motor do C7 (padrão: o js/engine.js da origin/main, pelo git) — só
    quando o motor mudou DE PROPÓSITO (dizer no PR)
    (--rapido: o leilão online de 8 até a metade e sem o da queda; --caso: só esses pedaços do O; LEILAO_DEPURA=1 mostra
@@ -3017,8 +3019,430 @@ async function testeCampSessao() {
   });
 }
 
+/* ============================================ KO o campeonato online (a sessão sobre o Firebase falso) ============================================
+   A sala montada no banco falso já no fim do leilão (o leilão de cada um é o bloco O) e as sessões online (abrir) em 2, 4 e
+   8 "aparelhos", cada um com o seu cliente, a sua latência e o seu relógio: todos veem os mesmos jogos, resultados,
+   tabela, chave e campeão; cada jogo é reservado e gravado UMA vez (o servidor falso guarda a história de cada nó); dois
+   aparelhos simulando o mesmo jogo ao mesmo tempo dão um resultado só; o prazo da pessoa é pela hora do servidor (os
+   relógios ±5 s e o pulo de +60 s depois da calibração: nenhum jogo reservado pelo prazo antes de a pessoa ter 2 min de
+   prazo correndo no servidor); quem some (a página escondida) para o prazo e volta; o dono simula os pendentes; quem
+   recarrega vê tudo gravado; quem sai da sala conta como bot; a limpeza não apaga a sala no campeonato com atividade
+   nos jogos e apaga a do fim 24 h depois; as regras opcionais (o .validate do LEIA-ME) não recusam nenhuma gravação
+   honesta. Nenhum Firebase de verdade. --caso dois,limpeza,quatro,oito. */
+// o avaliador das regras opcionais (firebase/regras-leilao-validate.json) com a semântica do .validate: só valores não
+// nulos, no nó gravado, nos de dentro e nos de cima; `data`/`root` antes da gravação, `newData` depois, `now` a hora do
+// servidor, `auth.uid` a conta de quem grava, os $ do caminho. As expressões das regras são JavaScript válido (com o
+// .matches das strings): rodam como funções. Devolve confere(raizAntes, caminho, valor, hora, authUid) → [regras que recusam].
+function avaliadorRegras(arquivo) {
+  const regras = JSON.parse(fs.readFileSync(arquivo, "utf8")).rules;
+  if (!String.prototype.matches) Object.defineProperty(String.prototype, "matches", { value: function (re) { return re.test(String(this)); }, configurable: true });
+  const fns = new Map();
+  const fn = (expr, vars) => {
+    const k = expr + "|" + vars.join(",");
+    if (!fns.has(k)) fns.set(k, new Function("data", "newData", "root", "now", "auth", ...vars, "return (" + expr + ");"));
+    return fns.get(k);
+  };
+  const vazio = v => v == null || (typeof v === "object" && !Object.keys(v).length);
+  function limpa(v, hora) {
+    if (v && typeof v === "object" && v[".sv"] === "timestamp") return hora;
+    if (v == null || typeof v !== "object") return v == null ? null : v;
+    const o = {}; let tem = false;
+    Object.keys(v).forEach(k => { const x = limpa(v[k], hora); if (!vazio(x)) { o[k] = x; tem = true; } });
+    return tem ? o : null;
+  }
+  const pega = (t, ps) => { let x = t; for (const p of ps) { if (x == null || typeof x !== "object") return null; x = x[p]; } return x == null ? null : x; };
+  function poe(t, ps, v) {
+    if (!ps.length) return v;
+    const o = t && typeof t === "object" ? Object.assign({}, t) : {};
+    const x = poe(o[ps[0]], ps.slice(1), v);
+    if (vazio(x)) delete o[ps[0]]; else o[ps[0]] = x;
+    return Object.keys(o).length ? o : null;
+  }
+  class Snap {
+    constructor(t, ps) { this.t = t; this.ps = ps; }
+    child(k) { return new Snap(this.t, this.ps.concat(String(k).split("/").filter(Boolean))); }
+    val() { return pega(this.t, this.ps); }
+    exists() { return this.val() != null; }
+    hasChildren(ks) { const v = this.val(); if (!v || typeof v !== "object") return false; return ks ? ks.every(k => v[k] != null) : true; }
+    isString() { return typeof this.val() === "string"; }
+    isNumber() { return typeof this.val() === "number"; }
+    isBoolean() { return typeof this.val() === "boolean"; }
+  }
+  return function confere(antes, ps, valor, hora, uid) {
+    // (o poe copia só o caminho: a árvore de antes não muda)
+    const depois = poe(antes || null, ps, limpa(JSON.parse(JSON.stringify(valor === undefined ? null : valor)), hora));
+    const falhas = [];
+    // as regras em cada nó: os de cima do caminho gravado, ele e os de dentro (só onde o valor novo existe)
+    function avalia(r, cam, vars) {
+      if (!r || !r[".validate"] || pega(depois, cam) == null) return;
+      const nomes = Object.keys(vars), f = fn(r[".validate"], nomes);
+      let res;
+      try { res = f(new Snap(antes, cam), new Snap(depois, cam), new Snap(antes, []), hora, { uid }, ...nomes.map(n => vars[n])); } catch (e) { res = false; }
+      if (res !== true) falhas.push(cam.join("/") + " (" + r[".validate"].slice(0, 60) + "…)");
+    }
+    function filhoRegra(r, k) {
+      if (!r) return [null, null];
+      if (r[k]) return [r[k], null];
+      const w = Object.keys(r).find(x => x[0] === "$");
+      return w ? [r[w], w] : [null, null];
+    }
+    let r = regras, vars = {};
+    avalia(r, [], vars);
+    for (let i = 0; i < ps.length && r; i++) {
+      const [rf, w] = filhoRegra(r, ps[i]);
+      r = rf; if (w) vars = Object.assign({}, vars, { [w]: ps[i] });
+      avalia(r, ps.slice(0, i + 1), vars);
+    }
+    (function desce(r0, cam, vs) {
+      const v = pega(depois, cam);
+      if (!r0 || v == null || typeof v !== "object") return;
+      Object.keys(v).forEach(k => {
+        const [rf, w] = filhoRegra(r0, k);
+        if (!rf) return;
+        const vs2 = w ? Object.assign({}, vs, { [w]: k }) : vs;
+        avalia(rf, cam.concat(k), vs2);
+        desce(rf, cam.concat(k), vs2);
+      });
+    })(r, ps, vars);
+    return falhas;
+  };
+}
+async function testeCampOnline() {
+  await blocoAsync("KO", "campeonato online (banco falso): 2, 4 e 8 aparelhos, cada jogo uma vez, o prazo pelo servidor, quem some, o dono, recarregar, quem sai", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, LC = TMx.leilaoCamp, R = TMx.leilaoRede;
+    const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+    const CASOS = opt("--caso", null) ? opt("--caso").split(",") : null, caso = n => !CASOS || CASOS.includes(n);
+    // o tempo de mentira (como o do bloco O): o servidor, as agendas das sessões e os relógios andam juntos
+    const RT = { hora: 9_000_000, fila: [], seq: 0 };
+    const agendar = (fn, ms) => { const e = { at: RT.hora + Math.max(0, +ms || 0), fn, s: RT.seq++, morto: false }; RT.fila.push(e); return e; };
+    const cancelar = e => { if (e) e.morto = true; };
+    const respira = async () => { for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r)); };
+    let acontecimentos = 0;
+    async function anda(pare, limiteMs = 6 * 3600_000) {
+      const fim = RT.hora + limiteMs;
+      let parado = 0, horaAntes = RT.hora;
+      for (let k = 0; k < 6_000_000; k++) {
+        if (RT.hora !== horaAntes) { horaAntes = RT.hora; parado = 0; } else if (++parado > 20000) throw new Error("laço sem o tempo andar em " + RT.hora);
+        await respira();
+        if (pare && pare()) return true;
+        if (RT.fila.length > 4000) RT.fila = RT.fila.filter(e => !e.morto);
+        let m = -1;
+        for (let i = 0; i < RT.fila.length; i++) { const e = RT.fila[i]; if (e.morto) continue; if (m < 0 || e.at < RT.fila[m].at || (e.at === RT.fila[m].at && e.s < RT.fila[m].s)) m = i; }
+        if (m < 0 || RT.fila[m].at > fim) {
+          for (let i = 0; i < 4; i++) await respira();
+          if (pare && pare()) return true;
+          if (RT.fila.some(e => !e.morto && e.at <= fim)) continue;
+          RT.hora = Math.max(RT.hora, fim);
+          return !!(pare && pare());
+        }
+        const e = RT.fila.splice(m, 1)[0];
+        RT.hora = Math.max(RT.hora, e.at); acontecimentos++;
+        try { e.fn(); } catch (er) { ok(false, "exceção num acontecimento: " + (er && er.stack || er)); }
+      }
+      return false;
+    }
+    const passa = ms => anda(null, ms);
+    async function espera(p, limiteMs = 120_000) {
+      let feito = false, val, err;
+      p.then(v => { feito = true; val = v; }, e => { feito = true; err = e; });
+      await anda(() => feito, limiteMs);
+      if (!feito) throw new Error("a promessa não resolveu em " + limiteMs + " ms");
+      if (err) throw err;
+      return val;
+    }
+    const banco = new BancoFalso({ relogio: () => RT.hora, tempo: () => RT.hora, agendar });
+    // ---------- as regras opcionais (o .validate do LEIA-ME) avaliadas em cada gravação, sem recusar: o fluxo honesto do
+    // campeonato não pode ser recusado por elas ----------
+    const confereRegras = avaliadorRegras(path.join(RAIZ, "firebase/regras-leilao-validate.json")), recusas = [];
+    let gravacoes = 0;
+    banco.negar = (op, caminho, valor, C) => {
+      const ps = String(caminho).split("/").filter(Boolean);
+      if (ps[0] !== "leiloes") return false;
+      gravacoes++;
+      const f = confereRegras(banco.raiz, ps, valor, banco.relogio(), C ? C.uid : null);
+      if (f.length) recusas.push({ op, caminho, f });
+      return false;
+    };
+    // ---------- o servidor guarda a história de cada jogo (a hora do servidor de cada mudança do nó) ----------
+    const HIST = {};   // código → { ult: { id: canon }, log: { id: [{ hora, j }] } }
+    const escreveOrig = banco._escreve.bind(banco);
+    banco._escreve = itens => {
+      const toca = [];
+      for (const [ps] of itens) if (ps[0] === "leiloes" && HIST[ps[1]] && (ps.length <= 2 || ps[2] === "jogos")) toca.push(ps);
+      escreveOrig(itens);
+      for (const ps of toca) {
+        const H = HIST[ps[1]], ids = ps.length >= 4 ? [ps[3]] : [...new Set(Object.keys(banco.ler("leiloes/" + ps[1] + "/jogos") || {}).concat(Object.keys(H.ult)))];
+        for (const id of ids) {
+          const j = banco.ler("leiloes/" + ps[1] + "/jogos/" + id), c = LC.canon(j);
+          if (H.ult[id] === c) continue;
+          H.ult[id] = c; (H.log[id] = H.log[id] || []).push({ hora: RT.hora, j });
+        }
+      }
+    };
+    // ---------- os aparelhos (como os do bloco O) ----------
+    let nAp = 0;
+    function documento() { const d = { hidden: false, ouvintes: [], addEventListener(n, f) { if (n === "visibilitychange") this.ouvintes.push(f); }, removeEventListener(n, f) { this.ouvintes = this.ouvintes.filter(x => x !== f); }, esconde(sim) { this.hidden = sim; this.ouvintes.slice().forEach(f => f()); } }; return d; }
+    function aparelho(uid, o = {}) {
+      nAp++;
+      const dev = { uid, desvio: o.desvio || 0, arm: armazemFalso(), doc: documento() };
+      dev.cli = banco.cliente({ uid: "auth-" + uid, latencia: o.latencia ?? 20, relogio: () => RT.hora + dev.desvio });
+      dev.mono = { base: 30_000 + nAp * 977, pulo: 0 };
+      dev.redePara = codigo => R.firebase(codigo, { db: dev.cli.db, firebase: dev.cli.firebase, relogio: () => RT.hora - 9_000_000 + dev.mono.base + dev.mono.pulo, relogioParede: () => RT.hora + dev.desvio });
+      dev.opc = extra => Object.assign({
+        id: { uid, auth: "auth-" + uid, nome: "Pessoa " + uid.toUpperCase(), num: "2000-" + String(nAp).padStart(4, "0") },
+        redePara: dev.redePara, edicao: () => "public", suUnlocked: () => false, trocarEdicao: ed => ed, fairplay: () => false,
+        armazem: dev.arm, agendar, cancelar, mundo: MUNDO.public, doc: dev.doc, semAtual: true
+      }, extra || {});
+      dev.abrir = codigo => espera(SS.abrir(codigo, dev.opc({ online: true })));
+      dev.bytes = () => banco.bytes(dev.cli.cid);
+      return dev;
+    }
+    // a sala no fim do leilão, gravada direto no servidor (o leilão de robôs da máquina pura: o bloco O testa o leilão)
+    const CORES = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#14b8a6", "#ec4899"];
+    function salaPronta(cod, uids, nb, formato, liga, semente) {
+      const T = uids.length + nb, { lotes, fora } = lotesDe("public", liga, T);
+      const ctx = Lx.contexto({ T, lotes, fora, semente }), fim = leilaoRobos(ctx).v;
+      const sala = {
+        meta: { dono: uids[0], proto: SS.PROTO, regras: Lx.REGRAS, versaoTM: "", edicao: "public", criada: RT.hora, estado: "escalacao", semente, atividade: RT.hora, fimLeilao: RT.hora },
+        cfg: { liga, ligaNome: liga, vagas: T, bots: nb, tempo: 10000, formato, overall: "mostra", T }, tec: {}
+      };
+      uids.forEach((u, i) => { sala.tec[u] = { nome: "Pessoa " + u.toUpperCase(), num: "2000-000" + i, papel: i ? "tecnico" : "dono", pronto: true, auth: "auth-" + u, entrou: i, clube: { nome: "Clube " + u.toUpperCase(), sigla: u.toUpperCase().slice(0, 3), cor: CORES[i], escudo: "classico|star" }, formacao: "4-4-2" }; });
+      SS._sala.refazBots(sala);
+      sala.ordem = SS._sala.ordemPrevista(sala);
+      HIST[cod] = { ult: {}, log: {} };
+      banco.gravar("leiloes/" + cod, { sala, lotes: { l: lotes, f: fora, T, liga, ed: "public" }, vivo: fim });
+      return { T, ordem: sala.ordem, ctx, fim, sala };
+    }
+    // a vista resumida (o que todo aparelho tem de ver igual)
+    const resumo = S => { const c = S.ver().camp; return c ? JSON.stringify({ r: c.rodadas.map(R0 => R0.jogos.map(g => [g.id, g.a, g.b, g.e, g.placar, g.venc])), t: c.tabela && c.tabela.map(x => [x.t, x.pts, x.sg, x.gp]), c: c.campeao, cl: c.classificacao, a: c.artilharia.slice(0, 5).map(x => [x.id, x.gols]), f: c.fim }) : "sem camp"; };
+    // a história de cada jogo no servidor: uma reserva, um resultado e nada depois; o prazo da pessoa com 2 min correndo
+    function confereHist(cod, S, id, conta) {
+      const H = HIST[cod], c = S.ver().camp, ctxC = S._campCtx();
+      c.rodadas.forEach(R0 => R0.jogos.forEach(g => {
+        const L = H.log[g.id] || [], res = L.filter(x => x.j && x.j.e === "reservado"), fe = L.filter(x => x.j && x.j.e === "feito");
+        ok(res.length === 1 && fe.length === 1 && L[L.length - 1].j && L[L.length - 1].j.e === "feito", `${id}: ${g.id} com ${res.length} reservas e ${fe.length} resultados no servidor`);
+        if (!res.length || !fe.length) return;
+        const jr = res[0].j, jf = fe[0].j;
+        ok(jf.trava === jr.trava && LC.canon(jf.esc) === LC.canon(jr.esc) && LC.conferirJogo(ctxC, g, jf) === null, `${id}: ${g.id} gravado com outra trava, escalação ou resultado`);
+        conta[jr.motivo] = (conta[jr.motivo] || 0) + 1;
+        const k = L.indexOf(res[0]);
+        let corre = 0;
+        for (let i = 0; i < k; i++) if (L[i].j && L[i].j.e === "aberto" && !L[i].j.parado) corre += L[i + 1].hora - L[i].hora;
+        L.slice(0, k).forEach(x => { if (x.j && x.j.e === "aberto" && x.j.parado) conta.pausas = (conta.pausas || 0) + 1; });
+        if (jr.motivo === "prazo") {
+          const ant = k > 0 ? L[k - 1].j : null;
+          ok(ant && ant.e === "aberto" && !ant.parado && ant.ini + ant.resta <= res[0].hora, `${id}: ${g.id} reservado pelo prazo ANTES de vencer pela hora do servidor (${ant ? ant.ini + ant.resta - res[0].hora : "?"} ms)`);
+          ok(corre >= LC.PRAZO, `${id}: ${g.id} reservado pelo prazo com só ${corre / 1000} s de prazo correndo no servidor`);
+        }
+      }));
+    }
+    // a pessoa: simula o próprio jogo quando a regra diz (2 s depois de ver o jogo aberto)
+    function pilotoOnline(S, simula) {
+      const visto = new Set(), resp = [];
+      let parado = false;
+      const off = S.aoMudar(() => {
+        if (parado) return;
+        const c = S.ver().camp, mj = c && c.meuJogo;
+        if (!mj || !mj.podeSimular || visto.has(mj.id) || !simula(mj)) return;
+        visto.add(mj.id);
+        agendar(() => { if (!parado) S.simular(mj.id).then(r => resp.push({ id: mj.id, r })); }, 2000);
+      });
+      return { parar() { parado = true; off(); }, resp };
+    }
+    // o dono: "Simular os pendentes" quando a rodada só espera por quem sumiu (o prazo parado, ou o jogo nem aberto)
+    const DEP = {}, chamadas = {};
+    function vigiaDono(S0, sumidos, conta) {
+      let parado = false;
+      const olha = () => {
+        if (parado) return;
+        const c = S0.ver().camp;
+        if (c && !c.fim && c.pendentes) {
+          const pend = c.rodada.jogos.filter(g => g.e !== "feito");
+          const soSumidos = pend.every(g => (g.j && g.j.e === "aberto" && g.j.parado) || (!g.j && [g.a, g.b].some(t => sumidos.has(t))));
+          if (soSumidos) { conta.dono = (conta.dono || 0) + 1; S0.simularPendentes(); }
+        }
+        agendar(olha, 30_000);
+      };
+      agendar(olha, 30_000);
+      return { parar() { parado = true; } };
+    }
+    try {
+      /* ---------- dois: 2 pessoas + 2 bots no mata-mata; dois aparelhos simulando o mesmo jogo; recarregar ---------- */
+      if (caso("dois")) {
+        const id = "KO dois", conta = {};
+        // a semente em que a 2ª pessoa (t = 1) joga contra um bot na 1ª rodada
+        let sem = null;
+        for (let k = 0; k < 100 && !sem; k++) { const c = LC.contexto({ formato: "mata", T: 4, semente: "KOd" + k }), j = LC.estrutura(c)[0].jogos.find(x => x.src.some(s => s.t === 1)); if (j && j.src.some(s => s.t >= 2)) sem = "KOd" + k; }
+        salaPronta("KODOIS", ["d0", "d1"], 2, "mata", "it", sem);
+        const A = aparelho("d0", { latencia: 15 }), B = aparelho("d1", { latencia: 60, desvio: 5000 });
+        const SA = await A.abrir("KODOIS");
+        let SB = await B.abrir("KODOIS");
+        await anda(() => SA.sala.meta.estado === "camp" && SB.sala.meta.estado === "camp", 200_000);
+        ok(SA.sala.meta.estado === "camp" && typeof SA.sala.meta.camp === "number", `${id}: a escalação não passou ao campeonato em 60 s`);
+        // o jogo da 2ª pessoa abre (o prazo corre): ela toca em Simular no MESMO instante em que o dono simula os pendentes
+        await anda(() => { const mj = SB.ver().camp && SB.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.podeSimular); }, 60_000);
+        const idB = SB.ver().camp.meuJogo.id;
+        const pB = SB.simular(), pA = SA.simularPendentes();
+        const [rB, rA] = await espera(Promise.all([pB, pA]));
+        ok(rB.ok && rA.ok && rB.jogo && rB.jogo.e === "feito", `${id}: as respostas da corrida: ${JSON.stringify([rB.estado, rB.motivo, rA.estado, rA.motivo])}`);
+        await passa(2000);
+        const L = HIST.KODOIS.log[idB] || [];
+        ok(L.filter(x => x.j && x.j.e === "reservado").length === 1 && L.filter(x => x.j && x.j.e === "feito").length === 1, `${id}: a corrida no mesmo jogo deu ${L.length} mudanças no servidor`);
+        ok(LC.canon(rB.res) === LC.canon(SA.jogos[idB].res) && LC.canon(SB.jogos[idB].res) === LC.canon(SA.jogos[idB].res), `${id}: os dois viram resultados diferentes`);
+        // o 2º aparelho recarrega no meio (fecha e abre de novo): vê tudo gravado e segue
+        SB.parar(); await passa(20_000);
+        SB = await B.abrir("KODOIS");
+        ok(resumo(SB) === resumo(SA), `${id}: quem recarregou viu outro campeonato`);
+        await anda(() => SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", 3600_000);
+        ok(SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", `${id}: não acabou (${SA.sala.meta.estado}/${SB.sala.meta.estado})`);
+        ok(resumo(SA) === resumo(SB) && SA.ver().camp.campeao != null && !SA.alterada && !SB.alterada, `${id}: vistas diferentes no fim ou sala congelada (${SA.alterada}/${SB.alterada} ${JSON.stringify(SA.alteradaJogo || SB.alteradaJogo)})`);
+        confereHist("KODOIS", SA, id, conta);
+        ok((conta.pedido || 0) + (conta.dono || 0) >= 1, `${id}: ninguém simulou pela tela: ${JSON.stringify(conta)}`);
+        nota(`dois: ${JSON.stringify(conta)}`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- limpeza: a sala no campeonato com atividade nos jogos não some; a do fim, 24 h depois, some ---------- */
+      if (caso("limpeza")) {
+        const id = "KO limpeza", H = 3600_000;
+        RT.hora = Math.max(RT.hora, 40 * H);         // (as horas "de 25 h atrás" precisam de um relógio que já passou delas)
+        // uma sala no camp com a meta de 25 h atrás e um jogo gravado há 2 h (a atividade do campeonato mora nos jogos)
+        const P1 = salaPronta("KOLIMP", ["l0", "l1"], 2, "mata", "es", "KOl"), s1 = P1.sala;
+        // (o contexto como o da sessão: os clubes e os técnicos da sala entram no texto dos lances)
+        const ctxDaSala = (P, cod, sem, T) => LC.contexto({ codigo: cod, semente: sem, formato: "mata", T, ctx: P.ctx, vivo: P.fim,
+          clubes: P.ordem.map(u => P.sala.tec[u].clube), nomes: P.ordem.map(u => P.sala.tec[u].nome), tipos: P.ordem.map(u => P.sala.tec[u].papel === "bot" ? "bot" : "pessoa") });
+        const c1 = ctxDaSala(P1, "KOLIMP", "KOl", 4);
+        const g1 = LC.montar(c1, {}).rodadas[0].jogos[0];
+        const j1 = LC.reservar(null, { ab: [g1.a, g1.b], esc: [LC.escalacaoDoJogo(c1, g1.a), LC.escalacaoDoJogo(c1, g1.b)], modo: "simulado", por: -1, motivo: "dono", ts: RT.hora - 2 * H }).jogo;
+        const f1 = LC.gravar(j1, { trava: j1.trava, res: LC.resultadoDoJogo(c1, g1.id, j1), ts: RT.hora - 2 * H + 1000, mata: true }).jogo;
+        Object.assign(s1.meta, { estado: "camp", camp: RT.hora - 25 * H, atividade: RT.hora - 25 * H, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 60_000 });
+        banco.gravar("leiloes/KOLIMP/sala", s1); banco.gravar("leiloes/KOLIMP/jogos/" + g1.id, f1);
+        // uma sala no fim, tudo de 25 h atrás: some
+        const P2 = salaPronta("KOLIM2", ["n0", "n1"], 0, "mata", "es", "KOn"), s2 = P2.sala;
+        const c2 = ctxDaSala(P2, "KOLIM2", "KOn", 2);
+        const g2 = LC.montar(c2, {}).rodadas[0].jogos[0];
+        const j2 = LC.reservar(null, { ab: [g2.a, g2.b], esc: [LC.escalacaoDoJogo(c2, g2.a), LC.escalacaoDoJogo(c2, g2.b)], modo: "simulado", por: -1, motivo: "abertura", ts: RT.hora - 25 * H }).jogo;
+        const f2 = LC.gravar(j2, { trava: j2.trava, res: LC.resultadoDoJogo(c2, g2.id, j2), ts: RT.hora - 25 * H + 1000, mata: true }).jogo;
+        Object.assign(s2.meta, { estado: "fim", camp: RT.hora - 25 * H - 5000, fimCamp: RT.hora - 25 * H + 2000, atividade: RT.hora - 25 * H + 2000, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 70_000 });
+        banco.gravar("leiloes/KOLIM2/sala", s2); banco.gravar("leiloes/KOLIM2/jogos/" + g2.id, f2);
+        const S1 = await aparelho("l1", { latencia: 30 }).abrir("KOLIMP"), S2 = await aparelho("n1", { latencia: 30 }).abrir("KOLIM2");
+        await passa(120_000);
+        ok(banco.ler("leiloes/KOLIMP/sala") && !S1.apagada && !S1.alterada, `${id}: a sala no campeonato com um jogo gravado há 2 h sumiu (${S1.alterada})`);
+        ok(!banco.ler("leiloes/KOLIM2/sala") && S2.apagada, `${id}: a sala do fim de 25 h atrás não sumiu (${S2.alterada} ${JSON.stringify(S2.alteradaJogo)})`);
+        S1.parar(); S2.parar();
+      }
+
+      /* ---------- quatro: 4 pessoas + 2 bots no misto; ±5 s, o pulo de +60 s, quem some e volta, quem some e o dono ---------- */
+      if (caso("quatro")) {
+        const id = "KO quatro", conta = {}, cod = "KOQUAT";
+        const { ordem } = salaPronta(cod, ["q0", "q1", "q2", "q3"], 2, "misto", "br", "KOq"), t0q = RT.hora;
+        const devs = ["q0", "q1", "q2", "q3"].map((u, k) => aparelho(u, { latencia: [0, 25, 70, 140][k], desvio: [0, 5000, -5000, 0][k] }));
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        // o relógio de parede do 4º pula +60 s depois da calibração
+        await anda(() => Ss[3].rede._hora().escolhida, 30_000);
+        devs[3].desvio += 60_000;
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        const pils = [pilotoOnline(Ss[1], mj => mj.rodada % 2 === 0)];
+        // o 3º some 70 s quando o prazo do jogo dele contra um bot está correndo (duas vezes); o 4º some de vez na 3ª rodada
+        let some3 = 0, sumiu4 = false;
+        const sumidos = new Set();
+        const offs = [Ss[2].aoMudar(() => {
+          const c = Ss[2].ver().camp, mj = c && c.meuJogo;
+          if (some3 < 2 && mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.contraBot && !devs[2].doc.hidden) {
+            some3++; devs[2].doc.esconde(true);
+            agendar(() => devs[2].doc.esconde(false), 70_000);
+          }
+        }), Ss[0].aoMudar(() => {
+          const c = Ss[0].ver().camp;
+          if (!sumiu4 && c && c.rodada && c.rodada.n >= 3) { sumiu4 = true; sumidos.add(3); devs[3].doc.esconde(true); }
+        })];
+        const dono = vigiaDono(Ss[0], sumidos, chamadas);
+        if (process.env.KO_DEPURA) Ss.forEach((S, k) => { const o = S._acao.bind(S); S._acao = (tipo, a) => { const x = k + ":" + tipo + ":" + (a.acao || ""); DEP[x] = (DEP[x] || 0) + 1; return o(tipo, a); }; });
+        await anda(() => Ss.slice(0, 3).every(S => S.sala.meta.estado === "fim"), 6 * 3600_000);
+        dono.parar(); pils.forEach(p => p.parar()); offs.forEach(f => f());
+        ok(Ss.slice(0, 3).every(S => S.sala.meta.estado === "fim"), `${id}: não acabou (${Ss.map(S => S.sala.meta.estado)}; rodada ${Ss[0].ver().camp && Ss[0].ver().camp.rodada && Ss[0].ver().camp.rodada.n})`);
+        // quem sumiu volta e vê tudo gravado
+        devs[3].doc.esconde(false);
+        await passa(30_000);
+        ok(Ss.every(S => resumo(S) === resumo(Ss[0])) && Ss.every(S => !S.alterada), `${id}: vistas diferentes ou sala congelada (${Ss.map(S => S.alterada)})`);
+        confereHist(cod, Ss[0], id, conta);
+        ok((conta.pausas || 0) > 0 && (conta.prazo || 0) > 0 && (conta.dono || 0) > 0, `${id}: o prazo parado, o prazo vencido e o dono não foram exercitados: ${JSON.stringify(conta)}`);
+        ok(some3 > 0 && sumiu4, `${id}: ninguém sumiu (${some3}, ${sumiu4})`);
+        nota(`quatro: ${JSON.stringify(conta)} (o dono simulou os pendentes ${chamadas.dono || 0}×), ${ordem.length} técnicos, ${((RT.hora - t0q) / 60000).toFixed(0)} min de campeonato`);
+        if (process.env.KO_DEPURA) console.log(JSON.stringify(DEP));
+        Ss.forEach(S => S.parar());
+      }
+
+      /* ---------- oito: 8 pessoas nos pontos corridos (56 jogos); quem sai da sala conta como bot ---------- */
+      if (caso("oito")) {
+        const id = "KO oito", conta = {}, cod = "KOOITO", uids = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7"];
+        salaPronta(cod, uids, 0, "pontos", "de", "KOo");
+        const devs = uids.map((u, k) => aparelho(u, { latencia: k === 7 ? 10 : 20 + k * 20, desvio: (k % 3 - 1) * 5000 }));
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        // o 8º sai da sala quando a 2ª rodada abre: os jogos das rodadas que abrem depois disso andam como os de um bot (o
+        // prazo do adversário); antes, como os de uma pessoa (simulados na abertura)
+        let pSai = null;
+        const offSai = Ss[0].on("rodada", x => { if (x.n === 2 && !pSai) pSai = Ss[7].sair(); });
+        await anda(() => !!pSai, 3600_000);
+        offSai();
+        if (!ok(pSai, `${id}: a 2ª rodada não abriu`)) throw new Error("oito: sem a 2ª rodada");
+        await espera(pSai);
+        const tSaiu = RT.hora;
+        const vivos = Ss.slice(0, 7);
+        await anda(() => vivos.every(S => S.sala.meta.estado === "fim"), 6 * 3600_000);
+        ok(vivos.every(S => S.sala.meta.estado === "fim"), `${id}: não acabou (${vivos.map(S => S.sala.meta.estado)})`);
+        ok(vivos.every(S => resumo(S) === resumo(vivos[0])) && vivos.every(S => !S.alterada), `${id}: vistas diferentes ou sala congelada`);
+        confereHist(cod, vivos[0], id, conta);
+        // os jogos do 8º: 'abertura' antes de sair; depois, o prazo do adversário (não a abertura)
+        const c = vivos[0].ver().camp, H = HIST[cod];
+        let depois = 0;
+        c.rodadas.forEach(R0 => R0.jogos.forEach(g => {
+          if (g.a !== 7 && g.b !== 7) return;
+          const jr = (H.log[g.id] || []).find(x => x.j && x.j.e === "reservado");
+          if (!jr) return;
+          if (R0.n === 1) ok(jr.j.motivo === "abertura", `${id}: ${g.id} (antes de sair) por '${jr.j.motivo}'`);
+          else if (R0.abre > tSaiu + 1000) { depois++; ok(jr.j.motivo === "prazo", `${id}: ${g.id} (a rodada abriu ${(R0.abre - tSaiu) / 1000} s depois de ele sair) por '${jr.j.motivo}'`); }
+        }));
+        ok(depois >= 5 && c.rodadas.flatMap(R0 => R0.jogos).length === 56, `${id}: ${depois} jogos depois de sair`);
+        const kb = devs.slice(0, 7).map(d => (d.bytes().desce / 1024).toFixed(0));
+        nota(`oito: ${JSON.stringify(conta)}; KB baixados por aparelho no campeonato ${kb.join("/")}`);
+        vivos.forEach(S => S.parar());
+      }
+      // as regras opcionais não recusaram nenhuma gravação honesta (e recusam as adulterações do campeonato)
+      ok(!recusas.length, `as regras opcionais recusariam ${recusas.length} gravações honestas: ${JSON.stringify(recusas.slice(0, 3))}`);
+      {
+        const raiz = { leiloes: { X: { sala: { meta: { estado: "camp" } }, jogos: {
+          a: { e: "aberto", ini: 1000, resta: 120000 }, r: { e: "reservado", trava: 500, ab: [0, 1], motivo: "abertura" },
+          f: { e: "feito", trava: 500, ts: 600, res: { placar: [1, 0] } }, p: { e: "aberto", parado: true, resta: 90000 } } } } };
+        const TSv = { ".sv": "timestamp" }, recusa = (cam, v, hora) => confereRegras(raiz, ("leiloes/X/" + cam).split("/"), v, hora, "u").length > 0;
+        ok(!recusa("jogos/n", { e: "aberto", ini: TSv, resta: 120000 }, 2000) && !recusa("jogos/a", { e: "aberto", parado: true, resta: 90000 }, 31000) &&
+          !recusa("jogos/a", { e: "reservado", trava: TSv, motivo: "prazo", ab: [0, 1] }, 121000) && !recusa("jogos/r", { e: "feito", trava: 500, ts: TSv, res: { placar: [2, 0] } }, 9000),
+          "as regras opcionais recusaram um passo honesto da máquina do jogo");
+        const adult = [
+          ["o feito regravado", "jogos/f", { e: "feito", trava: 500, ts: TSv, res: { placar: [0, 3] } }, 9000],
+          ["o reservado de volta ao aberto", "jogos/r", { e: "aberto", ini: TSv, resta: 120000 }, 9000],
+          ["o prazo antes de vencer", "jogos/a", { e: "reservado", trava: TSv, motivo: "prazo", ab: [0, 1] }, 120999],
+          ["a trava inventada", "jogos/n", { e: "reservado", trava: 7, motivo: "abertura", ab: [0, 1] }, 9000],
+          ["o feito com outra trava", "jogos/r", { e: "feito", trava: 501, ts: TSv, res: { placar: [2, 0] } }, 9000],
+          ["o feito sem reservar", "jogos/a", { e: "feito", trava: 1000, ts: TSv, res: { placar: [2, 0] } }, 9000],
+          ["o prazo que volta a crescer", "jogos/p", { e: "aberto", ini: TSv, resta: 100000 }, 9000],
+          ["o prazo maior que 2 min", "jogos/n", { e: "aberto", ini: TSv, resta: 120001 }, 9000],
+          ["a hora inventada ao abrir", "jogos/n", { e: "aberto", ini: 5, resta: 120000 }, 9000],
+          ["o começo do campeonato inventado", "sala/meta/camp", 12345, 9000]
+        ];
+        adult.forEach(([nome, cam, v, h]) => ok(recusa(cam, v, h), `as regras opcionais deixaram passar ${nome}`));
+      }
+    } finally {
+      nota(`${acontecimentos} acontecimentos; as regras opcionais conferidas em ${gravacoes} gravações (${recusas.length} recusas)`);
+    }
+  });
+}
+
 await testeCamp();
 await testeCampSessao();
+await testeCampOnline();
 await testeProtocolo();
 await testeSessao();
 await testeRede();
