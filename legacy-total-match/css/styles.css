@@ -7725,6 +7725,9 @@ body.theme-light .lei-sj-3d { color: #92400e; }
    seu clube e o campinho embaixo), o placar numa linha (o anel ao lado de quem lidera e do valor) e a linha de baixo da barra
    mais justa ("Outro valor" inteiro); abaixo de 700 px a barra em duas linhas, como em pé (o Tudo e o campo não cabiam lado a lado) */
 @media (max-height: 520px) and (min-width: 560px) and (max-width: 799px) {
+  /* (as 4 pílulas do online não cabem entre a marca e os ícones: numa linha só delas, embaixo, em vez de quebrar no meio) */
+  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) { row-gap: 6px; }
+  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) .lei-abas { grid-column: 1 / -1; grid-row: 2; padding-bottom: 2px; }
   .lei-corpo-lote { grid-template-columns: minmax(0, 1fr); }
   .lei-corpo-lote .lei-col-b { width: 100%; max-width: 420px; margin: 0 auto; }
   .lei-lote-card { grid-template-columns: minmax(0, 1fr) 210px; }
