@@ -1240,7 +1240,7 @@
       return R.jogos.map(function (g) { return g.id + ":" + g.e + ":" + (g.placar ? g.placar.join("-") : "") + ":" + g.a + ":" + g.b + ":" + extraDe(g); }).join(",") + "/" + R.folgas.join(",") + "/" + R.aberta;
     }).join("|");
     var mj = C.meuJogo;
-    return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot],
+    return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.podeJogar, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot, mj.tresD ? mj.tresD.abriu : null],
       C.folga, C.eliminado, C.pendentes, C.podePendentes, C.pendQuem, (C.pendLista || []).map(function (x) { return x.id + ":" + x.t; }).join(","),
       VIEW.campSel, VIEW.ocupado, pendVisivel(V),
       V.tecnicos.map(function (t) { return [t.clube.nome, t.clube.cor, t.clube.escudo, t.clube.sigla, t.nome, t.saiu, t.ausente]; })]);
