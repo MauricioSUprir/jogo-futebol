@@ -1024,7 +1024,7 @@
     }
     [["+1", B.b1], ["+5", B.b5], ["+10", B.b10]].forEach(function (p) {
       var x = b[p[0]];
-      poeBotao(p[1], x.pode && !ocup, rs(x.alvo), x.pode ? "Lance de " + rs(x.alvo) : p[0] + ": " + SS().textoMotivo(x.motivo, x));
+      poeBotao(p[1], x.pode && !ocup, rs(x.alvo), x.pode ? p[0] + ": lance de " + rs(x.alvo) : p[0] + ": " + SS().textoMotivo(x.motivo, x));
     });
     var tu = b.tudo, conf = VIEW.conf.ate && VIEW.conf.seq === l.seq && VIEW.conf.valor === tu.alvo && tu.pode;
     B.tudo.classList.toggle("confirma", !!conf);
@@ -1042,8 +1042,11 @@
     if (V.conferindo) { poeMsg(B, "Conferindo…", "alerta"); return; }
     if (VIEW.msg && agoraReal() < VIEW.msgAte) { poeMsg(B, VIEW.msg.txt, VIEW.msg.tipo); return; }
     var x1 = b["+1"];
-    if (!x1.pode) poeMsg(B, SS().textoMotivo(x1.motivo, x1), x1.motivo === "lider" ? "ok" : x1.motivo === "tarde" || x1.motivo === "pausa" ? "" : "alerta");
-    else poeMsg(B, "Seu máximo neste jogador: " + rs(x1.max), "");
+    if (!x1.pode) {
+      // na pausa entre os lotes, o máximo no jogador que vem (a hora de planejar: o campo mostra só "Outro valor")
+      var txt = SS().textoMotivo(x1.motivo, x1) + (x1.motivo === "pausa" && x1.max > 0 ? " · seu máximo " + rs(x1.max) : "");
+      poeMsg(B, txt, x1.motivo === "lider" ? "ok" : x1.motivo === "tarde" || x1.motivo === "pausa" ? "" : "alerta");
+    } else poeMsg(B, "Seu máximo neste jogador: " + rs(x1.max), "");
   }
   function poeMsg(B, txt, tipo) {
     if (B.msg.textContent !== txt) B.msg.textContent = txt;
@@ -2307,7 +2310,9 @@
           var abre = function () { folhaVendas(t.t); };
           linha.classList.add("abre");
           linha.setAttribute("role", "button"); linha.setAttribute("tabindex", "0");
-          linha.setAttribute("aria-label", "Ver o time de " + (t.eu ? "você" : t.nome));
+          // (um botão lê só o rótulo: o saldo, as vagas e o estado vão nele, como a linha mostra)
+          var est = seloDe(V, t)[1];
+          linha.setAttribute("aria-label", (t.eu ? "Ver o seu time" : "Ver o time de " + t.nome) + ": " + rs(t.saldo) + ", " + t.n + " de " + L().VAGAS + (est ? ", " + est : ""));
           linha.dataset.foco = "ver-" + t.t;
           linha.addEventListener("click", abre);
           linha.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abre(); } });
