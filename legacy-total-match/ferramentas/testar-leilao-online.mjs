@@ -1559,7 +1559,7 @@ async function casoPar3d() {
   for (const ap of aps) await vigiaCamp(ap);
   const s0 = sala(cod);
   confere(`${ID}1 a sala com 3 pessoas (regras ${s0 && s0.meta.regras}, Pontos corridos, 3 min por tempo): o leilão até o fim e o campeonato com os jogos de amigo contra amigo`,
-    !!(r && r.ok) && acabou && camp && s0.meta.regras === Lx.REGRAS && Lx.REGRAS >= 3 && s0.cfg.duracao3d === 3, { ok: r && r.ok, acabou, camp, regras: s0 && s0.meta.regras });
+    !!(r && r.ok) && acabou && camp && s0.meta.regras === Lx.REGRAS && Lx.REGRAS >= Lx.REGRAS_PAR && s0.cfg.duracao3d === 3, { ok: r && r.ok, acabou, camp, regras: s0 && s0.meta.regras });
   const jogoDe = id => banco.ler(`leiloes/${cod}/jogos/${id}`);
   const quem = id => ESCRITAS.filter(x => x.cod === cod && x.id === id && x.e !== "aberto");
   const pagina = async t => { for (const ap of aps) if (await ap.p.evaluate(() => TM.leilaoSessao.atual().eu).catch(() => -1) === t) return ap; return null; };

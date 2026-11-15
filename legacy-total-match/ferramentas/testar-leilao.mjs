@@ -3266,12 +3266,12 @@ async function testeCamp3d() {
       ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta", "TD9 o abriu apagado (o W.O. vira simulado) não congelou: " + JSON.stringify(A.alteradaJogo));
       A.parar();
     }
-    /* ---- TD10 as regras do 3D (2; desde o PR 5, a sala nova é de regras 3): a sala de regras 1 segue valendo aqui, sem o Jogar;
-       a de regras 4, só olhar ---- */
+    /* ---- TD10 as regras do 3D (2; desde o PR 5, a sala nova é de regras 4): a sala de regras 1 segue valendo aqui, sem o Jogar;
+       a de regras 5, só olhar ---- */
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 3 && Lx.REGRAS_3D === 2 && Lx.regrasAceitas(1) && Lx.regrasAceitas(2) && Lx.regrasAceitas(3) && !Lx.regrasAceitas(4) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras e o Jogar na sala nova");
+      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -3447,13 +3447,14 @@ async function testeCamp3d() {
     ].filter(([x, y]) => x !== y);
     ok(!ok3.length, "PAR3 a vez do jogo de duas pessoas e do par: " + JSON.stringify(ok3));
 
-    /* ---- PAR4 as regras: 3 (o par), as salas de regras 1 e 2 aceitas (sem ele), a de 4 só olhar; o Jogar contra um bot não é o par ---- */
-    ok(Lx.REGRAS === 3 && Lx.REGRAS_PAR === 3 && Lx.REGRAS_3D === 2 && [1, 2, 3].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(4), "PAR4 as regras 3 e as aceitas");
+    /* ---- PAR4 as regras: 4 (o par), as salas de regras 1, 2 e 3 aceitas (sem ele), a de 5 só olhar; o Jogar contra um bot não é o par ---- */
+    ok(Lx.REGRAS === 4 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5), "PAR4 as regras 4 e as aceitas");
     A.retomar();
     const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
-    ok(A.sala.meta.regras === 3 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
-    A.sala.meta.regras = 2; A._jogosVer++;
-    ok(!A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar, "PAR4 a sala de regras 2: o 3D contra um bot segue, sem o par");
+    ok(A.sala.meta.regras === 4 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
+    // (as salas de regras 3 — a outra frente, os lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
+    const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
+    ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));
     A.parar();
     nota(`PAR1–PAR4: a máquina, ${adult.length} adulterações acusadas, a vez em 9 estados`);
   });
@@ -3571,7 +3572,7 @@ async function testeCampOnline() {
     // a sala no fim do leilão, gravada direto no servidor (o leilão de robôs da máquina pura: o bloco O testa o leilão)
     const CORES = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#14b8a6", "#ec4899"];
     // regras: a versão da sala (padrão 2: os casos do KO são de antes do PR 5 — o jogo de duas pessoas simulado ao abrir a rodada;
-    // o par das salas de regras 3 está no caso "par")
+    // o par das salas de regras 4 está no caso "par")
     function salaPronta(cod, uids, nb, formato, liga, semente, regras = 2) {
       const T = uids.length + nb, { lotes, fora } = lotesDe("public", liga, T);
       const ctx = Lx.contexto({ T, lotes, fora, semente }), fim = leilaoRobos(ctx).v;
@@ -3997,19 +3998,19 @@ async function testeCampOnline() {
         nota(`pendentes: ${JSON.stringify(conta)}`);
         SA.parar(); SB.parar();
       }
-      /* ---------- par (PR 5): o jogo de duas pessoas no Online 3D, numa sala de regras 3 com 3 pessoas (pontos corridos: um jogo
+      /* ---------- par (PR 5): o jogo de duas pessoas no Online 3D, numa sala de regras 4 com 3 pessoas (pontos corridos: um jogo
          por rodada, a 3ª folga e age nos prazos) — cada rodada um caminho: o 3D gravado UMA vez (os dois gravam o mesmo), o W.O.
          de quem não tocou em Jogar (pela hora do servidor), o simulado do 3D que não abriu, o W.O. de quem saiu, o Simular de um
          dos dois e o prazo de 2 min sem ninguém tocar; numa sala de regras 2, o jogo contra o amigo é simulado ao abrir a rodada,
          sem o Jogar ---------- */
       if (caso("par")) {
         const id = "KO par", cod = "KOPAR", H0 = Object.keys(HIST).length;
-        salaPronta(cod, ["q0", "q1", "q2"], 0, "pontos", "br", "KOpar", 3);
+        salaPronta(cod, ["q0", "q1", "q2"], 0, "pontos", "br", "KOpar", Lx.REGRAS_PAR);
         const devs = [aparelho("q0", { latencia: 15 }), aparelho("q1", { latencia: 40, desvio: 3000 }), aparelho("q2", { latencia: 25, desvio: -4000 })];
         const Ss = [];
         for (const d of devs) Ss.push(await d.abrir(cod));
         await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
-        ok(Ss.every(S => S._comPar() && S._campCtx().par), `${id}: a sala de regras 3 sem o par`);
+        ok(Ss.every(S => S._comPar() && S._campCtx().par), `${id}: a sala de regras 4 sem o par`);
         const jogo = i => banco.ler("leiloes/" + cod + "/jogos/" + i);
         const r3Par = (T, h, a) => ({ homeGoals: h, awayGoals: a, gols: [].concat(Array.from({ length: h }, (_, k) => ({ lado: 0, tmId: T[0].players[10 - k].id, nome: T[0].players[10 - k].name, minuto: 10 + k * 20 })), Array.from({ length: a }, (_, k) => ({ lado: 1, tmId: T[1].players[10 - k].id, nome: T[1].players[10 - k].name, minuto: 15 + k * 20 }))),
           cartoes: [], stats: { possession: [52, 48], shots: [h + 5, a + 4], onTarget: [h + 2, a + 1] } });

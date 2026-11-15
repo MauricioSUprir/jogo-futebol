@@ -165,7 +165,7 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   pela MESMA sessão de partida da sala do Online 3D: `TM.online3d.confronto`) e abre a tela antes do jogo do 3D com "Pronto" e
   o "Simular partida" novo (qualquer um escolhe e os dois saem com o simulado). Quem não toca em Jogar em 2 min ou sai no meio
   perde por W.O.; a ligação que não dá (sem TURN, comum no 4G) vira o simulado; o resultado é gravado uma vez, por qualquer um
-  dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 e 2) seguem com o jogo contra amigo simulado ao
+  dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 a 3) seguem com o jogo contra amigo simulado ao
   abrir a rodada. Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximo: PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
@@ -1415,7 +1415,7 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   mando neutro; no mata-mata empatado os 91'–120' cortados no 1º gol — o gol de ouro sem mexer no motor — e os pênaltis
   sem os expulsos), a semente `"leilao:"+código+":"+jogo+":"+trava` e a MÁQUINA de cada jogo em `jogos/{id}` (aberto →
   reservado → feito, uma transação por passo; a trava = a hora do SERVIDOR gravada ao reservar; o prazo de 2 min do jogo
-  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, nas salas de regras 1 e 2, pessoa
+  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, nas salas de regras 1 a 3, pessoa
   × pessoa simulados ao abrir a rodada; `proximaAcao`, `conferirJogo`; ids `r{rodada}j{k}` e `m{rodada}j{par}`). `js/engine.js`:
   a opção `semLesao` (sem ela, o motor igual à main: o C7 confere com a `ferramentas/dados/motor-ref.json`; mudança de
   propósito no motor = `--gravar-motor` e dizer no PR). A sessão: o campeonato nasce numa transação (`meta.camp`), quem
@@ -1472,7 +1472,7 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   `--so3d`), o caso `tresd`
   do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
   `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). **PR 5 (o par; PLANO §8 "Durante
-  o PR 5")**: `REGRAS` 3 (aceitas 1, 2 e 3; `REGRAS_PAR`, `_comPar`). `TM.online3d.confronto(o)` = a sessão de partida tirada do
+  o PR 5")**: `REGRAS` 4 (aceitas 1 a 4; `REGRAS_PAR` 4, `_comPar`; o 3 é o da outra frente, os lotes por técnico: sem o par). `TM.online3d.confronto(o)` = a sessão de partida tirada do
   `online3d.js` (o sinal POR NÓ — `sinalRef`; o par em `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` —, a ligação, o lobby
   técnico, o pedido, o quadro e a porta; `auto`, `partida`/`online` por cima do pedido, `rodada0`, `aoAbrir`/`aoResultado`); a
   sala do Online 3D usa a MESMA. A máquina do par (`leilao-camp.js`, só com `c.par`): `reservarPar` (o 1º Jogar; `par`,

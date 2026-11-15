@@ -34,7 +34,7 @@
                 mata-mata empatado — o gol de ouro e os pênaltis — é simulado com a semente) ou 'simulado' (o "Simular partida"
                 da tela do 3D, ou o 3D que nem chegou a abrir no prazo de começar; escSim = as escalações da tela, só quando
                 mudaram)
-   O PAR (PR 5; só nas salas de regras ≥ 3, c.par): o jogo de DUAS pessoas no Online 3D, cada uma no seu aparelho. O nó
+   O PAR (PR 5; só nas salas de regras ≥ 4, c.par): o jogo de DUAS pessoas no Online 3D, cada uma no seu aparelho. O nó
    ganha `par: true`, `vem0`/`vem1` (a hora do servidor em que cada lado tocou em "Jogar"; o de quem reservou = o inicio) e o
    `abriu` (o 1º 3D à vista, de qualquer lado, só com os dois). Antes do toque, como o jogo contra um bot: o prazo de 2 min
    (aberto) que só corre com uma das duas presente e, vencido, o simulado. O 1º "Jogar" reserva (reservarPar) e o outro tem
@@ -45,7 +45,7 @@
    'simulado': qualquer um escolheu Simular, a ligação falhou, os aparelhos dessincronizaram) ou o W.O. de quem SAIU no meio
    (woPar, `woPor: 'saiu'`: o 3D do outro avisou, ou ele mesmo saiu/aceitou o W.O.).
    Motivos de reservar: 'pedido' (a pessoa do jogo tocou em Simular ou em Jogar), 'prazo' (o prazo venceu pela testemunha da
-   hora), 'abertura' (bot × bot; pessoa × pessoa nas salas de regras 1 e 2, antes do par), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
+   hora), 'abertura' (bot × bot; pessoa × pessoa nas salas de regras 1 a 3, antes do par), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
    outro técnico, com o dono fora há mais de 5 min). O 3D reservado que abriu e passa de 2 × duração × 1,3 + 8 min (desde o
    `inicio`) sem resultado é W.O. de quem reservou (decisão 15); o que não chegou a abrir em 2 min é simulado (por qualquer
    aparelho, com a semente). Quem reservou pode aceitar o W.O. antes do prazo (o 3D fechou sem resultado: `desistir`; o feito
@@ -59,7 +59,7 @@
 
    API (TM.leilaoCamp):
      contexto(o)                 o: { codigo, semente, formato, T, ctx (o do TM.leilao), vivo, clubes [t], tipos ['bot'|'pessoa'],
-                                    escal, prefs, inicio, duracao3d, dificuldade3d, par (a sala tem o par: regras ≥ 3) } → c (o campeonato; as contas abaixo recebem c)
+                                    escal, prefs, inicio, duracao3d, dificuldade3d, par (a sala tem o par: regras ≥ 4) } → c (o campeonato; as contas abaixo recebem c)
      duracao3dDe(x) · dificuldade3dDe(x) (a duração e a dificuldade do 3D da sala; padrões 4 min e 'normal')
      formatoDe(nome) · rodadasDe(formato, T) · jogosDe(formato, T) · duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })
      estrutura(c) · montar(c, jogos) (a vista: rodadas, jogos, tabela, atual, fim, campeão,
@@ -909,7 +909,7 @@
   /** O que fazer agora com um jogo da vista (g de montar): { acao, motivo?, quando? } ou null. info: { presente(t) → bool,
    *  visto(t) → a hora do último batimento do técnico (ou null), hora (a do servidor, estimada) }. A sessão age na hora
    *  `quando` (os prazos, depois da testemunha) e com o escalonamento de 1,5 s × k.
-   *   — bot × bot e, sem o par (regras 1 e 2), pessoa × pessoa: reservar ao abrir a rodada (motivo 'abertura');
+   *   — bot × bot e, sem o par (regras 1 a 3), pessoa × pessoa: reservar ao abrir a rodada (motivo 'abertura');
    *   — pessoa × bot: com a pessoa presente, abrir o prazo; correndo, ninguém do jogo presente = pausar (desde o último
    *     batimento); parado, alguém voltou = retomar; vencido = reservar ('prazo');
    *   — pessoa × pessoa com o par: o mesmo prazo, correndo com UMA das duas presente;

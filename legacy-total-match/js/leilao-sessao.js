@@ -34,8 +34,8 @@
 
    O campeonato (§1.7; o núcleo puro é o leilao-camp.js): a vista (rodadas, tabela, chave, artilharia, o fim) é montada
    dos jogos GRAVADOS (ninguém recalcula partida para mostrar). Qualquer aparelho da sala age nos jogos da rodada da vez,
-   escalonado como no leilão: bot × bot (e pessoa × pessoa nas salas de regras 1 e 2) é reservado e simulado ao abrir a
-   rodada; o de pessoa × pessoa nas salas de regras 3 (o PAR, PR 5) tem o prazo de 2 min (correndo com uma das duas
+   escalonado como no leilão: bot × bot (e pessoa × pessoa nas salas de regras 1 a 3) é reservado e simulado ao abrir a
+   rodada; o de pessoa × pessoa nas salas de regras 4 (o PAR, PR 5) tem o prazo de 2 min (correndo com uma das duas
    presente) e o jogarPar (o Online 3D do par: o 1º toque reserva, o 2º entra; os W.O. e o simulado dos prazos pela
    testemunha da hora; o resultado pelo gravar3d/woPar de qualquer um dos dois aparelhos — a ligação mora na tela); o jogo
    de uma pessoa contra um bot tem o prazo de 2 min para começar, que só corre com a pessoa presente (pausar/retomar pelo
@@ -854,7 +854,7 @@
   };
   // a sala tem o Jogar no 3D (as regras 2 do PR 4; a de regras 1, criada antes, segue só com o simulado)
   P._com3d = function () { var s = this.sala; return !!(s && s.meta && typeof s.meta.regras === "number" && s.meta.regras >= LE().REGRAS_3D); };
-  // a sala tem o par: o jogo contra um amigo no Online 3D (as regras 3 do PR 5; nas de antes, ele é simulado ao abrir a rodada)
+  // a sala tem o par: o jogo contra um amigo no Online 3D (as regras 4 do PR 5; nas de antes, ele é simulado ao abrir a rodada)
   P._comPar = function () { var s = this.sala; return !!(s && s.meta && typeof s.meta.regras === "number" && s.meta.regras >= LE().REGRAS_PAR); };
   // o meu jogo da rodada da vez (null: folga, eliminado ou o fim)
   P._meuJogo = function (V) {

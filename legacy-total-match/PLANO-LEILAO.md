@@ -1491,7 +1491,7 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   tocar em Jogar em 2 min, ou sair no meio do 3D, perde por **W.O.**; se a ligação não der (sem TURN, comum no 4G), o jogo é
   **simulado**. Antes do toque, o prazo de 2 min de sempre (correndo com um dos dois na sala) e o Simular partida. O
   resultado é gravado uma vez, por qualquer um dos dois aparelhos; nada vai ao ranking nem ao h2h. As salas criadas antes
-  (regras 1 e 2) seguem como eram: o jogo contra o amigo simulado ao abrir a rodada.
+  (regras 1 a 3) seguem como eram: o jogo contra o amigo simulado ao abrir a rodada.
 - **`TM.online3d.confronto(o)`** (a "sessão de partida" do plano): o sinal passou a ser POR NÓ (`sinalRef(ref, papel, aoPede)`;
   a sala do Online 3D usa `salas3d/{c}/rtc`, o par `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` novo) e o confronto junta a
   ligação, o lobby técnico do canal ctrl (`ola`, os pings e o D0, o `time`), o pedido, o quadro e a porta. A sala do Online 3D
@@ -1505,7 +1505,7 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
 - **Quem é o anfitrião:** o técnico do lado 0 do jogo (`ab[0]`) — joga em casa no pedido, que é o lado 0 do resultado do 3D
   (`resDo3d` sem conversão). Cada aparelho monta o SEU time (`time3d(timeDoTecnico(c, t, esc))`, as escalações GRAVADAS na
   reserva) e manda pelo `time`, como na sala.
-- **A máquina do par** (`leilao-camp.js`; só com `c.par`, as salas de regras 3): `reservarPar` (o 1º Jogar: modo `'3d'`,
+- **A máquina do par** (`leilao-camp.js`; só com `c.par`, as salas de regras 4): `reservarPar` (o 1º Jogar: modo `'3d'`,
   `par: true`, motivo `'pedido'`, a trava = o `inicio` = a hora do servidor e o lado de quem tocou já em `vem0`/`vem1`),
   `entrarPar` (o 2º: o lado dele, uma vez), `naoVeio` (só um tocou e passaram 2 min do `inicio`: W.O. de quem não veio,
   `woPor: 'naoVeio'`), `marcarAbriu` (o 1º 3D à vista, de qualquer lado, só com os dois), `naoAbriu` (com os dois: o 3D
@@ -1537,17 +1537,19 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   `{tipo:'simular'}` pelo canal confiável; quem recebe qualquer um sai também; os dois com `tm3d:sair {motivo: 'simular'}` meio
   segundo depois; a tela não começa o jogo. Sem `online.simular` (a sala do Online 3D), nada muda. Fecho 0; `hash-partida`
   IGUAL; `hash-igual --ref origin/main` IGUAL (sem o `--ref`, a base padrão 980b0b0 é velha e reprova também na main).
-- **Regras 3** (`leilao.js REGRAS` 3, `REGRAS_ACEITAS` [1, 2, 3], `REGRAS_PAR` 3; a sessão `_comPar`): o aparelho do PR 4 só
-  olha as salas novas; este joga as de regras 1 (sem o 3D), 2 (o 3D contra um bot; o amigo simulado ao abrir a rodada) e 3.
+- **Regras 4** (`leilao.js REGRAS` 4, `REGRAS_ACEITAS` [1, 2, 3, 4], `REGRAS_PAR` 4; a sessão `_comPar`; o 3 é da outra frente,
+  os lotes por técnico, que vai antes para a main — combinado pela coordenação: as salas de regras 3 são como as de 2 para o
+  par): o aparelho de antes só olha as salas novas; este joga as de regras 1 (sem o 3D), 2 e 3 (o 3D contra um bot; o amigo
+  simulado ao abrir a rodada) e 4.
   A conferência (`conferirJogo`) conhece o par (o par só com `c.par`, o toque de quem reservou = o `inicio`, o `abriu` só com
   os dois, os dois W.O. do par) e a sessão (a `volta`: os toques e o `abriu` só aparecem, uma vez cada). As regras
   opcionais: o reservado → reservado do par só ganhando o toque do outro lado com `now` e o resto igual; o abriu e o feito
   não mexem nos toques nem no `par` (`vem0`, `vem1`: `now` ou igual).
 - **Testes** (Node): `testar-leilao.mjs` PAR (a máquina, 11 adulterações acusadas, a vez em 9 estados, as regras e as salas
-  antigas) e o KO `--caso par` (3 aparelhos sobre o banco falso, regras 3, pontos corridos: o 3D gravado uma vez pelos dois,
+  antigas) e o KO `--caso par` (3 aparelhos sobre o banco falso, regras 4, pontos corridos: o 3D gravado uma vez pelos dois,
   o W.O. de quem não veio só depois de 2 min pela hora do servidor, o simulado do 3D que não abriu, o W.O. de quem saiu, o
   Simular de um dos dois, o prazo sem ninguém tocar; a sala de regras 2 sem o par) — os casos de antes do KO seguem nas salas
-  de regras 2 (`salaPronta(..., regras = 2)`); o TD10 com as regras 3. Navegador: `testar-leilao-online.mjs --so par3d` (P1–P7,
+  de regras 2 (`salaPronta(..., regras = 2)`); o TD10 com as regras 4. Navegador: `testar-leilao-online.mjs --so par3d` (P1–P7,
   3 páginas, o WebRTC DE VERDADE no loopback com o quadro de ensaio no modo online — `ensaio-3d.mjs`: a porta e o fim pelo
   teste —; no CI, mais uma parte do `tm-testes.yml`); `golaco/tools/teste-prepartida-tela.mjs` O8 e `teste-online.mjs` O16.
   Na base (94b6a3d4) o PAR e o KO par reprovam por exceção (sem `reservarPar` nem `_comPar`), o par3d no P2 (sem o Jogar

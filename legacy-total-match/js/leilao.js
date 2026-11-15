@@ -23,15 +23,16 @@
   var TM = (global.TM = global.TM || {});
 
   /* ---------- constantes ---------- */
-  var REGRAS = 3;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
+  var REGRAS = 4;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
                                   // (o 3D contra um bot: o reservado no 3D ganha o abriu, o W.O. e o simulado do 3D que não abriu);
-                                  // 3 = o PR 5 (o par: pessoa × pessoa no Online 3D, com o prazo, os toques vem0/vem1 e os W.O. dele)
-  var REGRAS_ACEITAS = [1, 2, 3]; // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
+                                  // 3 = a outra frente (os lotes por técnico); 4 = o PR 5 (o par: pessoa × pessoa no Online 3D, com
+                                  // o prazo, os toques vem0/vem1 e os W.O. dele)
+  var REGRAS_ACEITAS = [1, 2, 3, 4]; // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
                                   // Jogar (nada de 3D nelas: o aparelho de antes, na mesma sala, não conhece o abriu nem o W.O.); as de
-                                  // regras 2 (antes do PR 5), com o Jogar contra um bot e o jogo contra um amigo simulado ao abrir a
-                                  // rodada (o aparelho do PR 4, na mesma sala, não conhece o par)
+                                  // regras 2 e 3 (antes do PR 5), com o Jogar contra um bot e o jogo contra um amigo simulado ao abrir
+                                  // a rodada (o aparelho de antes, na mesma sala, não conhece o par)
   var REGRAS_3D = 2;              // a 1ª versão com o Jogar no 3D
-  var REGRAS_PAR = 3;             // a 1ª versão com o par (o jogo contra um amigo no Online 3D)
+  var REGRAS_PAR = 4;             // a 1ª versão com o par (o jogo contra um amigo no Online 3D)
   function regrasAceitas(r) { return REGRAS_ACEITAS.indexOf(r) >= 0; }
   var SALDO = 100;                // R$ do jogo para cada técnico
   var VAGAS = 11;                 // o time: 11 em campo, sem reservas

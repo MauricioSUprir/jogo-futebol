@@ -1489,7 +1489,7 @@
       if (mj.eleAusente && mj.podeSimular) box.appendChild(el("p", { class: "lei-sj-motivo", text: nomeTec1(V, mj.adversario) + " não está na sala agora: o Jogar volta quando ele voltar." }));
       else if (!mj.podeSimular && mj.motivo && mj.motivo !== "conferindo") box.appendChild(el("p", { class: "lei-sj-motivo", text: SS().textoMotivo(mj.motivo, { rede: V.rede }) }));
     } else if (!mj.contraBot) {
-      // contra um amigo numa sala de antes do PR 5 (regras 1 e 2): simulado ao abrir a rodada
+      // contra um amigo numa sala de antes do PR 5 (regras 1 a 3): simulado ao abrir a rodada
       est.textContent = "Contra um amigo: o jogo é simulado ao abrir a rodada.";
       box.appendChild(est);
     } else {
