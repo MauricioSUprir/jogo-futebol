@@ -367,7 +367,7 @@
     S.sala = null; S.lotesG = null; S.ctx = null; S.vivo = null; S.vivoN = null;
     S.escal = {}; S.vendas = {}; S.bates = {}; S.pres = {};
     // o campeonato: os jogos gravados, a versão (sobe a cada mudança), os nós já conferidos (o texto canônico) e o contexto
-    S.jogos = {}; S._jogosVer = 0; S._jogosVisto = false; S._jogoOk = {}; S._feitoVisto = {}; S._camp = null; S._campV = null;
+    S.jogos = {}; S._jogosVer = 0; S._jogosVisto = false; S._jogoOk = {}; S._jogoTxt = {}; S._feitoVisto = {}; S._camp = null; S._campV = null;
     S._rodadaVista = null; S.alteradaJogo = null;
     S.bots = [];
     S.atraso = Math.max(0, num(opc.atraso, 0));
@@ -774,8 +774,11 @@
       if (j == null) continue;
       var g = porId[id];
       if (!g) return falha(id, "id");
+      // o atalho: o mesmo texto da última vez (o mesmo aparelho entrega o nó igual) = já conferido
+      var tj = JSON.stringify(j);
+      if (S._jogoTxt[id] === tj) continue;
       var cj = canon(j);
-      if (ok[id] === cj) continue;
+      if (ok[id] === cj) { S._jogoTxt[id] = tj; continue; }
       // a máquina só anda para a frente: o feito não muda; o reservado só vira o feito dele (a mesma trava, os mesmos
       // times e escalações): voltar o reservado ao aberto daria uma trava nova, outro sorteio (o "jogar de novo")
       var visto = S._feitoVisto[id];
@@ -783,7 +786,7 @@
       if (visto && visto.e === "reservado" && !(j.e === "feito" && j.trava === visto.trava && canon(j.esc) === visto.esc && canon(j.ab) === visto.ab && j.modo === visto.modo)) return falha(id, "volta");
       var m = LC().conferirJogo(c, g, j);
       if (m) return falha(id, m);
-      ok[id] = cj;
+      ok[id] = cj; S._jogoTxt[id] = tj;
       if (j.e === "feito") S._feitoVisto[id] = "feito";
       else if (j.e === "reservado") S._feitoVisto[id] = { e: "reservado", trava: j.trava, esc: canon(j.esc), ab: canon(j.ab), modo: j.modo };
     }
@@ -1034,8 +1037,9 @@
     if (!S.online || !s || !s.meta) return null;
     var atv = Math.max(num(s.meta.atividade, 0), num(s.meta.criada, 0), num(s.meta.camp, 0), num(s.meta.fimCamp, 0)), v = S.vivoN;
     if (v) atv = Math.max(atv, v.abre, v.t);
-    // no campeonato, cada passo de um jogo (abrir, retomar, reservar, gravar) é atividade
-    atv = Math.max(atv, horaJogos(S.jogos));
+    // no campeonato, cada passo de um jogo (abrir, retomar, reservar, gravar) é atividade (a conta só muda com os jogos)
+    if (!S._horaJ || S._horaJ.ver !== S._jogosVer) S._horaJ = { ver: S._jogosVer, h: horaJogos(S.jogos) };
+    atv = Math.max(atv, S._horaJ.h);
     Object.keys(S.bates || {}).forEach(function (u) {
       var b = S.bates[u], tc = s.tec && s.tec[u];
       if (b && tc && tc.papel !== "bot" && b.sid !== S.sid) atv = Math.max(atv, num(b.ts, 0));
