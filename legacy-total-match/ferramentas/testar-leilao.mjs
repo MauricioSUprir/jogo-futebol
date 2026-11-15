@@ -2904,8 +2904,8 @@ async function testeCampSessao() {
     /* ---- K0 a duração estimada e o formato ---- */
     {
       const d = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata" }), d8 = LC.duracaoEstimada({ T: 8, tempo: 10000, formato: "pontos", tresD: true, duracao3d: 4 });
-      ok(d.leilao.n === 52 && d.leilao.lo === 8 && d.leilao.hi === 15 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
-      ok(d8.leilao.n === 104 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
+      ok(d.leilao.n === 80 && d.leilao.lo === 10 && d.leilao.hi === 23 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
+      ok(d8.leilao.n === 160 && d8.leilao.lo === 20 && d8.leilao.hi === 45 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
       for (let T = 2; T <= 8; T++) for (const f of LC.FORMATOS) {
         const e = LC.duracaoEstimada({ T, tempo: 15000, formato: f });
         ok(e.camp.rodadas === LC.rodadasDe(f, T) && e.camp.lo >= 1 && e.camp.hi > e.camp.lo && e.leilao.hi > e.leilao.lo, `K0 ${f} T${T}: ${JSON.stringify(e)}`);
