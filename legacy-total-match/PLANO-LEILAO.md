@@ -718,3 +718,31 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   de gravar como o 3D; a v1 calcula com a semente).
 - **Um amigo atrasado assumir um bot no meio** (produto leve 9): fica para depois; na v1, só o "passar o clube" de
   quem trocou de aparelho.
+
+**Durante o PR 1** (o que o código real pediu de diferente do plano):
+- **`mundoBase`** gera de novo a cada chamada (~0,2–0,3 s no Node, longe de 1 s: a reserva de recusar a liga com
+  edições não precisou). As seleções são do módulo e o `generateWorld` empurra jogadores na lista de antes: o
+  `mundoBase` devolve a lista e o técnico de cada seleção ao que eram, no mesmo objeto (sem isso, o mundo da carreira
+  ganhava convocados).
+- **O `vivo` ganhou o `f`**: no fim, o técnico de cada jogador de `fora` que completou um time de graça (a escalação
+  usa índice ≥ L para eles). Sem líder é `lider: -1`, sem lance `valor: 0` e `t: 0`; o `seq` também sobe no fim
+  (uma ação velha guardada aborta). Na repescagem `k` é a posição em `sem`, que fica parada (o lote sem lance de novo
+  sai).
+- **A extensão é `min(8 s, duração)`**: na repescagem (6 s) um lance devolve o relógio a 6 s, não a 8 s (com 8 s o
+  lote passaria a durar mais que a própria repescagem). Com o lote de 10/15/20 s, 8 s.
+- **O lance não fecha o lote** mesmo quando todos os outros já passaram: quem viu chama o `fechar` logo depois (o
+  `passar` fecha na mesma transação, como o plano diz).
+- **A conferência aceita estados pulados**: o ouvinte do Firebase pode ver o lote fechar sem ver o último lance (o
+  fechamento é conferido pelo preço que saiu do caixa do comprador: ≥ o último lance visto, ≤ o máximo, de quem podia).
+  Sem isso, uma sala honesta congelava. A hora não entra na conferência (a testemunha e o `.validate` cuidam dela).
+- **`fora`** guarda até 1 GK, 5 DF, 5 MF e 4 FW por técnico (o máximo de cada grupo numa formação). Duas ligas com 8
+  técnicos não têm atacantes que sobrem para isso (ch e py: 28 de 32); o mínimo de uma formação (1, 3, 2, 1 por
+  técnico) sobra em todas, e o completar com todos passando sempre fecha os 11 (testar-leilao L6).
+- **Os robôs** são `robo(vivo, ctx, bot, semente?)`: os lotes vêm no `ctx` (o contexto do leilão) e a semente, se não
+  vier, é a da sala. O limite é constante dentro do lote. Nos 1 000 leilões só de robôs, 100% completam sem a
+  reposição e o quartil de cima custa mais em 100%; sobram ~R$ 26 por técnico (o preço de mercado vale ~0 para quem
+  está no nível da reposição): dá para apertar no ajuste fino com o dono.
+- **A ordem** espalha cada grupo em passos iguais com as faixas de nota alternadas: 99% dos blocos de T com 2+
+  posições e 82% com notas altas e baixas; o 1º goleiro cai, em média, a 6% da fila.
+- O `testar-leilao.mjs` ganhou o bloco **R** (a rede em memória sozinha); o **L8** (o protocolo inteiro pela rede)
+  entra com a sessão.
