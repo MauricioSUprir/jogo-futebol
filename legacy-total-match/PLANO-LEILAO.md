@@ -906,3 +906,45 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   testemunha, sem o salto, sem o passe do ausente, Começar sem conferir, sem a conferência, sem outra aba, sem o
   Conferindo…, sem a limpeza, sem escalonar). O banco falso só refaz a vista dos ouvintes do caminho mexido (antes, cada
   mensagem clonava e comparava os lotes inteiros de todo ouvinte: o leilão de 4 levava ~10 s de CPU).
+- **As telas do online** (`leilao-tela.js`, o bloco LEILÃO do `styles.css`; v383):
+  - **A Entrada** pela conta do TM (`TM.net`): sem ela (sem o SDK, sem internet) o cartão "Com os amigos online" fica com
+    Criar sala e Entrar com código apagados e o porquê ("Sem conexão com o servidor agora…"); com a conta entrando,
+    "Entrando na sua conta online…" (e, depois de 9 s, Tentar de novo); suspenso pelo fair play, o aviso (o
+    `TM.fairplay.status`, não o `gate`, que escreve com emoji e volta ao Online). O convite do `?leilao=` entra sozinho uma
+    vez, só com a conta pronta (sem ela, fica guardado). As Minhas salas online dizem "Leilão em andamento" (o índice do
+    aparelho guarda o estado, não o lote da vez); o X de uma sala online que não está aberta só a tira da lista (`esquecer`:
+    a pessoa continua na sala e volta pelo código); o da aberta é o Sair da sala. Voltar a uma sala online troca para a
+    edição dela (a pro só com a chave).
+  - **O código da sala** só aparece no Saguão, atrás do olho (o topo diz "Sala online"; as Minhas salas também): quem
+    compartilha a tela não o mostra. O QR (o do Online 3D, agora exportado: `TM.online3d.qrSvg`) só com o código à
+    mostra, porque ele leva o código.
+  - **A Criar sala** é a mesma tela do treino com `{ online: true }`: os técnicos na sala são as VAGAS (2–8, contando os
+    bots) e os bots de treino 0 a vagas − 1; o resumo e a liga falam "com a sala cheia". O seletor de escudo virou uma peça
+    só (`editorClube`), usada na Criar e no Saguão (lá com as cores de outras pessoas apagadas: a sessão recusaria). O − N +
+    e o botão da liga se atualizam no lugar (refeitos a cada toque, o mesmo botão tocado várias vezes ficava preso no
+    valor velho).
+  - **O Saguão** é refeito por SEÇÕES com chave (os batimentos chegam a todo instante: refazer tudo tirava o foco e o
+    cursor do Meu clube); o foco do teclado volta ao mesmo botão (`data-foco`) e o cursor ao mesmo lugar. O Meu clube grava
+    com "Salvar o clube" (uma transação por letra digitada seria demais); a formação vale no toque. A barra fixa do saguão
+    fica à vista como a de lance (o espaço do fim da página e o `scroll-padding` contam com ela). No PC, duas colunas
+    (o convite, os pedidos e os participantes; a configuração e o meu clube).
+  - **A linha do participante** passa o selo e o Tirar para a linha de baixo quando falta espaço (em 390 px o nome sumia).
+  - **A faixa da sala** (uma de cada vez, a mais grave): a sala alterada, as regras de outra versão (com "Atualizar" quando
+    a sala é mais nova: o `ver()` ganhou `regrasSala`), outra aba (com "Usar aqui" = `assumir`), sem internet,
+    Reconectando…, "Servidor cheio, tente em alguns minutos." (sem conexão por 15 s com a internet do aparelho ligada: o
+    plano grátis do Firebase recusa a conexão de quem passa do limite, e o SDK só fica tentando) e Atualizando…. Criar,
+    entrar e voltar a uma sala sem resposta em 15 s dizem o mesmo.
+  - **Recusado, tirado e a sala encerrada** voltam à Entrada com o recado (os eventos saem ANTES de a sessão parar: a ida à
+    Entrada vem no tique seguinte, já sem a sessão). O confirmar do TM (`.sheet-overlay`, camada 120) fica ABAIXO das folhas
+    do leilão (130): os botões do dono dentro da folha Participantes fecham a folha antes de perguntar.
+  - **A região ao vivo** fala quem entra, quem sai, quem fica pronto, o pedido novo (para o dono), o Pronto zerado pela
+    configuração, a conexão (caiu, atualizando, de volta) e o leilão que começou, cada um uma vez (pela diferença do
+    saguão, não pelo retorno das ações: assim não repete).
+  - **A folha Participantes** só é refeita quando o que ela mostra muda (a chave), não a cada batimento.
+  - Ganchos de teste no topo do `leilao-tela.js` (`TM.leilaoTela.estado()`, `TM.leilaoTela.ajustes` com `cheioMs` e
+    `contaMs`, os seletores estáveis); o `testar-leilao --tela` T2 passou a conferir a Entrada sem o Firebase ("Sem conexão
+    com o servidor"). Conferido num ensaio com o banco falso (dois a quatro aparelhos; não é o teste oficial, que é o
+    `testar-leilao-online.mjs` do próximo passo): o fluxo criar → pedido → aceitar → Pronto → Começar, o convite pelo link,
+    recusado, tirado, outra aba e Usar aqui, o Pronto zerado pela configuração, a queda (Reconectando… → Servidor cheio →
+    de volta), o "Conferindo…" do ack perdido, a sala alterada e as regras mais novas; nada sobre nada (nem encostado, nem
+    texto fora do botão, nem atrás da barra fixa) nos 8 tamanhos, no escuro e no claro, e nenhum erro de página.
