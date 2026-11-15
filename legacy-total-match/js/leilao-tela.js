@@ -447,8 +447,8 @@
   }
   function abaFeita(V, rota) {
     if (rota === "leilao-saguao") return !!V.estado && V.estado !== "saguao" && !V.pedido;
-    if (rota === "leilao-lote") return V.estado === "escalacao" || V.estado === "camp";
-    if (rota === "leilao-escalacao") return V.estado === "camp";
+    if (rota === "leilao-lote") return V.estado === "escalacao" || V.estado === "camp" || V.estado === "fim";
+    if (rota === "leilao-escalacao") return V.estado === "camp" || V.estado === "fim";
     return false;
   }
   function abasEl(V, rota) {
@@ -540,7 +540,7 @@
   }
   function rotaDoEstado(V) {
     if (V.pedido || (V.online && !V.treino && (V.estado === "saguao" || !V.estado))) return "leilao-saguao";
-    return V.estado === "escalacao" ? "leilao-escalacao" : V.estado === "camp" ? "leilao-camp" : "leilao-lote";
+    return V.estado === "escalacao" ? "leilao-escalacao" : V.estado === "camp" || V.estado === "fim" ? "leilao-camp" : "leilao-lote";
   }
   // volta a uma sala das Minhas salas (x = a linha de SS().salas(), ou só o código): o treino pelo aparelho; a online pela
   // conta (com a edição da sala: a pública troca sozinha, a pro só com a chave)
@@ -1123,7 +1123,7 @@
       ]));
     } else {
       P.prazo = null;
-      if (V.estado === "camp") b.appendChild(el("div", { class: "lei-caixa lei-esc-camp" }, [
+      if (V.estado === "camp" || V.estado === "fim") b.appendChild(el("div", { class: "lei-caixa lei-esc-camp" }, [
         el("p", { class: "intro-text", text: "A escalação vale para o campeonato, que chega numa próxima atualização." }),
         botao("Ver o campeonato", function () { TM.ui.go("leilao-camp"); }, "btn", "trophy")
       ]));
@@ -1165,7 +1165,7 @@
     P.corpo.appendChild(el("div", { class: "next-match lei-cartao lei-embreve" }, [
       el("span", { class: "lei-embreve-ic" }, [ic("trophy")]),
       el("div", { class: "nm-label", text: "Campeonato em breve" }),
-      el("p", { class: "intro-text", text: V.estado === "camp"
+      el("p", { class: "intro-text", text: V.estado === "camp" || V.estado === "fim"
         ? "Seu time está pronto. O campeonato (mata-mata, pontos corridos ou os dois), com Jogar ou Simular em cada jogo, chega numa próxima atualização."
         : "Primeiro o leilão e a escalação. O campeonato (mata-mata, pontos corridos ou os dois) chega numa próxima atualização." }),
       el("div", { class: "lei-acoes" }, V.estado === "saguao" || V.pedido ? [
@@ -1785,7 +1785,8 @@
     if (x.estado === "leilao" && x.online) return "Leilão em andamento";
     if (x.estado === "leilao") return x.fase === "rep" ? "Repescagem" : x.k >= 0 ? "Jogador " + (x.k + 1) + " de " + (13 * x.T) : "Começando";
     if (x.estado === "escalacao") return "Escalação";
-    if (x.estado === "camp") return "Campeonato em breve";
+    if (x.estado === "camp") return "Campeonato";
+    if (x.estado === "fim") return "Encerrada";
     return "Saguão";
   }
   TM.ui.register("leilao", function (screen, params) {

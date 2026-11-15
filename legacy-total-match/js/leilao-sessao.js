@@ -21,9 +21,25 @@
      bate/{uid}  { ts, sid, desde, n } a cada 5 s com a página à vista (online; é a testemunha da hora)
      relogio  só no treino: a hora do treino (ms) na última ação; o relógio do treino PARA com a página fechada ou
               escondida e volta daí (recarregar a página no meio volta ao mesmo ponto, com o tempo que faltava)
+     jogos/{id}  a máquina de cada jogo do campeonato (leilao-camp.js: aberto → reservado → feito), SÓ por transação, uma
+              por passo; o resultado mora dentro e é gravado UMA vez, antes de alguém o mostrar
 
    Estados da sala: saguao (online: pedidos, aceitar, configurar, Pronto) → leilao (Começar, por transação) → escalacao
-   (o vivo chegou ao fim; qualquer aparelho) → camp (todos prontos ou 60 s; o campeonato é o PR 3: a tela diz "em breve").
+   (o vivo chegou ao fim; qualquer aparelho) → camp (todos prontos ou 60 s; a transação grava meta.camp = a hora do
+   servidor em que o campeonato começa: o calendário é função pura de cfg.formato, T e meta.semente) → fim (todos os jogos
+   feitos; meta.fimCamp; a sala fica para consulta e some 24 h depois da última atividade, como as outras).
+
+   O campeonato (§1.7; o núcleo puro é o leilao-camp.js): a vista (rodadas, tabela, chave, artilharia, o fim) é montada
+   dos jogos GRAVADOS (ninguém recalcula partida para mostrar). Qualquer aparelho da sala age nos jogos da rodada da vez,
+   escalonado como no leilão: bot × bot (e, até o PR 5, pessoa × pessoa) é reservado e simulado ao abrir a rodada; o jogo
+   de uma pessoa contra um bot tem o prazo de 2 min para começar, que só corre com a pessoa presente (pausar/retomar pelo
+   batimento dela; no treino ela está sempre presente: o relógio do treino é que para) e, vencido pela testemunha da hora,
+   é simulado por qualquer um; a pessoa toca em "Simular partida" (simular): reservar com a trava do servidor → simular
+   com a semente e as escalações GRAVADAS → gravar → só então o resultado volta para a tela mostrar. O dono tem
+   simularPendentes(). A escalação mudada vale a partir do próximo jogo que não começou (a reserva grava a do momento).
+   Quem saiu da sala ("Sair da sala") conta como bot nos jogos. Todo nó novo de jogos é conferido (leilao-camp.js
+   conferirJogo: os times, as escalações e o simulado RECALCULADO uma vez por nó); o feito que muda ou o jogo que some
+   congelam a sala, como o vivo.
 
    Quem age (§3.3, "sem martelo"): fechar o lote, o lance de um robô, o passe de quem sumiu, as trocas de estado da sala e
    apagar a sala vencida são transações IDEMPOTENTES que qualquer aparelho com a sala aberta roda; no online, o k-ésimo
@@ -39,10 +55,11 @@
    Cada `vivo` novo é conferido contra o anterior (TM.leilao.conferir); se não bate, a sessão congela (`alterada`).
 
    API (TM.leilaoSessao):
-     criarTreino(opc) → Promise(sessão)   opc: { liga, bots (1–7), formacao, tempo (s ou ms), clube?, semente?, codigo?
+     criarTreino(opc) → Promise(sessão)   opc: { liga, bots (1–7), formacao, tempo (s ou ms), formato ('mata' padrão,
+                                           'pontos', 'misto'), clube?, semente?, codigo?
                                            e, só nos testes: relogio, agendar, cancelar, armazem, latencia, atraso }
      criarSala(opc) → Promise(sessão)     o online: { liga, ligaNome?, vagas (2–8, contando os bots), bots, tempo, formacao,
-                                           clube?, semente?, mundo? } — o código de 6 letras (sem I, O, 0 e 1) nasce por
+                                           formato, clube?, semente?, mundo? } — o código de 6 letras (sem I, O, 0 e 1) nasce por
                                            transação de null (sem colisão)
      entrar(codigo, opc) → Promise(sessão) o pedido (ou a volta de quem já é da sala); rejeita com `codigo`: codigo,
                                            naoExiste, recusado, cheia, edicao, regras, fairplay, conta, vencida, indisponivel
@@ -52,12 +69,16 @@
      esquecer(codigo) · limpaCodigo(texto) · acelerar(fator) (gancho de teste) · textoMotivo(m, info)
      Nos testes, o online recebe em opc: id { uid, auth, nome, num }, redePara(codigo), edicao(), suUnlocked(),
      trocarEdicao(ed), fairplay() (true = suspenso), doc (a visibilidade), sid, mundo, armazem, agendar, cancelar.
-   A sessão: ver() (tudo o que as telas mostram) · lance('+1'|'+5'|'+10'|'tudo'|número) · passar() · mudarFormacao(f) ·
-     trocar(a, b) · prontoEscalacao(sim) · sair() · parar() · aoMudar(fn) · on(evento, fn) · escalacao(t) · hora()
-     Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial) · pronto(sim) · meuClube(clube) ·
-     comecar() · passarClube(uidVelho, uidNovo) · encerrar() · assumir() · reconectar()
+   A sessão: ver() (tudo o que as telas mostram; no campeonato, ver().camp) · lance('+1'|'+5'|'+10'|'tudo'|número) ·
+     passar() · mudarFormacao(f) · trocar(a, b) · prontoEscalacao(sim) · sair() · parar() · aoMudar(fn) · on(evento, fn) ·
+     escalacao(t) · hora()
+     O campeonato: simular(id?) (o meu jogo da rodada, sem id) · simularPendentes() (só o dono) · partida(id) (o jogo
+     gravado com os dois times pelas escalações gravadas: o "Ver o jogo" no 2D)
+     Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial; também o formato) · pronto(sim) ·
+     meuClube(clube) · comecar() · passarClube(uidVelho, uidNovo) · encerrar() · assumir() · reconectar()
      Eventos: 'lote' {i, fase, k}, 'lance' {t, valor}, 'superado' {t, valor}, 'vendido' {i, t, preco}, 'semLance' {i},
-     'formacao' {de, para}, 'fim', 'estado' {estado}, 'alterada' {motivo}; online: 'aceito', 'recusado', 'tirado',
+     'formacao' {de, para}, 'fim', 'estado' {estado}, 'alterada' {motivo}; o campeonato: 'jogo' {id, a, b, placar, venc,
+     eu} (um jogo foi gravado), 'rodada' {n, nome} (a rodada abriu); online: 'aceito', 'recusado', 'tirado',
      'passado' (o clube foi para outra conta), 'apagada', 'outraAba', 'conferindo', 'rede' {rede}
    Ganchos de teste: acelerar(fator) e pular(ms) (o relógio do treino), pausar()/retomar().
    O relógio do treino também para com segurar(motivo, sim): a página escondida ("pagina") e a pessoa fora das telas da
@@ -102,6 +123,21 @@
 
   /* ---------- utilidades ---------- */
   function LE() { return TM.leilao; }
+  function LC() { return TM.leilaoCamp; }
+  function formatoDe(x) { return LC() ? LC().formatoDe(x) : "mata"; }
+  // o nó jogos como objeto (as chaves r1j0, m2j1… nunca viram lista no Firebase; o vazio volta null)
+  function objJogos(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
+  function jogoDaVista(V, id) {
+    if (!V) return null;
+    for (var r = 0; r < V.rodadas.length; r++) for (var k = 0; k < V.rodadas[r].jogos.length; k++) if (V.rodadas[r].jogos[k].id === id) return V.rodadas[r].jogos[k];
+    return null;
+  }
+  // a hora mais nova gravada nos jogos (o treino reaberto não volta o relógio para antes dela; a limpeza conta como atividade)
+  function horaJogos(js) {
+    var h = 0;
+    Object.keys(js || {}).forEach(function (k) { var j = js[k]; if (j) h = Math.max(h, num(j.ts, 0), num(j.trava, 0), num(j.ini, 0), num(j.inicio, 0)); });
+    return h;
+  }
   function UT() { return (TM.ut && TM.ut._i) || null; }
   function versao() { try { return (TM.versao && TM.versao()) || ""; } catch (e) { return ""; } }
   function edicao() { try { return (TM.storage && TM.storage.edition && TM.storage.edition()) || "public"; } catch (e) { return "public"; } }
@@ -304,6 +340,13 @@
       case "mudou": return "A sala mudou: tente de novo";
       case "naoMembro": return "Você não é técnico desta sala";
       case "rede": return "Falha na conexão: tente de novo";
+      case "naoCamp": return "O campeonato ainda não começou";
+      case "campFim": return "O campeonato acabou";
+      case "semJogo": return "Você não joga nesta rodada";
+      case "naoEhSeu": return "Esse jogo não é seu";
+      case "espera": return "Esse jogo ainda não abriu";
+      case "jogando": return "Esse jogo já está sendo jogado";
+      case "semPendentes": return "Nenhum jogo pendente nesta rodada";
       case "fase": return "Agora não dá";
       default: return "Agora não dá";
     }
@@ -323,6 +366,9 @@
     S.uidEu = S.online && S.id ? S.id.uid : null;
     S.sala = null; S.lotesG = null; S.ctx = null; S.vivo = null; S.vivoN = null;
     S.escal = {}; S.vendas = {}; S.bates = {}; S.pres = {};
+    // o campeonato: os jogos gravados, a versão (sobe a cada mudança), os nós já conferidos (o texto canônico) e o contexto
+    S.jogos = {}; S._jogosVer = 0; S._jogosVisto = false; S._jogoOk = {}; S._feitoVisto = {}; S._camp = null; S._campV = null;
+    S._rodadaVista = null; S.alteradaJogo = null;
     S.bots = [];
     S.atraso = Math.max(0, num(opc.atraso, 0));
     S._atrasoDin = S.online && opc.atraso == null;
@@ -397,7 +443,7 @@
   P._carregar = function (opc) {
     var S = this, L = LE(), rede = S.rede;
     if (S.online) return S._carregarOnline();
-    return Promise.all(["sala", "lotes", "vivo", "relogio", "escal", "vendas"].map(function (c) { return rede.ler(c); })).then(function (r) {
+    return Promise.all(["sala", "lotes", "vivo", "relogio", "escal", "vendas", "jogos"].map(function (c) { return rede.ler(c); })).then(function (r) {
       var sala = r[0], lotes = r[1];
       if (!sala || !sala.meta) throw erroCod("naoExiste");
       if (!S.online && (!lotes || !lotes.l)) throw new Error("sala");
@@ -405,6 +451,7 @@
       S.treino = !!sala.meta.treino;
       S.soOlhar = sala.meta.regras !== L.REGRAS;
       S.escal = lista(r[4]); S.vendas = lista(r[5]);
+      S.jogos = objJogos(r[6]); S._jogosVer++;
       if (opc && typeof opc.eu === "number") S.eu = opc.eu;
       else S._defineEu();
       S.uidEu = S.eu >= 0 ? S._ordem()[S.eu] : null;
@@ -416,7 +463,8 @@
       }
       // o treino reaberto: o relógio volta de onde parou (nunca antes do que já está gravado)
       if (S._relogio && opc && opc.retomar) {
-        var v = r[2] || {}, h = Math.max(num(r[3], 0), num(v.abre, 0), num(v.t, 0), num(sala.meta.atividade, 0), num(sala.meta.criada, 0));
+        var v = r[2] || {}, h = Math.max(num(r[3], 0), num(v.abre, 0), num(v.t, 0), num(sala.meta.atividade, 0), num(sala.meta.criada, 0),
+          num(sala.meta.camp, 0), num(sala.meta.fimCamp, 0), horaJogos(S.jogos));
         if (h > 0) { S._relogio.h0 = h; S._relogio.r0 = S._relogio.base(); }
       }
       S._ouvir();
@@ -428,7 +476,7 @@
   P._carregarOnline = function () {
     var S = this;
     return new Promise(function (ok, falha) {
-      var falta = { sala: 1, lotes: 1, vivo: 1, escal: 1, vendas: 1, bate: 1, pres: 1 };
+      var falta = { sala: 1, lotes: 1, vivo: 1, escal: 1, vendas: 1, jogos: 1, bate: 1, pres: 1 };
       S._carga = {
         visto: function (c) { if (!falta[c]) return; delete falta[c]; if (!Object.keys(falta).length) { S._carga = null; ok(); } },
         falha: function (e) { S._carga = null; falha(e); }
@@ -483,6 +531,7 @@
     S._paraOuvir.push(rede.ouvir("vivo", function (v) { S._naVivo(v); S._visto("vivo"); }, erro));
     S._paraOuvir.push(rede.ouvir("escal", function (v) { S.escal = lista(v); S._notificar(); S._programa(); S._visto("escal"); }, erro));
     S._paraOuvir.push(rede.ouvir("vendas", function (v) { S.vendas = lista(v); S._notificar(); S._visto("vendas"); }, erro));
+    S._paraOuvir.push(rede.ouvir("jogos", function (v) { S._naJogos(v); S._visto("jogos"); }, erro));
     if (S.online) {
       S._paraOuvir.push(rede.ouvir("lotes", function (v) { S._naLotes(v); S._visto("lotes"); }, erro));
       S._paraOuvir.push(rede.ouvir("bate", function (v) { S.bates = v || {}; S._naBate(); S._visto("bate"); }, erro));
@@ -512,7 +561,11 @@
     S._defineEu();
     if (s.ordem && S.ctx && S.ctx.T !== s.ordem.length) S._montaCtx();
     if (!S.ctx) S._montaCtx();
-    if (antes !== undefined && antes !== (s.meta && s.meta.estado)) S._emite("estado", { estado: s.meta && s.meta.estado });
+    if (antes !== undefined && antes !== (s.meta && s.meta.estado)) {
+      S._emite("estado", { estado: s.meta && s.meta.estado });
+      if (s.meta && s.meta.estado === "camp") S._checaRodada(false);
+    }
+    S._confereJogos();
     if (S.online && !S._carga) {
       S._situacaoPedido(euAntes);
       if (S.parado) return;
@@ -592,6 +645,7 @@
     S.vivo = v; S.vivoN = L.norm(v, ctx);
     S._eventos(ant ? L.norm(ant, ctx) : null, S.vivoN);
     S._formacaoAuto();
+    S._confereJogos();
     S._notificar(); S._programa();
   };
   P._eventos = function (a, b) {
@@ -628,6 +682,125 @@
       S.rede.atualizar("escal/" + S.eu, { formacao: e.formacao, tit: null });
       S._emite("formacao", { de: atual, para: e.formacao });
     }
+  };
+
+  /* ---------- o campeonato: os jogos gravados, a vista e a conferência ---------- */
+  // o contexto do campeonato (leilao-camp.js) a partir da sala, dos lotes e do vivo no fim; só no estado camp/fim. Os
+  // campos que mudam (as escalações, quem saiu) são refeitos a cada chamada; o calendário fica no cache do contexto
+  P._campCtx = function () {
+    var S = this, s = S.sala, v = S.vivoN;
+    if (!LC() || !s || !s.meta || !S.ctx || !v || v.fase !== "fim") return null;
+    var est = s.meta.estado;
+    if (est !== "camp" && est !== "fim") return null;
+    var ordem = S._ordem(), T = S.ctx.T, fmt = formatoDe(s.cfg && s.cfg.formato), sem = String(s.meta.semente);
+    var c = S._camp;
+    if (!c || c.T !== T || c.formato !== fmt || c.semente !== sem || c.codigo !== String(S.codigo)) c = S._camp = LC().contexto({ codigo: S.codigo, semente: sem, formato: fmt, T: T });
+    c.ctx = S.ctx; c.vivo = S.vivo; c.inicio = num(s.meta.camp, 0); c.escal = S.escal || {};
+    c.clubes = []; c.nomes = []; c.tipos = []; c.prefs = [];
+    ordem.forEach(function (uid, t) {
+      var tc = (s.tec && s.tec[uid]) || {};
+      c.clubes[t] = tc.clube || limpaClube(null);
+      c.nomes[t] = tc.nome || ("Técnico " + (t + 1));
+      // quem saiu da sala ("Sair da sala") não volta: os jogos dele andam como os de um bot
+      c.tipos[t] = tc.papel === "bot" || tc.saiu ? "bot" : "pessoa";
+      c.prefs[t] = S._prefPadrao(t);
+    });
+    return c;
+  };
+  // a vista do campeonato (montar) dos jogos GRAVADOS; refeita só quando os jogos (ou o começo) mudam
+  P._vista = function () {
+    var S = this, c = S._campCtx();
+    if (!c) return null;
+    var k = S._jogosVer + "|" + c.inicio + "|" + c.formato + "|" + c.T;
+    if (S._campV && S._campV.k === k) return S._campV.V;
+    var V = LC().montar(c, S.jogos || {});
+    S._campV = { k: k, V: V };
+    return V;
+  };
+  P._naJogos = function (v) {
+    var S = this;
+    if (S.parado) return;
+    var js = objJogos(v), ant = S.jogos || {};
+    // o nó inteiro que some depois de ter jogos (alguém apagou só ele): a sala congela, como o vivo
+    if (!Object.keys(js).length && Object.keys(ant).length && S._jogosVisto) { S.jogos = js; S._jogosVer++; S.alteradaJogo = { id: null, motivo: "sumiu" }; S._congela("jogos"); return; }
+    S.jogos = js; S._jogosVer++;
+    var primeiro = !S._jogosVisto;
+    S._jogosVisto = true;
+    S._confereJogos();
+    if (!S.alterada) {
+      if (!primeiro) S._eventosCamp(ant);
+      S._checaRodada(primeiro);
+    }
+    S._notificar(); S._programa();
+  };
+  // o evento do jogo gravado agora (não na carga: aí tudo já estava gravado)
+  P._eventosCamp = function (ant) {
+    var S = this, V = S._vista();
+    if (!V) return;
+    V.rodadas.forEach(function (R) {
+      R.jogos.forEach(function (g) {
+        var a = ant[g.id];
+        if (g.e === "feito" && !(a && a.e === "feito")) S._emite("jogo", { id: g.id, a: g.a, b: g.b, placar: g.placar, venc: g.venc, eu: S.eu >= 0 && (g.a === S.eu || g.b === S.eu) });
+      });
+    });
+  };
+  // o evento da rodada que abriu (a 1ª abre quando a sala chega ao camp; as outras, quando a anterior acaba); na carga
+  // (calado) só guarda a rodada da vez
+  P._checaRodada = function (calado) {
+    var S = this, V = S._vista();
+    if (!V) return;
+    var atual = V.atual >= 0 ? V.rodadas[V.atual].n : -1;
+    if (S._rodadaVista == null && calado) { S._rodadaVista = atual; return; }
+    if (atual >= 0 && atual !== S._rodadaVista) S._emite("rodada", { n: atual, nome: V.rodadas[V.atual].nome });
+    S._rodadaVista = atual;
+  };
+  // a conferência dos jogos (§3.3): cada nó novo ou mudado é conferido UMA vez (o texto canônico guardado): os times da
+  // vez, as escalações gravadas (só jogadores do técnico, nas vagas dos grupos dele) e o simulado RECALCULADO com a semente;
+  // o feito que muda, o jogo que some ou um id fora do calendário congelam a sala. Antes do campeonato (sem o contexto),
+  // espera: confere quando a sala chegar ao camp.
+  P._confereJogos = function () {
+    var S = this, js = S.jogos || {};
+    if (S.alterada || S.parado || !Object.keys(js).length) return;
+    var c = S._campCtx(), V = c ? S._vista() : null;
+    if (!c || !V) return;
+    var ok = S._jogoOk, porId = {};
+    V.rodadas.forEach(function (R) { R.jogos.forEach(function (g) { porId[g.id] = g; }); });
+    function falha(id, motivo) { S.alteradaJogo = { id: id, motivo: motivo }; S._congela("jogos"); }
+    var ks = Object.keys(ok);
+    for (var i = 0; i < ks.length; i++) if (js[ks[i]] == null) return falha(ks[i], "sumiu");
+    var nos = Object.keys(js);
+    for (var n = 0; n < nos.length; n++) {
+      var id = nos[n], j = js[id];
+      if (j == null) continue;
+      var g = porId[id];
+      if (!g) return falha(id, "id");
+      var cj = canon(j);
+      if (ok[id] === cj) continue;
+      // a máquina só anda para a frente: o feito não muda; o reservado só vira o feito dele (a mesma trava, os mesmos
+      // times e escalações): voltar o reservado ao aberto daria uma trava nova, outro sorteio (o "jogar de novo")
+      var visto = S._feitoVisto[id];
+      if (visto === "feito") return falha(id, "feito");
+      if (visto && visto.e === "reservado" && !(j.e === "feito" && j.trava === visto.trava && canon(j.esc) === visto.esc && canon(j.ab) === visto.ab && j.modo === visto.modo)) return falha(id, "volta");
+      var m = LC().conferirJogo(c, g, j);
+      if (m) return falha(id, m);
+      ok[id] = cj;
+      if (j.e === "feito") S._feitoVisto[id] = "feito";
+      else if (j.e === "reservado") S._feitoVisto[id] = { e: "reservado", trava: j.trava, esc: canon(j.esc), ab: canon(j.ab), modo: j.modo };
+    }
+  };
+  // o meu jogo da rodada da vez (null: folga, eliminado ou o fim)
+  P._meuJogo = function (V) {
+    var S = this;
+    if (!V || S.eu < 0 || V.atual < 0) return null;
+    var R = V.rodadas[V.atual];
+    for (var k = 0; k < R.jogos.length; k++) if (R.jogos[k].a === S.eu || R.jogos[k].b === S.eu) return R.jogos[k];
+    return null;
+  };
+  P._souDono = function () {
+    var S = this, s = S.sala;
+    if (!s || !s.meta || S.eu < 0) return false;
+    if (!S.online) return S._ordem()[S.eu] === s.meta.dono;
+    return !!(S.uidEu && s.meta.dono === S.uidEu);
   };
 
   // o registro da venda é de quem fechou o lote; se ele caiu antes de gravar, qualquer presente grava o mesmo valor
@@ -859,8 +1032,10 @@
   P._vencimento = function () {
     var S = this, s = S.sala;
     if (!S.online || !s || !s.meta) return null;
-    var atv = Math.max(num(s.meta.atividade, 0), num(s.meta.criada, 0)), v = S.vivoN;
+    var atv = Math.max(num(s.meta.atividade, 0), num(s.meta.criada, 0), num(s.meta.camp, 0), num(s.meta.fimCamp, 0)), v = S.vivoN;
     if (v) atv = Math.max(atv, v.abre, v.t);
+    // no campeonato, cada passo de um jogo (abrir, retomar, reservar, gravar) é atividade
+    atv = Math.max(atv, horaJogos(S.jogos));
     Object.keys(S.bates || {}).forEach(function (u) {
       var b = S.bates[u], tc = s.tec && s.tec[u];
       if (b && tc && tc.papel !== "bot" && b.sid !== S.sid) atv = Math.max(atv, num(b.ts, 0));
@@ -892,7 +1067,7 @@
   // a "cara" do estado que o motor viu (o vivo e a fase da sala): a mesma cara = a mesma decisão
   P._chave = function () {
     var v = this.vivoN, s = this.sala;
-    return (s && s.meta ? s.meta.estado : "-") + "|" + (v ? v.seq + ":" + v.n + ":" + v.p + ":" + v.fase : "nulo");
+    return (s && s.meta ? s.meta.estado : "-") + "|" + (v ? v.seq + ":" + v.n + ":" + v.p + ":" + v.fase : "nulo") + "|" + this._jogosVer;
   };
   P._programa = function () {
     var S = this, L = LE(), ctx = S.ctx;
@@ -933,6 +1108,8 @@
     } else if (est === "escalacao") {
       var limite = num(S.sala.meta.fimLeilao, agora) + ESCAL_MS, prontos = S._todosProntos();
       cand(prontos ? agora : limite, "camp", { prazo: prontos ? null : limite });
+    } else if (est === "camp" && ctx) {
+      S._candidatosCamp(agora, cand);
     }
     if (venc != null) cand(venc, "limpeza", { prazo: venc });
     if (!prox) return;
@@ -941,6 +1118,45 @@
     // próprio lance a caminho do servidor): espera o estado novo ou 0,5 s, nunca tenta de novo na hora
     if (S._abortou && S._abortou.chave === S._chave() && a.tipo !== "limpeza") ms = Math.max(ms, S._abortou.ate - agora);
     S._agenda(ms, function () { S._acao(a.tipo, a); });
+  };
+  // o que fazer agora com os jogos da rodada da vez (os candidatos do _programa; §1.7 e §3.3). Cada aparelho começa por um
+  // jogo diferente (pelo seu lugar entre os presentes): menos transações disputadas no mesmo nó
+  P._candidatosCamp = function (agora, cand) {
+    var S = this, V = S._vista();
+    if (!V) return;
+    if (V.fim) { cand(agora, "fimCamp", {}); return; }
+    var R = V.atual >= 0 ? V.rodadas[V.atual] : null;
+    if (!R || !R.aberta || !R.jogos.length) return;
+    var ps = S.online ? S._presentes(agora) : [], off = Math.max(0, ps.indexOf(S.eu));
+    for (var x = 0; x < R.jogos.length; x++) {
+      var a = S._acaoJogo(R.jogos[(x + off) % R.jogos.length], agora);
+      if (a) cand(a.quando, "jogo", a);
+    }
+  };
+  /** A próxima ação num jogo da vista: { acao: 'abrir'|'retomar'|'pausar'|'reservar'|'gravar'|'wo', id, motivo?, quando,
+   *  prazo? (as decisões por prazo passam pela testemunha da hora), t? (a pessoa do jogo) } ou null. A regra é a do
+   *  leilao-camp.js proximaAcao; aqui entram o batimento de cada pessoa e o treino: a pessoa do treino está sempre presente
+   *  (o relógio do treino é que para quando ela sai das telas da sala ou esconde a página). Para o prazo parar sem ninguém
+   *  perceber, a pausa é marcada para 12 s depois do último batimento da pessoa (sem um batimento novo até lá, ela sumiu). */
+  P._acaoJogo = function (g, agora) {
+    var S = this, c = S._campCtx();
+    if (!c || !g || !g.aberta || g.a == null || g.b == null || g.e === "feito" || g.invalido) return null;
+    var j = g.j;
+    if (j && j.e === "reservado") {
+      if (j.modo === "simulado") return { acao: "gravar", id: g.id, quando: agora };
+      var pz = LC().prazoDe(j, c);
+      return pz == null ? null : { acao: "wo", id: g.id, quando: pz, prazo: pz };
+    }
+    if (LC().confronto(c, g) !== "pessoaBot") return { acao: "reservar", id: g.id, motivo: "abertura", quando: agora };
+    var p = c.tipos[g.a] === "pessoa" ? g.a : g.b;
+    var aqui = !S.online || !S._ausente(p, agora);
+    if (!j) return aqui ? { acao: "abrir", id: g.id, quando: agora, t: p } : null;
+    if (j.parado) return aqui ? { acao: "retomar", id: g.id, quando: agora, t: p } : null;
+    var vence = j.ini + j.resta, reserva = { acao: "reservar", id: g.id, motivo: "prazo", quando: vence, prazo: vence, t: p };
+    if (!S.online || (p === S.eu && S._ativo())) return reserva;
+    var b = S.bates[S._ordem()[p]], visto = num(b && b.ts, 0), some = visto + AUSENTE_MS;
+    if (some < vence) return { acao: "pausar", id: g.id, quando: some, prazo: some, t: p, desde: visto };
+    return reserva;
   };
   // a transação no vivo com uma função pura do leilao.js; quem fechou um lote vendido grava o registro da venda.
   // agora = a hora da decisão (a da testemunha no online; sem ela, a do relógio)
@@ -1000,10 +1216,23 @@
           return s;
         });
       } else if (tipo === "camp") {
+        // o campeonato nasce aqui, UMA vez (a transação só passa do estado escalacao): meta.camp = a hora do servidor em
+        // que a 1ª rodada abre; o calendário é função pura do formato, do T e da semente da sala
         return rede.transacao("sala", function (s) {
           if (!s || !s.meta || s.meta.estado !== "escalacao") return undefined;
           if (!S._todosProntos() && (hs != null ? hs : rede.horaServidor()) < num(s.meta.fimLeilao, 0) + ESCAL_MS) return undefined;
-          s.meta.estado = "camp"; s.meta.atividade = TS;
+          s.meta.estado = "camp"; s.meta.camp = TS; s.meta.atividade = TS;
+          return s;
+        });
+      } else if (tipo === "jogo") {
+        return S._acaoCamp(a, hs);
+      } else if (tipo === "fimCamp") {
+        // todos os jogos feitos: a sala passa ao fim (fica para consulta; a limpeza conta 24 h da última atividade)
+        return rede.transacao("sala", function (s) {
+          if (!s || !s.meta || s.meta.estado !== "camp") return undefined;
+          var V = S._vista();
+          if (!V || !V.fim) return undefined;
+          s.meta.estado = "fim"; s.meta.fimCamp = TS; s.meta.atividade = TS;
           return s;
         });
       } else if (tipo === "limpeza") {
@@ -1015,8 +1244,10 @@
     }).then(function (res) {
       S._ocupado = false;
       if (res.espera != null) { S._agenda(res.espera + 20, function () { S._programa(); }); return; }
-      // qualquer ação que não fez nada sem o estado mudar: a próxima tentativa espera o estado novo ou 0,5 s
+      // qualquer ação que não fez nada sem o estado mudar: a próxima tentativa espera o estado novo ou 0,5 s (no treino,
+      // só as do campeonato, com 50 ms: o leilão do treino continua igual à máquina pura)
       if (!res.feito && S.online && S._chave() === chave) S._abortou = { chave: chave, ate: S.hora() + 500 };
+      else if (!res.feito && !S.online && (tipo === "jogo" || tipo === "fimCamp") && S._chave() === chave) S._abortou = { chave: chave, ate: S.hora() + 50 };
       if (!res.feito) {
         if (tipo === "robo" && res.motivo !== "seq" && res.motivo !== "nada" && res.motivo !== "pausa" && res.motivo !== "tarde") S._falhas[a.seq + ":" + a.n + ":" + a.bot.t] = 1;
         // fechar cedo (o relógio deste aparelho chegou antes do da rede): espera um pouco antes de tentar de novo
@@ -1031,6 +1262,66 @@
       if (global.console) console.error(e);
       S._agenda(1000, function () { S._programa(); });
     });
+  };
+
+  /* ---------- o campeonato: os passos dos jogos (UMA transação por passo, no nó jogos/{id}) ---------- */
+  // fn(cur) devolve o { ok, jogo, motivo } da máquina do leilao-camp.js; Promise({ feito, valor, motivo })
+  P._transJogo = function (id, fn) {
+    var S = this, motivo = null;
+    return S.rede.transacao("jogos/" + id, function (cur) {
+      motivo = null;
+      var r = fn(cur);
+      if (!r || !r.ok) { motivo = (r && r.motivo) || "nada"; return undefined; }
+      return r.jogo;
+    }).then(function (res) { res.motivo = motivo; if (res.feito) S.guardarHora(false); return res; });
+  };
+  // o resultado, UMA vez: calculado DENTRO da transação a partir do nó que o servidor tem (a trava e as escalações
+  // gravadas; o mesmo em todo aparelho) e gravado só sobre o reservado com aquela trava
+  P._gravarJogo = function (id) {
+    var S = this, c = S._campCtx(), rede = S.rede, memo = {};
+    if (!c) return Promise.resolve({ feito: false, motivo: "naoCamp" });
+    return S._transJogo(id, function (cur) {
+      if (!cur || cur.e !== "reservado") return { ok: false, motivo: cur ? cur.e : "sem" };
+      if (cur.modo !== "simulado") return { ok: false, motivo: "modo" };
+      var k = canon(cur), res = memo[k] || (memo[k] = LC().resultadoDoJogo(c, id, cur));
+      return LC().gravar(cur, { trava: cur.trava, res: res, ts: rede.TS, mata: LC().ehMata(id) });
+    });
+  };
+  // reservar com a trava do servidor (TS) e as escalações de AGORA (a do técnico vale a partir do próximo jogo que não
+  // começou) e, se reservou, gravar na hora (os outros aparelhos gravariam o mesmo resultado; quem reservou não espera
+  // ninguém). hora = a da testemunha (só no 'prazo'); por = o técnico que pediu (-1 = um aparelho qualquer)
+  P._reservarEGravar = function (g, motivo, hora, por) {
+    var S = this, c = S._campCtx(), rede = S.rede;
+    if (!c) return Promise.resolve({ feito: false, motivo: "naoCamp" });
+    var esc = [LC().escalacaoDoJogo(c, g.a), LC().escalacaoDoJogo(c, g.b)];
+    return S._transJogo(g.id, function (cur) {
+      return LC().reservar(cur, { ab: [g.a, g.b], esc: esc, modo: "simulado", por: por, motivo: motivo, ts: rede.TS, hora: hora });
+    }).then(function (r) {
+      // reservou, ou outro aparelho reservou no meio (o simulado): grava
+      if (!r.feito && r.motivo !== "reservado") return r;
+      return S._gravarJogo(g.id).then(function (r2) {
+        if (r.feito) { r2.feito = true; r2.reservou = true; }
+        return r2;
+      });
+    });
+  };
+  // a ação do motor num jogo (candidatos de _acaoJogo); hs = a hora da testemunha (online, nas decisões por prazo)
+  P._acaoCamp = function (a, hs) {
+    var S = this, c = S._campCtx(), V = S._vista(), g = jogoDaVista(V, a.id), rede = S.rede, TS = rede.TS;
+    if (!c || !g || !g.aberta || g.e === "feito") return Promise.resolve({ feito: false, motivo: "nada" });
+    var hora = hs != null ? hs : rede.horaServidor();
+    if (a.acao === "abrir") return S._transJogo(g.id, function (cur) { return LC().abrir(cur, { ts: TS }); });
+    if (a.acao === "retomar") return S._transJogo(g.id, function (cur) { return LC().retomar(cur, { ts: TS }); });
+    if (a.acao === "pausar") {
+      // confere de novo com os batimentos que chegaram até a testemunha: voltou (bate fresco) = o prazo continua
+      if (!S._ausente(a.t, hora)) return Promise.resolve({ feito: false, motivo: "voltou" });
+      var b = S.bates[S._ordem()[a.t]], desde = num(b && b.ts, num(a.desde, hora));
+      return S._transJogo(g.id, function (cur) { return LC().pausar(cur, { quando: desde }); });
+    }
+    if (a.acao === "reservar") return S._reservarEGravar(g, a.motivo, a.motivo === "prazo" ? hora : null, -1);
+    if (a.acao === "gravar") return S._gravarJogo(g.id);
+    if (a.acao === "wo") return S._transJogo(g.id, function (cur) { return LC().wo(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
+    return Promise.resolve({ feito: false, motivo: "nada" });
   };
 
   /* ---------- o que as telas mostram ---------- */
@@ -1078,7 +1369,8 @@
       codigo: S.codigo, treino: S.treino, online: S.online, estado: meta.estado || null, alterada: S.alterada, soOlhar: S.soOlhar,
       conectado: S.rede.conectado ? S.rede.conectado() : true, pausado: S.pausado(), agora: agora, eu: S.eu,
       T: ctx ? ctx.T : ordem.length, liga: { id: cfg.liga || null, nome: cfg.ligaNome || "" }, cfg: cfg, fase: v ? v.fase : null,
-      tecnicos: [], lote: null, botoes: null, proximos: [], vendas: [], ultimo: S.ultimo, meu: null,
+      tecnicos: [], lote: null, botoes: null, proximos: [], vendas: [], ultimo: S.ultimo, meu: null, camp: null,
+      formato: formatoDe(cfg.formato),
       fimEscalacao: meta.estado === "escalacao" ? num(meta.fimLeilao, agora) + ESCAL_MS : null,
       // online
       rede: S._estadoRede(), conferindo: !!S.conferindo, outraAba: S.outraAba, apagada: S.apagada, oculta: S._oculta,
@@ -1149,7 +1441,56 @@
       var i = +k; out.vendas.push({ i: i, t: x.t, preco: x.v, seq: x.s || 0, retrato: ctx.lotes[i] });
     });
     out.vendas.sort(function (a, b2) { return a.seq - b2.seq; });
+    out.camp = S._verCamp(agora);
     return out;
+  };
+  /** O campeonato para as telas (null antes dele): { formato, T, rodadas (montar: cada jogo com e 'espera'|'livre'|
+   *  'aberto'|'reservado'|'feito', res e placar GRAVADOS), atual, rodada (a da vez), tabela (pontos), ligaFeita, fim, campeao,
+   *  classificacao, artilharia, melhorTime ({ t, soma }), notas ([{ t, soma }] no fim), tipos, meuJogo ({ id, rodada, a, b,
+   *  adversario, contraBot, mata, e, prazo: { fim, restante, parado, resta } | null, placar, res, venc, podeSimular,
+   *  motivo }), folga, eliminado, pendentes (os jogos da rodada da vez ainda sem resultado), podePendentes (o dono),
+   *  inicio, fimCamp }. Nada aqui recalcula partida: tudo sai dos jogos gravados. */
+  P._verCamp = function (agora) {
+    var S = this, c = S._campCtx(), V = c ? S._vista() : null, s = S.sala;
+    if (!c || !V) return null;
+    var R = V.atual >= 0 ? V.rodadas[V.atual] : null, meu = S._meuJogo(V), mj = null, eu = S.eu;
+    if (meu) {
+      var j = meu.j, pz = null, adv = meu.a === eu ? meu.b : meu.a;
+      if (j && j.e === "aberto") pz = j.parado ? { parado: true, resta: j.resta, fim: null, restante: j.resta } : { parado: false, resta: j.resta, fim: j.ini + j.resta, restante: Math.max(0, j.ini + j.resta - agora) };
+      var imp = S._impede(), pode = meu.aberta && meu.e !== "feito" && !(j && j.e === "reservado" && j.modo !== "simulado") && !imp && !S.soOlhar;
+      mj = {
+        id: meu.id, rodada: meu.rodada, a: meu.a, b: meu.b, adversario: adv, contraBot: c.tipos[adv] === "bot", mata: meu.mata, e: meu.e,
+        prazo: pz, placar: meu.placar, res: meu.res, venc: meu.venc, podeSimular: !!pode,
+        motivo: pode ? null : (S.soOlhar ? "fase" : imp || (meu.e === "feito" ? "campFim" : !meu.aberta ? "espera" : "jogando"))
+      };
+    }
+    var eliminado = false;
+    if (eu >= 0) V.rodadas.forEach(function (Rx) {
+      if (Rx.fase !== "mata") return;
+      Rx.jogos.forEach(function (g) { if (g.e === "feito" && (g.a === eu || g.b === eu) && g.venc !== eu) eliminado = true; });
+    });
+    // no misto, quem não se classificou na fase de pontos
+    if (eu >= 0 && c.formato === "misto" && V.ligaFeita && !eliminado) {
+      var naMata = V.rodadas.some(function (Rx) { return Rx.fase === "mata" && Rx.jogos.some(function (g) { return g.a === eu || g.b === eu; }); });
+      if (!naMata) eliminado = true;
+    }
+    var pend = R ? R.jogos.filter(function (g) { return g.e !== "feito"; }).length : 0;
+    return {
+      formato: c.formato, T: c.T, rodadas: V.rodadas, atual: V.atual, rodada: R, tabela: V.tabela, ligaFeita: V.ligaFeita, fim: V.fim,
+      campeao: V.campeao, classificacao: V.classificacao, artilharia: V.artilharia, melhorTime: V.melhorTime,
+      notas: V.fim ? LC().somaNotas(c) : null, tipos: c.tipos.slice(), meuJogo: mj,
+      folga: !!(R && eu >= 0 && R.folgas.indexOf(eu) >= 0), eliminado: eliminado,
+      pendentes: pend, podePendentes: S._souDono() && pend > 0 && !V.fim && !S.soOlhar && !S._impede(),
+      inicio: c.inicio, fimCamp: s && s.meta ? num(s.meta.fimCamp, null) : null, alteradaJogo: S.alteradaJogo
+    };
+  };
+  /** O jogo GRAVADO para o "Ver o jogo" no 2D: { id, rodada, a, b, mata, res, times: [A, B] } com os times pelas escalações
+   *  gravadas no jogo (as do momento da reserva); null se o jogo não está feito. */
+  P.partida = function (id) {
+    var S = this, c = S._campCtx(), V = c ? S._vista() : null, g = jogoDaVista(V, id);
+    if (!g || g.e !== "feito" || !g.j) return null;
+    var ab = Array.isArray(g.j.ab) ? g.j.ab : [g.j.ab[0], g.j.ab[1]], esc = Array.isArray(g.j.esc) ? g.j.esc : [g.j.esc[0], g.j.esc[1]];
+    return { id: g.id, rodada: g.rodada, a: g.a, b: g.b, mata: g.mata, res: g.res, times: [LC().timeDoTecnico(c, ab[0], esc[0]), LC().timeDoTecnico(c, ab[1], esc[1])] };
   };
 
   /* ---------- as ações da pessoa ---------- */
@@ -1281,6 +1622,58 @@
     return S.rede.atualizar("escal/" + S.eu, { pronto: sim === false ? null : true }).then(function () { return { ok: true, estado: "aceito" }; });
   };
 
+  /* ---------- o campeonato: as ações da pessoa ---------- */
+  function respostaJogo(g, valor) {
+    var j = valor || (g && g.j);
+    if (!j || j.e !== "feito") return { ok: false, estado: "recusado", motivo: "rede" };
+    return { ok: true, estado: "aceito", id: g.id, jogo: j, res: j.res, a: g.a, b: g.b, mata: g.mata };
+  }
+  /** "Simular partida" (o meu jogo da rodada; id = outro jogo meu): reserva com a trava do servidor (motivo 'pedido'),
+   *  simula com a semente e as escalações GRAVADAS, grava e SÓ ENTÃO responde com o resultado para a tela mostrar (no 2D
+   *  sem pausa: a pausa sortearia o resto de novo). Se outro aparelho chegou antes (o prazo venceu, o dono simulou os
+   *  pendentes), responde com o resultado que ele gravou (gravando o reservado, se ainda faltar). Promise({ ok, estado:
+   *  'aceito', id, jogo (o nó feito), res, a, b, mata }) ou a recusa com o motivo. */
+  P.simular = function (id) {
+    var S = this;
+    if (S.parado) return recusa("parado");
+    if (S.soOlhar) return recusa("fase");
+    var imp = S._impede(); if (imp && imp !== "conferindo") return recusa(imp, imp === "conexao" ? { rede: S._estadoRede() } : null);
+    var V = S._vista(); if (!V) return recusa("naoCamp");
+    if (V.fim) return recusa("campFim");
+    var g = id ? jogoDaVista(V, id) : S._meuJogo(V);
+    if (!g) return recusa("semJogo");
+    if (S.eu < 0 || (g.a !== S.eu && g.b !== S.eu)) return recusa("naoEhSeu");
+    if (!g.aberta || g.a == null || g.b == null) return recusa("espera");
+    if (g.e === "feito") return Promise.resolve(respostaJogo(g));
+    if (g.j && g.j.e === "reservado" && g.j.modo !== "simulado") return recusa("jogando");
+    var p = g.j && g.j.e === "reservado" ? S._gravarJogo(g.id) : S._reservarEGravar(g, "pedido", null, S.eu);
+    return p.then(function (r) {
+      if (r.valor && r.valor.e === "feito") return respostaJogo(g, r.valor);
+      // a corrida terminou no feito de outro aparelho que esta transação não viu: lê o que ficou gravado
+      return S.rede.ler("jogos/" + g.id).then(function (j) { return respostaJogo(g, j); });
+    }, function (e) { return { ok: false, estado: "recusado", motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
+  };
+  /** O dono: "Simular os pendentes" — reserva (motivo 'dono') e simula os jogos da rodada da vez que ainda não têm
+   *  resultado (os de quem está ausente, cujo prazo parou). O 3D em andamento (PR 4) fica. Promise({ ok, estado, n }). */
+  P.simularPendentes = function () {
+    var S = this;
+    if (S.parado) return recusa("parado");
+    if (S.soOlhar) return recusa("fase");
+    if (!S._souDono()) return recusa("dono");
+    var imp = S._impede(); if (imp && imp !== "conferindo") return recusa(imp, imp === "conexao" ? { rede: S._estadoRede() } : null);
+    var V = S._vista(); if (!V) return recusa("naoCamp");
+    if (V.fim) return recusa("campFim");
+    var R = V.rodadas[V.atual], eu = S.eu;
+    var pend = R.jogos.filter(function (g) { return g.e !== "feito" && g.a != null && g.b != null && !g.invalido && !(g.j && g.j.e === "reservado" && g.j.modo !== "simulado"); });
+    if (!pend.length) return recusa("semPendentes");
+    return Promise.all(pend.map(function (g) {
+      var p = g.j && g.j.e === "reservado" ? S._gravarJogo(g.id) : S._reservarEGravar(g, "dono", null, eu);
+      return p.then(null, function () { return { feito: false }; });
+    })).then(function (rs) {
+      return { ok: true, estado: "aceito", n: rs.filter(function (r) { return r.feito; }).length, pendentes: pend.length };
+    });
+  };
+
   /* ---------- o saguão (online; tudo por transação no nó `sala`) ---------- */
   /** O dono aceita o pedido (o técnico entra no fim da fila das pessoas, com uma cor que ninguém usa). */
   P.aceitar = function (uid) {
@@ -1319,7 +1712,7 @@
       return null;
     });
   };
-  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo }. Zera os Pronto. */
+  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo, formato }. Zera os Pronto. */
   P.configurar = function (parcial) {
     var S = this, L = LE(), m = S._naoPodeSala(true); if (m) return recusa(m);
     parcial = parcial || {};
@@ -1332,6 +1725,8 @@
       var tempo = parcial.tempo != null ? (parcial.tempo < 1000 ? parcial.tempo * 1000 : parcial.tempo) : cfg.tempo;
       if (L.TEMPOS.indexOf(tempo) < 0) tempo = L.DUR;
       if (parcial.liga != null) { cfg.liga = String(parcial.liga); cfg.ligaNome = String(parcial.ligaNome || parcial.liga); }
+      if (parcial.formato != null) cfg.formato = formatoDe(parcial.formato);
+      else cfg.formato = formatoDe(cfg.formato);
       cfg.vagas = vagas; cfg.bots = nb; cfg.tempo = tempo;
       s.cfg = cfg;
       humanosDe(s).forEach(function (u) { if (s.tec[u].papel !== "dono") s.tec[u].pronto = false; });
@@ -1518,7 +1913,7 @@
       codigo: S.codigo, online: true, treino: false, liga: s.cfg && s.cfg.liga, ligaNome: (s.cfg && s.cfg.ligaNome) || "",
       T: S._ordem().length, estado: s.meta.estado, fase: v ? v.fase : null, k: v ? v.k : -1, criada: num(s.meta.criada, 0),
       clube: tc ? tc.clube : null, regrasOk: s.meta.regras === LE().REGRAS, pedido: !!(S.pedido && S.pedido.estado === "esperando"),
-      edicao: s.meta.edicao || "public", alterada: !!S.alterada
+      edicao: s.meta.edicao || "public", alterada: !!S.alterada, formato: formatoDe(s.cfg && s.cfg.formato)
     };
     var chave = JSON.stringify([e.estado, e.T, e.clube, e.pedido, e.ligaNome, e.regrasOk, e.alterada]);
     if (chave === S._indiceVisto) return;
@@ -1588,7 +1983,7 @@
       identidadesBots(semente, nb, [clube.cor], 1, false).forEach(function (b) { tec[b.uid] = { nome: b.nome, papel: b.papel, pronto: true, entrou: b.entrou, clube: b.clube, formacao: b.formacao }; });
       var sala = {
         meta: { dono: uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: edicao(), criada: TS, estado: "saguao", semente: semente, atividade: TS, treino: true },
-        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: "mata", overall: "mostra" },
+        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra" },
         tec: tec
       };
       var esc = {}; esc["escal/0"] = { formacao: formacao };
@@ -1659,7 +2054,7 @@
         tec[id.uid] = { nome: id.nome, num: id.num || null, papel: "dono", pronto: true, auth: id.auth, entrou: 0, clube: clube, formacao: formacao };
         var sala = {
           meta: { dono: id.uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: opcEdicao(opc), criada: TS, estado: "saguao", semente: semente, atividade: TS },
-          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: "mata", overall: "mostra" },
+          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra" },
           tec: tec
         };
         refazBots(sala);
@@ -1748,7 +2143,7 @@
       out.push({
         codigo: c, treino: !!s.meta.treino, online: false, liga: s.cfg && s.cfg.liga, ligaNome: (s.cfg && s.cfg.ligaNome) || "", T: ordem.length,
         estado: s.meta.estado, fase: v.fase || null, k: num(v.k, -1), criada: num(s.meta.criada, 0),
-        clube: dono ? dono.clube : null, regrasOk: s.meta.regras === LE().REGRAS
+        clube: dono ? dono.clube : null, regrasOk: s.meta.regras === LE().REGRAS, formato: formatoDe(s.cfg && s.cfg.formato)
       });
     });
     indiceOnline(armazem).forEach(function (x) { if (x && x.codigo) out.push(x); });
