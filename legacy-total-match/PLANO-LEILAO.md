@@ -1780,9 +1780,15 @@ coordenação):
   | `testar-leilao.mjs` O1 (o Overall pelo `configurar`, zera os Pronto, recusado na sala de regras 4) | reprova (o `configurar` ignora o Overall) | passa |
   | `testar-leilao.mjs --tela` T15 (a opção na Criar; o treino escondido sem nenhuma nota em 48 telas; o fim que revela) | reprova (sem a opção) | passa |
   | `testar-leilao-online.mjs --so telas` D6f (o Overall pelo Saguão) | reprova (sem o segmentado) | passa |
-  | golaco `teste-ponte-tm` P15, `teste-prepartida-tela` E27, `teste-editor-tela` 17 | reprovam (as notas à mostra com o pedido escondido) | passam |
+  | golaco `teste-ponte-tm` P15, `teste-prepartida-tela` E27, `teste-editor-tela` 17 | reprovam (as notas à mostra com o pedido escondido; o controle sem o parâmetro também, pela falta do `__golaco.notasOcultas`) | passam |
   | golaco `teste-pausa-tela` P14 (a pausa sem nota e o cartão igual) | passa (a pausa nunca mostrou nota: guarda) | passa |
-  | `testar-3d.mjs` seção 8 (o GOLAÇO de verdade com o pedido escondido) | reprova (o pedido sem o campo) | passa |
+  | `testar-3d.mjs` seção 8 (o GOLAÇO de verdade com o pedido escondido) | reprova por construção (o pedido sem o campo; não rodado na base) | passa |
+
+  Rodados no fim: `testar-leilao.mjs` 20/20 blocos (103 s), `--tela` 103/103 (517 s), `testar-leilao-online.mjs --so telas,dois`
+  39/39, `testar-3d.mjs` (a 1ª rodada inteira achou dois erros do próprio teste novo — a tela mostra um time por vez; com 1 bot o
+  jogo é a final e as notas aparecem no fim dele —, corrigidos e a seção 7 + 8 de novo, verde), golaco `teste-ponte-tm`,
+  `teste-editor-tela` (49), `teste-prepartida-tela --so ajustes`, `teste-pausa-tela --so notas`, `hash-partida` IGUAL, `hash-igual
+  --ref origin/main` IGUAL, `fecho-hash --diff origin/main` 0 e `conferir-estilos.py` sem controle sem estilo.
 
 ---
 
