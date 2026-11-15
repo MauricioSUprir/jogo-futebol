@@ -48,6 +48,7 @@
    firebase(codigo, opc) — o online: a mesma interface sobre `leiloes/{código}` do Realtime Database do TM (TM.net._db; sem
    ele, levanta um erro com codigo 'indisponivel'). opc (os testes passam o banco falso): db, firebase (o SDK, pelo
    ServerValue), raiz ("leiloes"), relogio() (monótono: padrão performance.now), relogioParede() (padrão Date.now).
+     refBruta(caminho) = o ref do SDK (só o online: o sinal WebRTC do par, rtc/{jogo}, pelo TM.online3d.confronto).
      ler = once('value'); ouvir = on('value') (o off devolvido); gravar = set; atualizar = update; TS = o
      ServerValue.TIMESTAMP; os valores passam pela mesma limpeza da memória (sem undefined, NaN nem vazio: o SDK recusa).
      transacao = ref.transaction(fn, fim, false): SEM applyLocally (nada de líder falso piscando). O SDK roda a fn a 1ª
@@ -450,6 +451,9 @@
       // depois de tudo o que este aparelho ainda tinha a caminho e não deixa nó órfão (apagar não recria nada)
       varrer: function () { return raiz.remove().then(function () { return true; }, function () { return false; }); },
       salvarAgora: function () {},
+      // o nó do SDK num caminho da sala (só o online): o sinal WebRTC do par do Modo Leilão (rtc/{jogo}; PR 5) usa o
+      // TM.online3d.confronto, que fala com o ref direto (on/set/push/remove/onDisconnect), como a sala do Online 3D
+      refBruta: function (caminho) { return ref(caminho); },
       // só dos testes: a amostra escolhida da hora
       _hora: function () { return { escolhida: escolhida, amostras: amostras.length, offsetSdk: offsetSdk }; }
     };

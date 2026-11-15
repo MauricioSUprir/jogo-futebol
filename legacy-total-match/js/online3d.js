@@ -362,7 +362,8 @@
              eu { uid, nome }, outro (objeto { uid, nome } ou função que o devolve: a sala aprende o convidado depois),
              meuTime3d e info (o MEU time: TM.tm3d.time3d e { fonte, id, nome, nota, escudo }; pode vir depois por C.time),
              duracao (minutos por tempo do pedido: número ou função; a do anfitrião vale), sala (o código: pedido.online.sala),
-             auto (o anfitrião manda o pedido sozinho assim que tem os dois times, o 'ola' e o D0 — o Leilão; sem ele, a sala chama
+             rodada0 (a 1ª oferta do anfitrião é a rodada0 + 1: o Leilão começa pela hora, e a oferta do anfitrião que recarregou
+             no meio da ligação vale mais que a de antes para o convidado), auto (o anfitrião manda o pedido sozinho assim que tem os dois times, o 'ola' e o D0 — o Leilão; sem ele, a sala chama
              C.comecar() com os dois prontos), titulo, origem, partida e online (campos que entram por cima no pedido: o Leilão
              põe o mando neutro, a competição, o empateContinua e online.simular — o "Simular partida" na tela antes do jogo do
              GOLAÇO), aceitaOferta() (o convidado aceita a oferta nova agora? padrão: ligando ou falhou), pedirReligar() (o
@@ -382,7 +383,7 @@
   function confronto(o) {
     var C = {
       papel: o.papel === "A" ? "A" : "C", lado: o.papel === "A" ? 0 : 1, fase: "parado", eu: o.eu || { uid: null, nome: "Jogador" },
-      sinal: null, lig: null, rodada: 0, rtts: [], rtt: null, D0: null, olaEle: null,
+      sinal: null, lig: null, rodada: o.rodada0 > 0 ? Math.floor(o.rodada0) : 0, rtts: [], rtt: null, D0: null, olaEle: null,
       meu: o.meuTime3d ? { meia: o.meuTime3d, info: o.info || { fonte: "outro", id: null, nome: o.meuTime3d.name, nota: o.meuTime3d.rating, escudo: null } } : null,
       dele: null, pedido: null, porta: null, fila: [], fim: null, msg: null, ligandoDesde: 0, fechado: false, autoVenceu: false
     };

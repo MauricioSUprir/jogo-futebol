@@ -322,6 +322,9 @@
     if (VIEW.sessaoLigada === S) return;
     VIEW.sessaoLigada = S;
     VIEW.codigoVisivel = false; VIEW.sag = null; VIEW.redeVista = "ok"; VIEW.offDesde = 0; VIEW.campSel = null;
+    // o par (PR 5): o jogo contra um amigo no Online 3D liga sozinho quando os dois tocaram em Jogar (e fecha quando o jogo
+    // é decidido por outro caminho)
+    S.aoMudar(function () { olhaPar(S); });
     function nomeTec(t) { var V = S.ver(), x = V.tecnicos[t]; return x ? (x.eu ? "você" : x.nome) : ""; }
     S.on("lote", function () { if (naSala()) anunciaLote(S.ver()); });
     S.on("lance", function (e) {
@@ -1337,7 +1340,8 @@
       return R.jogos.map(function (g) { return g.id + ":" + g.e + ":" + (g.placar ? g.placar.join("-") : "") + ":" + g.a + ":" + g.b + ":" + extraDe(g); }).join(",") + "/" + R.folgas.join(",") + "/" + R.aberta;
     }).join("|");
     var mj = C.meuJogo;
-    return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.podeJogar, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot, mj.tresD ? [mj.tresD.abriu, mj.tresD.guardado, mj.tresD.porMim] : null],
+    return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.podeJogar, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot, mj.tresD ? [mj.tresD.abriu, mj.tresD.guardado, mj.tresD.porMim] : null,
+      mj.comPar, mj.eleAusente, mj.par ? [mj.par.vemEu, mj.par.vemEle, mj.par.abriu, mj.par.guardado] : null, PAR && PAR.id === mj.id ? PAR.C.fase : null],
       C.folga, C.eliminado, C.pendentes, C.podePendentes, C.pendQuem, (C.pendLista || []).map(function (x) { return x.id + ":" + x.t; }).join(","),
       VIEW.campSel, VIEW.ocupado, pendVisivel(V),
       V.tecnicos.map(function (t) { return [t.clube.nome, t.clube.cor, t.clube.escudo, t.clube.sigla, t.nome, t.saiu, t.ausente]; })]);
@@ -1471,11 +1475,20 @@
         if (ocup3) bd.setAttribute("aria-busy", "true");
         acoes.appendChild(bd);
       }
+    } else if (mj.e === "reservado" && mj.par) {
+      seuJogoPar(S, V, mj, box, est, acoes);
     } else if (mj.e === "reservado") {
       est.textContent = "Simulando…";
       box.appendChild(est);
+    } else if (!mj.contraBot && mj.comPar) {
+      // contra um amigo (PR 5): o Jogar abre o Online 3D do par (os dois tocam) e, ao lado, o Simular partida
+      P.prazo = est;
+      box.appendChild(est);
+      botoesPar(S, V, mj, acoes, true);
+      if (mj.eleAusente && mj.podeSimular) box.appendChild(el("p", { class: "lei-sj-motivo", text: nomeTec1(V, mj.adversario) + " não está na sala agora: o Jogar volta quando ele voltar." }));
+      else if (!mj.podeSimular && mj.motivo && mj.motivo !== "conferindo") box.appendChild(el("p", { class: "lei-sj-motivo", text: SS().textoMotivo(mj.motivo, { rede: V.rede }) }));
     } else if (!mj.contraBot) {
-      // contra um amigo, até o PR 5 (o Online 3D do par): simulado ao abrir a rodada
+      // contra um amigo numa sala de antes do PR 5 (regras 1 e 2): simulado ao abrir a rodada
       est.textContent = "Contra um amigo: o jogo é simulado ao abrir a rodada.";
       box.appendChild(est);
     } else {
@@ -1505,6 +1518,24 @@
   // o prazo do meu jogo contra um bot (a hora do servidor; no treino, o relógio da sala)
   function textoPrazo(mj, agora) {
     function mmss(ms) { var s = Math.ceil(Math.max(0, ms) / 1000); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+    // o par (PR 5): quem falta tocar em Jogar, ligando, o 3D e os prazos de cada passo
+    var pa = mj && mj.par;
+    if (pa) {
+      var rp = pa.fim - agora, ele = VIEW.V ? nomeTec1(VIEW.V, mj.adversario) : "o seu amigo";
+      if (pa.guardado) return "Gravando o resultado do 3D…";
+      if (!pa.vemEu) return rp > 0 ? ele + " chamou para o 3D. Toque em Jogar em " + mmss(rp) + ", ou é W.O." : "O prazo acabou: W.O.…";
+      if (!pa.vemEle) return rp > 0 ? "Esperando " + ele + " tocar em Jogar · " + mmss(rp) + " (sem o toque, W.O. para você)." : "O prazo acabou: W.O.…";
+      if (pa.abriu) return rp > 0 ? "Jogando em 3D · " + mmss(rp) + " de prazo para o resultado." : "O prazo do 3D acabou: simulando…";
+      if (PAR && PAR.id === mj.id && PAR.C && PAR.C.fase === "ligando") return "Ligando os aparelhos… (" + mmss(rp) + ")";
+      return rp > 0 ? "Abrindo o 3D · " + mmss(rp) + " para abrir, ou o jogo é simulado." : "O 3D não abriu: simulando…";
+    }
+    if (mj && !mj.contraBot && mj.comPar) {
+      var pz0 = mj.prazo;
+      if (!pz0) return "Toque em Jogar para jogar em 3D contra o seu amigo, ou em Simular partida. Sem o toque, ele é simulado sozinho em 2 min.";
+      if (pz0.parado) return "Prazo parado em " + mmss(pz0.resta) + ": volta a correr com um de vocês na sala.";
+      var r0 = pz0.fim - agora;
+      return r0 > 0 ? "Simulado sozinho em " + mmss(r0) + " se ninguém tocar em Jogar nem em Simular." : "O prazo acabou: simulando…";
+    }
     // o 3D reservado: o prazo da partida (abriu: W.O.) ou o de começar (o simulado)
     var t3 = mj && mj.tresD;
     if (t3) {
@@ -1551,10 +1582,11 @@
   }
   // o meu 3D reservado que fechou sem resultado: aceitar o W.O. agora (com a confirmação) — o 3D tinha aberto
   function desistirMeu(S, mj) {
-    if (VIEW.ocupado || !mj || !mj.tresD) return;
+    var t3 = mj && (mj.tresD || mj.par);
+    if (VIEW.ocupado || !t3) return;
     TM.ui.confirm("Aceitar o W.O.?", "O jogo em 3D fechou sem resultado. Com o W.O., ele conta como 3 × 0 para " + nomeClube(VIEW.V, mj.adversario) + " agora, sem esperar o prazo.", "Aceitar o W.O.", function () {
       VIEW.ocupado = "desistir"; atualiza();
-      S.desistir3d(mj.id, mj.tresD.trava).then(function (r) {
+      S.desistir3d(mj.id, t3.trava).then(function (r) {
         VIEW.ocupado = null;
         if (!r || !r.ok) TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro");
         atualiza();
@@ -1593,6 +1625,190 @@
       atualiza();
     });
   }
+  /* ---------- o par (PR 5; PLANO-LEILAO.md §1.7 e §3.6): o jogo contra um amigo no Online 3D, cada um no seu aparelho ----------
+     O Jogar dos dois (jogarPar: o 1º reserva, o 2º "vem"); com os dois, esta página liga o Online 3D do par pela MESMA sessão de
+     partida da sala do Online 3D (TM.online3d.confronto; o sinal em leiloes/{código}/rtc/{jogo}): o lado 0 do jogo é o
+     anfitrião (oferece e joga em casa, com o mando neutro), o pedido vem com os dois times do leilão, a duração da sala e o
+     "Simular partida" ao lado do "Pronto" na tela antes do jogo do GOLAÇO. O resultado vai ao jogos/{id} UMA vez, de qualquer um
+     dos dois aparelhos: o do 3D (no apito, 1,5 s depois — sem o 'tm3d:fim' com o W.O. no meio —, ou no fim), o simulado (um dos
+     dois escolheu Simular, a ligação não deu, os aparelhos dessincronizaram) ou o W.O. de quem saiu. Só então o 2D mostra o que
+     ficou gravado. O jogo decidido por outro caminho (o outro aparelho gravou, o prazo) fecha o 3D desta página. */
+  var PAR = null;     // o par ligado nesta página: { S, id, trava, lado, C (o confronto), fim, apito }
+  function nomeTec1(V, t) { var x = V && V.tecnicos[t]; return x ? x.nome : "o seu amigo"; }
+  // os botões do jogo contra um amigo: Jogar (o 1º toque reserva; com o par que ele reservou, eu "venho") e Simular partida
+  function botoesPar(S, V, mj, acoes, comJogar) {
+    var abrindo = VIEW.ocupado === "jogar";
+    if (comJogar) {
+      var jg = botao(abrindo ? "Abrindo…" : "Jogar", function () { jogarParMeu(S, jg); }, "btn primary", "play");
+      jg.disabled = !mj.podeJogar || abrindo || !!VIEW.ocupado;
+      jg.dataset.foco = "sj-jogar"; jg.classList.add("lei-jogar");
+      if (abrindo) jg.setAttribute("aria-busy", "true");
+      acoes.appendChild(jg);
+    }
+    var ocupado = VIEW.ocupado === "simular";
+    var bt = botao(ocupado ? "Simulando…" : "Simular partida", function () { simularMeu(S, bt); }, "btn", "fast-forward");
+    bt.disabled = !mj.podeSimular || ocupado || !!VIEW.ocupado;
+    bt.dataset.foco = "sj-simular"; bt.classList.add("lei-simular");
+    if (ocupado) bt.setAttribute("aria-busy", "true");
+    acoes.appendChild(bt);
+  }
+  // o Seu jogo com o par reservado: quem falta tocar em Jogar, ligando, o 3D; os botões de cada passo
+  function seuJogoPar(S, V, mj, box, est, acoes) {
+    var pa = mj.par, ele = nomeTec1(V, mj.adversario);
+    VIEW.partes.prazo = est;
+    est.classList.add("lei-sj-3d");
+    box.appendChild(est);
+    var nota = pa.guardado ? "O resultado do 3D está neste aparelho e vai para a sala assim que a conexão deixar."
+      : !pa.vemEu ? "Se você não tocar em Jogar a tempo, o jogo conta como W.O. contra você. Simular partida também vale."
+      : !pa.vemEle ? "Se " + ele + " não tocar em Jogar a tempo, o jogo conta como W.O. para você."
+      : pa.abriu ? "Quem sair da partida perde por W.O. Sem resultado no prazo, o jogo é simulado."
+      : "Se a ligação entre os dois aparelhos não der (comum no 4G), o jogo é simulado.";
+    box.appendChild(el("p", { class: "lei-sj-nota", text: nota }));
+    if (V.soOlhar || pa.guardado) return;
+    if (!pa.vemEu) { botoesPar(S, V, mj, acoes, true); return; }
+    if (!pa.abriu) { botoesPar(S, V, mj, acoes, false); return; }
+    // o 3D abriu e esta página não está nele (fechou sem resultado, recarregou): aceitar o W.O. agora
+    if (!(PAR && PAR.id === mj.id) && !(TM.tm3d && TM.tm3d.aberto && TM.tm3d.aberto())) {
+      var ocup3 = VIEW.ocupado === "desistir";
+      var bd = botao(ocup3 ? "Gravando…" : "Aceitar o W.O. agora", function () { desistirMeu(S, mj); }, "btn", "flag");
+      bd.disabled = !!VIEW.ocupado || V.rede !== "ok" && !!V.online;
+      bd.dataset.foco = "sj-desistir"; bd.classList.add("lei-desistir");
+      if (ocup3) bd.setAttribute("aria-busy", "true");
+      acoes.appendChild(bd);
+    }
+  }
+  // o "Jogar" contra um amigo: o toque vai à sala (o 1º reserva; o 2º "vem"); com os dois, o olhaPar liga o Online 3D. Com a
+  // Config "Sempre simular" ou sem WebGL 2, o Jogar é o Simular partida (vale para os dois: qualquer um escolhe Simular)
+  function jogarParMeu(S, bt) {
+    if (VIEW.ocupado) return;
+    var t3 = TM.tm3d, simBt = VIEW.screen ? VIEW.screen.querySelector(".lei-simular") : null;
+    if (!t3 || !t3.jogarOnline || !TM.online3d || !TM.online3d.confronto || t3.preferencia() === "simular") { simularMeu(S, simBt); return; }
+    if (!t3.disponivel()) { t3.avisaSemWebgl(); simularMeu(S, simBt); return; }
+    VIEW.ocupado = "jogar";
+    if (bt) { bt.disabled = true; bt.setAttribute("aria-busy", "true"); var r0 = bt.querySelector("span:last-child"); if (r0) r0.textContent = "Abrindo…"; }
+    S.jogarPar().then(function (r) {
+      VIEW.ocupado = null;
+      if (!r || !r.ok) TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro");
+      atualiza();
+      if (r && r.ok && sessao() === S) olhaPar(S);
+    }, function (e) {
+      VIEW.ocupado = null;
+      if (global.console) console.error(e);
+      TM.ui.toast("Não deu para abrir o jogo: tente de novo.", "erro");
+      atualiza();
+    });
+  }
+  // a cada mudança da sessão: o par desta página decidido por outro caminho fecha; com os dois no Jogar (e o 3D ainda sem abrir),
+  // o Online 3D liga (só nas telas da sala, com esta aba no comando)
+  function olhaPar(S) {
+    if (PAR && PAR.S !== sessao()) { fechaPar(PAR); PAR = null; }
+    if (PAR && PAR.S === S && !PAR.fim) {
+      var jp = S.jogos && S.jogos[PAR.id];
+      if (!jp || jp.trava !== PAR.trava || jp.e === "feito") parDecidido(PAR, jp);
+    }
+    if (PAR || sessao() !== S || !naSala()) return;
+    var V = S.ver(), mj = V.camp && V.camp.meuJogo;
+    if (!mj || !mj.par || V.outraAba || V.soOlhar || V.alterada || V.rede !== "ok") return;
+    if (!mj.par.vemEu || !mj.par.vemEle || mj.par.abriu) return;
+    if (TM.tm3d && TM.tm3d.aberto && TM.tm3d.aberto()) return;
+    comecaPar(S, S.par(mj.id));
+  }
+  function comecaPar(S, P0) {
+    if (!P0 || !S.rede || !S.rede.refBruta || !TM.online3d || !TM.online3d.confronto || !TM.tm3d || !TM.tm3d.time3d) return;
+    var V = S.ver(), ele = V.tecnicos[P0.adversario], eu = V.tecnicos[V.eu];
+    var meu = P0.times[P0.lado], meia = TM.tm3d.time3d(meu, meu.formation);
+    var titulo = (P0.nomeRodada || "Campeonato") + " · Leilão";
+    var X = { S: S, id: P0.id, trava: P0.trava, lado: P0.lado, fim: false, apito: null };
+    PAR = X;
+    VIEW.parFim = null;
+    X.C = TM.online3d.confronto({
+      ref: S.rede.refBruta("rtc/" + P0.id), papel: P0.lado === 0 ? "A" : "C",
+      eu: { uid: eu ? eu.uid : null, nome: eu ? eu.nome : "Técnico" }, outro: { uid: ele ? ele.uid : null, nome: ele ? ele.nome : "Técnico" },
+      meuTime3d: meia, info: { fonte: "leilao", id: P0.lado, nome: meia.name, nota: meia.rating, escudo: (meia.identidade && meia.identidade.escudo) || null },
+      duracao: P0.duracao3d, sala: String(S.codigo) + ":" + P0.id, auto: true, titulo: titulo, origem: "leilao",
+      rodada0: Math.floor(Date.now() / 1000) % 1000000000,
+      // (o mando neutro e sem clássico, como todo jogo do leilão; o empate do mata-mata segue no gol de ouro e nos pênaltis, gravados)
+      partida: { neutro: true, estadio: null, classico: false, nomeClassico: null, competicao: titulo, empateContinua: !!P0.mata },
+      online: { simular: true },
+      aoFase: function (f) {
+        if (PAR !== X) return;
+        if (f === "falhou" || f === "erroPedido") { parSimula(X, "Não deu para ligar os dois aparelhos direto: o jogo foi simulado."); return; }
+        atualiza();
+      },
+      aoAbrir: function () { if (PAR === X) S.abriu3d(X.id, X.trava, null); },
+      // o resultado do 3D no apito (o 3D ainda no pós-jogo): grava 1,5 s depois — no W.O. do meio o 3D também grava o placar
+      // parcial ali, e o 'tm3d:fim' com o W.O. chega antes
+      aoResultado: function (r3) {
+        X.apito = r3;
+        setTimeout(function () { if (!X.fim && X.apito === r3 && sessao() === S) S.gravar3d(X.id, X.trava, "3d", r3); }, 1500);
+      },
+      aoFim: function (r3, dados, fim) { parFim(X, r3, fim); },
+      aoSair: function (dados, fim) { parSaiu(X, fim); }
+    });
+    X.C.ligar();
+    atualiza();
+  }
+  function fechaPar(X) { if (X && X.C) { try { X.C.fechar(false); } catch (e) {} } }
+  // o 3D acabou: o resultado (o W.O. de quem saiu, o simulado da dessincronia ou o do 3D) gravado e só então mostrado
+  function parFim(X, r3, fim) {
+    if (X.fim) return;
+    X.fim = true;
+    var S = X.S, on = (fim && fim.online) || {};
+    if (on.dessinc) { mostraPar(X, S.gravar3d(X.id, X.trava, "simulado", null), "Os dois aparelhos ficaram diferentes: o jogo foi simulado."); return; }
+    if (on.wo && (on.wo.vencedor === 0 || on.wo.vencedor === 1)) { mostraPar(X, S.woPar(X.id, X.trava, 1 - on.wo.vencedor)); return; }
+    if (r3) { mostraPar(X, S.gravar3d(X.id, X.trava, "3d", r3)); return; }
+    mostraPar(X, S.gravar3d(X.id, X.trava, "simulado", null));
+  }
+  // saí do 3D: o abandono (o meu W.O.) ou o "Simular partida" da tela (de um dos dois), o 3D que não abriu aqui (o simulado)
+  function parSaiu(X, fim) {
+    if (X.fim) return;
+    X.fim = true;
+    var S = X.S;
+    if (fim && fim.abandono) { mostraPar(X, S.woPar(X.id, X.trava, X.lado), "Você saiu da partida: W.O."); return; }
+    mostraPar(X, S.gravar3d(X.id, X.trava, "simulado", null));
+  }
+  function parSimula(X, aviso) {
+    if (X.fim) return;
+    X.fim = true;
+    mostraPar(X, X.S.gravar3d(X.id, X.trava, "simulado", null), aviso);
+  }
+  // o que ficou GRAVADO (de qualquer um dos dois aparelhos): o 2D do jogo (o do 3D na velocidade instantânea) ou, no W.O., o
+  // Campeonato com o aviso
+  function mostraPar(X, p, aviso) {
+    var S = X.S;
+    fechaPar(X);
+    try { if (S.rede && S.rede.refBruta) S.rede.refBruta("rtc/" + X.id).remove(); } catch (e) {}
+    Promise.resolve(p).then(function (r) {
+      if (PAR === X) PAR = null;
+      VIEW.parFim = r && r.ok && r.res ? (r.res.wo != null ? "wo" : r.res.em3d ? "3d" : "simulado") : "nada";
+      if (sessao() !== S) return;
+      if (!r || !r.ok || !r.res) { TM.ui.toast(SS().textoMotivo((r && r.motivo) || "naoGravou"), "erro"); if (naSala() || TM.ui.current() === "leilao-camp") atualiza(); else TM.ui.go("leilao-camp"); return; }
+      if (aviso) TM.ui.toast(aviso, r.res.wo != null ? "alerta" : "alerta");
+      var res = r.res;
+      if (res.wo != null) {
+        if (!aviso) TM.ui.toast(res.wo === X.lado ? "W.O.: o jogo conta como 3 × 0 para o seu amigo." : "O seu amigo saiu da partida: vitória por W.O.", "alerta");
+        TM.ui.go("leilao-camp");
+        return;
+      }
+      quandoNaVista(S, X.id, function () { if (sessao() === S && S.partida(X.id)) verJogo(X.id, !!res.em3d); else TM.ui.go("leilao-camp"); });
+    }, function (e) {
+      if (PAR === X) PAR = null;
+      if (global.console) console.error(e);
+      TM.ui.go("leilao-camp");
+    });
+  }
+  // o jogo do par decidido por outro caminho (o outro aparelho gravou, o prazo venceu): com o 3D aberto, ele fecha — menos o
+  // resultado do 3D (gravado no apito, com o 3D ainda no pós-jogo: o fim dele mostra o gravado)
+  function parDecidido(X, jp) {
+    if (jp && jp.e === "feito" && jp.trava === X.trava && jp.fim === "3d" && TM.tm3d && TM.tm3d.aberto && TM.tm3d.aberto()) return;
+    X.fim = true;
+    var aberto = !!(TM.tm3d && TM.tm3d.aberto && TM.tm3d.aberto());
+    if (aberto) TM.tm3d.fechar();
+    var res = jp && jp.e === "feito" && jp.trava === X.trava ? jp.res : null;
+    var aviso = !res ? null : res.wo != null ? null : res.em3d ? null : aberto || X.C.fase === "ligando" ? "O jogo foi simulado." : null;
+    mostraPar(X, Promise.resolve(res ? { ok: true, res: res, jogo: jp } : { ok: false, motivo: "jaFeito" }), aviso);
+  }
+
   // chama fim() quando o jogo gravado já está na vista da sessão (S.partida), ou em 8 s; o que chega depois dos 8 s (a rede
   // lenta) chama tarde(), até 2 min (a pessoa ainda no Campeonato vê o jogo que pediu)
   function quandoNaVista(S, id, fim, tarde) {
@@ -1841,7 +2057,8 @@
      O TM.matchview.play com pauseSide null: sem o botão de pausa (a pausa sortearia o resto de novo: resimRest) e sem o 3D
      (o tm3d.js só entra com um lado do jogador). Depois dos 90', a prorrogação com o gol de ouro e os pênaltis, também os
      gravados. Fora das rotas da sala: no treino o relógio para enquanto a pessoa vê o jogo. */
-  function verJogo(id) { TM.ui.go("leilao-jogo", { id: id }); }
+  // rapido: o jogo que acabou de ser jogado em 3D (o par) vai na velocidade instantânea, como o 3D contra um bot
+  function verJogo(id, rapido) { TM.ui.go("leilao-jogo", { id: id, rapido: !!rapido }); }
   function copiaRes(x) { return x == null ? null : JSON.parse(JSON.stringify(x)); }
   TM.ui.register("leilao-jogo", function (screen, params) {
     var S = sessao(), J = S && params && params.id && S.partida ? S.partida(params.id) : null;
@@ -1852,13 +2069,15 @@
     var titulo = (R ? R.nome : "Campeonato") + " · Leilão";
     VIEW.jogoVisto = J.id;
     function volta() { TM.ui.go("leilao-camp"); }
-    TM.matchview.play(screen, {
+    var cfgJogo = {
       teamA: A, teamB: B,
       result: { score: (res.score || [0, 0]).slice(), events: res.events || [], stats: res.stats || null, sentOff: res.sentOff || [], injuries: [] },
       pauseSide: null, simOpts: { realism: 3, neutral: true }, formation: A.formation, formationB: B.formation,
       title: titulo, onBack: volta,
       onDone: function () { depoisDos90(res, A, B, titulo, volta); }
-    });
+    };
+    if (params.rapido) { try { cfgJogo.settings = Object.assign({}, TM.storage.settings(), { matchSpeed: "instantaneo" }); } catch (e) {} }
+    TM.matchview.play(screen, cfgJogo);
   });
   // depois dos 90' (o resultado GRAVADO): a prorrogação com o gol de ouro e os pênaltis, se houve; depois volta()
   function depoisDos90(res, A, B, titulo, volta) {
@@ -3159,7 +3378,9 @@
         // o Campeonato: o texto do prazo do meu jogo (null sem ele) e a rodada à mostra (null = a da vez)
         prazo: P && P.prazo ? P.prazo.textContent : null, rodadaVista: VIEW.campSel,
         // o "Ver o jogo": o id do jogo à mostra no 2D (a rota leilao-jogo e as telas da prorrogação e dos pênaltis dele)
-        jogo: VIEW.jogoVisto || null
+        jogo: VIEW.jogoVisto || null,
+        // o par (PR 5): o Online 3D ligado nesta página ({ id, lado, fase do confronto, trava }) e como o último acabou
+        par: PAR ? { id: PAR.id, lado: PAR.lado, fase: PAR.C ? PAR.C.fase : null, trava: PAR.trava } : null, parFim: VIEW.parFim || null
       };
     },
     /** Gancho de teste: os prazos da tela (cheioMs, contaMs). */
