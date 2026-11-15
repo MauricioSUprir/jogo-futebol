@@ -140,6 +140,8 @@ function rngT(s) { return TMs.public.rng.make(TMs.public.rng.hashStr(String(s)))
 bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
   let casos = 0, falta = 0;
   const curtos = [];
+  // o exemplo do plano: 4 técnicos = 6 GK, 18 DF, 18 MF e 10 FW
+  ok(jsonIgual(LE.cotas(4), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos: " + JSON.stringify(LE.cotas(4)));
   for (const ed of ["public", "pro"]) {
     const W = MUNDO[ed], L = TMs[ed].leilao;
     for (const liga of LIGAS) {
@@ -151,7 +153,11 @@ bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
         casos++;
         const { lotes, fora } = L.criarLotes(W, liga, T), q = L.cotas(T), id = `${ed}/${liga}/T${T}`;
         ok(lotes.length === 13 * T, `${id}: ${lotes.length} lotes (esperado ${13 * T})`);
-        ok(q.GK + q.DF + q.MF + q.FW === 13 * T && q.DF - q.MF >= 0 && q.DF - q.MF <= 1, `${id}: cotas ${JSON.stringify(q)}`);
+        // a fórmula do plano (§1.2), feita aqui sem o leilao.js: GK ⌈1,5T⌉, FW ⌈2,5T⌉, DF e MF dividem o resto (a sobra
+        // ímpar no DF)
+        const qGK = Math.ceil(1.5 * T), qFW = Math.ceil(2.5 * T), qDF = Math.ceil((13 * T - qGK - qFW) / 2);
+        const qEsp = { GK: qGK, DF: qDF, MF: 13 * T - qGK - qFW - qDF, FW: qFW };
+        ok(jsonIgual(q, qEsp), `${id}: cotas ${JSON.stringify(q)} (esperado ${JSON.stringify(qEsp)})`);
         for (const g of GR) {
           const n = lotes.filter(l => l.pos === g).length;
           if (n !== q[g]) { falta++; ok(false, `${id}: ${n} ${g} (cota ${q[g]})`); }
@@ -300,6 +306,44 @@ bloco("L3", "lance: mínimo, máximo, Tudo, cabe, completo, seq, toque, valor, l
     }
   }
   ok(testouPosicao, "nenhuma liga com jogadores de um grupo só para o teste de 'sem vaga que sirva'");
+  // o "cabe" é em QUALQUER uma das 6 formações (§1.3): para cada uma, o time com as vagas dela menos uma aceita o lote que
+  // só fecha nela; os parciais do plano (o 3º atacante, o 4º, o 5º zagueiro, o 5º meia) também; com nenhuma, 'posicao'
+  {
+    const ctxF = ctxDe("public", "br", 8, "maquina");
+    const puros = g => ctxF.lotes.map((l, i) => l.grupos.length === 1 && l.pos === g ? i : -1).filter(i => i >= 0);
+    const P = { GK: puros("GK"), DF: puros("DF"), MF: puros("MF"), FW: puros("FW") };
+    const monta = (cont, g) => {
+      const usados = { GK: 0, DF: 0, MF: 0, FW: 0 }, idx = [];
+      for (const gr of GR) for (let n = 0; n < (cont[gr] || 0); n++) idx.push(P[gr][usados[gr]++]);
+      const lote = P[g][usados[g]];
+      if (idx.some(i => i == null) || lote == null) return null;
+      let v = JSON.parse(JSON.stringify(LE.inicial(ctxF, 0)));
+      v.i = lote; v.k = ctxF.fila.indexOf(lote); v = comCompras(ctxF, v, 1, idx, 1);
+      return { v, idx, lote, ag: abertoEm(v, ctxF) + 10 };
+    };
+    const caso = (cont, g, nome, soNela) => {
+      const m = monta(cont, g);
+      if (!m) { ok(false, `${nome}: sem jogadores de um grupo só para montar`); return; }
+      const pd = LE.pode(m.v, ctxF, 1, m.ag), r = LE.lance(m.v, ctxF, 1, 1, m.v.seq, m.ag);
+      const depois = LE.formacoesQueCabem(LE.contaMascaras(m.idx.concat([m.lote]).map(i => ctxF.lotes[i])));
+      if (soNela) {
+        ok(jsonIgual(depois, soNela), `${nome}: com ele o time cabe em ${depois} (esperado ${soNela})`);
+        ok(pd.pode && r.ok, `${nome}: pode ${pd.pode} (${pd.motivo}), lance ${r.ok ? "aceito" : r.motivo}`);
+      } else ok(!depois.length && !pd.pode && pd.motivo === "posicao" && !r.ok && r.motivo === "posicao", `${nome}: cabe em ${depois}, pode ${pd.motivo}, lance ${r.motivo}`);
+    };
+    const UM = { "4-4-2": "MF", "4-3-3": "FW", "3-5-2": "MF", "3-4-3": "FW", "5-4-1": "DF", "4-2-4": "FW" };
+    for (const f of LE.FORMACOES) {
+      const vg = LE.VAGAS_FORM[f], cont = { GK: vg[0], DF: vg[1], MF: vg[2], FW: vg[3] };
+      cont[UM[f]]--;
+      caso(cont, UM[f], `o 11º que só fecha a ${f}`, [f]);
+    }
+    caso({ GK: 1, FW: 2 }, "FW", "o 3º atacante", ["4-3-3", "3-4-3", "4-2-4"]);
+    caso({ GK: 1, FW: 3 }, "FW", "o 4º atacante", ["4-2-4"]);
+    caso({ GK: 1, DF: 4 }, "DF", "o 5º zagueiro", ["5-4-1"]);
+    caso({ GK: 1, MF: 4 }, "MF", "o 5º meia", ["3-5-2"]);
+    caso({ GK: 1, FW: 4 }, "FW", "o 5º atacante", null);
+    caso({ GK: 1, DF: 5 }, "DF", "o 6º zagueiro", null);
+  }
   // completo
   const vc = JSON.parse(JSON.stringify(v0)); vc.cx[3] = [50, 0, 1, 4, 4, 2];
   r = LE.lance(vc, ctx, 3, 1, s, a); ok(!r.ok && r.motivo === "completo", "time completo: " + r.motivo);
@@ -400,6 +444,23 @@ bloco("L6", "fim: 11 que cabem, 1 goleiro, o completar só com os de fora", (ok,
     }
     const f = v.f || "", d = v.d;
     ok(f.length === ctx.fora.length, `${id}: f com ${f.length} (fora ${ctx.fora.length})`);
+    // o completar refeito aqui, sem o do leilao.js (§1.3): um por vez para quem tem menos jogadores (empate: o técnico de
+    // menor índice), o MELHOR de fora ainda livre que cabe (pela nota; desempate pelo id)
+    {
+      const foraOrd = ctx.fora.map((_, j) => j).sort((x, y) => cmpNota(ctx.fora[x], ctx.fora[y]));
+      const tms = [], trav = [], fEsp = ctx.fora.map(() => "-");
+      for (let t = 0; t < ctx.T; t++) { tms.push([]); trav.push(false); }
+      for (let i = 0; i < d.length; i++) if (d[i] !== "-") tms[L.LETRAS.indexOf(d[i])].push(ctx.lotes[i]);
+      for (;;) {
+        let alvo = -1;
+        for (let t = 0; t < ctx.T; t++) if (tms[t].length < 11 && !trav[t] && (alvo < 0 || tms[t].length < tms[alvo].length)) alvo = t;
+        if (alvo < 0) break;
+        const j = foraOrd.find(j => fEsp[j] === "-" && L.formacoesQueCabem(L.contaMascaras(tms[alvo].concat([ctx.fora[j]]))).length > 0);
+        if (j == null) { trav[alvo] = true; continue; }
+        fEsp[j] = L.letra(alvo); tms[alvo].push(ctx.fora[j]);
+      }
+      ok(fEsp.join("") === (f || fEsp.map(() => "-").join("")), `${id}: o completar não deu os melhores de fora na ordem (${f} × esperado ${fEsp.join("")})`);
+    }
     const idsFora = new Set(ctx.fora.map(l => l.id));
     for (let j = 0; j < f.length; j++) if (f[j] !== "-") { completados++; ok(idsFora.has(ctx.fora[j].id), `${id}: completou com quem não é de fora`); }
     // ninguém dos lotes no completar, ninguém repetido
@@ -1034,8 +1095,120 @@ bloco("L10", "conferência: o vivo adulterado é acusado", (ok, nota) => {
   const kx = Math.floor(E.length / 2), kv = E.findIndex(v => v.seq === E[kx].seq - 2);
   ok(kv >= 0, "sem estado de dois lotes atrás");
   if (kv >= 0) { const m = acusa(E[kx], E[kv], "seq que volta"); ok(m === "voltou", "seq que volta acusado como " + m); motivos.push(m); }
+  // estados pulados de qualquer tamanho (o ouvinte do Firebase pode perder vários lotes): pares (j, k) sorteados de leilões
+  // honestos com repescagem, lotes pulados e completar de graça — e o fim, que nada muda depois
+  const rp = rngT("L10-pulos");
+  const leiloesP = [
+    ["en", 6, "conferencia", null],
+    ["br", 4, "pulos-passa", { humanos: [0], politica: (v, c, t) => (v.lider ?? -1) !== t && LE.pode(v, c, t).pode ? { acao: "passar", quando: v.abre + c.espera + 200 } : null }],
+    ["jp", 3, "pulos-todos", { humanos: [0, 1, 2], politica: (v, c, t) => LE.pode(v, c, t).pode ? (v.k % 3 === t ? { acao: "lance", alvo: (v.valor || 0) + 1, quando: v.abre + c.espera + 100 + t } : { acao: "passar", quando: v.abre + c.espera + 300 + t }) : null }],
+    ["it", 8, "pulos-guloso", { humanos: [1], politica: (v, c, t) => LE.pode(v, c, t).pode ? { acao: "lance", alvo: (v.valor || 0) + 1, quando: Math.max(v.abre + c.espera, v.t || 0) + 300 } : null }]
+  ].map(([liga, T, sem, o]) => { const c = ctxDe("public", liga, T, sem); const rr = leilaoRobos(c, o || undefined); rr.erros.forEach(e => ok(false, `${liga}/T${T}: ${e}`)); return { ctx: c, E: rr.estados }; });
+  let paresHonestos = 0, paresAcusados = 0, comRep = 0, comFim = 0;
+  for (const { ctx: c, E: EE } of leiloesP) {
+    for (let n = 0; n < 1500; n++) {
+      const j = Math.floor(rp() * EE.length), k = j + Math.floor(rp() * (EE.length - j));
+      if (k === j && n % 2) continue;
+      paresHonestos++;
+      if (EE[k].fase === "rep") comRep++;
+      if (EE[k].fase === "fim") comFim++;
+      const cc = LE.conferir(EE[j], EE[k], c);
+      if (!cc.ok) { paresAcusados++; if (paresAcusados <= 3) ok(false, `honesto acusado: ${cc.motivo} de ${j} (seq ${EE[j].seq}, ${EE[j].fase}) a ${k} (seq ${EE[k].seq}, ${EE[k].fase}) em ${c.semente}`); }
+    }
+  }
+  ok(paresAcusados === 0, `${paresAcusados} de ${paresHonestos} pares honestos com estados pulados acusados`);
+  ok(comRep > 50 && comFim > 50, `pares com a repescagem (${comRep}) e com o fim (${comFim})`);
+  // adulterações com o seq pulando 2 ou mais (nos 4 leilões: com repescagem e lotes pulados)
+  const motivosPulo = [], feitos = new Set();
+  for (const { ctx: c, E: EE } of leiloesP) {
+    const NV = v => LE.norm(v, c);
+    const novosDe = (a, b) => { const out = []; for (let i = 0; i < c.L; i++) if (a.d[i] === "-" && b.d[i] !== "-") out.push(i); return out; };
+    const pares = [];
+    for (let j = 1; j < EE.length; j++) for (let k = j + 1; k < EE.length && EE[k].seq <= EE[j].seq + 4; k++) if (EE[k].seq >= EE[j].seq + 2) pares.push([NV(EE[j]), NV(EE[k])]);
+    ok(pares.length > 50, `${c.semente}: pares com o seq pulando 2 a 4: ${pares.length}`);
+    const acusaPulo = (a, b, nome) => { const r = LE.conferir(a, b, c); ok(!r.ok, `${c.semente}: ${nome}: não acusou`); motivosPulo.push(r.motivo); if (VERBOSO) console.log("         " + c.semente + ": " + nome + " → " + r.motivo); return r.motivo; };
+    const darLote = (b, t, i, preco) => { b.d = b.d.slice(0, i) + LE.letra(t) + b.d.slice(i + 1); b.cx[t][0] -= preco; b.cx[t][1] -= 1; b.cx[t][2 + GR.indexOf(c.lotes[i].pos)]++; };
+    const tirarLote = (b, t, i, preco) => { b.d = b.d.slice(0, i) + "-" + b.d.slice(i + 1); b.cx[t][0] += preco; b.cx[t][1] += 1; b.cx[t][2 + GR.indexOf(c.lotes[i].pos)]--; };
+    const semCompra = (a, b) => { const nv = novosDe(a, b), q = []; for (let t = 0; t < c.T; t++) if (!nv.some(i => b.d[i] === LE.letra(t))) q.push(t); return q; };
+    const pagou = (a, b, t) => a.cx[t][0] - b.cx[t][0];
+    const feitosAqui = new Set();
+    const vez = nome => !feitosAqui.has(nome) && (feitosAqui.add(nome), feitos.add(nome), true);
+    for (const [a, b] of pares) {
+      const livres = semCompra(a, b), nv = novosDe(a, b);
+      // um lote da janela (comprado por u, que só comprou ele) passa de graça para quem não comprou nada
+      if (!feitosAqui.has("janela") && livres.length) {
+        // (t com folga no caixa: sozinho, o vivo continua de pé — só a conta do salto acusa)
+        const folga = t => b.cx[t][0] <= LE.SALDO - (LE.VAGAS - b.cx[t][1]) - 1;
+        const i = nv.find(i => i !== a.i && nv.filter(x => b.d[x] === b.d[i]).length === 1), t = i == null ? null : livres.find(t => LE.cabeLote(b, c, t, i) && b.cx[t][1] > 1 && folga(t));
+        if (t != null) {
+          const u = LE.LETRAS.indexOf(b.d[i]), b1 = cl(b); tirarLote(b1, u, i, pagou(a, b, u)); darLote(b1, t, i, 0); vez("janela");
+          const m = acusaPulo(a, b1, "seq+2: lote da janela de graça"); ok(m === "fechamento", `${c.semente}: o lote da janela de graça acusado como ${m}`);
+        }
+      }
+      // o melhor lote ainda por vir (depois do de b), com R$ 1 descontado
+      if (!feitosAqui.has("futuro") && livres.length && b.fase === "lotes") {
+        const t = livres[0], fut = c.fila.slice(b.k + 1).filter(i => b.d[i] === "-" && !(b.sem || []).includes(i) && LE.cabeLote(b, c, t, i));
+        const i = fut.sort((x, y) => c.lotes[y].overall - c.lotes[x].overall)[0];
+        if (i != null && b.cx[t][0] > b.cx[t][1]) { const b2 = cl(b); darLote(b2, t, i, 1); vez("futuro"); acusaPulo(a, b2, "seq+2: lote ainda por vir"); }
+      }
+      // quem não comprou pagou
+      if (!feitosAqui.has("pagou") && livres.some(t => b.cx[t][0] >= 2 + b.cx[t][1])) { const t = livres.find(t => b.cx[t][0] >= 2 + b.cx[t][1]), b3 = cl(b); b3.cx[t][0] -= 2; vez("pagou"); acusaPulo(a, b3, "seq+2: saldo que cai sem compra"); }
+      // o seq que pula mais do que a janela
+      if (vez("seq")) { const b4 = cl(b); b4.seq += 60; acusaPulo(a, b4, "seq+60 sem lotes para tanto"); }
+      // a posição que volta (o lote de b é o de uma posição antes da de a, ainda sem dono)
+      if (!feitosAqui.has("volta") && a.fase === b.fase && a.k > 0) {
+        const lista = a.fase === "lotes" ? c.fila : (b.sem || []), k = [...Array(a.k).keys()].reverse().find(k => b.d[lista[k]] === "-");
+        if (k != null) { const b5 = cl(b); b5.k = k; b5.i = lista[k]; vez("volta"); acusaPulo(a, b5, "seq+2 com a posição de volta"); }
+      }
+      // o lote de a com líder sem dono em b (a compra desfeita)
+      if (!feitosAqui.has("lider") && a.lider >= 0 && b.d[a.i] !== "-" && nv.filter(i => b.d[i] === b.d[a.i]).length === 1) {
+        const dono = LE.LETRAS.indexOf(b.d[a.i]), b6 = cl(b); tirarLote(b6, dono, a.i, pagou(a, b, dono)); vez("lider"); acusaPulo(a, b6, "seq+2: o lote com líder sem dono");
+      }
+      // o lote de a vendido por menos que o lance (o líder sem outra compra)
+      if (!feitosAqui.has("barato") && a.lider >= 0 && a.valor >= 3 && b.d[a.i] === LE.letra(a.lider) && nv.filter(i => b.d[i] === b.d[a.i]).length === 1) {
+        const b7 = cl(b); b7.cx[a.lider][0] = a.cx[a.lider][0] - 1; vez("barato"); acusaPulo(a, b7, "seq+2: o lote de a por R$ 1 (lance de R$ " + a.valor + ")");
+      }
+      // um lote sem lance tirado da repescagem: parece pulado, mas alguém podia comprar
+      if (!feitosAqui.has("pulado") && a.fase === "lotes" && b.fase === "lotes") {
+        const novosSem = (b.sem || []).slice((a.sem || []).length).filter(i => i !== a.i);
+        if (novosSem.length) {
+          const b8 = cl(b); b8.sem = b8.sem.filter(i => i !== novosSem[0]); vez("pulado");
+          const m = acusaPulo(a, b8, "seq+2: lote sem lance tirado da repescagem"); ok(m === "pulado", `${c.semente}: o lote tirado da repescagem acusado como ${m}`);
+        }
+      }
+      // a repescagem perde um lote antigo
+      if (!feitosAqui.has("sem") && (a.sem || []).length) { const b9 = cl(b); b9.sem = b9.sem.slice(1); vez("sem"); acusaPulo(a, b9, "seq+2: a `sem` perde um lote"); }
+    }
+  }
+  for (const caso of ["janela", "futuro", "pagou", "seq", "volta", "lider", "barato", "pulado", "sem"]) ok(feitos.has(caso), `adulteração com o seq pulando não montada: ${caso}`);
+  // depois do fim: nada muda (nem o seq, nem os de graça); o `f` do fim = o completar das compras (também visto de longe)
+  {
+    let fimC = null;
+    for (const { ctx: c, E: EE } of leiloesP) { const ult = LE.norm(EE[EE.length - 1], c); if ((ult.f || "").replace(/-/g, "").length >= 2) { fimC = { c, EE, ult }; break; } }
+    ok(!!fimC, "nenhum fim com completados de graça");
+    if (fimC) {
+      const { c, EE, ult } = fimC, f = ult.f.split("");
+      const acusaFim = (a, b, nome) => { const r = LE.conferir(a, b, c); ok(!r.ok, `${nome}: não acusou`); motivosPulo.push(r.motivo); return r.motivo; };
+      const b1 = cl(ult); b1.seq++; acusaFim(ult, b1, "depois do fim, seq+1 sem mudar nada");
+      // dois de graça do mesmo grupo trocados entre técnicos (ou um de graça trocado pelo melhor de fora livre)
+      let troca = null;
+      for (let j = 0; j < f.length && !troca; j++) for (let k = 0; k < f.length && !troca; k++) if (f[j] !== "-" && f[k] !== "-" && f[j] !== f[k] && c.fora[j].pos === c.fora[k].pos) troca = [j, k];
+      if (!troca) for (let j = 0; j < f.length && !troca; j++) for (let k = 0; k < f.length && !troca; k++) if (f[j] !== "-" && f[k] === "-" && c.fora[j].pos === c.fora[k].pos) troca = [j, k];
+      ok(!!troca, "nenhuma troca possível no completar");
+      if (troca) {
+        const f2 = f.slice(); [f2[troca[0]], f2[troca[1]]] = [f2[troca[1]], f2[troca[0]]];
+        const b2 = cl(ult); b2.f = f2.join("");
+        const b3 = cl(b2); b3.seq++;
+        acusaFim(ult, b2, "depois do fim, o completar trocado (mesmo seq)");
+        acusaFim(ult, b3, "depois do fim, o completar trocado (seq+1)");
+        const m4 = acusaFim(EE[Math.floor(EE.length / 2)], b2, "o fim visto de longe com o completar trocado");
+        ok(m4 === "completar", "o completar trocado acusado como " + m4);
+        ok(!LE.conferir(null, b2, c).ok, "o completar trocado sem o vivo anterior: não acusou");
+      }
+    }
+  }
   ok(acusadas === 0, `${acusadas} de ${honestas} transições honestas acusadas`);
-  nota(`${honestas} transições honestas (também com estados pulados), ${motivos.length} adulterações acusadas (${[...new Set(motivos)].join(", ")})`);
+  nota(`${honestas} transições honestas (também com estados pulados), ${motivos.length} adulterações acusadas (${[...new Set(motivos)].join(", ")}); ${paresHonestos} pares honestos com saltos de qualquer tamanho (${comRep} na repescagem, ${comFim} no fim), ${motivosPulo.length} adulterações com o seq pulando ou depois do fim (${[...new Set(motivosPulo)].join(", ")})`);
 });
 
 /* ===================================================== R rede em memória ===================================================== */

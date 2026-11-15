@@ -575,6 +575,17 @@
   }
 
   /* ---------- a conferência (§3.3): cada vivo novo contra o anterior ---------- */
+  // o vivo sem o completar de graça do fim: o `f` tirado e as vagas e os grupos dele devolvidos ao caixa
+  function semCompletar(v, ctx) {
+    var pre = norm(v, ctx), f = v.f || "";
+    pre.f = null;
+    for (var j = 0; j < f.length; j++) {
+      var t = idxLetra(f.charAt(j));
+      if (t < 0) continue;
+      pre.cx[t][1] += 1; pre.cx[t][2 + ctx.gF[j]] -= 1;
+    }
+    return pre;
+  }
   function confereSozinho(v, ctx) {
     var T = ctx.T;
     if (!v || typeof v !== "object") return "estrutura";
@@ -582,6 +593,11 @@
     if (v.d.length !== ctx.L) return "estrutura";
     if (v.f && v.f.length !== ctx.fora.length) return "estrutura";
     if (["lotes", "rep", "fim"].indexOf(v.fase) < 0) return "estrutura";
+    // cada letra é um técnico da sala (ou '-')
+    var letras = "-" + LETRAS.slice(0, T);
+    for (var i = 0; i < v.d.length; i++) if (letras.indexOf(v.d.charAt(i)) < 0) return "estrutura";
+    for (var i2 = 0; v.f && i2 < v.f.length; i2++) if (letras.indexOf(v.f.charAt(i2)) < 0) return "estrutura";
+    if (v.f && v.fase !== "fim") return "estrutura";
     var tm = times(v, ctx);
     for (var t = 0; t < T; t++) {
       var c = v.cx[t];
@@ -593,17 +609,34 @@
       tm[t].lotes.forEach(function (i) { porPos[ctx.gL[i]]++; });
       tm[t].fora.forEach(function (j) { porPos[ctx.gF[j]]++; });
       for (var g = 0; g < 4; g++) if (c[2 + g] !== porPos[g]) return "caixa";
-      // cada compra custou pelo menos R$ 1 e sobra R$ 1 para cada vaga
+      // cada compra custou pelo menos R$ 1 e sobra R$ 1 para cada vaga que os lotes ainda não ocuparam (o máximo garante;
+      // os de graça do fim não custam)
       if (c[0] > SALDO - tm[t].lotes.length) return "caixa";
-      if (c[0] < c[1]) return "caixa";
+      if (c[0] < VAGAS - tm[t].lotes.length) return "caixa";
       if (!cabeAlguma(tm[t].cnt)) return "time";
+    }
+    // a `sem`: lotes sem repetir; nos lotes, ainda sem dono (só a repescagem vende o que ficou sem lance)
+    var visto = {};
+    for (var s = 0; s < v.sem.length; s++) {
+      var li = v.sem[s];
+      if (!(li >= 0 && li < ctx.L) || li !== Math.floor(li) || visto[li]) return "estrutura";
+      visto[li] = 1;
+      if (v.fase === "lotes" && v.d.charAt(li) !== "-") return "lote";
     }
     if (v.fase !== "fim") {
       if (v.i < 0 || v.i >= ctx.L || v.d.charAt(v.i) !== "-") return "lote";
+      // o lote aberto é o da posição k (a fila nos lotes, a `sem` na repescagem)
+      if (v.i !== (v.fase === "lotes" ? ctx.fila[v.k] : v.sem[v.k])) return "lote";
       if (v.lider >= 0) {
         if (v.lider >= T || v.valor < 1 || v.valor > maximo(v, v.lider) || !cabeLote(v, ctx, v.lider, v.i)) return "lance";
       } else if (v.valor !== 0) return "lance";
+      return null;
     }
+    // no fim: nenhum lote aberto e o `f` = o completar de graça refeito a partir das compras (função pura do `d`)
+    if (v.k !== -1 || v.i !== -1 || v.lider !== -1 || v.valor !== 0 || v.n !== 0 || v.h.length || v.p !== repete("0", T)) return "lote";
+    var pre = semCompletar(v, ctx);
+    completar(pre, ctx);
+    if (pre.f !== (v.f || repete("-", ctx.fora.length)) || JSON.stringify(pre.cx) !== JSON.stringify(v.cx)) return "completar";
     return null;
   }
   // mesmo lote: só podem mudar n/lider/valor/t/h (lances que sobem) e p (passes que entram)
@@ -618,8 +651,77 @@
     if (b.n === a.n + 1 && (b.lider === a.lider || a.p.charAt(b.lider) === "1")) return "lance";
     return null;
   }
+  // estados pulados (b.seq > a.seq + 1: o ouvinte não viu os lotes do meio). Sem os lances, confere o que dá para provar:
+  //  · a fase e a posição só andam; a `sem` de `a` é o começo da de `b` e só cresce, nos lotes, com lotes da janela na ordem
+  //    da fila;
+  //  · a janela = o lote de `a` e as posições depois dele (até a de `b` nos lotes; na repescagem, as da `sem`); o seq não
+  //    passa do número de posições que podem ter aberto, e vendas + entradas na `sem` não passam do número de aberturas;
+  //  · cada lote novo é da janela; o de `a` com líder foi vendido nessa abertura, por ≥ o lance (≥ o lance + 1 para quem
+  //    cobriu), nunca para quem passou; cada outro lote novo custou ≥ R$ 1; quem não comprou não pagou nada;
+  //  · o lote da fila que ficou sem dono e fora da `sem` foi pulado: ninguém podia comprá-lo, e o "pode" só diminui (vaga,
+  //    máximo e "cabe" só caem com as compras), então ninguém pode no estado de `b` (antes do completar, no fim).
+  function confereSalto(a, b, ctx) {
+    var F = { lotes: 0, rep: 1, fim: 2 };
+    if (F[b.fase] < F[a.fase] || (b.fase === a.fase && b.k <= a.k)) return "lote";
+    var na = a.sem.length, s;
+    if (b.sem.length < na) return "lote";
+    for (s = 0; s < na; s++) if (b.sem[s] !== a.sem[s]) return "lote";
+    if (a.fase !== "lotes" && b.sem.length !== na) return "lote";
+    var naJanela = {}, abriveis = 0, semNovos = b.sem.length - na, foiSem = false, kf = 0;
+    naJanela[a.i] = 1;
+    if (a.fase === "lotes") {
+      kf = b.fase === "lotes" ? b.k : ctx.fila.length;
+      for (var k = a.k + 1; k < kf; k++) { naJanela[ctx.fila[k]] = 1; abriveis++; }
+      var pos = a.k - 1;
+      for (s = na; s < b.sem.length; s++) {
+        var ps = ctx.fila.indexOf(b.sem[s]);
+        if (ps <= pos || ps < a.k || ps >= kf) return "lote";
+        pos = ps;
+        if (b.sem[s] === a.i) foiSem = true;
+      }
+    }
+    if (b.fase !== "lotes") {
+      var k0 = a.fase === "rep" ? a.k + 1 : 0, k1 = b.fase === "rep" ? b.k : b.sem.length;
+      for (var k2 = k0; k2 < k1; k2++) { naJanela[b.sem[k2]] = 1; abriveis++; }
+    }
+    if (b.fase !== "fim") abriveis++;
+    var abertos = b.seq - a.seq - (b.fase === "fim" ? 1 : 0);
+    if (abertos > abriveis) return "lote";
+    // o lote de `a`: com líder, vendido nesta abertura; sem líder, nos lotes, vendido ou na `sem`
+    if (a.lider >= 0 && (foiSem || b.d.charAt(a.i) === "-")) return "fechamento";
+    if (a.fase === "lotes" && !foiSem && b.d.charAt(a.i) === "-") return "fechamento";
+    var minimo = [], novos = [], vendidos = 0, t;
+    for (t = 0; t < ctx.T; t++) { minimo.push(0); novos.push(0); }
+    for (var i = 0; i < ctx.L; i++) {
+      if (a.d.charAt(i) !== "-" || b.d.charAt(i) === "-") continue;
+      if (!naJanela[i]) return "fechamento";
+      var dono = idxLetra(b.d.charAt(i));
+      vendidos++; novos[dono]++;
+      if (i === a.i && !foiSem) {
+        if (dono !== a.lider && a.p.charAt(dono) === "1") return "fechamento";
+        minimo[dono] += Math.max(1, a.valor + (dono === a.lider ? 0 : 1));
+      } else minimo[dono] += 1;
+    }
+    if (vendidos + semNovos > abertos + 1 - (b.fase !== "fim" ? 1 : 0)) return "fechamento";
+    for (t = 0; t < ctx.T; t++) {
+      var pago = a.cx[t][0] - b.cx[t][0];
+      if (novos[t] === 0 ? pago !== 0 : pago < minimo[t]) return "fechamento";
+    }
+    // os pulados da fila: ninguém pode no estado de `b`
+    if (a.fase === "lotes") {
+      var pre = b.fase === "fim" ? semCompletar(b, ctx) : b, naSem = {};
+      for (s = na; s < b.sem.length; s++) naSem[b.sem[s]] = 1;
+      for (var k3 = a.k + 1; k3 < kf; k3++) {
+        var li = ctx.fila[k3];
+        if (b.d.charAt(li) === "-" && !naSem[li] && alguemPode(pre, ctx, li)) return "pulado";
+      }
+    }
+    return null;
+  }
   /** Confere o vivo `novo` contra o `ant` (pode ser null) com as mesmas funções puras: { ok, motivo }.
-   *  Acusa saldo que sobe, lance acima do máximo, venda sem dinheiro, dono que muda, fechamento que não bate. */
+   *  Acusa saldo que sobe, lance acima do máximo, venda sem dinheiro, dono que muda, fechamento que não bate, o `f` do fim
+   *  que não é o completar das compras e qualquer mudança depois do fim; com estados pulados, o que dá para provar
+   *  (confereSalto). */
   function conferir(ant0, novo0, ctx) {
     if (!novo0) return { ok: false, motivo: "estrutura" };
     var b = norm(novo0, ctx), m = confereSozinho(b, ctx);
@@ -627,10 +729,12 @@
     if (!ant0) return { ok: true, motivo: null };
     var a = norm(ant0, ctx);
     if (b.seq < a.seq) return { ok: false, motivo: "voltou" };
+    // depois do fim nada muda
+    if (a.fase === "fim") return JSON.stringify(a) === JSON.stringify(b) ? { ok: true, motivo: null } : { ok: false, motivo: "fim" };
     for (var t = 0; t < ctx.T; t++) if (b.cx[t][0] > a.cx[t][0]) return { ok: false, motivo: "caixa" };
     for (var i = 0; i < ctx.L; i++) if (a.d.charAt(i) !== "-" && b.d.charAt(i) !== a.d.charAt(i)) return { ok: false, motivo: "dono" };
     if (b.seq === a.seq) { m = confereNoLote(a, b, ctx); return { ok: !m, motivo: m }; }
-    if (b.seq === a.seq + 1 && a.fase !== "fim") {
+    if (b.seq === a.seq + 1) {
       // o lote de `a` fechou (talvez com lances que o ouvinte não viu): quem comprou, por quanto, e o resto é conta
       var esp = norm(a, ctx), i0 = a.i, dono = idxLetra(b.d.charAt(i0));
       if (i0 >= 0 && dono >= 0) {
@@ -648,7 +752,8 @@
       m = confereNoLote(esp, b, ctx);
       return { ok: !m, motivo: m ? "fechamento" : null };
     }
-    return { ok: true, motivo: null };
+    m = confereSalto(a, b, ctx);
+    return { ok: !m, motivo: m };
   }
 
   /* ---------- robôs (§3.5) ---------- */
