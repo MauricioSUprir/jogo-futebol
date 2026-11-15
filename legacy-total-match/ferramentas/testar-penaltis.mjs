@@ -20,7 +20,7 @@
      8 nada sobre nada nas duas telas do modo (360, 390 e 844×390 do celular; 1280 do PC): nenhum botão encostado em outro,
        nada fora da tela, sem rolagem de lado;
      9 nenhum erro de página (no TM e dentro do 3D);
-    10 "Mais modos" com todos os atalhos (10 com o Pênaltis 3D; 11 com o Modo Livre 3D; 12 com o Online 3D): numa linha só no PC (1280) e, no
+    10 "Mais modos" com todos os atalhos (10 com o Pênaltis 3D; 11 com o Modo Livre 3D; 12 com o Online 3D; 13 com o Leilão): 7 + 6 no PC (1280) e, no
        celular (360, grade de 3), nenhum sozinho num canto da última linha (revisão de 16/10: o "Perfil" ia sozinho para
        uma 2ª linha no PC);
     11 o quadro do 3D nos Pênaltis não promete simular: o X, a confirmação e o aviso de demora com os textos da disputa
@@ -103,7 +103,7 @@ const mais = await p.evaluate(() => {
   return b ? { texto: b.textContent.trim(), icone: !!b.querySelector(".tm-ic, svg"), emoji: /\p{Extended_Pictographic}/u.test(b.textContent) } : null;
 });
 confere("1 'Pênaltis 3D' em Mais modos (ícone + nome, sem emoji)", !!mais && mais.icone && !mais.emoji, mais);
-// 10) a grade do "Mais modos": PC numa linha; celular sem um atalho sozinho num canto da última linha
+// 10) a grade do "Mais modos": PC 7 + 6 (13 atalhos, com o Leilão); celular sem um atalho sozinho num canto da última linha
 const grade = [];
 for (const [w, h] of [[1280, 800], [360, 740]]) {
   await p.setViewportSize({ width: w, height: h });
@@ -120,8 +120,8 @@ for (const [w, h] of [[1280, 800], [360, 740]]) {
 await p.setViewportSize({ width: 390, height: 844 });
 await p.evaluate(() => TM.ui.go("modes"));
 await p.waitForTimeout(400);
-confere("10 'Mais modos': todos os atalhos numa linha no PC; no celular nenhum sozinho num canto da última linha",
-  grade[0].n >= 10 && grade[0].linhas === 1 && grade[1].n === grade[0].n && (grade[1].ultima > 1 || grade[1].larguraUltima >= 95), grade);
+confere("10 'Mais modos': os 13 atalhos em 7 + 6 no PC; no celular nenhum sozinho num canto da última linha",
+  grade[0].n === 13 && grade[0].linhas === 2 && grade[1].n === grade[0].n && (grade[1].ultima > 1 || grade[1].larguraUltima >= 95), grade);
 await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(x => /Pênaltis 3D/.test(x.textContent)).click());
 await p.waitForTimeout(700);
 const tela = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active, .screen")?.innerText || "" }));

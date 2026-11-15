@@ -14,8 +14,8 @@
    A senha do Viverde FC vem SÓ da variável TM_SENHA_VIVERDE (nunca no código nem em arquivo); sem ela, o item 9 sai como
    "pulado" e a Ana joga com um clube comum.
    Confere:
-     1 "Online 3D" em "Mais modos" (ícone Lucide + nome, sem emoji) e a grade com 12 atalhos (PC numa linha; tablet 6 + 6;
-       celular 3 + 3 + 3 + 3);
+     1 "Online 3D" em "Mais modos" (ícone Lucide + nome, sem emoji) e a grade com 13 atalhos (o Leilão é o 13º: PC e tablet
+       7 + 6; celular 3 + 3 + 3 + 3 + 1);
      2 criar sala: código de 5 letras, link ?online3d=, QR; o nó salas3d/{código} no banco com a versão e o anfitrião;
      3 código inexistente, sala cheia e versão diferente: a mensagem certa na tela;
      4 entrar pelo código e o anfitrião RECUSAR: o convidado sai com o aviso e não entra de novo; o anfitrião volta a esperar;
@@ -336,8 +336,8 @@ try {
     }, w));
   }
   await A.p.setViewportSize(A.vp);
-  confere("1 grade de 12 atalhos: PC numa linha (1280 e 1440, sem nome quebrado), tablet 6 + 6, celular 3 + 3 + 3 + 3",
-    grade.every(g => g.n === 12 && !g.quebra.length) && grade[0].linhas.join() === "12" && grade[1].linhas.join() === "12" && grade[2].linhas.join() === "6,6" && grade[3].linhas.join() === "3,3,3,3", grade);
+  confere("1 grade de 13 atalhos (com o Leilão): PC 7 + 6 (1280 e 1440, sem nome quebrado), tablet 7 + 6, celular 3 + 3 + 3 + 3 + 1",
+    grade.every(g => g.n === 13 && !g.quebra.length) && grade[0].linhas.join() === "7,6" && grade[1].linhas.join() === "7,6" && grade[2].linhas.join() === "7,6" && grade[3].linhas.join() === "3,3,3,3,1", grade);
   await A.p.evaluate(() => TM.ui.go("modes"));
   await espera(300);
   await A.p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(x => /Online 3D/.test(x.textContent)).click());
