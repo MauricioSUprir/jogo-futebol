@@ -5,11 +5,13 @@ name: Total Match — testes
 #               falso, o leilão online pela sessão e o campeonato — C, K e KO —; ~60 s, sem navegador e sem rede) e o
 #               conferir-estilos.py (controle sem estilo no css/styles.css = visual padrão do navegador)
 #   navegador   (a partir do PR 2 do Leilão) os de navegador, em partes ao mesmo tempo, com o Playwright e o Chromium como no
-#               golaco-testes.yml: o treino num aparelho até o campeão (testar-leilao.mjs --tela, ~6 min), o leilão online e o
-#               campeonato em várias páginas contra o banco falso (testar-leilao-online.mjs, um job por caso: telas ~15 s;
-#               dois ~1 min, o campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8
-#               e os bytes) e o Online 3D com o quadro de ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele
-#               sai como "pulado")
+#               golaco-testes.yml: o treino num aparelho até o campeão e, desde o PR 4, o jogo contra um bot em 3D pela
+#               página de ensaio do 3D (testar-leilao.mjs --tela, ~7 min com o T14), o leilão online e o campeonato em várias
+#               páginas contra o banco falso (testar-leilao-online.mjs, um job por caso: telas ~15 s, no mesmo job o tresd
+#               ~3 min — o 3D contra um bot visto pela outra página e o W.O. gravado por ela, PR 4 —; dois ~1 min, o
+#               campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8 e os bytes) e o
+#               Online 3D com o quadro de ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado").
+#               O testar-3d.mjs (o GOLAÇO de verdade) fica fora do CI: roda à mão nos PRs que mexem no pedido do 3D
 #   tm-testes   o nome que o PR mostra: só passa se todos passaram
 # Nenhum teste fala com o Firebase de verdade. O deploy (deploy-pages.yml) não muda.
 on:
@@ -47,8 +49,8 @@ jobs:
         include:
           - parte: treino na tela
             cmd: node ferramentas/testar-leilao.mjs --tela --prints "$RUNNER_TEMP/prints"
-          - parte: leilão online, as telas
-            cmd: node ferramentas/testar-leilao-online.mjs --so telas --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, as telas e o 3D contra um bot
+            cmd: node ferramentas/testar-leilao-online.mjs --so telas,tresd --prints "$RUNNER_TEMP/prints"
           - parte: leilão online e o campeonato misto, 2 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so dois --prints "$RUNNER_TEMP/prints"
           - parte: leilão online e os pontos corridos, 4 páginas
