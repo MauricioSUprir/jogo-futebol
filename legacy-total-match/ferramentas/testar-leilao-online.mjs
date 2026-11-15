@@ -13,7 +13,7 @@
    As pessoas jogam por um PILOTO na página (window.__lt): decide como um robô com o perfil do seu índice
    (TM.leilao.robo) e age pela TELA (os botões de verdade: +1, +5, +10, Tudo de dois toques, Outro valor + Dar lance,
    Passar) ou pela API da sessão (S.lance, S.passar).
-   Casos (--so telas,dois,quatro,oito; sem --so, todos):
+   Casos (--so telas,dois,quatro,oito,tresd; sem --so, todos):
      telas   (T1–T8) o que a revisão do PR 2 achou nas telas, com nomes de 16 letras: o nome inteiro nos pedidos e nos
              participantes nos 8 tamanhos, o foco pelo teclado depois de Aceitar, o Salvar do clube apagado sem mudança,
              "Atualizando a sala…" na barra, o "lidera" do placar à vista e a sala congelada "parada" na Entrada e nas
@@ -47,9 +47,14 @@
    reservado e gravado UMA vez, com a mesma trava; o reservado pelo prazo só com a hora do SERVIDOR além do prazo e 2 min
    correndo. E as regras opcionais (o .validate do LEIA-ME-leilao.md, ferramentas/lib/regras-leilao.mjs) conferem cada
    gravação das páginas sem recusar nada (G3: o fluxo honesto não pode ser recusado).
+     tresd   (3D1–3D5; PR 4) 2 páginas + 1 bot, as Partidas em 3D com 3 min: o jogo de uma pessoa contra o bot pelo Jogar
+             com a página de ensaio do 3D (ferramentas/lib/ensaio-3d.mjs) até o fim do 3D — a outra página vê o MESMO
+             resultado gravado (o nó, "Jogado em 3D", o 2D do Ver o jogo) — e o 3D aberto com o app fechado no meio: depois
+             do prazo do 3D, o W.O. gravado pela OUTRA página (o uid de quem grava, pelo banco falso); quem fechou volta e vê
+             o W.O.
    O par do Online 3D (PR 5) entra aqui no PR dele.
    Uma linha por item; o código de saída é 1 se algum reprovar (no CI, um job por caso).
-   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito] [--fator 6] [--prints <pasta>] [-v]
+   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito,tresd] [--fator 6] [--prints <pasta>] [-v]
    (o Chromium do Playwright: NODE_PATH com o playwright e, se preciso, PLAYWRIGHT_BROWSERS_PATH; como no golaco) */
 import fs from "node:fs";
 import vm from "node:vm";
@@ -73,6 +78,7 @@ fs.mkdirSync(PASTA, { recursive: true });
 const { servidor, playwright } = await import(pathToFileURL(path.join(WT, "golaco/tools/lib/navegador.mjs")).href);
 const { BancoFalso, relogioAcelerado } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
 const { avaliadorRegras } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/regras-leilao.mjs")).href);
+const { servirEnsaio3d, ligaEnsaio3d, PASTA_ENSAIO_3D } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/ensaio-3d.mjs")).href);
 
 /* ---------- o TM.leilao e o TM.leilaoCamp em Node (as contas do servidor: o fim do lote, o "todos passaram", os times;
    o texto canônico dos jogos) ---------- */
@@ -162,9 +168,11 @@ function historiaJogos(toca, hora) {
 // recusa de propósito e a sessão não toma a recusa por queda de conexão (o caso "passar" do bloco KO do testar-leilao.mjs)
 const confereRegras = avaliadorRegras(path.join(RAIZ, "firebase/regras-leilao-validate.json"));
 const REGRAS = { gravacoes: 0, recusas: [], esperadas: [], adulteradas: new Set() };
+const ESCRITAS = [];   // quem gravou cada mudança de um nó jogos/{id} (o uid da página; o W.O. do 3D gravado por outra)
 banco.negar = (op, caminho, valor, C) => {
   const ps = String(caminho).split("/").filter(Boolean);
   if (ps[0] !== "leiloes") return false;
+  if (ps[2] === "jogos" && ps[3] && ps.length === 4) ESCRITAS.push({ cod: ps[1], id: ps[3], uid: C ? C.uid : null, e: valor && valor.e, hora: banco.relogio() });
   REGRAS.gravacoes++;
   const f = confereRegras(banco.raiz, ps, valor, banco.relogio(), C ? C.uid : null);
   if (!f.length || REGRAS.adulteradas.has(ps[1])) return false;
@@ -298,6 +306,8 @@ async function aparelho(nome, uid, o = {}) {
     await banco.instalar(cx, { latencia: o.lat ?? LAT });   // o SDK do gstatic vira o falso, ligado ao banco daqui
     await cx.addInitScript(rel.scriptPagina(o.desvio || 0));
     await cx.addInitScript(INICIO, { uid, nome, ed: o.pro ? "pro" : "public", chave: !!o.chave, share: !!o.share });
+    // o 3D do jogo contra um bot (PR 4): o quadro é a página de ensaio
+    if (o.ensaio3d) { await servirEnsaio3d(cx); await cx.addInitScript(ligaEnsaio3d, PASTA_ENSAIO_3D); }
   }
   const p = await cx.newPage();
   p.on("pageerror", e => erros.push(nome + ": " + String(e).slice(0, 300)));
@@ -1379,11 +1389,126 @@ async function casoTelas() {
 }
 
 /* ====================================================================================================== */
+// o jogo de uma pessoa contra um bot em 3D (PR 4) online, pela página de ensaio do 3D (ferramentas/lib/ensaio-3d.mjs): A (o dono)
+// joga o seu pelo Jogar até o fim do 3D e B vê o MESMO resultado gravado (o nó, o 2D do Ver o jogo, "Jogado em 3D"); B abre o
+// seu 3D e fecha o app no meio: depois do prazo do 3D, o W.O. contra B gravado pela página de A; B volta e vê o W.O.
+async function casoTresD() {
+  const ID = "3D";
+  const A = await aparelho("TresD-A", "uid3dA", { w: 390, h: 844, toque: true, ensaio3d: true });
+  const B = await aparelho("TresD-B", "uid3dB", { w: 1280, h: 800, lat: 12, ensaio3d: true });
+  const { cod, r } = await salaPelaApi([A, B], { liga: "br", vagas: 3, bots: 1, tempo: 10, formato: "pontos", duracao3d: 3 });
+  // o leilão: as duas pessoas passam em tudo (o 11 de cada uma sai do completar); o 3D é o que se testa aqui
+  for (const ap of [A, B]) await ap.p.evaluate(() => {
+    const iv = setInterval(() => { const S = TM.leilaoSessao.atual(); if (!S) return; const V = S.ver(); if (V.estado !== "leilao") { clearInterval(iv); return; } if (V.botoes && V.botoes.passar.pode) S.passar(); }, 300);
+  });
+  const acabou = await ateOFim(cod, [A, B], real(39 * 40000) + 60000);
+  await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "escalacao"); }, 30000);
+  for (const ap of [A, B]) await ap.p.evaluate(() => TM.leilaoSessao.atual().prontoEscalacao(true)).catch(() => {});
+  const camp = await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "camp"); }, 30000);
+  for (const ap of [A, B]) await ap.p.evaluate(() => TM.ui.go("leilao-camp"));
+  const { cal, tipos } = await calendario(A);
+  const ids = Object.keys(cal).sort((x, y) => cal[x].n - cal[y].n || (x < y ? -1 : 1));
+  const contra = (t, id) => (cal[id].a === t || cal[id].b === t) && tipos[cal[id].a === t ? cal[id].b : cal[id].a] === "bot";
+  const gA = ids.find(id => contra(0, id)), gB = ids.find(id => contra(1, id));
+  const s0 = sala(cod);
+  confere(`${ID}1 a sala com 2 pessoas e 1 bot (Pontos corridos, as Partidas em 3D com 3 min por tempo): o leilão até o fim e o campeonato com os jogos de cada pessoa contra o bot`,
+    !!(r && r.ok) && acabou && camp && s0.cfg.duracao3d === 3 && !!gA && !!gB, { ok: r && r.ok, acabou, camp, d3: s0 && s0.cfg.duracao3d, gA, gB });
+  const jogoDe = id => banco.ler(`leiloes/${cod}/jogos/${id}`);
+  const quem = id => ESCRITAS.filter(x => x.cod === cod && x.id === id);
+  // o Jogar pela tela no meu jogo da rodada (aberto, com o prazo correndo), com o modo da página de ensaio
+  async function jogar(ap, id, modo, placar) {
+    await ap.p.evaluate(([m, pl]) => { localStorage.setItem("ensaio3d:modo", m); localStorage.setItem("ensaio3d:placar", pl); localStorage.removeItem("ensaio3d:ultimo"); }, [modo, placar || "2-1"]);
+    await ap.p.evaluate(() => { if (TM.ui.current() !== "leilao-camp") TM.ui.go("leilao-camp"); });
+    const pode = await ate(ap.p, id => { const S = TM.leilaoSessao.atual(), V = S && S.ver(), mj = V && V.camp && V.camp.meuJogo, b = document.querySelector(".lei-jogar");
+      return TM.ui.current() === "leilao-camp" && !!(mj && mj.id === id && mj.e === "aberto" && mj.podeJogar && b && !b.disabled); }, id, real(110000));
+    return pode && clicaSel(ap, ".lei-jogar");
+  }
+  // do 2D até o Campeonato
+  async function ateCamp(ap) {
+    for (let k = 0; k < 10; k++) {
+      if (await ap.p.evaluate(() => TM.ui.current() === "leilao-camp")) return true;
+      await ap.p.evaluate(() => { const bs = [...document.querySelectorAll(".screen.is-active button")]; const b = bs.find(x => /^Pular/.test(x.textContent.trim())) || bs.find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); }).catch(() => {});
+      await espera(250);
+    }
+    return ap.p.evaluate(() => TM.ui.current() === "leilao-camp");
+  }
+  // o estado de um jogo na lista da rodada dele (‹ até ela)
+  async function linha(ap, id) {
+    let t = null;
+    for (let k = 0; k < 8 && t == null; k++) {
+      t = await ap.p.evaluate(id => { const e = document.querySelector(`.lei-rodada .lei-jogo[data-jogo="${id}"] .lei-jg-est`); return e ? e.textContent : null; }, id);
+      if (t == null) { await ap.p.evaluate(() => { const b = document.querySelector(".lei-rod-bt[data-foco='rod-ant']"); if (b && !b.disabled) b.click(); }); await espera(150); }
+    }
+    await ap.p.evaluate(() => { const b = document.querySelector('[data-foco="rod-vez"]'); if (b) b.click(); });
+    return t;
+  }
+  const igualServ = (ap, id) => ap.p.evaluate(id => { const j = TM.leilaoSessao.atual().jogos[id]; return j ? TM.leilaoCamp.canon(j) : null; }, id);
+  let Bv = B;
+  const E = {};
+  for (const id of ids) {
+    if (E.a && E.b) break;
+    if (id === gA) {
+      // A joga até o fim do 3D (1 × 1: o empate dos pontos corridos)
+      E.a = { clicou: await jogar(A, id, "fim", "1-1") };
+      E.a.feito = await ateNode(() => { const j = jogoDe(id); return !!(j && j.e === "feito"); }, 30000, 100);
+      E.a.volta = await ateCamp(A);
+      E.a.j = jogoDe(id);
+      E.a.ped = await A.p.evaluate(() => JSON.parse(localStorage.getItem("ensaio3d:ultimo") || "null"));
+      // B vê o mesmo nó, "Jogado em 3D" e o 2D do Ver o jogo com o placar gravado, sem pausa
+      // (B pode já ter fechado e voltado no jogo dele: a página de agora)
+      E.a.igualB = await ateNode(async () => (await igualServ(Bv, id)) === LCx.canon(jogoDe(id)), 20000, 150);
+      await vigiaCamp(Bv);
+      E.a.linhaB = await linha(Bv, id);
+      E.a.vis = novoVis();
+      await verJogoDaLista(Bv, cod, id, cal[id].n, E.a.vis);
+      E.a.sims2d = (await juntaVigia(Bv)).sims2d;
+    } else if (id === gB) {
+      // B abre o 3D (o abriu gravado) e fecha o app no meio: o W.O. depois do prazo, pela página de A
+      E.b = { clicou: await jogar(B, id, "aberto") };
+      E.b.abriu = await ateNode(() => { const j = jogoDe(id); return !!(j && j.e === "reservado" && j.abriu != null); }, 20000, 100);
+      await B.p.close();
+      E.b.desde = rel.agora();
+      E.b.feito = await ateNode(() => { const j = jogoDe(id); return !!(j && j.e === "feito"); }, real(LCx.prazo3d(3) + 90000) + 30000, 300);
+      E.b.j = jogoDe(id);
+      E.b.igualA = await ateNode(async () => (await igualServ(A, id)) === LCx.canon(jogoDe(id)), 20000, 150);
+      E.b.linhaA = await linha(A, id);
+      // B volta pelo link e vê o W.O.
+      Bv = await aparelho("TresD-B", "uid3dB", { cx: B.cx, busca: "?leilao=" + cod });
+      E.b.voltou = await ate(Bv.p, () => { const S = TM.leilaoSessao.atual(); return TM.ui.current() === "leilao-camp" && !!(S && S.eu === 1 && S.ver().camp); }, null, 40000);
+      E.b.igualB = await ateNode(async () => (await igualServ(Bv, id)) === LCx.canon(jogoDe(id)), 20000, 150);
+      E.b.linhaB = await linha(Bv, id);
+    } else {
+      // A × B: simulado ao abrir a rodada
+      await ateNode(() => { const j = jogoDe(id); return !!(j && j.e === "feito"); }, 30000, 150);
+    }
+  }
+  // (as gravações de cada jogo depois do aberto — o prazo de começar, de qualquer página —, e os passos que o servidor guardou)
+  const ja = E.a && E.a.j, wa = E.a ? quem(gA).filter(x => x.e !== "aberto") : [], uidA = A.uid, uidB = B.uid;
+  const passos = id => ((HIST[cod].log[id] || []).filter(x => x.j && x.j.e !== "aberto").map(x => x.j.e)).join();
+  confere(`${ID}2 A joga o seu jogo contra o bot pelo Jogar até o fim do 3D (o pedido 11 + 11, 3 min, mando neutro): gravado UMA vez pela página de A (reservado no 3D, o abriu, o feito '3d' com o placar do 3D) e o 2D de A volta ao Campeonato`,
+    !!E.a && E.a.clicou && E.a.feito && E.a.volta && ja.modo === "3d" && ja.fim === "3d" && ja.res.em3d && ja.res.score.join() === "1,1" && ja.por === 0 && ja.abriu != null
+    && !!E.a.ped && E.a.ped.nCasa === 11 && E.a.ped.nFora === 11 && E.a.ped.partida && E.a.ped.partida.minutosPorTempo === 3 && E.a.ped.partida.neutro
+    && wa.length >= 3 && wa.every(x => x.uid === uidA) && passos(gA) === "reservado,reservado,feito", { E: E.a && { clicou: E.a.clicou, feito: E.a.feito, volta: E.a.volta, ped: E.a.ped }, j: ja && { modo: ja.modo, fim: ja.fim, score: ja.res && ja.res.score, por: ja.por }, escritas: wa, passos: passos(gA) });
+  confere(`${ID}3 a OUTRA página (B) vê o MESMO resultado gravado: o nó igual ao do servidor, 'Jogado em 3D' na rodada e o 2D do Ver o jogo com o placar gravado, sem pausa e sem sorteio`,
+    !!E.a && E.a.igualB && /^Jogado em 3D/.test(E.a.linhaB || "") && E.a.vis.jogos === 1 && !E.a.vis.ruins.length && E.a.sims2d === 0, E.a && { igualB: E.a.igualB, linhaB: E.a.linhaB, vis: E.a.vis, sims2d: E.a.sims2d });
+  const jb = E.b && E.b.j, wb = E.b ? quem(gB).filter(x => x.e !== "aberto") : [], wWO = wb.filter(x => x.e === "feito");
+  confere(`${ID}4 B abre o 3D (o abriu gravado por B) e fecha o app no meio: depois do prazo do 3D (2 × 3 min × 1,3 + 8 min, pela hora do servidor), o W.O. contra B gravado pela página de A`,
+    !!E.b && E.b.clicou && E.b.abriu && E.b.feito && jb.res.wo === jb.ab.indexOf(1) && jb.ts >= jb.inicio + LCx.prazo3d(3) && passos(gB) === "reservado,reservado,feito"
+    && wb.filter(x => x.e === "reservado").every(x => x.uid === uidB) && wWO.length >= 1 && wWO.every(x => x.uid === uidA),
+    { E: E.b && { clicou: E.b.clicou, abriu: E.b.abriu, feito: E.b.feito }, j: jb && { wo: jb.res && jb.res.wo, ab: jb.ab, dt: jb.ts - jb.inicio }, escritas: wb, passos: passos(gB) });
+  confere(`${ID}5 o W.O. igual nas duas: A vê o nó do servidor e 'W.O.' na rodada; B volta pelo link e vê o mesmo`,
+    !!E.b && E.b.igualA && E.b.linhaA === "W.O." && E.b.voltou && E.b.igualB && E.b.linhaB === "W.O.", E.b && { igualA: E.b.igualA, linhaA: E.b.linhaA, voltou: E.b.voltou, igualB: E.b.igualB, linhaB: E.b.linhaB });
+  for (const ap of [A, Bv]) await ap.p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); }).catch(() => {});
+  for (const ap of [A, B]) await ap.cx.close().catch(() => {});
+}
+
+/* ====================================================================================================== */
 try {
   if (caso("telas")) await casoTelas();
   if (caso("dois")) await casoDois();
   if (caso("quatro")) await casoQuatro();
   if (caso("oito")) await casoOito();
+  if (caso("tresd")) await casoTresD();
 } catch (e) {
   confere("exceção no teste", false, String(e && e.stack || e).slice(0, 1500));
 }
