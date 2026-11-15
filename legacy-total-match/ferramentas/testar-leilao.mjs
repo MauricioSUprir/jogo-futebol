@@ -2102,6 +2102,109 @@ async function testeOnline() {
     ok(!sala(cod4) && !lista.some(x => x.codigo === cod4) && (await rejeita(SS.abrir(cod4, B.opc({ online: true })))) === "naoExiste", "o dono encerra: a sala some e sai das Minhas salas na conferência");
     nota_("O6", "30 min no saguão, 24 h sem atividade, a vencida recusa a entrada, encerrar, conferirSalas");
   }
+
+    marca("O7");
+  if (caso("O7")) /* ---------- O7 a sala mexida fora das regras e o rastro: o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho depois de encerrar ---------- */
+  {
+    // (a) o vivo apagado no meio do leilão (uma gravação de qualquer conta logada): congela em todos, nada recomeça
+    const A = aparelho("va"), B = aparelho("vb");
+    const SA = await A.criar({ liga: "en", vagas: 4, bots: 2, tempo: 10, semente: "O7" }), cod = SA.codigo;
+    let SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("vb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    await espera(SA.comecar()); await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    await anda(() => SA.vivoN.seq >= 6, 3600_000);
+    const altV = []; [SA, SB].forEach(S => S.on("alterada", x => altV.push(x.motivo)));
+    banco.gravar(`leiloes/${cod}/vivo`, null);
+    await passa(20_000);
+    ok(!banco.ler(`leiloes/${cod}/vivo`) && SA.alterada && SB.alterada && altV.length === 2 && SA.ver().alterada,
+      `o vivo apagado no meio: a sala congela em todos e o leilão não recomeça do zero (alterada ${SA.alterada}/${SB.alterada}, vivo ${JSON.stringify(banco.ler(`leiloes/${cod}/vivo`) && banco.ler(`leiloes/${cod}/vivo`).seq)})`);
+    // (b) recarregar com o vivo apagado e as vendas gravadas: também congela (não refaz o vivo inicial)
+    SB.parar(); await passa(100);
+    SB = await B.abrir(cod); await passa(10_000);
+    ok(SB.alterada && !banco.ler(`leiloes/${cod}/vivo`), `recarregar com o vivo apagado e vendas gravadas: congela (${SB.alterada})`);
+    [SA, SB].forEach(x => x.parar());
+    // (c) os lotes trocados no saguão por outra conta (mesmo T e liga, outras notas): o Começar grava os deste aparelho
+    const C1 = aparelho("vc"), C2 = aparelho("vd");
+    const SC = await C1.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7c" }), codC = SC.codigo;
+    const SD = await C2.entrar(codC); await passa(200); await espera(SC.aceitar("vd")); await passa(300); await espera(SD.pronto(true)); await passa(300);
+    const certos = TMs.public.leilao.criarLotes(MUNDO.public, "en", 3), mexidos = { l: JSON.parse(JSON.stringify(certos.lotes)), f: certos.fora, T: 3, liga: "en" };
+    mexidos.l.forEach(r => { r.overall = 99; });
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos);
+    await passa(300);
+    const rC = await espera(SC.comecar());
+    await anda(() => SC.ctx && SD.ctx && SC.vivoN && SD.vivoN, 30_000);
+    const ltC = banco.ler(`leiloes/${codC}/lotes`);
+    ok(rC.ok && ltC.l.every((r, i) => r.overall === certos.lotes[i].overall) && ltC.ed === "public" && SC.ctx.lotes.every(r => r.overall !== 99) && SD.ctx.lotes.every(r => r.overall !== 99) && !SC.alterada && !SD.alterada,
+      "os lotes trocados no saguão: o Começar grava os do mundo-base (com a edição da sala) e as duas sessões usam esses: " + JSON.stringify(rC));
+    // depois do Começar, lotes trocados = a sala congela (como antes)
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos); await passa(500);
+    ok(SC.alterada === "lotes" && SD.alterada === "lotes", "os lotes trocados depois do Começar: congela");
+    [SC, SD].forEach(x => x.parar());
+    // (d) a edição do aparelho do dono trocada antes do Começar (a tela de início faz isso sem recarregar): os lotes saem
+    // da edição DA SALA, nunca da Season Update numa sala pública
+    const E = { ed: "public" }, edOrig = TMs.public.storage.edition;
+    const D1 = aparelho("ve"), D2 = aparelho("vf");
+    const edHooks = { edicao: () => E.ed, trocarEdicao: ed => { E.ed = ed; return ed; }, suUnlocked: () => true, mundo: null };
+    TMs.public.storage.edition = () => E.ed;
+    try {
+      const SE = await D1.criar({ liga: "br", ligaNome: "Brasil", vagas: 3, bots: 1, tempo: 10, semente: "O7d" }, edHooks), codE = SE.codigo;
+      const SF = await D2.entrar(codE); await passa(200); await espera(SE.aceitar("vf")); await passa(300); await espera(SF.pronto(true)); await passa(300);
+      E.ed = "pro";
+      const rE = await espera(SE.comecar());
+      await anda(() => SE.ctx && SF.ctx, 30_000);
+      const ltE = banco.ler(`leiloes/${codE}/lotes`), pub = TMs.public.leilao.criarLotes(MUNDO.public, "br", 3);
+      ok(rE.ok && E.ed === "public" && ltE && ltE.ed === "public" && ltE.l.every((r, i) => r.id === pub.lotes[i].id) && !SF.alterada,
+        `a edição trocada antes do Começar: volta à da sala e os lotes são os da pública (${JSON.stringify(rE)}, edição ${E.ed}, 1º ${ltE && ltE.l[0].name} × ${pub.lotes[0].name})`);
+      [SE, SF].forEach(x => x.parar());
+    } finally { TMs.public.storage.edition = edOrig; }
+    // (e) o bate a caminho quando o dono encerra: nada fica órfão em leiloes/{código}
+    const G0 = aparelho("vg", { latencia: 0 }), G1 = aparelho("vh", { latencia: 200 });
+    const SG = await G0.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7e" }), codG = SG.codigo;
+    const SH = await G1.entrar(codG); await passa(1500); await espera(SG.aceitar("vh")); await passa(6000);
+    await anda(() => SH._bateEmVoo, 60_000); await passa(20);
+    const rG = await espera(SG.encerrar()); await passa(5000);
+    ok(rG.ok && SH.apagada && banco.ler(`leiloes/${codG}`) == null, "o bate a caminho quando o dono encerra: a sala não volta (sobrou " + JSON.stringify(banco.ler(`leiloes/${codG}`)) + ")");
+    [SG, SH].forEach(x => x.parar());
+    nota_("O7", "o vivo apagado congela (também ao recarregar), os lotes trocados no saguão são regravados no Começar, a edição trocada volta à da sala, o bate a caminho não recria a sala encerrada");
+  }
+
+    marca("O8");
+  if (caso("O8")) /* ---------- O8 a volta da página escondida não derruba a conexão do TM inteiro (as salas dos outros modos) ---------- */
+  {
+    // o goOffline/goOnline vale para o TM todo: o servidor roda o onDisconnect das salas do Online 3D e dos outros modos.
+    // Só com o socket preso (o bate sem ack em 3 s depois da volta) e sem outra sala online aberta
+    const outra = { v: false };
+    const A = aparelho("xa"), B = aparelho("xb");
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O8" }), cod = SA.codigo;
+    const SB = await B.entrar(cod, { outrasSalas: () => outra.v }); await passa(200); await espera(SA.aceitar("xb")); await passa(300);
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    // a sala de outro modo deste aparelho: some se a conexão cair (o onDisconnect dela)
+    B.cli.db.ref("salas3d/OUTRA").set({ dono: "xb" }); B.cli.db.ref("salas3d/OUTRA").onDisconnect().remove();
+    await passa(500);
+    let reconexoes = 0; const recOrig = SB.rede.reconectar; SB.rede.reconectar = () => { reconexoes++; recOrig(); };
+    // (a) escondida 7 s com o socket bom: volta "Atualizando…", fica em dia sem reconectar e a outra sala continua
+    B.doc.esconde(true); await passa(7000); B.doc.esconde(false);
+    const atualizando = SB.ver().rede === "atualizando";
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    ok(atualizando && SB.ver().rede === "ok" && reconexoes === 0 && banco.ler("salas3d/OUTRA"),
+      `a volta depois de 7 s escondida com o socket bom: "Atualizando…", em dia sem derrubar a conexão (${reconexoes} reconexões; a sala do outro modo ${banco.ler("salas3d/OUTRA") ? "continua" : "SUMIU"})`);
+    // (b) o socket preso na volta (o que sobe fica parado): sem outra sala aberta, reconecta UMA vez depois de 3 s sem ack
+    outra.v = true;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    ok(reconexoes === 0 && SB.ver().rede === "reconectando" && banco.ler("salas3d/OUTRA"), `o socket preso com outra sala online aberta: "Reconectando…" sem derrubar a conexão (${reconexoes} reconexões, ${SB.ver().rede})`);
+    banco.definirLatencia(B.cli.cid, 20); await anda(() => SB.ver().rede === "ok", 120_000);
+    outra.v = false;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    banco.definirLatencia(B.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok", 120_000);
+    ok(reconexoes === 1 && SB.ver().rede === "ok", `o socket preso sem outra sala: reconecta uma vez e fica em dia (${reconexoes} reconexões, ${SB.ver().rede})`);
+    [SA, SB].forEach(x => x.parar());
+    banco.gravar("salas3d/OUTRA", null);
+    nota_("O8", "a volta com o socket bom não reconecta (a sala de outro modo continua); com o socket preso, só sem outra sala online aberta");
+  }
   } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
   function nota_(b, s) { notas.push(b + ": " + s); }
 

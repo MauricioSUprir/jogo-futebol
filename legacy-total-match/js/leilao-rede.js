@@ -58,8 +58,11 @@
      horaServidor = o relógio monótono + a diferença para o servidor da amostra de MENOR ida e volta (numa janela das 12
      últimas testemunhas; a que não cruza a escolhida — o relógio do aparelho pulou ou dormiu — recomeça a janela); antes
      da 1ª testemunha, Date.now() + .info/serverTimeOffset (o aperto de mão do SDK). conectado/aoCair/aoVoltar =
-     .info/connected; reconectar = goOffline()/goOnline() (vale para o TM inteiro, como o SDK); aoDesconectar =
-     ref.onDisconnect(). Presença (pres/{uid}/{chave}), batimento e as decisões pela testemunha são da sessão. */
+     .info/connected; reconectar = goOffline()/goOnline() (vale para o TM inteiro, como o SDK: o servidor roda o
+     onDisconnect das salas dos OUTROS modos também; a sessão só chama com o socket preso e nenhuma outra sala online
+     aberta); aoDesconectar = ref.onDisconnect(); varrer() = apagar a sala de novo, também depois de apagada (quem vê a
+     sala sumir manda pelo mesmo socket, depois do que ainda tinha a caminho: nada fica órfão). Presença
+     (pres/{uid}/{chave}), batimento e as decisões pela testemunha são da sessão. */
 (function (global) {
   "use strict";
   var TM = (global.TM = global.TM || {});
@@ -443,6 +446,9 @@
         apagada = true;
         return raiz.remove().then(function () { return true; }, falhou("apagar"));
       },
+      // apaga a sala de novo, mesmo depois de apagada (a sessão chama quando vê a sala sumir): pelo mesmo socket, vai
+      // depois de tudo o que este aparelho ainda tinha a caminho e não deixa nó órfão (apagar não recria nada)
+      varrer: function () { return raiz.remove().then(function () { return true; }, function () { return false; }); },
       salvarAgora: function () {},
       // só dos testes: a amostra escolhida da hora
       _hora: function () { return { escolhida: escolhida, amostras: amostras.length, offsetSdk: offsetSdk }; }

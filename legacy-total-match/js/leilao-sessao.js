@@ -73,7 +73,7 @@
   var BATE_MS = 5000;            // o batimento (online), com a página à vista
   var AUSENTE_MS = 12000;        // sem bate fresco por mais que isso = ausente (passa sozinho)
   var ACK_MS = 3000;             // bate sem ack em 3 s = "Reconectando…"
-  var VOLTA_MS = 5000;           // escondida por mais que isso: goOffline/goOnline e "Atualizando…" na volta
+  var VOLTA_MS = 5000;           // escondida por mais que isso: "Atualizando…" na volta (e, sem o ack, goOffline/goOnline)
   var ESCALONA_MS = 1500;        // o k-ésimo presente espera 1,5 s × k depois do momento certo
   var SALTO_MS = 1000;           // o relógio de parede e o monótono se desencontraram mais que isso: testemunha nova
   var SAGUAO_MS = 30 * 60000;    // a sala parada no saguão some depois de 30 min
@@ -125,6 +125,19 @@
     if (!x) return {};
     if (Array.isArray(x)) { var o = {}; x.forEach(function (v, i) { if (v != null) o[i] = v; }); return o; }
     return x;
+  }
+  // o texto canônico de um valor como o Firebase guarda (sem null nem vazio, lista = objeto de índices, chaves em ordem):
+  // compara o que este aparelho montou com o que voltou do servidor
+  function canon(v) {
+    function n(x) {
+      if (x == null || typeof x === "function") return null;
+      if (typeof x === "number") return isFinite(x) ? x : null;
+      if (typeof x !== "object") return x;
+      var o = {}, tem = false, ks = Array.isArray(x) ? x.map(function (y, i) { return String(i); }) : Object.keys(x).sort();
+      ks.forEach(function (k) { var y = n(x[k]); if (y != null) { o[k] = y; tem = true; } });
+      return tem ? o : null;
+    }
+    return JSON.stringify(n(v));
   }
   function erroCod(codigo, msg) { var e = new Error(msg || textoMotivo(codigo)); e.codigo = codigo; return e; }
   function meuUid() {
@@ -271,6 +284,7 @@
       case "recusado": return "O dono da sala recusou a sua entrada";
       case "cheia": return "A sala está cheia";
       case "edicao": return "Esta sala é da Season Update: libere a chave para entrar";
+      case "edicaoAparelho": return "O Total Match está em outra edição: volte à edição da sala";
       case "regras": return "Esta sala usa outra versão das regras: atualize a página";
       case "fairplay": return "Você está suspenso do online por abandonar partidas";
       case "conta": return "A conta online ainda não está pronta";
@@ -322,6 +336,10 @@
     S._horaGravada = -1;
     S._euFixo = typeof opc.eu === "number";
     S._mundo = opc.mundo || null;
+    S._opcOutras = opc.outrasSalas || null;     // testes: outra sala online do TM aberta neste aparelho
+    // a edição deste aparelho (os ganchos de teste ou o TM.storage) e a do mundo que veio em opc.mundo
+    S._opcEd = { edicao: opc.edicao, suUnlocked: opc.suUnlocked, trocarEdicao: opc.trocarEdicao };
+    S._mundoEd = S._mundo ? opcEdicao(S._opcEd) : null;
     S._armazem = opc.armazem || null;
     S._doc = opc.doc || null;
     // o online: o batimento, a rede e a testemunha
@@ -392,7 +410,7 @@
       S._montaCtx();
       // o estado lido já vale para as telas (os ouvintes confirmam logo depois com o mesmo valor)
       if (r[2]) {
-        if (S.ctx) { var c0 = L.conferir(null, r[2], S.ctx); if (c0.ok) { S.vivo = r[2]; S.vivoN = L.norm(r[2], S.ctx); } else S.alterada = c0.motivo; }
+        if (S.ctx) { var c0 = L.conferir(null, r[2], S.ctx); if (c0.ok) { S.vivo = r[2]; S.vivoN = L.norm(r[2], S.ctx); S._vivoVisto = true; } else S.alterada = c0.motivo; }
         else S._vivoPend = r[2];
       }
       // o treino reaberto: o relógio volta de onde parou (nunca antes do que já está gravado)
@@ -442,6 +460,12 @@
     var ordem = S._ordem(), T = ordem.length;
     if (S.ctx && S.ctx.T === T) return;
     if (lt.l.length !== L.LOTES_POR_TEC * T) return;                     // os lotes de outra lotação (ainda chegando)
+    if (S.online) {
+      // os lotes de outra liga ou de outra edição que a da sala, ou (no aparelho do dono) outros que os que ele gravou no
+      // Começar (trocados entre as duas transações): a sala congela
+      var edS = s.meta.edicao === "pro" ? "pro" : "public";
+      if ((lt.liga != null && s.cfg && lt.liga !== s.cfg.liga) || (lt.ed != null && lt.ed !== edS) || (S._lotesMeus && canon(lt) !== S._lotesMeus)) { S._congela("lotes"); return; }
+    }
     S.ctx = L.contexto({ T: T, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg && s.cfg.tempo });
     S._lotesJson = S.online ? JSON.stringify(lt) : null;
     S.bots = [];
@@ -472,7 +496,13 @@
     if (!s && S._carga) return;            // a sala que não existe: a carga recusa
     if (!s) {
       S.sala = null; S._limpaTimer();
-      if (S.online) { S.apagada = true; S._emite("apagada", {}); esquecer(S.codigo, S._armazem); S.parar(true); }
+      if (S.online) {
+        S.apagada = true; S._emite("apagada", {}); esquecer(S.codigo, S._armazem); S.parar(true);
+        // o que este aparelho ainda tinha a caminho (o bate da testemunha, a presença, um registro de venda) chega ao
+        // servidor DEPOIS de a sala sumir e recriaria leiloes/{código}/bate… para sempre: apagar a sala de novo pelo
+        // mesmo socket (ordenado) vem depois de tudo isso. Apagar não recria nada.
+        if (S.rede.varrer) { try { S.rede.varrer(); } catch (e) {} }
+      }
       S._notificar(); return;
     }
     var antes = S.sala ? S.sala.meta && S.sala.meta.estado : undefined, euAntes = S.eu;
@@ -521,6 +551,19 @@
     // depois do Começar os lotes não mudam: mudou = adulterado
     if (!v || JSON.stringify(v) !== S._lotesJson) S._congela("lotes");
   };
+  P._temVendas = function () { var vd = this.vendas || {}; return Object.keys(vd).some(function (k) { return vd[k] != null; }); };
+  // o vivo apagado depois de existir (ou o vivo que falta com vendas gravadas): confere se a SALA ainda existe (com a sala
+  // inteira apagada, o evento do vivo pode chegar antes do da sala) e, se existe, congela. Até a resposta, nada age.
+  P._vivoSumiu = function () {
+    var S = this;
+    if (S._sumiu || S.alterada) return;
+    S._sumiu = true; S._limpaTimer();
+    S.rede.ler("sala").then(function (s) {
+      if (S.parado) return;
+      if (!s || !s.meta) return;            // a sala inteira sumiu: o _naSala encerra
+      S._congela("vivo");
+    }, function () { if (!S.parado) S._congela("vivo"); });
+  };
   P._congela = function (motivo) {
     var S = this;
     if (S.alterada) return;
@@ -534,9 +577,16 @@
     if (S.parado) return;
     if (!ctx) { S._vivoPend = v; return; }
     var ant = S.vivo;
-    if (v == null) { S.vivo = null; S.vivoN = null; S._notificar(); S._programa(); return; }
+    if (v == null) {
+      // o vivo que já existiu e sumiu (alguém apagou só ele): o leilão NÃO recomeça do zero; a sala congela (a sala
+      // inteira apagada é o _naSala que trata)
+      if (S._vivoVisto || S._temVendas()) { S._vivoSumiu(); return; }
+      S.vivo = null; S.vivoN = null; S._notificar(); S._programa(); return;
+    }
+    if (S._sumiu) return;
     var c = L.conferir(ant, v, ctx);
     if (!c.ok) { S._congela(c.motivo); return; }
+    S._vivoVisto = true;
     S.vivo = v; S.vivoN = L.norm(v, ctx);
     S._eventos(ant ? L.norm(ant, ctx) : null, S.vivoN);
     S._formacaoAuto();
@@ -670,12 +720,19 @@
     if (!S._bateEmVoo) {
       S._bateEmVoo = true;
       var meu = ++S._bateN;
-      var t3 = S._agendar(function () { if (S._bateEmVoo && meu === S._bateN && !S.parado) S._defBate("reconectando"); }, ACK_MS);
+      var t3 = S._agendar(function () {
+        if (!S._bateEmVoo || meu !== S._bateN || S.parado) return;
+        S._defBate("reconectando");
+        // de volta depois de escondida e o bate sem resposta: o socket ficou meio aberto (o iPhone faz isso). Só então
+        // derruba e refaz a conexão, e nunca com outra sala online do TM aberta (o goOffline vale para o TM inteiro: o
+        // servidor rodaria o onDisconnect das salas do Online 3D e dos outros modos)
+        if (S._desconfia) { S._desconfia = false; if (S.rede.conectado() && !S._outrasSalas()) S.reconectar(); }
+      }, ACK_MS);
       S._testemunha().then(function (ts) {
         if (meu === S._bateN) S._bateEmVoo = false;
         S._cancelar(t3);
         if (S.parado) return;
-        if (ts != null) { S._defBate("ok"); S._programa(); }
+        if (ts != null) { S._desconfia = false; S._defBate("ok"); S._programa(); }
       }, function () {
         if (meu === S._bateN) S._bateEmVoo = false;
         S._cancelar(t3);
@@ -764,8 +821,16 @@
     }
     if (!S._oculta) return;
     S._oculta = false;
-    if (S.hora() - S._ocultaDesde > VOLTA_MS) { S._estadoBate = "atualizando"; S._bateEmVoo = false; S._bateN++; try { S.rede.reconectar(); } catch (e) {} }
+    // o socket costuma estar bom: "Atualizando…" até o ack do próximo bate; sem ack em 3 s, o _bater reconecta
+    if (S.hora() - S._ocultaDesde > VOLTA_MS) { S._estadoBate = "atualizando"; S._bateEmVoo = false; S._bateN++; S._desconfia = true; }
     S._bater(); S._programa(); S._notificar();
+  };
+  // outra sala online do TM aberta neste aparelho (o Online 3D, a fila do aleatório): o goOffline derrubaria as dela
+  P._outrasSalas = function () {
+    if (this._opcOutras) { try { return !!this._opcOutras(); } catch (e) { return false; } }
+    try { var e3 = TM.online3d && TM.online3d.estado && TM.online3d.estado(); if (e3 && e3.fase) return true; } catch (e) {}
+    try { if (TM.net && TM.net._mmA) return true; } catch (e) {}
+    return false;
   };
   P._bateFresco = function (uid, agora) { var b = this.bates[uid]; return !!b && typeof b.ts === "number" && agora - b.ts <= AUSENTE_MS; };
   // o técnico t está ausente (passa sozinho): saiu da sala, ou sem bate fresco (esta sessão, ativa, nunca)
@@ -830,10 +895,12 @@
   P._programa = function () {
     var S = this, L = LE(), ctx = S.ctx;
     S._limpaTimer();
-    if (S.parado || S.alterada || S.soOlhar || !S.sala || !S.sala.meta || S.pausado()) return;
+    if (S.parado || S.alterada || S._sumiu || S.soOlhar || !S.sala || !S.sala.meta || S.pausado()) return;
     if (S._ocupado) return;              // a ação em curso chama o _programa quando termina
     if (S.online && (S._carga || !S._ativo())) return;
     var est = S.sala.meta.estado, agora = S.hora(), atraso = S._atrasoAgora(agora);
+    // depois do Começar o vivo só falta antes do 1º (e sem venda nenhuma): faltando depois disso, foi apagado
+    if (ctx && !S.vivo && est !== "saguao" && (est !== "leilao" || S._vivoVisto || S._temVendas())) { S._vivoSumiu(); return; }
     var prox = null;
     function cand(q, tipo, extra) { if (!prox || q < prox.quando) { prox = extra || {}; prox.quando = q; prox.tipo = tipo; } }
     // a sala vencida primeiro: quem volta depois de 24 h não faz o leilão andar, apaga
@@ -1301,13 +1368,21 @@
     var ordem = ordemPrevista(s0), T = ordem.length, liga = s0.cfg.liga;
     if (T < L.TEC_MIN) return recusa("poucos");
     if (prontosDe(s0).faltam.length) return recusa("prontos");
-    var mundo = (opc && opc.mundo) || S._mundo || TM.data.mundoBase(), lg = mundo.leaguesById && mundo.leaguesById[liga];
+    // os lotes saem do mundo-base da edição DA SALA: a tela de início troca a edição sem recarregar e a sessão continua
+    // viva (sem isto, os jogadores da Season Update iam para uma sala pública); volta à da sala, como o entrar()
+    var ed = s0.meta.edicao === "pro" ? "pro" : "public", oe = S._opcEd;
+    if (opcEdicao(oe) !== ed) {
+      if (ed === "pro" && !opcLiberada(oe)) return recusa("edicao");
+      opcTroca(oe, ed);
+      if (opcEdicao(oe) !== ed) return recusa("edicaoAparelho");
+    }
+    var mundo = (opc && opc.mundo) || (S._mundo && S._mundoEd === ed ? S._mundo : null) || TM.data.mundoBase();
+    var lg = mundo.leaguesById && mundo.leaguesById[liga];
     if (!lg) return recusa("liga");
-    var lt = L.criarLotes(mundo, liga, T), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga };
-    return rede.transacao("lotes", function (cur) {
-      if (cur && cur.T === T && cur.liga === liga && cur.l && cur.l.length === dados.l.length) return undefined;
-      return dados;
-    }).then(function () {
+    var lt = L.criarLotes(mundo, liga, T), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed }, meus = canon(dados);
+    // os lotes que já estão lá só ficam se forem IGUAIS aos deste aparelho (gravados no saguão por outra conta: troca)
+    return rede.transacao("lotes", function (cur) { return cur && canon(cur) === meus ? undefined : dados; }).then(function () {
+      S._lotesMeus = meus;
       return S._transSala(function (s) {
         if (s.meta.estado !== "saguao") return "comecou";
         var ord = ordemPrevista(s);
