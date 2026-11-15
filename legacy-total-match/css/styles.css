@@ -6854,7 +6854,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-bloco-tit { white-space: nowrap; }
 .lei-bloco-info { font-size: 12px; font-weight: 600; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .lei-bloco.aberto .lei-bloco-seta, .lei-bloco-bt.aberto .lei-bloco-seta { transform: rotate(180deg); }
-.lei-bloco-corpo { padding: 0 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+/* 2 px entre o botão do bloco e o 1º item (dois clicáveis nunca encostam) */
+.lei-bloco-corpo { padding: 2px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
 .lei-tec, .lei-part { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--black-soft); color: var(--text); font: inherit; text-align: left; }
 .lei-tec { cursor: pointer; }
@@ -6931,7 +6932,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-formas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
 .lei-forma-bt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 46px; min-width: 0; padding: 6px 4px; }
 .lei-forma-f { font-size: 14px; font-weight: 800; }
-.lei-forma-n { font-size: 10.5px; font-weight: 600; opacity: .85; white-space: nowrap; }
+/* o nome quebra em duas linhas quando o botão é estreito ("Tudo ou / nada"): nunca sai do botão */
+.lei-forma-n { font-size: 10.5px; font-weight: 600; opacity: .85; line-height: 1.15; text-align: center; max-width: 100%; }
 .lei-forma-bt:disabled { opacity: .35; cursor: not-allowed; }
 .lei-esc-aviso { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(245,184,61,.45); background: rgba(245,184,61,.10); font-size: 12.5px; font-weight: 600; }
 .lei-esc-aviso .tm-ic { color: var(--alerta); width: 17px; height: 17px; flex: 0 0 auto; }
@@ -7071,7 +7073,12 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-lance-in { max-width: 760px; }
   .lei-pitch-esc { max-width: 440px; }
   .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  /* na Escalação a coluna da direita é estreita até ~1100 px: 3 por linha, como no celular */
+  .lei-corpo-esc .lei-formas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .lei-corpo-camp { max-width: 720px; }
+}
+@media (min-width: 1100px) and (min-height: 521px) {
+  .lei-corpo-esc .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 /* celular deitado (pouca altura): o topo numa linha só, a carta compacta e a barra de lance numa linha, à vista com o relógio */
 @media (max-height: 520px) and (min-width: 560px) {
@@ -7114,6 +7121,10 @@ body.theme-light .lei-lb-tudo .lei-lb-v { color: rgba(255,255,255,.85); }
 body.theme-light .lei-lb-tudo.confirma { color: #1b1203; }
 body.theme-light .lei-lb-tudo.confirma .lei-lb-v { color: rgba(0,0,0,.66); }
 body.theme-light .lei-voce { color: #ffffff; }
+/* os textos de estado sobre o branco: tons escuros (contraste ≥ 4,5:1; o --ok/--alerta do escuro dá 2,3 e 1,8) */
+body.theme-light .lei-lance-msg.ok { color: #0f7a3a; }
+body.theme-light .lei-lance-msg.alerta, body.theme-light .lei-esc-pen { color: #92400e; }
+body.theme-light .lei-lance-msg.erro { color: #b91c1c; }
 body.theme-light .lei-gr.gr-GK { color: #92400e; background: rgba(245,184,61,.22); }
 body.theme-light .lei-gr.gr-DF { color: #1d4ed8; background: rgba(59,130,246,.14); }
 body.theme-light .lei-gr.gr-FW { color: #b91c1c; background: rgba(239,68,68,.12); }

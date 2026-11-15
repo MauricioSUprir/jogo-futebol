@@ -1331,14 +1331,28 @@ async function testeTela() {
     const camada = e => { let a = e; while (a && a !== document.body) { if (getComputedStyle(a).position === "fixed") return a; a = a.parentElement; } return null; };
     const els = [...document.querySelectorAll(sel)].filter(visivel);
     const nome = e => (e.className && typeof e.className === "string" ? "." + e.className.trim().split(/\s+/).slice(0, 2).join(".") : e.tagName) + (e.textContent ? ' "' + e.textContent.trim().slice(0, 18) + '"' : "");
-    const pares = [];
+    const pares = [], encostam = [];
+    // clicáveis vizinhos: nem por cima (> 1 px) nem encostados (menos de 2 px entre as bordas)
+    const clicavel = e => e.matches("button, a[href], [role=button], input, select");
     for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
       const X = els[i], Y = els[j];
       if (X.contains(Y) || Y.contains(X) || camada(X) !== camada(Y)) continue;
       const a = X.getBoundingClientRect(), bb = Y.getBoundingClientRect();
       const ix = Math.min(a.right, bb.right) - Math.max(a.left, bb.left), iy = Math.min(a.bottom, bb.bottom) - Math.max(a.top, bb.top);
       if (ix > 1 && iy > 1) pares.push(nome(X) + " X " + nome(Y));
+      else if (ix > -2 && iy > -2 && clicavel(X) && clicavel(Y)) encostam.push(nome(X) + " | " + nome(Y) + " (" + Math.round(Math.max(-ix, -iy) * 10) / 10 + " px)");
     }
+    // o texto de dentro de um botão não sai dele (o rótulo "Tudo ou nada" passava do botão 4-2-4)
+    const saem = [];
+    els.filter(e => e.matches("button")).forEach(b => {
+      const rb = b.getBoundingClientRect();
+      b.querySelectorAll("span, div, small, strong, b").forEach(x => {
+        if (!x.childNodes.length || ![...x.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+        const cs = getComputedStyle(x); if (cs.display === "none" || cs.visibility === "hidden") return;
+        const r = x.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return;
+        if (r.left < rb.left - 1 || r.right > rb.right + 1 || r.top < rb.top - 1 || r.bottom > rb.bottom + 1) saem.push(nome(x) + " em " + nome(b) + " (" + Math.round(r.left) + "–" + Math.round(r.right) + " no " + Math.round(rb.left) + "–" + Math.round(rb.right) + ")");
+      });
+    });
     const larg = document.documentElement.clientWidth;
     const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
     // no fim da rolagem, o último da página termina acima da barra fixa
@@ -1352,7 +1366,7 @@ async function testeTela() {
       if (fundo > topo + 1) atras = Math.round(fundo - topo);
       scrollTo(0, y0);
     }
-    return { n: els.length, sobre: pares, fora, rolaLado: document.documentElement.scrollWidth > larg + 1, atras };
+    return { n: els.length, sobre: pares, encostam, saem, fora, rolaLado: document.documentElement.scrollWidth > larg + 1, atras };
   });
   const nadaSobre = [];
   async function nadaSobreNada(p, rotulo, extra) {
@@ -1361,7 +1375,7 @@ async function testeTela() {
       await espera(320);
       await p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); scrollTo(0, 0); });
       const s = await sobreposicao(p);
-      const r = { tela: rotulo + " " + w + "x" + h, n: s.n, sobre: s.sobre.slice(0, 4), fora: s.fora.slice(0, 4), rolaLado: s.rolaLado, atras: s.atras };
+      const r = { tela: rotulo + " " + w + "x" + h, n: s.n, sobre: s.sobre.slice(0, 4), encostam: s.encostam.slice(0, 4), saem: s.saem.slice(0, 4), fora: s.fora.slice(0, 4), rolaLado: s.rolaLado, atras: s.atras };
       if (extra) Object.assign(r, await extra(p, w, h));
       nadaSobre.push(r);
       await print(p, `nada-${rotulo}-${w}x${h}`);
@@ -1406,6 +1420,11 @@ async function testeTela() {
 
     /* T2 a Entrada e o Criar (o treino) */
     const { p } = await aparelho(390, 844, true);
+    // o que fica escrito na região ao vivo (#lei-vivo) e por quanto tempo: o que o leitor de tela ouve (também depois de recarregar)
+    const vigiaVivo = () => { window.__vivo = []; const ir = () => { const r = document.getElementById("lei-vivo"); if (r) new MutationObserver(() => window.__vivo.push([performance.now(), r.textContent])).observe(r, { childList: true, characterData: true, subtree: true }); };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ir); else ir(); };
+    await p.context().addInitScript(vigiaVivo);
+    await p.evaluate(vigiaVivo);
     const html = await (await fetch(srv.url + "index.html")).text();
     confere("T2 a região ao vivo no HTML inicial (#lei-vivo, role=status, aria-live=polite) e os 4 arquivos do leilão no index.html",
       /<div id="lei-vivo"[^>]*role="status"[^>]*aria-live="polite"/.test(html) && ["leilao.js", "leilao-rede.js", "leilao-sessao.js", "leilao-tela.js"].every(f => html.includes("js/" + f + "?v=")));
@@ -1524,9 +1543,18 @@ async function testeTela() {
       return { barraVisivel: barra.top >= 0 && barra.bottom <= innerHeight + 1 && barra.height > 40, relVisivel: rel.top >= 0 && rel.bottom <= barra.top + 0.5,
         roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1) };
     }));
-    const ruins = nadaSobre.filter(x => x.sobre.length || x.fora.length || x.rolaLado || x.atras);
-    confere(`T4 nada sobre nada: Entrada, Criar e Leilão nos 8 tamanhos (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
-    const lotes = nadaSobre.filter(x => /^lote/.test(x.tela));
+    await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="false"]').forEach(b => b.click()));
+    await espera(200);
+    await nadaSobreNada(p, "lote-blocos", async p => p.evaluate(() => {
+      const pt = document.querySelector(".lei-bloco .lei-pitch"), r = pt && pt.getBoundingClientRect();
+      return { blocos: document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').length, campinho: r ? Math.round(r.width) : 0, cartas: document.querySelectorAll(".lei-bloco .lei-pitch .ut-card").length };
+    }));
+    const blocos = nadaSobre.filter(x => /^lote-blocos/.test(x.tela));
+    confere("T4 com os blocos abertos (Seu time, Técnicos, Próximos lotes): o campinho do lote medido nos 8 tamanhos", blocos.length === 8 && blocos.every(x => x.blocos === 3 && x.campinho > 100 && x.cartas === 11), blocos.map(x => ({ t: x.tela, b: x.blocos, c: x.campinho, n: x.cartas })));
+    await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').forEach(b => b.click()));
+    const ruins = nadaSobre.filter(x => x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.atras);
+    confere(`T4 nada sobre nada (nem encostado, nem texto fora do botão): Entrada, Criar e Leilão (blocos fechados e abertos) nos 8 tamanhos (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
+    const lotes = nadaSobre.filter(x => /^lote /.test(x.tela));
     confere("T4 a barra de lance à vista com o relógio rodando nos 8 tamanhos (também 844×390 e 360×740), o relógio acima dela, linha 1 com ≥ 48 px",
       lotes.length === 8 && lotes.every(x => x.barraVisivel && x.relVisivel && x.roda && x.l1min >= 48), lotes.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, roda: x.roda, h: x.l1min })));
     // "Vendido para X por R$ Y" (ou "Sem lance") na pausa entre os lotes
@@ -1547,10 +1575,24 @@ async function testeTela() {
       return { barra: lum(cs(".lei-lance").backgroundColor), meu: lum(cs(".lei-meu").backgroundColor), texto: lum(cs(".lei-meu-clube").color),
         abaOn: cs(".lei-aba.on").backgroundImage !== "none", tudo: cs(".lei-lb-tudo").backgroundImage !== "none", sb: lum(cs(".lei-sb").backgroundColor) };
     });
+    const contraste = await p.evaluate(() => {
+      const rgb = c => c.match(/[\d.]+/g).map(Number);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => { const m = rgb(c); return 0.2126 * lin(m[0]) + 0.7152 * lin(m[1]) + 0.0722 * lin(m[2]); };
+      const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const fundo = getComputedStyle(document.body).backgroundColor, barra = "rgb(255, 255, 255)";
+      const m = document.querySelector(".lei-lance-msg"), cls0 = m.className, out = {};
+      for (const k of ["ok", "alerta", "erro"]) { m.className = "lei-lance-msg " + k; out[k] = Math.round(cr(getComputedStyle(m).color, barra) * 100) / 100; }
+      m.className = cls0;
+      const pen = document.createElement("span"); pen.className = "lei-esc-pen"; document.querySelector(".lei-corpo").appendChild(pen);
+      out.pen = Math.round(cr(getComputedStyle(pen).color, fundo) * 100) / 100; pen.remove();
+      return out;
+    });
+    confere("T4 tema claro: o retorno e o motivo da barra (ok, alerta, erro) e o '−N fora da função' com contraste ≥ 4,5:1", Object.values(contraste).every(x => x >= 4.5), contraste);
     const sClaro = await sobreposicao(p);
     await print(p, "4-claro");
     confere("T4 tema claro: barra, caixas e botões claros, texto escuro, a aba ativa e o Tudo em verde; nada sobre nada",
-      claro.barra > 0.9 && claro.meu > 0.9 && claro.sb > 0.9 && claro.texto < 0.3 && claro.abaOn && claro.tudo && !sClaro.sobre.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3) });
+      claro.barra > 0.9 && claro.meu > 0.9 && claro.sb > 0.9 && claro.texto < 0.3 && claro.abaOn && claro.tudo && !sClaro.sobre.length && !sClaro.encostam.length && !sClaro.saem.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3), encostam: sClaro.encostam.slice(0, 3), saem: sClaro.saem.slice(0, 3) });
     await p.evaluate(() => TM.ui.applyTheme("dark"));
 
     /* T5 a barra da sessão: Como funciona, Participantes e Vendas (folhas), e o relógio parado fora da sala */
@@ -1559,11 +1601,56 @@ async function testeTela() {
       await p.click(`.lei-sb[aria-label="${rot}"]`);
       await espera(250);
       const s = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, txt: f.innerText.replace(/\s+/g, " ").slice(0, 3000), foco: document.activeElement && document.activeElement.className } : null; });
+      // aria-modal de verdade: a tela por trás inerte e o Tab (e o Shift+Tab) dando a volta dentro da folha
+      const fora = [];
+      for (let i = 0; i < 25; i++) { await p.keyboard.press(i < 19 ? "Tab" : "Shift+Tab"); const q = await p.evaluate(() => { const a = document.activeElement; return a && a.closest(".lei-folha-in") ? null : (a ? a.tagName + "." + a.className : "nada"); }); if (q) fora.push(q); }
+      const inerte = await p.evaluate(() => document.querySelector("#app > .screen").inert);
       await p.keyboard.press("Escape");
       await espera(150);
-      folhas.push({ rot, ok: !!s && s.tit === tit && !(await p.evaluate(() => !!document.querySelector(".lei-folha"))), s });
+      const solta = await p.evaluate(() => !document.querySelector("#app > .screen").inert);
+      folhas.push({ rot, ok: !!s && s.tit === tit && !(await p.evaluate(() => !!document.querySelector(".lei-folha"))), modal: !fora.length && inerte && solta, fora: fora.slice(0, 3), s: s && { tit: s.tit, foco: s.foco } , txt: s && s.txt });
     }
-    confere("T5 Como funciona, Participantes e Vendas abrem como folhas (foco no Fechar) e fecham com Esc", folhas.every(f => f.ok) && /R\$ 100/.test(folhas[0].s.txt) && /Bot /.test(folhas[1].s.txt) && /Vendidos/i.test(folhas[2].s.txt), folhas);
+    confere("T5 Como funciona, Participantes e Vendas abrem como folhas (foco no Fechar) e fecham com Esc", folhas.every(f => f.ok) && /R\$ 100/.test(folhas[0].txt) && /Bot /.test(folhas[1].txt) && /Vendidos/i.test(folhas[2].txt), folhas.map(f => ({ rot: f.rot, ok: f.ok, s: f.s })));
+    confere("T5 as folhas prendem o foco: a tela por trás inerte enquanto abertas, o Tab e o Shift+Tab não saem da folha", folhas.every(f => f.modal), folhas.map(f => ({ rot: f.rot, modal: f.modal, fora: f.fora })));
+    // o foco do teclado nunca atrás da barra de lance fixa (scroll-padding), no celular em pé
+    const focoTapado = [];
+    for (const [w, h] of [[390, 844], [360, 740]]) {
+      await p.setViewportSize({ width: w, height: h });
+      await espera(250);
+      await p.evaluate(() => { if (document.activeElement) document.activeElement.blur(); scrollTo(0, 0); });
+      for (let i = 0; i < 28; i++) {
+        await p.keyboard.press("Tab");
+        const r = await p.evaluate(() => { const a = document.activeElement, b = document.querySelector(".lei-lance"); if (!a || a === document.body || !b || b.hidden || b.contains(a)) return null;
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.bottom > rb.top + 1 ? (a.getAttribute("aria-label") || a.textContent).trim().slice(0, 30) + " " + Math.round(ra.top) + "–" + Math.round(ra.bottom) + " (barra em " + Math.round(rb.top) + ")" : null; });
+        if (r) focoTapado.push(w + "x" + h + ": " + r);
+      }
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T5 o Tab pela aba Leilão nunca deixa o foco atrás da barra de lance (390×844 e 360×740)", !focoTapado.length, focoTapado.slice(0, 4));
+    // a linha da barra de lance: os textos mais longos (o retorno, os motivos, a troca de formação) cabem em 360 px; o campo de
+    // outro valor com o máximo no lugar reservado
+    await p.setViewportSize({ width: 360, height: 740 });
+    await espera(250);
+    const linha = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual();
+      S._emite("formacao", { de: "4-4-2", para: "4-2-4" });
+      const m = document.querySelector(".lei-lance-msg"), mede = () => { const r = document.createRange(); r.selectNodeContents(m); return r.getBoundingClientRect().width; };
+      const out = { formacao: m.textContent, larg: m.clientWidth, cabe: mede() <= m.clientWidth + 0.5, longos: [] };
+      const txt0 = m.textContent;
+      const textos = ["Lance de R$ 100: você lidera", "Alguém chegou antes: R$ 100", "Esse jogador já fechou", "Não deu para dar o lance", "Toque de novo para confirmar R$ 100",
+        "Digite o valor do lance", "Você passou neste jogador", "Seu máximo neste jogador: R$ 100", "Aguarde o próximo jogador"]
+        .concat(["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim", "valor", "antes", "fechado"].map(k => TM.leilaoSessao.textoMotivo(k, { max: 100, valor: 100 })));
+      textos.forEach(t => { m.textContent = t; const w = mede(); if (w > m.clientWidth + 0.5) out.longos.push(t + " (" + Math.round(w) + " px)"); });
+      m.textContent = txt0;
+      const v = document.querySelector(".lei-valor"), cs = getComputedStyle(v), cv = document.createElement("canvas").getContext("2d");
+      cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+      const livre = v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      out.placeholder = { txt: "Até R$ 100", larg: Math.round(cv.measureText("Até R$ 100").width), livre: Math.round(livre), real: v.placeholder };
+      return out;
+    });
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T5 em 360 px a linha da barra de lance mostra inteiros o aviso da formação e os outros textos, e o campo de outro valor o máximo ('Até R$ X')",
+      /^Formação agora é 4-2-4/.test(linha.formacao) && linha.cabe && !linha.longos.length && linha.placeholder.larg <= linha.placeholder.livre && /^(Até R\$ \d+|Outro valor)$/.test(linha.placeholder.real), linha);
     await p.evaluate(() => TM.leilaoSessao.acelerar(2));
     await p.click(".lei-cab .tb-back");
     await espera(400);
@@ -1609,7 +1696,7 @@ async function testeTela() {
           await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
           const V2 = S.ver();
           if (V2.estado === "leilao" && V2.lote && !V2.lote.pausa && !V2.lote.fechando && V2.botoes && !V2.botoes["+1"].pode && V2.botoes["+1"].motivo === m1 && V2.lote.seq + ":" + V2.lote.n === k1
-            && b1.disabled && !/lidera:|chegou antes|passou neste|já fechou|Lance de|formação passou|confirmar/.test(msg.textContent)) out.amostra = [m1, msg.textContent];
+            && b1.disabled && !/lidera:|chegou antes|passou neste|já fechou|Lance de|Formação agora|confirmar/.test(msg.textContent)) out.amostra = [m1, msg.textContent];
           V = V2;
           if (!V.botoes) return out;
         }
@@ -1632,6 +1719,14 @@ async function testeTela() {
       V.estado !== "leilao" && n7 > 10 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
     const an = await p.evaluate(() => TM.leilaoTela.anuncios());
     confere("T7 a região ao vivo falou o lote ('Jogador N de 52: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 52: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
+    // o que ficou de fato na #lei-vivo: o "Vendido para X por R$ Y" fica escrito (antes, o lote novo o trocava no mesmo quadro) e
+    // nenhuma fala sai antes de 1 s
+    const vivo = await p.evaluate(() => { const v = window.__vivo || [], falas = [];
+      // (a última fala ainda está na região: o tempo dela não conta)
+      for (let i = 0; i + 1 < v.length; i++) if (v[i][1]) falas.push({ t: v[i][1], ms: Math.round(v[i + 1][0] - v[i][0]) });
+      return { n: falas.length, vendidos: falas.filter(f => /Vendido para .+ por R\$ \d+/.test(f.t)).length, curtas: falas.filter(f => f.ms < 1000).map(f => f.t.slice(0, 60) + " (" + f.ms + " ms)"),
+        amostra: falas.filter(f => /Vendido/.test(f.t)).slice(-2).map(f => f.t.slice(0, 120) + " (" + f.ms + " ms)") }; });
+    confere("T7 na #lei-vivo o 'Vendido para X por R$ Y' fica escrito (junto com o lote novo) e cada fala fica pelo menos 1 s", vivo.n > 10 && vivo.vendidos > 3 && !vivo.curtas.length, vivo);
 
     /* T8 a escalação (a aba abre sozinha no fim do leilão) */
     const foiEsc = await ate(p, () => TM.ui.current() === "leilao-escalacao", null, 15000);
@@ -1642,7 +1737,7 @@ async function testeTela() {
     confere("T8 no fim do leilão a aba Escalação abre sozinha: 11/11, o campinho com as 11 cartas tocáveis e o prazo",
       foiEsc && V.estado === "escalacao" && V.meu.escalacao.n === 11 && esc.cartas === 11 && esc.vagas === 11 && esc.n === "11/11" && /A escalação fecha em \d:\d\d/.test(esc.prazo || ""), { foiEsc, estado: V.estado, esc });
     await nadaSobreNada(p, "escalacao");
-    const ruinsEsc = nadaSobre.filter(x => /^escalacao/.test(x.tela) && (x.sobre.length || x.fora.length || x.rolaLado));
+    const ruinsEsc = nadaSobre.filter(x => /^escalacao/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
     confere("T8 nada sobre nada na Escalação nos 8 tamanhos", !ruinsEsc.length, ruinsEsc.slice(0, 4));
     // trocar duas vagas do mesmo grupo
     const par = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), e = V.meu.escalacao, sl = TM.leilao.slotsDe(e.formacao);

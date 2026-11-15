@@ -54,17 +54,18 @@
   function nomeForma(f) { return FORMA_NOME[f] ? f + " · " + FORMA_NOME[f] : f; }
 
   /* ---------- o clube e a seleção do retrato (como no mundo-base) ---------- */
-  var _base = { ed: null, mundo: null };
-  function mundoBase() {
+  // só os clubes do mundo-base ficam guardados (o mundo inteiro tem ~3,7 MB), e só enquanto a pessoa está na sala
+  var _base = { ed: null, clubes: null };
+  function clubesBase() {
     var ed = TM.storage.edition();
-    if (_base.ed !== ed || !_base.mundo) { _base.ed = ed; _base.mundo = TM.data.mundoBase(); }
-    return _base.mundo;
+    if (_base.ed !== ed || !_base.clubes) { _base.ed = ed; _base.clubes = TM.data.mundoBase().clubsById; }
+    return _base.clubes;
   }
   // o clube criado e o Editor mudam o clube no mundo da carreira: a carta mostra o do mundo-base (o dos lotes)
   function clube(id) {
     if (!id) return null;
     var c = null; try { c = TM.data.club(id); } catch (e) { c = null; }
-    if (c && (c.custom || c.viverde || c.crestData)) { try { c = mundoBase().clubsById[id] || c; } catch (e) {} }
+    if (c && (c.custom || c.viverde || c.crestData)) { try { c = clubesBase()[id] || c; } catch (e) {} }
     return c || null;
   }
   function nacao(id) { try { return id ? TM.data.nation(id) : null; } catch (e) { return null; } }
@@ -132,14 +133,27 @@
   doc.addEventListener("pointerdown", function () { if (sessao()) Som.destrava(); }, true);
 
   /* ---------- a região ao vivo (uma só, no index.html) ---------- */
+  // o que chega junto vira UMA fala (o "Vendido para X por R$ Y" e o lote novo saem da mesma conferência: trocado no mesmo
+  // quadro, o leitor de tela nunca ouvia a venda) e cada fala fica pelo menos VIVO_MIN ms na região antes da próxima
+  var VIVO_MIN = 1200;
+  var _vivo = { fila: [], h: null, ultima: 0 };
   var _lider = { t: 0, pend: null, h: null };
   function anuncia(txt) {
     if (!txt) return;
     VIEW.anuncios.push(txt); if (VIEW.anuncios.length > 40) VIEW.anuncios.shift();
-    var r = doc.getElementById("lei-vivo");
-    if (!r) return;
-    r.textContent = "";
-    setTimeout(function () { r.textContent = txt; }, 40);
+    _vivo.fila.push(txt);
+    if (!_vivo.h) _vivo.h = setTimeout(falaVivo, Math.max(40, _vivo.ultima + VIVO_MIN - agoraReal()));
+  }
+  function falaVivo() {
+    _vivo.h = null;
+    // (com o relógio acelerado dos testes chegam muitas: só as 4 últimas)
+    var r = doc.getElementById("lei-vivo"), txt = _vivo.fila.slice(-4).join(". ");
+    _vivo.fila = [];
+    if (!r || !txt) return;
+    _vivo.ultima = agoraReal();
+    // a mesma fala de novo ("Sem lance" seguido): esvazia e escreve no tique seguinte, senão o leitor não repete
+    if (r.textContent === txt) { r.textContent = ""; setTimeout(function () { r.textContent = txt; }, 40); }
+    else r.textContent = txt;
   }
   // o líder no máximo a cada 2 s (com bots dando lance a todo instante, falar cada um afoga o resto)
   function anunciaLider(txt) {
@@ -175,6 +189,7 @@
   /* ---------- a vida das telas da sala ---------- */
   function naSala() { try { return !!ROTAS_SALA[TM.ui.current()]; } catch (e) { return false; } }
   function desligaTela() {
+    try { doc.documentElement.style.scrollPaddingBottom = ""; } catch (e) {}
     VIEW.desliga.forEach(function (f) { try { f(); } catch (e) {} });
     VIEW.desliga = []; VIEW.tick = null; VIEW.partes = null; VIEW.abas = null; VIEW.avisoSala = null;
   }
@@ -201,6 +216,7 @@
     desligaTela();
     fechaFolha();
     VIEW.screen = null; VIEW.rota = null;
+    _base.clubes = null;
     Wake.solta();
     var S = sessao();
     if (S && S.segurar) S.segurar("tela", true);
@@ -251,8 +267,7 @@
     });
     S.on("semLance", function () { if (naSala()) anuncia("Sem lance"); });
     S.on("formacao", function (e) {
-      var txt = "Sua formação passou para " + e.para + ": o time não cabia mais na " + e.de;
-      if (naSala()) { mostraMsg(txt, "alerta", 4000); anuncia(txt); }
+      if (naSala()) { mostraMsg("Formação agora é " + e.para + " (não cabia na " + e.de + ")", "alerta", 4000); anuncia("Sua formação passou para " + e.para + ": o time não cabia mais na " + e.de); }
     });
     S.on("fim", function () { if (naSala()) { Som.toca("fim"); anuncia("O leilão acabou"); } });
     S.on("estado", function (e) {
@@ -714,7 +729,7 @@
     var o = b.outro, podeOutro = o.pode && !ocup;
     B.dar.disabled = !podeOutro;
     B.valor.disabled = !(o.pode || o.motivo === "pausa");
-    B.valor.placeholder = o.pode || o.motivo === "pausa" ? "Outro valor (até " + rs(o.max) + ")" : "Outro valor";
+    B.valor.placeholder = o.pode || o.motivo === "pausa" ? "Até " + rs(o.max) : "Outro valor";
     B.passar.disabled = !(b.passar.pode && !ocup);
     // a linha de cima: o retorno do último toque por 2,5 s; senão o motivo de o +1 estar apagado; senão o máximo
     if (VIEW.msg && agoraReal() < VIEW.msgAte) { poeMsg(B, VIEW.msg.txt, VIEW.msg.tipo); return; }
@@ -728,12 +743,14 @@
     if (B.msg.className !== cls) B.msg.className = cls;
   }
   function mostraMsg(txt, tipo, ms) { VIEW.msg = { txt: txt, tipo: tipo || "" }; VIEW.msgAte = agoraReal() + (ms || 2500); atualizaBarra(VIEW.V); }
-  // a página termina com um espaço da altura da barra (nada fica escondido atrás dela no fim da rolagem)
+  // a página termina com um espaço da altura da barra (nada fica escondido atrás dela no fim da rolagem) e o foco do
+  // teclado rola a página para o botão não ficar atrás dela (scroll-padding do documento)
   function ajustaEspaco() {
     var P = VIEW.partes; if (!P || !P.espaco) return;
     var h = P.bar && !P.bar.raiz.hidden ? P.bar.raiz.offsetHeight : 0;
-    var px = (h ? h + 12 : 0) + "px";
+    var px = (h ? h + 12 : 0) + "px", raiz = doc.documentElement.style;
     if (P.espaco.style.height !== px) P.espaco.style.height = px;
+    if (raiz.scrollPaddingBottom !== (h ? px : "")) raiz.scrollPaddingBottom = h ? px : "";
   }
   function enviaLance(tipo, depois) {
     var S = sessao(), V = VIEW.V;
@@ -949,17 +966,32 @@
     var fundo = el("div", { class: "lei-folha" }, [caixa]);
     fundo.addEventListener("click", function (e) { if (e.target === fundo) fechaFolha(); });
     doc.body.appendChild(fundo);
-    VIEW.folha = { fundo: fundo, corpo: corpo, monta: monta, antes: antes, vivo: !!opc.vivo };
+    // a tela por trás (com a barra de lance) fica inerte: o Tab e o leitor de tela não saem da folha (a #lei-vivo fica fora)
+    var tela = doc.querySelector("#app > .screen");
+    if (tela && !tela.inert) tela.inert = true; else tela = null;
+    VIEW.folha = { fundo: fundo, caixa: caixa, corpo: corpo, monta: monta, antes: antes, vivo: !!opc.vivo, tela: tela };
     monta(corpo);
     global.requestAnimationFrame(function () { fundo.classList.add("show"); try { fechar.focus(); } catch (e) {} });
   }
   function fechaFolha() {
     var f = VIEW.folha; if (!f) return;
     VIEW.folha = null;
+    if (f.tela) f.tela.inert = false;
     if (f.fundo.parentNode) f.fundo.parentNode.removeChild(f.fundo);
     try { if (f.antes && f.antes.isConnected && f.antes.focus) f.antes.focus(); } catch (e) {}
   }
-  doc.addEventListener("keydown", function (e) { if (e.key === "Escape" && VIEW.folha) { e.preventDefault(); fechaFolha(); } });
+  doc.addEventListener("keydown", function (e) {
+    var f = VIEW.folha; if (!f) return;
+    if (e.key === "Escape") { e.preventDefault(); fechaFolha(); return; }
+    if (e.key !== "Tab") return;
+    // o Tab dá a volta dentro da folha (do último ao primeiro e, com Shift, do primeiro ao último)
+    var foc = [].filter.call(f.caixa.querySelectorAll("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])"), function (x) {
+      return !x.disabled && x.offsetParent !== null;
+    });
+    if (!foc.length) return;
+    var prim = foc[0], ult = foc[foc.length - 1], at = doc.activeElement, dentro = f.caixa.contains(at);
+    if (e.shiftKey ? (at === prim || !dentro) : (at === ult || !dentro)) { e.preventDefault(); (e.shiftKey ? ult : prim).focus(); }
+  });
 
   function folhaComoFunciona() {
     var S = sessao(), V = S ? S.ver() : null, seg = V && V.cfg && V.cfg.tempo ? Math.round(V.cfg.tempo / 1000) : Math.round(L().DUR / 1000);
@@ -1307,7 +1339,7 @@
     gravar("leilao:criar", { liga: F.liga, T: F.T, formacao: F.formacao, tempo: F.tempo, clube: clubeLimpo });
     // um quadro para o "Preparando…" aparecer antes da conta dos lotes (o mundo-base leva uma fração de segundo)
     setTimeout(function () {
-      var mundo = null; try { mundo = mundoBase(); } catch (e) { mundo = null; }
+      var mundo = null; try { mundo = TM.data.mundoBase(); } catch (e) { mundo = null; }
       SS().criarTreino({ liga: F.liga, bots: F.T - 1, formacao: F.formacao, tempo: F.tempo, clube: clubeLimpo, mundo: mundo || undefined }).then(function () {
         VIEW.criando = false;
         TM.ui.go("leilao-lote");
