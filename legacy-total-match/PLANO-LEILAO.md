@@ -1320,3 +1320,46 @@ KO):
 - **Visto e não mudado**: assistir ao próprio jogo no 2D conta como presença (o prazo do jogo seguinte corre; no treino o
   relógio para); a barra de velocidade do Campo 2D encosta nas bordas em 390 px (já na main); o "Simular os pendentes" do
   dono não toca mais no jogo de quem está presente (era o que o teste `dois` tratava como pretendido).
+
+---
+
+## 9. Visual pelas fotos (15/11)
+
+Pedido do dono (15/11), com o print da tela do lote no iPhone: "tem que ser mais organizado e n quero a cartinha do
+jogador. qro igual as imagens". "Igual" = a organização, a hierarquia e os componentes das 8 fotos de 14/11; as cores, a
+marca e as fontes continuam as do TM. Do site de referência não entra nada (§0: nome, a nota com o bicho, o amarelo, o
+Pix, os nomes dos bots das fotos, a sala pública). A especificação inteira, tela a tela e com as medidas na largura de
+390, foi feita com os prints das nossas telas (treino e o Saguão pelo banco falso) lado a lado com as fotos.
+
+**A tela do lote** (o 1º passo; o resto do leilão continua igual):
+- **Topo:** a marca do TM (com o ‹ de voltar) e 6 ícones sem texto, 44 × 44, com `aria-label` e `title` iguais aos de hoje:
+  tema (`sun`/`moon`, grava como a Config), Som, Vendas (`history`, que entra no gerador de ícones), Como funciona
+  (`book-open`), Participantes, Sair (vermelho). O olho e o copiar da foto não entram (7 ícones de 44 px não cabem em 360;
+  o copiar fica no Saguão). O título e a liga vão para um `h1` do leitor de tela e para a folha "Como funciona".
+- **Abas em pílula** centralizadas (36 px de altura, sem ícone; a feita com ✓; a ativa em verde cheio).
+- **"Jogador N de 52"** num chip centralizado.
+- **Um cartão só, sem a carta do Ultimate:** a foto redonda (na pública, a silhueta da carta), o selo da nota à esquerda da
+  foto, o escudo do clube num círculo sobre o canto, o nome grande (até 2 linhas), "função, clube", chips (bandeira +
+  país, os grupos, a altura) e o (i) da ficha; embaixo o anel do relógio ("06") e "Fulano lidera / R$ 9" grande; e até 3
+  lances anteriores (sem o da frente) com altura fixa.
+- **Seu clube** solto na página (escudo, nome, VOCÊ, saldo, a barra, "R$ X para N vagas" · "média de R$ Y por vaga") e o
+  **campinho verde** com as vagas em círculo (a sigla quando vazia; a foto ou a silhueta e o sobrenome quando preenchida;
+  "4/11"). Saem daqui: a contagem GOL/DEF/MEI/ATA, o "Máximo agora", o bloco Técnicos (a folha Participantes já mostra o
+  saldo e o estado, e ganha o toque que abre o time) e o bloco Seu time; os Próximos lotes ficam numa linha recolhível no
+  fim.
+- **Barra de lance:** a linha do motivo fica; +1 · +5 · +10 em verde cheio (o valor só no `aria-label`) e "Tudo R$ X" em
+  destaque com o valor ao lado; "Outro valor" (16 px) · "Dar lance" tonal · "Passar" só texto.
+- **Deitado (844 × 390):** o topo numa linha, o cartão deitado à esquerda com o anel à vista, a barra numa linha.
+  **PC:** nada de ponta a ponta (a sala em 1000 px, 2 colunas a partir de 1024 px; de 600 a 1023, uma coluna de 560).
+
+**A Criar sala e o Saguão** ficam especificados para um passo depois (seções soltas com cartões de opção e desenhos, o passo
+com deslizante, o segmentado da formação com o campinho verde, a barra fixa com o resumo; no Saguão, o título grande, o
+código na caixa tracejada, Copiar e Compartilhar lado a lado, o papel e o estado em caixa alta, o resumo num cartão verde
+e "Sala e clube" num cartão só). Não entram: o 5 em campo (decisão 3), a sala pública e, antes do PR 6, o "Overall
+escondido".
+
+**Pontos em aberto** (com a recomendada): o valor fora dos botões +N (sim, como a foto); o campinho verde nos dois temas (a
+Escalação continua com o de hoje até ganhar o desenho novo); a ficha (i) também sem a carta (o cabeçalho do cartão + os 6
+atributos em números); os chips de posição neutros no cartão; as pílulas com 36 px (a foto tem 23). Nos testes: o T4 do
+`--tela` passa a contar as 11 vagas do campinho novo e a ler o fundo do cartão novo no tema claro, e entra um teste que
+reprova com qualquer `.ut-card` na aba Leilão.
