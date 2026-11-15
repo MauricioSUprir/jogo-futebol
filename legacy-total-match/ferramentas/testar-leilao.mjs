@@ -4074,6 +4074,21 @@ async function testeTela() {
     }
     confere("T5 Como funciona, Participantes e Vendas abrem como folhas (foco no Fechar) e fecham com Esc", folhas.every(f => f.ok) && /R\$ 100/.test(folhas[0].txt) && /Bot /.test(folhas[1].txt) && /Vendidos/i.test(folhas[2].txt), folhas.map(f => ({ rot: f.rot, ok: f.ok, s: f.s })));
     confere("T5 as folhas prendem o foco: a tela por trás inerte enquanto abertas, o Tab e o Shift+Tab não saem da folha", folhas.every(f => f.modal), folhas.map(f => ({ rot: f.rot, modal: f.modal, fora: f.fora })));
+    // o bloco Técnicos saiu da aba: na folha Participantes, tocar num técnico abre o time dele (as Vendas com o campinho novo);
+    // a ficha do (i) também sem a carta (o cabeçalho do cartão, os 6 atributos em números e a lista)
+    await p.click('.lei-sb[aria-label="Participantes"]');
+    await espera(250);
+    const tecBot = await p.evaluate(() => { const l = [...document.querySelectorAll(".lei-folha .lei-part.abre")].find(x => /^Ver o time de Bot /.test(x.getAttribute("aria-label") || "")); if (!l) return null; const a = l.getAttribute("aria-label"); l.click(); return a; });
+    await espera(300);
+    const timeBot = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, sub: (f.querySelector(".lei-folha-sub") || {}).textContent, vagas: f.querySelectorAll(".lei-cv .lei-cv-vaga").length, cartas: f.querySelectorAll(".ut-card").length } : null; });
+    await p.keyboard.press("Escape"); await espera(150);
+    await p.click(".lei-lote-card .lei-ficha-bt");
+    await espera(300);
+    const ficha = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { cartas: f.querySelectorAll(".ut-card").length, at: [...f.querySelectorAll(".lei-ficha-at li")].map(x => x.textContent), foto: !!f.querySelector(".lei-ficha-cab .lei-foto"), nota: !!f.querySelector(".lei-ficha-cab .lei-nota") } : null; });
+    await p.keyboard.press("Escape"); await espera(150);
+    confere("T5 Participantes: tocar num técnico abre o time dele (Vendas, o campinho das 11 vagas, sem carta); a ficha do (i) sem a carta, com a foto, a nota e os 6 atributos",
+      !!tecBot && timeBot && timeBot.tit === "Vendas" && /^Time de Bot /.test(timeBot.sub || "") && timeBot.vagas === 11 && !timeBot.cartas
+      && ficha && !ficha.cartas && ficha.at.length === 6 && ficha.foto && ficha.nota, { tecBot, timeBot, ficha });
     // o foco do teclado nunca atrás da barra de lance fixa (scroll-padding), no celular em pé
     const focoTapado = [];
     for (const [w, h] of [[390, 844], [360, 740]]) {

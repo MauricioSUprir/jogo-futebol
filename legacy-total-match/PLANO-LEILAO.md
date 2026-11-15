@@ -1363,3 +1363,15 @@ Escalação continua com o de hoje até ganhar o desenho novo); a ficha (i) tamb
 atributos em números); os chips de posição neutros no cartão; as pílulas com 36 px (a foto tem 23). Nos testes: o T4 do
 `--tela` passa a contar as 11 vagas do campinho novo e a ler o fundo do cartão novo no tema claro, e entra um teste que
 reprova com qualquer `.ut-card` na aba Leilão.
+
+**Feito no passo 1 (branch `leilao-visual`, sem a Criar, o Saguão, o Campeonato e a versão: o PR 4 corre junto):**
+- `js/leilao-tela.js`: a moldura (a marca `.lei-marca` com o `tb-back`, o `h1.lei-sr`, os 6 `.lei-sb` só de ícone; o tema
+  segue o do TM pelo laço), as pílulas, o lote (`fotoBox`, `seloNota`, `infoJogador`, `campinhoVagas`, `notasOcultas` — hoje
+  sempre falso: o PR 6 liga pelo `V.notasOcultas`), o relógio em 2 dígitos, a barra (o valor dos +N no `aria-label` e no
+  `title`; "Outro valor" sempre, o máximo no rótulo do campo), a folha Participantes com o toque que abre o time e a ficha sem
+  a carta. `js/ultimate.js`: só exporta a `silhueta`. `ferramentas/gerar-icones.py`: o `history`.
+- Medidas que mudaram de propósito no `--tela`: o T4 lê o cartão `.lei-lote-card` (o Seu clube ficou sem caixa) e a cor dos
+  ícones (não o fundo); conta as 11 `.lei-cv-vaga`; os blocos abertos viraram só os Próximos lotes. Entraram: nenhuma
+  `.ut-card` na aba, tudo no mesmo cartão, o topo e as pílulas, a barra das fotos e ≤ 1000 px nos 8 tamanhos; o contraste dos
+  chips e das pílulas (a inativa no claro ficou em #4a5c50: com o `--text-dim` dava 4,43:1); no T5 o toque nos Participantes e a
+  ficha sem a carta; no online (telas) o T6b com as 4 pílulas numa linha em 360 × 740.
