@@ -41,7 +41,8 @@
   }
 
   function pickColors(t, fallback) {
-    var c = (t.club && t.club.colors) || (t.nation && t.nation.colors) || null;
+    // (o time sem clube nem seleção — o do Ultimate e o do Modo Leilão — com as cores próprias em t.colors)
+    var c = (t.club && t.club.colors) || (t.nation && t.nation.colors) || t.colors || null;
     return { primary: (c && c.primary) || fallback, secondary: (c && c.secondary) || "#ffffff" };
   }
   // garante contraste entre as duas equipes
