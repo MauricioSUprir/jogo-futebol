@@ -1175,7 +1175,7 @@ async function casoQuatro() {
   confere(`${ID}13 recarregar no meio do campeonato (P2b, na rodada ${R.antes}): volta pelo ?leilao= à aba Campeonato com a mesma vista e os mesmos jogos das outras`, R.pausou && R.voltou && R.igual, R);
   const P = E.pend;
   confere(`${ID}14 o dono toca em "Simular os pendentes" pela tela: com quem sumiu (P3, a página escondida) parado no prazo e os outros jogos da rodada prontos, o jogo dele é simulado pelo dono e a rodada anda`,
-    !!P.id && P.parou && P.so && P.dono && P.viu && /1 jogo esperando quem não está aqui/.test(P.txt || "") && ((P.txt || "").match(/não está aqui/g) || []).length === 2 && P.clicou && P.gravado && motivoDe(P.id) === "dono" && P.voltou,
+    !!P.id && P.parou && P.so && P.dono && P.viu && /1 jogo esperando quem não está aqui/.test(P.txt || "") && /^(?!1 jogo ).+ não está aqui$/m.test(P.txt || "") && P.clicou && P.gravado && motivoDe(P.id) === "dono" && P.voltou,
     { id: P.id, parou: P.parou, so: P.so, dono: P.dono, viu: P.viu, txt: P.txt, clicou: P.clicou, gravado: P.gravado, motivo: P.id && motivoDe(P.id), voltou: P.voltou });
   const nsFim4 = await nadaSobreNada(P1, "camp-fim-pontos", () => !!document.querySelector(".lei-campeao") && !!document.querySelector(".lei-tabela"));
   const nsMeio = P.ns || { ruins: [{ tela: "camp-meio", semMedida: true }], medidas: [] };

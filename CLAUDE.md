@@ -158,7 +158,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Próximos: PR 4 o 3D contra bot, PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
-  simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"); a
+  simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
+  fora há mais de 5 min, qualquer técnico presente tem o botão — escolha minha); a
   pergunta do plano grátis (Spark): um leilão de 8 técnicos (104 lotes) baixa ~1,0–1,1 MB por página (~9 MB no total) e o
   campeonato soma ~30 KB no mata-mata e ~0,5 MB nos pontos corridos com 8 (no pior caso ~12,5 MB a sala de 8).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
@@ -1409,8 +1410,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   propósito no motor = `--gravar-motor` e dizer no PR). A sessão: o campeonato nasce numa transação (`meta.camp`), quem
   age é escalonado com a testemunha da hora, `simular(id?)` (grava e só então responde), `simularPendentes()` (o dono),
   `partida(id)` (os times pelas escalações GRAVADAS), `ver().camp`; a escalação mudada vale no próximo jogo que não
-  começou; QUEM SOME: os jogos dele esperam (o prazo parado) até ele voltar ou o dono simular os pendentes; quem sai da
-  sala conta como bot; todo resultado simulado é recalculado UMA vez por aparelho (a conferência; qualquer diferença
+  começou; QUEM SOME: os jogos dele esperam (o prazo parado) até ele voltar ou o dono simular os pendentes — também quando
+  ninguém viu ele sumir (sozinho na sala, todos de celular travado: o bate leva a presença contínua, `ant`/`cont`/`falta`,
+  e o prazo para no último bate antes do buraco); "Simular os pendentes" só nos jogos de quem NÃO está aqui (nunca o do
+  dono nem o de quem está presente) e, com o dono fora há mais de 5 min, de qualquer técnico presente (motivo
+  `pendentes`); a limpeza não apaga o campeonato em andamento com alguém na sala; quem sai da sala conta como bot; todo resultado simulado é recalculado UMA vez por aparelho (a conferência; qualquer diferença
   congela a sala). As telas: o Formato na Criar e no Saguão (com a duração estimada), a aba Campeonato (Seu jogo com o
   prazo e o Simular partida, a rodada com ‹ ›, a tabela, a chave, a artilharia; o "Simular os pendentes" só online e 8 s
   depois de a rodada abrir; o fim no pôster do TM), o "Ver o jogo" (rota `leilao-jogo`: o `TM.matchview.play` com o
@@ -1427,8 +1431,13 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   mata-mata com 8 e os bytes; em todo caso a história de cada jogo no servidor (uma reserva e um resultado, o prazo pela
   hora do servidor) e o G3 (as regras opcionais em cada gravação das páginas, pela `ferramentas/lib/regras-leilao.mjs`).
   Os testes acharam e corrigiram: o 2D que não abria depois do Simular (a resposta da transação antes do dado pelo
-  ouvinte: a tela espera o jogo na vista) e, com o `.validate` publicado, o aparelho que perdeu o clube preso em
-  "Reconectando…" (a recusa por permissão do batimento não é queda de conexão). Fica para os PRs 4–6: o "Jogar em 3D"
+  ouvinte: a tela espera o jogo na vista e abre também se ele chega depois dos 8 s) e, com o `.validate` publicado, o
+  aparelho que perdeu o clube preso em "Reconectando…" (a recusa por permissão do batimento não é queda de conexão). A
+  revisão do PR 3 (PLANO §8, "A revisão do PR 3"): o prazo que corria sem ninguém presente, o dono ausente que travava e
+  apagava o campeonato, o "Simular os pendentes" que pegava jogos de quem estava presente, os clubes de mesmo nome (o
+  técnico junto do clube na aba e no 2D), a fala com os pênaltis, o Campo 2D (o condutor nulo depois do chute e o laço que
+  não parava fora da tela; `pitch2d.js`, já na main) e o T7 instável do `--tela`; KO `sozinho`, `dormem`, `semdono`,
+  `pendentes` e Q16 no `quatro`. Fica para os PRs 4–6: o "Jogar em 3D"
   contra bot (o gancho `gravar` no `tm3d.js`, `duracao3d`, o W.O. do 3D sem resultado — as funções puras já existem:
   `prazo3d`, `wo`), o par no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas
   escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma

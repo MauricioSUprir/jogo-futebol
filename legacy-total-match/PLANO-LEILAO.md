@@ -1037,7 +1037,7 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   bot é do PR 4, você contra um amigo em 3D é do PR 5); o mata-mata é o padrão; o jogo de uma pessoa contra um bot tem o
   "Simular partida" e o prazo de 2 min, que só corre com ela presente; **quem some não é simulado pelo prazo sozinho**: os
   jogos dele esperam (o prazo parado) até ele voltar ou o dono tocar em "Simular os pendentes" (só online, 8 s depois de a
-  rodada abrir); quem sai da sala conta como bot; a prorrogação do mata-mata vai até o 1º gol (gol de ouro) e depois os
+  rodada abrir; com o dono fora há mais de 5 min, qualquer técnico presente — ver "A revisão do PR 3"); quem sai da sala conta como bot; a prorrogação do mata-mata vai até o 1º gol (gol de ouro) e depois os
   pênaltis, sem os expulsos; o misto com 2 técnicos é um jogo de pontos e a final; o melhor time é a soma das notas dos 11;
   o 2D do Ultimate passou a mostrar o escudo desenhado e as cores do clube. Os testes de navegador
   online acharam e corrigiram dois defeitos: o 2D que não abria depois do "Simular partida" e, com o `.validate` publicado,
@@ -1270,3 +1270,53 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     servidor (o 1º jogo da pessoa contra um bot a partir da 2ª rodada, com o prazo correndo) e a política do piloto segura o
     toque até ele acontecer — sem deadlock: se o acontecimento não vier, o prazo simula o jogo; a ação que abre uma tela a
     partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois).
+
+**A revisão do PR 3** (três lentes: regras, telas e regressão; os scripts dos revisores sobre o banco falso viraram casos do
+KO):
+- **O prazo corria sem ninguém do jogo presente** (regras, médio): só parava se OUTRO aparelho visse a pessoa sumir e
+  gravasse o `pausar`; sozinha na sala (o outro técnico saiu ou nunca abriu) ou com todos de celular travado, o prazo
+  seguia e, na volta, o próprio aparelho simulava o jogo pelo prazo em 0,1–0,3 s. Agora o `bate/{uid}` leva a presença
+  contínua: `ant` (o bate anterior desta conta), `cont` (desde quando ela está sem buraco de mais de 12 s) e `falta` (o
+  último bate antes do buraco); o 1º bate depois de um buraco se reconhece pelo `ant` (`corridaDe`). Quem vê que a
+  presença da pessoa recomeçou DEPOIS de o prazo começar (o aparelho dela primeiro) grava o `pausar` no último bate antes
+  do buraco (só no mesmo trecho: o mesmo `ini`) e o prazo volta a correr; o reservar pelo prazo confere de novo depois da
+  testemunha (`_semBuraco`); o próprio aparelho com o bate velho (dormiu sem esconder a página) não decide pelo prazo até
+  o bate novo. O `.validate` opcional: `ant`/`cont`/`falta` números do passado. KO `sozinho` (antes: simulado 0,1 s
+  depois da volta com 5 s de presença; agora o prazo parou com 115 s e venceu 115 s depois da volta) e `dormem` (antes
+  0,2–0,3 s; agora o prazo inteiro depois da volta); toda reserva pelo prazo de todo caso do KO confere a presença da
+  pessoa pelos batimentos no servidor (≥ 119 s; 120,1 s no pior).
+- **O dono ausente travava o campeonato** (regras, médio): só ele tinha o "Simular os pendentes" e, 24 h depois, a
+  limpeza feita pelo aparelho de quem esperou apagava a sala. Agora, com o dono fora há mais de 5 min (pelo último bate
+  dele; quem saiu da sala está fora), qualquer técnico presente tem o botão (motivo `pendentes`, conferido pela testemunha
+  da hora) e a limpeza não apaga o campeonato em andamento com alguém na sala (o bate deste aparelho conta como atividade
+  no `camp`). KO `semdono` (antes: a rodada parada 3 h e a sala apagada em 25 h; agora o outro técnico simula depois de 5
+  min e o campeonato vai ao fim) e o 3º caso da `limpeza`. Decisão minha (o dono não foi consultado): 5 min.
+- **"Simular os pendentes" só nos jogos que esperam por quem NÃO está aqui** (telas, médio): contava e simulava todo jogo
+  sem resultado, também o do próprio dono e o de quem está presente com o prazo correndo. Agora só o jogo de uma pessoa
+  ausente contra um bot (o prazo parado ou o jogo nem aberto); a caixa lista os jogos e quem não está (KO `pendentes`;
+  a corrida do `dois` com o jogo de B esperando por ele e o dono 2 s atrasado; Q14 com o texto novo).
+- **Clubes com o mesmo nome** (telas, médio: o "Meu Clube" de quem não tem o Ultimate): a aba Campeonato põe o primeiro
+  nome do técnico (ou "você") junto do clube na rodada, na tabela, na chave e na artilharia (o clube encolhe com as
+  reticências, o técnico não) e o 2D junta o técnico ao nome quando os dois do jogo se chamam igual (só o que se mostra:
+  o resultado gravado e os textos dele não mudam). Q16 no `quatro`. O clube padrão continua "Meu Clube" e o Pronto não é
+  barrado por nome repetido.
+- **A fala do fim do meu jogo** diz os pênaltis, o gol de ouro e o W.O. (o `resultadoMeu`, como a tela; o evento `jogo`
+  leva o `res`).
+- **O Campo 2D** (telas; já na main, o leilão só expõe): depois do chute a bola fica sem condutor e o `flowStep` lia
+  `carrier.x` (um erro a cada passe cosmético) — agora o mais perto da bola, do time com a posse, vira o condutor; e o laço
+  do Campo 2D para quando a tela sai da página (rodava até recarregar, um a mais por jogo visto). O `--tela` liga o Campo 2D
+  nos 2 primeiros jogos animados de cada trecho (T11) e o "nenhum erro de página" pega o resto.
+- **O Q10** (1 toque em 14 sem o 2D numa rodada): os timers das páginas andam ×6 no teste e os 8 s do `quandoNaVista`
+  viram ~1,3 s de verdade; o jogo que chega depois do limite ainda abre o 2D se a pessoa continua no Campeonato (até 2
+  min).
+- **O T7 do `--tela`** (do PR 1; reprovava por sorteio também na main: de 6 a 90 amostras pelo caminho sorteado): basta
+  ≥ 3 amostras, nenhuma errada e um motivo de goleiro/posição/máximo/completo.
+- **Medido depois das correções** (local, Chromium 141): o Node inteiro 17 de 17 blocos em ~57 s (o KO com os casos novos
+  em ~10 s; 3654 gravações conferidas pelas regras opcionais, 0 recusas); `--tela` 57 de 57 em ~286 s (a base, com o
+  teste novo: 56 de 57, 6 erros de página do Campo 2D); `testar-leilao-online.mjs` 55 de 55 (o `quatro` repetido depois
+  de acertar o texto do Q14: 21 de 21; Q10 com 14 toques e 14 jogos no 2D; G3 4630 gravações sem recusa honesta; bytes
+  por página no mata-mata de 8: 30 KB); `testar-online3d.mjs` 24 ok (o Viverde pulado, sem a senha); os casos novos do
+  KO reprovam na base (sozinho, dormem, semdono, pendentes e o 3º da limpeza).
+- **Visto e não mudado**: assistir ao próprio jogo no 2D conta como presença (o prazo do jogo seguinte corre; no treino o
+  relógio para); a barra de velocidade do Campo 2D encosta nas bordas em 390 px (já na main); o "Simular os pendentes" do
+  dono não toca mais no jogo de quem está presente (era o que o teste `dois` tratava como pretendido).
