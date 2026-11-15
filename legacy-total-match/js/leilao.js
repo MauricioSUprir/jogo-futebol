@@ -767,7 +767,7 @@
     cotas: cotas, criarLotes: criarLotes, jogadoresDaLiga: jogadoresDaLiga, retrato: retrato, ordem: ordem, contexto: contexto,
     // a máquina
     inicial: inicial, lance: lance, passar: passar, fechar: fechar, fimDoLote: fimDoLote, todosPassaram: function (v, ctx) { return todosPassaram(norm(v, ctx), ctx); },
-    pode: pode, maximo: function (v, ctx, t) { return maximo(norm(v, ctx), t); }, norm: norm, limpo: limpo, letra: letra,
+    pode: pode, maximo: function (v, ctx, t) { return maximo(norm(v, ctx), t); }, norm: norm, limpo: limpo, letra: letra, LETRAS: LETRAS,
     // times e formações
     timeDe: timeDe, cabeEm: cabeEm, formacoesQueCabem: formacoesQueCabem, formacaoPara: formacaoPara, contaMascaras: contaMascaras,
     encaixe: encaixe, proximos: proximos, vendidoPorTec: vendidoPorTec,
