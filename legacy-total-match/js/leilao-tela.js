@@ -1278,7 +1278,8 @@
 
   /* ---------- a aba Campeonato (PLANO-LEILAO.md §1.7, §1.8 e §2.6) ----------
      Tudo sai do ver().camp, que a sessão monta dos jogos GRAVADOS (nada aqui recalcula partida): "Seu jogo" (os escudos, o
-     prazo pela hora do servidor, Simular partida; contra amigo, simulado ao abrir a rodada até o PR 5), "Simular os
+     prazo pela hora do servidor, Simular partida; contra amigo, o Jogar do par no Online 3D — PR 5 — e, nas salas de antes,
+     simulado ao abrir a rodada), "Simular os
      pendentes" (o dono, online), a rodada (‹ › por todas, cada jogo com o estado e o Ver o jogo), a tabela (pontos e misto),
      a chave (mata-mata e a fase final do misto), a artilharia e, no fim, o campeão, a classificação, o artilheiro e o melhor
      time. "Ver o jogo" e o "Simular partida" mostram o resultado GRAVADO no 2D sem pausa (rota leilao-jogo). */
@@ -1523,8 +1524,8 @@
     if (pa) {
       var rp = pa.fim - agora, ele = VIEW.V ? nomeTec1(VIEW.V, mj.adversario) : "o seu amigo";
       if (pa.guardado) return "Gravando o resultado do 3D…";
-      if (!pa.vemEu) return rp > 0 ? ele + " chamou para o 3D. Toque em Jogar em " + mmss(rp) + ", ou é W.O." : "O prazo acabou: W.O.…";
-      if (!pa.vemEle) return rp > 0 ? "Esperando " + ele + " tocar em Jogar · " + mmss(rp) + " (sem o toque, W.O. para você)." : "O prazo acabou: W.O.…";
+      if (!pa.vemEu) return rp > 0 ? ele + " chamou para o 3D · " + mmss(rp) + " para tocar em Jogar." : "O prazo acabou: W.O.…";
+      if (!pa.vemEle) return rp > 0 ? "Esperando " + ele + " tocar em Jogar · " + mmss(rp) + "." : "O prazo acabou: W.O.…";
       if (pa.abriu) return rp > 0 ? "Jogando em 3D · " + mmss(rp) + " de prazo para o resultado." : "O prazo do 3D acabou: simulando…";
       if (PAR && PAR.id === mj.id && PAR.C && PAR.C.fase === "ligando") return "Ligando os aparelhos… (" + mmss(rp) + ")";
       return rp > 0 ? "Abrindo o 3D · " + mmss(rp) + " para abrir, ou o jogo é simulado." : "O 3D não abriu: simulando…";
@@ -1880,7 +1881,8 @@
   function estadoJogo(g) {
     if (g.a == null || g.b == null) return ["def", "A definir"];
     if (g.e === "feito") { var x = extraDe(g); return ["feito", x === "W.O." ? "W.O." : (g.res && g.res.em3d ? "Jogado em 3D" : "Simulado") + (x ? " · " + x : "")]; }
-    if (g.e === "reservado") return ["anda", g.j && g.j.modo === "3d" ? "Jogando em 3D" : "Simulando…"];
+    // (o par com um só no Jogar: esperando o outro tocar)
+    if (g.e === "reservado") return ["anda", g.j && g.j.par === true && (g.j.vem0 == null || g.j.vem1 == null) ? "Chamado para o 3D" : g.j && g.j.modo === "3d" ? "Jogando em 3D" : "Simulando…"];
     if (!g.aberta) return ["fechado", "Esperando a rodada"];
     return ["espera", "Esperando"];
   }
@@ -2657,7 +2659,10 @@
         "Jogador sem lance vai para a repescagem no fim (" + Math.round(L().DUR_REP / 1000) + " s). Quem ainda tiver vaga completa de graça com jogadores de fora dos lotes, que são piores.",
         "O que sobrar de dinheiro não vale nada no campeonato.",
         "Depois da escalação, o campeonato (" + nomeFormato(V && V.formato).toLowerCase() + "): " + fraseFormato(V && V.formato, V ? V.T : 4).replace(/^./, function (x) { return x.toLowerCase(); }),
-        "O seu jogo contra um bot: toque em Jogar (em 3D, com a duração e a dificuldade da sala) ou em Simular partida; sem o toque, ele é simulado sozinho em 2 min (o prazo só corre com você na sala). Contra um amigo, o jogo é simulado quando a rodada abre. Os jogos dos bots, na hora.",
+        "O seu jogo contra um bot: toque em Jogar (em 3D, com a duração e a dificuldade da sala) ou em Simular partida; sem o toque, ele é simulado sozinho em 2 min (o prazo só corre com você na sala). " +
+          (V && typeof V.regrasSala === "number" && V.regrasSala >= L().REGRAS_PAR
+            ? "Contra um amigo: os dois tocam em Jogar e jogam ao vivo em 3D, cada um no seu aparelho; qualquer um pode Simular partida. Quem não tocar em Jogar em 2 min ou sair no meio perde por W.O.; se a ligação entre os aparelhos não der, o jogo é simulado."
+            : "Contra um amigo, o jogo é simulado quando a rodada abre.") + " Os jogos dos bots, na hora.",
         "Começou o 3D e ele fechou sem resultado (o app fechou ou travou): o jogo conta como W.O. 3 × 0 contra você no fim do prazo (" + Math.round(LC().prazo3d(V ? V.duracao3d : 4) / 60000) + " min) ou na hora, se você aceitar o W.O.",
         "Cada resultado é gravado uma vez e todos veem o mesmo: ninguém joga de novo. A escalação mudada vale a partir do próximo jogo que ainda não começou.",
         "Não conta no ranking online nem no confronto direto, e não usa Total Coins."

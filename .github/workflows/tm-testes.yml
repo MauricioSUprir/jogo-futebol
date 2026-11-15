@@ -9,7 +9,8 @@ name: Total Match — testes
 #               página de ensaio do 3D (testar-leilao.mjs --tela, ~7 min com o T14), o leilão online e o campeonato em várias
 #               páginas contra o banco falso (testar-leilao-online.mjs, um job por caso: telas ~15 s, no mesmo job o tresd
 #               ~3 min — o 3D contra um bot visto pela outra página e o W.O. gravado por ela, PR 4 —; dois ~1 min, o
-#               campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8 e os bytes) e o
+#               campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8 e os bytes; par3d,
+#               PR 5, o jogo contra um amigo no Online 3D do par com o WebRTC de verdade no loopback e o quadro de ensaio) e o
 #               Online 3D com o quadro de ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado").
 #               O testar-3d.mjs (o GOLAÇO de verdade) fica fora do CI: roda à mão nos PRs que mexem no pedido do 3D
 #   tm-testes   o nome que o PR mostra: só passa se todos passaram
@@ -57,6 +58,8 @@ jobs:
             cmd: node ferramentas/testar-leilao-online.mjs --so quatro --prints "$RUNNER_TEMP/prints"
           - parte: leilão online e o mata-mata, 8 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so oito --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, o jogo contra um amigo no Online 3D, 3 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so par3d --prints "$RUNNER_TEMP/prints"
           - parte: Online 3D
             # o TM servido na raiz (como no GitHub Pages; o quadro do 3D é a página de ensaio, sem o /golaco/)
             cmd: |
@@ -93,6 +96,6 @@ jobs:
     steps:
       - name: Todas as partes passaram
         run: |
-          echo "node: ${{ needs.node.result }} · navegador (6 partes): ${{ needs.navegador.result }}"
+          echo "node: ${{ needs.node.result }} · navegador (7 partes): ${{ needs.navegador.result }}"
           test "${{ needs.node.result }}" = success
           test "${{ needs.navegador.result }}" = success

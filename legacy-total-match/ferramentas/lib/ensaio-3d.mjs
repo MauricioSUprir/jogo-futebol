@@ -16,7 +16,12 @@
      apito       'tm3d:pronto' e, 250 ms depois, o resultado do 'fim' gravado em localStorage["tm3d:resultado:<id>"] (como o golaco no
                  apito final) SEM o 'tm3d:fim': o 3D fica aberto na cena do pós-jogo (a pessoa ainda não tocou em "Voltar ao TM")
      tardio      nada até localStorage["ensaio3d:solta"] = "1" (o teste solta); aí só o 'tm3d:tela' (o 3D que abre DEPOIS de a
-                 pessoa tocar no X do TM: a confirmação "Voltar e simular" ainda na tela) */
+                 pessoa tocar no X do TM: a confirmação "Voltar e simular" ainda na tela)
+   O pedido ONLINE (modo "online": o par do Modo Leilão, PR 5) não olha o modo: manda 'tm3d:tela' e 'tm3d:pronto', guarda a porta
+   que o TM entrega (com os estados da ligação) e o teste conduz pelo window.__ens do quadro: fim() (o resultado montado do pedido —
+   o MESMO nos dois aparelhos, como o lockstep —, gravado em localStorage["tm3d:resultado:<id>"] como no apito e mandado no
+   'tm3d:fim' com online.hashFinal; fim(r, online) manda outro), sair(extra) ('tm3d:sair' com { motivo: 'simular' } ou
+   { abandono: true }), manda(n) (pacotes pela porta) e o que chegou (porta, estados, bin, ctrl). */
 export const ROTA_ENSAIO_3D = /\/golaco\/ensaio-3d\.html(\?|$)/;
 export const PASTA_ENSAIO_3D = "golaco/ensaio-3d.html";
 
@@ -30,6 +35,27 @@ export const ENSAIO_3D = `<!doctype html><meta charset="utf-8"><title>ensaio</ti
     userSide: ped && ped.userSide, controle: ped && ped.controle, modo: modo,
     partida: pa ? { minutosPorTempo: pa.minutosPorTempo, dificuldade: pa.dificuldade, ajustesFixos: !!pa.ajustesFixos, neutro: pa.neutro, empateContinua: pa.empateContinua } : null,
     escudos: ped ? [ped.home, ped.away].map(function (t) { var i = t && t.identidade; return i ? { tipo: i.escudoTipo || null, svg: String(i.escudo || "").indexOf("data:image/svg") === 0 } : null; }) : null }));
+  if (ped && ped.modo === "online") {
+    var E = window.__ens = { id: id, pedido: ped, porta: null, portas: 0, estados: [], bin: [], ctrl: [], lado: ped.online ? ped.online.lado : null };
+    addEventListener("message", function (e) {
+      var d = e.data;
+      if (!d || d.tipo !== "tm3d:porta" || d.id !== id) return;
+      var p = (e.ports && e.ports[0]) || d.porta;
+      E.portas++; E.porta = p;
+      p.onmessage = function (ev) { var m = ev.data; if (!m) return; if (m.t === "estado") E.estados.push(m.estado); else if (m.t === "j") E.bin.push(Array.from(new Uint8Array(m.b))); else if (m.t === "c") E.ctrl.push(m.m); };
+    });
+    E.manda = function (n) { for (var i = 0; i < n; i++) { var b = new Uint8Array([E.lado, i, 7]).buffer; E.porta.postMessage({ t: "j", b: b }, [b]); } };
+    E.resultado = function () { return resultado(); };
+    E.fim = function (r, online) {
+      r = r || resultado();
+      localStorage.setItem("tm3d:resultado:" + id, JSON.stringify(r));
+      parent.postMessage({ tipo: "tm3d:fim", id: id, resultado: r, online: online || { hashFinal: 12345 } }, location.origin);
+    };
+    E.sair = function (extra) { parent.postMessage(Object.assign({ tipo: "tm3d:sair", id: id }, extra || {}), location.origin); };
+    parent.postMessage({ tipo: "tm3d:tela", id: id }, location.origin);
+    parent.postMessage({ tipo: "tm3d:pronto", id: id }, location.origin);
+    return;
+  }
   if (modo === "parado") return;
   if (modo === "tardio") {
     var iv = setInterval(function () { if (localStorage.getItem("ensaio3d:solta") === "1") { clearInterval(iv); parent.postMessage({ tipo: "tm3d:tela", id: id }, location.origin); } }, 100);

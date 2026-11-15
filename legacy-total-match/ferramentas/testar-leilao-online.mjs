@@ -13,7 +13,7 @@
    As pessoas jogam por um PILOTO na página (window.__lt): decide como um robô com o perfil do seu índice
    (TM.leilao.robo) e age pela TELA (os botões de verdade: +1, +5, +10, Tudo de dois toques, Outro valor + Dar lance,
    Passar) ou pela API da sessão (S.lance, S.passar).
-   Casos (--so telas,dois,quatro,oito,tresd; sem --so, todos):
+   Casos (--so telas,dois,quatro,oito,tresd,par3d; sem --so, todos):
      telas   (T1–T8) o que a revisão do PR 2 achou nas telas, com nomes de 16 letras: o nome inteiro nos pedidos e nos
              participantes nos 8 tamanhos, o foco pelo teclado depois de Aceitar, o Salvar do clube apagado sem mudança,
              "Atualizando a sala…" na barra, o "lidera" do placar à vista e a sala congelada "parada" na Entrada e nas
@@ -52,9 +52,14 @@
              resultado gravado (o nó, "Jogado em 3D", o 2D do Ver o jogo) — e o 3D aberto com o app fechado no meio: depois
              do prazo do 3D, o W.O. gravado pela OUTRA página (o uid de quem grava, pelo banco falso); quem fechou volta e vê
              o W.O.
-   O par do Online 3D (PR 5) entra aqui no PR dele.
+     par3d   (P1–P7; PR 5) 3 páginas, Pontos corridos (um jogo por rodada, a 3ª folga), 3 min: o jogo de amigo contra amigo no
+             Online 3D do par, com o WebRTC DE VERDADE no loopback e o quadro de ensaio (o pedido online): os dois tocam em Jogar
+             e o par liga (o pedido com o lado 0 = o anfitrião, os mesmos times e a semente, o mando neutro, online.simular; a
+             porta nos dois sentidos); o fim do 3D nas duas gravado UMA vez e igual nas três e no servidor; o "Simular partida" de
+             um dos dois; a ligação que não dá (o prazo encurtado) = o simulado; quem sai = W.O.; nada sobre nada no Seu jogo do
+             par nos 8 tamanhos, escuro e claro
    Uma linha por item; o código de saída é 1 se algum reprovar (no CI, um job por caso).
-   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito,tresd] [--fator 6] [--prints <pasta>] [-v]
+   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito,tresd,par3d] [--fator 6] [--prints <pasta>] [-v]
    (o Chromium do Playwright: NODE_PATH com o playwright e, se preciso, PLAYWRIGHT_BROWSERS_PATH; como no golaco) */
 import fs from "node:fs";
 import vm from "node:vm";
@@ -289,7 +294,8 @@ function INICIO(o) {
 
 /* ---------- os aparelhos ---------- */
 const { chromium } = playwright();
-const nav = await chromium.launch({ headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });
+// (o WebRTC do par3d no loopback: sem o mDNS no lugar dos IPs locais, como o testar-online3d.mjs)
+const nav = await chromium.launch({ headless: true, ignoreDefaultArgs: ["--hide-scrollbars"], args: ["--disable-features=WebRtcHideLocalIpsWithMdns"] });
 const erros = [];            // erros de página e de console (G2)
 const firebaseReal = [];     // pedidos ao Firebase de verdade (G1)
 const externos = new Set();  // os outros endereços de fora (informativo)
@@ -1526,6 +1532,154 @@ async function casoTresD() {
   for (const ap of [A, B]) await ap.cx.close().catch(() => {});
 }
 
+
+/* ---------- par3d (P1–P7; PR 5): o jogo contra um amigo no Online 3D, cada um na sua página, com o WebRTC DE VERDADE no loopback
+   (como o testar-online3d.mjs) e o quadro de ensaio do 3D (ferramentas/lib/ensaio-3d.mjs, o pedido online: a porta e o fim pelo
+   teste). 3 páginas, Pontos corridos (um jogo por rodada; a 3ª folga), 3 min por tempo: o resultado do 3D igual nas três e no
+   servidor (gravado UMA vez), o "Simular partida" de um dos dois na tela do 3D, a ligação que não dá (o prazo encurtado) e quem
+   sai no meio (W.O.). ---------- */
+async function casoPar3d() {
+  const ID = "P";
+  const aps = [
+    await aparelho("Par-A", "uidParA", { w: 390, h: 844, toque: true, ensaio3d: true }),
+    await aparelho("Par-B", "uidParB", { w: 1280, h: 800, lat: 12, ensaio3d: true }),
+    await aparelho("Par-C", "uidParC", { w: 844, h: 390, toque: true, lat: 9, ensaio3d: true })
+  ];
+  const { cod, r } = await salaPelaApi(aps, { liga: "br", vagas: 3, bots: 0, tempo: 10, formato: "pontos", duracao3d: 3 });
+  // o leilão: todos passam (o 11 de cada um sai do completar); o par é o que se testa aqui
+  for (const ap of aps) await ap.p.evaluate(() => {
+    const iv = setInterval(() => { const S = TM.leilaoSessao.atual(); if (!S) return; const V = S.ver(); if (V.estado !== "leilao") { clearInterval(iv); return; } if (V.botoes && V.botoes.passar.pode) S.passar(); }, 300);
+  });
+  const acabou = await ateOFim(cod, aps, real(39 * 40000) + 60000);
+  await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "escalacao"); }, 30000);
+  for (const ap of aps) await ap.p.evaluate(() => TM.leilaoSessao.atual().prontoEscalacao(true)).catch(() => {});
+  const camp = await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "camp"); }, 30000);
+  // o prazo da ligação na hora da página (o relógio acelerado: 15 s de página seriam 2,5 s de verdade para o WebRTC ligar)
+  for (const ap of aps) await ap.p.evaluate(f => { TM.online3d.api.PRAZO_MS = 15000 * f; TM.ui.go("leilao-camp"); }, FATOR);
+  for (const ap of aps) await vigiaCamp(ap);
+  const s0 = sala(cod);
+  confere(`${ID}1 a sala com 3 pessoas (regras ${s0 && s0.meta.regras}, Pontos corridos, 3 min por tempo): o leilão até o fim e o campeonato com os jogos de amigo contra amigo`,
+    !!(r && r.ok) && acabou && camp && s0.meta.regras === Lx.REGRAS && Lx.REGRAS >= 3 && s0.cfg.duracao3d === 3, { ok: r && r.ok, acabou, camp, regras: s0 && s0.meta.regras });
+  const jogoDe = id => banco.ler(`leiloes/${cod}/jogos/${id}`);
+  const quem = id => ESCRITAS.filter(x => x.cod === cod && x.id === id && x.e !== "aberto");
+  const pagina = async t => { for (const ap of aps) if (await ap.p.evaluate(() => TM.leilaoSessao.atual().eu).catch(() => -1) === t) return ap; return null; };
+  const igualServ = (ap, id) => ap.p.evaluate(id => { const j = TM.leilaoSessao.atual().jogos[id]; return j ? TM.leilaoCamp.canon(j) : null; }, id);
+  const quadro = ap => ap.p.frames().find(f => /ensaio-3d\.html\?tm=/.test(f.url())) || null;
+  async function quadroLigado(ap, ms) {
+    const fim = Date.now() + ms;
+    while (Date.now() < fim) {
+      const f = quadro(ap);
+      if (f && await f.evaluate(() => !!(window.__ens && window.__ens.portas > 0 && window.__ens.estados.indexOf("aberto") >= 0)).catch(() => false)) return f;
+      await espera(150);
+    }
+    return null;
+  }
+  // o Jogar pela tela: o 1º toque (reserva) e o 2º (do outro: entra)
+  async function jogar(ap, id, primeiro) {
+    const pode = await ate(ap.p, ([id, p]) => { const S = TM.leilaoSessao.atual(), V = S && S.ver(), mj = V && V.camp && V.camp.meuJogo, b = document.querySelector(".lei-jogar");
+      return TM.ui.current() === "leilao-camp" && !!(mj && mj.id === id && mj.contraAmigo && mj.podeJogar && (p ? mj.e === "aberto" : (mj.par && !mj.par.vemEu)) && b && !b.disabled); }, [id, primeiro], real(120000));
+    return pode && clicaSel(ap, ".lei-jogar");
+  }
+  async function ateCamp(ap) {
+    for (let k = 0; k < 20; k++) {
+      if (await ap.p.evaluate(() => TM.ui.current() === "leilao-camp" && !(TM.tm3d && TM.tm3d.aberto())).catch(() => false)) return true;
+      await ap.p.evaluate(() => { const bs = [...document.querySelectorAll(".screen.is-active button")]; const b = bs.find(x => /^Pular/.test(x.textContent.trim())) || bs.find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); }).catch(() => {});
+      await espera(300);
+    }
+    return ap.p.evaluate(() => TM.ui.current() === "leilao-camp");
+  }
+  const estadoTela = ap => ap.p.evaluate(() => TM.leilaoTela.estado()).catch(() => null);
+  const CAM = ["3d", "simular", "falha", "sai"], E = {};
+  for (let rod = 1; rod <= CAM.length; rod++) {
+    const cam = CAM[rod - 1];
+    // o jogo da rodada (o calendário: um por rodada; a 3ª página folga)
+    const ok1 = await ateNode(async () => { const V = await ver(aps[0]); return !!(V && V.camp && V.camp.rodada && V.camp.rodada.n === rod && V.camp.rodada.aberta); }, real(900000), 300);
+    if (!ok1) { E[cam] = { erro: "a rodada " + rod + " não abriu" }; break; }
+    const V0 = await ver(aps[0]), g = V0.camp.rodada.jogos[0], X = await pagina(g.a), Y = await pagina(g.b);
+    const x = E[cam] = { id: g.id, a: g.a, b: g.b };
+    if (cam === "falha") for (const ap of [X, Y]) await ap.p.evaluate(() => { TM.online3d.api.PRAZO_MS = 1; });
+    x.j1 = await jogar(X, g.id, true);
+    x.j2 = await jogar(Y, g.id, false);
+    if (cam !== "falha") {
+      const [fx, fy] = await Promise.all([quadroLigado(X, real(240000)), quadroLigado(Y, real(240000))]);
+      x.ligou = !!(fx && fy);
+      if (x.ligou) {
+        x.ped = await Promise.all([fx, fy].map(f => f.evaluate(() => { const p = window.__ens.pedido; return { lado: p.online.lado, simular: p.online.simular, sala: p.online.sala, semente: p.online.semente, neutro: p.partida.neutro, min: p.partida.minutosPorTempo, casa: p.home.name, fora: p.away.name, n: [p.home.players.length, p.away.players.length], userSide: p.userSide }; })));
+        // a porta nos dois sentidos (pacotes do canal do jogo, pelo WebRTC de verdade)
+        await fx.evaluate(() => window.__ens.manda(20)); await fy.evaluate(() => window.__ens.manda(20));
+        await espera(1500);
+        x.bin = await Promise.all([fx, fy].map(f => f.evaluate(() => window.__ens.bin.filter(b => b[2] === 7).length)));
+        if (cam === "3d") {
+          // o fim nas duas páginas (o lockstep: o mesmo resultado) — fica UM no servidor
+          await Promise.all([fx.evaluate(() => window.__ens.fim()), fy.evaluate(() => window.__ens.fim())]);
+          x.r3 = await fx.evaluate(() => window.__ens.resultado());
+        } else if (cam === "simular") await fy.evaluate(() => window.__ens.sair({ motivo: "simular" }));
+        else if (cam === "sai") await fx.evaluate(() => window.__ens.sair({ abandono: true }));
+      }
+    }
+    x.feito = await ateNode(() => { const j = jogoDe(g.id); return !!(j && j.e === "feito"); }, real(600000), 200);
+    x.j = jogoDe(g.id);
+    // o 3D das duas fecha (o de quem não saiu, pela vigia: o jogo decidido por outro aparelho) e as duas voltam ao Campeonato
+    x.fechou = await ateNode(async () => (await Promise.all([X, Y].map(ap => ap.p.evaluate(() => !(TM.tm3d && TM.tm3d.aberto())).catch(() => false)))).every(Boolean), 20000, 200);
+    x.tela = await Promise.all([X, Y].map(estadoTela));
+    x.camp = (await Promise.all([X, Y].map(ateCamp))).every(Boolean);
+    x.iguais = await ateNode(async () => (await Promise.all(aps.map(ap => igualServ(ap, g.id)))).every(c => c === LCx.canon(jogoDe(g.id))), 20000, 200);
+    x.rtc = banco.ler(`leiloes/${cod}/rtc/${g.id}`);
+    x.escritas = quem(g.id).map(w => ({ uid: w.uid, e: w.e }));
+    x.passos = ((HIST[cod].log[g.id] || []).filter(y => y.j && y.j.e !== "aberto").map(y => y.j.e + (y.j.abriu != null ? "+abriu" : "") + (y.j.vem0 != null && y.j.vem1 != null ? "+2" : ""))).join();
+    if (cam === "falha") for (const ap of [X, Y]) await ap.p.evaluate(f => { TM.online3d.api.PRAZO_MS = 15000 * f; }, FATOR);
+  }
+  const uidDe = async ap => ap.uid, ladoDe = (x, t) => t === x.a ? 0 : 1;
+  const A3 = E["3d"], AS = E.simular, AF = E.falha, AX = E.sai;
+  confere(`${ID}2 os dois tocam em Jogar e o Online 3D do par liga (o WebRTC de verdade): o pedido online nos dois quadros com o lado 0 = o anfitrião, os mesmos times, a mesma semente, o mando neutro, 3 min e o "Simular partida" (online.simular); a porta nos dois sentidos`,
+    !!A3 && A3.j1 && A3.j2 && A3.ligou && A3.ped[0].lado === 0 && A3.ped[1].lado === 1 && A3.ped[0].userSide === "home" && A3.ped[1].userSide === "away" && A3.ped[0].simular === true && A3.ped[1].simular === true
+    && A3.ped[0].semente === A3.ped[1].semente && A3.ped[0].casa === A3.ped[1].casa && A3.ped[0].fora === A3.ped[1].fora && A3.ped.every(p => p.neutro === true && p.min === 3 && p.n[0] === 11 && p.n[1] === 11) && A3.bin.every(n => n >= 18),
+    A3 && { j: [A3.j1, A3.j2], ligou: A3.ligou, ped: A3.ped, bin: A3.bin });
+  confere(`${ID}3 o fim do 3D nas duas páginas: o resultado gravado UMA vez (o feito '3d' com o placar do 3D), o MESMO nó nas três páginas e no servidor, o nó do sinal apagado e as duas de volta ao Campeonato`,
+    !!A3 && A3.feito && A3.j.fim === "3d" && A3.j.res.em3d && A3.j.res.score.join() === [A3.r3.homeGoals, A3.r3.awayGoals].join() && A3.j.par === true && A3.j.abriu != null && A3.iguais && A3.rtc == null && A3.fechou && A3.camp
+    && A3.escritas.filter(w => w.e === "feito").length === 1 && /^reservado,reservado\+2,reservado\+abriu\+2,feito\+abriu\+2$/.test(A3.passos),
+    A3 && { feito: A3.feito, fim: A3.j && A3.j.fim, s: A3.j && A3.j.res && A3.j.res.score, iguais: A3.iguais, rtc: A3.rtc, escritas: A3.escritas, passos: A3.passos, camp: A3.camp });
+  confere(`${ID}4 um dos dois escolhe "Simular partida" na tela do 3D: o simulado com a semente gravado uma vez; o 3D do outro fecha sozinho (o jogo decidido) e as três páginas veem o mesmo`,
+    !!AS && AS.ligou && AS.feito && AS.j.fim === "simulado" && !AS.j.res.em3d && AS.j.res.wo == null && AS.iguais && AS.fechou && AS.camp && AS.escritas.filter(w => w.e === "feito").length === 1,
+    AS && { ligou: AS.ligou, fim: AS.j && AS.j.fim, iguais: AS.iguais, fechou: AS.fechou, escritas: AS.escritas, tela: AS.tela });
+  confere(`${ID}5 a ligação que não dá (o prazo encurtado nas duas: sem TURN, o 4G): o simulado com a semente, sem o 3D ter aberto, igual nas três`,
+    !!AF && AF.j1 && AF.j2 && AF.feito && AF.j.fim === "simulado" && AF.j.abriu == null && AF.j.vem0 != null && AF.j.vem1 != null && AF.iguais && AF.fechou && AF.camp,
+    AF && { j: [AF.j1, AF.j2], fim: AF.j && AF.j.fim, abriu: AF.j && AF.j.abriu, iguais: AF.iguais, tela: AF.tela });
+  confere(`${ID}6 quem sai no meio do 3D perde por W.O. (o anfitrião saiu: 0 × 3), gravado uma vez; o 3D do outro fecha e as três veem o mesmo`,
+    !!AX && AX.ligou && AX.feito && AX.j.res.wo === ladoDe(AX, AX.a) && AX.j.woPor === "saiu" && AX.iguais && AX.fechou && AX.camp && AX.escritas.filter(w => w.e === "feito").length === 1,
+    AX && { ligou: AX.ligou, wo: AX.j && AX.j.res && AX.j.res.wo, por: AX.j && AX.j.woPor, iguais: AX.iguais, fechou: AX.fechou, escritas: AX.escritas });
+  // nada sobre nada no Seu jogo do par (esperando o outro tocar), nos 8 tamanhos, escuro e claro — o próximo jogo de A
+  const V5 = await ver(aps[0]);
+  let nada = null;
+  if (V5 && V5.camp && !V5.camp.fim) {
+    const g5 = V5.camp.rodada && V5.camp.rodada.jogos[0], X5 = g5 ? await pagina(g5.a) : null;
+    if (X5) {
+      await jogar(X5, g5.id, true);
+      await ate(X5.p, () => { const mj = TM.leilaoSessao.atual().ver().camp.meuJogo; return !!(mj && mj.par && mj.par.vemEu && !mj.par.vemEle); }, null, 20000);
+      nada = [];
+      const TAMANHOS8 = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080]];
+      for (const claro of [false, true]) {
+        await X5.p.evaluate(c => TM.ui.applyTheme(c ? "light" : "dark"), claro);
+        for (const [w, h] of TAMANHOS8) {
+          await X5.p.setViewportSize({ width: w, height: h });
+          await espera(250);
+          await X5.p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); const b = document.querySelector(".lei-seujogo"); if (b) b.scrollIntoView({ block: "center" }); });
+          const s5 = await sobreposicao(X5.p);
+          const txt = await X5.p.evaluate(() => (document.querySelector(".lei-seujogo") || {}).textContent || "");
+          const ruim = s5.sobre.length || s5.encostam.length || s5.saem.length || s5.fora.length || s5.rolaLado || s5.atras;
+          if (ruim || !/Esperando .+ tocar em Jogar/.test(txt)) nada.push({ w, h, claro, sobre: s5.sobre.slice(0, 3), encostam: s5.encostam.slice(0, 3), saem: s5.saem.slice(0, 3), fora: s5.fora.slice(0, 3), rolaLado: s5.rolaLado, atras: s5.atras, txt: txt.slice(0, 80) });
+          await print(X5, `par-seujogo-${claro ? "claro" : "escuro"}-${w}x${h}`);
+        }
+      }
+      await X5.p.evaluate(() => TM.ui.applyTheme("dark"));
+      await X5.p.setViewportSize({ width: X5.o.w || 390, height: X5.o.h || 844 });
+    }
+  }
+  confere(`${ID}7 o Seu jogo do par ("Esperando {nome} tocar em Jogar", o prazo e o Simular partida): nada sobre nada nos 8 tamanhos, escuro e claro`, nada && !nada.length, nada && nada.slice(0, 4));
+  for (const ap of aps) await ap.p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); }).catch(() => {});
+  for (const ap of aps) await ap.cx.close().catch(() => {});
+}
+
 /* ====================================================================================================== */
 try {
   if (caso("telas")) await casoTelas();
@@ -1533,6 +1687,7 @@ try {
   if (caso("quatro")) await casoQuatro();
   if (caso("oito")) await casoOito();
   if (caso("tresd")) await casoTresD();
+  if (caso("par3d")) await casoPar3d();
 } catch (e) {
   confere("exceção no teste", false, String(e && e.stack || e).slice(0, 1500));
 }
