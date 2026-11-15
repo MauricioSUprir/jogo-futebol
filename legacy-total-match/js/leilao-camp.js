@@ -41,7 +41,8 @@
    API (TM.leilaoCamp):
      contexto(o)                 o: { codigo, semente, formato, T, ctx (o do TM.leilao), vivo, clubes [t], tipos ['bot'|'pessoa'],
                                     escal, prefs, inicio, duracao3d } → c (o campeonato; as contas abaixo recebem c)
-     rodadasDe(formato, T) · estrutura(c) · montar(c, jogos) (a vista: rodadas, jogos, tabela, atual, fim, campeão,
+     formatoDe(nome) · rodadasDe(formato, T) · jogosDe(formato, T) · duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })
+     estrutura(c) · montar(c, jogos) (a vista: rodadas, jogos, tabela, atual, fim, campeão,
      classificação, artilharia, o melhor time) · tabela(c, jogos) · artilharia(c, jogos) · somaNotas(c)
      timeDoTecnico(c, t, esc?) · escalacaoDoJogo(c, t) · simularJogo(a, b, { semente, mataMata }) · sementeJogo(codigo, id, trava)
      resultadoDoJogo(c, id, j) (o simulado com a semente do jogo)
@@ -92,6 +93,13 @@
   }
 
   /* ---------- o calendário ---------- */
+  /** O formato da sala pelo nome (aceita "mataMata"/"mata-mata" e "pontosCorridos"); desconhecido = o padrão, "mata". */
+  function formatoDe(x) {
+    var s = String(x == null ? "" : x).toLowerCase().replace(/[^a-z]/g, "");
+    if (s === "pontos" || s === "pontoscorridos") return "pontos";
+    if (s === "misto") return "misto";
+    return "mata";
+  }
   function rodadasDe(formato, T) {
     if (!(T >= 2 && T <= 8)) return 0;
     var turnoN = T % 2 ? T : T - 1, mata = 0, P = 1;
@@ -99,6 +107,35 @@
     if (formato === "pontos") return 2 * turnoN;
     if (formato === "misto") return turnoN + (T <= 4 ? 1 : 2);
     return mata;
+  }
+  /** Quantos jogos o campeonato tem: T − 1 no mata-mata, T·(T − 1) nos pontos corridos e o turno único + 1 (até 4) ou + 3
+   *  jogos do mata-mata no misto. */
+  function jogosDe(formato, T) {
+    if (!(T >= 2 && T <= 8)) return 0;
+    if (formato === "pontos") return T * (T - 1);
+    if (formato === "misto") return T * (T - 1) / 2 + (T <= 4 ? 1 : 3);
+    return T - 1;
+  }
+  /** A duração estimada (em minutos) para a Criar sala mostrar. o: { T, tempo (ms do relógio do lote), formato, tresD?,
+   *  duracao3d? (min por tempo; padrão 4) } → { leilao: { lo, hi, n (lotes) }, camp: { lo, hi, rodadas, jogos }, total: { lo,
+   *  hi } }.
+   *   — o leilão: medido com os robôs no PR 1 (~0,9 × o relógio por lote quando todos passam rápido, metade com 2 técnicos;
+   *     o relógio + 7 s quando ninguém passa: o relógio inteiro, a pausa e a repescagem);
+   *   — o campeonato, por rodada: simulado, de ~30 s (quem joga toca em Simular e vê) aos 2 min do prazo; no 3D (PR 4),
+   *     de 2 × a duração + 4 min (a partida e as telas) a 2 × a duração × 1,3 + 5 min. */
+  function duracaoEstimada(o) {
+    o = o || {};
+    var L = LE(), T = o.T || 0, n = (L ? L.LOTES_POR_TEC : 13) * T, s = (o.tempo > 0 ? o.tempo : (L ? L.DUR : 10000)) / 1000;
+    var lo = n * (T <= 2 ? 0.5 : 0.9) * s / 60, hi = n * (s + 7) / 60;
+    var fmt = formatoDe(o.formato), R = rodadasDe(fmt, T), dur = o.duracao3d || DURACAO_3D;
+    var clo = o.tresD ? R * (2 * dur + 4) : R * 0.5, chi = o.tresD ? R * (2 * dur * 1.3 + 5) : R * PRAZO / 60000;
+    function par(a, b) { var x = Math.max(1, Math.round(a)); return { lo: x, hi: Math.max(x + 1, Math.round(b)) }; }
+    var le = par(lo, hi), ca = par(clo, chi);
+    return {
+      leilao: { lo: le.lo, hi: le.hi, n: n },
+      camp: { lo: ca.lo, hi: ca.hi, rodadas: R, jogos: jogosDe(fmt, T) },
+      total: { lo: le.lo + ca.lo, hi: le.hi + ca.hi }
+    };
   }
   /** Um turno pelo método do círculo: n = T (ou T + 1 com T ímpar: a vaga a mais é a folga); a vaga n − 1 fica parada e as
    *  outras giram (na rodada r, a posição p tem a vaga (p + r) mod (n − 1)). Pares: (posição 0, vaga parada) e
@@ -665,7 +702,7 @@
     var T = o.T || (o.ctx && o.ctx.T) || 0;
     return {
       codigo: String(o.codigo || ""), semente: String(o.semente != null ? o.semente : o.codigo || ""),
-      formato: FORMATOS.indexOf(o.formato) >= 0 ? o.formato : "mata", T: T,
+      formato: formatoDe(o.formato), T: T,
       ctx: o.ctx || null, vivo: o.vivo || null, clubes: o.clubes || [], nomes: o.nomes || [], tipos: o.tipos || [],
       escal: o.escal || {}, prefs: o.prefs || [], inicio: numero(o.inicio) ? o.inicio : 0,
       duracao3d: o.duracao3d || DURACAO_3D, _est: null, _sorteio: null
@@ -674,7 +711,8 @@
 
   TM.leilaoCamp = {
     FORMATOS: FORMATOS, PRAZO: PRAZO, REALISMO: REALISMO, MODOS: MODOS, MOTIVOS: MOTIVOS, ESTADOS: ESTADOS, WO: WO,
-    contexto: contexto, rodadasDe: rodadasDe, estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
+    contexto: contexto, formatoDe: formatoDe, rodadasDe: rodadasDe, jogosDe: jogosDe, duracaoEstimada: duracaoEstimada,
+    estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
     somaNotas: somaNotas, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
     resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoDe: prazoDe,
