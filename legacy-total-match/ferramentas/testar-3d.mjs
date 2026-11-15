@@ -755,6 +755,59 @@ if (fr) {
   await cx.unroute(ROTA_ENSAIO);
 }
 
+// 7) o Modo Leilão (PR 4; PLANO-LEILAO.md §3.6): o "Jogar" do jogo contra um bot abre o GOLAÇO de verdade com o time do leilão — 11
+// SEM banco — (o pedido 11 + 11 e o mundo 11 × 11), a duração e a dificuldade da SALA (3 min, Difícil) travadas, mando neutro, o
+// empate que continua (o mata-mata) e os escudos desenhados do leilão; o 3D aberto marca o abriu; "Simular o resto" leva ao tm3d:fim
+// e o resultado do 3D fica gravado (feito '3d') ANTES de o 2D mostrar o placar, sem o botão de pausa. Pela sessão do leilão (o leilão
+// do treino com 1 bot passa sozinho, a ×40; as telas dele estão no testar-leilao.mjs --tela)
+{
+  await p.evaluate(async () => {
+    const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s);
+    TM.leilaoSessao.acelerar(40);
+    window.__SL = await TM.leilaoSessao.criarTreino({ liga: "br", bots: 1, formato: "mata", tempo: 10, duracao3d: 3, dificuldade3d: "dificil", mundo: TM.data.mundoBase() });
+    TM.ui.go("leilao-lote");
+  });
+  const esc = await ate(() => !!(window.__SL.sala && window.__SL.sala.meta.estado === "escalacao"), null, 240);
+  await p.evaluate(() => { window.__SL.acelerar(1); return window.__SL.prontoEscalacao(true); });
+  await p.evaluate(() => TM.ui.go("leilao-camp"));
+  const podeJ = await ate(() => { const c = window.__SL.ver().camp; return !!(c && c.meuJogo && c.meuJogo.podeJogar && document.querySelector(".lei-jogar:not([disabled])")); }, null, 60);
+  // o que a página vê: o gravar3d (quando respondeu) e a 1ª vez que o placar do 2D aparece
+  const id = await p.evaluate(() => {
+    const S = window.__SL, W = window.__lei3d = { gravados: [], vista: null };
+    const g3 = S.gravar3d;
+    S.gravar3d = function () { const a = arguments; return g3.apply(S, a).then(r => { W.gravados.push({ t: performance.now(), origem: a[2], e: r && r.jogo ? r.jogo.e : null }); return r; }); };
+    new MutationObserver(() => { const sc = document.querySelector(".screen.is-active .live-score"); if (sc && !W.vista) W.vista = { t: performance.now(), rota: TM.ui.current(), pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)) }; })
+      .observe(document.body, { subtree: true, childList: true });
+    const id = window.__leiId = S.ver().camp.meuJogo.id, b = document.querySelector(".lei-jogar");
+    if (b) b.click();
+    return id;
+  });
+  const fr = podeJ ? await espera3d() : null;
+  let ped = null, abriu = null, r = null;
+  if (fr) {
+    ped = await fr.evaluate(() => {
+      const g = window.__golaco, P = g.tm.pedido, m = g.mundo;
+      return { n: [P.home.players.length, P.away.players.length], jogadores: [0, 1].map(t => m.jogadores.filter(j => j.time === t).length), partida: P.partida,
+        escudos: [P.home.identidade.escudoTipo, P.away.identidade.escudoTipo], ticks: m.partida.ticksPorTempo, dif: m.dificuldade || "normal" };
+    });
+    abriu = await p.evaluate(i => { const j = window.__SL.jogos[i]; return !!(j && j.e === "reservado" && j.modo === "3d" && j.abriu != null); }, id);
+    await abaDaTela(fr, "jogar");
+    await fr.waitForFunction(() => !window.__golaco.prepartida.aberta && window.__golaco.mundo.tick > 0, null, { timeout: 30000 }).catch(() => {});
+    r = await simulaEVolta(fr);
+  }
+  const feito = await ate(() => { const j = window.__SL.jogos[window.__leiId]; return !!(j && j.e === "feito") && !!window.__lei3d.vista; }, null, 60);
+  const g = await p.evaluate(i => { const j = window.__SL.jogos[i]; return j ? { e: j.e, fim: j.fim, em3d: !!(j.res && j.res.em3d), score: j.res && j.res.score, alterada: !!window.__SL.ver().alterada } : null; }, id);
+  const W = await p.evaluate(() => window.__lei3d);
+  await print("07-leilao-2d");
+  confere("Leilão (PR 4): o Jogar abre o GOLAÇO com o time de 11 sem banco — o pedido 11 + 11 e o mundo 11 × 11 —, 3 min por tempo (10 800 ticks) e Difícil travados, mando neutro, o empate que continua no mata-mata, os escudos desenhados; o 3D aberto marca o abriu",
+    esc && podeJ && !!ped && ped.n.join() === "11,11" && ped.jogadores.join() === "11,11" && ped.ticks === 10800 && ped.dif === "dificil" && ped.partida.minutosPorTempo === 3 && ped.partida.dificuldade === "dificil"
+    && ped.partida.ajustesFixos === true && ped.partida.neutro === true && ped.partida.empateContinua === true && ped.escudos.every(t => t === "ultimate") && abriu, { esc, podeJ, ped, abriu });
+  confere("Leilão (PR 4): \"Simular o resto\" → tm3d:fim → o resultado do 3D gravado (feito '3d', o placar do 3D) ANTES de o 2D mostrar o placar, sem o botão de pausa; a sala confere (não congela)",
+    !!r && feito && !!g && g.fim === "3d" && g.em3d && g.score[0] === r.res.homeGoals && g.score[1] === r.res.awayGoals && !g.alterada
+    && W.gravados.length === 1 && W.gravados[0].origem === "3d" && W.gravados[0].e === "feito" && W.gravados[0].t <= W.vista.t && !W.vista.pausa, { feito, g, res3d: r && { h: r.res.homeGoals, a: r.res.awayGoals }, W });
+  await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
+}
+
 confere("nenhum erro de página (TM e 3D)", erros.length === 0, erros);
 console.log("OK:\n  " + ok.join("\n  "));
 if (falhas.length) console.log("FALHOU:\n  " + falhas.join("\n  "));
