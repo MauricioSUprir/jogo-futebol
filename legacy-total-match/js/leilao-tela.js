@@ -1300,6 +1300,8 @@
         el("p", { class: "intro-text", text: "A sala fechou para quem chega agora. Quem trocou de aparelho pede pelo código e o dono passa o clube." }),
         el("div", { class: "lei-acoes" }, [botao(V.estado === "leilao" ? "Ir ao leilão" : V.estado === "escalacao" ? "Ir à escalação" : "Ir ao campeonato", function () { TM.ui.go(rotaDoEstado(V)); }, "btn primary", "gavel")])
       ]));
+      // quem volta depois de um deploy no meio do leilão (a sala é de outra versão do TM) também vê o aviso
+      if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
       return;
     }
     b.appendChild(el("h2", { class: "lei-sag-tit", text: "Prepare seu clube." }));
