@@ -1316,8 +1316,9 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   posição, R$ 100 cada (dinheiro do jogo), 10 s por lote (lance com menos de 8 s volta a 8 s), +1/+5/+10 sobre o valor
   visto, Tudo de dois toques, outro valor, Passar, repescagem de 6 s e o completar de graça com os de fora; a escalação no
   campinho (só as formações em que o time cabe, troca de vagas, −1/−2); o Campeonato "em breve". Arquivos: `js/leilao.js`
-  (PURO, `TM.leilao`: lotes, a máquina do lote, robôs, emparelhamento das 6 formações, conferência, escalação pelo
-  húngaro), `js/leilao-rede.js` (o transporte, `TM.leilaoRede`: `memoria()` com gravação no localStorage; o `firebase()` do
+  (PURO, `TM.leilao`: lotes, a máquina do lote, robôs, emparelhamento das 6 formações, escalação pelo húngaro e a
+  conferência — também com o seq pulando, pelos limites da janela, e depois do fim, quando nada muda e o `f` é o completar
+  refeito), `js/leilao-rede.js` (o transporte, `TM.leilaoRede`: `memoria()` com gravação no localStorage; o `firebase()` do
   PR 2 segue a mesma interface), `js/leilao-sessao.js` (`TM.leilaoSessao`, sem DOM: relógios, robôs e transações
   idempotentes; `ver()` para as telas; o relógio do treino PARA com a página escondida ou com a pessoa fora das telas da
   sala, `segurar`; recarregar volta ao mesmo lote), `js/leilao-tela.js` (rotas `leilao`, `leilao-criar`, `leilao-lote`,
@@ -1327,10 +1328,13 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   5 + 5 + 3 de 760 a 789 e 3 + 3 + 3 + 3 + 1 no celular (mexeu na grade? `testar-online3d`, `testar-livre` e
   `testar-penaltis` conferem). Ícones novos só pelo `EXTRA` do `ferramentas/gerar-icones.py` (a `semEmoji` mora no MODELO
   do gerador: regenerar não a apaga). Testes: `ferramentas/testar-leilao.mjs` (Node, L1–L10 + R + S, ~30 s; no CI pelo
-  `.github/workflows/tm-testes.yml`, com o `conferir-estilos.py`) e `testar-leilao.mjs --tela` (navegador, 32 itens: a
-  grade, o treino inteiro pela tela, recarregar no meio, nada sobre nada nos 8 tamanhos com a barra fixa numa camada
-  própria, o tema claro; ~2–3 min, fora do CI até o PR 2). Próximos PRs: 2 online, 3 campeonato, 4 e 5 o 3D, 6 notas
-  escondidas.
+  `.github/workflows/tm-testes.yml`, com o `conferir-estilos.py`) e `testar-leilao.mjs --tela` (navegador, 38 itens: a
+  grade, o treino inteiro pela tela, recarregar no meio, nada sobre nada nos 8 tamanhos — por cima, ENCOSTADO (< 2 px entre
+  clicáveis) ou texto saindo do botão — com a barra fixa numa camada própria e os blocos abertos, o tema claro com contraste
+  ≥ 4,5:1, as folhas modais (tela inerte, Tab preso), o foco nunca atrás da barra (scroll-padding), o que fica escrito na
+  `#lei-vivo` (falas juntas, ≥ 1 s cada); ~3 min, fora do CI até o PR 2). Lições: teste de regra confere contra a conta
+  feita no próprio teste (as cotas, o completar), nunca contra a função testada; a região ao vivo trocada no mesmo quadro
+  cala a fala anterior. Próximos PRs: 2 online, 3 campeonato, 4 e 5 o 3D, 6 notas escondidas.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

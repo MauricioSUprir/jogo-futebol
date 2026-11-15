@@ -807,3 +807,31 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     os botões desligados. Uma rota da sala aberta sem sessão (depois de recarregar a página) oferece "Continuar o treino".
   - O "nada sobre nada" do `testar-leilao --tela` usa o critério do `testar-online3d` com a barra de lance (fixa) numa
     camada própria: o que rola por baixo dela não conta como encostar; no fim da rolagem, nada fica atrás dela.
+- **A revisão do PR 1** (três lentes: regras e robôs, telas e celular, regressões no resto do TM):
+  - **A conferência com estados pulados tem limites** (`confereSalto`; o `firebase()` do PR 2 se apoia nela): com o `seq`
+    pulando 2 ou mais, a fase e a posição só andam; a `sem` só cresce, nos lotes, com lotes da janela (o lote de `a` e as
+    posições depois dele até a de `b`; na repescagem, as da `sem`), na ordem da fila; o `seq` não passa das posições que
+    podem ter aberto; cada lote novo é da janela e custou ≥ R$ 1 (o de `a` com líder, ≥ o lance, nunca para quem passou);
+    quem não comprou não pagou; o lote da fila que ficou sem dono e fora da `sem` foi pulado, e ninguém pode comprá-lo no
+    estado de `b` (o "pode" só diminui: vaga, máximo e "cabe" só caem com as compras). Antes, com o `seq` pulando 2, um
+    lote de graça passava. **Depois do fim nada muda** (qualquer diferença é acusada) e todo vivo no fim tem o `f` refeito
+    pelo completar a partir do `d` (antes, a troca dos completados com `seq`+1 passava). O `confereSozinho` ganhou as letras
+    do `d`/`f`, a `sem` sem repetir, o lote aberto = o da posição `k` e o saldo ≥ as vagas que os lotes não ocuparam.
+    L10: 5 935 pares honestos com saltos de qualquer tamanho (749 na repescagem, 123 no fim) e 34 adulterações com o `seq`
+    pulando ou depois do fim, acusadas.
+  - **Os testes de regra contra a conta feita no teste:** L1 com a fórmula das cotas (e o exemplo de 4 técnicos: 6, 18,
+    18, 10), L3 com um caso positivo por formação (o 11º que só fecha cada uma) e os parciais (3º e 4º atacante, 5º
+    zagueiro, 5º meia; 'posicao' quando nenhuma serve), L6 com o completar refeito (o melhor de fora que cabe, para quem
+    tem menos, empate no menor índice). Cada um reprova a mutação que antes passava.
+  - **A região ao vivo junta o que chega junto:** a sessão emite a venda e o lote novo na mesma conferência; trocado no
+    mesmo quadro, o leitor de tela nunca ouvia o "Vendido para X por R$ Y". Agora vira uma fala ("Vendido para X por R$ Y.
+    Jogador N de 52: …") e cada fala fica ≥ 1,2 s.
+  - **Telas:** o retorno e o motivo da barra e o "−N fora da função" com tons escuros no claro (contraste ≥ 4,5:1); "Tudo
+    ou nada" quebra em duas linhas e a Escalação tem 3 formações por linha até 1100 px; o foco não fica atrás da barra
+    fixa (`scroll-padding-bottom` do documento com a altura dela, tirado ao sair da sala); as folhas deixam a tela inerte
+    e prendem o Tab; o aviso da formação curto na barra ("Formação agora é 4-3-3 (não cabia na 4-4-2)", a frase inteira na
+    região ao vivo) e o campo "Até R$ X"; 2 px entre o botão do bloco e o 1º item. O `--tela` passou a reprovar ENCOSTADO
+    (< 2 px entre clicáveis) e texto fora do botão (o critério do `testar-sobreposicao` só via sobreposição) e mede o lote
+    também com os blocos abertos (o padrão do PC).
+  - **A tela guarda só os clubes do mundo-base, e só enquanto a pessoa está na sala** (o mundo inteiro ficava no heap até
+    recarregar: 13,6 → 9,9 MB depois de sair do treino na pública, 12,4 → 9,3 na pro); a Criar gera o mundo e solta.
