@@ -751,6 +751,19 @@ async function casoDois() {
   const nsConv = await nadaSobreNada(B, "saguao-convidado", () => !!document.querySelector(".lei-sagbar"));
   confere(`${ID}6 nada sobre nada no Saguão (o dono e o convidado) em 360×740, 844×390 e 1280×800, no escuro e no claro (${nsDono.medidas.length + nsConv.medidas.length} medidas)`,
     !nsDono.ruins.length && !nsConv.ruins.length && nsDono.medidas.every(m => m.n > 8 && m.barra), nsDono.ruins.concat(nsConv.ruins).slice(0, 4));
+  // o selo VOCÊ da sua linha no Saguão: a pílula verde nos dois temas (a revisão de 15/11: a regra base tinha saído junto
+  // com a do seu clube da aba Leilão; no claro ficava branco sobre branco)
+  const voce = await A.p.evaluate(() => {
+    const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const mede = () => { const e = document.querySelector(".lei-part.eu .lei-voce"); if (!e) return null; const cs = getComputedStyle(e), f = rgba(cs.backgroundColor), t = rgba(cs.color);
+      const x = L(t), y = L(f); return { txt: e.textContent, fundo: f[3], cr: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100 }; };
+    const escuro = mede(); TM.ui.applyTheme("light"); const claro = mede(); TM.ui.applyTheme("dark");
+    return { escuro, claro };
+  });
+  confere(`${ID}6c o selo VOCÊ da sua linha no Saguão é a pílula verde no escuro e no claro (≥ 4,5:1)`,
+    !!voce.escuro && !!voce.claro && voce.escuro.txt === "VOCÊ" && [voce.escuro, voce.claro].every(x => x.fundo >= 1 && x.cr >= 4.5), voce);
 
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");

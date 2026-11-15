@@ -3693,8 +3693,10 @@ async function testeTela() {
     return { n: els.length, sobre: pares, encostam, saem, fora, rolaLado: document.documentElement.scrollWidth > larg + 1, atras };
   });
   const nadaSobre = [];
-  async function nadaSobreNada(p, rotulo, extra) {
-    for (const [w, h] of TAMANHOS) {
+  // (tams: outros tamanhos que os 8; o celular deitado estreito da aba Leilão)
+  const DEITADOS = [[667, 375], [740, 360]];
+  async function nadaSobreNada(p, rotulo, extra, tams = TAMANHOS) {
+    for (const [w, h] of tams) {
       await p.setViewportSize({ width: w, height: h });
       await espera(320);
       await p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); scrollTo(0, 0); });
@@ -3932,6 +3934,36 @@ async function testeTela() {
     depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent, campo: document.querySelector(".lei-valor").value }));
     confere("T3 'Outro valor': acima do máximo fica na tela ('Acima do seu máximo R$ X'); um valor bom (Enter) vira lance e o campo esvazia",
       /Acima do seu máximo R\$ \d+/.test(msgMax) && ((depois.V.lote.lider === depois.V.eu && depois.V.lote.valor === alvoOutro && depois.campo === "") || /chegou antes|já fechou|tem de passar/.test(depois.msg)), { msgMax, alvoOutro, valor: depois.V.lote.valor, msg: depois.msg });
+    // o Tudo armado (o 1º toque: "Confirmar") cabe no botão em todo tamanho (com o valor ao lado, "Confirmar R$ 90" passava
+    // do botão em todo celular em pé: em 360 por cima do +10 e cortado na borda); o 2º toque não sai (espera os 2 s). Antes do
+    // Tudo de dois toques abaixo: ele gasta o máximo e, depois, o Tudo pode ficar apagado até o fim do leilão
+    // (o relógio corre até um lote em que o Tudo acende — o "Outro valor" acima pode me deixar na frente deste — e quase para
+    // enquanto o 1º toque é medido e os 2 s passam)
+    const tudoArmado = [];
+    for (const [w, h] of TAMANHOS.concat(DEITADOS)) {
+      await p.setViewportSize({ width: w, height: h });
+      await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+      const pronto = await ate(p, () => { const S = TM.leilaoSessao.atual(), V = S.ver(), b = document.querySelector(".lei-lb-tudo");
+        return V.lote && !V.lote.pausa && V.lote.fim - S.hora() > 4000 && V.botoes && V.botoes.tudo.pode && b && !b.disabled && !b.classList.contains("confirma"); }, null, 60000);
+      if (!pronto) { tudoArmado.push({ t: w + "x" + h, semLote: true, fora: [] }); continue; }
+      await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+      await p.click(".lei-lb-tudo");
+      await espera(150);
+      tudoArmado.push(await p.evaluate(t => {
+        const b = document.querySelector(".lei-lb-tudo"), rb = b.getBoundingClientRect(), fora = [];
+        b.querySelectorAll(".lei-lb-t, .lei-lb-v").forEach(x => {
+          if (getComputedStyle(x).display === "none") return;
+          const rg = document.createRange(); rg.selectNodeContents(x); const r = rg.getBoundingClientRect();
+          if (r.width && (r.left < rb.left + 2 || r.right > rb.right - 2 || r.right > innerWidth)) fora.push(x.textContent + " " + Math.round(r.left) + "–" + Math.round(r.right) + " no " + Math.round(rb.left) + "–" + Math.round(rb.right));
+        });
+        return { t, conf: b.classList.contains("confirma"), txt: b.querySelector(".lei-lb-t").textContent, fora, sw: b.scrollWidth, cw: b.clientWidth };
+      }, w + "x" + h));
+      await espera(2200);
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+    confere("T3 o Tudo armado ('Confirmar', o 1º toque) cabe no botão nos 8 tamanhos e em 667×375 e 740×360 (o texto a ≥ 2 px das bordas, nada fora da tela)",
+      tudoArmado.length === 10 && tudoArmado.every(x => x.conf && x.txt === "Confirmar" && !x.fora.length && x.sw <= x.cw), tudoArmado.filter(x => !x.conf || x.fora.length || x.sw > x.cw).slice(0, 4));
     // Tudo: o 1º toque vira "Confirmar R$ X" (nada sai), o 2º dá o lance do máximo
     await proximoLote(); await abertoMeu();
     antes = await ver(p);
@@ -3969,13 +4001,18 @@ async function testeTela() {
         // nenhuma carta do Ultimate na aba (nem a assinatura TOTAL MATCH dela)
         cartas: document.querySelectorAll(".lei-corpo-lote .ut-card, .lei-corpo-lote .utc-tier").length,
         // a foto, a nota, o nome, os chips, o relógio, quem lidera e o valor no MESMO cartão
-        noCartao: [".lei-foto", ".lei-nota", ".lei-nome", ".lei-chips .lei-chip", ".lei-ficha-bt", ".lei-relogio", ".lei-lider", ".lei-valor-atual", ".lei-hist"].filter(s => !dentro(s)),
+        // (a lista dos lances de antes some quando não há nenhum: está no cartão e, com lances, à vista)
+        noCartao: [".lei-foto", ".lei-nota", ".lei-nome", ".lei-chips .lei-chip", ".lei-ficha-bt", ".lei-relogio", ".lei-lider", ".lei-valor-atual"].filter(s => !dentro(s))
+          .concat((h => !h || (h.children.length ? h.offsetParent === null : getComputedStyle(h).display !== "none"))(card && card.querySelector(".lei-hist")) ? [".lei-hist"] : []),
         nota: (card && card.querySelector(".lei-nota") || {}).getAttribute ? card.querySelector(".lei-nota").getAttribute("aria-label") : null,
         // o topo: 6 ícones sem texto à vista, com aria-label e title, ≥ 44 × 44
         sb: { n: sbs.length, comTexto: sbs.filter(b => b.innerText.trim()).length, semRotulo: sbs.filter(b => !b.getAttribute("aria-label") || !b.title).length,
           min: Math.round(Math.min(...sbs.map(b => Math.min(r(b).width, r(b).height)))) },
-        // as abas em pílula: sem ícone, menos o check da feita
+        // as abas em pílula: sem ícone, menos o check da feita; mais leves que o chip (as fotos: 23 × 32 px), com o alvo de
+        // toque de 44 px (o toque 6 px acima e abaixo da pílula ainda é nela)
         abasIc: abas.filter(b => b.querySelector("svg") && !b.classList.contains("feita")).length,
+        abaH: Math.round(Math.max(...abas.map(b => r(b).height))), chipH: Math.round(r(document.querySelector(".lei-lote-n")).height),
+        abaAlvo: abas.every(b => { const q = r(b), x = q.left + q.width / 2; return [q.top - 6, q.bottom + 6].every(y => { const e = document.elementFromPoint(x, y); return !!e && e.closest(".lei-aba") === b; }); }),
         // o campinho do seu clube: as 11 vagas da formação, as compras nelas, "n/11"
         vagas: cv ? cv.querySelectorAll(".lei-cv-vaga").length : 0, cheias: cv ? cv.querySelectorAll(".lei-cv-vaga.cheia").length : -1, meus: V.tecnicos[V.eu].n,
         conta: cv ? cv.querySelector(".lei-cv-n").textContent : null, campinho: cv ? Math.round(r(cv).width) : 0,
@@ -3984,14 +4021,23 @@ async function testeTela() {
         larg: Math.round(larg)
       };
     };
-    await nadaSobreNada(p, "lote", async (p, w, h) => p.evaluate(async lotePelasFotos => {
+    const extraLote = async (p, w, h) => p.evaluate(async lotePelasFotos => {
       const barra = document.querySelector(".lei-lance").getBoundingClientRect(), rel = document.querySelector(".lei-relogio").getBoundingClientRect();
+      const val = document.querySelector(".lei-valor-atual").getBoundingClientRect();
       const arco = document.querySelector(".lei-rel-arco"), d0 = arco.style.strokeDashoffset;
       await new Promise(r => setTimeout(r, 450));
       const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => Math.round(b.getBoundingClientRect().height));
+      // o "Outro valor" inteiro no campo (o texto de verdade, com a fonte do campo)
+      const v = document.querySelector(".lei-valor"), cs = getComputedStyle(v), cv = document.createElement("canvas").getContext("2d");
+      cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+      const ph = { txt: v.placeholder, larg: Math.round(cv.measureText(v.placeholder).width), livre: Math.round(v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) };
       return { barraVisivel: barra.top >= 0 && barra.bottom <= innerHeight + 1 && barra.height > 40, relVisivel: rel.top >= 0 && rel.bottom <= barra.top + 0.5,
-        roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1), fotos: (0, eval)("(" + lotePelasFotos + ")")() };
-    }, lotePelasFotos.toString()));
+        valVisivel: val.top >= 0 && val.bottom <= barra.top + 0.5, ph, roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1), fotos: (0, eval)("(" + lotePelasFotos + ")")() };
+    }, lotePelasFotos.toString());
+    await nadaSobreNada(p, "lote", extraLote);
+    // o celular deitado mais estreito que 844 (o iPhone SE e o 8 deitados: a revisão de 15/11 achou o nome quebrado, o país
+    // em "M…" e "Outro val")
+    await nadaSobreNada(p, "lote-deitado", extraLote, DEITADOS);
     // os Próximos lotes abertos (a única linha recolhível que ficou na aba): nada sobre nada também com a lista à vista
     await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="false"]').forEach(b => b.click()));
     await espera(200);
@@ -4004,28 +4050,81 @@ async function testeTela() {
       fotos.length === 8 && fotos.every(x => x.cartas === 0 && !x.noCartao.length && /^Nota \d+$/.test(x.nota || "")), fotos.map(x => ({ t: x.t, c: x.cartas, falta: x.noCartao, nota: x.nota })));
     confere("T4 o topo só de ícones (6, sem texto à vista, com aria-label e title, ≥ 44 × 44) e as abas em pílula sem ícone (só o check da feita), nos 8 tamanhos",
       fotos.every(x => x.sb.n === 6 && !x.sb.comTexto && !x.sb.semRotulo && x.sb.min >= 44 && !x.abasIc), fotos.map(x => ({ t: x.t, sb: x.sb, abasIc: x.abasIc })));
+    confere("T4 as pílulas mais leves que o chip 'Jogador N de 52' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
+      fotos.every(x => x.abaH < x.chipH && x.abaH >= 24 && x.abaAlvo), fotos.map(x => ({ t: x.t, aba: x.abaH, chip: x.chipH, alvo: x.abaAlvo })));
     confere("T4 o campinho do seu clube sempre à vista: as 11 vagas da formação, as compras nelas e 'n/11' (8 tamanhos)",
       fotos.every(x => x.vagas === 11 && x.cheias === x.meus && x.meus > 0 && x.conta === x.meus + "/11" && x.campinho > 200), fotos.map(x => ({ t: x.t, v: x.vagas, cheias: x.cheias, meus: x.meus, conta: x.conta, w: x.campinho })));
     confere("T4 a barra de lance das fotos: +1, +5, +10 e Tudo; 'Outro valor' (≥ 16 px: o iPhone não dá zoom), Dar lance e Passar (8 tamanhos)",
       fotos.every(x => x.l1.join() === "+1,+5,+10,Tudo" && x.l2[0] === "Outro valor" && x.l2[1] >= 16 && /^Dar lance$/.test(x.l2[2]) && /^Passar$/.test(x.l2[3])), fotos.map(x => ({ t: x.t, l1: x.l1, l2: x.l2 })));
     confere("T4 nada de ponta a ponta no PC: o topo e a aba Leilão com no máximo 1000 px nos 8 tamanhos", fotos.every(x => x.larg > 0 && x.larg <= 1000), fotos.map(x => ({ t: x.t, l: x.larg })));
     const ruins = nadaSobre.filter(x => x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.atras);
-    confere(`T4 nada sobre nada (nem encostado, nem texto fora do botão): Entrada, Criar e Leilão (blocos fechados e abertos) nos 8 tamanhos (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
+    confere(`T4 nada sobre nada (nem encostado, nem texto fora do botão): Entrada, Criar e Leilão (blocos fechados e abertos) nos 8 tamanhos e o Leilão em 667×375 e 740×360 (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
+    const deit = nadaSobre.filter(x => /^lote-deitado /.test(x.tela));
+    confere("T4 o celular deitado estreito (667×375 e 740×360): o anel e o valor acima da barra, a barra à vista, 'Outro valor' inteiro e as fotos no mesmo cartão (nada sobre nada no item abaixo)",
+      deit.length === 2 && deit.every(x => x.barraVisivel && x.relVisivel && x.valVisivel && x.ph.larg <= x.ph.livre && x.ph.txt === "Outro valor" && x.fotos.cartas === 0 && !x.fotos.noCartao.length),
+      deit.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, v: x.valVisivel, ph: x.ph, falta: x.fotos.noCartao })));
     const lotes = nadaSobre.filter(x => /^lote /.test(x.tela));
-    confere("T4 a barra de lance à vista com o relógio rodando nos 8 tamanhos (também 844×390 e 360×740), o relógio acima dela, linha 1 com ≥ 48 px",
-      lotes.length === 8 && lotes.every(x => x.barraVisivel && x.relVisivel && x.roda && x.l1min >= 48), lotes.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, roda: x.roda, h: x.l1min })));
+    confere("T4 a barra de lance à vista com o relógio rodando nos 8 tamanhos (também 844×390 e 360×740), o relógio e o valor acima dela, linha 1 com ≥ 48 px, 'Outro valor' inteiro",
+      lotes.length === 8 && lotes.every(x => x.barraVisivel && x.relVisivel && x.valVisivel && x.roda && x.l1min >= 48 && x.ph.larg <= x.ph.livre),
+      lotes.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, v: x.valVisivel, roda: x.roda, h: x.l1min, ph: x.ph })));
     // "Vendido para X por R$ Y" (ou "Sem lance") na pausa entre os lotes
     await p.evaluate(() => TM.leilaoSessao.acelerar(1.5));
     const sAntes = (await ver(p)).lote.seq;
     await ate(p, s => { const V = TM.leilaoSessao.atual().ver(); return V.lote && V.lote.seq !== s; }, sAntes, 30000);
     await p.evaluate(() => TM.leilaoSessao.acelerar(0.2));
     await espera(150);
-    const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"); return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled) }; });
-    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') por cima do cartão do jogador novo, com os botões apagados", vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes, vendido);
+    const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"), S = TM.leilaoSessao.atual(), V = S.ver(), u = V.ultimo;
+      const toca = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0; };
+      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-bt, .lei-lote-card .lei-nome")];
+      return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled),
+        quem: e && (e.querySelector(".lei-vendido-quem") || {}).textContent, vendidoEra: u && S.ctx.lotes[u.i] && S.ctx.lotes[u.i].name, novo: V.lote && V.lote.retrato.name,
+        cobre: e ? chips.filter(c => toca(e, c)).map(c => c.textContent.slice(0, 16)) : [], msg: document.querySelector(".lei-lance-msg").textContent,
+        esperado: V.botoes && V.botoes["+1"].motivo === "pausa" && V.botoes["+1"].max > 0 ? "Aguarde o próximo jogador · seu máximo R$ " + V.botoes["+1"].max : null }; });
+    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') com o nome de quem foi vendido, sobre a linha do relógio do cartão novo (sem cobrir o nome nem os chips), os botões apagados e 'Aguarde o próximo jogador' com o seu máximo",
+      vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes && !!vendido.quem && vendido.quem === vendido.vendidoEra && !vendido.cobre.length
+        && (vendido.esperado ? vendido.msg === vendido.esperado : !/^Seu máximo neste jogador/.test(vendido.msg)), vendido);
     await print(p, "4-vendido");
+    // o contraste dos textos novos nos dois temas (a revisão de 15/11): os lances de antes (os velhos eram apagados por opacidade:
+    // 2,2–4,1:1), o valor do Tudo e o Dar lance (no claro, 2,5 e 4,5), os textos brancos do campinho sobre a grama (3,2–4,4)
+    const contrasteLote = () => p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+      // o fundo de verdade: as camadas de cima até a primeira opaca (a página por baixo de tudo)
+      const fundo = e => { const pilha = []; for (let a = e; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) pilha.push(c); if (c[3] >= 1) break; }
+        let f = pilha.length && pilha[pilha.length - 1][3] >= 1 ? pilha.pop() : rgba(getComputedStyle(document.body).backgroundColor);
+        while (pilha.length) f = sobre(pilha.pop(), f); return f; };
+      // o texto com a opacidade dele e a dos pais até o fundo (sem a do botão apagado: o estado, não a cor)
+      const op = (e, ate) => { let o = 1; for (let a = e; a && a !== ate; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+      const texto = (e, f, ate) => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e, ate); return cr(sobre(c, f), f); };
+      const stops = e => (getComputedStyle(e).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba);
+      const out = {};
+      const card = document.querySelector(".lei-lote-card");
+      const ol = document.createElement("ol"); ol.className = "lei-hist";
+      ol.innerHTML = '<li><span class="lei-hist-n">A</span><b>R$ 9</b></li><li><span class="lei-hist-n">B</span><b>R$ 8</b></li><li><span class="lei-hist-n">C</span><b>R$ 7</b></li>';
+      card.appendChild(ol);
+      const fc = fundo(card);
+      out.hist = Math.min(...[...ol.querySelectorAll(".lei-hist-n, b")].map(x => texto(x, fc, card)));
+      ol.remove();
+      const tudo = document.querySelector(".lei-lb-tudo"), tv = tudo.querySelector(".lei-lb-v"), ft = stops(tudo).map(c => sobre(c, fundo(tudo.parentElement)));
+      out.tudoValor = Math.min(...ft.map(f => texto(tv, f, tudo)));
+      const dar = document.querySelector(".lei-lb-dar");
+      out.darLance = texto(dar.querySelector(".lei-lb-t"), fundo(dar), dar);
+      const cv = document.querySelector(".lei-corpo-lote .lei-cv"), grama = stops(cv);
+      for (const [k, s] of [["cvSigla", ".lei-cv-sig"], ["cvFormacao", ".lei-cv-forma"], ["cvConta", ".lei-cv-n"], ["cvNome", ".lei-cv-nome"]]) {
+        const x = cv.querySelector(s); if (x) out[k] = Math.min(...grama.map(f => texto(x, f, cv)));
+      }
+      return out;
+    });
+    const contrasteEscuro = await contrasteLote();
     // tema claro
     await p.evaluate(() => TM.ui.applyTheme("light"));
     await espera(300);
+    const contrasteClaro = await contrasteLote();
+    confere("T4 contraste ≥ 4,5:1 nos dois temas: os lances de antes, o valor do Tudo, o Dar lance e os textos do campinho (a sigla, a formação, o n/11 e o sobrenome)",
+      [contrasteEscuro, contrasteClaro].every(o => Object.keys(o).length >= 6 && Object.values(o).every(x => x >= 4.5)), { escuro: contrasteEscuro, claro: contrasteClaro });
     const claro = await p.evaluate(() => {
       const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
       const cs = s => getComputedStyle(document.querySelector(s));
@@ -4078,6 +4177,20 @@ async function testeTela() {
     // a ficha do (i) também sem a carta (o cabeçalho do cartão, os 6 atributos em números e a lista)
     await p.click('.lei-sb[aria-label="Participantes"]');
     await espera(250);
+    // o selo VOCÊ da sua linha: a pílula verde nos dois temas (a regra base tinha saído junto com a do seu clube: no claro,
+    // branco sobre branco) e o rótulo da linha com o saldo e as vagas (um botão só lê o rótulo)
+    const voce = await p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const mede = () => { const e = document.querySelector(".lei-folha .lei-part.eu .lei-voce"); if (!e) return null; const cs = getComputedStyle(e), f = rgba(cs.backgroundColor), t = rgba(cs.color);
+        const x = L(t), y = L(f); return { fundo: f[3], cr: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100 }; };
+      const escuro = mede(); TM.ui.applyTheme("light"); const claro = mede(); TM.ui.applyTheme("dark");
+      const eu = document.querySelector(".lei-folha .lei-part.eu.abre");
+      return { escuro, claro, rotulo: eu && eu.getAttribute("aria-label") };
+    });
+    confere("T5 o selo VOCÊ dos Participantes é a pílula verde nos dois temas (≥ 4,5:1) e a sua linha diz 'Ver o seu time: R$ X, N de 11'",
+      !!voce.escuro && !!voce.claro && voce.escuro.fundo >= 1 && voce.claro.fundo >= 1 && voce.escuro.cr >= 4.5 && voce.claro.cr >= 4.5 && /^Ver o seu time: R\$ \d+, \d+ de 11/.test(voce.rotulo || ""), voce);
     const tecBot = await p.evaluate(() => { const l = [...document.querySelectorAll(".lei-folha .lei-part.abre")].find(x => /^Ver o time de Bot /.test(x.getAttribute("aria-label") || "")); if (!l) return null; const a = l.getAttribute("aria-label"); l.click(); return a; });
     await espera(300);
     const timeBot = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, sub: (f.querySelector(".lei-folha-sub") || {}).textContent, vagas: f.querySelectorAll(".lei-cv .lei-cv-vaga").length, cartas: f.querySelectorAll(".ut-card").length } : null; });
@@ -4115,19 +4228,19 @@ async function testeTela() {
       const out = { formacao: m.textContent, larg: m.clientWidth, cabe: mede() <= m.clientWidth + 0.5, longos: [] };
       const txt0 = m.textContent;
       const textos = ["Lance de R$ 100: você lidera", "Alguém chegou antes: R$ 100", "Esse jogador já fechou", "Não deu para dar o lance", "Toque de novo para confirmar R$ 100",
-        "Digite o valor do lance", "Você passou neste jogador", "Seu máximo neste jogador: R$ 100", "Aguarde o próximo jogador"]
+        "Digite o valor do lance", "Você passou neste jogador", "Seu máximo neste jogador: R$ 100", "Aguarde o próximo jogador", "Aguarde o próximo jogador · seu máximo R$ 100"]
         .concat(["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim", "valor", "antes", "fechado"].map(k => TM.leilaoSessao.textoMotivo(k, { max: 100, valor: 100 })));
       textos.forEach(t => { m.textContent = t; const w = mede(); if (w > m.clientWidth + 0.5) out.longos.push(t + " (" + Math.round(w) + " px)"); });
       m.textContent = txt0;
       const v = document.querySelector(".lei-valor"), cs = getComputedStyle(v), cv = document.createElement("canvas").getContext("2d");
       cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
       const livre = v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
-      out.placeholder = { txt: "Até R$ 100", larg: Math.round(cv.measureText("Até R$ 100").width), livre: Math.round(livre), real: v.placeholder };
+      out.placeholder = { txt: v.placeholder, larg: Math.round(cv.measureText(v.placeholder).width), livre: Math.round(livre) };
       return out;
     });
     await p.setViewportSize({ width: 390, height: 844 });
-    confere("T5 em 360 px a linha da barra de lance mostra inteiros o aviso da formação e os outros textos, e o campo de outro valor o máximo ('Até R$ X')",
-      /^Formação agora é 4-2-4/.test(linha.formacao) && linha.cabe && !linha.longos.length && linha.placeholder.larg <= linha.placeholder.livre && /^(Até R\$ \d+|Outro valor)$/.test(linha.placeholder.real), linha);
+    confere("T5 em 360 px a linha da barra de lance mostra inteiros o aviso da formação e os outros textos (também o máximo da pausa), e o campo 'Outro valor' inteiro (o texto de verdade, com a fonte do campo)",
+      /^Formação agora é 4-2-4/.test(linha.formacao) && linha.cabe && !linha.longos.length && linha.placeholder.txt === "Outro valor" && linha.placeholder.larg <= linha.placeholder.livre, linha);
     await p.evaluate(() => TM.leilaoSessao.acelerar(2));
     await p.click(".lei-cab .tb-back");
     await espera(400);
@@ -4238,6 +4351,24 @@ async function testeTela() {
     confere("T8 a formação troca para uma em que o time cabe (as que não cabem ficam apagadas com o motivo)",
       // (o time pode caber numa formação só: então todas as outras estão apagadas com o motivo)
       (forma.alvo ? V.meu.escalacao.formacao === forma.alvo : forma.off.length === 5) && forma.off.every(t => /não cabe/.test(t)), { forma, agora: V.meu.escalacao.formacao });
+    // o campinho cheio em cada formação em que o time cabe, em 360×740: as linhas retas e nada sobre nada (a nota e o −N saem
+    // da caixa da vaga: a revisão de 15/11 achou o nome do zagueiro central do 5-4-1 sobre a nota do goleiro)
+    await p.setViewportSize({ width: 360, height: 740 });
+    const formaAntes = V.meu.escalacao.formacao, formasCheias = [];
+    for (const f of await p.evaluate(() => [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].filter(b => !b.disabled).map(b => b.querySelector(".lei-forma-f").textContent))) {
+      await p.evaluate(f => { const b = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].find(x => x.querySelector(".lei-forma-f").textContent === f); if (b && !b.classList.contains("active")) b.click(); }, f);
+      await ate(p, f => TM.leilaoSessao.atual().ver().meu.escalacao.formacao === f && !!document.querySelector(".lei-cv-esc"), f, 5000);
+      await espera(200);
+      const s = await sobreposicao(p);
+      const linhas = await p.evaluate(() => { const tops = {}; document.querySelectorAll(".lei-cv-esc .lei-cv-vaga").forEach(v => { const g = (v.getAttribute("aria-label") || "").match(/vaga de (\w+)/); const k = g ? g[1] : "?"; (tops[k] = tops[k] || new Set()).add(v.style.top); });
+        return Object.values(tops).every(x => x.size === 1); });
+      formasCheias.push({ f, retas: linhas, sobre: s.sobre.slice(0, 3), encostam: s.encostam.slice(0, 3), fora: s.fora.slice(0, 3) });
+    }
+    await p.evaluate(f => { const b = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].find(x => x.querySelector(".lei-forma-f").textContent === f); if (b && !b.classList.contains("active")) b.click(); }, formaAntes);
+    await ate(p, f => TM.leilaoSessao.atual().ver().meu.escalacao.formacao === f, formaAntes, 5000);
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T8 o campinho cheio da Escalação em cada formação em que o time cabe (360×740): as linhas retas e nada sobre nada (a nota, o −N e os nomes)",
+      formasCheias.length >= 1 && formasCheias.every(x => x.retas && !x.sobre.length && !x.encostam.length && !x.fora.length), formasCheias);
     await print(p, "8-escalacao");
     // Pronto → o campeonato: quem confirmou vai sozinho à aba Campeonato
     await p.evaluate(() => TM.leilaoSessao.acelerar(1));
