@@ -30,7 +30,8 @@
                 comSemente("leilao:" + código + ":" + id + ":" + trava): ninguém o calcula antes de escolher
      feito      { …o reservado, e, res, ts } o resultado, gravado UMA vez (o reservado com a mesma trava) e só então mostrado
    Motivos de reservar: 'pedido' (a pessoa do jogo tocou em Simular), 'prazo' (o prazo venceu pela testemunha da hora),
-   'abertura' (bot × bot; pessoa × pessoa até o PR 5) e 'dono' (Simular os pendentes). O 3D reservado que passa de
+   'abertura' (bot × bot; pessoa × pessoa até o PR 5), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
+   outro técnico, com o dono fora há mais de 5 min). O 3D reservado que passa de
    2 × duração × 1,3 + 8 min sem resultado é W.O. de quem reservou (decisão 15; o 3D é do PR 4).
 
    O resultado gravado (`res`): o do motor nos 90' (score, events, stats, sentOff) e, no mata-mata empatado, `pror` { score,
@@ -58,7 +59,7 @@
   var REALISMO = 3;                 // a sala é fixa para todos: realismo 3, mando neutro
   var DURACAO_3D = 4;               // min por tempo no 3D (PR 4: a sala escolhe)
   var MODOS = ["simulado", "3d"];
-  var MOTIVOS = ["pedido", "prazo", "abertura", "dono"];
+  var MOTIVOS = ["pedido", "prazo", "abertura", "dono", "pendentes"];
   var ESTADOS = ["aberto", "reservado", "feito"];
   var WO = 3;                       // o W.O.: 3 × 0
   var PARA_CORTE = 90;              // a prorrogação começa no 91'

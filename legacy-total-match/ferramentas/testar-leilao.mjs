@@ -2911,7 +2911,7 @@ async function testeCampSessao() {
       if (parar) {
         const achou = await V.anda(() => {
           const c = A.ver().camp, mj = c && c.meuJogo;
-          return !!(c && c.rodada && c.rodada.n === parar && mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.prazo.restante > 30000 && c.pendentes === 1);
+          return !!(c && c.rodada && c.rodada.n === parar && mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.prazo.restante > 30000 && c.rodada.jogos.filter(g => g.e !== "feito").length === 1);
         });
         ok(achou, "K2: o jogo da pessoa da 2ª rodada nunca ficou aberto sozinho");
         parou = { hora: A.hora(), feitos: JSON.stringify(A.jogos), rodada: A.ver().camp.rodada.n };
@@ -3090,13 +3090,21 @@ async function testeCampOnline() {
       if (f.length) recusas.push({ op, caminho, f });
       return false;
     };
-    // ---------- o servidor guarda a história de cada jogo (a hora do servidor de cada mudança do nó) ----------
-    const HIST = {};   // código → { ult: { id: canon }, log: { id: [{ hora, j }] } }
+    // ---------- o servidor guarda a história de cada jogo (a hora do servidor de cada mudança do nó) e a de cada
+    // batimento (a presença de cada conta: os `ts` que o servidor pôs) ----------
+    const HIST = {};   // código → { ult: { id: canon }, log: { id: [{ hora, j }] }, bates: { uid: [ts] } }
     const escreveOrig = banco._escreve.bind(banco);
     banco._escreve = itens => {
-      const toca = [];
-      for (const [ps] of itens) if (ps[0] === "leiloes" && HIST[ps[1]] && (ps.length <= 2 || ps[2] === "jogos")) toca.push(ps);
+      const toca = [], bts = [];
+      for (const [ps] of itens) {
+        if (ps[0] === "leiloes" && HIST[ps[1]] && (ps.length <= 2 || ps[2] === "jogos")) toca.push(ps);
+        if (ps[0] === "leiloes" && HIST[ps[1]] && ps[2] === "bate" && ps.length >= 4) bts.push(ps);
+      }
       escreveOrig(itens);
+      for (const ps of bts) {
+        const b = banco.ler("leiloes/" + ps[1] + "/bate/" + ps[3]), H = HIST[ps[1]], L = (H.bates[ps[3]] = H.bates[ps[3]] || []);
+        if (b && typeof b.ts === "number" && L[L.length - 1] !== b.ts) L.push(b.ts);
+      }
       for (const ps of toca) {
         const H = HIST[ps[1]], ids = ps.length >= 4 ? [ps[3]] : [...new Set(Object.keys(banco.ler("leiloes/" + ps[1] + "/jogos") || {}).concat(Object.keys(H.ult)))];
         for (const id of ids) {
@@ -3136,16 +3144,17 @@ async function testeCampOnline() {
       uids.forEach((u, i) => { sala.tec[u] = { nome: "Pessoa " + u.toUpperCase(), num: "2000-000" + i, papel: i ? "tecnico" : "dono", pronto: true, auth: "auth-" + u, entrou: i, clube: { nome: "Clube " + u.toUpperCase(), sigla: u.toUpperCase().slice(0, 3), cor: CORES[i], escudo: "classico|star" }, formacao: "4-4-2" }; });
       SS._sala.refazBots(sala);
       sala.ordem = SS._sala.ordemPrevista(sala);
-      HIST[cod] = { ult: {}, log: {} };
+      HIST[cod] = { ult: {}, log: {}, bates: {} };
       banco.gravar("leiloes/" + cod, { sala, lotes: { l: lotes, f: fora, T, liga, ed: "public" }, vivo: fim });
       return { T, ordem: sala.ordem, ctx, fim, sala };
     }
     // a vista resumida (o que todo aparelho tem de ver igual)
     const resumo = S => { const c = S.ver().camp; return c ? JSON.stringify({ r: c.rodadas.map(R0 => R0.jogos.map(g => [g.id, g.a, g.b, g.e, g.placar, g.venc])), t: c.tabela && c.tabela.map(x => [x.t, x.pts, x.sg, x.gp]), c: c.campeao, cl: c.classificacao, a: c.artilharia.slice(0, 5).map(x => [x.id, x.gols]), f: c.fim }) : "sem camp"; };
     // a história de cada jogo no servidor: uma reserva, um resultado e nada depois; o prazo da pessoa com 2 min correndo
-    function confereHist(cod, S, id, conta) {
+    function confereHist(cod, S, id, conta, so) {
       const H = HIST[cod], c = S.ver().camp, ctxC = S._campCtx();
       c.rodadas.forEach(R0 => R0.jogos.forEach(g => {
+        if (so && !so.includes(g.id)) return;
         const L = H.log[g.id] || [], res = L.filter(x => x.j && x.j.e === "reservado"), fe = L.filter(x => x.j && x.j.e === "feito");
         ok(res.length === 1 && fe.length === 1 && L[L.length - 1].j && L[L.length - 1].j.e === "feito", `${id}: ${g.id} com ${res.length} reservas e ${fe.length} resultados no servidor`);
         if (!res.length || !fe.length) return;
@@ -3160,8 +3169,33 @@ async function testeCampOnline() {
           const ant = k > 0 ? L[k - 1].j : null;
           ok(ant && ant.e === "aberto" && !ant.parado && ant.ini + ant.resta <= res[0].hora, `${id}: ${g.id} reservado pelo prazo ANTES de vencer pela hora do servidor (${ant ? ant.ini + ant.resta - res[0].hora : "?"} ms)`);
           ok(corre >= LC.PRAZO, `${id}: ${g.id} reservado pelo prazo com só ${corre / 1000} s de prazo correndo no servidor`);
+          const pres = presenteCorrendo(cod, S, g, L, k);
+          if (pres != null) {
+            conta.presMin = Math.min(conta.presMin ?? Infinity, Math.round(pres / 100) / 10);
+            ok(pres >= LC.PRAZO - 1000, `${id}: ${g.id} reservado pelo prazo com a pessoa presente só ${(pres / 1000).toFixed(1)} s do prazo correndo (pelos batimentos dela no servidor)`);
+          }
         }
       }));
+    }
+    // quanto do prazo correndo (o nó aberto e não parado, pela história do servidor, até a reserva k) a pessoa do jogo
+    // esteve PRESENTE pelos batimentos dela no servidor (presente entre dois bates com no máximo 12 s um do outro, e do
+    // último bate até a reserva quando ele tem no máximo 12 s); null = não é o jogo de uma pessoa contra um bot ou ela saiu
+    // da sala
+    function presenteCorrendo(cod, S, g, L, k) {
+      const c = S._campCtx(), ordem = S._ordem();
+      if (LC.confronto(c, g) !== "pessoaBot") return null;
+      const p = c.tipos[g.a] === "pessoa" ? g.a : g.b, uid = ordem[p], tc = S.sala.tec[uid];
+      if (!tc || tc.saiu) return null;
+      const R = L[k].hora, B = (HIST[cod].bates[uid] || []).filter(x => x <= R).sort((x, y) => x - y), pres = [];
+      for (let i = 0; i + 1 < B.length; i++) if (B[i + 1] - B[i] <= 12000) pres.push([B[i], B[i + 1]]);
+      if (B.length && R - B[B.length - 1] <= 12000) pres.push([B[B.length - 1], R]);
+      let soma = 0;
+      for (let i = 0; i < k; i++) {
+        const x = L[i].j; if (!x || x.e !== "aberto" || x.parado) continue;
+        const a = L[i].hora, b = L[i + 1].hora;
+        for (const [p0, p1] of pres) soma += Math.max(0, Math.min(b, p1) - Math.max(a, p0));
+      }
+      return soma;
     }
     // a pessoa: simula o próprio jogo quando a regra diz (2 s depois de ver o jogo aberto)
     function pilotoOnline(S, simula) {
@@ -3206,12 +3240,21 @@ async function testeCampOnline() {
         let SB = await B.abrir("KODOIS");
         await anda(() => SA.sala.meta.estado === "camp" && SB.sala.meta.estado === "camp", 200_000);
         ok(SA.sala.meta.estado === "camp" && typeof SA.sala.meta.camp === "number", `${id}: a escalação não passou ao campeonato em 60 s`);
-        // o jogo da 2ª pessoa abre (o prazo corre): ela toca em Simular no MESMO instante em que o dono simula os pendentes
+        // o jogo da 2ª pessoa abre (o prazo corre) e ela some (a página escondida): o prazo para e o jogo passa a esperar por
+        // ela. Ela volta e toca em Simular no MESMO instante em que o dono — que ainda não viu a volta (a rede dele chega
+        // 2 s atrasada) — toca em "Simular os pendentes": duas transações no mesmo jogo
         await anda(() => { const mj = SB.ver().camp && SB.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.podeSimular); }, 60_000);
         const idB = SB.ver().camp.meuJogo.id;
+        B.doc.esconde(true);
+        const esperou = await anda(() => { const j = SA.jogos[idB], c = SA.ver().camp; return !!(j && j.e === "aberto" && j.parado && c.podePendentes && c.pendLista.some(x => x.id === idB)); }, 60_000);
+        banco.definirLatencia(A.cli.cid, { sobe: 15, desce: 2000 });
+        B.doc.esconde(false);
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.podeSimular); }, 60_000);
+        const aindaPend = SA.ver().camp.pendLista.some(x => x.id === idB);
         const pB = SB.simular(), pA = SA.simularPendentes();
         const [rB, rA] = await espera(Promise.all([pB, pA]));
-        ok(rB.ok && rA.ok && rB.jogo && rB.jogo.e === "feito", `${id}: as respostas da corrida: ${JSON.stringify([rB.estado, rB.motivo, rA.estado, rA.motivo])}`);
+        banco.definirLatencia(A.cli.cid, 15);
+        ok(esperou && aindaPend && rB.ok && rA.ok && rB.jogo && rB.jogo.e === "feito", `${id}: as respostas da corrida: ${JSON.stringify([esperou, aindaPend, rB.estado, rB.motivo, rA.estado, rA.motivo])}`);
         await passa(2000);
         const L = HIST.KODOIS.log[idB] || [];
         ok(L.filter(x => x.j && x.j.e === "reservado").length === 1 && L.filter(x => x.j && x.j.e === "feito").length === 1, `${id}: a corrida no mesmo jogo deu ${L.length} mudanças no servidor`);
@@ -3252,11 +3295,20 @@ async function testeCampOnline() {
         const f2 = LC.gravar(j2, { trava: j2.trava, res: LC.resultadoDoJogo(c2, g2.id, j2), ts: RT.hora - 25 * H + 1000, mata: true }).jogo;
         Object.assign(s2.meta, { estado: "fim", camp: RT.hora - 25 * H - 5000, fimCamp: RT.hora - 25 * H + 2000, atividade: RT.hora - 25 * H + 2000, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 70_000 });
         banco.gravar("leiloes/KOLIM2/sala", s2); banco.gravar("leiloes/KOLIM2/jogos/" + g2.id, f2);
-        const S1 = await aparelho("l1", { latencia: 30 }).abrir("KOLIMP"), S2 = await aparelho("n1", { latencia: 30 }).abrir("KOLIM2");
+        // uma sala no campeonato PARADA há 25 h (o jogo do dono, que sumiu, esperando; a outra pessoa abre e fica): com
+        // alguém na sala, o campeonato em andamento não some
+        const P3 = salaPronta("KOLIM3", ["m0", "m1"], 2, "mata", "es", "KOm"), s3 = P3.sala;
+        const c3 = ctxDaSala(P3, "KOLIM3", "KOm", 4), g3 = LC.montar(c3, {}).rodadas[0].jogos.find(g => g.a !== 0 && g.b !== 0) || LC.montar(c3, {}).rodadas[0].jogos[1];
+        const j3 = LC.reservar(null, { ab: [g3.a, g3.b], esc: [LC.escalacaoDoJogo(c3, g3.a), LC.escalacaoDoJogo(c3, g3.b)], modo: "simulado", por: -1, motivo: "abertura", ts: RT.hora - 25 * H }).jogo;
+        const f3 = LC.gravar(j3, { trava: j3.trava, res: LC.resultadoDoJogo(c3, g3.id, j3), ts: RT.hora - 25 * H + 1000, mata: true }).jogo;
+        Object.assign(s3.meta, { estado: "camp", camp: RT.hora - 25 * H - 5000, atividade: RT.hora - 25 * H, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 70_000 });
+        banco.gravar("leiloes/KOLIM3/sala", s3); banco.gravar("leiloes/KOLIM3/jogos/" + g3.id, f3);
+        const S1 = await aparelho("l1", { latencia: 30 }).abrir("KOLIMP"), S2 = await aparelho("n1", { latencia: 30 }).abrir("KOLIM2"), S3 = await aparelho("m1", { latencia: 30 }).abrir("KOLIM3");
         await passa(120_000);
         ok(banco.ler("leiloes/KOLIMP/sala") && !S1.apagada && !S1.alterada, `${id}: a sala no campeonato com um jogo gravado há 2 h sumiu (${S1.alterada})`);
         ok(!banco.ler("leiloes/KOLIM2/sala") && S2.apagada, `${id}: a sala do fim de 25 h atrás não sumiu (${S2.alterada} ${JSON.stringify(S2.alteradaJogo)})`);
-        S1.parar(); S2.parar();
+        ok(banco.ler("leiloes/KOLIM3/sala") && !S3.apagada && !S3.alterada, `${id}: o campeonato parado há 25 h sumiu com alguém dentro da sala (${S3.alterada})`);
+        S1.parar(); S2.parar(); S3.parar();
       }
 
       /* ---------- passar: com as regras opcionais VALENDO, o dono passa o clube no instante em que o batimento do aparelho
@@ -3369,6 +3421,143 @@ async function testeCampOnline() {
         const kb = devs.slice(0, 7).map(d => (d.bytes().desce / 1024).toFixed(0));
         nota(`oito: ${JSON.stringify(conta)}; KB baixados por aparelho no campeonato ${kb.join("/")}`);
         vivos.forEach(S => S.parar());
+      }
+
+      /* ---------- sozinho: a pessoa sozinha na sala (o outro técnico nunca abriu) some com o prazo correndo e volta: sem
+         ninguém para gravar a pausa, o prazo parou mesmo assim no último bate dela (o bate da volta diz que houve um buraco)
+         e só vence depois de 2 min com ela presente ---------- */
+      if (caso("sozinho")) {
+        const id = "KO sozinho", cod = "KOSOZ", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOs" + k }), j = LC.estrutura(c)[0].jogos.find(x => x.src.some(s => s.t === 0)); if (j && j.src.some(s => s.t >= 2)) sem = "KOs" + k; }
+        salaPronta(cod, ["s0", "s1"], 2, "pontos", "it", sem);
+        const A = aparelho("s0", { latencia: 20 }), SA = await A.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => { const mj = SA.ver().camp && SA.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }, 60_000);
+        const idA = SA.ver().camp.meuJogo.id;
+        await passa(5000);
+        A.doc.esconde(true); const tSome = RT.hora;
+        await passa(300_000);
+        const jFora = banco.ler("leiloes/" + cod + "/jogos/" + idA);
+        A.doc.esconde(false); const tVolta = RT.hora;
+        // de volta: o prazo para no último bate antes do buraco e volta a correr (nada reservado na volta)
+        await passa(20_000);
+        const jVolta = banco.ler("leiloes/" + cod + "/jogos/" + idA), L0 = HIST[cod].log[idA] || [];
+        const pausa = L0.find(x => x.j && x.j.e === "aberto" && x.j.parado);
+        ok(jFora && jFora.e === "aberto" && jVolta && jVolta.e === "aberto" && !jVolta.parado && pausa && pausa.hora >= tVolta && pausa.j.resta >= LC.PRAZO - 12_000,
+          `${id}: na volta o jogo não parou no último bate antes do buraco (${JSON.stringify({ fora: jFora, volta: jVolta, pausa: pausa && { seg: (pausa.hora - tVolta) / 1000, resta: pausa.j.resta } })})`);
+        // e vence pelo prazo só depois de ela ficar presente o que restava
+        await anda(() => { const j = SA.jogos[idA]; return !!(j && j.e === "feito"); }, 600_000);
+        const L = HIST[cod].log[idA] || [], jr = L.find(x => x.j && x.j.e === "reservado");
+        ok(jr && jr.j.motivo === "prazo" && jr.hora > tSome && (jr.hora - tVolta) >= (pausa ? pausa.j.resta : LC.PRAZO) - 1000,
+          `${id}: reservado ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) + " s depois da volta por '" + jr.j.motivo + "'" : "nunca"} (restavam ${pausa ? pausa.j.resta / 1000 : "?"} s)`);
+        confereHist(cod, SA, id, conta, [idA]);
+        nota(`sozinho: o prazo parou no último bate (restavam ${pausa ? (pausa.j.resta / 1000).toFixed(1) : "?"} s) e venceu ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) : "?"} s depois da volta; a pessoa presente ${conta.presMin ?? "?"} s do prazo`);
+        SA.parar();
+      }
+
+      /* ---------- dormem: as duas pessoas, cada uma contra um bot, travam o celular ao mesmo tempo com o prazo correndo e
+         voltam juntas: ninguém viu ninguém sumir, e nenhum dos dois jogos é simulado pelo prazo na volta ---------- */
+      if (caso("dormem")) {
+        const id = "KO dormem", cod = "KODORM", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOz" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOz" + k; }
+        salaPronta(cod, ["z0", "z1"], 2, "pontos", "it", sem);
+        const A = aparelho("z0", { latencia: 20 }), B = aparelho("z1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => [SA, SB].every(S => { const mj = S.ver().camp && S.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }), 60_000);
+        const ids = [SA, SB].map(S => S.ver().camp.meuJogo.id);
+        await passa(10_000);
+        A.doc.esconde(true); B.doc.esconde(true);
+        await passa(180_000);
+        A.doc.esconde(false); B.doc.esconde(false); const tVolta = RT.hora;
+        await passa(30_000);
+        const naVolta = ids.map(i => banco.ler("leiloes/" + cod + "/jogos/" + i));
+        ok(naVolta.every(j => j && j.e === "aberto" && !j.parado && j.resta >= LC.PRAZO - 15_000), `${id}: na volta, os jogos: ${JSON.stringify(naVolta)}`);
+        await anda(() => ids.every(i => SA.jogos[i] && SA.jogos[i].e === "feito"), 600_000);
+        ids.forEach(i => {
+          const L = HIST[cod].log[i] || [], jr = L.find(x => x.j && x.j.e === "reservado");
+          ok(jr && jr.j.motivo === "prazo" && jr.hora - tVolta >= LC.PRAZO - 15_000, `${id}: ${i} reservado ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) + " s depois da volta por '" + jr.j.motivo + "'" : "nunca"}`);
+        });
+        confereHist(cod, SA, id, conta, ids);
+        nota(`dormem: a pessoa presente ${conta.presMin ?? "?"} s do prazo no pior jogo`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- semdono: o DONO some com o jogo dele contra um bot esperando: nos primeiros 5 min só o dono teria o
+         "Simular os pendentes"; depois, o outro técnico presente tem (motivo 'pendentes') e o campeonato vai ao fim ---------- */
+      if (caso("semdono")) {
+        const id = "KO semdono", cod = "KOSEMD", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "mata", T: 4, semente: "KOx" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOx" + k; }
+        salaPronta(cod, ["x0", "x1"], 2, "mata", "it", sem);
+        const A = aparelho("x0", { latencia: 20 }), B = aparelho("x1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await passa(3000);
+        A.doc.esconde(true); const tSome = RT.hora;    // o dono fecha o app
+        const pil = pilotoOnline(SB, () => true);
+        await passa(4 * 60_000);
+        const c4 = SB.ver().camp, r4 = await espera(SB.simularPendentes());
+        const idDono = c4.rodada.jogos.find(g => g.a === 0 || g.b === 0).id;
+        ok(c4.pendentes === 1 && !c4.podePendentes && c4.pendLista[0].id === idDono && c4.pendLista[0].t === 0 && !r4.ok && r4.motivo === "dono",
+          `${id}: com o dono fora há 4 min, o outro técnico já podia simular os pendentes (${JSON.stringify({ pend: c4.pendentes, pode: c4.podePendentes, r4 })})`);
+        await anda(() => SB.ver().camp.podePendentes, 120_000);
+        const c5 = SB.ver().camp;
+        ok(c5.podePendentes && c5.pendQuem === "outro" && RT.hora - tSome >= 5 * 60_000 - 15_000, `${id}: o "Simular os pendentes" não passou ao outro técnico (${(RT.hora - tSome) / 1000} s; ${JSON.stringify({ pode: c5.podePendentes, quem: c5.pendQuem })})`);
+        // o outro técnico toca sempre que o campeonato espera pelo dono (a final também pode ser do dono contra um bot)
+        let n = 0;
+        while (SB.sala.meta.estado !== "fim" && n < 4) {
+          if (!(await anda(() => SB.sala.meta.estado === "fim" || SB.ver().camp.podePendentes, 3600_000))) break;
+          if (SB.sala.meta.estado === "fim") break;
+          const r = await espera(SB.simularPendentes()); n++;
+          ok(r.ok && r.n >= 1, `${id}: o "Simular os pendentes" do outro técnico: ${JSON.stringify(r)}`);
+        }
+        await anda(() => SB.sala.meta.estado === "fim", 3600_000);
+        ok(SB.sala.meta.estado === "fim" && n >= 1, `${id}: o campeonato não acabou sem o dono (${SB.sala.meta.estado}; ${n} toques)`);
+        const jr = (HIST[cod].log[idDono] || []).find(x => x.j && x.j.e === "reservado");
+        ok(jr && jr.j.motivo === "pendentes" && jr.j.por === 1, `${id}: o jogo do dono reservado por '${jr && jr.j.motivo}' (por ${jr && jr.j.por})`);
+        pil.parar();
+        // o dono volta e vê tudo gravado
+        A.doc.esconde(false);
+        await passa(20_000);
+        ok(resumo(SA) === resumo(SB) && !SA.alterada && !SB.alterada, `${id}: o dono voltou e viu outro campeonato`);
+        confereHist(cod, SB, id, conta);
+        nota(`semdono: ${JSON.stringify(conta)} (${n} toques do outro técnico)`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- pendentes: o "Simular os pendentes" do dono só simula os jogos de quem NÃO está aqui — nunca o do dono
+         (ele tem o Simular partida) nem o de quem está presente com o prazo correndo ---------- */
+      if (caso("pendentes")) {
+        const id = "KO pendentes", cod = "KOPEND", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOy" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOy" + k; }
+        salaPronta(cod, ["y0", "y1"], 2, "pontos", "it", sem);
+        const A = aparelho("y0", { latencia: 20 }), B = aparelho("y1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => [SA, SB].every(S => { const mj = S.ver().camp && S.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }), 60_000);
+        const idA = SA.ver().camp.meuJogo.id, idB = SB.ver().camp.meuJogo.id;
+        await passa(9000);
+        const c1 = SA.ver().camp, r1 = await espera(SA.simularPendentes());
+        const j1 = [idA, idB].map(i => banco.ler("leiloes/" + cod + "/jogos/" + i).e);
+        ok(c1.pendentes === 0 && !c1.podePendentes && !r1.ok && r1.motivo === "semPendentes" && j1.every(e => e === "aberto"),
+          `${id}: com as duas pessoas presentes, o dono ia simular ${c1.pendentes} jogo(s) (${JSON.stringify({ r1, j1 })})`);
+        // B some: o jogo dele passa a esperar por quem não está aqui; o do dono, não
+        B.doc.esconde(true);
+        await anda(() => { const c = SA.ver().camp; return !!(c.podePendentes && c.pendentes === 1); }, 60_000);
+        const c2 = SA.ver().camp, r2 = await espera(SA.simularPendentes());
+        await passa(2000);
+        const jA = banco.ler("leiloes/" + cod + "/jogos/" + idA), jB = banco.ler("leiloes/" + cod + "/jogos/" + idB);
+        ok(c2.pendLista.length === 1 && c2.pendLista[0].id === idB && c2.pendLista[0].t === 1 && r2.ok && r2.n === 1 && jB.e === "feito" && jB.motivo === "dono" && jA.e === "aberto",
+          `${id}: o dono simulou ${JSON.stringify({ lista: c2.pendLista, r2, jA: jA && jA.e, jB: jB && [jB.e, jB.motivo] })}`);
+        B.doc.esconde(false);
+        await anda(() => SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", 6 * 3600_000);
+        confereHist(cod, SA, id, conta);
+        nota(`pendentes: ${JSON.stringify(conta)}`);
+        SA.parar(); SB.parar();
       }
       // as regras opcionais não recusaram nenhuma gravação honesta (e recusam as adulterações do campeonato)
       ok(!recusas.length, `as regras opcionais recusariam ${recusas.length} gravações honestas: ${JSON.stringify(recusas.slice(0, 3))}`);

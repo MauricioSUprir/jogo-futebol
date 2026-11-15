@@ -6981,6 +6981,10 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-pend-txt { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .lei-pend-t { font-weight: 800; font-size: 14px; }
 .lei-pend-s { font-size: 12px; line-height: 1.4; color: var(--text-dim); }
+.lei-pend-lista { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lei-pend-j { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 0; font-size: 12px; line-height: 1.4; min-width: 0; }
+.lei-pend-quem { font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.lei-pend-cl { color: var(--text-dim); overflow-wrap: anywhere; min-width: 0; }
 .lei-pend .btn { flex: 1 1 200px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
 /* a rodada à mostra: ‹ título › e os jogos */
 .lei-rodada { display: flex; flex-direction: column; gap: 10px; }

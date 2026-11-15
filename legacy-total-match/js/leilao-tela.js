@@ -1220,11 +1220,12 @@
     }).join("|");
     var mj = C.meuJogo;
     return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot],
-      C.folga, C.eliminado, C.pendentes, C.podePendentes, VIEW.campSel, VIEW.ocupado, pendVisivel(V),
+      C.folga, C.eliminado, C.pendentes, C.podePendentes, C.pendQuem, (C.pendLista || []).map(function (x) { return x.id + ":" + x.t; }).join(","),
+      VIEW.campSel, VIEW.ocupado, pendVisivel(V),
       V.tecnicos.map(function (t) { return [t.clube.nome, t.clube.cor, t.clube.escudo, t.clube.sigla, t.nome, t.saiu, t.ausente]; })]);
   }
-  // "Simular os pendentes" (o dono, online): só depois de a rodada estar aberta há 8 s (os jogos dos bots e os de amigo
-  // contra amigo são simulados na abertura, escalonados: o botão não pisca a cada rodada)
+  // "Simular os pendentes" (online; o dono ou, com ele fora há mais de 5 min, qualquer técnico presente): só os jogos que
+  // esperam por quem não está aqui, e só depois de a rodada estar aberta há 8 s (quem pisca não vira pendente)
   var PEND_ESPERA = 8000;
   function pendVisivel(V) {
     var C = V.camp;
@@ -1413,10 +1414,21 @@
     }, "btn", "fast-forward");
     bt.disabled = !!VIEW.ocupado || !podeAgir(V);
     bt.dataset.foco = "pendentes"; bt.classList.add("lei-pend-bt");
+    // quais jogos e de quem: quem não está aqui em destaque
+    var lista = el("ul", { class: "lei-pend-lista" }, (C.pendLista || []).map(function (x) {
+      var y = V.tecnicos[x.t];
+      return el("li", { class: "lei-pend-j", data: { jogo: x.id } }, [
+        el("span", { class: "lei-pend-quem", text: (y ? y.nome : "Técnico") + " não está aqui" }),
+        el("span", { class: "lei-pend-cl", text: nomeClube(V, x.a) + " × " + nomeClube(V, x.b) })
+      ]);
+    }));
     return el("div", { class: "lei-caixa lei-pend" }, [
       el("div", { class: "lei-pend-txt" }, [
-        el("span", { class: "lei-pend-t", text: C.pendentes === 1 ? "1 jogo sem resultado nesta rodada" : C.pendentes + " jogos sem resultado nesta rodada" }),
-        el("span", { class: "lei-pend-s", text: "Você é o dono da sala: simule os jogos de quem não está aqui para a rodada andar." })
+        el("span", { class: "lei-pend-t", text: C.pendentes === 1 ? "1 jogo esperando quem não está aqui" : C.pendentes + " jogos esperando quem não está aqui" }),
+        el("span", { class: "lei-pend-s", text: C.pendQuem === "outro"
+          ? "O dono não está aqui há mais de 5 min: qualquer técnico pode simular estes jogos para a rodada andar."
+          : "Você é o dono da sala: simule os jogos de quem não está aqui para a rodada andar." }),
+        lista
       ]),
       bt
     ]);

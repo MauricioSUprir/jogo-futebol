@@ -13,7 +13,7 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 |---|---|
 | `vivo` (o leilão ao vivo) | o `seq` que volta; o valor do lance que desce no mesmo lote; **lance depois do fim do lote** (o servidor é o juiz da hora: `now`); **apagar só o `vivo`** (a regra fica em `leiloes/<código>`, que continua existindo: por isso vale também para apagar) |
 | `vivo/abre`, `vivo/t` | hora que não seja a do servidor (`now`) |
-| `bate/<uid>` | batimento com hora que não seja a do servidor; batimento gravado por outra conta |
+| `bate/<uid>` | batimento com hora que não seja a do servidor; batimento gravado por outra conta; a presença contínua (`ant`, `cont`, `falta`: bates anteriores) no futuro ou fora de número |
 | `pres/<uid>`, `escal/<t>` | presença e escalação gravadas por outra conta (o autor tem de ser o `auth.uid` gravado em `sala/tec/<uid>/auth`) |
 | `sala`, `sala/meta` | apagar só a `sala`, a `meta` ou o dono, o estado, as regras ou a criação; trocar o dono; `criada`, `atividade` e `fimLeilao` com hora que não seja a do servidor; estado fora da lista |
 | `sala/tec/<uid>/auth` | trocar a conta de um técnico (só ao entrar, com a do próprio pedido); apagar só a conta |

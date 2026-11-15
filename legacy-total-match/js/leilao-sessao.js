@@ -18,7 +18,9 @@
      escal/{t}  { formacao, tit: [índice global × 11] (só a escalação feita à mão), pronto }; a automática é função pura
      vendas/{i} { t, v (o preço), s (o seq do lote) }: registro para a tela (a verdade é o vivo.d)
      pres/{uid}/{sid}  true por conexão (online; o onDisconnect apaga)
-     bate/{uid}  { ts, sid, desde, n } a cada 5 s com a página à vista (online; é a testemunha da hora)
+     bate/{uid}  { ts, sid, desde, ant, cont, falta } a cada 5 s com a página à vista (online; é a testemunha da hora). A
+              presença contínua: ant = o bate anterior desta conta que este aparelho conhece (a hora do servidor), cont =
+              desde quando ela está sem buraco de mais de 12 s, falta = o último bate antes desse buraco (corridaDe)
      relogio  só no treino: a hora do treino (ms) na última ação; o relógio do treino PARA com a página fechada ou
               escondida e volta daí (recarregar a página no meio volta ao mesmo ponto, com o tempo que faltava)
      jogos/{id}  a máquina de cada jogo do campeonato (leilao-camp.js: aberto → reservado → feito), SÓ por transação, uma
@@ -34,9 +36,12 @@
    escalonado como no leilão: bot × bot (e, até o PR 5, pessoa × pessoa) é reservado e simulado ao abrir a rodada; o jogo
    de uma pessoa contra um bot tem o prazo de 2 min para começar, que só corre com a pessoa presente (pausar/retomar pelo
    batimento dela; no treino ela está sempre presente: o relógio do treino é que para) e, vencido pela testemunha da hora,
-   é simulado por qualquer um; a pessoa toca em "Simular partida" (simular): reservar com a trava do servidor → simular
+   é simulado por qualquer um. Quem some sem ninguém ver (sozinha na sala, todos com o celular travado) não perde o prazo:
+   o bate dela diz que houve um buraco depois de o prazo começar e o prazo para no último bate antes dele e volta a correr
+   (qualquer aparelho, o dela primeiro); a pessoa toca em "Simular partida" (simular): reservar com a trava do servidor → simular
    com a semente e as escalações GRAVADAS → gravar → só então o resultado volta para a tela mostrar. O dono tem
-   simularPendentes(). A escalação mudada vale a partir do próximo jogo que não começou (a reserva grava a do momento).
+   simularPendentes() (só os jogos que esperam por quem está AUSENTE; com o dono fora há mais de 5 min, qualquer técnico
+   presente tem). A escalação mudada vale a partir do próximo jogo que não começou (a reserva grava a do momento).
    Quem saiu da sala ("Sair da sala") conta como bot nos jogos. Todo nó novo de jogos é conferido (leilao-camp.js
    conferirJogo: os times, as escalações e o simulado RECALCULADO uma vez por nó); o feito que muda ou o jogo que some
    congelam a sala, como o vivo.
@@ -72,7 +77,8 @@
    A sessão: ver() (tudo o que as telas mostram; no campeonato, ver().camp) · lance('+1'|'+5'|'+10'|'tudo'|número) ·
      passar() · mudarFormacao(f) · trocar(a, b) · prontoEscalacao(sim) · sair() · parar() · aoMudar(fn) · on(evento, fn) ·
      escalacao(t) · hora()
-     O campeonato: simular(id?) (o meu jogo da rodada, sem id) · simularPendentes() (só o dono) · partida(id) (o jogo
+     O campeonato: simular(id?) (o meu jogo da rodada, sem id) · simularPendentes() (o dono; sem ele há 5 min, qualquer
+     técnico presente) · partida(id) (o jogo
      gravado com os dois times pelas escalações gravadas: o "Ver o jogo" no 2D)
      Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial; também o formato) · pronto(sim) ·
      meuClube(clube) · comecar() · passarClube(uidVelho, uidNovo) · encerrar() · assumir() · reconectar()
@@ -97,6 +103,7 @@
   var VOLTA_MS = 5000;           // escondida por mais que isso: "Atualizando…" na volta (e, sem o ack, goOffline/goOnline)
   var ESCALONA_MS = 1500;        // o k-ésimo presente espera 1,5 s × k depois do momento certo
   var SALTO_MS = 1000;           // o relógio de parede e o monótono se desencontraram mais que isso: testemunha nova
+  var DONO_FORA_MS = 5 * 60000;  // o dono fora há mais que isso: "Simular os pendentes" passa a qualquer técnico presente
   var SAGUAO_MS = 30 * 60000;    // a sala parada no saguão some depois de 30 min
   var VIDA_MS = 24 * 3600000;    // e depois de 24 h sem atividade
   var CHAVE_ONLINE = "leilao:online";   // o índice das salas online deste aparelho (Minhas salas)
@@ -156,6 +163,16 @@
     return t.toUpperCase().replace(/[^A-Z0-9]/g, "");
   }
   function num(x, p) { return typeof x === "number" && isFinite(x) ? x : p; }
+  // a presença contínua de um técnico pelo bate dele: { ini (desde quando ele está sem buraco de mais de 12 s entre dois
+  // bates, pela hora do SERVIDOR; null = desde sempre), falta (o último bate antes desse buraco; null = não se sabe) }. O
+  // 1º bate depois do buraco se reconhece pelo `ant` (o anterior); os seguintes levam o `cont` e a `falta`. O bate sem
+  // `ant` (o 1º da conta na sala, ou de uma versão anterior) conta como presença contínua.
+  function corridaDe(b) {
+    if (!b || typeof b.ts !== "number") return null;
+    if (typeof b.ant !== "number") return { ini: null, falta: null };
+    if (b.ts - b.ant > AUSENTE_MS) return { ini: b.ts, falta: b.ant };
+    return { ini: typeof b.cont === "number" ? b.cont : null, falta: typeof b.falta === "number" ? b.falta : null };
+  }
   function lista(x) {
     // o Firebase devolve como lista um nó de chaves 0..n (escal/0, vendas/12…): aceita os dois
     if (!x) return {};
@@ -346,7 +363,7 @@
       case "naoEhSeu": return "Esse jogo não é seu";
       case "espera": return "Esse jogo ainda não abriu";
       case "jogando": return "Esse jogo já está sendo jogado";
-      case "semPendentes": return "Nenhum jogo pendente nesta rodada";
+      case "semPendentes": return "Nenhum jogo esperando por quem não está aqui";
       case "fase": return "Agora não dá";
       default: return "Agora não dá";
     }
@@ -392,6 +409,8 @@
     // o online: o batimento, a rede e a testemunha
     S._estadoBate = "ok"; S._bateEmVoo = false; S._timerBate = null; S._bateN = 0; S._meuBate = 0; S._desde = null;
     S._oculta = false; S._ocultaDesde = 0; S._twFila = null; S._aoOk = []; S._presArmada = false; S._euAntes = null;
+    // a presença contínua desta conta (corridaDe): herdada do bate que está no servidor no 1º bate desta sessão
+    S._cont = null; S._falta = null; S._herdar = true;
   }
   var P = Sessao.prototype;
 
@@ -805,6 +824,38 @@
     if (!S.online) return S._ordem()[S.eu] === s.meta.dono;
     return !!(S.uidEu && s.meta.dono === S.uidEu);
   };
+  // o dono fora da sala há mais de 5 min (pelo último bate dele, na hora `agora`; saiu da sala = fora): sem ele, o
+  // "Simular os pendentes" passa a qualquer técnico presente (senão a rodada que espera pelo dono nunca andaria)
+  P._donoFora = function (agora) {
+    var S = this, s = S.sala, dono = s && s.meta && s.meta.dono, tc = dono && s.tec && s.tec[dono];
+    if (!S.online || !tc) return false;
+    if (tc.saiu) return true;
+    var b = S.bates && S.bates[dono], visto = b && typeof b.ts === "number" ? b.ts : num(s.meta.camp, 0);
+    return agora - visto >= DONO_FORA_MS;
+  };
+  // quem pode tocar em "Simular os pendentes" agora: 'dono', 'outro' (o dono fora há mais de 5 min) ou null
+  P._quemPendentes = function (agora) {
+    var S = this;
+    if (!S.online || S.eu < 0 || S.soOlhar) return null;
+    if (S._souDono()) return "dono";
+    return S._donoFora(agora) ? "outro" : null;
+  };
+  /** Os jogos da rodada da vez que esperam por quem está AUSENTE (o jogo de uma pessoa contra um bot com ela fora: o prazo
+   *  parado ou o jogo nem aberto): [{ id, a, b, t (quem não está aqui) }]. Bot × bot e (até o PR 5) amigo × amigo são
+   *  simulados ao abrir a rodada; o jogo de quem está aqui tem o "Simular partida" dele (o meu também); o reservado é
+   *  gravado por qualquer aparelho e o 3D em andamento (PR 4) fica. */
+  P._pendentes = function (V, agora) {
+    var S = this, c = S._campCtx(), out = [];
+    if (!S.online || !c || !V || V.fim || V.atual < 0) return out;
+    V.rodadas[V.atual].jogos.forEach(function (g) {
+      if (!g.aberta || g.e === "feito" || g.a == null || g.b == null || g.invalido || (g.j && g.j.e === "reservado")) return;
+      if (LC().confronto(c, g) !== "pessoaBot") return;
+      var p = c.tipos[g.a] === "pessoa" ? g.a : g.b;
+      if (p === S.eu || !S._ausente(p, agora)) return;
+      out.push({ id: g.id, a: g.a, b: g.b, t: p });
+    });
+    return out;
+  };
 
   // o registro da venda é de quem fechou o lote; se ele caiu antes de gravar, qualquer presente grava o mesmo valor
   // depois de 3 s (escalonado como o resto): a verdade continua sendo o vivo.d
@@ -877,12 +928,26 @@
   // a testemunha da hora, uma de cada vez (duas ao mesmo tempo no mesmo caminho se atrapalham: a leitura de depois do
   // ack de uma veria o valor local da outra)
   P._testemunha = function () {
-    var S = this, rede = S.rede, uid = S.uidEu;
-    var extra = { sid: S.sid, desde: S._desde != null ? S._desde : rede.TS };
-    var p = (S._twFila || Promise.resolve()).then(function () { return rede.testemunha("bate/" + uid, extra); });
+    var S = this, rede = S.rede, uid = S.uidEu, ant = null;
+    var p = (S._twFila || Promise.resolve()).then(function () {
+      // o bate anterior desta conta (o deste aparelho com ack ou, mais novo, o que está no servidor: outra aba, a sessão
+      // antes de recarregar) e a corrida dele, herdada no 1º bate desta sessão
+      var b = S.bates && S.bates[uid];
+      if (S._herdar) { var c = corridaDe(b); S._cont = c ? c.ini : null; S._falta = c ? c.falta : null; S._herdar = false; }
+      ant = Math.max(S._meuBate, num(b && b.ts, 0)) || null;
+      var extra = { sid: S.sid, desde: S._desde != null ? S._desde : rede.TS };
+      if (ant != null) extra.ant = ant;
+      if (S._cont != null) extra.cont = S._cont;
+      if (S._falta != null) extra.falta = S._falta;
+      return rede.testemunha("bate/" + uid, extra);
+    });
     S._twFila = p.then(null, function () {});
     return p.then(function (ts) {
-      if (ts != null) { S._meuBate = Math.max(S._meuBate, ts); if (S._desde == null) S._desde = ts; }
+      if (ts != null) {
+        S._meuBate = Math.max(S._meuBate, ts); if (S._desde == null) S._desde = ts;
+        // um buraco de mais de 12 s desde o bate anterior (pela hora do servidor): a presença recomeça aqui
+        if (ant != null && ts - ant > AUSENTE_MS) { S._cont = ts; S._falta = ant; }
+      }
       return ts;
     });
   };
@@ -985,7 +1050,7 @@
   P.assumir = function () {
     var S = this;
     if (!S.online || S.parado) return;
-    S.outraAba = false; S._desde = null; S._bateEmVoo = false; S._bateN++;
+    S.outraAba = false; S._desde = null; S._bateEmVoo = false; S._bateN++; S._herdar = true;
     S._ligaOnline(); S._programa(); S._notificar();
   };
   /** Derruba e refaz a conexão (o socket meio aberto do iPhone). */
@@ -1033,7 +1098,8 @@
     var ps = S._presentes(agora), k = ps.indexOf(S.eu);
     return ESCALONA_MS * (k < 0 ? ps.length : k);
   };
-  // quando a sala vence (a limpeza, §1.1): 30 min parada no saguão, 24 h sem atividade (o bate desta aba não conta)
+  // quando a sala vence (a limpeza, §1.1): 30 min parada no saguão, 24 h sem atividade (o bate desta aba não conta, menos
+  // no campeonato: com alguém na sala, o campeonato em andamento não some — nem o que espera por um ausente)
   P._vencimento = function () {
     var S = this, s = S.sala;
     if (!S.online || !s || !s.meta) return null;
@@ -1046,6 +1112,7 @@
       var b = S.bates[u], tc = s.tec && s.tec[u];
       if (b && tc && tc.papel !== "bot" && b.sid !== S.sid) atv = Math.max(atv, num(b.ts, 0));
     });
+    if (s.meta.estado === "camp") atv = Math.max(atv, S._meuBate);
     return atv + (s.meta.estado === "saguao" ? SAGUAO_MS : VIDA_MS);
   };
 
@@ -1140,10 +1207,13 @@
     }
   };
   /** A próxima ação num jogo da vista: { acao: 'abrir'|'retomar'|'pausar'|'reservar'|'gravar'|'wo', id, motivo?, quando,
-   *  prazo? (as decisões por prazo passam pela testemunha da hora), t? (a pessoa do jogo) } ou null. A regra é a do
-   *  leilao-camp.js proximaAcao; aqui entram o batimento de cada pessoa e o treino: a pessoa do treino está sempre presente
-   *  (o relógio do treino é que para quando ela sai das telas da sala ou esconde a página). Para o prazo parar sem ninguém
-   *  perceber, a pausa é marcada para 12 s depois do último batimento da pessoa (sem um batimento novo até lá, ela sumiu). */
+   *  prazo? (as decisões por prazo passam pela testemunha da hora), t? (a pessoa do jogo), ini e falta? (a pausa pelo
+   *  buraco) } ou null. A regra é a do leilao-camp.js proximaAcao; aqui entram o batimento de cada pessoa e o treino: a
+   *  pessoa do treino está sempre presente (o relógio do treino é que para quando ela sai das telas da sala ou esconde a
+   *  página). Para o prazo parar sem ninguém perceber, a pausa é marcada para 12 s depois do último batimento da pessoa (sem
+   *  um batimento novo até lá, ela sumiu). E quando ninguém percebeu (sozinha na sala, todos com o celular travado), o bate
+   *  dela diz que houve um buraco DEPOIS de o prazo começar: o prazo para no último bate antes do buraco (a `falta`) e volta
+   *  a correr — nunca é simulado pelo prazo com ela presente menos de 2 min. */
   P._acaoJogo = function (g, agora) {
     var S = this, c = S._campCtx();
     if (!c || !g || !g.aberta || g.a == null || g.b == null || g.e === "feito" || g.invalido) return null;
@@ -1159,10 +1229,28 @@
     if (!j) return aqui ? { acao: "abrir", id: g.id, quando: agora, t: p } : null;
     if (j.parado) return aqui ? { acao: "retomar", id: g.id, quando: agora, t: p } : null;
     var vence = j.ini + j.resta, reserva = { acao: "reservar", id: g.id, motivo: "prazo", quando: vence, prazo: vence, t: p };
-    if (!S.online || (p === S.eu && S._ativo())) return reserva;
+    if (!S.online) return reserva;
+    var eu = p === S.eu && S._ativo(), run = S._corrida(p);
+    // eu, com o último bate velho (o aparelho travou sem esconder a página): o próximo bate diz se houve buraco
+    if (eu && agora - S._meuBate > AUSENTE_MS) return null;
+    if (run && run.ini != null && run.ini > j.ini) return { acao: "pausar", id: g.id, quando: agora, t: p, ini: j.ini, falta: run.falta != null ? run.falta : j.ini };
+    if (eu) return reserva;
     var b = S.bates[S._ordem()[p]], visto = num(b && b.ts, 0), some = visto + AUSENTE_MS;
     if (some < vence) return { acao: "pausar", id: g.id, quando: some, prazo: some, t: p, desde: visto };
     return reserva;
+  };
+  // a presença contínua do técnico t (corridaDe): a minha pelo que este aparelho sabe (o ack de cada bate), a dos outros
+  // pelo bate deles
+  P._corrida = function (t) {
+    var S = this;
+    if (t === S.eu && S._ativo()) return { ini: S._cont, falta: S._falta };
+    return corridaDe(S.bates[S._ordem()[t]]);
+  };
+  // a pessoa do jogo esteve presente sem buraco desde que o prazo começou a correr (o reservar pelo prazo confere de novo
+  // depois da testemunha: o bate dela pode ter chegado no meio)
+  P._semBuraco = function (t, j) {
+    var run = this._corrida(t);
+    return !(j && j.e === "aberto" && !j.parado && run && run.ini != null && run.ini > j.ini);
   };
   // a transação no vivo com uma função pura do leilao.js; quem fechou um lote vendido grava o registro da venda.
   // agora = a hora da decisão (a da testemunha no online; sem ela, a do relógio)
@@ -1319,12 +1407,23 @@
     if (a.acao === "abrir") return S._transJogo(g.id, function (cur) { return LC().abrir(cur, { ts: TS }); });
     if (a.acao === "retomar") return S._transJogo(g.id, function (cur) { return LC().retomar(cur, { ts: TS }); });
     if (a.acao === "pausar") {
+      // o buraco depois de o prazo começar: para no último bate antes dele (só no mesmo trecho do prazo que se viu: quem
+      // já parou e retomou deixou outro `ini`)
+      if (a.falta != null) return S._transJogo(g.id, function (cur) {
+        if (!cur || cur.e !== "aberto" || cur.parado || cur.ini !== a.ini) return { ok: false, motivo: "mudou" };
+        return LC().pausar(cur, { quando: a.falta });
+      });
       // confere de novo com os batimentos que chegaram até a testemunha: voltou (bate fresco) = o prazo continua
       if (!S._ausente(a.t, hora)) return Promise.resolve({ feito: false, motivo: "voltou" });
-      var b = S.bates[S._ordem()[a.t]], desde = num(b && b.ts, num(a.desde, hora));
+      var b = S.bates[S._ordem()[a.t]], run = corridaDe(b), desde = num(b && b.ts, num(a.desde, hora));
+      // ela voltou e sumiu de novo sem ninguém ver: o prazo não corre no buraco de antes
+      if (run && run.ini != null && g.j && run.ini > g.j.ini) desde = run.falta != null ? run.falta : g.j.ini;
       return S._transJogo(g.id, function (cur) { return LC().pausar(cur, { quando: desde }); });
     }
-    if (a.acao === "reservar") return S._reservarEGravar(g, a.motivo, a.motivo === "prazo" ? hora : null, -1);
+    if (a.acao === "reservar") {
+      if (a.motivo === "prazo" && S.online && !S._semBuraco(a.t, g.j)) return Promise.resolve({ feito: false, motivo: "buraco" });
+      return S._reservarEGravar(g, a.motivo, a.motivo === "prazo" ? hora : null, -1);
+    }
     if (a.acao === "gravar") return S._gravarJogo(g.id);
     if (a.acao === "wo") return S._transJogo(g.id, function (cur) { return LC().wo(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
     return Promise.resolve({ feito: false, motivo: "nada" });
@@ -1454,7 +1553,8 @@
    *  'aberto'|'reservado'|'feito', res e placar GRAVADOS), atual, rodada (a da vez), tabela (pontos), ligaFeita, fim, campeao,
    *  classificacao, artilharia, melhorTime ({ t, soma }), notas ([{ t, soma }] no fim), tipos, meuJogo ({ id, rodada, a, b,
    *  adversario, contraBot, mata, e, prazo: { fim, restante, parado, resta } | null, placar, res, venc, podeSimular,
-   *  motivo }), folga, eliminado, pendentes (os jogos da rodada da vez ainda sem resultado), podePendentes (o dono),
+   *  motivo }), folga, eliminado, pendentes (quantos jogos da rodada da vez esperam por quem está ausente), pendLista
+   *  ([{ id, a, b, t }]), podePendentes, pendQuem ('dono' | 'outro': o dono fora há mais de 5 min),
    *  inicio, fimCamp }. Nada aqui recalcula partida: tudo sai dos jogos gravados. */
   P._verCamp = function (agora) {
     var S = this, c = S._campCtx(), V = c ? S._vista() : null, s = S.sala;
@@ -1480,13 +1580,13 @@
       var naMata = V.rodadas.some(function (Rx) { return Rx.fase === "mata" && Rx.jogos.some(function (g) { return g.a === eu || g.b === eu; }); });
       if (!naMata) eliminado = true;
     }
-    var pend = R ? R.jogos.filter(function (g) { return g.e !== "feito"; }).length : 0;
+    var pend = S._pendentes(V, agora), quem = S._quemPendentes(agora);
     return {
       formato: c.formato, T: c.T, rodadas: V.rodadas, atual: V.atual, rodada: R, tabela: V.tabela, ligaFeita: V.ligaFeita, fim: V.fim,
       campeao: V.campeao, classificacao: V.classificacao, artilharia: V.artilharia, melhorTime: V.melhorTime,
       notas: V.fim ? LC().somaNotas(c) : null, tipos: c.tipos.slice(), meuJogo: mj,
       folga: !!(R && eu >= 0 && R.folgas.indexOf(eu) >= 0), eliminado: eliminado,
-      pendentes: pend, podePendentes: S._souDono() && pend > 0 && !V.fim && !S.soOlhar && !S._impede(),
+      pendentes: pend.length, pendLista: pend, pendQuem: quem, podePendentes: !!quem && pend.length > 0 && !V.fim && !S._impede(),
       inicio: c.inicio, fimCamp: s && s.meta ? num(s.meta.fimCamp, null) : null, alteradaJogo: S.alteradaJogo
     };
   };
@@ -1659,24 +1759,31 @@
       return S.rede.ler("jogos/" + g.id).then(function (j) { return respostaJogo(g, j); });
     }, function (e) { return { ok: false, estado: "recusado", motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
   };
-  /** O dono: "Simular os pendentes" — reserva (motivo 'dono') e simula os jogos da rodada da vez que ainda não têm
-   *  resultado (os de quem está ausente, cujo prazo parou). O 3D em andamento (PR 4) fica. Promise({ ok, estado, n }). */
+  /** "Simular os pendentes": reserva e simula os jogos da rodada da vez que esperam por quem está AUSENTE (_pendentes: o
+   *  prazo parado ou o jogo nem aberto; nunca o de quem está aqui com o prazo correndo, nem o meu). É do dono (motivo
+   *  'dono'); com o dono fora há mais de 5 min, de qualquer técnico presente (motivo 'pendentes'; a testemunha da hora
+   *  confirma pela hora do servidor). Promise({ ok, estado, n }). */
   P.simularPendentes = function () {
     var S = this;
     if (S.parado) return recusa("parado");
     if (S.soOlhar) return recusa("fase");
-    if (!S._souDono()) return recusa("dono");
+    var quem = S._quemPendentes(S.hora());
+    if (!quem) return recusa("dono");
     var imp = S._impede(); if (imp && imp !== "conferindo") return recusa(imp, imp === "conexao" ? { rede: S._estadoRede() } : null);
-    var V = S._vista(); if (!V) return recusa("naoCamp");
-    if (V.fim) return recusa("campFim");
-    var R = V.rodadas[V.atual], eu = S.eu;
-    var pend = R.jogos.filter(function (g) { return g.e !== "feito" && g.a != null && g.b != null && !g.invalido && !(g.j && g.j.e === "reservado" && g.j.modo !== "simulado"); });
-    if (!pend.length) return recusa("semPendentes");
-    return Promise.all(pend.map(function (g) {
-      var p = g.j && g.j.e === "reservado" ? S._gravarJogo(g.id) : S._reservarEGravar(g, "dono", null, eu);
-      return p.then(null, function () { return { feito: false }; });
-    })).then(function (rs) {
-      return { ok: true, estado: "aceito", n: rs.filter(function (r) { return r.feito; }).length, pendentes: pend.length };
+    var V0 = S._vista(); if (!V0) return recusa("naoCamp");
+    if (V0.fim) return recusa("campFim");
+    if (!S._pendentes(V0, S.hora()).length) return recusa("semPendentes");
+    var eu = S.eu, pre = quem === "dono" ? Promise.resolve(null) : S._testemunha();
+    return pre.then(function (hs) {
+      if (S.parado) return { ok: false, estado: "recusado", motivo: "parado" };
+      if (quem !== "dono" && (hs == null || !S._donoFora(hs))) return { ok: false, estado: "recusado", motivo: "dono" };
+      var V = S._vista(), pend = V ? S._pendentes(V, hs != null ? hs : S.hora()) : [];
+      if (!pend.length) return { ok: false, estado: "recusado", motivo: "semPendentes" };
+      return Promise.all(pend.map(function (x) {
+        return S._reservarEGravar(jogoDaVista(V, x.id), quem === "dono" ? "dono" : "pendentes", null, eu).then(null, function () { return { feito: false }; });
+      })).then(function (rs) {
+        return { ok: true, estado: "aceito", n: rs.filter(function (r) { return r.feito; }).length, pendentes: pend.length };
+      });
     });
   };
 

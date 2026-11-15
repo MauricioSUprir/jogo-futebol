@@ -49,7 +49,10 @@
             "ts": { ".validate": "newData.val() === now" },
             "desde": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "sid": { ".validate": "newData.isString()" },
-            "n": { ".validate": "newData.isString()" }
+            "n": { ".validate": "newData.isString()" },
+            "ant": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            "cont": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            "falta": { ".validate": "newData.isNumber() && newData.val() <= now" }
           }
         },
         "pres": {
