@@ -52,12 +52,13 @@
              resultado gravado (o nó, "Jogado em 3D", o 2D do Ver o jogo) — e o 3D aberto com o app fechado no meio: depois
              do prazo do 3D, o W.O. gravado pela OUTRA página (o uid de quem grava, pelo banco falso); quem fechou volta e vê
              o W.O.
-     par3d   (P1–P7; PR 5) 3 páginas, Pontos corridos (um jogo por rodada, a 3ª folga), 3 min: o jogo de amigo contra amigo no
+     par3d   (P1–P9; PR 5) 3 páginas, Pontos corridos (um jogo por rodada, a 3ª folga), 3 min: o jogo de amigo contra amigo no
              Online 3D do par, com o WebRTC DE VERDADE no loopback e o quadro de ensaio (o pedido online): os dois tocam em Jogar
              e o par liga (o pedido com o lado 0 = o anfitrião, os mesmos times e a semente, o mando neutro, online.simular; a
              porta nos dois sentidos); o fim do 3D nas duas gravado UMA vez e igual nas três e no servidor; o "Simular partida" de
              um dos dois; a ligação que não dá (o prazo encurtado) = o simulado; quem sai = W.O.; nada sobre nada no Seu jogo do
-             par nos 8 tamanhos, escuro e claro
+             par nos 8 tamanhos, escuro e claro; a ligação que cai no meio = o simulado (P8); o chamado noutra aba (a faixa, o
+             selo, o Jogar dela) e o Jogar de 44 px, apagado de verdade (P9)
    Uma linha por item; o código de saída é 1 se algum reprovar (no CI, um job por caso).
    Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito,tresd,par3d] [--fator 6] [--prints <pasta>] [-v]
    (o Chromium do Playwright: NODE_PATH com o playwright e, se preciso, PLAYWRIGHT_BROWSERS_PATH; como no golaco) */
@@ -1887,7 +1888,7 @@ async function casoPar3d() {
     return ap.p.evaluate(() => TM.ui.current() === "leilao-camp");
   }
   const estadoTela = ap => ap.p.evaluate(() => TM.leilaoTela.estado()).catch(() => null);
-  const CAM = ["3d", "simular", "falha", "sai"], E = {};
+  const CAM = ["3d", "simular", "falha", "sai", "cai"], E = {};
   for (let rod = 1; rod <= CAM.length; rod++) {
     const cam = CAM[rod - 1];
     // o jogo da rodada (o calendário: um por rodada; a 3ª página folga)
@@ -1896,8 +1897,35 @@ async function casoPar3d() {
     const V0 = await ver(aps[0]), g = V0.camp.rodada.jogos[0], X = await pagina(g.a), Y = await pagina(g.b);
     const x = E[cam] = { id: g.id, a: g.a, b: g.b };
     if (cam === "falha") for (const ap of [X, Y]) await ap.p.evaluate(() => { TM.online3d.api.PRAZO_MS = 1; });
+    if (cam === "3d") {
+      // (a revisão do PR 5: o Jogar com ≥ 44 px e, apagado, apagado de verdade — opacidade ≤ 0,5 e sem a sombra do botão principal)
+      await ate(X.p, () => { const b = document.querySelector(".lei-jogar"); return !!(b && !b.disabled); }, null, real(120000));
+      x.bt = await X.p.evaluate(() => {
+        const b = document.querySelector(".lei-jogar"), h = b.getBoundingClientRect().height, op0 = getComputedStyle(b).opacity;
+        b.disabled = true; const cs = getComputedStyle(b), r = { h, op0, op: +cs.opacity, sombra: cs.boxShadow }; b.disabled = false;
+        return r;
+      });
+      // (o chamado em outra aba da sala, M2: B na Escalação vê a faixa "{A} chamou você para o jogo em 3D" com o Jogar e o selo na aba
+      // Campeonato; o Jogar da faixa é o 2º toque)
+      await Y.p.evaluate(() => TM.ui.go("leilao-escalacao"));
+    }
     x.j1 = await jogar(X, g.id, true);
-    x.j2 = await jogar(Y, g.id, false);
+    if (cam === "3d") {
+      x.chamado = await ate(Y.p, () => { const f = document.querySelector(".lei-chamado"); return !!(f && !f.hidden && /chamou você para o jogo em 3D/.test(f.textContent) && f.querySelector(".btn:not(:disabled)")); }, null, real(60000));
+      x.selo = await Y.p.evaluate(() => !!document.querySelector('.lei-aba[data-rota="leilao-camp"] .lei-aba-selo'));
+      const tamY = Y.p.viewportSize();
+      x.chamadoNada = [];
+      for (const [w, h] of [[390, 844], [1280, 800]]) {
+        await Y.p.setViewportSize({ width: w, height: h });
+        await espera(250);
+        await Y.p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); const f = document.querySelector(".lei-chamado"); if (f) f.scrollIntoView({ block: "center" }); });
+        const sy = await sobreposicao(Y.p);
+        if (sy.sobre.length || sy.encostam.length || sy.saem.length || sy.fora.length || sy.rolaLado || sy.atras) x.chamadoNada.push({ w, h, sobre: sy.sobre.slice(0, 3), encostam: sy.encostam.slice(0, 3), saem: sy.saem.slice(0, 3), fora: sy.fora.slice(0, 3) });
+        await print(Y, `par-chamado-${w}x${h}`);
+      }
+      if (tamY) await Y.p.setViewportSize(tamY);
+      x.j2 = x.chamado && await clicaSel(Y, ".lei-chamado .btn");
+    } else x.j2 = await jogar(Y, g.id, false);
     if (cam !== "falha") {
       const [fx, fy] = await Promise.all([quadroLigado(X, real(240000)), quadroLigado(Y, real(240000))]);
       x.ligou = !!(fx && fy);
@@ -1913,6 +1941,9 @@ async function casoPar3d() {
           x.r3 = await fx.evaluate(() => window.__ens.resultado());
         } else if (cam === "simular") await fy.evaluate(() => window.__ens.sair({ motivo: "simular" }));
         else if (cam === "sai") await fx.evaluate(() => window.__ens.sair({ abandono: true }));
+        // (a revisão do PR 5, M3: a ligação caiu no meio — os dois 3D mandam o fim com o W.O. 'caiu', cada um como vencedor, e o
+        // placar parcial gravado em localStorage com o online.wo, como o GOLAÇO): o simulado, nunca o W.O.
+        else if (cam === "cai") await Promise.all([[fx, 0], [fy, 1]].map(([f, l]) => f.evaluate(l => { const r = window.__ens.resultado(), on = { wo: { vencedor: l, motivo: "caiu" }, hashFinal: 1 }; r.online = on; window.__ens.fim(r, on); }, l)));
       }
     }
     x.feito = await ateNode(() => { const j = jogoDe(g.id); return !!(j && j.e === "feito"); }, real(600000), 200);
@@ -1928,7 +1959,7 @@ async function casoPar3d() {
     if (cam === "falha") for (const ap of [X, Y]) await ap.p.evaluate(f => { TM.online3d.api.PRAZO_MS = 15000 * f; }, FATOR);
   }
   const uidDe = async ap => ap.uid, ladoDe = (x, t) => t === x.a ? 0 : 1;
-  const A3 = E["3d"], AS = E.simular, AF = E.falha, AX = E.sai;
+  const A3 = E["3d"], AS = E.simular, AF = E.falha, AX = E.sai, AC = E.cai;
   confere(`${ID}2 os dois tocam em Jogar e o Online 3D do par liga (o WebRTC de verdade): o pedido online nos dois quadros com o lado 0 = o anfitrião, os mesmos times, a mesma semente, o mando neutro, 3 min e o "Simular partida" (online.simular); a porta nos dois sentidos`,
     !!A3 && A3.j1 && A3.j2 && A3.ligou && A3.ped[0].lado === 0 && A3.ped[1].lado === 1 && A3.ped[0].userSide === "home" && A3.ped[1].userSide === "away" && A3.ped[0].simular === true && A3.ped[1].simular === true
     && A3.ped[0].semente === A3.ped[1].semente && A3.ped[0].casa === A3.ped[1].casa && A3.ped[0].fora === A3.ped[1].fora && A3.ped.every(p => p.neutro === true && p.min === 3 && p.n[0] === 11 && p.n[1] === 11) && A3.bin.every(n => n >= 18),
@@ -1946,6 +1977,12 @@ async function casoPar3d() {
   confere(`${ID}6 quem sai no meio do 3D perde por W.O. (o anfitrião saiu: 0 × 3), gravado uma vez; o 3D do outro fecha e as três veem o mesmo`,
     !!AX && AX.ligou && AX.feito && AX.j.res.wo === ladoDe(AX, AX.a) && AX.j.woPor === "saiu" && AX.iguais && AX.fechou && AX.camp && AX.escritas.filter(w => w.e === "feito").length === 1,
     AX && { ligou: AX.ligou, wo: AX.j && AX.j.res && AX.j.res.wo, por: AX.j && AX.j.woPor, iguais: AX.iguais, fechou: AX.fechou, escritas: AX.escritas });
+  confere(`${ID}8 a ligação que cai no meio do 3D (o W.O. 'caiu' dos dois lados, o placar parcial em localStorage com o online.wo): o simulado com a semente, gravado uma vez, nunca o W.O.; as três veem o mesmo`,
+    !!AC && AC.ligou && AC.feito && AC.j.fim === "simulado" && !AC.j.res.em3d && AC.j.res.wo == null && AC.j.woPor == null && AC.iguais && AC.fechou && AC.camp && AC.escritas.filter(w => w.e === "feito").length === 1,
+    AC && { ligou: AC.ligou, fim: AC.j && AC.j.fim, wo: AC.j && AC.j.res && AC.j.res.wo, woPor: AC.j && AC.j.woPor, iguais: AC.iguais, escritas: AC.escritas, tela: AC.tela });
+  confere(`${ID}9 o chamado do amigo noutra aba da sala (B na Escalação): a faixa "{A} chamou você para o jogo em 3D" com o Jogar, o selo na aba Campeonato e nada sobre nada; o Jogar da faixa é o 2º toque. O Jogar: ≥ 44 px e, apagado, opacidade ≤ 0,5 sem sombra`,
+    !!A3 && A3.chamado && A3.selo && A3.j2 && A3.chamadoNada && !A3.chamadoNada.length && A3.bt && A3.bt.h >= 44 && A3.bt.op <= 0.5 && A3.bt.sombra === "none",
+    A3 && { chamado: A3.chamado, selo: A3.selo, j2: A3.j2, nada: A3.chamadoNada, bt: A3.bt });
   // nada sobre nada no Seu jogo do par (esperando o outro tocar), nos 8 tamanhos, escuro e claro — o próximo jogo de A
   const V5 = await ver(aps[0]);
   let nada = null;
