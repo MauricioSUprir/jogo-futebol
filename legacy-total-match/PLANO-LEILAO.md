@@ -1425,3 +1425,59 @@ KO):
     sorteia; na 2ª passou).
   - **CI**: o `--so telas,tresd` no job das telas do online (nenhum job a mais); o `--tela` ~7 min com o T14. O
     `testar-3d.mjs` continua fora do CI (o GOLAÇO de verdade, à mão).
+
+**A revisão do PR 4** (três lentes: regras e determinismo, telas e produto, regressão; os achados conferidos no código e os
+consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leilao-tela.js`, `js/tm3d.js`, as regras opcionais):
+- **Grave — o resultado do 3D só chegava no "Voltar ao Total Match"** (confirmado: o golaco grava
+  `localStorage["tm3d:resultado:<id>"]` no apito e só manda o `tm3d:fim` no botão da faixa do fim, depois da cena do
+  pós-jogo e dos melhores momentos; fechar o app ali dava W.O. de quem jogou a partida inteira). Conserto: com o gancho, o
+  `abre3d` olha esse localStorage enquanto o quadro está aberto e chama `cfg.aoResultado(r3)` (o leilão grava já ali, sem
+  mostrar; o `tm3d:fim` depois devolve o gravado); a GUARDA `tm3d:guarda:<id>` (posta quando o 3D abre; o
+  `limpaSobras` e o `termina` não apagam o resultado guardado; ela vence em 1 h); a CAIXA do aparelho
+  (`leilao:3d:<código>` = { id, trava, abriu, pedido, r3 }): o resultado do 3D fica nela ANTES de gravar e o MOTOR grava o
+  guardado (a ação `gravar3d` do `_acaoJogo`, também lendo o `tm3d:resultado:<pedido>` depois de recarregar) até o jogo ser
+  decidido; decidido, a caixa e a guarda saem (`_confere3d`, `_larga3d` → `TM.tm3d.soltaResultado`). Com o GOLAÇO de
+  verdade (`testar-3d` seção 7) o gravar sai 1,7 s antes do `tm3d:fim` no "Simular o resto".
+- **Grave — o X confirmado depois de o 3D abrir dava W.O.** (confirmado: o `tm3d:tela` tirava o X mas não a confirmação, e o
+  `termina('sair')` sem motivo com o `abriu` não gravava nada). Conserto: o X e o "Simular a partida" da demora mandam
+  `dados.doTM` ('x' | 'demora'); com o gancho, eles gravam o simulado também com o `abriu` (é o que a confirmação promete;
+  os outros modos ignoram o campo).
+- **Médio — versões misturadas na sala** (confirmado nas duas lentes: o PR mudou a máquina de `jogos/` sem subir o
+  `REGRAS`). Conserto: `REGRAS` 2; o aparelho de antes (v384) só olha as salas novas (o `regras !== 1` dele); este aceita
+  as de regras 1 e 2 (`REGRAS_ACEITAS`, `regrasAceitas`) e, nas de regras 1 (criadas antes do PR 4, com um v384 dentro),
+  não tem o Jogar (`_com3d`: `podeJogar` falso, `com3d: false`, o botão some, `jogar3d` → 'sem3d') e congela com um nó do
+  3D nelas ('forma') — o treino salvo antes do deploy segue, só com o Simular. (Escolhida a alternativa que não tranca as
+  salas em andamento; trancar seria só subir o número.)
+- **Médio — o abriu tentado uma vez só e a reserva pela estimativa** (confirmado). Conserto: o `abriu3d(id, trava, pedido)`
+  guarda o `abriu` na caixa e, se a transação falha, o motor insiste (a ação `abriu`) até ele ficar gravado ou o jogo ser
+  decidido; o `_reservaNoServidor` sem o nó em 10 s LÊ o nó do servidor (`rede.ler`) e, sem ele, o 3D não abre
+  ('reservaSemServidor': sem o abriu, o simulado em 2 min).
+- **Médio — o 3D aberto num jogo já decidido** (confirmado). Conserto: a vigia da rota `leilao-jogar` (`S.aoMudar` com o
+  quadro aberto, `TM.tm3d.aberto()`): o jogo que deixa de ser o reservado com a trava (e não é o MEU feito `'3d'`, que sai
+  no apito com o 3D no pós-jogo) fecha o quadro (`TM.tm3d.fechar`) com o aviso e leva ao 2D do gravado (o W.O., ao
+  Campeonato).
+- **Médio — o gravar3d que desistia perdia o 3D** (confirmado). Conserto: a caixa acima (o resultado guardado antes; o
+  motor insiste a cada volta e ao reabrir a sala) e uma gravação por vez para o mesmo 3D (`_grav3d`: o apito, o `tm3d:fim`
+  e o motor usam a mesma promessa). O Seu jogo diz "Gravando o resultado do 3D…" com o resultado no aparelho.
+- **Médio — preso de 16 a 34 min sem saída** (confirmado; a decisão 15 fica). Conserto: no Seu jogo, para quem reservou e
+  sem o 3D aberto nesta página, "Aceitar o W.O. agora" (o 3D abriu; com a confirmação; `desistir3d` → `desistir`: o W.O. de
+  quem reservou com `desistiu: true`, que a conferência aceita a qualquer hora depois do `abriu` e só de quem reservou) e
+  "Simular agora" (o 3D que nem abriu: o `gravar3d('simulado')` de sempre). Vale no treino e no online. O "Simular os
+  pendentes" do dono continua sem o 3D reservado (quem está jogando não perde o jogo para outro).
+- **Médio — "Como funciona" sem o Jogar nem o W.O.** e o texto do Campeonato antes dele: reescritos.
+- **Leves**: o reservado → reservado (abriu) agora exige o mesmo `por`, `motivo` e `inicio` (a conferência e o `.validate`);
+  "W.O." na chave e no pôster do fim ("Final: vitória/derrota por W.O. contra X"); a etiqueta "3D" do Saguão e o bloco
+  "Partidas em 3D" (Saguão do dono e Criar sala online) só com bots; a fala "W.O.." sem o ponto repetido.
+- **Testes**: TD10 (as regras 2 e a sala de regras 1), TD11 (aceitar o W.O.), TD12 (o `por` trocado no abriu congela), TD13
+  (o gravar que falha e o app fechado depois do apito: gravado pelo motor antes do prazo), TD14 (o abriu que falha); o T14
+  com 6 técnicos e os jogos 7 (o apito: gravado com o 3D aberto; recarregar não perde nada e nada sobra), 8 (o X depois de
+  o 3D abrir = o simulado) e 9 (a vigia), o "Aceitar o W.O. agora" (jogos 3 e 5) e o "Simular agora" (jogo 6); a página de
+  ensaio com os modos `apito` e `tardio`. Na base (bc628213) o T14 reprova os jogos 3, 5, 6 e 7 (o 7 fica reservado e o
+  8 nem começa) e o TD, no TD10. Rodados: `testar-leilao.mjs` 18/18 blocos (65 s), `--tela` 76/76 (324 s),
+  `testar-leilao-online.mjs --so telas,tresd,dois` 34/34, `testar-3d` 71/71 (pro) e 70/70 (`--publica`),
+  `testar-online3d` 24/24, `conferir-estilos.py` 0.
+- **Lições**: mudança na máquina de um nó compartilhado sobe o `REGRAS` (e decide o que fazer com as salas em andamento:
+  aceitar as velhas sem a peça nova); o que o 3D grava no apito é a verdade do jogo — esperar o botão do fim é perder a
+  partida quando o app fecha; uma confirmação aberta pode sobreviver ao estado que a criou: o que ela promete tem de ir
+  junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
+  já volta depois de queda e de recarregar), não um laço solto na tela.

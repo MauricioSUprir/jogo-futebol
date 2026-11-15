@@ -157,9 +157,10 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   campeão, a classificação, o artilheiro e o melhor time). **PR 4 PRONTO** (branch `claude/leilao`; TM v385): OS SEUS
   JOGOS CONTRA OS BOTS EM 3D — o "Jogar" do Seu jogo abre a tela antes do jogo do 3D (Jogar partida ou Simular partida),
   com a duração e a dificuldade da SALA (escolhidas na Criar sala ou no Saguão; padrão 4 min e Normal) travadas; o
-  resultado é gravado antes de o 2D mostrar; o 3D que fecha sem resultado vira W.O. depois do prazo, o que nem abriu, o
-  simulado; com "Sempre simular" ou sem WebGL 2, o simulado direto. Detalhes técnicos na seção TOTAL MATCH ("Modo
-  Leilão"). Próximos: PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
+  resultado é gravado antes de o 2D mostrar (já no apito final do 3D, antes da cena do pós-jogo); o 3D que fecha sem
+  resultado vira W.O. depois do prazo (ou na hora, com o "Aceitar o W.O. agora"), o que nem abriu, o simulado; com
+  "Sempre simular" ou sem WebGL 2, o simulado direto. Salas criadas antes do PR 4 (regras 1) seguem valendo, sem o Jogar.
+  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximos: PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
   simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
@@ -1451,8 +1452,18 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   gravado, sem pausa. Prazos: sem o `abriu`, 2 min → o simulado (`naoAbriu`); com ele, 2 × duração × 1,3 + 8 min → o W.O.
   de quem reservou (`wo`), por qualquer aparelho. A conferência aceita o 3D pela forma (`res3dValido`). A sala:
   `duracao3d` (3–10, padrão 4) e `dificuldade3d` (padrão Normal) na Criar e no Saguão ("Partidas em 3D"; zera os Pronto).
-  Testes: TD (Node), `--tela` T14 (o treino pela página de ensaio do 3D, `ferramentas/lib/ensaio-3d.mjs`: o fim do 3D, o
-  Simular da tela, o 3D fechado = W.O., "Sempre simular", recarregar no meio; nada sobre nada; `--so3d`), o caso `tresd`
+  Revisão do PR 4 (PLANO §8, "A revisão do PR 4"): `REGRAS` 2 (o aparelho de antes só olha as salas novas; as de regras 1
+  seguem valendo, sem o Jogar: `regrasAceitas`, `_com3d`); o resultado do 3D gravado no APITO (o `tm3d.js` olha o
+  `localStorage["tm3d:resultado:<id>"]` com o quadro aberto: `cfg.aoResultado`; a guarda `tm3d:guarda:<id>` contra o
+  `limpaSobras`); a caixa `leilao:3d:<código>` no aparelho (o abriu, o pedido e o resultado do 3D) com que o MOTOR insiste no
+  abriu e no resultado até o jogo ser decidido (`gravar3d`/`abriu` no `_acaoJogo`); a reserva sem resposta lê o nó do
+  servidor; o X e a demora do TM pedem o simulado (`dados.doTM`); a vigia da `leilao-jogar` fecha o 3D se o jogo é decidido
+  por outro caminho; "Aceitar o W.O. agora" (`desistir`, `desistiu: true`) e "Simular agora" (o 3D que nem abriu); a
+  conferência e o `.validate` com o `por`, o `motivo` e o `inicio` iguais no abriu.
+  Testes: TD (Node; TD10–TD14 da revisão), `--tela` T14 (o treino com 6 pela página de ensaio do 3D,
+  `ferramentas/lib/ensaio-3d.mjs` — modos `apito` e `tardio` da revisão: o fim do 3D, o Simular da tela, o 3D fechado = W.O.,
+  "Sempre simular", recarregar no meio, o "Aceitar o W.O. agora", o apito, o X depois de abrir, a vigia; nada sobre nada;
+  `--so3d`), o caso `tresd`
   do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
   `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). Fica para os PRs 5–6: o par
   no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
