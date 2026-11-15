@@ -1555,3 +1555,28 @@ reprova com qualquer `.ut-card` na aba Leilão.
   na pausa, "Aguarde o próximo jogador · seu máximo R$ X"; o T5 mede o placeholder de verdade.
 - **Fica:** em 568 × 320 (o iPhone SE de 1ª geração deitado) o anel fica 30 px abaixo da barra até rolar (o topo de 44 px e
   as pílulas em 2 linhas); no 5-4-1 e no 3-5-2 em 360–390 os sobrenomes de 9–10 letras da linha de 5 ainda saem com "…".
+
+**Feito no passo 2 (a Criar sala, branch `leilao-visual-b`; o Saguão fica para o passo 3):**
+- `js/leilao-tela.js` (rota `leilao-criar`), pelas fotos `a8c8ed5a`, `79d4002b` e `a177cbb4`: seções soltas (`.lei-cs`, o título
+  `h2.lei-cs-tit` de 20 px, sem caixa): a **Liga** num cartão grande marcado com o "Trocar" (a folha das 30 ligas fica); o
+  **Formato** em 3 cartões com o desenho em SVG (`desenhoFormato`: a tabela, a chave, as duas; `seletorFormato(…, { ilustrado })`),
+  marcados pela borda e pelo fundo, sem o check, com "N rodadas com T técnicos · ~X a Y min" (a duração não quebra); os
+  **Técnicos na sala** (só no online) e os **Bots de treino** no − e + quadrados tonais com o número de 44 px e o deslizante
+  ligado (`passo(…, { deslizante })`; no treino só os bots, 1 a 7); o **Tempo de cada jogador** no segmentado das fotos (saiu do
+  "Mais opções", que acabou; a dica diz quanto dura o leilão); as **Partidas em 3D** no mesmo segmentado (`seletor3d(…, { seg })`,
+  só com bots); **Sua formação** no segmentado 3 × 2 com o campinho das vagas embaixo (`campinhoVagas(null, −1, { formacao })`: o
+  mesmo da aba Leilão, vazio, 62% da largura); **Seu clube** com o nome, a sigla e o "Escolher escudo" tonal com o escudo dentro
+  (`editorClube(…, { escolher })`, abre o seletor de hoje); e a nota do dinheiro do jogo. Embaixo a **barra fixa**
+  `.lei-criarbar`: o resumo numa linha com "…" ("**Liga Brasil A.** 4 técnicos, mata-mata, 4-4-2, leilão de cerca de …"; o
+  texto inteiro no `title`) e o "Começar o treino" / "Criar sala"; a página termina com o espaço da altura dela e o
+  scroll-padding (pelo `ResizeObserver`; ao sair, só desfaz o que ela pôs). Lado a lado a partir de 600 px de largura.
+- O Saguão continua igual: as peças novas são opções (`deslizante`, `ilustrado`, `seg`, `escolher`) e o CSS delas mora em
+  classes novas (`.lei-seg`, `.lei-formatos.ilu`, `.lei-passo.desl`, `.lei-esc-escolher`, `.lei-criar …`).
+- Testes: no `--tela` (T2) o treino com só os bots (1–7, o deslizante junto), os cartões do formato (o desenho certo, sem o
+  check, o marcado pela borda e pelo fundo e os outros iguais), a formação 3 × 2 com o campinho (as 11 vagas vazias com a
+  sigla, "0/11", o toque troca), o contraste ≥ 4,5:1 de todo texto nos dois temas, o claro, a Criar online sem a conta (os
+  técnicos 2–8, os bots 0 a T − 1 e presos quando os técnicos descem, o 3D só com bots) e, em 40 telas (treino e online, os 8
+  tamanhos e 667 × 375 e 740 × 360, escuro e claro), a barra fixa embaixo com o resumo numa linha, o último campo acima dela no
+  fim da rolagem, as seções sem caixa e a coluna ≤ 600 px; o "atrás da barra" do nada sobre nada vale também para ela. No
+  online, o D1b (a Criar com a conta: o deslizante 2–8 e 0–1, o cartão marcado, a barra e nada sobre nada nas 3 telas, escuro
+  e claro).
