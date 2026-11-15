@@ -5004,7 +5004,8 @@ async function testeTela() {
     confere("T2 tema claro da Criar sala: o texto escuro, o cartão do formato branco e o marcado num verde claro com a borda verde, a escolhida do segmentado branca, a barra clara e o campinho verde",
       claroCriar.tit < 0.3 && claroCriar.fmtOff > 0.95 && claroCriar.fmtOn > 0.85 && claroCriar.fmtOn < claroCriar.fmtOff && claroCriar.bordaOn && claroCriar.segOn > 0.95 && claroCriar.barra > 0.9 && claroCriar.resumo < 0.3 && claroCriar.grama, claroCriar);
     // a Criar da sala online (sem a conta online: a tela abre com o aviso): os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o
-    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D só com bots
+    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D SEMPRE (a revisão do PR 5: o 3D entre
+    // amigos) — a dificuldade só com bots
     await p.evaluate(() => TM.ui.go("leilao-criar", { online: true }));
     await espera(400);
     const onl = await p.evaluate(async () => {
@@ -5012,27 +5013,28 @@ async function testeTela() {
       const nT = () => +g("Técnicos na sala").querySelector(".lei-passo-n").textContent, nB = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
       const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
       const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
+      const dif3d = () => !!q('.lei-criar [data-secao="3d"] .lei-dif3d');
       const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
       const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
       for (let i = 0; i < 10; i++) g("Menos um bot").click();
-      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d(), semDif = !dif3d();
       for (let i = 0; i < 10; i++) g("Menos um técnico").click();
       const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
       for (let i = 0; i < 10; i++) g("Mais um técnico").click();
       const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
       for (let i = 0; i < 10; i++) g("Mais um bot").click();
-      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), dB7 = dv(dB);
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), comDif = dif3d(), dB7 = dv(dB);
       anda(dT, 3);
       const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
       // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
       anda(dT, 4); anda(dB, 0);
-      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(),
+      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, semDif, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, comDif, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(), semDifFim: !dif3d(),
         resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
     });
-    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D só com bots e 'Criar sala' na barra",
-      onl.aviso && onl.b0 === 0 && onl.menosBOff && onl.sem3d && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
-      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && onl.sem3dFim
-      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
+    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D sempre (sem bots, só a duração; a dificuldade com bots) e 'Criar sala' na barra",
+      onl.aviso && onl.b0 === 0 && onl.menosBOff && !onl.sem3d && onl.semDif && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
+      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.comDif && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && !onl.sem3dFim && onl.semDifFim
+      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de .*, 3D de 4 min por tempo$/.test(onl.resumo) && onl.bt === "Criar sala", onl);
     await nadaSobreCriar("criar-online");
     const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
     confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
