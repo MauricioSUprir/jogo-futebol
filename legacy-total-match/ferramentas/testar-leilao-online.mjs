@@ -892,7 +892,8 @@ async function casoDois() {
   await ate(B.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-sag-res"), null, 10000);
   const sA = await olhaSaguao(A), sB = await olhaSaguao(B), ligaD = (await ver(A)).liga.nome;
   // (as etiquetas das fotos: sem a liga — está na frase — nem os técnicos — estão em "2/2 participantes" —; sem bots, quatro)
-  const etqD = ["Até 26 jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
+  // (2 técnicos × os lotes por técnico desta versão: 40 desde os 20 por técnico, #645)
+  const etqD = ["Até " + (2 * await A.p.evaluate(() => TM.leilao.LOTES_POR_TEC)) + " jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
   const lin = (ps, u) => ps.find(x => x.uid === u) || {};
   const verde = c => { const m = (c.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 && m[1] > m[0] + 40 && m[1] > m[2] + 20; };
   const partsOk = (ps, eu) => ps.length === 2 && lin(ps, "uidAna").papel === "Dono da sala" && lin(ps, "uidAna").estado === "Pronto" && lin(ps, "uidAna").estCls === "pronto"
