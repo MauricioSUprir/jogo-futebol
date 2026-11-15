@@ -816,17 +816,17 @@
       var porG = [[], [], [], []], cntRest = new Array(16).fill(0);
       rest.forEach(function (i) { porG[ctx.gL[i]].push(i); cntRest[ctx.mL[i]]++; });
       porG.forEach(function (l) { l.sort(function (x, y) { return ctx.rank[x] - ctx.rank[y]; }); });
-      var val = {}, V = 0, sup = [0, 0, 0, 0];
+      var val = {}, V = 0, sup = [0, 0, 0, 0], dem = {};
       for (var g4 = 0; g4 < 4; g4++) {
         var l = porG[g4]; sup[g4] = l.length;
         var rep = l.length > D[g4] ? ctx.lotes[l[D[g4]]].overall : (l.length ? ctx.lotes[l[l.length - 1]].overall - 3 : 0);
         for (var x = 0; x < l.length; x++) {
           var vv = Math.pow(Math.max(0, ctx.lotes[l[x]].overall - rep), 1.5);
           val[l[x]] = vv;
-          if (x < D[g4]) V += vv;
+          if (x < D[g4]) { V += vv; dem[l[x]] = 1; }
         }
       }
-      return { D: D, G: G, V: V, val: val, sup: sup, rest: rest, cntRest: cntRest };
+      return { D: D, G: G, V: V, val: val, dem: dem, sup: sup, rest: rest, cntRest: cntRest };
     })());
   }
   /** O limite do robô no lote atual (R$; nunca acima do máximo legal). Constante dentro do lote. */
@@ -844,6 +844,10 @@
       var cabem = 0;
       for (var m = 1; m < 16; m++) if (mk.cntRest[m] && cabeAlguma(comMais(tm.cnt, m))) cabem += mk.cntRest[m];
       if (vagas(v, t) >= cabem) return max;
+      // o lote fora dos D melhores que restam no grupo (abaixo do nível de reposição) fica para quem precisar no fim: com 20
+      // lotes por técnico sobram 9 por técnico, e o R$ 1 em tudo enchia o time cedo de quem não vale nada e sobrava dinheiro
+      // (testar-leilao L7)
+      if (!mk.dem[i] && v.fase === "lotes") return 0;
       var M = 1 + (mk.V > 0 ? mk.G * (mk.val[i] || 0) / mk.V : 0);
       var nec = cabeEm(cnt, bot.formacao) ? 1 : 0.5;
       if (mk.sup[g] <= mk.D[g]) nec *= 1.3;
