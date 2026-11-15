@@ -7322,7 +7322,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-seg .seg-btn:disabled { opacity: .45; cursor: not-allowed; }
 .lei-seg .seg-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .lei-seg-t { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lei-seg-s { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; }
+.lei-seg-s { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; opacity: 1; }
 @media (hover: hover) { .lei-seg .seg-btn:not(.active):not(:disabled):hover { color: var(--text); } }
 .lei-seg.lei-forma-seg { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .lei-seg.lei-forma-seg .seg-btn { min-height: 54px; }
