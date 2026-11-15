@@ -16,7 +16,8 @@
                recusados: { uid: true } (online),
                ordem: [uid × T] (o índice t de cada técnico; gravada no Começar) }
      lotes   { l: [retrato × lotesPorTec(regras)·T: 20T (menos nas ligas pequenas com 7 e 8), 13T nas salas de regras 1 e
-               2], f: [retrato] (os de fora, para completar de graça), T, liga (online) }  gravados uma vez
+               2], f: [retrato] (os de fora, para completar de graça), T, liga, ed (online), ov ('mostra' | 'escondido':
+               o Overall da sala no Começar, PR 6 — é ele que vale até o fim; sem ele, à mostra) }  gravados uma vez
      vivo    o estado do leilão (leilao.js); SÓ por transação
      escal/{t}  { formacao, tit: [índice global × 11] (só a escalação feita à mão), pronto }; a automática é função pura
      vendas/{i} { t, v (o preço), s (o seq do lote) }: registro para a tela (a verdade é o vivo.d)
@@ -568,14 +569,19 @@
       var edS = s.meta.edicao === "pro" ? "pro" : "public";
       if ((lt.liga != null && s.cfg && lt.liga !== s.cfg.liga) || (lt.ed != null && lt.ed !== edS) || (S._lotesMeus && canon(lt) !== S._lotesMeus)) { S._congela("lotes"); return; }
     }
-    // (com as notas escondidas, os robôs pela nota percebida: PR 6)
-    S.ctx = L.contexto({ T: T, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg && s.cfg.tempo, notasOcultas: L.ocultasNaSala(s) });
+    // o Overall é o gravado com os lotes no Começar (`ov`, PR 6; os lotes de antes, sem ele, são de salas à mostra): com as
+    // notas escondidas, os robôs pela nota percebida
+    var ovLotes = lt.ov === "escondido";
+    S.ctx = L.contexto({ T: T, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg && s.cfg.tempo, notasOcultas: ovLotes });
     S._lotesJson = S.online ? JSON.stringify(lt) : null;
     S.bots = [];
     ordem.forEach(function (uid, t) {
       var tc = s.tec && s.tec[uid];
       if (tc && tc.papel === "bot") S.bots.push(L.perfilRobo(S.ctx.semente, t));
     });
+    // o Overall da sala diferente do gravado com os lotes = a sala mexida (um aparelho que gravou o cfg.overall ou o meta.regras
+    // depois do Começar): congela, e a vista continua com o dos lotes (S.ctx), nunca com as notas à mostra
+    if (ovLotes !== L.ocultasNaSala(s)) S._congela("overall");
     if (S._vivoPend) { var v = S._vivoPend; S._vivoPend = null; S._naVivo(v); }
   };
   P._ouvir = function () {
@@ -611,6 +617,8 @@
     }
     var antes = S.sala ? S.sala.meta && S.sala.meta.estado : undefined, euAntes = S.eu;
     S.sala = s;
+    // depois do Começar, o Overall é o dos lotes (S.ctx.notasOcultas): o cfg.overall ou o meta.regras mudados = a sala mexida
+    if (S.ctx && !!S.ctx.notasOcultas !== LE().ocultasNaSala(s)) S._congela("overall");
     S.soOlhar = !!s.meta && !LE().regrasAceitas(s.meta.regras);
     S._defineEu();
     if (s.ordem && S.ctx && S.ctx.T !== s.ordem.length) S._montaCtx();
@@ -1619,8 +1627,9 @@
       regrasSala: meta.regras != null ? meta.regras : null,
       // as notas escondidas (PR 6): overall = a opção da sala ('mostra' | 'escondido'); notasOcultas = as telas não mostram nota
       // (nem o que a entregue) agora; revelados = [bool × T] os times cujas notas já apareceram (leilao.js REVELA_NOTAS: com o
-      // "campeonato", todos juntos no fim dele — e aí notasOcultas fica false)
-      overall: L.ocultasNaSala(sala) ? "escondido" : "mostra", notasOcultas: L.ocultasNaSala(sala), revelados: null
+      // "campeonato", todos juntos no fim dele — e aí notasOcultas fica false). Depois do Começar vale o gravado com os lotes
+      // (S.ctx.notasOcultas), nunca o cfg.overall de agora: um aparelho que o mudasse no meio mostraria as notas a todos
+      overall: (ctx ? ctx.notasOcultas : L.ocultasNaSala(sala)) ? "escondido" : "mostra", notasOcultas: !!(ctx ? ctx.notasOcultas : L.ocultasNaSala(sala)), revelados: null
     };
     ordem.forEach(function (uid, t) {
       var tc = (sala.tec && sala.tec[uid]) || {}, c = v ? v.cx[t] : [L.SALDO, L.VAGAS, 0, 0, 0, 0];
@@ -2406,14 +2415,16 @@
     var lg = mundo.leaguesById && mundo.leaguesById[liga];
     if (!lg) return recusa("liga");
     // os lotes pelas regras da SALA (a de regras 1 e 2, criada antes, segue com 13T: o aparelho de antes, nela, conta 13T)
-    var lt = L.criarLotes(mundo, liga, T, { regras: s0.meta.regras }), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed }, meus = canon(dados);
+    // (o `ov`: o Overall da sala no Começar, gravado com os lotes — que não mudam mais —, PR 6: é ele que vale até o fim)
+    var ov = L.ocultasNaSala(s0) ? "escondido" : "mostra";
+    var lt = L.criarLotes(mundo, liga, T, { regras: s0.meta.regras }), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed, ov: ov }, meus = canon(dados);
     // os lotes que já estão lá só ficam se forem IGUAIS aos deste aparelho (gravados no saguão por outra conta: troca)
     return rede.transacao("lotes", function (cur) { return cur && canon(cur) === meus ? undefined : dados; }).then(function () {
       S._lotesMeus = meus;
       return S._transSala(function (s) {
         if (s.meta.estado !== "saguao") return "comecou";
         var ord = ordemPrevista(s);
-        if (ord.length !== T || (s.cfg && s.cfg.liga) !== liga) return "mudou";
+        if (ord.length !== T || (s.cfg && s.cfg.liga) !== liga || (L.ocultasNaSala(s) ? "escondido" : "mostra") !== ov) return "mudou";
         if (ord.length < L.TEC_MIN || ord.length > L.TEC_MAX) return "poucos";
         if (prontosDe(s).faltam.length) return "prontos";
         s.meta.estado = "leilao"; s.ordem = ord; s.cfg.T = T;
@@ -2614,7 +2625,7 @@
         tec: tec
       };
       var esc = {}; esc["escal/0"] = { formacao: formacao };
-      return rede.atualizar("", { sala: sala, lotes: { l: lotes.lotes, f: lotes.fora } }).then(function () {
+      return rede.atualizar("", { sala: sala, lotes: { l: lotes.lotes, f: lotes.fora, ov: L.ocultasNaSala(sala) ? "escondido" : "mostra" } }).then(function () {
         return rede.atualizar("", esc);
       }).then(function () {
         // o Começar (§3.3): só do saguão, com todos prontos e os lotes gravados; grava a ordem dos técnicos

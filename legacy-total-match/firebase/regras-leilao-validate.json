@@ -9,12 +9,15 @@
             ".validate": "newData.hasChildren(['dono', 'estado', 'regras', 'criada'])",
             "dono": { ".validate": "!data.exists() || newData.val() === data.val()" },
             "estado": { ".validate": "newData.isString() && newData.val().matches(/^(saguao|leilao|escalacao|camp|fim)$/)" },
-            "regras": { ".validate": "newData.isNumber()" },
+            "regras": { ".validate": "newData.isNumber() && (!data.exists() || newData.val() === data.val())" },
             "criada": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "atividade": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "fimLeilao": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "camp": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "fimCamp": { ".validate": "newData.val() === now || newData.val() === data.val()" }
+          },
+          "cfg": {
+            ".validate": "!data.exists() || newData.child('overall').val() === data.child('overall').val() || root.child('leiloes').child($c).child('sala/meta/estado').val() === 'saguao'"
           },
           "tec": {
             "$uid": {
