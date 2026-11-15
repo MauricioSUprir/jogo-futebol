@@ -2693,9 +2693,12 @@ async function testeCamp() {
       const gv = LC.gravar(rv.jogo, { trava: 5000, res: resOk, ts: 6000 });
       ok(gv.ok && gv.jogo.e === "feito" && gv.jogo.ts === 6000 && gv.jogo.trava === 5000 && gv.jogo.esc[0].formacao === "4-3-3" && gv.jogo.res.v === 0, `C8 gravar: ${JSON.stringify(gv)}`);
       ok(LC.gravar(gv.jogo, { trava: 5000, res: resOk, ts: 7000 }).motivo === "feito" && reserva(gv.jogo, {}).motivo === "feito", "C8: o feito foi regravado ou reservado de novo");
-      // o 3D (PR 4): o prazo pela duração; vencido sem resultado = W.O. de quem reservou
-      const c3 = LC.contexto({ formato: "mata", T: 2, semente: "wo" }), r3 = reserva(null, { modo: "3d", por: 1, ts: 10000 });
-      ok(r3.ok && r3.jogo.inicio === 10000 && LC.prazoDe(r3.jogo, c3) === 10000 + LC.prazo3d(4) && LC.prazo3d(4) === 1104000, `C8: o prazo do 3D ${LC.prazoDe(r3.jogo, c3)} (18,4 min com 4 min por tempo)`);
+      // o 3D (PR 4): o que abriu tem o prazo pela duração e, vencido sem resultado, é W.O. de quem reservou; o que não abriu
+      // tem o prazo de começar (2 min: o simulado — bloco TD)
+      const c3 = LC.contexto({ formato: "mata", T: 2, semente: "wo" }), r30 = reserva(null, { modo: "3d", por: 1, ts: 10000 });
+      ok(r30.ok && r30.jogo.inicio === 10000 && LC.prazoDe(r30.jogo, c3) === 10000 + PZ && LC.wo(r30.jogo, { trava: 10000, hora: 1e13, ts: 1 }, c3).motivo === "naoAbriu", `C8: o prazo do 3D que não abriu ${LC.prazoDe(r30.jogo, c3)} (2 min) ou o W.O. dele`);
+      const r3 = LC.marcarAbriu(r30.jogo, { trava: 10000, ts: 10500 });
+      ok(r3.ok && r3.jogo.abriu === 10500 && LC.prazoDe(r3.jogo, c3) === 10000 + LC.prazo3d(4) && LC.prazo3d(4) === 1104000, `C8: o prazo do 3D ${LC.prazoDe(r3.jogo, c3)} (18,4 min com 4 min por tempo)`);
       ok(LC.wo(r3.jogo, { trava: 10000, hora: 10000 + 1104000 - 1, ts: 1 }, c3).motivo === "cedo" && LC.wo(rv.jogo, { trava: 5000, hora: 1e13, ts: 1 }, c3).motivo === "trava", "C8: W.O. antes do prazo ou no simulado");
       const w = LC.wo(r3.jogo, { trava: 10000, hora: 10000 + 1104000, ts: 99 }, c3);
       ok(w.ok && w.jogo.e === "feito" && w.jogo.res.wo === 1 && w.jogo.res.placar.join() === "3,0" && w.jogo.res.v === 0 && LC.resValido(w.jogo.res, true), `C8 W.O.: ${JSON.stringify(w)}`);
@@ -2708,7 +2711,7 @@ async function testeCamp() {
       ok(A(g(0, 1, null), aqui) === '{"acao":"abrir","quando":0}' && A(g(0, 1, null), longe) === "null", "C8: o prazo abre sem ninguém do jogo ou não abre com alguém");
       ok(A(g(0, 1, ab), aqui) === `{"acao":"reservar","motivo":"prazo","quando":${1000 + PZ}}` && A(g(0, 1, ab), longe) === '{"acao":"pausar","quando":0,"desde":7777}', "C8: o prazo correndo não vence ou não para sem ninguém");
       ok(A(g(0, 1, pa.jogo), aqui) === '{"acao":"retomar","quando":0}' && A(g(0, 1, pa.jogo), longe) === "null", "C8: o prazo parado não volta (ou volta sem ninguém)");
-      ok(A(g(0, 1, rv.jogo), longe) === '{"acao":"gravar","quando":0}' && A(g(0, 1, r3.jogo), longe) === '{"acao":"wo","quando":1114000}', "C8: o reservado não grava (ou o 3D sem o W.O. no prazo)");
+      ok(A(g(0, 1, rv.jogo), longe) === '{"acao":"gravar","quando":0}' && A(g(0, 1, r3.jogo), longe) === '{"acao":"wo","quando":1114000}' && A(g(0, 1, r30.jogo), longe) === `{"acao":"naoAbriu","quando":${10000 + PZ}}`, "C8: o reservado não grava (ou o 3D sem o W.O. no prazo, ou o que não abriu sem o simulado)");
       ok(A(g(0, 1, gv.jogo, { e: "feito" }), aqui) === "null" && A(g(0, 1, null, { aberta: false, e: "espera" }), aqui) === "null", "C8: agiu num jogo feito ou de uma rodada que não abriu");
     }
 

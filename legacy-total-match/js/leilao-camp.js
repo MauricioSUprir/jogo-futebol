@@ -24,30 +24,40 @@
      aberto     { e, ini, resta, parado? } o prazo de 2 min para começar (só no jogo de uma pessoa contra um bot): corre de
                 `ini` com `resta` ms; com ninguém do jogo presente fica `parado` (guarda o que resta) e volta a correr quando
                 alguém do jogo volta
-     reservado  { e, ab, esc, modo, por, motivo, trava, inicio? } a escolha está feita: os técnicos (ab), as escalações
+     reservado  { e, ab, esc, modo, por, motivo, trava, inicio?, abriu? } a escolha está feita: os técnicos (ab), as escalações
                 GRAVADAS no momento (esc: [{ formacao, tit }, …]; vale a partir do próximo jogo que não começou), o modo
-                ('simulado'; '3d' no PR 4, com o `inicio`) e a TRAVA = a hora do servidor ao reservar. O simulado é
-                comSemente("leilao:" + código + ":" + id + ":" + trava): ninguém o calcula antes de escolher
-     feito      { …o reservado, e, res, ts } o resultado, gravado UMA vez (o reservado com a mesma trava) e só então mostrado
+                ('simulado' ou '3d': o "Jogar" da pessoa contra um bot, com o `inicio` = a trava e, quando o 3D chega a abrir
+                — a tela antes do jogo à vista —, o `abriu` = a hora do servidor) e a TRAVA = a hora do servidor ao reservar.
+                O simulado é comSemente("leilao:" + código + ":" + id + ":" + trava): ninguém o calcula antes de escolher
+     feito      { …o reservado, e, res, ts, fim?, escSim? } o resultado, gravado UMA vez (o reservado com a mesma trava) e só
+                então mostrado. No 3D, `fim` diz como ele acabou: '3d' (o resultado do 3D; o que veio depois dos 90' no
+                mata-mata empatado — o gol de ouro e os pênaltis — é simulado com a semente) ou 'simulado' (o "Simular partida"
+                da tela do 3D, ou o 3D que nem chegou a abrir no prazo de começar; escSim = as escalações da tela, só quando
+                mudaram)
    Motivos de reservar: 'pedido' (a pessoa do jogo tocou em Simular), 'prazo' (o prazo venceu pela testemunha da hora),
    'abertura' (bot × bot; pessoa × pessoa até o PR 5), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
-   outro técnico, com o dono fora há mais de 5 min). O 3D reservado que passa de
-   2 × duração × 1,3 + 8 min sem resultado é W.O. de quem reservou (decisão 15; o 3D é do PR 4).
+   outro técnico, com o dono fora há mais de 5 min). O 3D reservado que abriu e passa de 2 × duração × 1,3 + 8 min (desde o
+   `inicio`) sem resultado é W.O. de quem reservou (decisão 15); o que não chegou a abrir em 2 min é simulado (por qualquer
+   aparelho, com a semente).
 
    O resultado gravado (`res`): o do motor nos 90' (score, events, stats, sentOff) e, no mata-mata empatado, `pror` { score,
    events (91' em diante, cortados no gol de ouro), ouro (o lado que fez o gol de ouro) } e `pen` { score, kicks: [{ side,
    name, scored, id }], winner }; `placar` = o que conta (o dos 90' ou o do fim da prorrogação) e `v` o vencedor (0 ou 1,
-   o lado; -1 = empate, só na fase de pontos). W.O.: { placar, score, wo (o lado que perdeu), v }.
+   o lado; -1 = empate, só na fase de pontos). W.O.: { placar, score, wo (o lado que perdeu), v }. O do 3D (resDo3d): o mesmo
+   formato, com em3d: true, os gols e cartões do 3D como lances do motor e as estatísticas dele.
 
    API (TM.leilaoCamp):
      contexto(o)                 o: { codigo, semente, formato, T, ctx (o do TM.leilao), vivo, clubes [t], tipos ['bot'|'pessoa'],
-                                    escal, prefs, inicio, duracao3d } → c (o campeonato; as contas abaixo recebem c)
+                                    escal, prefs, inicio, duracao3d, dificuldade3d } → c (o campeonato; as contas abaixo recebem c)
+     duracao3dDe(x) · dificuldade3dDe(x) (a duração e a dificuldade do 3D da sala; padrões 4 min e 'normal')
      formatoDe(nome) · rodadasDe(formato, T) · jogosDe(formato, T) · duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })
      estrutura(c) · montar(c, jogos) (a vista: rodadas, jogos, tabela, atual, fim, campeão,
      classificação, artilharia, o melhor time) · tabela(c, jogos) · artilharia(c, jogos) · somaNotas(c)
      timeDoTecnico(c, t, esc?) · escalacaoDoJogo(c, t) · simularJogo(a, b, { semente, mataMata }) · sementeJogo(codigo, id, trava)
-     resultadoDoJogo(c, id, j) (o simulado com a semente do jogo)
-     A máquina (cada uma devolve { ok: true, jogo } ou { ok: false, motivo }): abrir, pausar, retomar, reservar, gravar, wo
+     resultadoDoJogo(c, id, j) (o simulado com a semente do jogo) · resDo3d(c, id, j, r3) (o resultado do 3D → o res) ·
+     res3dValido(c, id, j) · escDaTela(c, j, titulares) (as escalações da tela do 3D, se mudaram)
+     A máquina (cada uma devolve { ok: true, jogo } ou { ok: false, motivo }): abrir, pausar, retomar, reservar, marcarAbriu,
+     gravar, naoAbriu, wo
      proximaAcao(c, g, info) (o que fazer agora com um jogo da vista) · conferirJogo(c, g, j) (o motivo, se a sala foi alterada)
      canon(v) (o texto canônico, como o Firebase guarda) */
 (function (global) {
@@ -55,9 +65,15 @@
   var TM = (global.TM = global.TM || {});
 
   var FORMATOS = ["mata", "pontos", "misto"];
-  var PRAZO = 120000;               // 2 min para começar o jogo de uma pessoa contra um bot (só com alguém do jogo presente)
+  var PRAZO = 120000;               // 2 min para começar o jogo de uma pessoa contra um bot (só com alguém do jogo presente);
+                                    // também o do 3D reservado que não chegou a abrir
   var REALISMO = 3;                 // a sala é fixa para todos: realismo 3, mando neutro
-  var DURACAO_3D = 4;               // min por tempo no 3D (PR 4: a sala escolhe)
+  var DURACAO_3D = 4;               // min por tempo no 3D (o padrão; a sala escolhe uma das DURACOES_3D)
+  var DURACOES_3D = [3, 4, 5, 6, 8, 10];
+  var DIFICULDADE_3D = "normal";    // a dos bots no 3D (o padrão; a sala escolhe, travada no 3D)
+  var DIFICULDADES = ["facil", "normal", "dificil", "lenda"];
+  var FINS = ["3d", "simulado"];    // como o 3D acabou (o `fim` do feito)
+  var TIPOS_3D = ["goal", "pengoal", "yellow", "red", "half", "full"];   // os lances de um resultado do 3D
   var MODOS = ["simulado", "3d"];
   var MOTIVOS = ["pedido", "prazo", "abertura", "dono", "pendentes"];
   var ESTADOS = ["aberto", "reservado", "feito"];
@@ -72,6 +88,8 @@
   function embaralha(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; } return a; }
   function cmpId(a, b) { a = String(a); b = String(b); return (a.length - b.length) || (a < b ? -1 : a > b ? 1 : 0); }
   function copia(v) { return v == null ? null : JSON.parse(JSON.stringify(v)); }
+  function duracao3dDe(x) { x = +x; return DURACOES_3D.indexOf(x) >= 0 ? x : DURACAO_3D; }
+  function dificuldade3dDe(x) { return DIFICULDADES.indexOf(x) >= 0 ? x : DIFICULDADE_3D; }
   // o Firebase devolve como lista um nó de chaves 0..n e como objeto uma lista com buracos: aceita os dois
   function comoLista(x) {
     if (Array.isArray(x)) return x;
@@ -128,7 +146,7 @@
     o = o || {};
     var L = LE(), T = o.T || 0, n = (L ? L.LOTES_POR_TEC : 13) * T, s = (o.tempo > 0 ? o.tempo : (L ? L.DUR : 10000)) / 1000;
     var lo = n * (T <= 2 ? 0.5 : 0.9) * s / 60, hi = n * (s + 7) / 60;
-    var fmt = formatoDe(o.formato), R = rodadasDe(fmt, T), dur = o.duracao3d || DURACAO_3D;
+    var fmt = formatoDe(o.formato), R = rodadasDe(fmt, T), dur = duracao3dDe(o.duracao3d);
     var clo = o.tresD ? R * (2 * dur + 4) : R * 0.5, chi = o.tresD ? R * (2 * dur * 1.3 + 5) : R * PRAZO / 60000;
     function par(a, b) { var x = Math.max(1, Math.round(a)); return { lo: x, hi: Math.max(x + 1, Math.round(b)) }; }
     var le = par(lo, hi), ca = par(clo, chi);
@@ -511,43 +529,51 @@
     var r = TM.rng.comSemente(sem, function () { return TM.engine.simulate(a, b, opcoesMotor()); });
     var res = { score: r.score.slice(), events: r.events, stats: r.stats, placar: r.score.slice(), v: 0 };
     if (r.sentOff && r.sentOff.length) res.sentOff = r.sentOff;
-    if (o.mataMata && r.score[0] === r.score[1]) {
-      var fora = [], amarelos = [];
-      r.events.forEach(function (e) {
-        if (e.type === "red" && e.playerId != null) fora.push(e.playerId);
-        if (e.type === "yellow" && e.playerId != null) amarelos.push(e.playerId);
-      });
-      var et = TM.rng.comSemente(sem + ":pror", function () {
-        return TM.engine.simulate(a, b, opcoesMotor({ startMinute: PARA_CORTE + 1, endMinute: 120, startScore: r.score.slice(), excludeIds: fora.slice(), yellowIds: amarelos }));
-      });
-      var evs = et.events, corte = -1;
-      for (var i = 0; i < evs.length; i++) if ((evs[i].type === "goal" || evs[i].type === "pengoal") && evs[i].minute > PARA_CORTE) { corte = i; break; }
-      var pror = { score: et.score.slice(), events: evs };
-      if (corte >= 0) {
-        var gol = evs[corte];
-        pror.events = evs.slice(0, corte + 1);
-        pror.score = comoLista(gol.score).slice();
-        pror.ouro = gol.team;
-        pror.events.push({ minute: gol.minute, type: "full", score: pror.score.slice(), text: "Gol de ouro! Fim de jogo." });
-      }
-      res.pror = pror;
-      res.placar = pror.score.slice();
-      if (pror.score[0] === pror.score[1]) {
-        pror.events.forEach(function (e) { if (e.type === "red" && e.playerId != null) fora.push(e.playerId); });
-        var sh = TM.rng.comSemente(sem + ":pen", function () { return TM.engine.shootout(semExpulsos(a, fora), semExpulsos(b, fora)); });
-        res.pen = {
-          score: sh.score.slice(), winner: sh.winner,
-          kicks: sh.kicks.map(function (k) { return { side: k.side, name: k.name, scored: !!k.scored, id: k.player ? k.player.id : null }; })
-        };
-      }
-    }
+    if (o.mataMata && r.score[0] === r.score[1]) completarMata(res, a, b, sem);
     res.v = vencedorDe(res);
+    return res;
+  }
+  /** O mata-mata empatado nos 90' (o simulado ou o do 3D): a prorrogação com o GOL DE OURO e, seguindo empatado, os pênaltis,
+   *  na semente do jogo com os sufixos ":pror" e ":pen" (res.score e res.events = os 90'; os expulsos fora, os amarelos
+   *  valendo). Escreve res.pror, res.placar e res.pen. */
+  function completarMata(res, a, b, sem) {
+    var score = comoLista(res.score).slice(), evs90 = comoLista(res.events);
+    if (score[0] !== score[1]) return res;
+    var fora = [], amarelos = [];
+    evs90.forEach(function (e) {
+      if (!e) return;
+      if (e.type === "red" && e.playerId != null) fora.push(e.playerId);
+      if (e.type === "yellow" && e.playerId != null) amarelos.push(e.playerId);
+    });
+    var et = TM.rng.comSemente(sem + ":pror", function () {
+      return TM.engine.simulate(a, b, opcoesMotor({ startMinute: PARA_CORTE + 1, endMinute: 120, startScore: score.slice(), excludeIds: fora.slice(), yellowIds: amarelos }));
+    });
+    var evs = et.events, corte = -1;
+    for (var i = 0; i < evs.length; i++) if ((evs[i].type === "goal" || evs[i].type === "pengoal") && evs[i].minute > PARA_CORTE) { corte = i; break; }
+    var pror = { score: et.score.slice(), events: evs };
+    if (corte >= 0) {
+      var gol = evs[corte];
+      pror.events = evs.slice(0, corte + 1);
+      pror.score = comoLista(gol.score).slice();
+      pror.ouro = gol.team;
+      pror.events.push({ minute: gol.minute, type: "full", score: pror.score.slice(), text: "Gol de ouro! Fim de jogo." });
+    }
+    res.pror = pror;
+    res.placar = pror.score.slice();
+    if (pror.score[0] === pror.score[1]) {
+      pror.events.forEach(function (e) { if (e.type === "red" && e.playerId != null) fora.push(e.playerId); });
+      var sh = TM.rng.comSemente(sem + ":pen", function () { return TM.engine.shootout(semExpulsos(a, fora), semExpulsos(b, fora)); });
+      res.pen = {
+        score: sh.score.slice(), winner: sh.winner,
+        kicks: sh.kicks.map(function (k) { return { side: k.side, name: k.name, scored: !!k.scored, id: k.player ? k.player.id : null }; })
+      };
+    }
     return res;
   }
   /** O simulado de um jogo reservado (o que todo aparelho honesto recalcula igual): os times pelas escalações GRAVADAS no nó
    *  e a semente com a trava. */
   function resultadoDoJogo(c, id, j) {
-    var ab = comoLista(j.ab), esc = comoLista(j.esc);
+    var ab = comoLista(j.ab), esc = comoLista(j.escSim || j.esc);
     var a = timeDoTecnico(c, ab[0], esc[0]), b = timeDoTecnico(c, ab[1], esc[1]);
     return simularJogo(a, b, { semente: sementeJogo(c.codigo, id, j.trava), mataMata: ehMata(id) });
   }
@@ -555,7 +581,127 @@
     var p = perdedor === 0 ? [0, WO] : [WO, 0];
     return { placar: p, score: p.slice(), wo: perdedor, v: 1 - perdedor };
   }
-  function prazo3d(duracao) { return Math.round((2 * (duracao || DURACAO_3D) * 1.3 + 8) * 60000); }
+  function prazo3d(duracao) { return Math.round((2 * duracao3dDe(duracao) * 1.3 + 8) * 60000); }
+
+  /* ---------- o resultado do 3D (o "Jogar" da pessoa contra um bot; PR 4) ---------- */
+  function nomeTxt(x) { var t = String(x == null ? "" : x).replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, 40); return t || "Jogador"; }
+  function minuto90(m) { m = Math.round(+m || 1); return Math.max(1, Math.min(90, m)); }
+  function par2(x, d) {
+    x = comoLista(x);
+    return x.length === 2 && numero(x[0]) && numero(x[1]) && x[0] >= 0 && x[1] >= 0 ? [Math.round(x[0]), Math.round(x[1])] : d;
+  }
+  function timesDoJogo(c, j, esc) {
+    var ab = comoLista(j.ab), e = comoLista(esc || j.esc);
+    return [timeDoTecnico(c, ab[0], e[0]), timeDoTecnico(c, ab[1], e[1])];
+  }
+  // o jogador do time pelo tmId do 3D (o id do retrato) ou, sem ele, pelo nome
+  function achaJogador(t, x) {
+    var ps = t.players || [], k = x && x.tmId != null ? String(x.tmId) : null, i;
+    if (k != null) for (i = 0; i < ps.length; i++) if (String(ps[i].id) === k) return ps[i];
+    var n = x && x.nome != null ? String(x.nome) : null;
+    if (n != null) for (i = 0; i < ps.length; i++) if (ps[i].name === n) return ps[i];
+    return null;
+  }
+  /** O resultado do 3D (o do golaco: { homeGoals, awayGoals, gols: [{ lado, tmId, nome, minuto, penalti, contra }], cartoes:
+   *  [{ lado, tmId, nome, minuto, cor }], stats: { possession, shots, onTarget } }) → o `res` gravado: os gols e os cartões
+   *  viram os lances do motor (como o tm3d.js aplicaResultado: o autor pelo tmId; o gol contra sem autor), os times pelas
+   *  escalações GRAVADAS na reserva; o placar = os gols (o que o 3D contar a mais entra sem autor, no 90'); no mata-mata
+   *  empatado, o gol de ouro e os pênaltis simulados com a semente do jogo (completarMata). em3d: true. */
+  function resDo3d(c, id, j, r3) {
+    r3 = r3 || {};
+    var T = timesDoJogo(c, j), placar = [0, 0], ev = [], sentOff = [];
+    var gols = comoLista(r3.gols).filter(function (g) { return g && typeof g === "object"; }).map(function (g, i) { return { g: g, i: i, m: minuto90(g.minuto) }; });
+    gols.sort(function (x, y) { return (x.m - y.m) || (x.i - y.i); });
+    gols.forEach(function (x) {
+      var g = x.g, lado = g.lado === 1 ? 1 : 0, t = T[lado];
+      var pl = g.contra ? null : achaJogador(t, g), autor = g.contra ? achaJogador(T[1 - lado], g) : null;
+      placar[lado]++;
+      var quem = pl ? pl.name : g.contra ? (autor ? autor.name : nomeTxt(g.nome)) + " (contra)" : nomeTxt(g.nome);
+      ev.push({ minute: x.m, type: g.penalti ? "pengoal" : "goal", team: lado, player: quem, playerId: pl ? pl.id : null, score: placar.slice(),
+        text: g.contra ? "GOL CONTRA! " + quem.replace(" (contra)", "") + " desvia para o próprio gol. Ponto para o " + t.name + "."
+          : (g.penalti ? "PÊNALTI CONVERTIDO! " : "GOL! ") + quem + " marca para o " + t.name + "." });
+    });
+    // o placar do 3D com mais gols que a lista (não deveria): os que faltam, sem autor, no 90'
+    [r3.homeGoals, r3.awayGoals].forEach(function (n, lado) {
+      while (inteiro(n) && n > placar[lado] && placar[lado] < 30) {
+        placar[lado]++;
+        ev.push({ minute: 90, type: "goal", team: lado, player: "Gol", playerId: null, score: placar.slice(), text: "GOL do " + T[lado].name + "." });
+      }
+    });
+    comoLista(r3.cartoes).forEach(function (cc) {
+      if (!cc || typeof cc !== "object") return;
+      var lado = cc.lado === 1 ? 1 : 0, t = T[lado], pl = achaJogador(t, cc), quem = pl ? pl.name : nomeTxt(cc.nome), verm = cc.cor === "red", m = minuto90(cc.minuto);
+      ev.push({ minute: m, type: verm ? "red" : "yellow", team: lado, player: quem, playerId: pl ? pl.id : null, text: (verm ? "Expulso: " : "Amarelo para ") + quem + " (" + t.name + ")" });
+      if (verm) sentOff.push({ id: pl ? pl.id : null, name: quem, side: lado, minute: m });
+    });
+    var meio = [0, 0];
+    ev.forEach(function (e) { if (e.minute <= 45 && (e.type === "goal" || e.type === "pengoal")) meio[e.team]++; });
+    ev.push({ minute: 45, type: "half", score: meio, text: "Fim do 1º tempo" });
+    ev.sort(function (x, y) { return (x.minute - y.minute) || ((x.type === "half" ? 1 : 0) - (y.type === "half" ? 1 : 0)); });
+    ev.push({ minute: 90, type: "full", score: placar.slice(), text: "Fim de jogo! (partida jogada em 3D)" });
+    var st = r3.stats || {}, h = placar[0], a = placar[1];
+    var res = {
+      score: placar.slice(), events: ev,
+      stats: { possession: par2(st.possession, [50, 50]), shots: par2(st.shots, [Math.max(h, 1) + 4, Math.max(a, 1) + 4]), onTarget: par2(st.onTarget, [h + 1, a + 1]) },
+      placar: placar.slice(), v: 0, em3d: true
+    };
+    if (sentOff.length) res.sentOff = sentOff;
+    if (ehMata(id) && h === a) completarMata(res, T[0], T[1], sementeJogo(c.codigo, id, j.trava));
+    res.v = vencedorDe(res);
+    return res;
+  }
+  /** O resultado do 3D gravado tem a forma certa? (o 3D não se recalcula: os lances só dos tipos do 3D, nos 90', os gols que
+   *  batem com o placar, os autores e os cartões de jogadores do time certo, as estatísticas; o que veio depois dos 90' no
+   *  mata-mata empatado É recalculado com a semente) */
+  function res3dValido(c, id, j) {
+    var res = j && j.res;
+    if (!res || res.em3d !== true || res.wo != null) return false;
+    var T = timesDoJogo(c, j), ids = T.map(function (t) { var o = {}; t.players.forEach(function (p) { o[String(p.id)] = 1; }); return o; });
+    var sc = comoLista(res.score), conta = [0, 0], evs = comoLista(res.events);
+    for (var i = 0; i < evs.length; i++) {
+      var e = evs[i];
+      if (!e || TIPOS_3D.indexOf(e.type) < 0 || !inteiro(e.minute) || e.minute < 1 || e.minute > 90) return false;
+      if (e.type === "half" || e.type === "full") continue;
+      if (e.team !== 0 && e.team !== 1) return false;
+      if (e.playerId != null && !ids[e.team][String(e.playerId)]) return false;
+      if (e.type === "goal" || e.type === "pengoal") conta[e.team]++;
+    }
+    if (conta[0] !== sc[0] || conta[1] !== sc[1]) return false;
+    var st = res.stats || {};
+    if (!["possession", "shots", "onTarget"].every(function (k) { return par2(st[k], null) != null; })) return false;
+    var base = copia(res);
+    delete base.pror; delete base.pen;
+    base.score = sc.slice(); base.events = evs; base.placar = sc.slice(); base.v = 0;
+    if (ehMata(id) && sc[0] === sc[1]) completarMata(base, T[0], T[1], sementeJogo(c.codigo, id, j.trava));
+    base.v = vencedorDe(base);
+    return canon(base) === canon(res);
+  }
+  /** As escalações da tela do 3D ("Simular partida": { home: [tmId × 11], away }; home = o lado 0 do jogo) que MUDARAM em
+   *  relação às gravadas na reserva: [esc0, esc1] ou null (nada mudou ou a tela não vale). Como o tm3d.js ordemDaTela: só o
+   *  conjunto dos 11 conta (quem fica não muda de vaga; quem entra fica na vaga de quem saiu) e só jogadores do técnico.
+   *  Sem reservas no leilão (decisão 12) o conjunto é sempre o mesmo: na prática, null. */
+  function escDaTela(c, j, tit) {
+    if (!tit || !c.ctx || !c.vivo) return null;
+    var L = LE(), ab = comoLista(j.ab), esc = comoLista(j.esc), mudou = false, out = [];
+    for (var k = 0; k < 2; k++) {
+      var ids = tit[k === 0 ? "home" : "away"], e = esc[k], cur = comoLista(e && e.tit);
+      out.push(e);
+      if (!Array.isArray(ids) || ids.length !== 11) continue;
+      var meu = {}; L.timeIdx(c.vivo, c.ctx, ab[k]).forEach(function (x) { var r = L.retratoDe(c.ctx, x); if (r) meu[String(r.id)] = x; });
+      var quer = {}, ok = true;
+      ids.forEach(function (id) { var s = String(id); if (meu[s] == null || quer[s]) ok = false; quer[s] = 1; });
+      if (!ok) continue;
+      var fica = {}, entram = [];
+      cur.forEach(function (x) { var r = inteiro(x) && x >= 0 ? L.retratoDe(c.ctx, x) : null; if (r && quer[String(r.id)]) fica[String(r.id)] = 1; });
+      ids.forEach(function (id) { if (!fica[String(id)]) entram.push(meu[String(id)]); });
+      if (!entram.length) continue;
+      var nt = cur.map(function (x) { var r = inteiro(x) && x >= 0 ? L.retratoDe(c.ctx, x) : null; return r && fica[String(r.id)] ? x : entram.length ? entram.shift() : x; });
+      var ne = { formacao: e.formacao, tit: nt };
+      if (!escValida(c, ab[k], ne)) continue;
+      out[k] = ne; mudou = true;
+    }
+    return mudou ? out.map(function (x) { return { formacao: x.formacao, tit: comoLista(x.tit).slice() }; }) : null;
+  }
 
   /* ---------- a máquina do jogo (dentro de rede.transacao("jogos/" + id)) ---------- */
   function nao(motivo) { return { ok: false, motivo: motivo }; }
@@ -583,7 +729,8 @@
   function prazoDe(j, c) {
     if (!j) return null;
     if (j.e === "aberto") return j.parado ? null : j.ini + j.resta;
-    if (j.e === "reservado" && j.modo === "3d" && numero(j.inicio)) return j.inicio + prazo3d(c && c.duracao3d);
+    // o 3D reservado: o que abriu tem o prazo da partida (o W.O.); o que não abriu, o de começar (o simulado)
+    if (j.e === "reservado" && j.modo === "3d" && numero(j.inicio)) return j.inicio + (numero(j.abriu) ? prazo3d(c && c.duracao3d) : PRAZO);
     return null;
   }
   /** A escolha: reserva o jogo com a TRAVA (a hora do servidor) e as escalações de agora. o: { ab: [a, b], esc: [{ formacao,
@@ -607,24 +754,55 @@
     if (o.modo === "3d") n.inicio = o.ts;
     return sim(n);
   }
+  function copiaNo(j) { var n = {}; Object.keys(j).forEach(function (k) { n[k] = j[k]; }); return n; }
   function feito(j, res, ts) {
-    var n = {}; Object.keys(j).forEach(function (k) { n[k] = j[k]; });
+    var n = copiaNo(j);
     n.e = "feito"; n.res = res; n.ts = ts;
     return n;
   }
+  /** O 3D chegou a abrir (a tela antes do jogo à vista): marca `abriu` = a hora do servidor, UMA vez, no reservado no 3D com
+   *  a mesma trava. o: { trava, ts } */
+  function marcarAbriu(j, o) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.modo !== "3d" || !numero(j.trava) || j.trava !== o.trava) return nao("trava");
+    if (j.abriu != null) return nao("abriu");
+    var n = copiaNo(j); n.abriu = o.ts;
+    return sim(n);
+  }
   /** O resultado, UMA vez: só sobre o reservado com a mesma trava que o aparelho viu (o feito nunca é regravado).
-   *  o: { trava, res, ts, mata (o jogo é do mata-mata: nunca empate) } */
+   *  o: { trava, res, ts, mata (o jogo é do mata-mata: nunca empate), fim e escSim (só no 3D: '3d' | 'simulado'; as
+   *  escalações da tela, se mudaram) } */
   function gravar(j, o) {
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (!numero(j.trava) || j.trava !== o.trava) return nao("trava");
     if (!resValido(o.res, !!o.mata)) return nao("res");
-    return sim(feito(j, o.res, o.ts));
+    var n = feito(j, o.res, o.ts);
+    if (j.modo === "3d") {
+      if (FINS.indexOf(o.fim) < 0) return nao("fim");
+      if ((o.fim === "3d") !== (o.res.em3d === true)) return nao("res");
+      n.fim = o.fim;
+      if (o.fim === "simulado" && o.escSim) n.escSim = comoLista(o.escSim).map(function (x) { return { formacao: x.formacao, tit: comoLista(x.tit).slice() }; });
+    }
+    return sim(n);
   }
-  /** O 3D reservado que passou do prazo sem resultado: W.O. de quem reservou (decisão 15; o 3D é do PR 4).
-   *  o: { trava, hora (a testemunha), ts } */
+  /** O 3D reservado que NÃO chegou a abrir e passou do prazo de começar (2 min desde o `inicio`): o simulado com a semente
+   *  (decisão 15: "o 3D que nem chegou a abrir = simulado"). o: { trava, hora (a testemunha), ts, res (o simulado), mata } */
+  function naoAbriu(j, o, c) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
+    if (j.abriu != null) return nao("abriu");
+    var pz = prazoDe(j, c);
+    if (pz == null || !numero(o.hora) || o.hora < pz) return nao("cedo");
+    if (!resValido(o.res, !!o.mata) || o.res.em3d) return nao("res");
+    var n = feito(j, o.res, o.ts); n.fim = "simulado";
+    return sim(n);
+  }
+  /** O 3D reservado que ABRIU e passou do prazo da partida (2 × duração × 1,3 + 8 min) sem resultado: W.O. de quem reservou
+   *  (decisão 15). o: { trava, hora (a testemunha), ts } */
   function wo(j, o, c) {
     if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
     if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
+    if (!numero(j.abriu)) return nao("naoAbriu");
     var pz = prazoDe(j, c);
     if (pz == null || !numero(o.hora) || o.hora < pz) return nao("cedo");
     var ab = comoLista(j.ab), lado = ab.indexOf(j.por);
@@ -645,14 +823,15 @@
    *   — bot × bot e (até o PR 5) pessoa × pessoa: reservar ao abrir a rodada (motivo 'abertura');
    *   — pessoa × bot: com a pessoa presente, abrir o prazo; correndo, ninguém do jogo presente = pausar (desde o último
    *     batimento); parado, alguém voltou = retomar; vencido = reservar ('prazo');
-   *   — reservado e simulado: gravar o resultado (qualquer aparelho: o mesmo resultado); reservado no 3D e vencido: o W.O. */
+   *   — reservado e simulado: gravar o resultado (qualquer aparelho: o mesmo resultado); reservado no 3D e vencido: o W.O.
+   *     (abriu) ou o simulado (não abriu: 'naoAbriu') */
   function proximaAcao(c, g, info) {
     if (!g || !g.aberta || g.a == null || g.b == null || g.e === "feito" || g.invalido) return null;
     var j = g.j;
     if (j && j.e === "reservado") {
       if (j.modo === "simulado") return { acao: "gravar", quando: 0 };
       var pz = prazoDe(j, c);
-      return pz == null ? null : { acao: "wo", quando: pz };
+      return pz == null ? null : { acao: numero(j.abriu) ? "wo" : "naoAbriu", quando: pz };
     }
     var tipo = confronto(c, g);
     if (tipo !== "pessoaBot") return { acao: "reservar", motivo: "abertura", quando: 0 };
@@ -682,7 +861,9 @@
     return n === Math.min(slots.length, idx.length);
   }
   /** O nó gravado bate com as regras? null = sim; senão o motivo ('forma', 'vez', 'times', 'escalacao', 'resultado', 'wo').
-   *  O simulado é RECALCULADO e comparado pelo texto canônico; o 3D (PR 4) só pela forma. g: o jogo da vista (montar). */
+   *  O simulado é RECALCULADO e comparado pelo texto canônico (também o do 3D que acabou simulado, com as escalações da tela);
+   *  o resultado do 3D, só pela forma (res3dValido; o gol de ouro e os pênaltis dele recalculados), o lado e quem reservou.
+   *  g: o jogo da vista (montar). */
   function conferirJogo(c, g, j) {
     if (j == null) return null;
     if (!noValido(j, g.mata)) return "forma";
@@ -692,9 +873,18 @@
     if (ab[0] !== g.a || ab[1] !== g.b) return "times";
     var esc = comoLista(j.esc);
     if (esc.length !== 2 || !escValida(c, ab[0], esc[0]) || !escValida(c, ab[1], esc[1])) return "escalacao";
+    // o 3D: só pelo "Jogar" da pessoa do jogo (motivo 'pedido', quem reservou é um dos dois), com o `inicio`
+    if (j.modo === "3d" && (j.motivo !== "pedido" || ab.indexOf(j.por) < 0 || !numero(j.inicio) || (j.abriu != null && !numero(j.abriu)))) return "forma";
     if (j.e !== "feito") return null;
-    if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por ? null : "wo";
-    if (j.modo !== "simulado") return null;
+    if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por && numero(j.abriu) ? null : "wo";
+    if (j.modo === "3d") {
+      if (j.fim === "3d") return res3dValido(c, g.id, j) ? null : "resultado";
+      if (j.fim !== "simulado") return "forma";
+      if (j.escSim != null) {
+        var es = comoLista(j.escSim);
+        if (es.length !== 2 || !escValida(c, ab[0], es[0]) || !escValida(c, ab[1], es[1])) return "escalacao";
+      }
+    } else if (j.fim != null || j.escSim != null) return "forma";
     return canon(resultadoDoJogo(c, g.id, j)) === canon(j.res) ? null : "resultado";
   }
 
@@ -706,18 +896,21 @@
       formato: formatoDe(o.formato), T: T,
       ctx: o.ctx || null, vivo: o.vivo || null, clubes: o.clubes || [], nomes: o.nomes || [], tipos: o.tipos || [],
       escal: o.escal || {}, prefs: o.prefs || [], inicio: numero(o.inicio) ? o.inicio : 0,
-      duracao3d: o.duracao3d || DURACAO_3D, _est: null, _sorteio: null
+      duracao3d: duracao3dDe(o.duracao3d), dificuldade3d: dificuldade3dDe(o.dificuldade3d), _est: null, _sorteio: null
     };
   }
 
   TM.leilaoCamp = {
     FORMATOS: FORMATOS, PRAZO: PRAZO, REALISMO: REALISMO, MODOS: MODOS, MOTIVOS: MOTIVOS, ESTADOS: ESTADOS, WO: WO,
+    DURACAO_3D: DURACAO_3D, DURACOES_3D: DURACOES_3D, DIFICULDADE_3D: DIFICULDADE_3D, DIFICULDADES: DIFICULDADES,
+    duracao3dDe: duracao3dDe, dificuldade3dDe: dificuldade3dDe,
+    resDo3d: resDo3d, res3dValido: res3dValido, escDaTela: escDaTela, completarMata: completarMata,
     contexto: contexto, formatoDe: formatoDe, rodadasDe: rodadasDe, jogosDe: jogosDe, duracaoEstimada: duracaoEstimada,
     estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
     somaNotas: somaNotas, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
     resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoDe: prazoDe,
-    abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, gravar: gravar, wo: wo,
+    abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo,
     confronto: confronto, proximaAcao: proximaAcao, conferirJogo: conferirJogo, canon: canon,
     // para os testes
     _turno: turno, _chaveInicial: chaveInicial, _espalha: espalha
