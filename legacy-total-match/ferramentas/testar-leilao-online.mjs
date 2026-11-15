@@ -369,7 +369,7 @@ const piloto = ap => ap.p.evaluate(() => window.__lt.estado()).catch(() => null)
 
 /* ---------- nada sobre nada (o critério do testar-leilao.mjs --tela, com as peças do saguão e do campeonato) ---------- */
 const sobreposicao = p => p.evaluate(() => {
-  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l";
+  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen";
   const visivel = e => {
     const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
     const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
@@ -761,6 +761,19 @@ async function casoDois() {
   const nsConv = await nadaSobreNada(B, "saguao-convidado", () => !!document.querySelector(".lei-sagbar"));
   confere(`${ID}6 nada sobre nada no Saguão (o dono e o convidado) em 360×740, 844×390 e 1280×800, no escuro e no claro (${nsDono.medidas.length + nsConv.medidas.length} medidas)`,
     !nsDono.ruins.length && !nsConv.ruins.length && nsDono.medidas.every(m => m.n > 8 && m.barra), nsDono.ruins.concat(nsConv.ruins).slice(0, 4));
+  // o selo VOCÊ da sua linha no Saguão: a pílula verde nos dois temas (a revisão de 15/11: a regra base tinha saído junto
+  // com a do seu clube da aba Leilão; no claro ficava branco sobre branco)
+  const voce = await A.p.evaluate(() => {
+    const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+    const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const mede = () => { const e = document.querySelector(".lei-part.eu .lei-voce"); if (!e) return null; const cs = getComputedStyle(e), f = rgba(cs.backgroundColor), t = rgba(cs.color);
+      const x = L(t), y = L(f); return { txt: e.textContent, fundo: f[3], cr: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100 }; };
+    const escuro = mede(); TM.ui.applyTheme("light"); const claro = mede(); TM.ui.applyTheme("dark");
+    return { escuro, claro };
+  });
+  confere(`${ID}6c o selo VOCÊ da sua linha no Saguão é a pílula verde no escuro e no claro (≥ 4,5:1)`,
+    !!voce.escuro && !!voce.claro && voce.escuro.txt === "VOCÊ" && [voce.escuro, voce.claro].every(x => x.fundo >= 1 && x.cr >= 4.5), voce);
 
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");
@@ -1373,6 +1386,17 @@ async function casoTelas() {
     return { txt: v.textContent, dentro: a.width > 4 && a.left >= b.left - 1 && a.right <= b.right + 1, sw: v.scrollWidth, cw: v.clientWidth };
   });
   confere(`${ID}6 o placar com o líder de 16 letras em 360×740: "lidera" inteiro à vista (o nome encolhe)`, lidera && p6 && p6.txt === "lidera" && p6.dentro && p6.sw <= p6.cw + 1, p6);
+  // a aba Leilão do online pelas fotos (PLANO-LEILAO.md §9): as 4 pílulas (Saguão feito, Leilão, Escalação, Campeonato) numa
+  // linha só em 360×740, o topo só de ícones, nenhuma carta do Ultimate e nada sobre nada nos 3 tamanhos, escuro e claro
+  const p6b = await Dn.p.evaluate(() => {
+    const abas = [...document.querySelectorAll(".lei-abas .lei-aba")], tops = new Set(abas.map(b => Math.round(b.getBoundingClientRect().top)));
+    return { abas: abas.map(b => b.textContent.trim()), feita: abas.filter(b => b.classList.contains("feita")).map(b => b.getAttribute("aria-label")), linhas: tops.size,
+      cartas: document.querySelectorAll(".lei-corpo-lote .ut-card").length, sbTexto: [...document.querySelectorAll(".lei-cab .lei-sb")].filter(b => b.innerText.trim()).length };
+  });
+  const nsL = await nadaSobreNada(Dn, "telas-lote", () => !!document.querySelector(".lei-lote-card"));
+  confere(`${ID}6b a aba Leilão do online pelas fotos: as 4 pílulas numa linha em 360×740 (o Saguão com o check), o topo só de ícones, sem a carta e nada sobre nada (3 tamanhos, escuro e claro)`,
+    p6b.abas.join() === "Saguão,Leilão,Escalação,Campeonato" && p6b.linhas === 1 && p6b.feita.join() === "Saguão, concluído" && !p6b.cartas && !p6b.sbTexto && !nsL.ruins.length,
+    { p6b, ruins: nsL.ruins.slice(0, 3) });
 
   /* T7–T8 a sala congelada (o vivo mexido no servidor): "Sala parada" na Entrada e "Parada" nas Minhas salas */
   const vv = vivoServ(cod); vv.cx[0][0] += 50; REGRAS.adulteradas.add(cod); banco.gravar("leiloes/" + cod + "/vivo", vv);

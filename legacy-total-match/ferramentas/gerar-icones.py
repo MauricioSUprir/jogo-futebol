@@ -121,7 +121,9 @@ for a, b in APELIDOS.items():
 EXTRA = ["chevron-left", "chevron-right", "chevron-down", "x", "check", "menu", "ellipsis", "bell", "settings", "user", "message-circle", "house", "users", "clipboard-list", "arrow-left-right", "telescope", "globe", "log-out", "plus", "minus", "search", "sliders-horizontal", "arrow-up-down", "list", "grid-2x2", "store", "layers", "chart-line", "activity",
          "message-circle", "house", "users", "clipboard-list", "arrow-left-right", "telescope", "globe",
          # Modo Leilão (PLANO-LEILAO.md §3.8): o martelo do atalho e da sala, o olho que esconde o código, copiar e compartilhar
-         "gavel", "eye-off", "copy", "share-2"]
+         "gavel", "eye-off", "copy", "share-2",
+         # Modo Leilão, o topo da sala só de ícones (PLANO-LEILAO.md §9): o relógio das Vendas
+         "history"]
 usados.update(EXTRA)
 
 

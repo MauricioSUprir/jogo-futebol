@@ -1481,3 +1481,77 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   partida quando o app fecha; uma confirmação aberta pode sobreviver ao estado que a criou: o que ela promete tem de ir
   junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
   já volta depois de queda e de recarregar), não um laço solto na tela.
+
+---
+
+## 9. Visual pelas fotos (15/11)
+
+Pedido do dono (15/11), com o print da tela do lote no iPhone: "tem que ser mais organizado e n quero a cartinha do
+jogador. qro igual as imagens". "Igual" = a organização, a hierarquia e os componentes das 8 fotos de 14/11; as cores, a
+marca e as fontes continuam as do TM. Do site de referência não entra nada (§0: nome, a nota com o bicho, o amarelo, o
+Pix, os nomes dos bots das fotos, a sala pública). A especificação inteira, tela a tela e com as medidas na largura de
+390, foi feita com os prints das nossas telas (treino e o Saguão pelo banco falso) lado a lado com as fotos.
+
+**A tela do lote** (o 1º passo; o resto do leilão continua igual):
+- **Topo:** a marca do TM (com o ‹ de voltar) e 6 ícones sem texto, 44 × 44, com `aria-label` e `title` iguais aos de hoje:
+  tema (`sun`/`moon`, grava como a Config), Som, Vendas (`history`, que entra no gerador de ícones), Como funciona
+  (`book-open`), Participantes, Sair (vermelho). O olho e o copiar da foto não entram (7 ícones de 44 px não cabem em 360;
+  o copiar fica no Saguão). O título e a liga vão para um `h1` do leitor de tela e para a folha "Como funciona".
+- **Abas em pílula** centralizadas (36 px de altura, sem ícone; a feita com ✓; a ativa em verde cheio).
+- **"Jogador N de 52"** num chip centralizado.
+- **Um cartão só, sem a carta do Ultimate:** a foto redonda (na pública, a silhueta da carta), o selo da nota à esquerda da
+  foto, o escudo do clube num círculo sobre o canto, o nome grande (até 2 linhas), "função, clube", chips (bandeira +
+  país, os grupos, a altura) e o (i) da ficha; embaixo o anel do relógio ("06") e "Fulano lidera / R$ 9" grande; e até 3
+  lances anteriores (sem o da frente) com altura fixa.
+- **Seu clube** solto na página (escudo, nome, VOCÊ, saldo, a barra, "R$ X para N vagas" · "média de R$ Y por vaga") e o
+  **campinho verde** com as vagas em círculo (a sigla quando vazia; a foto ou a silhueta e o sobrenome quando preenchida;
+  "4/11"). Saem daqui: a contagem GOL/DEF/MEI/ATA, o "Máximo agora", o bloco Técnicos (a folha Participantes já mostra o
+  saldo e o estado, e ganha o toque que abre o time) e o bloco Seu time; os Próximos lotes ficam numa linha recolhível no
+  fim.
+- **Barra de lance:** a linha do motivo fica; +1 · +5 · +10 em verde cheio (o valor só no `aria-label`) e "Tudo R$ X" em
+  destaque com o valor ao lado; "Outro valor" (16 px) · "Dar lance" tonal · "Passar" só texto.
+- **Deitado (844 × 390):** o topo numa linha, o cartão deitado à esquerda com o anel à vista, a barra numa linha.
+  **PC:** nada de ponta a ponta (a sala em 1000 px, 2 colunas a partir de 1024 px; de 600 a 1023, uma coluna de 560).
+
+**A Criar sala e o Saguão** ficam especificados para um passo depois (seções soltas com cartões de opção e desenhos, o passo
+com deslizante, o segmentado da formação com o campinho verde, a barra fixa com o resumo; no Saguão, o título grande, o
+código na caixa tracejada, Copiar e Compartilhar lado a lado, o papel e o estado em caixa alta, o resumo num cartão verde
+e "Sala e clube" num cartão só). Não entram: o 5 em campo (decisão 3), a sala pública e, antes do PR 6, o "Overall
+escondido".
+
+**Pontos em aberto** (com a recomendada): o valor fora dos botões +N (sim, como a foto); o campinho verde nos dois temas (a
+Escalação continua com o de hoje até ganhar o desenho novo); a ficha (i) também sem a carta (o cabeçalho do cartão + os 6
+atributos em números); os chips de posição neutros no cartão; as pílulas com 36 px (a foto tem 23). Nos testes: o T4 do
+`--tela` passa a contar as 11 vagas do campinho novo e a ler o fundo do cartão novo no tema claro, e entra um teste que
+reprova com qualquer `.ut-card` na aba Leilão.
+
+**Feito no passo 1 (branch `leilao-visual`, sem a Criar, o Saguão, o Campeonato e a versão: o PR 4 corre junto):**
+- `js/leilao-tela.js`: a moldura (a marca `.lei-marca` com o `tb-back`, o `h1.lei-sr`, os 6 `.lei-sb` só de ícone; o tema
+  segue o do TM pelo laço), as pílulas, o lote (`fotoBox`, `seloNota`, `infoJogador`, `campinhoVagas`, `notasOcultas` — hoje
+  sempre falso: o PR 6 liga pelo `V.notasOcultas`), o relógio em 2 dígitos, a barra (o valor dos +N no `aria-label` e no
+  `title`; "Outro valor" sempre, o máximo no rótulo do campo), a folha Participantes com o toque que abre o time e a ficha sem
+  a carta. `js/ultimate.js`: só exporta a `silhueta`. `ferramentas/gerar-icones.py`: o `history`.
+- Medidas que mudaram de propósito no `--tela`: o T4 lê o cartão `.lei-lote-card` (o Seu clube ficou sem caixa) e a cor dos
+  ícones (não o fundo); conta as 11 `.lei-cv-vaga`; os blocos abertos viraram só os Próximos lotes. Entraram: nenhuma
+  `.ut-card` na aba, tudo no mesmo cartão, o topo e as pílulas, a barra das fotos e ≤ 1000 px nos 8 tamanhos; o contraste dos
+  chips e das pílulas (a inativa no claro ficou em #4a5c50: com o `--text-dim` dava 4,43:1); no T5 o toque nos Participantes e a
+  ficha sem a carta; no online (telas) o T6b com as 4 pílulas numa linha em 360 × 740.
+
+**Revisão do passo 1 (15/11; três lentes: fidelidade às fotos, nada sobre nada/claro/acessibilidade e regressão):**
+- **Grave:** o 1º toque do Tudo ("Confirmar" e o valor na mesma linha) passava do botão em todo celular em pé (em 360 por cima
+  do +10 e cortado na borda). Agora só "Confirmar" (17 px; o valor já está na linha de cima). Novo no T4: o Tudo armado nos 8
+  tamanhos e em 667 × 375 e 740 × 360, o texto a ≥ 2 px das bordas.
+- **Médios:** a Escalação também no campinho das vagas (a cartinha voltava a um toque; tocar em dois troca, a 1ª com o anel
+  branco; o `campinho`/`cartaEl` saíram da sala); o VOCÊ do Saguão e dos Participantes de volta (a regra base tinha saído junto
+  com a do seu clube: no claro, branco no branco; T5 e o 6c do online); o campinho com as linhas retas e as vagas à mesma
+  distância na linha (no 5-4-1 o nome do zagueiro central encostava na nota do goleiro; o nada sobre nada mede agora a bola, o
+  nome, a nota e o −N; T8 em cada formação que cabe); contraste ≥ 4,5:1 nos dois temas (os lances de antes sem opacidade, o
+  Tudo e o Dar lance no claro, a grama mais escura com o branco cheio; T4); o deitado de 560 a 799 px numa coluna com o placar
+  numa linha (667 × 375: nome quebrado, "M…", "Outro val"; T4 com 667 × 375 e 740 × 360: o anel e o valor acima da barra).
+- **Leves:** os lances de antes somem sem nenhum; a faixa Vendido sobre a linha do relógio e com o nome do vendido; as
+  pílulas com 30 px (26 deitado) e o alvo de 44 pelo `::after`, o chip com 15 px; o hover só com mouse; o som desligado sem
+  apagar; o −N com 11 px; os Próximos lotes à esquerda no PC; a silhueta com a borda e escura na cor clara do clube
+  (luminância > 0,3); o nome do clube de 16 letras em 360; "+1: lance de R$ X" e "Ver o seu time: R$ X, N de 11, estado";
+  na pausa, "Aguarde o próximo jogador · seu máximo R$ X"; o T5 mede o placeholder de verdade.
+- **Fica:** em 568 × 320 (o iPhone SE de 1ª geração deitado) o anel fica 30 px abaixo da barra até rolar (o topo de 44 px e
+  as pílulas em 2 linhas); no 5-4-1 e no 3-5-2 em 360–390 os sobrenomes de 9–10 letras da linha de 5 ainda saem com "…".
