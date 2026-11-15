@@ -863,3 +863,46 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   parou com o aparelho dormindo) recomeça a janela. Antes da 1ª testemunha, `Date.now()` + `.info/serverTimeOffset`.
 - **testar-leilao** ganhou o bloco **F** (a `firebase()` sobre o banco falso em Node, com o tempo de mentira) e a bateria
   comum do R e do F; o `testar-online3d.mjs` usa a biblioteca (24 ok).
+- **A sessão online** (`leilao-sessao.js`: `criarSala`, `entrar`, `abrir` online, `conferirSalas`, `esquecer`, `limpaCodigo`;
+  na sessão `aceitar`, `recusar`, `tirar`, `configurar`, `pronto`, `meuClube`, `comecar`, `passarClube`, `encerrar`,
+  `assumir`, `reconectar`):
+  - **carrega pelos ouvintes** (cada caminho baixa uma vez; os lotes são a maior parte dos bytes) e o motor só anda depois
+    do 1º valor de todos: sem os batimentos, todo mundo pareceria ausente;
+  - **ausente = sem bate fresco por 12 s** (o número do §3.3; o §1.4 dizia 10 s) ou "Sair da sala" (`tec.saiu`);
+  - **os bots da sala online** ficam sempre DEPOIS das pessoas na ordem e são refeitos a cada mudança (o perfil pelo
+    índice final, cores que nenhuma pessoa usa); a lotação conta pessoas + bots ≤ vagas; **o dono conta como pronto**;
+  - **o Começar** grava os lotes por transação (aborta se já estão com os mesmos T e liga) e só então a da sala, que
+    confere a lotação contra o T dos lotes; **o pedido depois do Começar fica** (`depois: true`) para o passar o clube, e
+    aceitar recusa; **tirar** põe em `recusados` (não pede de novo);
+  - **a edição** troca antes da transação do pedido (como o Ultimate): se o pedido falhar, a edição fica trocada.
+- **Três achados do motor online** (cada um com o teste que reprovava):
+  - **o próprio lance a caminho**: o SDK monta a próxima transação do mesmo aparelho POR CIMA da que ainda não teve ack
+    (sem `applyLocally`, o ouvinte não a vê); a transação do motor abortava sem rede e o motor tentava de novo no mesmo
+    instante (um laço que o tempo de mentira acusou). Agora a ação que não fez nada sem o estado mudar espera o estado novo
+    ou 0,5 s (`_abortou`);
+  - **o candidato que nunca deixa fechar**: com o relógio adiantado, "passar o ausente" (desmentido pela testemunha:
+    "voltou") era escolhido de novo a cada 0,5 s, sempre antes do fechamento; agora ele só volta com um bate novo da pessoa;
+  - **o aparelho que dorme**: o relógio monótono para, a hora estimada atrasa e um lance no mesmo instante entrava depois
+    do fim. A rede ganhou `salto()` (o relógio de parede × o monótono desde a última testemunha); acima de 1 s a sessão
+    não age e pede uma testemunha na hora. Os dois relógios adiantando juntos não dão salto: aí só a testemunha antes de
+    fechar segura (o O4 "adiantado" reprova sem ela).
+- **A limpeza** vem antes de tudo (a sala vencida aberta fechava o lote atrasado e renovava a atividade); o bate da própria
+  aba não conta como atividade, o das outras pessoas conta (a sala com alguém presente não vence).
+- **O registro da venda**: quem fechou grava; se ele cai antes, qualquer presente grava o mesmo valor em 3 s.
+- **Outra aba**: só cede para a sessão que começou depois (o `desde` no bate: a hora do servidor do 1º bate dela) e volta
+  sozinha quando a outra fica 12 s sem bate.
+- **"Conferindo…"** dura até o ack do 1º bate depois da volta (o que o servidor mandou antes dele já chegou) e responde
+  pelo vivo; os botões online ficam desligados com a rede fora de dia (sem conexão, Atualizando…, Reconectando…, salto).
+- **O lance velho guardado** de verdade é o do socket meio aberto: sem conexão a tela nem deixa dar lance (`conexao`); o
+  lance que sobe atrasado tem a base conferida pelo servidor, roda de novo com o vivo novo e o `seq` recusa.
+- **Os bytes medidos** (testar-leilao O3, por aparelho): 2 técnicos ~88 KB, 4 + 2 bots ~480 KB, 8 técnicos (104 lotes)
+  ~1,06 MB; o §6 estimava ~2 MB. Um leilão de 8 baixa ~8,5 MB no total.
+- **O `.validate` opcional** (`firebase/regras-leilao-validate.json` + `LEIA-ME-leilao.md`) ficou sem a regra do autor do
+  lance: o líder é um número e as regras não o convertem em chave (uma regra que dá erro nega a gravação e pararia o
+  leilão de quem publicar). Com o bloco publicado, a conta vinculada aberta em outro aparelho precisa do passar o clube.
+- **O `?leilao=`**: o `app.js` vai à Entrada com o código; a Entrada guarda o convite uma vez por carga da página
+  (`TM.leilaoTela.convite()`), para a tela do online entrar sozinha.
+- **testar-leilao O** (~8 s; o arquivo inteiro ~35 s, sem `--rapido` no CI): dez mutações da sessão reprovam (sem a
+  testemunha, sem o salto, sem o passe do ausente, Começar sem conferir, sem a conferência, sem outra aba, sem o
+  Conferindo…, sem a limpeza, sem escalonar). O banco falso só refaz a vista dos ouvintes do caminho mexido (antes, cada
+  mensagem clonava e comparava os lotes inteiros de todo ouvinte: o leilão de 4 levava ~10 s de CPU).
