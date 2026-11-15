@@ -6767,20 +6767,25 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-marca.tb-back .tm-ic { width: 16px; height: 16px; }
 .lei-marca-seta { display: inline-flex; }
 .lei-marca-logo { width: 30px; height: 30px; display: block; border-radius: 8px; background: #0b110e; object-fit: cover; }
-.lei-marca.tb-back:hover { color: var(--gold); }
 .lei-marca:focus-visible, .lei-sb:focus-visible, .lei-aba:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .lei-sessao { display: flex; align-items: center; gap: 3px; min-width: 0; }
 .lei-sb { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%;
   background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
-.lei-sb:hover { background: var(--fill); color: var(--text); }
 .lei-sb-ic { display: inline-flex; }
 .lei-sb-ic .tm-ic { width: 22px; height: 22px; }
 .lei-sb.sair { color: var(--erro); }
-.lei-sb[aria-pressed="false"] { opacity: .7; }
+/* (o som desligado é o ícone volume-x, sem apagar: apagado, no claro ficava abaixo de 3:1) */
+/* o hover só com mouse (no toque o círculo cinza ficava preso no ícone depois do toque) */
+@media (hover: hover) {
+  .lei-marca.tb-back:hover { color: var(--gold); }
+  .lei-sb:hover { background: var(--fill); color: var(--text); }
+  .lei-aba:hover { color: var(--text); }
+  .lei-ficha-bt:hover { color: var(--gold); }
+  .lei-ficha-bt:hover .lei-ficha-ic { border-color: var(--gold); }
+}
 .lei-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
 .lei-aba { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0;
   background: var(--lei-tom); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
-.lei-aba:hover { color: var(--text); }
 .lei-aba-ic { display: inline-flex; }
 .lei-aba-ic:empty { display: none; }
 .lei-aba-ic .tm-ic { width: 14px; height: 14px; stroke-width: 2.6; }
@@ -6840,8 +6845,6 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
 .lei-ficha-ic { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2); }
 .lei-ficha-ic .tm-ic { width: 15px; height: 15px; color: inherit; }
-.lei-ficha-bt:hover { color: var(--gold); }
-.lei-ficha-bt:hover .lei-ficha-ic { border-color: var(--gold); }
 .lei-ficha-bt:focus-visible { outline: none; }
 .lei-ficha-bt:focus-visible .lei-ficha-ic { outline: 2px solid var(--gold); outline-offset: 1px; }
 .lei-placar { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: center; min-width: 0; }
@@ -6870,8 +6873,9 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 /* os lances de antes: até 3 linhas de 22 px, a altura guardada (o que chega não empurra o resto da página) */
 .lei-hist { list-style: none; min-height: 66px; display: flex; flex-direction: column; font-size: 14.5px; color: var(--text-dim); }
 .lei-hist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 22px; min-width: 0; }
-.lei-hist li:nth-child(2) { opacity: .75; }
-.lei-hist li:nth-child(3) { opacity: .55; }
+/* os mais velhos mais leves pelo peso e pelo tamanho (sem apagar: apagados, ficavam abaixo de 4,5:1) */
+.lei-hist li:nth-child(n+2) { font-size: 13.5px; }
+.lei-hist li:nth-child(n+2) b { font-weight: 400; }
 .lei-hist li.eu { color: var(--gold); }
 .lei-hist-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .lei-hist b { font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -6883,6 +6887,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-meu-l1 { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 32px; }
 .lei-meu-nome { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
 .lei-meu-clube { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* o selo VOCÊ (o Saguão e os Participantes: a pílula verde); no seu clube da aba Leilão, só o texto (as fotos) */
+.lei-voce { flex: 0 0 auto; padding: 2px 7px; border-radius: 6px; background: var(--gold); color: var(--black); font-size: 10px; font-weight: 900; letter-spacing: .08em; }
 .lei-meu .lei-voce { flex: 0 0 auto; padding: 0; background: none; color: var(--text-dim); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
 .lei-meu-saldo { flex: 0 0 auto; font-size: 18px; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
 .lei-meu-barra { height: 6px; margin-top: 12px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
@@ -6893,7 +6899,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 /* o campinho das vagas (verde nos dois temas, como nas fotos): as vagas pela formação, em círculo de 10% da largura */
 .lei-meu-campo { margin-top: 4px; }
 .lei-cv { position: relative; width: 100%; aspect-ratio: .9; border-radius: 16px; overflow: hidden; container-type: inline-size;
-  background: repeating-linear-gradient(180deg, #1c8a47 0 10%, #187d40 10% 20%); }
+  background: repeating-linear-gradient(180deg, #177a3e 0 10%, #136b36 10% 20%); }
 .lei-cv-linhas { position: absolute; inset: 4.5% 5%; border: 1.5px solid rgba(255,255,255,.32); border-radius: 2px; pointer-events: none; }
 .lei-cv-linhas i { position: absolute; display: block; border: 1.5px solid rgba(255,255,255,.32); }
 .lei-cv-linhas .m { left: 0; right: 0; top: 50%; border-width: 1.5px 0 0; }
@@ -6902,14 +6908,14 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-cv-linhas .a2 { left: 30%; right: 30%; bottom: -1.5px; height: 12%; border-bottom-width: 0; }
 .lei-cv-vaga { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%, -5cqw); }
 .lei-cv-bola { position: relative; width: 10cqw; height: 10cqw; min-width: 30px; min-height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-.lei-cv-bola.vazia { background: rgba(255,255,255,.14); border: 1.5px solid rgba(255,255,255,.45); }
-.lei-cv-sig { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: rgba(255,255,255,.92); }
+.lei-cv-bola.vazia { background: rgba(0,0,0,.18); border: 1.5px solid rgba(255,255,255,.55); }
+.lei-cv-sig { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: #fff; }
 .lei-cv-foto { border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
 .lei-cv-nome { max-width: 15.5cqw; font-size: 11px; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lei-cv-ov { position: absolute; left: -8px; top: -5px; min-width: 18px; height: 16px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;
   background: #fff; color: #0c5f2e; font-size: 11px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-.lei-cv .lei-pen { right: -10px; top: -6px; }
-.lei-cv-forma, .lei-cv-n { position: absolute; bottom: 1%; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.78); font-variant-numeric: tabular-nums; }
+.lei-cv .lei-pen { right: -10px; top: -6px; font-size: 11px; }
+.lei-cv-forma, .lei-cv-n { position: absolute; bottom: 1%; font-size: 12px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
 .lei-cv-forma { left: 6%; }
 .lei-cv-n { right: 6%; }
 .lei-cv-folha { max-width: 380px; margin: 0 auto; }
@@ -6974,6 +6980,10 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-lb-tudo { flex-direction: row; gap: 8px; background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: var(--black); }
 .lei-lb-tudo .lei-lb-v { opacity: .75; }
 .lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); color: #1b1203; box-shadow: 0 0 0 2px rgba(245,184,61,.45); }
+/* o 1º toque do Tudo: só "Confirmar" (o valor já está na linha de cima: "Toque de novo para confirmar R$ X"); com o valor ao
+   lado, "Confirmar R$ 90" passava do botão no celular em pé */
+.lei-lb-tudo.confirma .lei-lb-v { display: none; }
+.lei-lb-tudo.confirma .lei-lb-t { font-size: 17px; }
 .lei-l2 .lei-lb { min-height: 46px; padding: 0 18px; }
 .lei-l2 .lei-lb-t { font-size: 15px; font-weight: 800; }
 .lei-lb-dar { background: var(--lei-tom); color: var(--gold); }
@@ -7499,8 +7509,11 @@ body.theme-light .lei-nota { color: #ffffff; }
 /* o texto da pílula inativa um pouco mais escuro que o --text-dim (sobre o tom: 4,4 → 5,8:1) */
 body.theme-light .lei-aba:not(.on):not(.feita) { color: #4a5c50; }
 body.theme-light .lei-lote-rep { color: #92400e; }
-body.theme-light .lei-lb-tudo { color: #ffffff; }
-body.theme-light .lei-lb-tudo.confirma { color: #1b1203; }
+/* o Tudo e o Dar lance no claro: o verde mais escuro (o branco do valor e o verde do Dar lance com ≥ 4,5:1) */
+body.theme-light .lei-lb-tudo { background: linear-gradient(120deg, var(--gold), var(--gold-dark)); color: #ffffff; }
+body.theme-light .lei-lb-tudo .lei-lb-v { opacity: 1; }
+body.theme-light .lei-lb-dar { color: var(--gold-dark); }
+body.theme-light .lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); color: #1b1203; }
 body.theme-light .lei-voce { color: #ffffff; }
 body.theme-light .lei-meu .lei-voce { color: var(--text-dim); }
 /* os textos de estado sobre o branco: tons escuros (contraste ≥ 4,5:1; o --ok/--alerta do escuro dá 2,3 e 1,8) */
