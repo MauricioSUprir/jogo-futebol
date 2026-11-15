@@ -7342,6 +7342,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-esc-escolher-t { min-width: 0; }
 .lei-esc-escolher.aberto .lei-bloco-seta { transform: rotate(180deg); }
 .lei-esc-escolher:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* (as cores do escudo com o alvo de 44 px, como as formas e os símbolos; o Saguão fica com as de 36 até o passo dele) */
+.lei-editor-clube.escolher .lei-cor { width: 44px; height: 44px; }
 .lei-criar .lei-criar-nota { margin: -10px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
 /* a barra fixa: o resumo numa linha (com "…") e o botão principal; no celular em pé um embaixo do outro, do tablet para cima
    (e no celular deitado) lado a lado */
