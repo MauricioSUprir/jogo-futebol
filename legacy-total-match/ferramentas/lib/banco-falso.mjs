@@ -245,8 +245,15 @@ export function sdkFalso(T) {
     }
   }
   function vistaDe(l) { return l.ps[0] === ".info" ? { completo: true, v: infoEm(l.ps) } : visao(l.ps, { soVisiveis: true }); }
-  function atualiza() {
-    E.ouvintes.slice().forEach(function (l) { if (l.removido) return; var r = vistaDe(l); if (r.completo) dispara(l, r.v); });
+  // os ouvintes cuja vista pode ter mudado: só os dos caminhos mexidos (sem caminhos, todos: a conexão caiu ou voltou).
+  // A vista de um ouvinte só depende do cache e das escritas pendentes debaixo ou acima dele; o resto seria trabalho à toa
+  // (cada vista é clonada e comparada inteira: os lotes de um leilão têm ~60 KB)
+  function atualiza(caminhos) {
+    E.ouvintes.slice().forEach(function (l) {
+      if (l.removido) return;
+      if (caminhos && !caminhos.some(function (c) { return relacionados(c, l.ps); })) return;
+      var r = vistaDe(l); if (r.completo) dispara(l, r.v);
+    });
   }
   function criaOuvinte(ps, ev, cb, cancelar) {
     var l = { ps: ps, ev: ev || "value", cb: cb, cancelar: cancelar, ultimo: undefined, filhos: {}, removido: false };
@@ -287,7 +294,7 @@ export function sdkFalso(T) {
     abortaPorSet(ps);
     E.pendentes.push({ w: w, tipo: "set", ps: ps, v: normaliza(raw, estimativa()), msg: msg, visivel: true });
     var p = espera(w, "escrita", ps);
-    atualiza();
+    atualiza([ps]);
     envia(msg);
     return comCallback(p, f);
   }
@@ -307,7 +314,7 @@ export function sdkFalso(T) {
     var w = ++E.seqW, msg = { t: "atualizar", w: w, p: ps.join("/"), o: clone(o) };
     E.pendentes.push({ w: w, tipo: "update", ps: ps, itens: itens, msg: msg, visivel: true });
     var p = espera(w, "escrita", ps);
-    atualiza();
+    atualiza([ps]);
     envia(msg);
     return comCallback(p, f);
   }
@@ -352,7 +359,7 @@ export function sdkFalso(T) {
     if (feito) desescutar(tx.ps); else setTimeout(function () { desescutar(tx.ps); }, 0);
     if (erro) tx.falha(erro);
     else tx.ok({ committed: !!feito, snapshot: snap(ultimaChave(tx.ps), valor == null ? null : valor, tx.ps), toJSON: function () { return { committed: !!feito, snapshot: exporta(valor) }; } });
-    atualiza();
+    atualiza([tx.ps]);
   }
   function enviaProntas() {
     if (!E.conectado) return;
@@ -376,7 +383,7 @@ export function sdkFalso(T) {
     var seguiu;
     try { seguiu = rodaTx(tx, entradaDe(tx)); }   // a 1ª rodada é NA HORA, com o cache local
     catch (e) { E.txs = E.txs.filter(function (t) { return t !== tx; }); desescutar(ps); throw e; }
-    if (seguiu) { atualiza(); enviaProntas(); }
+    if (seguiu) { atualiza([ps]); enviaProntas(); }
     return prom;
   }
   function ackTx(tx, s) {
@@ -385,7 +392,7 @@ export function sdkFalso(T) {
       if (tx.abortarSet) { encerraTx(tx, new Error("set")); enviaProntas(); return; }
       if (tx.tentativas >= MAX_TENTATIVAS) { encerraTx(tx, new Error("maxretry")); enviaProntas(); return; }
       tx.estado = "run";
-      if (rodaTxSeguro(tx, entradaDe(tx))) atualiza();
+      if (rodaTxSeguro(tx, entradaDe(tx))) atualiza([tx.ps]);
       enviaProntas();
       return;
     }
@@ -451,8 +458,9 @@ export function sdkFalso(T) {
   // servidor: os ouvintes veem a escrita inteira de uma vez)
   function aoDado(m) {
     (m.itens || []).forEach(function (it) { E.cache = poe(E.cache, partes(it[0]), it[1] == null ? null : it[1]); });
-    if (m.q != null) listaEscutas().forEach(function (e) { if (e.q === m.q) e.completo = true; });
-    atualiza();
+    var mexidos = (m.itens || []).map(function (it) { return partes(it[0]); });
+    if (m.q != null) listaEscutas().forEach(function (e) { if (e.q === m.q) { e.completo = true; mexidos.push(e.ps); } });
+    atualiza(mexidos);
     enviaProntas();
   }
   function aoAck(m) {
@@ -465,7 +473,7 @@ export function sdkFalso(T) {
       if (m.s === "ok") { if (esp.aoOk) esp.aoOk(); esp.ok(); }
       else esp.falha(erroServidor(m.s, esp.ps));
     }
-    atualiza();
+    atualiza(esp && esp.ps ? [esp.ps] : undefined);
     enviaProntas();
   }
   T.receber = function (m) {
