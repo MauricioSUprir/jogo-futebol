@@ -23,15 +23,21 @@
   var TM = (global.TM = global.TM || {});
 
   /* ---------- constantes ---------- */
-  var REGRAS = 2;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
-                                  // (o 3D contra um bot: o reservado no 3D ganha o abriu, o W.O. e o simulado do 3D que não abriu)
-  var REGRAS_ACEITAS = [1, 2];    // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
-                                  // Jogar (nada de 3D nelas: o aparelho de antes, na mesma sala, não conhece o abriu nem o W.O.)
+  var REGRAS = 3;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
+                                  // (o 3D contra um bot: o reservado no 3D ganha o abriu, o W.O. e o simulado do 3D que não abriu);
+                                  // 3 = 20 lotes por técnico (15/11; eram 13)
+  var REGRAS_ACEITAS = [1, 2, 3]; // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
+                                  // Jogar (nada de 3D nelas: o aparelho de antes, na mesma sala, não conhece o abriu nem o W.O.);
+                                  // as de regras 1 e 2, com os 13 lotes por técnico de quando foram criadas (lotesPorTec)
   var REGRAS_3D = 2;              // a 1ª versão com o Jogar no 3D
+  var REGRAS_20 = 3;              // a 1ª versão com 20 lotes por técnico
   function regrasAceitas(r) { return REGRAS_ACEITAS.indexOf(r) >= 0; }
   var SALDO = 100;                // R$ do jogo para cada técnico
   var VAGAS = 11;                 // o time: 11 em campo, sem reservas
-  var LOTES_POR_TEC = 13;
+  var LOTES_POR_TEC = 20;         // 15/11 (dono): 20 por técnico, para sobrar opção na hora de montar o time (eram 13)
+  var LOTES_POR_TEC_ANTES = 13;   // as salas de regras 1 e 2 (criadas antes): o aparelho de antes, na mesma sala, conta 13
+  /** Os lotes por técnico de uma sala pelas regras dela (sem regras: as deste aparelho). */
+  function lotesPorTec(regras) { return typeof regras === "number" && regras < REGRAS_20 ? LOTES_POR_TEC_ANTES : LOTES_POR_TEC; }
   var TEC_MIN = 2, TEC_MAX = 8;
   var DUR = 10000;                // relógio do lote (ms); a sala pode escolher 10/15/20 s
   var EXT = 8000;                 // lance com menos de 8 s faltando: volta a 8 s
@@ -51,7 +57,8 @@
   };
   // o time-alvo de cada técnico na conta do mercado dos robôs (as cotas por técnico, arredondadas: 1, 4, 4, 2)
   var ALVO = [1, 4, 4, 2];
-  // jogadores de FORA guardados para completar no fim, por técnico (o máximo de cada grupo numa formação)
+  // jogadores de FORA guardados para completar no fim, por técnico (o máximo de cada grupo numa formação). Nas salas de 20 por
+  // técnico a cota nunca come esta reserva: qualquer time completa os 11 de graça no fim, compre o que comprar
   var FORA_POR_TEC = { GK: 1, DF: 5, MF: 5, FW: 4 };
   var PERFIS = ["estrelas", "equilibrado", "paciente"];
   var TETO_PERFIL = { estrelas: 0.6, equilibrado: 0.35, paciente: 0.45 };
@@ -85,9 +92,11 @@
   function cmpNota(a, b) { return (b.overall - a.overall) || cmpId(a.id, b.id); }
 
   /* ---------- cotas e lotes (§1.2) ---------- */
-  // GK ⌈1,5T⌉, FW ⌈2,5T⌉, DF e MF dividem o resto (a sobra ímpar no DF): 13T lotes
-  function cotas(T) {
-    var gk = Math.ceil(1.5 * T), fw = Math.ceil(2.5 * T), resto = LOTES_POR_TEC * T - gk - fw;
+  // n = lotes por técnico × T. Goleiros e atacantes na proporção das fotos (1,5 e 2,5 de cada 13 lotes): GK ⌈3n/26⌉, FW
+  // ⌈5n/26⌉; DF e MF dividem o resto (a sobra ímpar no DF). Com 20 por técnico, GK ⌈30T/13⌉ e FW ⌈50T/13⌉; com 13, ⌈1,5T⌉ e
+  // ⌈2,5T⌉ (as salas de antes: a conta em inteiros dá exatamente as cotas de antes)
+  function cotas(T, porTec) {
+    var n = (porTec || LOTES_POR_TEC) * T, gk = Math.ceil(n * 3 / 26), fw = Math.ceil(n * 5 / 26), resto = n - gk - fw;
     return { GK: gk, DF: Math.ceil(resto / 2), MF: Math.floor(resto / 2), FW: fw };
   }
   function grupoDoJogador(p, versa) {
@@ -120,19 +129,29 @@
     });
     return out.sort(cmpNota);
   }
-  /** Os lotes da liga para T técnicos: { lotes: [retrato × 13T], fora: [retrato] } (os melhores de cada grupo pela
-   *  cota; `fora` = os melhores que sobraram, para completar de graça no fim). `opc.versa` = TM.comp.playerVersa. */
+  /** Os lotes da liga para T técnicos: { lotes: [retrato × até lotesPorTec(regras)·T], fora: [retrato] } (os melhores de cada
+   *  grupo pela cota; `fora` = os melhores que sobraram, para completar de graça no fim). opc: { versa (= TM.comp.playerVersa),
+   *  regras (as da sala; padrão REGRAS) }. Nas salas de 20 por técnico a cota não come a reserva de `fora` (FORA_POR_TEC × T
+   *  de cada grupo): o que falta num grupo vai para os outros e, sem folga em nenhum, a liga fica com menos lotes (só as de 240
+   *  jogadores da edição pública com 7 e 8 técnicos: testar-leilao L1). Nas de antes (regras 1 e 2), a conta de antes, sem a
+   *  reserva: o aparelho de antes, na mesma sala, monta o leilão com exatamente 13T lotes. */
   function criarLotes(mundo, ligaId, T, opc) {
     opc = opc || {};
-    var versa = opc.versa || (TM.comp && TM.comp.playerVersa) || null;
-    var todos = jogadoresDaLiga(mundo, ligaId), q = cotas(T), usados = {}, lotes = [], falta = 0;
+    var versa = opc.versa || (TM.comp && TM.comp.playerVersa) || null, regras = opc.regras != null ? opc.regras : REGRAS;
+    var reserva = regras < REGRAS_20 ? null : FORA_POR_TEC;
+    var todos = jogadoresDaLiga(mundo, ligaId), q = cotas(T, lotesPorTec(regras)), usados = {}, lotes = [], falta = 0;
+    var resta = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    todos.forEach(function (p) { resta[p.pos]++; });
+    function livres(g) { return resta[g] - (reserva ? reserva[g] * T : 0); }
     GRUPOS.forEach(function (g) {
-      var n = 0;
-      todos.forEach(function (p) { if (n < q[g] && p.pos === g) { usados[p.id] = 1; lotes.push(p); n++; } });
-      falta += q[g] - n;
+      var n = 0, cota = Math.min(q[g], Math.max(0, livres(g)));
+      todos.forEach(function (p) { if (n < cota && p.pos === g) { usados[p.id] = 1; lotes.push(p); n++; } });
+      resta[g] -= n; falta += q[g] - n;
     });
-    // liga sem gente de algum grupo (não acontece nas 30 ligas: testar-leilao L1): completa com os melhores restantes
-    todos.forEach(function (p) { if (falta > 0 && !usados[p.id]) { usados[p.id] = 1; lotes.push(p); falta--; } });
+    // a cota que faltou num grupo: os melhores que sobram nos grupos com folga
+    todos.forEach(function (p) {
+      if (falta > 0 && !usados[p.id] && livres(p.pos) > 0) { usados[p.id] = 1; lotes.push(p); resta[p.pos]--; falta--; }
+    });
     var fora = [], nf = { GK: 0, DF: 0, MF: 0, FW: 0 };
     todos.forEach(function (p) { if (!usados[p.id] && nf[p.pos] < FORA_POR_TEC[p.pos] * T) { nf[p.pos]++; fora.push(p); } });
     lotes.sort(cmpNota);
@@ -870,7 +889,8 @@
   }
 
   TM.leilao = {
-    REGRAS: REGRAS, REGRAS_ACEITAS: REGRAS_ACEITAS, REGRAS_3D: REGRAS_3D, regrasAceitas: regrasAceitas, SALDO: SALDO, VAGAS: VAGAS, LOTES_POR_TEC: LOTES_POR_TEC, TEC_MIN: TEC_MIN, TEC_MAX: TEC_MAX,
+    REGRAS: REGRAS, REGRAS_ACEITAS: REGRAS_ACEITAS, REGRAS_3D: REGRAS_3D, REGRAS_20: REGRAS_20, regrasAceitas: regrasAceitas, SALDO: SALDO, VAGAS: VAGAS,
+    LOTES_POR_TEC: LOTES_POR_TEC, LOTES_POR_TEC_ANTES: LOTES_POR_TEC_ANTES, lotesPorTec: lotesPorTec, FORA_POR_TEC: FORA_POR_TEC, TEC_MIN: TEC_MIN, TEC_MAX: TEC_MAX,
     DUR: DUR, EXT: EXT, ESPERA: ESPERA, DUR_REP: DUR_REP, TOQUE_MAX: TOQUE_MAX, TEMPOS: TEMPOS,
     GRUPOS: GRUPOS, FORMACOES: FORMACOES, VAGAS_FORM: VAGAS_FORM, PERFIS: PERFIS,
     // lotes e ordem

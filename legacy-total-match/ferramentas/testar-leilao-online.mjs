@@ -36,7 +36,7 @@
              simulado pelo servidor), a página que cai no meio (as outras seguem; o prazo dela para e volta), recarregar,
              o dono "Simular os pendentes" pela tela, a mesma tabela e o mesmo campeão nas 4 e no servidor, nada sobre nada
              na aba Campeonato e no fim
-     oito    (O1–O8) 8 páginas, 104 lotes: o mesmo vivo, compras e caixas em todas e no servidor; os BYTES baixados do
+     oito    (O1–O8) 8 páginas, 160 lotes: o mesmo vivo, compras e caixas em todas e no servidor; os BYTES baixados do
              banco por página; depois o MATA-MATA com 8 (a escalação pela tela em duas, pela API nas outras; os jogos de
              amigo contra amigo simulados ao abrir a rodada), a mesma chave e o mesmo campeão nas 8 e no servidor, o Ver o
              jogo no 2D, nada sobre nada no fim e os bytes do campeonato somados aos do leilão
@@ -783,8 +783,8 @@ async function casoDois() {
   await ateNode(() => vivoServ(cod) && vigia(cod).ctx, 20000);
   s = sala(cod);
   const vA = await ver(A), vB = await ver(B);
-  confere(`${ID}5 o Pronto do convidado e o Começar do dono pela tela: as duas páginas vão sozinhas à aba Leilão com o mesmo vivo (26 lotes)`,
-    todos && foi && s.meta.estado === "leilao" && s.ordem && s.ordem.join() === "uidAna,uidBruno" && vigia(cod).ctx && vigia(cod).ctx.fila.length === 26 && vA && vB && JSON.stringify(vA.vivo) === JSON.stringify(vB.vivo),
+  confere(`${ID}5 o Pronto do convidado e o Começar do dono pela tela: as duas páginas vão sozinhas à aba Leilão com o mesmo vivo (40 lotes: 2 técnicos × 20)`,
+    todos && foi && s.meta.estado === "leilao" && s.ordem && s.ordem.join() === "uidAna,uidBruno" && vigia(cod).ctx && vigia(cod).ctx.fila.length === 2 * Lx.LOTES_POR_TEC && vA && vB && JSON.stringify(vA.vivo) === JSON.stringify(vB.vivo),
     { todos, foi, estado: s.meta.estado, ordem: s.ordem });
   vigia(cod);
 
@@ -895,7 +895,7 @@ async function casoDois() {
     { tB, voltouB, listou, txtSala, voltouA, eu: VA && VA.eu, soOlhar: VA && VA.soOlhar, versaoDiferente: VA && VA.versaoDiferente, nota });
 
   /* D13 o fim igual nas duas páginas e no servidor */
-  const acabou = await ateOFim(cod, [A, B], real(26 * 40000) + 60000);
+  const acabou = await ateOFim(cod, [A, B], real(2 * Lx.LOTES_POR_TEC * 40000) + 60000);
   const pA = await piloto(A), pB = await piloto(B);
   const fim = await fimIgual(ID, [A, B], cod);
   const cliques = {}; [pA, pB].forEach(x => x && Object.keys(x.cliques).forEach(k => { cliques[k] = (cliques[k] || 0) + x.cliques[k]; }));
@@ -966,8 +966,8 @@ async function casoQuatro() {
   const aps = [P0, P1, P2, P3];
   const { cod, r } = await salaPelaApi(aps, { liga: "br", vagas: 6, bots: 2, tempo: 10, formato: "pontos" });
   const C = vigia(cod), s = sala(cod);
-  confere(`${ID}1 4 páginas + 2 bots na sala (o pedido, o aceite e o Pronto pela API) e o Começar: 6 técnicos, 78 lotes, o mesmo vivo em todas; o campeonato de pontos corridos`,
-    r && r.ok && s.ordem.length === 6 && C.ctx && C.ctx.fila.length === 78 && s.ordem.slice(4).every(u => s.tec[u].papel === "bot") && s.cfg.formato === "pontos", { r, ordem: s.ordem, formato: s.cfg.formato });
+  confere(`${ID}1 4 páginas + 2 bots na sala (o pedido, o aceite e o Pronto pela API) e o Começar: 6 técnicos, 120 lotes, o mesmo vivo em todas; o campeonato de pontos corridos`,
+    r && r.ok && s.ordem.length === 6 && C.ctx && C.ctx.fila.length === 6 * Lx.LOTES_POR_TEC && s.ordem.slice(4).every(u => s.tec[u].papel === "bot") && s.cfg.formato === "pontos", { r, ordem: s.ordem, formato: s.cfg.formato });
   for (const ap of aps) await ap.p.evaluate(() => TM.ui.go("leilao-lote"));
   await pilotar(P0, "tela"); await pilotar(P1, "tela"); await pilotar(P2, "api"); await pilotar(P3, "api");
 
@@ -1225,11 +1225,11 @@ async function casoOito() {
   const b0 = aps.map(ap => banco.bytes(ap.p).desce);
   const { cod, r } = await salaPelaApi(aps, { liga: "de", vagas: 8, bots: 0, tempo: 10, formato: "mata" });
   const C = vigia(cod);
-  confere(`${ID}1 8 páginas na sala e o Começar: 104 lotes, o mesmo vivo em todas; o campeonato mata-mata`, r && r.ok && C.ctx && C.ctx.fila.length === 104 && sala(cod).cfg.formato === "mata", { r, formato: sala(cod).cfg.formato });
+  confere(`${ID}1 8 páginas na sala e o Começar: 160 lotes, o mesmo vivo em todas; o campeonato mata-mata`, r && r.ok && C.ctx && C.ctx.fila.length === 8 * Lx.LOTES_POR_TEC && sala(cod).cfg.formato === "mata", { r, formato: sala(cod).cfg.formato });
   // as duas primeiras pela tela (na aba Leilão); as outras pela API, fora das telas da sala (o online não para)
   for (let k = 0; k < 8; k++) await aps[k].p.evaluate(k => TM.ui.go(k < 2 ? "leilao-lote" : "modes"), k);
   for (let k = 0; k < 8; k++) await pilotar(aps[k], k < 2 ? "tela" : "api");
-  const acabou = await ateOFim(cod, aps, real(104 * 40000) + 120000);
+  const acabou = await ateOFim(cod, aps, real(8 * Lx.LOTES_POR_TEC * 40000) + 120000);
   const b1 = aps.map(ap => banco.bytes(ap.p).desce);
   // a escalação logo no fim do leilão (os 60 s dela são 10 s de verdade): as duas primeiras pela tela, as outras pela API
   for (const ap of aps) await ap.p.evaluate(() => window.__lt.parar()).catch(() => {});
@@ -1244,7 +1244,7 @@ async function casoOito() {
   confOk(`${ID}2b`, cod);
   const kb = aps.map((ap, k) => (b1[k] - b0[k]) / 1024);
   const max = Math.max(...kb), tot = kb.reduce((a, b) => a + b, 0);
-  confere(`${ID}3 os bytes baixados do banco por página no leilão de 8 com 104 lotes: ${kb.map(x => x.toFixed(0)).join(" · ")} KB (o maior ${(max / 1024).toFixed(2)} MB; ${(tot / 1024).toFixed(1)} MB no total; teto 3 MB por página)`,
+  confere(`${ID}3 os bytes baixados do banco por página no leilão de 8 com 160 lotes: ${kb.map(x => x.toFixed(0)).join(" · ")} KB (o maior ${(max / 1024).toFixed(2)} MB; ${(tot / 1024).toFixed(1)} MB no total; teto 3 MB por página)`,
     acabou && max > 50 && max < 3 * 1024, { kb });
 
   /* ---------- o campeonato MATA-MATA com 8 (todos pessoas: os jogos de amigo contra amigo simulados ao abrir a rodada) ---------- */
@@ -1425,7 +1425,7 @@ async function casoTresD() {
   for (const ap of [A, B]) await ap.p.evaluate(() => {
     const iv = setInterval(() => { const S = TM.leilaoSessao.atual(); if (!S) return; const V = S.ver(); if (V.estado !== "leilao") { clearInterval(iv); return; } if (V.botoes && V.botoes.passar.pode) S.passar(); }, 300);
   });
-  const acabou = await ateOFim(cod, [A, B], real(39 * 40000) + 60000);
+  const acabou = await ateOFim(cod, [A, B], real(3 * Lx.LOTES_POR_TEC * 40000) + 60000);
   await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "escalacao"); }, 30000);
   for (const ap of [A, B]) await ap.p.evaluate(() => TM.leilaoSessao.atual().prontoEscalacao(true)).catch(() => {});
   const camp = await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "camp"); }, 30000);

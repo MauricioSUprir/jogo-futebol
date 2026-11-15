@@ -2565,7 +2565,7 @@
   function textoEstado(x) {
     // (a sala online das Minhas salas guarda o estado, não o lote da vez)
     if (x.estado === "leilao" && x.online) return "Leilão em andamento";
-    if (x.estado === "leilao") return x.fase === "rep" ? "Repescagem" : x.k >= 0 ? "Jogador " + (x.k + 1) + " de " + (13 * x.T) : "Começando";
+    if (x.estado === "leilao") return x.fase === "rep" ? "Repescagem" : x.k >= 0 ? "Jogador " + (x.k + 1) + " de " + x.lotes : "Começando";
     if (x.estado === "escalacao") return "Escalação";
     if (x.estado === "camp") return "Campeonato";
     if (x.estado === "fim") return "Encerrada";
