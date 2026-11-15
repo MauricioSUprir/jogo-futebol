@@ -835,3 +835,31 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     também com os blocos abertos (o padrão do PC).
   - **A tela guarda só os clubes do mundo-base, e só enquanto a pessoa está na sala** (o mundo inteiro ficava no heap até
     recarregar: 13,6 → 9,9 MB depois de sair do treino na pública, 12,4 → 9,3 na pro); a Criar gera o mundo e solta.
+
+**Durante o PR 2** (o que o código real pediu de diferente do plano):
+- **O banco falso** (`ferramentas/lib/banco-falso.mjs`, conferido no código do `@firebase/database` 1.0.7, o do firebase
+  10.12.5): o servidor no Node e o SDK compat falso na página ou em Node, com o cache, as escritas pendentes, a transação
+  pelo cache e o `.info`. O topo do arquivo diz o que ele imita e o que não imita. Três achados no SDK que mudam o código:
+  - **A transação que aborta no `null` do cache nem pergunta ao servidor.** A 1ª rodada é na hora, com o cache local
+    (`null` num caminho que ninguém ouve); se a função devolve `undefined` ali, o SDK encerra com `committed: false` e o
+    `null` local. Por isso a `transacao` da `firebase()` OUVE o caminho e espera o 1º valor do servidor antes de rodar: o
+    `feito: false` é sempre sobre um valor que veio do servidor. O "repete com o valor do servidor" do §3.3 só vale para a
+    rodada que GRAVA (o servidor confere a base e responde "datastale").
+  - **`set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo** (`Error("set")`; a já mandada só se voltar
+    "datastale"): ninguém grava com `set`/`update` dentro ou acima de `sala`/`vivo` enquanto transaciona neles.
+  - **O ouvinte do SDK é chamado na hora** dentro do `on()` (cache pronto) e dentro do `set` de quem grava; a `ouvir` da
+    rede entrega sempre depois, na ordem. E o `val()` devolve como LISTA o nó de chaves 0..n (a sessão já tinha `lista`).
+- **A transação com a conexão caindo antes da resposta REJEITA** (`codigo: 'desconectado'`): o SDK cancela a transação já
+  mandada (pode ter entrado). É o "Conferindo…" do §2.4: ler de novo depois da volta. A gravação comum (`set`/`update`)
+  fica guardada e vai de novo na volta; o pedido de `onDisconnect` que estava no caminho o SDK esquece (rearmar a cada
+  volta: `aoVoltar`).
+- **A rede ganhou** (nas duas, para continuarem iguais): `testemunha(caminho, extra)` (grava `{...extra, ts: TS, n}` e
+  devolve a hora que o servidor pôs; a marca `n` diz se a leitura depois do ack é a nossa — duas abas da mesma conta no
+  mesmo `bate` dão `null`; o `.validate` opcional tem de aceitar o `n`), `aoVoltar`, `aoDesconectar(caminho)`
+  (`gravar/atualizar/apagar/cancelar`; na memória roda no `_cair`), `reconectar()` e `fechar()`; os erros com `codigo`
+  (`desconectado`, `permissao`, `disputa`, `sobrescrita`, `apagada`, `rede`; sem o banco do TM, `indisponivel`).
+- **`horaServidor`** é o relógio MONÓTONO (`performance.now`) + a diferença da testemunha de menor ida e volta (janela de
+  12); o relógio de parede que pula depois da calibração não mexe nela, e a amostra que não cruza a escolhida (o monótono
+  parou com o aparelho dormindo) recomeça a janela. Antes da 1ª testemunha, `Date.now()` + `.info/serverTimeOffset`.
+- **testar-leilao** ganhou o bloco **F** (a `firebase()` sobre o banco falso em Node, com o tempo de mentira) e a bateria
+  comum do R e do F; o `testar-online3d.mjs` usa a biblioteca (24 ok).

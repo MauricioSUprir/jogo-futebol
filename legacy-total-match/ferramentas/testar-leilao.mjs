@@ -4,7 +4,9 @@
    listas do escudo desenhado; o TM.ui de mentira) e os arquivos do leilão, nas duas edições (pública e pro), e roda:
      L1 lotes · L2 ordem · L3 lance · L4 relógio · L5 fechar · L6 fim · L7 robôs · L8 protocolo (o leilão inteiro
      pela sessão e pela rede em memória = a máquina pura) · L9 formações e escalação · L10 conferência ·
-     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas)
+     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas) ·
+     F a rede firebase() sobre o banco falso que se comporta como o SDK compat (ferramentas/lib/banco-falso.mjs): a mesma
+     bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, o onDisconnect
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
    Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v]
    --tela: o navegador num aparelho (§4.2; o Chromium do Playwright, o TM servido daqui, o relógio do treino acelerado pelo
@@ -1211,6 +1213,76 @@ bloco("L10", "conferência: o vivo adulterado é acusado", (ok, nota) => {
   nota(`${honestas} transições honestas (também com estados pulados), ${motivos.length} adulterações acusadas (${[...new Set(motivos)].join(", ")}); ${paresHonestos} pares honestos com saltos de qualquer tamanho (${comRep} na repescagem, ${comFim} no fim), ${motivosPulo.length} adulterações com o seq pulando ou depois do fim (${[...new Set(motivosPulo)].join(", ")})`);
 });
 
+/* ============================== a bateria comum das redes (R na memória, F no Firebase falso) ==============================
+   M: rede, agora(), avanca(ms) (o tempo de mentira anda e o que estava marcado acontece), outro(latencia) (outro aparelho
+   na MESMA sala), cair(rede)/voltar(rede) (a conexão daquele aparelho), arvore() (a sala no servidor), tolTS (o quanto o
+   carimbo devolvido pela transação pode ficar longe da hora do servidor: no online é a estimativa local). */
+async function bateriaRede(ok, M) {
+  const { rede } = M, TS = rede.TS;
+  // espera a promessa andando o tempo (o que ela pede ao "servidor" leva a latência)
+  const ja = async (p, ms = 200) => { await M.avanca(ms); return p; };
+  const vistos = [];
+  const para = rede.ouvir("vivo", v => vistos.push(v));
+  await M.avanca(0);
+  ok(vistos.length === 1 && vistos[0] === null, "ouvir entrega o valor de agora (null): " + JSON.stringify(vistos));
+  // a transação com o carimbo da hora e sem campos vazios
+  const t0 = M.agora();
+  let r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 1, t: TS, h: [], p: "00", sem: [], lider: -1 } : undefined));
+  await M.avanca(0);
+  const noServidor = (M.arvore() || {}).vivo || {};
+  ok(r.feito && Math.abs(r.valor.t - t0) <= M.tolTS && noServidor.t === t0 && !("h" in r.valor) && !("sem" in r.valor) && r.valor.lider === -1 && !("h" in noServidor),
+    "transação: carimbo resolvido e vazios fora: " + JSON.stringify(r.valor) + " no servidor " + JSON.stringify(noServidor));
+  ok(vistos.length === 2 && vistos[1].seq === 1 && vistos[1].t === t0, "o ouvinte viu a transação (uma vez, com a hora do servidor): " + JSON.stringify(vistos));
+  r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 9 } : undefined));
+  ok(!r.feito && r.valor && r.valor.seq === 1, "transação abortada devolve o atual: " + JSON.stringify(r));
+  // atualizar em vários caminhos e gravar null apaga
+  await ja(rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3", pronto: true } }));
+  ok((await ja(rede.ler("escal/1/formacao"))) === "4-3-3", "atualizar com caminhos");
+  await ja(rede.gravar("escal/0", null));
+  ok((await ja(rede.ler("escal/0"))) === null && (await ja(rede.ler("escal/1"))) !== null, "gravar null apaga");
+  await ja(rede.gravar("escal/1", null));
+  ok(!("escal" in (M.arvore() || {})), "o pai vazio some");
+  // dois aparelhos no mesmo banco, com latência e transações concorrentes
+  const b = M.outro(30);
+  await M.avanca(100);
+  const p1 = b.transacao("cont", c => (c || 0) + 1), p2 = rede.transacao("cont", c => (c || 0) + 1), p3 = b.transacao("cont", c => (c || 0) + 1);
+  await M.avanca(1000);
+  await Promise.all([p1, p2, p3]);
+  ok((await ja(rede.ler("cont"))) === 3, "três transações concorrentes somam 3");
+  // a queda: a operação espera a volta; aoCair e aoVoltar avisam
+  let caiu = 0, voltou = 0; b.aoCair(() => caiu++); b.aoVoltar(() => voltou++);
+  M.cair(b);
+  await M.avanca(0);
+  ok(!b.conectado() && caiu === 1, "aoCair e conectado");
+  let feito = false; const p4 = b.gravar("x", 1).then(() => { feito = true; });
+  await M.avanca(100);
+  ok(!feito && (await ja(rede.ler("x"))) === null, "sem conexão a gravação espera");
+  M.voltar(b);
+  await M.avanca(200); await p4;
+  ok(feito && (await ja(rede.ler("x"))) === 1 && voltou === 1 && b.conectado(), "na volta a gravação vai (e aoVoltar avisa)");
+  // o que o servidor faz quando a conexão cai (aoDesconectar): vale uma vez; cancelar tira
+  await ja(b.gravar("pres/b/k1", true)); await ja(b.gravar("pres/b/k2", true));
+  await ja(b.aoDesconectar("pres/b/k1").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").cancelar());
+  const vp = []; const paraP = rede.ouvir("pres", v => vp.push(v));
+  await M.avanca(100);
+  M.cair(b); await M.avanca(100);
+  ok(JSON.stringify(vp[vp.length - 1]) === JSON.stringify({ b: { k2: true } }), "aoDesconectar: o servidor apaga quando cai (o cancelado fica): " + JSON.stringify(vp));
+  M.voltar(b); await M.avanca(200);
+  await ja(b.gravar("pres/b/k1", true));
+  M.cair(b); await M.avanca(100);
+  ok((await ja(rede.ler("pres/b/k1"))) === true, "aoDesconectar vale uma vez (na volta, rearme)");
+  M.voltar(b); await M.avanca(200);
+  // a testemunha da hora: a hora que o servidor pôs
+  const tb = M.agora();
+  const tw = await ja(rede.testemunha("bate/eu", { sid: "s1" }));
+  const bate = await ja(rede.ler("bate/eu"));
+  ok(typeof tw === "number" && Math.abs(tw - tb) <= M.tolTS && bate && bate.ts === tw && bate.sid === "s1", "testemunha: a hora do servidor (" + (tw - tb) + " ms) e o que gravou " + JSON.stringify(bate));
+  paraP(); para();
+  return b;
+}
+
 /* ===================================================== R rede em memória ===================================================== */
 async function testeRede() {
   if (SO && !SO.includes("R")) return;
@@ -1224,57 +1296,262 @@ async function testeRede() {
   const agendar = (fn, ms) => agendaFila.push({ at: hora + ms, fn });
   const roda = async () => { for (let i = 0; i < 50; i++) { await new Promise(r => setImmediate(r)); agendaFila.sort((a, b) => a.at - b.at); while (agendaFila.length && agendaFila[0].at <= hora) agendaFila.shift().fn(); } };
   const rede = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
-  const vistos = [];
-  const para = rede.ouvir("vivo", v => vistos.push(v));
-  await roda();
-  ok(vistos.length === 1 && vistos[0] === null, "ouvir entrega o valor de agora (null)");
-  // a transação com o carimbo da hora e sem campos vazios
-  let r = await rede.transacao("vivo", cur => cur === null ? { seq: 1, t: R.TS, h: [], p: "00", sem: [], lider: -1 } : undefined);
-  await roda();
-  ok(r.feito && r.valor.t === 1000 && !("h" in r.valor) && !("sem" in r.valor) && r.valor.lider === -1, "transação: carimbo resolvido e vazios fora: " + JSON.stringify(r.valor));
-  ok(vistos.length === 2 && vistos[1].seq === 1, "o ouvinte viu a transação");
-  r = await rede.transacao("vivo", cur => cur === null ? { seq: 9 } : undefined);
-  ok(!r.feito && r.valor.seq === 1, "transação abortada devolve o atual");
-  // atualizar em vários caminhos e gravar null apaga
-  await rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3", pronto: true } });
-  ok((await rede.ler("escal/1/formacao")) === "4-3-3", "atualizar com caminhos");
-  await rede.gravar("escal/0", null);
-  ok((await rede.ler("escal/0")) === null && (await rede.ler("escal/1")) !== null, "gravar null apaga");
-  await rede.gravar("escal/1", null);
-  ok(!("escal" in rede._arvore()), "o pai vazio some");
+  await bateriaRede(ok, {
+    rede, tolTS: 0, agora: () => hora,
+    // anda até cada coisa marcada (na hora dela) e só então até o fim
+    avanca: async ms => {
+      const alvo = hora + ms;
+      for (let i = 0; i < 10000; i++) {
+        await roda();
+        agendaFila.sort((a, b) => a.at - b.at);
+        if (!agendaFila.length || agendaFila[0].at > alvo) break;
+        hora = Math.max(hora, agendaFila[0].at);
+      }
+      hora = alvo; await roda();
+    },
+    outro: lat => rede.outroCliente({ latencia: lat }),
+    cair: b => b._cair(), voltar: b => b._voltar(),
+    arvore: () => rede._arvore()
+  });
   // a gravação no aparelho: outra rede com o mesmo código volta ao mesmo ponto
   hora += 500; await roda();
   ok(guardado["leilao:sala:TREINO1"] && JSON.parse(guardado["leilao:salas"]).includes("TREINO1"), "gravou a sala e o índice");
   const volta = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
   ok((await volta.ler("vivo")).seq === 1, "o treino volta depois de recarregar");
   ok(jsonIgual(R.salasGuardadas(armazem), ["TREINO1"]), "salasGuardadas");
-  // dois aparelhos no mesmo banco, com latência e transações concorrentes
-  const b = rede.outroCliente({ latencia: 30 });
-  const p1 = b.transacao("cont", c => (c || 0) + 1), p2 = rede.transacao("cont", c => (c || 0) + 1), p3 = b.transacao("cont", c => (c || 0) + 1);
-  hora += 100; await roda();
-  await Promise.all([p1, p2, p3]);
-  ok((await rede.ler("cont")) === 3, "três transações concorrentes somam 3");
-  // a queda: a operação espera a volta; aoCair avisa
-  let caiu = 0; b.aoCair(() => caiu++);
-  b._cair();
-  ok(!b.conectado() && caiu === 1, "aoCair e conectado");
-  let feito = false; const p4 = b.gravar("x", 1).then(() => { feito = true; });
-  hora += 100; await roda();
-  ok(!feito && (await rede.ler("x")) === null, "sem conexão a gravação espera");
-  b._voltar(); await p4; hora += 10; await roda();
-  ok(feito && (await rede.ler("x")) === 1, "na volta a gravação vai");
-  para();
+  // reconectar: cai e volta (os dois avisos)
+  let c2 = 0, v2 = 0; rede.aoCair(() => c2++); rede.aoVoltar(() => v2++);
+  rede.reconectar();
+  ok(c2 === 1 && v2 === 1 && rede.conectado(), "reconectar: cai e volta");
+  rede.fechar();
   rede.apagar();
   ok(!guardado["leilao:sala:TREINO1"] && !guardado["leilao:salas"], "apagar some com a gravação");
   const ms = performance.now() - t0;
-  console.log(`${erros.length ? "REPROVOU" : "ok      "} R    rede em memória: ouvir, transação, carimbo, vazios, gravação, concorrência, queda (${(ms / 1000).toFixed(1)} s)`);
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} R    rede em memória: ouvir, transação, carimbo, vazios, gravação, concorrência, queda, aoDesconectar, testemunha (${(ms / 1000).toFixed(1)} s)`);
   if (erros.length) { falhas++; erros.forEach(e => console.log("         · " + e)); }
+}
+
+/* ============================================ F rede no Firebase (o banco falso) ============================================
+   A rede firebase() do leilao-rede.js sobre o banco falso que se comporta como o SDK compat 10.12.5
+   (ferramentas/lib/banco-falso.mjs): a MESMA bateria do R e o que só o online tem — a transação com o cache velho repete, a
+   1ª rodada com o valor do servidor (o SDK rodaria com null e abortaria sem perguntar), o TIMESTAMP resolvido no servidor (a
+   estimativa no valor devolvido), a hora pela testemunha de menor ida e volta (o relógio do aparelho ±5 s e pulando depois
+   da calibração), o ack perdido ('desconectado' e o servidor gravou), a gravação sem conexão reenviada, o onDisconnect no
+   servidor, a permissão recusada, a limpeza dos valores, o ouvir sempre depois, reconectar, apagar e a disputa de 4
+   aparelhos. Nenhum Firebase de verdade. */
+async function testeFirebase() {
+  if (SO && !SO.includes("F")) return;
+  const t00 = performance.now(), erros = [], notas = [];
+  const ok = (c, m) => { if (!c) erros.push(m); return !!c; };
+  const R = TMs.public.leilaoRede;
+  const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+  // o tempo de mentira: o servidor, o agendador e os relógios dos aparelhos andam juntos
+  const T = { hora: 1000, fila: [], seq: 0 };
+  const agendar = (fn, ms) => { T.fila.push({ at: T.hora + Math.max(0, +ms || 0), fn, s: T.seq++ }); };
+  const avanca = async (ms = 0) => {
+    const alvo = T.hora + ms;
+    const proximo = () => { T.fila.sort((a, b) => a.at - b.at || a.s - b.s); return T.fila.length && T.fila[0].at <= alvo; };
+    for (let volta = 0; volta < 200000; volta++) {
+      for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+      // as promessas em cadeia podem marcar mais coisa: espera mais um pouco antes de dar o tempo por andado
+      if (!proximo()) { for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r)); if (!proximo()) break; }
+      const it = T.fila.shift(); T.hora = Math.max(T.hora, it.at); it.fn();
+    }
+    T.hora = Math.max(T.hora, alvo);
+  };
+  // espera a promessa andando o tempo (o pedido e a resposta levam a latência dos dois lados)
+  const ja = async (p, ms = 400) => { await avanca(ms); return p; };
+  const banco = new BancoFalso({ relogio: () => T.hora, tempo: () => T.hora, agendar });
+  let nAparelho = 0;
+  const redes = new Map();   // rede → o cid do cliente dela no banco falso
+  // um aparelho: o cliente do banco falso (o SDK) + a rede firebase() da sala; desvio = o relógio de parede dele (±5 s)
+  function aparelho(codigo, o = {}) {
+    const cli = banco.cliente({ uid: o.uid || "u" + (++nAparelho), latencia: o.latencia ?? 0, relogio: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    const mono = { base: 50000 + nAparelho * 1000, pulo: 0 };
+    const rede = R.firebase(codigo, { db: cli.db, firebase: cli.firebase, relogio: () => T.hora - 1000 + mono.base + mono.pulo, relogioParede: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    redes.set(rede, cli.cid);
+    return { cli, rede, mono };
+  }
+  const sala = c => banco.ler("leiloes/" + c);
+  try {
+
+  /* F1 a mesma bateria do R */
+  const A = aparelho("SALA1");
+  await avanca(0);
+  await bateriaRede(ok, {
+    rede: A.rede, tolTS: 0, agora: () => T.hora, avanca,
+    outro: lat => aparelho("SALA1", { latencia: lat }).rede,
+    cair: rd => banco.derrubar(redes.get(rd)), voltar: rd => banco.conectar(redes.get(rd)),
+    arvore: () => sala("SALA1")
+  });
+
+  /* F2 a transação: a 1ª rodada com o valor do servidor; o cache velho repete; a armadilha do SDK */
+  banco.gravar("leiloes/SALA2/cont", 3);
+  banco.gravar("leiloes/SALA2/novo", 3);
+  const B = aparelho("SALA2", { latencia: { sobe: 10, desce: 120 } });
+  await avanca(500);
+  // o SDK puro (sem a rede): no caminho que ninguém ouve, a 1ª rodada vê null e a fn que aborta com null nem pergunta
+  const viuSdk = [];
+  let rs = await ja(B.cli.db.ref("leiloes/SALA2/cont").transaction(c => { viuSdk.push(c); return c == null ? undefined : c + 1; }, undefined, false));
+  ok(viuSdk.length === 1 && viuSdk[0] === null && !rs.committed && sala("SALA2").cont === 3, "o SDK falso imita a armadilha: 1ª rodada com null aborta sem perguntar ao servidor " + JSON.stringify(viuSdk));
+  // a rede: ouve antes, a fn vê o valor do servidor (num caminho que este aparelho nunca ouviu)
+  const viuRede = [];
+  let pr = B.rede.transacao("novo", c => { viuRede.push(c); return c == null ? undefined : c + 1; });
+  await avanca(1000); let r = await pr;
+  ok(r.feito && r.valor === 4 && viuRede[0] === 3 && sala("SALA2").novo === 4, "a rede: a 1ª rodada já com o valor do servidor " + JSON.stringify(viuRede));
+  await ja(B.rede.transacao("cont", c => c + 1));   // o cont vai a 4, como o novo
+  // o cache velho: B ouve, o servidor muda e o dado demora 120 ms a chegar; a transação de B repete com o valor de lá
+  const vistosB = []; const paraB = B.rede.ouvir("cont", v => vistosB.push(v));
+  await avanca(500);
+  banco.gravar("leiloes/SALA2/cont", 10);
+  const viuVelho = [];
+  pr = B.rede.transacao("cont", c => { viuVelho.push(c); return (c || 0) + 1; });
+  await avanca(2000); r = await pr;
+  ok(r.feito && r.valor === 11 && viuVelho.join() === "4,10" && sala("SALA2").cont === 11, "o cache velho: o servidor recusa ('datastale') e a fn roda de novo com o valor de lá: " + viuVelho.join(" → "));
+  ok(vistosB.join() === "4,10,11", "o ouvinte viu só valores do servidor (sem o líder falso do applyLocally): " + vistosB.join(","));
+  paraB();
+  // nenhuma escuta esquecida (a transação solta a dela)
+  await new Promise(res => setTimeout(res, 10)); await avanca(100);
+  ok(!B.cli.db.__falso.estado().escutas.length, "a transação não deixa escuta pendurada: " + JSON.stringify(B.cli.db.__falso.estado().escutas));
+
+  /* F3 a hora: o TIMESTAMP no servidor, a estimativa no valor, a testemunha de menor ida e volta, o relógio que pula */
+  let desvio = 5000;
+  const H = aparelho("SALA3", { latencia: 40, desvio: () => desvio });
+  await avanca(300);
+  const offSdk = H.rede._hora().offsetSdk;
+  ok(Math.abs(offSdk - (-5000 - 40)) < 1, "o .info/serverTimeOffset do aperto de mão: " + offSdk);
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 45, "antes da testemunha, a hora pelo aperto de mão (erro = a volta): " + (H.rede.horaServidor() - T.hora));
+  const tTx = T.hora;
+  pr = H.rede.transacao("x", c => ({ t: H.rede.TS, v: 1 }));
+  await avanca(500); r = await pr;
+  const srvX = sala("SALA3").x.t;
+  ok(r.feito && srvX >= tTx && srvX <= tTx + 200 && Math.abs(r.valor.t - srvX) <= 100, `TIMESTAMP: o servidor pôs ${srvX - tTx} ms depois; a transação devolve a estimativa (${r.valor.t - srvX} ms de diferença)`);
+  const tg = T.hora;
+  await ja(H.rede.gravar("y", { t: H.rede.TS }));
+  ok(typeof sala("SALA3").y.t === "number" && sala("SALA3").y.t === tg + 40, "gravar com o carimbo: a hora do servidor quando chegou (" + (sala("SALA3").y.t - tg) + " ms)");
+  // as testemunhas (latências diferentes: vale a de menor ida e volta)
+  const amostrasIda = [80, 15, 120, 40];
+  for (const lat of amostrasIda) {
+    banco.definirLatencia(H.cli.cid, lat);
+    const s0 = T.hora; pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(lat * 4 + 50); const tw = await pr;
+    ok(typeof tw === "number" && tw === s0 + lat, "a testemunha devolve a hora em que o servidor gravou (" + (tw - s0) + " ms, latência " + lat + ")");
+    await avanca(400);   // o que ainda está no caminho (o fim da escuta da leitura) chega antes da próxima
+
+  }
+  const esc = H.rede._hora().escolhida;
+  ok(esc && esc.ida === 30 && Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, `a hora pela amostra de menor ida e volta (${esc && esc.ida} ms): erro ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms`);
+  // o relógio de parede pula +60 s depois da calibração: a hora não muda (o relógio monótono)
+  desvio = 65000;
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, "o relógio de parede pula +60 s depois da calibração: a hora não muda");
+  // o relógio monótono pula (o aparelho dormiu e ele parou 3 s): a próxima testemunha não cruza e recomeça a janela
+  H.mono.pulo = -3000;
+  const errDepois = H.rede.horaServidor() - T.hora;
+  banco.definirLatencia(H.cli.cid, 60);
+  pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(400); await pr;
+  ok(Math.abs(errDepois + 3000) < 20 && Math.abs(H.rede.horaServidor() - T.hora) <= 60.5 && H.rede._hora().amostras === 1, `o relógio monótono pulou 3 s: a testemunha recomeça a janela (erro ${errDepois.toFixed(0)} → ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms)`);
+  // o relógio de um aparelho ±5 s: as horas gravadas são as do servidor
+  desvio = -5000;
+  const H2 = aparelho("SALA3", { latencia: 25, desvio: () => -5000 });
+  await avanca(200);
+  pr = H2.rede.testemunha("bate/h2", {}); const s2 = T.hora; await avanca(300); const tw2 = await pr;
+  ok(tw2 >= s2 && tw2 <= s2 + 100 && Math.abs(H2.rede.horaServidor() - T.hora) <= 25.5, "o aparelho atrasado 5 s: a testemunha e a hora são as do servidor");
+
+  // duas abas da mesma conta gravam o mesmo bate: a leitura de depois do ack é a da outra — sem testemunho, sem calibrar
+  const X = aparelho("SALA7", { latencia: 50 }), Y = aparelho("SALA7", { latencia: 10 });
+  await avanca(300);
+  pr = X.rede.testemunha("bate/eu", { sid: "x" });
+  await avanca(50);
+  Y.rede.gravar("bate/eu", { sid: "y", ts: 1 });
+  await avanca(500); const twX = await pr;
+  ok(twX === null && X.rede._hora().amostras === 0 && sala("SALA7").bate.eu.sid === "y", "outra aba gravou o mesmo bate antes da leitura: a testemunha devolve null e não calibra");
+
+  /* F4 o ack perdido: a transação rejeita com 'desconectado' e o servidor gravou; conferir lendo de novo */
+  const K = aparelho("SALA4", { latencia: 20 });
+  await avanca(200);
+  await ja(K.rede.gravar("cont", 1)); await avanca(100);
+  banco.cairNoProximoAck(K.cli.cid);
+  let erro = null;
+  pr = K.rede.transacao("cont", c => (c || 0) + 1).catch(e => { erro = e; });
+  await avanca(500); await pr;
+  ok(erro && erro.codigo === "desconectado" && sala("SALA4").cont === 2 && !K.rede.conectado(), "o ack perdido: rejeita com 'desconectado' e o servidor gravou (" + (erro && erro.message) + ")");
+  banco.conectar(K.cli.cid); await avanca(300);
+  ok((await ja(K.rede.ler("cont"))) === 2 && K.rede.conectado(), "na volta, ler de novo resolve o 'Conferindo…'");
+  // a gravação com o ack perdido: fica guardada, vai de novo na volta e só então resolve
+  banco.cairNoProximoAck(K.cli.cid);
+  let gravou = false; const pg = K.rede.gravar("g", { v: 7 }).then(() => { gravou = true; });
+  await avanca(300);
+  ok(!gravou && sala("SALA4").g && sala("SALA4").g.v === 7, "set com o ack perdido: o servidor tem, a promessa espera");
+  banco.conectar(K.cli.cid); await avanca(300); await pg;
+  ok(gravou && sala("SALA4").g.v === 7, "na volta, o set vai de novo e resolve");
+  // a transação feita sem conexão vai na volta (o SDK guarda a que não foi mandada)
+  banco.derrubar(K.cli.cid); await avanca(50);
+  let feitoOff = null; pr = K.rede.transacao("cont", c => (c || 0) + 10).then(x => { feitoOff = x; });
+  await avanca(500);
+  ok(feitoOff === null && sala("SALA4").cont === 2, "sem conexão a transação espera");
+  banco.conectar(K.cli.cid); await avanca(500); await pr;
+  ok(feitoOff && feitoOff.feito && sala("SALA4").cont === 12, "na volta a transação vai: " + JSON.stringify(feitoOff));
+
+  /* F5 permissão recusada e a limpeza dos valores */
+  banco.negar = (op, caminho) => caminho.includes("/proibido");
+  let ep = null; await ja(K.rede.gravar("proibido", 1).catch(e => { ep = e; })); await avanca(100);
+  let et = null; pr = K.rede.transacao("proibido", () => 1).catch(e => { et = e; }); await avanca(300); await pr;
+  ok(ep && ep.codigo === "permissao" && et && et.codigo === "permissao" && sala("SALA4").proibido == null, "sem permissão: gravar e transação rejeitam com 'permissao'");
+  banco.negar = null;
+  let lancou = null; try { K.cli.db.ref("leiloes/SALA4/z").set({ a: undefined }); } catch (e) { lancou = e.message; }
+  await ja(K.rede.gravar("z", { a: undefined, b: NaN, c: [], d: 1, e: { f: undefined } })); await avanca(100);
+  ok(/contains undefined/.test(lancou || "") && jsonIgual(sala("SALA4").z, { d: 1 }), "o SDK recusa undefined; a rede limpa como a memória: " + JSON.stringify(sala("SALA4").z));
+  await ja(K.rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3" } })); await avanca(100);
+  const escal = await ja(K.rede.ler("escal"));
+  ok(Array.isArray(escal) && escal.length === 2, "o nó de chaves 0..n volta como LISTA (o val() do SDK; a sessão aceita os dois)");
+
+  /* F6 o ouvir sempre depois (o SDK chama dentro do on() e do set) */
+  const O = aparelho("SALA5");
+  await avanca(100);
+  await ja(O.rede.gravar("a", 1)); await avanca(50);
+  const pO = O.rede.ouvir("a", () => {}); await avanca(50);   // o caminho fica com o cache pronto
+  let dentro = 0, depois = 0, fase = "on";
+  const pO2 = O.rede.ouvir("a", () => { if (fase === "on" || fase === "set") dentro++; else depois++; });
+  fase = "set"; O.rede.gravar("a", 2); fase = "fora";
+  await avanca(100);
+  ok(dentro === 0 && depois === 2, `o ouvir nunca chama dentro do on() nem do set (dentro ${dentro}, depois ${depois})`);
+  pO(); pO2();
+
+  /* F7 reconectar (goOffline/goOnline: o servidor roda o onDisconnect), aoCair/aoVoltar, apagar, indisponível */
+  let caiu = 0, voltou = 0; O.rede.aoCair(() => caiu++); O.rede.aoVoltar(() => voltou++);
+  await ja(O.rede.gravar("pres/o", true)); await ja(O.rede.aoDesconectar("pres/o").apagar()); await avanca(50);
+  O.rede.reconectar(); await avanca(300);
+  ok(caiu === 1 && voltou === 1 && O.rede.conectado() && sala("SALA5").pres == null, "reconectar: cai (o onDisconnect roda no servidor) e volta");
+  await ja(O.rede.apagar()); await avanca(100);
+  let ea = null; await O.rede.gravar("a", 3).catch(e => { ea = e; });
+  ok(sala("SALA5") == null && ea && ea.codigo === "apagada", "apagar: a sala some no servidor e nada mais grava");
+  let ei = null; try { R.firebase("X", {}); } catch (e) { ei = e; }
+  ok(ei && ei.codigo === "indisponivel", "sem o banco do TM: erro 'indisponivel'");
+  O.rede.fechar();
+
+  /* F8 a disputa: 4 aparelhos, 12 incrementos cada, latências diferentes, todos no mesmo instante */
+  const D = [0, 15, 40, 90].map((lat, i) => aparelho("SALA6", { latencia: lat, uid: "d" + i }));
+  await avanca(300);
+  const tentativas = [0, 0, 0, 0];
+  const ps = [];
+  for (let k = 0; k < 12; k++) D.forEach((d, i) => ps.push(d.rede.transacao("cont", c => { tentativas[i]++; return (c || 0) + 1; }).catch(e => ({ feito: false, erro: e.codigo }))));
+  await avanca(20000);
+  const rs8 = await Promise.all(ps);
+  ok(rs8.every(x => x.feito) && sala("SALA6").cont === 48, "4 aparelhos × 12 incrementos ao mesmo tempo somam 48: " + sala("SALA6").cont);
+  notas.push(`disputa: ${tentativas.reduce((a, b) => a + b, 0)} rodadas da fn para 48 gravações`);
+  notas.push(`bytes baixados pelo aparelho da bateria ${banco.bytes(A.cli.cid).desce}`);
+  } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+
+  const ms = performance.now() - t00;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} F    rede no Firebase (banco falso como o SDK): a bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, onDisconnect, permissão, limpeza, ouvir depois, disputa${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) { falhas++; erros.slice(0, VERBOSO ? 200 : 12).forEach(e => console.log("         · " + e)); }
 }
 
 await testeProtocolo();
 await testeSessao();
 await testeRede();
-console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + (SO && !SO.includes("R") ? 0 : 1) - falhas} de ${resultados.length + (SO && !SO.includes("R") ? 0 : 1)} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
+await testeFirebase();
+const nAsync = ["R", "F"].filter(b => !SO || SO.includes(b)).length;
+console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + nAsync - falhas} de ${resultados.length + nAsync} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
 process.exit(falhas ? 1 : 0);
 
 /* ================= --tela: o navegador num aparelho (PLANO-LEILAO.md §4.2) =================
