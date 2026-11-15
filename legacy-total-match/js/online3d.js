@@ -13,6 +13,12 @@
           convidado?, nomeC?, versaoC?, naSalaC? (= partidaN: o convidado está na sala esperando essa partida),
           aceito? (uid do convidado aceito), recusados?: { uid: true }, pedeLigar? (contador: o convidado pede outra ligação),
           rtc?: { rodada, nova, oferta: {type, sdp}, resposta?: {r, type, sdp}, iceA?: {chave: {r, c}}, iceC?: {chave: {r, c}} } }
+      (A sessão de partida — o sinal, a ligação, o lobby técnico do canal ctrl, o pedido, o quadro e a porta — é a função
+      confronto(o) (seções 4–7, TM.online3d.confronto): a sala daqui e o par do Modo Leilão (PR 5, js/leilao-tela.js, com o
+      sinal em leiloes/{CÓDIGO}/rtc/{jogo}) usam a MESMA. No Leilão o convidado pede outra oferta pelo próprio nó do sinal
+      (rtc/{jogo}/pede); o anfitrião manda o pedido sozinho com os dois times (auto) e o pedido leva online.simular: true — o
+      "Simular partida" ao lado do "Pronto" na tela antes do jogo do GOLAÇO; qualquer um escolhe e os dois saem com
+      'tm3d:sair' {motivo: 'simular'}.)
       Código: 5 letras de "ABCDEFGHJKLMNPQRSTUVWXYZ23456789" (as do online de hoje, sem as ambíguas), sorteado por
       crypto.getRandomValues; criada por transação, com onDisconnect().remove() do anfitrião. O convidado entra por
       transação (só um), com onDisconnect que tira os campos dele. Sala sem convidado expira em 15 min.
@@ -134,12 +140,20 @@
   function faixa(rtt) { return rtt == null ? null : rtt <= 80 ? "boa" : rtt <= 160 ? "media" : "lenta"; }
 
   /* ---------- 2. sinal pelo Firebase (A1) ---------- */
-  function sinalFirebase(codigo, papel) {
-    var r = refSala(codigo).child("rtc"), fn = null, h = null, vistos = {}, ofertaVista = 0, respostaVista = 0, rodadaPub = 0;
+  // r = o nó do sinal: salas3d/{c}/rtc na sala do Online 3D; leiloes/{c}/rtc/{jogo} no par do Modo Leilão (PR 5). aoPede (só o
+  // anfitrião) = o convidado pediu outra oferta pelo próprio nó (r/pede; a sala do Online 3D pede pelo nó da sala, pedeLigar)
+  function sinalRef(r, papel, aoPede) {
+    var fn = null, h = null, vistos = {}, ofertaVista = 0, respostaVista = 0, rodadaPub = 0, pedeVisto;
     var minha = papel === "A" ? "iceA" : "iceC", dele = papel === "A" ? "iceC" : "iceA";
     try { r.onDisconnect().remove(); } catch (e) {}
     function ouvir(snap) {
       var v = snap.val();
+      // o pedido de outra oferta: o 1º valor visto é velho (só as mudanças contam)
+      if (papel === "A" && aoPede) {
+        var pd = v && v.pede != null ? v.pede : null;
+        if (pedeVisto !== undefined && pd != null && pd !== pedeVisto) { pedeVisto = pd; try { aoPede(); } catch (e) { console.error(e); } }
+        else pedeVisto = pd;
+      }
       if (!v || !fn) return;
       if (papel === "C" && v.oferta && typeof v.rodada === "number" && v.rodada > ofertaVista) {
         ofertaVista = v.rodada;
@@ -163,13 +177,14 @@
         if (tipo === "oferta") { rodadaPub = d.rodada; return r.set({ rodada: d.rodada, nova: !!d.nova, oferta: { type: d.sdp.type, sdp: d.sdp.sdp } }); }
         if (tipo === "resposta") return r.child("resposta").set({ r: d.rodada, type: d.sdp.type, sdp: d.sdp.sdp });
         if (tipo === "ice") return r.child(minha).push({ r: d.rodada, c: d.c });
+        if (tipo === "pede") return r.child("pede").set(agora().toString(36) + "-" + (u32() % 1000000).toString(36));
       },
       aoReceber: function (f) { fn = f; },
       limpar: function () { try { return r.remove(); } catch (e) {} },
-      fechar: function () { fn = null; try { r.off("value", h); } catch (e) {} }
+      fechar: function () { fn = null; aoPede = null; try { r.off("value", h); } catch (e) {} }
     };
   }
-
+  function sinalFirebase(codigo, papel) { return sinalRef(refSala(codigo).child("rtc"), papel); }
   /* ---------- 3. ligação WebRTC (Transporte) ---------- */
   // o = { papel: 'A'|'C', publicar(tipo, dados), pedirReligar() (convidado), proximaRodada() (anfitrião) }
   function criarLigacao(o) {
@@ -339,19 +354,393 @@
     return fachada();
   }
 
-  /* ---------- a sala (estado deste aparelho) ---------- */
+  /* ---------- 4–7. a sessão de partida (o confronto): o sinal, a ligação, o lobby técnico, o pedido, o quadro e a porta ----------
+     TM.online3d.confronto(o): a MESMA para a sala do Online 3D (abaixo: a sala só cuida do nó salas3d/, do aceite, da escolha do
+     time, do Pronto e do resultado) e para o par do Modo Leilão (PR 5; js/leilao-tela.js: dois técnicos da sala privada jogam o
+     jogo deles no 3D, cada um no seu aparelho). Devolve o estado C (os campos abaixo) com os métodos.
+       o = { ref (o nó do sinal), papel 'A' (anfitrião: oferece; joga em casa, lado 0) | 'C' (convidado: responde; lado 1),
+             eu { uid, nome }, outro (objeto { uid, nome } ou função que o devolve: a sala aprende o convidado depois),
+             meuTime3d e info (o MEU time: TM.tm3d.time3d e { fonte, id, nome, nota, escudo }; pode vir depois por C.time),
+             duracao (minutos por tempo do pedido: número ou função; a do anfitrião vale), sala (o código: pedido.online.sala),
+             auto (o anfitrião manda o pedido sozinho assim que tem os dois times, o 'ola' e o D0 — o Leilão; sem ele, a sala chama
+             C.comecar() com os dois prontos), titulo, origem, partida e online (campos que entram por cima no pedido: o Leilão
+             põe o mando neutro, a competição, o empateContinua e online.simular — o "Simular partida" na tela antes do jogo do
+             GOLAÇO), aceitaOferta() (o convidado aceita a oferta nova agora? padrão: ligando ou falhou), pedirReligar() (o
+             convidado pede outra oferta; padrão: pelo nó do sinal, ref/pede),
+             aoFase(fase, x) ('ligando' | 'falhou' {msg} | 'aberto' (ligou: o lobby técnico) | 'ola' | 'conexao' (rtt, estado) |
+             'jogo' (o quadro abriu) | 'erroPedido'), aoSala(m) (as mensagens 'sala' que são do modo: time — depois de guardar —,
+             pronto, tchau…), aoFim(r3, dados, fim), aoSair(dados, fim) (o fim: { r3, online, abandono, semQuadro, motivo }),
+             aoAbrir(tipo, idPedido) (a 1ª tela do 3D à vista) e aoResultado(r3) (o resultado gravado no APITO, antes da cena do
+             pós-jogo: o 3D grava localStorage["tm3d:resultado:<id>"]) }
+       C.ligar() (anfitrião: uma ligação nova — rodada + 1 — e a oferta; convidado: o sinal e o prazo, até a oferta chegar) ·
+       C.tentar() (o "Tentar de novo": o convidado também pede outra oferta) · C.time(meia, info) (o meu time; manda ao outro) ·
+       C.enviarSala(m) ({ tipo, … } pelo canal ctrl, família 'sala') · C.comecar() (anfitrião: monta e manda o pedido e abre o 3D) ·
+       C.montaPedido() · C.religar() · C.desligar(motivo) (fecha só a ligação) · C.fechar(tchau?) (fecha tudo: a ligação, o sinal,
+       a porta; com tchau, manda {tipo:'tchau'} antes) · C.estado() (um retrato para os testes)
+     Estado: fase ('parado' | 'ligando' | 'falhou' | 'aberto' | 'jogo' | 'fim'), lig (a Ligação), rtt, D0, rtts, olaEle, meu, dele,
+     pedido (o do quadro deste aparelho), porta, lado, fim, msg, ligandoDesde. */
+  function confronto(o) {
+    var C = {
+      papel: o.papel === "A" ? "A" : "C", lado: o.papel === "A" ? 0 : 1, fase: "parado", eu: o.eu || { uid: null, nome: "Jogador" },
+      sinal: null, lig: null, rodada: 0, rtts: [], rtt: null, D0: null, olaEle: null,
+      meu: o.meuTime3d ? { meia: o.meuTime3d, info: o.info || { fonte: "outro", id: null, nome: o.meuTime3d.name, nota: o.meuTime3d.rating, escudo: null } } : null,
+      dele: null, pedido: null, porta: null, fila: [], fim: null, msg: null, ligandoDesde: 0, fechado: false, autoVenceu: false
+    };
+    var timers = {};
+    function outro() { return typeof o.outro === "function" ? o.outro() : o.outro || null; }
+    function nomeOutro() { var x = outro(); return x && x.nome ? x.nome : "o outro aparelho"; }
+    function emite(f, x) { if (C.fechado || !o.aoFase) return; try { o.aoFase(f, x || null); } catch (e) { console.error(e); } }
+    function garanteSinal() {
+      if (C.sinal) return;
+      C.sinal = sinalRef(o.ref, C.papel, C.papel === "A" ? function () {
+        // o convidado pediu outra oferta pelo nó do sinal (o Leilão): ligar de novo, ou refazer o ICE da ligação aberta
+        if (C.fechado) return;
+        if (C.fase === "falhou" || C.fase === "ligando") ligar();
+        else if (C.lig && (C.fase === "aberto" || C.fase === "jogo")) C.lig.religar();
+      } : null);
+      C.sinal.aoReceber(function (tipo, d) {
+        if (C.fechado) return;
+        if (C.papel === "C" && tipo === "oferta" && d.nova) {
+          // ligação nova do anfitrião (a 1ª, "Tentar de novo" ou "Jogar de novo")
+          var aceita = o.aceitaOferta ? o.aceitaOferta() : (C.fase === "ligando" || C.fase === "falhou");
+          if (!aceita) return;
+          fechaLig("nova");
+          zera();
+          C.fase = "ligando"; C.msg = null;
+          C.lig = novaLigacao();
+          armaPrazo(3000);
+          emite("ligando", { nova: true });
+        }
+        if (C.lig) C.lig.recebe(tipo, d);
+      });
+    }
+    function novaLigacao() {
+      var lig = criarLigacao({
+        papel: C.papel,
+        publicar: function (tipo, d) { if (!C.fechado && C.sinal) return C.sinal.publicar(tipo, d); },
+        proximaRodada: function () { return ++C.rodada; },
+        pedirReligar: function () { if (!C.fechado) pedeOferta(); }
+      });
+      lig.aoEstado(function (inf) { if (!C.fechado && C.lig === lig) naLigacao(inf); });
+      lig.aoControle(function (m) { if (!C.fechado && C.lig === lig) naCtrl(m); });
+      lig.aoReceber(function (ab) { if (!C.fechado && C.lig === lig) paraPorta({ t: "j", b: ab }, [ab]); });
+      return lig;
+    }
+    function pedeOferta() {
+      if (o.pedirReligar) { try { o.pedirReligar(); } catch (e) { console.error(e); } return; }
+      garanteSinal();
+      try { C.sinal.publicar("pede", {}); } catch (e) {}
+    }
+    function ligar() {
+      if (C.fechado) return;
+      garanteSinal();
+      C.msg = null;
+      if (C.papel === "A") {
+        fechaLig("nova");
+        zera();
+        C.fase = "ligando";
+        C.lig = novaLigacao();
+        C.rodada++;
+        emite("ligando");
+        C.lig.iniciar(C.rodada);
+        armaPrazo(0);
+      } else {
+        C.fase = "ligando";
+        armaPrazo(3000);
+        emite("ligando");
+      }
+    }
+    function tentar() {
+      if (C.fechado) return;
+      if (C.papel === "A") { ligar(); return; }
+      ligar();
+      pedeOferta();
+    }
+    function armaPrazo(extra) {
+      clearTimeout(timers.prazo);
+      C.ligandoDesde = agora();
+      timers.prazo = setTimeout(function () { if (!C.fechado && C.fase === "ligando") falha(TEXTO_FALHA); }, api.PRAZO_MS + (extra || 0) + 500);
+    }
+    function falha(msg) {
+      fechaLig("falhou");
+      C.fase = "falhou";
+      C.msg = msg || TEXTO_FALHA;
+      emite("falhou", { msg: C.msg });
+    }
+    function fechaLig(motivo, espera) {
+      clearTimeout(timers.ping); clearTimeout(timers.auto);
+      if (C.lig) { var l = C.lig; C.lig = null; l.fechar(motivo, espera); }
+    }
+    // o meu time fica (vai de novo quando ligar); o do outro e as medidas zeram
+    function zera() { C.dele = null; C.olaEle = null; C.rtts = []; C.rtt = null; C.autoVenceu = false; clearTimeout(timers.auto); timers.auto = null; }
+    function naLigacao(inf) {
+      if (C.porta) C.porta.postMessage(estadoPorta(inf));
+      if (inf.estado === "aberto") {
+        if (C.sinal) C.sinal.limpar();                          // ligou (ou religou): o nó do sinal, com os IPs, sai do banco
+        if (C.fase === "ligando") {
+          clearTimeout(timers.prazo);
+          C.fase = "aberto";                                    // (o que o outro mandou antes deste aviso já está guardado)
+          C.lig.enviarControle({ c: "sala", tipo: "ola", nome: C.eu.nome, versaoTM: versao(), webgl2: !!(TM.tm3d && TM.tm3d.disponivel && TM.tm3d.disponivel()), proto: api.PROTO });
+          if (C.meu) mandaMeuTime();
+          emite("aberto");
+        } else emite("conexao");
+      } else if (inf.estado === "fechado") {
+        if (C.fase === "ligando") falha(TEXTO_FALHA);
+        else if (C.fase === "aberto") falha("A conexão com " + nomeOutro() + " caiu. Tentem ligar de novo.");
+        // no jogo, o 3D decide (W.O. depois do prazo); ele já recebeu o estado pela porta
+      } else emite("conexao");
+    }
+    function naCtrl(m) {
+      if (m.c === "jogo") { paraPorta({ t: "c", m: m.m }); return; }
+      if (m.c !== "sala") return;
+      var t = m.tipo;
+      if (t === "ola") {
+        C.olaEle = { nome: m.nome, versaoTM: m.versaoTM, webgl2: !!m.webgl2, proto: m.proto };
+        if ((m.versaoTM || "") !== versao() || (m.proto || 1) !== api.PROTO) {
+          falha("Versões diferentes do Total Match: atualizem a página nos dois aparelhos (" + (m.versaoTM || "?") + " × " + versao() + ").");
+          return;
+        }
+        if (C.papel === "A") pings(api.PINGS);
+        emite("ola");
+        confereAuto();
+      } else if (t === "ping") { if (C.lig) C.lig.enviarControle({ c: "sala", tipo: "pong", t: m.t }); }
+      else if (t === "pong") {
+        if (typeof m.t !== "number" || !C.lig) return;
+        // janela dos últimos 60 (~30 s): o D0 sai do p95 dela (com 10 amostras, a maior); a linha mostra a mediana das
+        // últimas 5 (um pico da tela ocupada não pinta "lenta")
+        C.rtts.push(Math.max(0, relogio() - m.t));
+        if (C.rtts.length > 60) C.rtts.shift();
+        C.rtt = Math.round(mediana(C.rtts.slice(-5)));
+        if (C.rtts.length >= api.PINGS) C.D0 = calcD0(C.rtts);
+        C.lig.enviarControle({ c: "sala", tipo: "rtt", rtt: C.rtt, D0: C.D0 });
+        emite("conexao");
+        confereAuto();
+      } else if (t === "rtt") { C.rtt = typeof m.rtt === "number" ? m.rtt : C.rtt; C.D0 = m.D0 || C.D0; emite("conexao"); }
+      else if (t === "time") {
+        if (!m.meia || !m.info) return;
+        C.dele = { meia: m.meia, info: m.info };
+        sala(m);
+        confereAuto();
+      } else if (t === "pedido") { if (C.papel === "C" && m.pedido && C.fase === "aberto") abre(m.pedido); }
+      else sala(m);
+    }
+    function sala(m) { if (o.aoSala) { try { o.aoSala(m); } catch (e) { console.error(e); } } }
+    // 10 pings seguidos ao abrir (D0) e depois 2 por segundo enquanto escolhem os times
+    function pings(n) {
+      clearTimeout(timers.ping);
+      (function vai(k) {
+        if (C.fechado || !C.lig || (C.fase !== "aberto" && C.fase !== "ligando")) return;
+        C.lig.enviarControle({ c: "sala", tipo: "ping", t: relogio() });
+        timers.ping = setTimeout(function () { vai(k - 1); }, k > 1 ? 100 : 500);
+      })(n);
+    }
+    // auto (o Leilão): o anfitrião manda o pedido com os dois times, o 'ola' do outro e o D0 dos 10 pings (ou 3 s depois)
+    function confereAuto() {
+      if (!o.auto || C.papel !== "A" || C.fase !== "aberto" || C.fechado) return;
+      if (!(C.meu && C.dele && C.olaEle && C.lig)) return;
+      if (C.rtts.length < api.PINGS && !C.autoVenceu) {
+        if (!timers.auto) timers.auto = setTimeout(function () { timers.auto = null; C.autoVenceu = true; confereAuto(); }, 3000);
+        return;
+      }
+      if (!comecar()) emite("erroPedido");
+    }
+    function mandaMeuTime() { if (C.lig && C.meu) C.lig.enviarControle({ c: "sala", tipo: "time", meia: C.meu.meia, info: C.meu.info }); }
+
+    /* ----- 6. o pedido ----- */
+    function montaPedido() {
+      var home = clone(C.meu.meia), away = clone(C.dele.meia);
+      var ku = escolheUniformes(home, away);
+      home.kitEscolhido = ku[0]; away.kitEscolhido = ku[1];
+      var classico = false, nomeCl = null, a = C.meu.info, b = C.dele.info;
+      try {
+        if (a.fonte === "club" && b.fonte === "club" && TM.data.areRivals) {
+          classico = !!TM.data.areRivals(a.id, b.id);
+          if (classico && TM.data.derbyName) nomeCl = TM.data.derbyName(a.id, b.id) || null;
+        }
+      } catch (e) {}
+      var edicao = "public"; try { edicao = TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) {}
+      var dur = typeof o.duracao === "function" ? o.duracao() : o.duracao;
+      dur = [3, 4, 5, 6, 8, 10].indexOf(+dur) >= 0 ? +dur : 4;
+      var ox = outro(), titulo = o.titulo || "Online 3D";
+      var p = {
+        v: 2, titulo: titulo, origem: o.origem || "online3d", modo: "online", controle: null,
+        home: home, away: away,
+        partida: { neutro: false, publico: 0.85, classico: classico, nomeClassico: nomeCl, competicao: titulo,
+                   estadio: (home.identidade && home.identidade.estadio) || null,
+                   // (item 33: a duração do anfitrião — o mesmo pedido nos dois aparelhos; sem dificuldade: duas pessoas)
+                   minutosPorTempo: dur },
+        edicao: edicao, userSide: "home",
+        online: { sala: o.sala, semente: u32() || 1, nomes: [C.eu.nome, ox && ox.nome ? ox.nome : "Convidado"],
+                  D0: calcD0(C.rtts), proto: api.PROTO, lado: 0 }
+      };
+      if (o.partida) Object.keys(o.partida).forEach(function (k) { p.partida[k] = o.partida[k]; });
+      if (o.online) Object.keys(o.online).forEach(function (k) { p.online[k] = o.online[k]; });
+      return p;
+    }
+    // anfitrião: manda o pedido ao convidado e abre o 3D (false = não deu para mandar)
+    function comecar() {
+      if (C.papel !== "A" || C.fase !== "aberto" || !C.lig || !C.meu || !C.dele) return false;
+      clearTimeout(timers.auto);
+      var base = montaPedido();
+      if (!C.lig.enviarControle({ c: "sala", tipo: "pedido", pedido: base })) return false;
+      abre(base);
+      return true;
+    }
+
+    /* ----- o quadro do 3D e a porta (seção 5) ----- */
+    function abre(base) {
+      if (!TM.tm3d || !TM.tm3d.jogarOnline || C.fechado) return;
+      clearTimeout(timers.ping); clearTimeout(timers.auto);
+      var p = clone(base);
+      p.id = "o" + agora().toString(36) + (u32() % 1000000).toString(36);
+      p.online.lado = C.lado;
+      p.userSide = C.lado === 0 ? "home" : "away";
+      C.pedido = p; C.fila = []; C.fim = null;
+      C.fase = "jogo";
+      emite("jogo");
+      var ok = TM.tm3d.jogarOnline(p, {
+        pronto: function (janela, id) { if (!C.fechado) entregaPorta(janela, id); },
+        abriu: o.aoAbrir ? function (tipo) { if (!C.fechado) o.aoAbrir(tipo, p.id); } : null,
+        resultado: o.aoResultado ? function (r3) { if (!C.fechado) o.aoResultado(r3); } : null,
+        fim: function (r3, dados) { if (!C.fechado) fimJogo(r3, dados); },
+        sair: function (dados) { if (!C.fechado) saiuJogo(dados); }
+      });
+      if (!ok && !C.fechado && C.fase === "jogo") saiuJogo(null);
+    }
+    function estadoPorta(inf) {
+      inf = inf || (C.lig ? C.lig.info() : { estado: "fechado", rtt: null, par: null, motivo: "fechou" });
+      var ox = outro();
+      var e = { t: "estado", estado: inf.estado, rtt: C.rtt != null ? C.rtt : (inf.rtt != null ? inf.rtt : null), par: inf.par || null, nome: ox ? ox.nome : "" };
+      if (inf.motivo) e.motivo = inf.motivo;
+      return e;
+    }
+    function entregaPorta(janela, id) {
+      if (!C.pedido || C.pedido.id !== id || !janela) return;
+      if (C.porta) { try { C.porta.close(); } catch (e) {} C.porta = null; }
+      var ch = new global.MessageChannel();
+      try { janela.postMessage({ tipo: "tm3d:porta", id: id, proto: api.PROTO, porta: ch.port2 }, global.location.origin, [ch.port2]); }
+      catch (e) { return; }
+      C.porta = ch.port1;
+      C.porta.onmessage = daPorta;
+      C.porta.postMessage(estadoPorta());
+      var f = C.fila; C.fila = [];
+      f.forEach(function (x) { try { C.porta.postMessage(x[0], x[1] || []); } catch (e) {} });
+    }
+    function paraPorta(msg, transf) {
+      if (C.fase !== "jogo") return;
+      if (C.porta) { try { C.porta.postMessage(msg, transf || []); } catch (e) {} return; }
+      if (msg.t === "j" && C.fila.length > 600) return;       // pacote de jogo velho não serve
+      C.fila.push([msg, transf]);
+    }
+    function daPorta(e) {
+      var d = e.data;
+      if (!d || C.fase !== "jogo") return;
+      if (d.t === "j") { if (d.b instanceof ArrayBuffer && C.lig) C.lig.enviar(d.b); }
+      else if (d.t === "c") { if (C.lig) C.lig.enviarControle({ c: "jogo", m: d.m }); }
+      else if (d.t === "religar") { if (C.lig) C.lig.religar(); }
+      else if (d.t === "estado?") { if (C.porta) C.porta.postMessage(estadoPorta()); }
+    }
+    function termina() {
+      if (C.porta) { try { C.porta.close(); } catch (e) {} C.porta = null; }
+      C.fila = [];
+      fechaLig("fim", 1500);
+    }
+    /* ----- 7. o fim ----- */
+    function fimJogo(r3, dados) {
+      var on = (dados && dados.online) || (r3 && r3.online) || null;
+      C.fim = { r3: r3 || null, online: on, abandono: false };
+      termina();
+      C.fase = "fim";
+      if (o.aoFim) o.aoFim(r3 || null, dados || null, C.fim);
+    }
+    function saiuJogo(dados) {
+      var abandono = !!(dados && (dados.abandono || (dados.online && dados.online.abandono)));
+      C.fim = { r3: null, online: (dados && dados.online) || null, abandono: abandono, semQuadro: !dados, motivo: (dados && dados.motivo) || null };
+      termina();
+      C.fase = "fim";
+      if (o.aoSair) o.aoSair(dados || null, C.fim);
+    }
+    function fechar(tchau) {
+      if (C.fechado) return;
+      try { if (tchau && C.lig) C.lig.enviarControle({ c: "sala", tipo: "tchau" }); } catch (e) {}
+      C.fechado = true;
+      Object.keys(timers).forEach(function (k) { clearTimeout(timers[k]); });
+      if (C.sinal) C.sinal.fechar();
+      if (C.porta) { try { C.porta.close(); } catch (e) {} C.porta = null; }
+      if (C.lig) { var l = C.lig; C.lig = null; l.fechar("saiu", 400); }
+    }
+
+    C.ligar = ligar;
+    C.tentar = tentar;
+    C.time = function (meia, info) { C.meu = { meia: meia, info: info }; mandaMeuTime(); confereAuto(); };
+    C.enviarSala = function (m) { if (!C.lig) return false; var x = { c: "sala" }; Object.keys(m || {}).forEach(function (k) { x[k] = m[k]; }); return C.lig.enviarControle(x); };
+    C.comecar = comecar;
+    C.montaPedido = montaPedido;
+    C.religar = function () { if (C.lig) C.lig.religar(); };
+    // (a sala recusou ou o convidado saiu: só a ligação fecha; o prazo de ligar não vale mais)
+    C.desligar = function (motivo) { clearTimeout(timers.prazo); fechaLig(motivo || "saiu"); if (C.fase !== "jogo" && C.fase !== "fim") C.fase = "parado"; };
+    C.fechar = fechar;
+    C.estado = function () {
+      return { fase: C.fase, papel: C.papel, lado: C.lado, lig: C.lig ? C.lig.info() : null, rtt: C.rtt, D0: C.D0, rodada: C.rodada,
+        meu: C.meu && C.meu.info, dele: C.dele && C.dele.info, pedido: C.pedido ? { id: C.pedido.id, online: C.pedido.online } : null,
+        porta: !!C.porta, fim: C.fim, msg: C.msg, fechado: C.fechado };
+    };
+    return C;
+  }
+
+  /* ---------- a sala do Online 3D (estado deste aparelho) ---------- */
   var S = null;        // a sala em que estou (null = tela de entrada)
   var VIEW = { corpo: null, aviso: null, codigoAuto: null, autoFeito: false, linhaCon: null, ticker: null };
 
   function emJogo() { return S && (S.fase === "jogo"); }
   function noLobby() { return S && ["esperando", "entrou", "aguardaAceite", "ligando", "falhou", "times"].indexOf(S.fase) >= 0; }
   function novoEstado(papel, codigo, me) {
-    return { papel: papel, codigo: codigo, fase: papel === "A" ? "esperando" : "aguardaAceite", eu: { uid: me.uid, nome: me.name || "Jogador" },
-      outro: null, sala: null, partidaN: 1, rodada: 0, sinal: null, lig: null, rtts: [], rtt: null, D0: null,
-      fonte: "club", meu: null, dele: null, prontoEu: false, prontoEle: false, olaEle: null, porta: null, fila: [],
-      pedido: null, lado: papel === "A" ? 0 : 1, fim: null, gravado: {}, msg: null, pedeLigarVisto: 0, timers: {} };
+    var s = { papel: papel, codigo: codigo, fase: papel === "A" ? "esperando" : "aguardaAceite", eu: { uid: me.uid, nome: me.name || "Jogador" },
+      outro: null, sala: null, partidaN: 1, c: null,
+      fonte: "club", prontoEu: false, prontoEle: false,
+      fim: null, gravado: {}, msg: null, pedeLigarVisto: 0, timers: {} };
+    s.c = confrontoDaSala(s);
+    return s;
   }
   function limpaTimers(s) { Object.keys(s.timers).forEach(function (k) { clearTimeout(s.timers[k]); clearInterval(s.timers[k]); }); s.timers = {}; }
+  // a sessão de partida da sala: o sinal no nó salas3d/{c}/rtc; o convidado pede outra oferta pelo nó da sala (pedeLigar)
+  function confrontoDaSala(s) {
+    return confronto({
+      ref: refSala(s.codigo).child("rtc"), papel: s.papel, eu: s.eu, outro: function () { return s.outro; },
+      duracao: duracao3d, sala: s.codigo,
+      aceitaOferta: function () { return S === s && ["aguardaAceite", "ligando", "falhou", "times"].indexOf(s.fase) >= 0; },
+      pedirReligar: function () { if (S === s) refSala(s.codigo).update({ pedeLigar: ((s.sala && s.sala.pedeLigar) || 0) + 1 }); },
+      aoFase: function (f, x) {
+        if (S !== s) return;
+        if (f === "ligando") {
+          if (x && x.nova) s.prontoEu = s.prontoEle = false;
+          s.fase = "ligando"; s.msg = null;
+          if (s.papel === "A" && !(x && x.nova)) refSala(s.codigo).update({ estado: "ligando" });
+          redesenha();
+        } else if (f === "falhou") { s.fase = "falhou"; s.msg = x && x.msg; s.prontoEu = s.prontoEle = false; redesenha(); }
+        else if (f === "aberto") {
+          s.fase = "times";
+          if (s.papel === "A") refSala(s.codigo).update({ estado: "conectado" });
+          redesenha();
+        } else if (f === "ola") redesenha();
+        else if (f === "conexao") atualizaLinhaCon();
+        else if (f === "jogo") { s.fase = "jogo"; if (s.papel === "A") refSala(s.codigo).update({ estado: "jogando" }); redesenha(); }
+        else if (f === "erroPedido") TM.ui.toast("Não deu para mandar a partida ao outro aparelho.", "erro");
+      },
+      aoSala: function (m) {
+        if (S !== s) return;
+        var t = m.tipo;
+        if (t === "time") { s.prontoEle = false; redesenha(); }
+        else if (t === "pronto") { s.prontoEle = !!m.sim; redesenha(); confereInicio(); }
+        else if (t === "tchau") {
+          if (s.papel === "A") { /* o convidado saiu: o banco avisa (naSalaA) */ s.c.desligar("saiu"); if (s.fase === "times" || s.fase === "ligando") { s.fase = "entrou"; redesenha(); } }
+          else if (noLobby()) { sairDaSala(true); avisoFinal("O anfitrião fechou a sala."); redesenha(); }
+        }
+      },
+      aoFim: function (r3, dados, fim) { if (S === s) fimJogo(fim); },
+      aoSair: function (dados, fim) { if (S === s) saiuJogo(fim); }
+    });
+  }
 
   function redesenha() {
     if (TM.ui.current() !== "online3d" || !VIEW.corpo || !VIEW.corpo.isConnected) return;
@@ -455,12 +844,12 @@
       if (v.pedeLigar && v.pedeLigar !== S.pedeLigarVisto) {
         S.pedeLigarVisto = v.pedeLigar;
         if (S.fase === "falhou" || S.fase === "ligando") comecaLigacao();
-        else if (S.lig && (S.fase === "times" || S.fase === "jogo")) S.lig.religar();
+        else if (S.c.lig && (S.fase === "times" || S.fase === "jogo")) S.c.religar();
       }
     } else if (S.outro && noLobby()) {
       var nome = S.outro.nome;
       S.outro = null;
-      fechaLig("saiu");
+      S.c.desligar("saiu");
       zeraTimes();
       S.fase = "esperando";
       armaExpira();
@@ -472,12 +861,7 @@
     if (!v) { if (noLobby()) { sairDaSala(true); avisoFinal("A sala foi encerrada pelo anfitrião."); redesenha(); } return; }
     if (v.recusados && v.recusados[S.eu.uid]) { sairDaSala(true); avisoFinal("O anfitrião recusou a sua entrada."); redesenha(); return; }
     if (v.convidado !== S.eu.uid) { if (noLobby()) { sairDaSala(true); avisoFinal("Você não está mais nesta sala."); redesenha(); } return; }
-    if (S.fase === "aguardaAceite" && v.aceito === S.eu.uid && v.naSalaC === S.partidaN && v.partidaN === S.partidaN) {
-      S.fase = "ligando";
-      garanteSinal();
-      armaPrazoLig(3000);
-      redesenha();
-    }
+    if (S.fase === "aguardaAceite" && v.aceito === S.eu.uid && v.naSalaC === S.partidaN && v.partidaN === S.partidaN) S.c.ligar();
   }
 
   /* ----- aceitar / recusar (anfitrião) ----- */
@@ -490,178 +874,49 @@
     var uid = S.outro.uid, upd = { convidado: null, nomeC: null, versaoC: null, naSalaC: null, aceito: null, rtc: null, estado: "esperando" };
     upd["recusados/" + uid] = true;
     S.outro = null; S.fase = "esperando";
-    fechaLig("recusado");
+    S.c.desligar("recusado");
     refSala(S.codigo).update(upd);
     armaExpira();
     redesenha();
   }
 
-  /* ----- ligar os aparelhos ----- */
-  function garanteSinal() {
-    if (S.sinal) return;
-    var meu = S;
-    S.sinal = sinalFirebase(S.codigo, S.papel);
-    S.sinal.aoReceber(function (tipo, d) {
-      if (S !== meu) return;
-      if (S.papel === "C" && tipo === "oferta" && d.nova) {
-        // ligação nova do anfitrião (a 1ª, "Tentar de novo" ou "Jogar de novo")
-        // (o convidado pode ver a oferta antes do próprio nó da sala dizer que foi aceito: vale como aceite)
-        if (["aguardaAceite", "ligando", "falhou", "times"].indexOf(S.fase) < 0) return;
-        fechaLig("nova");
-        zeraTimes();
-        S.fase = "ligando";
-        S.lig = novaLigacao();
-        armaPrazoLig(3000);
-        redesenha();
-      }
-      if (S.lig) S.lig.recebe(tipo, d);
-    });
-  }
-  function novaLigacao() {
-    var meu = S;
-    var lig = criarLigacao({
-      papel: S.papel,
-      publicar: function (tipo, d) { if (S === meu && S.sinal) return S.sinal.publicar(tipo, d); },
-      proximaRodada: function () { return ++meu.rodada; },
-      pedirReligar: function () { if (S === meu) refSala(S.codigo).update({ pedeLigar: ((S.sala && S.sala.pedeLigar) || 0) + 1 }); }
-    });
-    lig.aoEstado(function (inf) { if (S === meu && S.lig === lig) naLigacao(inf); });
-    lig.aoControle(function (m) { if (S === meu && S.lig === lig) naCtrl(m); });
-    lig.aoReceber(function (ab) { if (S === meu && S.lig === lig) paraPorta({ t: "j", b: ab }, [ab]); });
-    return lig;
-  }
+  /* ----- ligar os aparelhos (o confronto da sala) ----- */
   function comecaLigacao() {
     if (!S || S.papel !== "A") return;
-    fechaLig("nova");
-    zeraTimes();
-    S.fase = "ligando"; S.msg = null;
-    garanteSinal();
-    S.lig = novaLigacao();
-    S.rodada++;
-    refSala(S.codigo).update({ estado: "ligando" });
-    S.lig.iniciar(S.rodada);
-    armaPrazoLig(0);
-    redesenha();
-  }
-  function armaPrazoLig(extra) {
-    var meu = S;
-    clearTimeout(S.timers.prazo);
-    S.ligandoDesde = agora();
-    S.timers.prazo = setTimeout(function () { if (S === meu && S.fase === "ligando") falhaLig(TEXTO_FALHA); }, api.PRAZO_MS + (extra || 0) + 500);
-  }
-  function falhaLig(msg) {
-    fechaLig("falhou");
-    S.fase = "falhou";
-    S.msg = msg || TEXTO_FALHA;
-    redesenha();
+    S.prontoEu = S.prontoEle = false;
+    S.c.ligar();
   }
   function tentarDeNovo() {
     if (!S) return;
-    if (S.papel === "A") { comecaLigacao(); return; }
-    S.fase = "ligando"; S.msg = null;
-    garanteSinal();
-    armaPrazoLig(3000);
-    refSala(S.codigo).update({ pedeLigar: ((S.sala && S.sala.pedeLigar) || 0) + 1 });
-    redesenha();
+    S.prontoEu = S.prontoEle = false;
+    S.c.tentar();
   }
-  function fechaLig(motivo, espera) {
-    if (!S) return;
-    clearTimeout(S.timers.ping);
-    if (S.lig) { var l = S.lig; S.lig = null; l.fechar(motivo, espera); }
-  }
-  // o meu time fica escolhido (vai de novo quando ligar); o do outro, os prontos e as medidas zeram
-  function zeraTimes() { S.prontoEu = S.prontoEle = false; S.dele = null; S.olaEle = null; S.rtts = []; S.rtt = null; }
-  function naLigacao(inf) {
-    if (S.porta) S.porta.postMessage(estadoPorta(inf));
-    if (inf.estado === "aberto") {
-      if (S.sinal) S.sinal.limpar();                          // ligou (ou religou): o nó rtc, com os IPs, sai do banco
-      if (S.fase === "ligando") {
-        clearTimeout(S.timers.prazo);
-        S.fase = "times";                                     // (o que o outro mandou antes deste aviso já está guardado)
-        if (S.papel === "A") refSala(S.codigo).update({ estado: "conectado" });
-        S.lig.enviarControle({ c: "sala", tipo: "ola", nome: S.eu.nome, versaoTM: versao(), webgl2: !!(TM.tm3d && TM.tm3d.disponivel && TM.tm3d.disponivel()), proto: api.PROTO });
-        if (S.meu) mandaMeuTime();
-        redesenha();
-      } else atualizaLinhaCon();
-    } else if (inf.estado === "fechado") {
-      if (S.fase === "ligando") falhaLig(TEXTO_FALHA);
-      else if (S.fase === "times") falhaLig("A conexão com " + (S.outro ? S.outro.nome : "o outro aparelho") + " caiu. Tentem ligar de novo.");
-      // no jogo, o 3D decide (W.O. depois do prazo); ele já recebeu o estado pela porta
-    } else atualizaLinhaCon();
-  }
-
-  /* ----- o lobby pelo canal ctrl ----- */
-  function naCtrl(m) {
-    if (m.c === "jogo") { paraPorta({ t: "c", m: m.m }); return; }
-    if (m.c !== "sala") return;
-    var t = m.tipo;
-    if (t === "ola") {
-      S.olaEle = { nome: m.nome, versaoTM: m.versaoTM, webgl2: !!m.webgl2, proto: m.proto };
-      if ((m.versaoTM || "") !== versao() || (m.proto || 1) !== api.PROTO) {
-        falhaLig("Versões diferentes do Total Match: atualizem a página nos dois aparelhos (" + (m.versaoTM || "?") + " × " + versao() + ").");
-        return;
-      }
-      if (S.papel === "A") pings(api.PINGS);
-      redesenha();
-    } else if (t === "ping") S.lig.enviarControle({ c: "sala", tipo: "pong", t: m.t });
-    else if (t === "pong") {
-      if (typeof m.t !== "number") return;
-      // janela dos últimos 60 (~30 s): o D0 sai do p95 dela (com 10 amostras, a maior); a linha mostra a mediana das
-      // últimas 5 (um pico da tela ocupada não pinta "lenta")
-      S.rtts.push(Math.max(0, relogio() - m.t));
-      if (S.rtts.length > 60) S.rtts.shift();
-      S.rtt = Math.round(mediana(S.rtts.slice(-5)));
-      if (S.rtts.length >= api.PINGS) S.D0 = calcD0(S.rtts);
-      S.lig.enviarControle({ c: "sala", tipo: "rtt", rtt: S.rtt, D0: S.D0 });
-      atualizaLinhaCon();
-    } else if (t === "rtt") { S.rtt = typeof m.rtt === "number" ? m.rtt : S.rtt; S.D0 = m.D0 || S.D0; atualizaLinhaCon(); }
-    else if (t === "time") {
-      if (!m.meia || !m.info) return;
-      S.dele = { meia: m.meia, info: m.info };
-      S.prontoEle = false;
-      redesenha();
-    } else if (t === "pronto") { S.prontoEle = !!m.sim; redesenha(); confereInicio(); }
-    else if (t === "pedido" && S.papel === "C") { if (m.pedido) abre(m.pedido); }
-    else if (t === "tchau") {
-      if (S.papel === "A") { /* o convidado saiu: o banco avisa (naSalaA) */ fechaLig("saiu"); if (S.fase === "times" || S.fase === "ligando") { S.fase = "entrou"; redesenha(); } }
-      else if (noLobby()) { sairDaSala(true); avisoFinal("O anfitrião fechou a sala."); redesenha(); }
-    }
-  }
-  // 10 pings seguidos ao abrir (D0) e depois 2 por segundo enquanto escolhem os times
-  function pings(n) {
-    var meu = S;
-    clearTimeout(S.timers.ping);
-    (function vai(k) {
-      if (S !== meu || !S.lig || (S.fase !== "times" && S.fase !== "ligando")) return;
-      S.lig.enviarControle({ c: "sala", tipo: "ping", t: relogio() });
-      S.timers.ping = setTimeout(function () { vai(k - 1); }, k > 1 ? 100 : 500);
-    })(n);
-  }
-  function mandaMeuTime() { if (S && S.lig && S.meu) S.lig.enviarControle({ c: "sala", tipo: "time", meia: S.meu.meia, info: S.meu.info }); }
+  // os prontos zeram; o meu time fica escolhido (vai de novo quando ligar); o do outro e as medidas zeram no confronto
+  function zeraTimes() { S.prontoEu = S.prontoEle = false; }
   function escolheTime(id) {
     if (!S) return;
     var fonte = S.fonte, t = fonte === "nation" ? TM.engine.teamFromNation(id) : TM.engine.teamFromClub(id);
     var meia = TM.tm3d.time3d(t, t.formation);
-    S.meu = { meia: meia, info: { fonte: fonte, id: id, nome: meia.name, nota: meia.rating, escudo: (meia.identidade && meia.identidade.escudo) || null } };
-    if (S.prontoEu) { S.prontoEu = false; if (S.lig) S.lig.enviarControle({ c: "sala", tipo: "pronto", sim: false }); }
-    mandaMeuTime();
+    if (S.prontoEu) { S.prontoEu = false; S.c.enviarSala({ tipo: "pronto", sim: false }); }
+    S.c.time(meia, { fonte: fonte, id: id, nome: meia.name, nota: meia.rating, escudo: (meia.identidade && meia.identidade.escudo) || null });
   }
   function alternaPronto() {
-    if (!S || !S.meu || !S.lig) return;
+    if (!S || !S.c.meu || !S.c.lig) return;
     S.prontoEu = !S.prontoEu;
-    S.lig.enviarControle({ c: "sala", tipo: "pronto", sim: S.prontoEu });
+    S.c.enviarSala({ tipo: "pronto", sim: S.prontoEu });
     redesenha();
     confereInicio();
   }
   function confereInicio() {
     if (!S || S.papel !== "A" || S.fase !== "times") return;
-    if (!(S.prontoEu && S.prontoEle && S.meu && S.dele && S.olaEle && S.lig)) return;
-    var base = montaPedido();
-    if (!S.lig.enviarControle({ c: "sala", tipo: "pedido", pedido: base })) { TM.ui.toast("Não deu para mandar a partida ao outro aparelho.", "erro"); return; }
-    abre(base);
+    if (!(S.prontoEu && S.prontoEle && S.c.meu && S.c.dele && S.c.olaEle && S.c.lig)) return;
+    if (!S.c.comecar()) TM.ui.toast("Não deu para mandar a partida ao outro aparelho.", "erro");
   }
-
-  /* ----- 6. o pedido ----- */
+  /** Os minutos de cada tempo da Config "Duração em 3D" (item 33) deste aparelho (o anfitrião manda a dele). */
+  function duracao3d() {
+    var v = 4; try { v = +TM.storage.settings().tempo3d; } catch (e) {}
+    return [3, 4, 5, 6, 8, 10].indexOf(v) >= 0 ? v : 4;
+  }
   function rgb(h) { h = String(h || "#888888").replace("#", ""); if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]; var n = parseInt(h, 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; }
   function dist(a, b) { var x = rgb(a), y = rgb(b); return Math.sqrt((x[0] - y[0]) * (x[0] - y[0]) + (x[1] - y[1]) * (x[1] - y[1]) + (x[2] - y[2]) * (x[2] - y[2])); }
   // o mandante com o uniforme dele; o visitante com o 1º (casa, fora, terceiro) que não se confunde (o mesmo clube = o 2º)
@@ -678,111 +933,19 @@
     }
     return [kc, melhor];
   }
-  /** Os minutos de cada tempo da Config "Duração em 3D" (item 33) deste aparelho (o anfitrião manda a dele). */
-  function duracao3d() {
-    var v = 4; try { v = +TM.storage.settings().tempo3d; } catch (e) {}
-    return [3, 4, 5, 6, 8, 10].indexOf(v) >= 0 ? v : 4;
-  }
 
-  function montaPedido() {
-    var home = clone(S.meu.meia), away = clone(S.dele.meia);
-    var ku = escolheUniformes(home, away);
-    home.kitEscolhido = ku[0]; away.kitEscolhido = ku[1];
-    var classico = false, nomeCl = null, a = S.meu.info, b = S.dele.info;
-    try {
-      if (a.fonte === "club" && b.fonte === "club" && TM.data.areRivals) {
-        classico = !!TM.data.areRivals(a.id, b.id);
-        if (classico && TM.data.derbyName) nomeCl = TM.data.derbyName(a.id, b.id) || null;
-      }
-    } catch (e) {}
-    var edicao = "public"; try { edicao = TM.storage.edition() === "pro" ? "pro" : "public"; } catch (e) {}
-    return {
-      v: 2, titulo: "Online 3D", origem: "online3d", modo: "online", controle: null,
-      home: home, away: away,
-      partida: { neutro: false, publico: 0.85, classico: classico, nomeClassico: nomeCl, competicao: "Online 3D",
-                 estadio: (home.identidade && home.identidade.estadio) || null,
-                 // (item 33: a duração do anfitrião — o mesmo pedido nos dois aparelhos; sem dificuldade: duas pessoas)
-                 minutosPorTempo: duracao3d() },
-      edicao: edicao, userSide: "home",
-      online: { sala: S.codigo, semente: u32() || 1, nomes: [S.eu.nome, S.outro ? S.outro.nome : "Convidado"],
-                D0: calcD0(S.rtts), proto: api.PROTO, lado: 0 }
-    };
-  }
-
-  /* ----- o quadro do 3D e a porta (seção 5) ----- */
-  function abre(base) {
-    if (!S || !TM.tm3d || !TM.tm3d.jogarOnline) return;
-    clearTimeout(S.timers.ping);
-    var p = clone(base);
-    p.id = "o" + agora().toString(36) + (u32() % 1000000).toString(36);
-    p.online.lado = S.papel === "A" ? 0 : 1;
-    p.userSide = S.papel === "A" ? "home" : "away";
-    S.lado = p.online.lado;
-    S.pedido = p; S.fila = []; S.fim = null;
-    S.fase = "jogo";
-    if (S.papel === "A") refSala(S.codigo).update({ estado: "jogando" });
-    redesenha();
-    var meu = S;
-    var ok = TM.tm3d.jogarOnline(p, {
-      pronto: function (janela, id) { if (S === meu) entregaPorta(janela, id); },
-      fim: function (r3, dados) { if (S === meu) fimJogo(r3, dados); },
-      sair: function (dados) { if (S === meu) saiuJogo(dados); }
-    });
-    if (!ok && S === meu && S.fase === "jogo") saiuJogo(null);
-  }
-  function estadoPorta(inf) {
-    inf = inf || (S.lig ? S.lig.info() : { estado: "fechado", rtt: null, par: null, motivo: "fechou" });
-    var e = { t: "estado", estado: inf.estado, rtt: S.rtt != null ? S.rtt : (inf.rtt != null ? inf.rtt : null), par: inf.par || null, nome: S.outro ? S.outro.nome : "" };
-    if (inf.motivo) e.motivo = inf.motivo;
-    return e;
-  }
-  function entregaPorta(janela, id) {
-    if (!S.pedido || S.pedido.id !== id || !janela) return;
-    if (S.porta) { try { S.porta.close(); } catch (e) {} S.porta = null; }
-    var ch = new global.MessageChannel();
-    try { janela.postMessage({ tipo: "tm3d:porta", id: id, proto: api.PROTO, porta: ch.port2 }, global.location.origin, [ch.port2]); }
-    catch (e) { return; }
-    S.porta = ch.port1;
-    S.porta.onmessage = daPorta;
-    S.porta.postMessage(estadoPorta());
-    var f = S.fila; S.fila = [];
-    f.forEach(function (x) { try { S.porta.postMessage(x[0], x[1] || []); } catch (e) {} });
-  }
-  function paraPorta(msg, transf) {
-    if (!S || S.fase !== "jogo") return;
-    if (S.porta) { try { S.porta.postMessage(msg, transf || []); } catch (e) {} return; }
-    if (msg.t === "j" && S.fila.length > 600) return;       // pacote de jogo velho não serve
-    S.fila.push([msg, transf]);
-  }
-  function daPorta(e) {
-    var d = e.data;
-    if (!d || !S || S.fase !== "jogo") return;
-    if (d.t === "j") { if (d.b instanceof ArrayBuffer && S.lig) S.lig.enviar(d.b); }
-    else if (d.t === "c") { if (S.lig) S.lig.enviarControle({ c: "jogo", m: d.m }); }
-    else if (d.t === "religar") { if (S.lig) S.lig.religar(); }
-    else if (d.t === "estado?") { if (S.porta) S.porta.postMessage(estadoPorta()); }
-  }
-  function terminaJogo() {
-    if (S.porta) { try { S.porta.close(); } catch (e) {} S.porta = null; }
-    S.fila = [];
-    fechaLig("fim", 1500);
-    if (S.papel === "A") refSala(S.codigo).update({ estado: "fim" });
-  }
-
-  /* ----- 7. resultado ----- */
+  /* ----- 7. resultado (a sala) ----- */
   function num(x) { x = Number(x); return isFinite(x) ? Math.max(0, Math.round(x)) : 0; }
-  function fimJogo(r3, dados) {
-    var on = (dados && dados.online) || (r3 && r3.online) || null;
-    S.fim = { r3: r3 || null, online: on, abandono: false };
-    terminaJogo();
+  function fimJogo(fim) {
+    S.fim = { r3: fim.r3, online: fim.online, abandono: false };
+    if (S.papel === "A") refSala(S.codigo).update({ estado: "fim" });
     gravaResultado();
     S.fase = "resultado";
     TM.ui.go("online3d");
   }
-  function saiuJogo(dados) {
-    var abandono = !!(dados && (dados.abandono || (dados.online && dados.online.abandono)));
-    S.fim = { r3: null, online: (dados && dados.online) || null, abandono: abandono, semQuadro: !dados };
-    if (abandono) {
+  function saiuJogo(fim) {
+    S.fim = { r3: null, online: fim.online, abandono: fim.abandono, semQuadro: fim.semQuadro };
+    if (fim.abandono) {
       var fp = null; try { fp = TM.fairplay ? TM.fairplay.recordAbandon() : null; } catch (e) {}
       S.fim.fp = fp;
       // o anfitrião é quem grava: saiu ele, grava a própria derrota (o convidado, quando sai, fica com o fair play)
@@ -791,7 +954,7 @@
         try { N().recordResult(S.eu.uid, S.outro.uid, S.outro.uid); N().recordWin(S.outro.uid, S.outro.nome, S.eu.uid, S.eu.nome); } catch (e) {}
       }
     }
-    terminaJogo();
+    if (S.papel === "A") refSala(S.codigo).update({ estado: "fim" });
     S.fase = "resultado";
     TM.ui.go("online3d");
   }
@@ -810,8 +973,8 @@
   function jogarDeNovo() {
     if (!S) return;
     S.partidaN++;
-    S.fim = null; S.pedido = null;
-    S.prontoEu = S.prontoEle = false; S.dele = null;
+    S.fim = null; S.c.pedido = null;
+    S.prontoEu = S.prontoEle = false;
     if (S.papel === "A") {
       S.fase = S.outro && S.sala && S.sala.convidado ? "entrou" : "esperando";
       var upd = { partidaN: S.partidaN, estado: "esperando" };
@@ -830,12 +993,9 @@
     s = s || S;
     if (!s) return;
     if (S === s) S = null;
-    try { if (s.lig) s.lig.enviarControle({ c: "sala", tipo: "tchau" }); } catch (e) {}
     limpaTimers(s);
     if (s.paraSala) s.paraSala();
-    if (s.sinal) s.sinal.fechar();
-    if (s.porta) { try { s.porta.close(); } catch (e) {} }
-    if (s.lig) { var l = s.lig; s.lig = null; l.fechar("saiu", 400); }
+    s.c.fechar(true);
     if (semBanco || !banco()) return;
     var r = refSala(s.codigo);
     try { r.onDisconnect().cancel(); } catch (e) {}
@@ -846,6 +1006,7 @@
       if (v && v.convidado === uid) r.update({ convidado: null, nomeC: null, versaoC: null, naSalaC: null, aceito: null, rtc: null });
     }).catch(function () {});
   }
+
   function confirmaSair(depois) {
     if (!S || S.fase === "resultado") { sairDaSala(); if (depois) depois(); return; }
     var outro = S.outro ? S.outro.nome : null;
@@ -984,7 +1145,7 @@
       el("div", { class: "o3d-ligando" }, [el("span", { class: "o3d-giro", "aria-hidden": "true" }), el("span", { text: "Conectando direto com " + (S.outro ? S.outro.nome : "o outro aparelho") + "…" }), seg]),
       el("div", { class: "o3d-acoes" }, [botao("Sair da sala", function () { confirmaSair(function () { redesenha(); }); }, "btn ghost")])
     ]));
-    function tic() { if (!S || !S.ligandoDesde) return; seg.textContent = Math.min(99, Math.floor((agora() - S.ligandoDesde) / 1000)) + " s"; }
+    function tic() { if (!S || !S.c.ligandoDesde) return; seg.textContent = Math.min(99, Math.floor((agora() - S.c.ligandoDesde) / 1000)) + " s"; }
     tic(); VIEW.ticker = setInterval(tic, 500);
   }
   function desenhaFalhou(corpo) {
@@ -1002,12 +1163,12 @@
     return e;
   }
   function pintaCon(e) {
-    var est = S.lig ? S.lig.info().estado : "fechado";
-    var fx = faixa(S.rtt);
+    var est = S.c.lig ? S.c.lig.info().estado : "fechado";
+    var fx = faixa(S.c.rtt);
     e.className = "o3d-con " + (est === "instavel" ? "media" : fx || "medindo");
     TM.ui.clear(e);
     e.appendChild(el("span", { class: "o3d-barras", "aria-hidden": "true" }, [el("i"), el("i"), el("i")]));
-    e.appendChild(el("span", { text: est === "instavel" ? "Conexão instável, reconectando…" : fx == null ? "Medindo a conexão…" : (fx === "boa" ? "Conexão boa" : fx === "media" ? "Conexão razoável" : "Conexão lenta") + " (" + S.rtt + " ms)" }));
+    e.appendChild(el("span", { text: est === "instavel" ? "Conexão instável, reconectando…" : fx == null ? "Medindo a conexão…" : (fx === "boa" ? "Conexão boa" : fx === "media" ? "Conexão razoável" : "Conexão lenta") + " (" + S.c.rtt + " ms)" }));
   }
   function atualizaLinhaCon() { if (VIEW.linhaCon && VIEW.linhaCon.isConnected && S) pintaCon(VIEW.linhaCon); }
   // o meu: o escudo do meu TM; o do outro: o MESMO que ele vê (o endereço que veio no time dele; a edição pode ser outra)
@@ -1035,15 +1196,15 @@
     if (!S.prontoEu) corpo.appendChild(seg);
     var abrePicker = function () {
       if (!S || S.prontoEu) return;
-      TM.ui.pickTeam({ source: S.fonte, title: "Seu time", current: S.meu && S.meu.info.fonte === S.fonte ? S.meu.info.id : null, especiais: S.fonte === "club",
+      TM.ui.pickTeam({ source: S.fonte, title: "Seu time", current: S.c.meu && S.c.meu.info.fonte === S.fonte ? S.c.meu.info.id : null, especiais: S.fonte === "club",
         back: function () { TM.ui.go("online3d"); },
         onPick: function (id) { escolheTime(id); TM.ui.go("online3d"); } });
     };
-    if (!S.meu) corpo.appendChild(el("button", { class: "chosen-team empty", type: "button", on: { click: abrePicker } }, [el("span", { text: "Escolher o meu time" })]));
+    if (!S.c.meu) corpo.appendChild(el("button", { class: "chosen-team empty", type: "button", on: { click: abrePicker } }, [el("span", { text: "Escolher o meu time" })]));
     else {
-      var i = S.meu.info;
+      var i = S.c.meu.info;
       var c = el("div", { class: "chosen-team o3d-time meu" + (S.prontoEu ? " pronto" : ""), on: { click: abrePicker } }, [
-        escudoImg(i, S.meu.meia, "chosen-crest", true),
+        escudoImg(i, S.c.meu.meia, "chosen-crest", true),
         el("div", { class: "chosen-info" }, [el("div", { class: "chosen-name", text: i.nome }), el("div", { class: "chosen-sub", text: S.prontoEu ? "Você está pronto" : "Toque para trocar" })]),
         TM.ui.ovBadge(i.nota)
       ]);
@@ -1051,11 +1212,11 @@
     }
     corpo.appendChild(el("div", { class: "vs-divider", text: "VS" }));
     corpo.appendChild(el("div", { class: "setting-label", text: outro }));
-    if (!S.dele) corpo.appendChild(el("div", { class: "chosen-team empty o3d-espera" }, [el("span", { text: outro + " está escolhendo o time…" })]));
+    if (!S.c.dele) corpo.appendChild(el("div", { class: "chosen-team empty o3d-espera" }, [el("span", { text: outro + " está escolhendo o time…" })]));
     else {
-      var d = S.dele.info;
+      var d = S.c.dele.info;
       corpo.appendChild(el("div", { class: "chosen-team o3d-time" + (S.prontoEle ? " pronto" : "") }, [
-        escudoImg(d, S.dele.meia, "chosen-crest", false),
+        escudoImg(d, S.c.dele.meia, "chosen-crest", false),
         el("div", { class: "chosen-info" }, [el("div", { class: "chosen-name", text: d.nome }), el("div", { class: "chosen-sub", text: S.prontoEle ? outro + " está pronto" : "Escolhido por " + outro })]),
         TM.ui.ovBadge(d.nota)
       ]));
@@ -1067,7 +1228,7 @@
     else st = "Cada um escolhe o próprio time. O anfitrião joga em casa.";
     corpo.appendChild(el("div", { class: "waiting-line o3d-status", text: st }));
     var bt = S.prontoEu ? botao("Desfazer pronto", alternaPronto, "btn ghost") : botao("Pronto", alternaPronto, "btn primary big");
-    if (!S.meu) bt.classList.add("is-off");
+    if (!S.c.meu) bt.classList.add("is-off");
     corpo.appendChild(el("div", { class: "o3d-acoes o3d-fim" }, [bt, botao("Sair da sala", function () { confirmaSair(function () { redesenha(); }); }, "btn ghost")]));
   }
 
@@ -1075,17 +1236,17 @@
   // o time de cada lado para a tela de fim: o meu pelos dados do meu TM; o do outro só com o nome e os jogadores do
   // pedido (a edição dele pode ser outra) — o escudo dele entra depois, o mesmo que ele vê (trocaEscudo)
   function timeDoPoster(lado) {
-    var meia = lado === 0 ? S.pedido.home : S.pedido.away;
+    var meia = lado === 0 ? S.c.pedido.home : S.c.pedido.away;
     var t = { name: meia.name, players: (meia.players || []).map(function (p) { return { id: p.tmId, name: p.nomeCompleto || p.name }; }) };
-    if (lado === S.lado && S.meu) {
-      var info = S.meu.info; t.id = info.id;
+    if (lado === S.c.lado && S.c.meu) {
+      var info = S.c.meu.info; t.id = info.id;
       try { if (info.fonte === "club") t.club = TM.data.club(info.id) || null; else if (info.fonte === "nation") t.nation = TM.data.nation(info.id) || null; } catch (e) {}
     }
     return t;
   }
   function trocaEscudo(poster, lado) {
     var lados = poster.querySelectorAll(".mdp-time"), alvo = lados[lado] && lados[lado].querySelector(".mdp-escudo");
-    var meia = lado === 0 ? S.pedido.home : S.pedido.away, info = S.dele && S.dele.info;
+    var meia = lado === 0 ? S.c.pedido.home : S.c.pedido.away, info = S.c.dele && S.c.dele.info;
     if (!alvo) return;
     alvo.replaceWith(escudoImg(info || {}, meia, "mdp-escudo", false));
   }
@@ -1108,14 +1269,14 @@
     }
     var a = timeDoPoster(0), b = timeDoPoster(1), r = { stats: null };
     try { TM.tm3d.aplicaResultado(r, F.r3, a, b); } catch (e) { r.score = [num(F.r3.homeGoals), num(F.r3.awayGoals)]; r.events = []; }
-    var hs = r.score[0], as = r.score[1], nomes = (S.pedido.online && S.pedido.online.nomes) || [];
-    var res = TM.ui.resultadoDe(hs, as, S.lado), nota = null;
+    var hs = r.score[0], as = r.score[1], nomes = (S.c.pedido.online && S.c.pedido.online.nomes) || [];
+    var res = TM.ui.resultadoDe(hs, as, S.c.lado), nota = null;
     if (on.wo && (on.wo.vencedor === 0 || on.wo.vencedor === 1)) {
-      res = on.wo.vencedor === S.lado ? { cls: "v", txt: "Vitória por W.O." } : { cls: "d", txt: "Derrota por W.O." };
-      nota = on.wo.vencedor === S.lado ? outro + " saiu da partida." : "Você saiu da partida.";
+      res = on.wo.vencedor === S.c.lado ? { cls: "v", txt: "Vitória por W.O." } : { cls: "d", txt: "Derrota por W.O." };
+      nota = on.wo.vencedor === S.c.lado ? outro + " saiu da partida." : "Você saiu da partida.";
     }
-    var poster = TM.ui.posterFim({ a: a, b: b, hs: hs, as: as, events: r.events, titulo: (nomes[0] || "Anfitrião") + " × " + (nomes[1] || "Convidado"), res: res, nota: nota, neutro: S.lado !== 0 });
-    trocaEscudo(poster, 1 - S.lado);
+    var poster = TM.ui.posterFim({ a: a, b: b, hs: hs, as: as, events: r.events, titulo: (nomes[0] || "Anfitrião") + " × " + (nomes[1] || "Convidado"), res: res, nota: nota, neutro: S.c.lado !== 0 });
+    trocaEscudo(poster, 1 - S.c.lado);
     corpo.appendChild(poster);
     corpo.appendChild(el("p", { class: "o3d-nota", text: S.papel === "A" ? "Resultado gravado no retrospecto de vocês e no ranking." : "O anfitrião grava o resultado no retrospecto de vocês e no ranking." }));
     corpo.appendChild(el("div", { class: "o3d-acoes o3d-fim" }, acoes));
@@ -1125,7 +1286,10 @@
   TM.online3d = {
     api: api,
     sinalFirebase: sinalFirebase,
+    sinalRef: sinalRef,
     criarLigacao: criarLigacao,
+    /** A sessão de partida (seções 4–7): a sala daqui e o par do Modo Leilão (PR 5) usam a mesma. */
+    confronto: confronto,
     calcD0: calcD0,
     limpaCodigo: limpaCodigo,
     /** O QR (SVG) de um texto (o link do convite): o Leilão usa o mesmo. */
@@ -1136,9 +1300,9 @@
     /** Um retrato do estado deste aparelho (testes). */
     estado: function () {
       if (!S) return { fase: null, aviso: VIEW.aviso };
-      return { fase: S.fase, papel: S.papel, codigo: S.codigo, partidaN: S.partidaN, outro: S.outro, rtt: S.rtt, D0: S.D0,
-        lig: S.lig ? S.lig.info() : null, meu: S.meu && S.meu.info, dele: S.dele && S.dele.info, prontoEu: S.prontoEu, prontoEle: S.prontoEle,
-        pedido: S.pedido ? { id: S.pedido.id, online: S.pedido.online } : null, porta: !!S.porta, fim: S.fim, msg: S.msg, aviso: VIEW.aviso };
+      return { fase: S.fase, papel: S.papel, codigo: S.codigo, partidaN: S.partidaN, outro: S.outro, rtt: S.c.rtt, D0: S.c.D0,
+        lig: S.c.lig ? S.c.lig.info() : null, meu: S.c.meu && S.c.meu.info, dele: S.c.dele && S.c.dele.info, prontoEu: S.prontoEu, prontoEle: S.prontoEle,
+        pedido: S.c.pedido ? { id: S.c.pedido.id, online: S.c.pedido.online } : null, porta: !!S.c.porta, fim: S.fim, msg: S.msg, aviso: VIEW.aviso };
     }
   };
 })(window);

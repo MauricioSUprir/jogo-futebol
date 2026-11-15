@@ -618,12 +618,16 @@
   /* Online 3D (js/online3d.js): o pedido já vem pronto (o anfitrião monta e manda ao convidado; cada aparelho põe o
      próprio id, userSide e online.lado). fns.pronto(janelaDoQuadro, id) a cada 'tm3d:pronto'/'tm3d:pedePorta' (entrega
      a MessagePort); fns.fim(resultado3d, dados) | fns.sair(dados) — dados = a mensagem do 3D (abandono, online);
-     o X do quadro antes do 3D ficar pronto também é abandono ({ abandono: true }). */
+     o X do quadro antes do 3D ficar pronto também é abandono ({ abandono: true }). Opcionais (o par do Modo Leilão, PR 5):
+     fns.abriu(tipo) (a 1ª 'tm3d:tela' ou 'tm3d:pronto') e fns.resultado(r3) (o resultado que o 3D grava no apito). */
   function jogarOnline(pedido, fns) {
     if (!webgl()) { TM.ui.toast("Este aparelho não tem WebGL 2, que o Online 3D precisa.", "alerta"); if (fns.sair) fns.sair(null); return false; }
     if (!pedido || pedido.modo !== "online" || !pedido.online || !pedido.home || !pedido.away || !pedido.id) { if (fns.sair) fns.sair(null); return false; }
     abre3d(pedido, {
       pronto: fns.pronto,
+      // (o par do Modo Leilão, PR 5: a 1ª tela do 3D à vista e o resultado gravado no apito; o Online 3D da sala não usa)
+      abriu: fns.abriu || null,
+      resultado: fns.resultado || null,
       fim: function (r3, dados) { if (fns.fim) fns.fim(r3, dados); },
       sair: function (dados) { if (fns.sair) fns.sair(dados); },
       falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu.", "alerta"); if (fns.sair) fns.sair(null); },
