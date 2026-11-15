@@ -2276,7 +2276,8 @@ async function testeTela() {
     await espera(400);
     const entrada = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
       off: [...document.querySelectorAll(".lei-online button")].map(b => b.disabled) }));
-    confere("T2 o atalho abre a Entrada: Treinar contra bots, o online 'Em breve' com os botões desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Em breve/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
+    // (aqui o SDK do Firebase é um vazio: sem a conta online, a Entrada oferece só o Treino e diz por quê)
+    confere("T2 o atalho abre a Entrada: Treinar contra bots e, sem conexão com o servidor, o online com Criar sala e Entrar com código desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Sem conexão com o servidor/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
     await nadaSobreNada(p, "entrada");
     await clica(p, "^Treinar contra bots$");
     await espera(400);
