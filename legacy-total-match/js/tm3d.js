@@ -53,7 +53,12 @@
    resultado GRAVADO) e o aoAbrir(tipo) (a 1ª 'tm3d:tela' ou 'tm3d:pronto'). Com o gancho, o fim do 3D grava ANTES de mostrar
    (gravar('3d', r3)), o "Simular partida" da tela e o 3D que nem abriu gravam o simulado (gravar('simulado', titulares | null)), o
    3D aberto e fechado sem resultado não grava nada, e o 2D mostra só o gravado, SEM pausa; "Sempre simular" e sem WebGL 2 também
-   (gravar('simulado', null)). simOpts.duracao3d (a sala) vale no lugar da Config "Duração em 3D". Sem o gancho, nada muda. */
+   (gravar('simulado', null)). simOpts.duracao3d (a sala) vale no lugar da Config "Duração em 3D". Com o gancho, também: o
+   aoAbrir recebe o id do pedido (aoAbrir(tipo, pedidoId)); o aoResultado(r3) recebe o resultado que o 3D grava no APITO (o TM
+   olha o localStorage enquanto o quadro está aberto: a cena do pós-jogo e o "Voltar ao Total Match" vêm depois); o resultado
+   fica com a guarda (localStorage["tm3d:guarda:<id>"]) até o modo o soltar (api.soltaResultado(id)) ou passar 1 h; o X e o
+   "Simular a partida" da demora pedem o simulado (dados.doTM) mesmo que o 3D abra com a confirmação na tela. api.aberto() diz
+   se há um quadro do 3D aberto. Sem o gancho, nada muda. */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -383,14 +388,25 @@
 
   /* ---------- quadro do 3D por cima do TM ---------- */
   var ativo = null;
-  // pedidos/resultados que sobraram (TM fechado com o 3D aberto, aba solta): só existe um 3D aberto por vez
+  // pedidos/resultados que sobraram (TM fechado com o 3D aberto, aba solta): só existe um 3D aberto por vez. O resultado com a
+  // GUARDA (localStorage["tm3d:guarda:<id>"] = a hora: o Modo Leilão, enquanto o jogo dele não fica gravado — o app fechado no
+  // pós-jogo do 3D) fica até a guarda sair (soltaResultado) ou passar de 1 h
+  var GUARDA_MS = 3600000;
+  function guardaViva(id, agora) { var g = +localStorage.getItem("tm3d:guarda:" + id) || 0; return g > 0 && agora - g < GUARDA_MS; }
   function limpaSobras() {
     try {
-      var velhas = [];
-      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && /^tm3d:(pedido|resultado):/.test(k)) velhas.push(k); }
+      var velhas = [], agora = Date.now();
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i), m;
+        if (!k) continue;
+        if ((m = /^tm3d:resultado:(.+)$/.exec(k))) { if (!guardaViva(m[1], agora)) velhas.push(k); }
+        else if (/^tm3d:pedido:/.test(k)) velhas.push(k);
+        else if ((m = /^tm3d:guarda:(.+)$/.exec(k)) && !guardaViva(m[1], agora)) velhas.push(k);
+      }
       velhas.forEach(function (k) { localStorage.removeItem(k); });
     } catch (e) {}
   }
+  function soltaResultado(id) { try { localStorage.removeItem("tm3d:guarda:" + id); localStorage.removeItem("tm3d:resultado:" + id); } catch (e) {} }
   // textos do quadro (o X, a confirmação e o aviso de demora): a partida é simulada quando o 3D não vem; os Pênaltis 3D
   // (jogarPenaltis) não simulam nada — só voltam à escolha dos times (fns.textos)
   var TEXTOS_PARTIDA = { quadro: "Partida em 3D", sair: "Voltar e simular", confirma: "Sair do 3D?",
@@ -420,8 +436,10 @@
     if (!gravaPedido(pedido)) { fns.falhou("Sem espaço para preparar a partida 3D."); return; }
     var aviso = el("div", { class: "tm3d-aviso", text: "Abrindo o estádio 3D…" });
     var quadro = el("iframe", { class: "tm3d-quadro", src: api.PASTA + "?tm=" + encodeURIComponent(pedido.id) + (api.PARAMS || ""), allow: "fullscreen; autoplay; gamepad", title: T.quadro });
+    // (o X e o botão da demora são pedidos EXPLÍCITOS de sair pelo TM — dados.doTM: a confirmação aberta pode durar até depois
+    // de o 3D abrir, e quem a confirma pediu o que ela promete; o modo Leilão grava o simulado com eles)
     var sair = el("button", { class: "tm3d-sair", type: "button", title: T.sair, on: { click: function () {
-      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair", null, T.sairDados || null); });
+      TM.ui.confirm(T.confirma, T.confirmaTexto, T.confirmaBotao, function () { termina("sair", null, Object.assign({ doTM: "x" }, T.sairDados || {})); });
     } } }, [TM.ic("x")]);
     var tela = el("div", { class: "tm3d-tela" }, [aviso, quadro, sair]);
     document.body.appendChild(tela);
@@ -444,9 +462,18 @@
       aviso.textContent = "O 3D está demorando para abrir.";
       aviso.classList.add("demora");
       aviso.style.display = "";
-      aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair"); } } }));
+      aviso.appendChild(el("button", { class: "btn small", text: T.demora, on: { click: function () { termina("sair", null, Object.assign({ doTM: "demora" }, T.sairDados || {})); } } }));
     }, api.ESPERA_MS);
     function lerResultado() { try { var t = localStorage.getItem("tm3d:resultado:" + pedido.id); return t ? JSON.parse(t) : null; } catch (e) { return null; } }
+    // fns.resultado(r3): o resultado que o 3D grava em localStorage já no APITO (antes da cena do pós-jogo, dos melhores momentos
+    // e do "Voltar ao Total Match"), uma vez — o Modo Leilão grava já ali (fechar o app no pós-jogo não perde o 3D)
+    var olhaRes = fns.resultado ? setInterval(function () {
+      if (acabou || !quadro.isConnected) { clearInterval(olhaRes); return; }
+      var r = lerResultado();
+      if (!r) return;
+      clearInterval(olhaRes);
+      try { fns.resultado(r); } catch (e) { if (global.console) console.error(e); }
+    }, 400) : null;
     function ouvir(e) {
       if (e.origin !== global.location.origin || !e.data || e.data.id !== pedido.id) return;
       if (e.source && quadro.contentWindow && e.source !== quadro.contentWindow) return;
@@ -476,10 +503,11 @@
     function termina(como, res, dados) {
       if (acabou) return;
       acabou = true;
-      clearTimeout(espera); clearInterval(olhaCarga);
+      clearTimeout(espera); clearInterval(olhaCarga); if (olhaRes) clearInterval(olhaRes);
       // o quadro some da vista já; o desmonte depois (fecha3d) — a tela do TM que o fns monta pinta antes
       fecha3d(true);
-      try { localStorage.removeItem("tm3d:pedido:" + pedido.id); localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
+      // (o resultado com a guarda fica: o modo o solta quando ele estiver gravado)
+      try { localStorage.removeItem("tm3d:pedido:" + pedido.id); if (!guardaViva(pedido.id, Date.now())) localStorage.removeItem("tm3d:resultado:" + pedido.id); } catch (e) {}
       if (como === "fim" && res) fns.fim(res, dados || null); else fns.sair(dados || null, abriuJa);
     }
     global.addEventListener("message", ouvir);
@@ -666,8 +694,12 @@
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
       userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
     if (typeof cfg.gravar === "function") {
+      // a guarda do resultado: o limpaSobras do próximo 3D não o apaga enquanto o modo não o soltar (soltaResultado)
+      try { localStorage.setItem("tm3d:guarda:" + pedido.id, String(Date.now())); } catch (e) {}
       abre3d(pedido, {
-        abriu: function (tipo) { if (cfg.aoAbrir) cfg.aoAbrir(tipo); },
+        abriu: function (tipo) { if (cfg.aoAbrir) cfg.aoAbrir(tipo, pedido.id); },
+        // o resultado já no apito (o 3D ainda no pós-jogo): o modo grava sem mostrar nada
+        resultado: cfg.aoResultado ? function (r3) { cfg.aoResultado(r3); } : null,
         // o fim do 3D: grava ANTES de mostrar (fechar o app na reprodução não perde o 3D)
         fim: function (r3) { gravarEMostra(screen, cfg, playOrig, "3d", r3); },
         // o "Simular partida" da tela: o simulado com a semente do modo (e os titulares da tela); o 3D que nem chegou a abrir (o X
@@ -676,7 +708,8 @@
         sair: function (dados, abriu) {
           avisoDeSaida(dados);
           if (dados && dados.motivo === "simular") gravarEMostra(screen, cfg, playOrig, "simulado", dados.titulares || null);
-          else if (!abriu || (dados && dados.motivo === "erro")) gravarEMostra(screen, cfg, playOrig, "simulado", null);
+          // (o X e o "Simular a partida" da demora pediram o simulado — também quando o 3D abriu com a confirmação na tela)
+          else if (!abriu || (dados && (dados.motivo === "erro" || dados.doTM))) gravarEMostra(screen, cfg, playOrig, "simulado", null);
           else (cfg.onBack || cfg.onDone || function () {})();
         },
         falhou: function (msg) { TM.ui.toast(msg || "O 3D não abriu: partida simulada.", "alerta"); gravarEMostra(screen, cfg, playOrig, "simulado", null); }
@@ -733,6 +766,8 @@
   api.jogarLivre = jogarLivre;
   api.jogarOnline = jogarOnline;
   api.fechar = function () { fecha3d(false); };
+  api.aberto = function () { return !!ativo; };
+  api.soltaResultado = soltaResultado;
   api._gravaPedido = gravaPedido;   // (testes: golaco/tools/teste-ponte-tm.mjs P11)
   api._abre3d = abre3d;             // (testes: golaco/tools/teste-ponte-tm.mjs P14 — o recado tm3d:tela e o quadro que some já)
   TM.tm3d = api;
