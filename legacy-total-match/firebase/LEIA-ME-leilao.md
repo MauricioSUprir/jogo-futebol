@@ -20,7 +20,7 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 | `sala/pedidos/<uid>` | pedido em nome de outra conta |
 | `lotes` | trocar ou apagar os jogadores depois do Começar |
 | `vendas/<i>`, `jogos/<j>/res` | gravar de novo um registro ou um resultado (grava uma vez) |
-| `jogos/<j>` (o campeonato) | a máquina andar para trás: **o jogo feito não muda**; o reservado só nasce do nada ou do prazo aberto (nunca de volta ao aberto: uma trava nova daria outro sorteio); o resultado só sobre o reservado e com a **mesma trava**; o reservado "pelo prazo" **antes de o prazo vencer** pela hora do servidor (`now`); o prazo maior que 2 min ou que volta a crescer; o 3D reservado (o "Jogar" contra um bot) só ganha o `abriu` uma vez, com a mesma trava, quem reservou, o motivo e o início (as escalações e os técnicos, os aparelhos conferem); o par (o jogo contra um amigo no Online 3D, PR 5) só ganha o toque do outro lado (`vem0`/`vem1`) uma vez, com a hora do servidor e o resto igual; `ini`, `trava`, `inicio`, `abriu`, `vem0`, `vem1` e `ts` com hora que não seja a do servidor |
+| `jogos/<j>` (o campeonato) | a máquina andar para trás: **o jogo feito não muda**; o reservado só nasce do nada ou do prazo aberto (nunca de volta ao aberto: uma trava nova daria outro sorteio); o resultado só sobre o reservado e com a **mesma trava**; o reservado "pelo prazo" **antes de o prazo vencer** pela hora do servidor (`now`); o prazo maior que 2 min ou que volta a crescer; o 3D reservado (o "Jogar" contra um bot) só ganha o `abriu` uma vez, com a mesma trava, quem reservou, o motivo e o início (as escalações e os técnicos, os aparelhos conferem); o par (o jogo contra um amigo no Online 3D, PR 5) só ganha o toque do outro lado (`vem0`/`vem1`) uma vez, com a hora do servidor e o resto igual; **o toque de cada lado só pela conta do técnico daquele lado** (`vem0` pela conta de `ab[0]`, `vem1` pela de `ab[1]`, achadas por `sala/ordem` e `sala/tec/<uid>/auth`; revisão do PR 5); a reserva nova do par com **um toque só**; o W.O. de quem saiu (`woPor: 'saiu'`) e o resultado do 3D do par só **com o `abriu`**; `ini`, `trava`, `inicio`, `abriu`, `vem0`, `vem1` e `ts` com hora que não seja a do servidor |
 | `sala/meta/camp`, `sala/meta/fimCamp` | o começo e o fim do campeonato com hora que não seja a do servidor |
 
 ## O que ele NÃO protege
@@ -38,6 +38,13 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
   partida (o resultado do 3D nem os aparelhos recalculam: conferem só a forma, o lado e quem reservou; o W.O. do 3D antes
   do prazo também passa pelas regras — os aparelhos acusam, menos o W.O. aceito por quem reservou, com o `desistiu`). Quem recalcula é cada aparelho (o simulado com a semente da sala e a trava do jogo), e a sala congela. Também
   passa **apagar um jogo** (o `.validate` não vale para apagar): os aparelhos que já o tinham visto congelam a sala.
+
+**Uma nota técnica sobre o toque do par:** a regra do `vem0`/`vem1` acha o técnico pelo índice gravado em `ab` (um número) e
+usa `'' + número` para virar o nome do filho de `sala/ordem` (o `child()` das regras pede texto). Ela foi conferida pelo
+avaliador dos testes (`ferramentas/lib/regras-leilao.mjs`, que roda as expressões como JavaScript) e não no emulador do
+Firebase; se o console recusar a conversão ao publicar, troque o trecho pela comparação com cada índice
+(`ab/0 === 0 && …ordem/0…`) — a estrutura de hoje (`sala/ordem` e `sala/tec/<uid>/auth`) já basta. O `ts ≥ abriu` do W.O. e do
+3D do par, os aparelhos conferem (a regra só exige o `abriu`).
 
 ## Atenção: a conta vinculada em dois aparelhos
 

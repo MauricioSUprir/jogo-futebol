@@ -163,9 +163,11 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   **PR 5 PRONTO** (branch `leilao-pr5`; a versão sobe no PR): VOCÊ CONTRA UM AMIGO EM 3D AO VIVO — no Seu jogo contra um amigo,
   o "Jogar" para os dois (o 1º toque chama o outro, só com ele na sala); com os dois, os aparelhos se ligam direto (o Online 3D,
   pela MESMA sessão de partida da sala do Online 3D: `TM.online3d.confronto`) e abre a tela antes do jogo do 3D com "Pronto" e
-  o "Simular partida" novo (qualquer um escolhe e os dois saem com o simulado). Quem não toca em Jogar em 2 min ou sai no meio
-  perde por W.O.; a ligação que não dá (sem TURN, comum no 4G) vira o simulado; o resultado é gravado uma vez, por qualquer um
-  dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 a 3) seguem com o jogo contra amigo simulado ao
+  o "Simular partida" novo (qualquer um escolhe e os dois saem com o simulado; depois do Pronto, só o do outro). Perde por W.O.
+  quem estava na sala e não tocou em Jogar em 2 min (fora dela: o simulado; o chamado aparece em qualquer aba da sala, com o
+  Jogar e um selo no Campeonato) ou quem toca em "Sair da partida" com o 3D aberto; a ligação que não dá OU CAI no meio (sem
+  TURN, comum no 4G) vira o simulado (revisão do PR 5: PLANO §8 "A revisão do PR 5"); o resultado é gravado uma vez, por
+  qualquer um dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 a 3) seguem com o jogo contra amigo simulado ao
   abrir a rodada. Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximo: PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
@@ -1476,7 +1478,7 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   `--so3d`), o caso `tresd`
   do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
   `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). **PR 5 (o par; PLANO §8 "Durante
-  o PR 5")**: `REGRAS` 4 (aceitas 1 a 4; `REGRAS_PAR` 4, `_comPar`; o 3 é o da outra frente, os lotes por técnico: sem o par). `TM.online3d.confronto(o)` = a sessão de partida tirada do
+  o PR 5")**: `REGRAS` 4 (aceitas 1 a 4; `REGRAS_PAR` 4, `_comPar`; o 3 são os 20 lotes por técnico, `REGRAS_20`: sem o par). `TM.online3d.confronto(o)` = a sessão de partida tirada do
   `online3d.js` (o sinal POR NÓ — `sinalRef`; o par em `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` —, a ligação, o lobby
   técnico, o pedido, o quadro e a porta; `auto`, `partida`/`online` por cima do pedido, `rodada0`, `aoAbrir`/`aoResultado`); a
   sala do Online 3D usa a MESMA. A máquina do par (`leilao-camp.js`, só com `c.par`): `reservarPar` (o 1º Jogar; `par`,
@@ -1491,6 +1493,16 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   Visão tática, o bit `E_SIMULAR` 128 no byte 19 + `{tipo:'simular'}` pelo canal confiável e os dois saem com `tm3d:sair
   {motivo: 'simular'}`. Testes: `testar-leilao.mjs` PAR e KO `--caso par`; `testar-leilao-online.mjs --so par3d` (o WebRTC de
   verdade no loopback, o `ensaio-3d.mjs` no modo online; no CI); `golaco` `teste-prepartida-tela` O8 e `teste-online` O16.
+  **A revisão do PR 5** (PLANO §8): o `jogarPar` escolhe entrar/reservar DENTRO da transação (os dois juntos); o `naoVeio`
+  vencido com quem não tocou fora da sala ou com buraco desde o chamado = o simulado (`_viuChamado`, `naoAbriu` com um toque);
+  `S.fimPar(id, trava, perdedor, motivo)`: só o `'saiu'` (o "Sair da partida") é W.O., e só com o `abriu` (o `woPar` e o `'3d'`
+  do par exigem o `abriu`; a conferência, o toque do outro > `inicio` e `ts ≥ abriu`; as regras, o `vemN` pela conta de
+  `ab[N]`); o prazo da partida do par + 6 min (`prazoPar`); o pedido no `aoAbrir` e o r3 do apito já na caixa; a faixa
+  `.lei-chamado` + o selo da aba + o aviso a cada 25 s fora das abas; o Ver o jogo some com o par esperando; o 3D da sala
+  também sem bots (só a duração). GOLAÇO (só página): `woDe` ('saiu' / nada depois do apito / 'caiu' / 'sumiu') e
+  `textosQueda`, o Simular desligado depois do Pronto e o E_SIMULAR pendente até a tela abrir. Testes: KO `--caso
+  revsim,revoculto,revcaiu,revforja`, PAR2 (17 adulterações), `par3d` P8–P9, `teste-online` O17, `teste-prepartida-tela`
+  O8b/O8c.
   Fica para o PR 6: as notas escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
   tela a partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois); no teste online, o
   acontecimento que depende do sorteio do calendário se procura no servidor e o piloto segura o toque até ele (sem
