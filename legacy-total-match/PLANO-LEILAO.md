@@ -1375,3 +1375,22 @@ reprova com qualquer `.ut-card` na aba Leilão.
   `.ut-card` na aba, tudo no mesmo cartão, o topo e as pílulas, a barra das fotos e ≤ 1000 px nos 8 tamanhos; o contraste dos
   chips e das pílulas (a inativa no claro ficou em #4a5c50: com o `--text-dim` dava 4,43:1); no T5 o toque nos Participantes e a
   ficha sem a carta; no online (telas) o T6b com as 4 pílulas numa linha em 360 × 740.
+
+**Revisão do passo 1 (15/11; três lentes: fidelidade às fotos, nada sobre nada/claro/acessibilidade e regressão):**
+- **Grave:** o 1º toque do Tudo ("Confirmar" e o valor na mesma linha) passava do botão em todo celular em pé (em 360 por cima
+  do +10 e cortado na borda). Agora só "Confirmar" (17 px; o valor já está na linha de cima). Novo no T4: o Tudo armado nos 8
+  tamanhos e em 667 × 375 e 740 × 360, o texto a ≥ 2 px das bordas.
+- **Médios:** a Escalação também no campinho das vagas (a cartinha voltava a um toque; tocar em dois troca, a 1ª com o anel
+  branco; o `campinho`/`cartaEl` saíram da sala); o VOCÊ do Saguão e dos Participantes de volta (a regra base tinha saído junto
+  com a do seu clube: no claro, branco no branco; T5 e o 6c do online); o campinho com as linhas retas e as vagas à mesma
+  distância na linha (no 5-4-1 o nome do zagueiro central encostava na nota do goleiro; o nada sobre nada mede agora a bola, o
+  nome, a nota e o −N; T8 em cada formação que cabe); contraste ≥ 4,5:1 nos dois temas (os lances de antes sem opacidade, o
+  Tudo e o Dar lance no claro, a grama mais escura com o branco cheio; T4); o deitado de 560 a 799 px numa coluna com o placar
+  numa linha (667 × 375: nome quebrado, "M…", "Outro val"; T4 com 667 × 375 e 740 × 360: o anel e o valor acima da barra).
+- **Leves:** os lances de antes somem sem nenhum; a faixa Vendido sobre a linha do relógio e com o nome do vendido; as
+  pílulas com 30 px (26 deitado) e o alvo de 44 pelo `::after`, o chip com 15 px; o hover só com mouse; o som desligado sem
+  apagar; o −N com 11 px; os Próximos lotes à esquerda no PC; a silhueta com a borda e escura na cor clara do clube
+  (luminância > 0,3); o nome do clube de 16 letras em 360; "+1: lance de R$ X" e "Ver o seu time: R$ X, N de 11, estado";
+  na pausa, "Aguarde o próximo jogador · seu máximo R$ X"; o T5 mede o placeholder de verdade.
+- **Fica:** em 568 × 320 (o iPhone SE de 1ª geração deitado) o anel fica 30 px abaixo da barra até rolar (o topo de 44 px e
+  as pílulas em 2 linhas); no 5-4-1 e no 3-5-2 em 360–390 os sobrenomes de 9–10 letras da linha de 5 ainda saem com "…".
