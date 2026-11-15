@@ -3757,6 +3757,12 @@ async function testeTela() {
       // animando (a velocidade normal): sem o botão de pausa, e o Pular vai adiante; instantâneo: o placar dos 90' já à mostra
       const f90 = await p.evaluate(() => ({ animando: [...document.querySelectorAll(".screen.is-active .actions button")].some(x => /Pular/.test(x.textContent)),
         placar: (document.querySelector(".live-score") || {}).textContent, overlay: !!document.querySelector(".pause-overlay"), campo2d: [...document.querySelectorAll(".screen.is-active button")].some(x => /Campo 2D/.test(x.textContent)) }));
+      // nos 2 primeiros jogos animados, o Campo 2D ligado antes do Pular: os chutes deixam a bola sem condutor e a pessoa sai
+      // do 2D com ele ligado (o laço do Campo 2D tem de parar sem erro de página na aba Campeonato)
+      if (f90.animando && (vis.campo2d || 0) < 2) {
+        const ligou = await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active button")].find(x => /Campo 2D/.test(x.textContent)); if (b) b.click(); return !!b; });
+        if (ligou) { vis.campo2d = (vis.campo2d || 0) + 1; await espera(1500); }
+      }
       if (f90.animando) { vis.animados = (vis.animados || 0) + 1; await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active .actions button")].find(x => /Pular/.test(x.textContent)); if (b) b.click(); }); await espera(120); }
       else vis.placares = (vis.placares || 0) + 1;
       f90.sims = await p.evaluate(() => window.__sims2d);
@@ -4128,9 +4134,11 @@ async function testeTela() {
       await espera(70);
     }
     V = await ver(p);
+    // quantas amostras saem depende do caminho sorteado (o Passar e a sala do treino; a maior parte cai com o retorno do toque
+    // na linha de cima): de 6 a 90 nas duas versões. O que vale é nenhuma errada e um motivo de goleiro/posição/máximo/completo
     const n7 = Object.values(amostras.motivos).reduce((s, x) => s + x, 0);
     confere("T7 o leilão vai até o fim pela tela; sempre que o +1 apaga, a linha de cima diz o motivo (com o de goleiro/posição/máximo/completo entre eles)",
-      V.estado !== "leilao" && n7 > 10 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
+      V.estado !== "leilao" && n7 >= 3 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
     const an = await p.evaluate(() => TM.leilaoTela.anuncios());
     confere("T7 a região ao vivo falou o lote ('Jogador N de 52: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 52: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
     // o que ficou de fato na #lei-vivo: o "Vendido para X por R$ Y" fica escrito (antes, o lote novo o trocava no mesmo quadro) e
@@ -4216,8 +4224,8 @@ async function testeTela() {
     });
     const v1 = await campPelaTela(p, "V.camp.rodadas[0].feita", 60000);
     const aoAbrir = await p.evaluate(() => window.__feitoAoAbrir);
-    confere("T11 'Simular partida' grava antes de mostrar: o 2D abre com o jogo já feito, anima sem o botão de pausa (pauseSide null) e não sorteia nada",
-      v1.simular >= 1 && v1.jogos >= 1 && v1.animados >= 1 && aoAbrir === "feito" && !v1.ruins.length, { v1, aoAbrir });
+    confere("T11 'Simular partida' grava antes de mostrar: o 2D abre com o jogo já feito, anima sem o botão de pausa (pauseSide null) e não sorteia nada (e o Campo 2D ligado; ao sair, nenhum erro de página: ver o último item)",
+      v1.simular >= 1 && v1.jogos >= 1 && v1.animados >= 1 && v1.campo2d >= 1 && aoAbrir === "feito" && !v1.ruins.length, { v1, aoAbrir });
     // o estado de cada jogo na rodada: Simulado com o placar e o Ver o jogo
     const linhas = await p.evaluate(() => [...document.querySelectorAll(".lei-rodada .lei-jogo")].map(li => ({ e: li.dataset.e, est: li.querySelector(".lei-jg-est").textContent, pl: li.querySelector(".lei-jg-pl").textContent, ver: !!li.querySelector(".lei-jg-ver") })));
     confere("T11 os jogos da rodada com o estado ('Simulado' com o placar e o Ver o jogo; 'Esperando' sem placar)",
