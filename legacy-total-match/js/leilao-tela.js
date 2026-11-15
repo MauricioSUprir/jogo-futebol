@@ -725,7 +725,9 @@
       TM.ui.clear(P.lider);
       if (lid) {
         P.lider.appendChild(escudo(lid.clube, "pp"));
-        P.lider.appendChild(el("span", { class: "lei-lider-nome", text: lid.eu ? "Você lidera" : lid.nome + " lidera" }));
+        // o nome encolhe; o "lidera" fica sempre à vista
+        if (lid.eu) P.lider.appendChild(el("span", { class: "lei-lider-nome", text: "Você lidera" }));
+        else { P.lider.appendChild(el("span", { class: "lei-lider-nome", text: lid.nome })); P.lider.appendChild(el("span", { class: "lei-lider-v", text: "lidera" })); }
         P.lider.classList.toggle("eu", !!lid.eu);
       } else {
         P.lider.appendChild(el("span", { class: "lei-lider-nome", text: "Sem lance" }));
@@ -1178,6 +1180,12 @@
   /* ---------- o Saguão (aba Saguão, só no online) ---------- */
   // a pessoa pode agir na sala agora (a conexão em dia, esta aba no comando, as regras iguais, a sala inteira)
   function podeAgir(V) { return !!V && V.rede === "ok" && !V.outraAba && !V.soOlhar && !V.alterada && V.conectado !== false; }
+  // por que a pessoa não age agora (o podeAgir falso): a mesma ordem da faixa da sala; a conexão de pé com a sala ainda
+  // atrasada diz "Atualizando a sala…"/"Reconectando…", não "Sem conexão"
+  function motivoAgir(V) {
+    var m = V.outraAba ? "outraAba" : V.alterada ? "alterada" : V.soOlhar ? "regras" : "conexao";
+    return SS().textoMotivo(m, { rede: V.rede });
+  }
   function papelDe(t) { return t.bot ? "Bot de treino" : t.papel === "dono" ? "Dono da sala" : "Técnico"; }
   // o estado de cada um (o selo da direita): no saguão Pronto / Falta confirmar; depois, Ausente / Saiu e o do lote
   function seloDe(V, t) {
@@ -1209,18 +1217,34 @@
     ]);
   }
   // uma seção refeita só quando a chave muda; o foco do teclado volta ao mesmo botão (data-foco) depois de refeita
+  // Sem o botão (o pedido aceito sumiu da lista), o foco vai ao próximo do mesmo tipo (o Aceitar do próximo pedido) ou ao
+  // rótulo da seção; com os botões apagados (a ação em curso), fica no rótulo e volta a eles na refeita seguinte: nunca cai
+  // no começo da página.
   function secao(P, nome, chave, monta) {
     var box = P[nome]; if (!box) return;
     if (P.k[nome] === chave) return;
     P.k[nome] = chave;
+    P.fp = P.fp || {};
     var a = doc.activeElement, foco = a && box.contains(a) && a.dataset ? a.dataset.foco : null, sel = null;
-    if (foco && a.tagName === "INPUT") { try { sel = [a.selectionStart, a.selectionEnd]; } catch (e) { sel = null; } }
+    if (!foco && P.fp[nome] && (!a || a === doc.body || box.contains(a))) foco = P.fp[nome];
+    delete P.fp[nome];
+    if (foco && a && a.dataset && a.dataset.foco === foco && a.tagName === "INPUT") { try { sel = [a.selectionStart, a.selectionEnd]; } catch (e) { sel = null; } }
     TM.ui.clear(box);
     monta(box);
-    if (foco) {
-      var f = box.querySelector('[data-foco="' + foco + '"]');
-      if (f && !f.disabled) { try { f.focus(); if (sel && f.setSelectionRange) f.setSelectionRange(sel[0], sel[1]); } catch (e) {} }
-    }
+    if (!foco) return;
+    var f = box.querySelector('[data-foco="' + foco + '"]');
+    if (f && !f.disabled) { try { f.focus(); if (sel && f.setSelectionRange) f.setSelectionRange(sel[0], sel[1]); } catch (e) {} return; }
+    if (f) { P.fp[nome] = foco; focaRotulo(box); return; }
+    var tipo = foco.split("-")[0], livres = [].slice.call(box.querySelectorAll("[data-foco]")).filter(function (x) { return !x.disabled; });
+    var g = livres.filter(function (x) { return x.dataset.foco.split("-")[0] === tipo; })[0] || livres[0];
+    if (g) { try { g.focus(); } catch (e) {} return; }
+    // nenhum botão livre agora (a ação em curso apaga todos): o rótulo segura o foco e a próxima refeita tenta de novo
+    P.fp[nome] = foco; focaRotulo(box);
+  }
+  function focaRotulo(box) {
+    var r = box.querySelector(".lei-rotulo"); if (!r) return;
+    r.setAttribute("tabindex", "-1");
+    try { r.focus({ preventScroll: true }); } catch (e) {}
   }
   TM.ui.register("leilao-saguao", function (screen) {
     var M = moldura(screen, "leilao-saguao"); if (!M) return;
@@ -1249,7 +1273,7 @@
         secao(P, "sCfg", JSON.stringify([V.souDono, V.cfg, V.saguao.humanos, ag, oc]), function (b) { poeConfig(b, S, V); });
         var eu = V.tecnicos[V.eu] || null;
         var usadas = V.tecnicos.filter(function (t) { return !t.bot && !t.eu; }).map(function (t) { return String(t.clube.cor).toLowerCase(); }).sort();
-        secao(P, "sClube", JSON.stringify([eu && eu.clube, eu && eu.formacao, usadas, ag, oc === "clube" || oc === "forma"]), function (b) { poeMeuClube(b, S, V, usadas); });
+        secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, oc === "clube" || oc === "forma"]), function (b) { poeMeuClube(b, S, V, usadas); });
       } else secao(P, "sPedidos", JSON.stringify([V.souDono, V.pedidosDepois, V.tecnicos.map(function (t) { return [t.uid, t.nome, t.papel, t.saiu, t.ausente]; }), ag, oc]), function (b) { poePedidosDepois(b, S, V); });
       secao(P, "sPart", JSON.stringify([modo, V.souDono, ag, oc, V.saguao && V.saguao.vagas, V.tecnicos.map(function (t) {
         return [t.uid, t.nome, t.num, t.papel, t.pronto, t.ausente, t.saiu, t.clube, t.eu];
@@ -1472,7 +1496,9 @@
   function poeMeuClube(b, S, V, usadas) {
     var t = V.tecnicos[V.eu]; b.hidden = !t;
     if (!t) return;
-    var base = JSON.stringify(t.clube), M = VIEW.meuClube, des = !podeAgir(V) || !!VIEW.ocupado;
+    // as duas formas pelo MESMO canal (o limpaClube): o Firebase devolve as chaves em outra ordem (cor, escudo, nome, sigla)
+    // e o "mudou?" pelo texto cru dava sempre sim (o Salvar nunca apagava e a cópia do editor não se renovava)
+    var base = JSON.stringify(SS().limpaClube(t.clube)), M = VIEW.meuClube, des = !podeAgir(V) || !!VIEW.ocupado;
     if (!M || M.codigo !== V.codigo || (!M.sujo && M.base !== base)) M = VIEW.meuClube = { codigo: V.codigo, base: base, F: JSON.parse(base), sujo: false, aberto: false };
     b.appendChild(el("div", { class: "lei-rotulo", text: "Meu clube" }));
     var salvar = botao(VIEW.ocupado === "clube" ? "Salvando…" : "Salvar o clube", function () {
@@ -1522,7 +1548,7 @@
     if (V.souDono) {
       rot = ocup === "comecar" ? "Preparando os lotes…" : "Começar o leilão"; icone = "gavel"; cls = "btn primary lei-sagbar-bt";
       pode = ag && sg.podeComecar && !ocup;
-      if (!ag) motivo = SS().textoMotivo(V.outraAba ? "outraAba" : "conexao");
+      if (!ag) motivo = motivoAgir(V);
       else if (sg.humanos + sg.bots < L().TEC_MIN) motivo = SS().textoMotivo("poucos") + ": aceite alguém ou ponha um bot";
       else if (sg.faltam.length) motivo = SS().textoMotivo("prontos");
       else motivo = "Todos prontos: toque em Começar.";
@@ -1530,7 +1556,7 @@
       var pronto = !!(eu && eu.pronto);
       rot = pronto ? "Pronto · toque para cancelar" : "Pronto"; icone = pronto ? "circle-check" : "check"; cls = "btn lei-sagbar-bt" + (pronto ? " on" : " primary");
       pode = ag && !ocup;
-      if (!ag) motivo = SS().textoMotivo(V.outraAba ? "outraAba" : "conexao");
+      if (!ag) motivo = motivoAgir(V);
       else motivo = pronto ? "Você está pronto: o dono começa quando todos estiverem." : "Toque em Pronto quando o seu clube estiver certo.";
     }
     if (B.bt.className !== cls) B.bt.className = cls;
@@ -1779,12 +1805,13 @@
     var S = sessao();
     if (S) {
       var V = S.ver(), tEu = V.tecnicos[V.eu];
-      var est = V.pedido ? (V.pedido.depois ? "esperando o dono passar o clube" : "esperando o dono aceitar") : V.lote ? textoLote(V.lote) : textoEstado({ estado: V.estado, fase: V.fase, k: -1, T: V.T });
-      corpo.appendChild(el("div", { class: "next-match lei-cartao lei-andamento" }, [
-        el("div", { class: "nm-label", text: V.pedido ? "Pedido de entrada" : "Leilão em andamento" }),
+      // a sala congelada pela conferência não está "em andamento": quem volta vê que ela parou antes de entrar
+      var est = V.alterada ? "alterada fora das regras" : V.pedido ? (V.pedido.depois ? "esperando o dono passar o clube" : "esperando o dono aceitar") : V.lote ? textoLote(V.lote) : textoEstado({ estado: V.estado, fase: V.fase, k: -1, T: V.T });
+      corpo.appendChild(el("div", { class: "next-match lei-cartao lei-andamento" + (V.alterada ? " parada" : "") }, [
+        el("div", { class: "nm-label", text: V.alterada ? "Sala parada" : V.pedido ? "Pedido de entrada" : "Leilão em andamento" }),
         el("div", { class: "lei-sala-linha" }, [escudo((tEu || {}).clube, "p"), el("div", { class: "lei-sala-txt" }, [
           el("span", { class: "lei-sala-t", text: subtitulo(V) }),
-          el("span", { class: "lei-sala-s", text: V.T + " técnicos · " + est + (S.pausado && S.pausado() ? " · parado" : "") })
+          el("span", { class: "lei-sala-s", text: est + " · " + V.T + " técnicos" + (S.pausado && S.pausado() ? " · parado" : "") })
         ])]),
         el("div", { class: "lei-acoes" }, [botao("Voltar à sala", function () { TM.ui.go(rotaDoEstado(S.ver())); }, "btn primary", V.online ? "door-open" : "gavel")])
       ]));
@@ -1907,8 +1934,10 @@
     salas.forEach(function (x) {
       var aberta = S && S.codigo === x.codigo;
       var t = (x.treino ? "Treino" : x.online ? "Sala online" : "Sala") + (x.ligaNome ? " · " + x.ligaNome : "");
-      var s = x.T + " técnicos · " + textoEstado(x) + (x.pedido ? " · esperando o dono" : "") + (x.regrasOk === false ? " · só olhar" : "") +
-        (x.online && x.edicao === "pro" ? " · Season Update" : "");
+      // o estado primeiro (é o que a linha diz de útil; no celular a linha quebra em duas em vez de cortar)
+      var parada = x.alterada || (aberta && S.alterada);
+      var s = (parada ? "Parada: alterada fora das regras" : textoEstado(x)) + (x.pedido ? " · esperando o dono" : "") + (x.regrasOk === false ? " · só olhar" : "") +
+        " · " + x.T + " técnicos" + (x.online && x.edicao === "pro" ? " · Season Update" : "");
       lista.appendChild(el("div", { class: "lei-sala" + (aberta ? " aberta" : "") + (x.online ? " online" : ""), data: { codigo: x.codigo } }, [
         escudo(x.clube, "p"),
         el("div", { class: "lei-sala-txt" }, [el("span", { class: "lei-sala-t", text: t }), el("span", { class: "lei-sala-s", text: s })]),

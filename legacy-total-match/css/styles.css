@@ -6807,7 +6807,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 @keyframes leiPulsa { 50% { transform: scale(1.05); } }
 .lei-lider { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; max-width: 100%; font-size: 12.5px; font-weight: 700; }
 .lei-lider.eu { color: var(--gold); }
-.lei-lider-nome { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-lider-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-lider-v { flex: 0 0 auto; white-space: nowrap; }
 .lei-valor-atual { font-size: 26px; font-weight: 900; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
 .lei-valor-atual.vazio { color: var(--text-dim); font-size: 20px; }
 .lei-hist { list-style: none; width: 100%; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-dim); }
@@ -6953,8 +6954,9 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-sala { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); min-width: 0; }
 .lei-sala.aberta { border-color: rgba(34,197,94,.5); }
 .lei-sala-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
-.lei-sala-t { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lei-sala-s { font-size: 12px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* o título e o estado quebram em duas linhas no celular em vez de cortar (o estado é o que a linha diz de útil) */
+.lei-sala-t { font-weight: 700; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.lei-sala-s { font-size: 12px; line-height: 1.35; color: var(--text-dim); overflow-wrap: anywhere; }
 .lei-sala-bts { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .lei-sala-x { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2);
   background: var(--black-soft); color: var(--text-dim); cursor: pointer; }
@@ -7115,9 +7117,18 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-pedido-passar { display: flex; flex-wrap: wrap; gap: 6px; }
 .lei-pedido-passar .btn { flex: 1 1 160px; }
 .lei-folha-pedidos { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
-.lei-part .lei-tec-quem, .lei-pedido .lei-tec-quem { display: flex; align-items: center; gap: 6px; min-width: 0; overflow: visible; }
-.lei-part-n { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* o NOME tem a prioridade: sem espaço, o número e o "VOCÊ" descem para a linha de baixo (antes o nome sumia: "M.") */
+.lei-part .lei-tec-quem, .lei-pedido .lei-tec-quem { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; overflow: visible; }
+.lei-part-n { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-num { flex: 0 0 auto; font-size: 11.5px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* os botões do pedido descem pela largura da COLUNA (no PC e no tablet a coluna do saguão tem ~380 px) */
+.lei-pedidos { container-type: inline-size; }
+@container (max-width: 440px) {
+  .lei-pedido { flex-wrap: wrap; }
+  .lei-pedido > .lei-tec-nome { flex: 1 1 0; }
+  .lei-pedido-bts { width: 100%; }
+  .lei-pedido-bts .btn { flex: 1 1 0; }
+}
 .lei-part .lei-voce { font-size: 9.5px; }
 .lei-part.longe { opacity: .72; }
 .lei-part { flex-wrap: wrap; row-gap: 6px; }

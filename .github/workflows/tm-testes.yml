@@ -6,7 +6,7 @@ name: Total Match — testes
 #               estilo no css/styles.css = visual padrão do navegador)
 #   navegador   (a partir do PR 2 do Leilão) os de navegador, em partes ao mesmo tempo, com o Playwright e o Chromium como no
 #               golaco-testes.yml: o treino num aparelho (testar-leilao.mjs --tela), o leilão online em várias páginas contra
-#               o banco falso (testar-leilao-online.mjs, um job por caso: dois, quatro, oito) e o Online 3D com o quadro de
+#               o banco falso (testar-leilao-online.mjs, um job por caso: telas, dois, quatro, oito) e o Online 3D com o quadro de
 #               ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado")
 #   tm-testes   o nome que o PR mostra: só passa se todos passaram
 # Nenhum teste fala com o Firebase de verdade. O deploy (deploy-pages.yml) não muda.
@@ -45,6 +45,8 @@ jobs:
         include:
           - parte: treino na tela
             cmd: node ferramentas/testar-leilao.mjs --tela --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, as telas
+            cmd: node ferramentas/testar-leilao-online.mjs --so telas --prints "$RUNNER_TEMP/prints"
           - parte: leilão online, 2 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so dois --prints "$RUNNER_TEMP/prints"
           - parte: leilão online, 4 páginas

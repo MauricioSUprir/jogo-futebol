@@ -276,7 +276,8 @@
       case "vaga": return "Escolha duas vagas diferentes";
       case "parado": return "A sala está parada";
       case "alterada": return "A sala foi alterada fora das regras";
-      case "conexao": return "Sem conexão: aguarde";
+      // info.rede: a conexão de pé, mas a sala ainda não está em dia (a volta da página, o bate sem resposta)
+      case "conexao": return info.rede === "atualizando" ? "Atualizando a sala…" : info.rede === "reconectando" ? "Reconectando…" : "Sem conexão: aguarde";
       case "conferindo": return "Conferindo…";
       case "outraAba": return "A sala está aberta em outro aparelho ou aba";
       case "codigo": return "O código tem 6 letras";
@@ -570,6 +571,7 @@
     S.alterada = motivo || "estrutura";
     S._limpaTimer();
     S._emite("alterada", { motivo: S.alterada });
+    if (S.online) S._guardaIndice();
     S._notificar();
   };
   P._naVivo = function (v) {
@@ -1060,7 +1062,11 @@
     var r = { alvo: alvo, pode: pd.pode, motivo: pd.motivo, max: pd.max, valor: base };
     if (!r.pode) return r;
     var imp = S._impede();
-    if (imp) { r.pode = false; r.motivo = imp; return r; }
+    if (imp) {
+      r.pode = false; r.motivo = imp;
+      if (imp === "conexao") { var er = S._estadoRede(); r.rede = er === "ok" ? "atualizando" : er; }
+      return r;
+    }
     if (!(alvo >= base + 1)) { r.pode = false; r.motivo = "valor"; return r; }
     if (alvo > pd.max) { r.pode = false; r.motivo = "max"; return r; }
     return r;
@@ -1512,9 +1518,9 @@
       codigo: S.codigo, online: true, treino: false, liga: s.cfg && s.cfg.liga, ligaNome: (s.cfg && s.cfg.ligaNome) || "",
       T: S._ordem().length, estado: s.meta.estado, fase: v ? v.fase : null, k: v ? v.k : -1, criada: num(s.meta.criada, 0),
       clube: tc ? tc.clube : null, regrasOk: s.meta.regras === LE().REGRAS, pedido: !!(S.pedido && S.pedido.estado === "esperando"),
-      edicao: s.meta.edicao || "public"
+      edicao: s.meta.edicao || "public", alterada: !!S.alterada
     };
-    var chave = JSON.stringify([e.estado, e.T, e.clube, e.pedido, e.ligaNome, e.regrasOk]);
+    var chave = JSON.stringify([e.estado, e.T, e.clube, e.pedido, e.ligaNome, e.regrasOk, e.alterada]);
     if (chave === S._indiceVisto) return;
     S._indiceVisto = chave;
     poeIndice(S._armazem, e);

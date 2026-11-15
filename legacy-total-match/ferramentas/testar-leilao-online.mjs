@@ -13,7 +13,11 @@
    As pessoas jogam por um PILOTO na página (window.__lt): decide como um robô com o perfil do seu índice
    (TM.leilao.robo) e age pela TELA (os botões de verdade: +1, +5, +10, Tudo de dois toques, Outro valor + Dar lance,
    Passar) ou pela API da sessão (S.lance, S.passar).
-   Casos (--so dois,quatro,oito; sem --so, todos):
+   Casos (--so telas,dois,quatro,oito; sem --so, todos):
+     telas   (T1–T8) o que a revisão do PR 2 achou nas telas, com nomes de 16 letras: o nome inteiro nos pedidos e nos
+             participantes nos 8 tamanhos, o foco pelo teclado depois de Aceitar, o Salvar do clube apagado sem mudança,
+             "Atualizando a sala…" na barra, o "lidera" do placar à vista e a sala congelada "parada" na Entrada e nas
+             Minhas salas
      dois    (D1–D14) a sala pela tela: criar sala, o código escondido com o olho e o QR, Copiar convite, Compartilhar só
              com navigator.share; o pedido pelo link ?leilao= e aceitar; o pedido pelo código e recusar (não pede de
              novo); as recusas na tela (código errado, sala cheia, edição, regras diferentes); Pronto e Começar; nada sobre
@@ -31,7 +35,7 @@
      falou com o Firebase de verdade · G2 nenhum erro no console nem na página
    O campeonato (PR 3) e o par do Online 3D (PR 5) entram aqui nos PRs deles.
    Uma linha por item; o código de saída é 1 se algum reprovar (no CI, um job por caso: ~1, 2 e 3 min).
-   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so dois,quatro,oito] [--fator 6] [--prints <pasta>] [-v]
+   Uso: node ferramentas/testar-leilao-online.mjs [endereço] [--so telas,dois,quatro,oito] [--fator 6] [--prints <pasta>] [-v]
    (o Chromium do Playwright: NODE_PATH com o playwright e, se preciso, PLAYWRIGHT_BROWSERS_PATH; como no golaco) */
 import fs from "node:fs";
 import vm from "node:vm";
@@ -798,7 +802,128 @@ async function casoOito() {
 }
 
 /* ====================================================================================================== */
+/* telas (T1–T8): o que a revisão do PR 2 achou nas telas, com nomes de 16 letras (o máximo do TM.net): o nome nunca corta
+   no pedido nem nos participantes (o número desce), os botões do pedido descem pela largura da COLUNA, o foco pelo teclado
+   depois de Aceitar, o Salvar do clube apagado sem mudança, "Atualizando…" (não "Sem conexão") na barra, o "lidera" do
+   placar sempre à vista e a sala congelada como "parada" na Entrada e nas Minhas salas */
+async function casoTelas() {
+  const ID = "T";
+  const NOMES = ["Mariana Oliveira", "Guilherme Santos", "Beatriz Carvalho"];
+  const Dn = await aparelho(NOMES[0], "uidTm", { w: 820, h: 1180, toque: true });
+  const G1 = await aparelho(NOMES[1], "uidTg", { w: 390, h: 844, toque: true });
+  const G2 = await aparelho(NOMES[2], "uidTb", { w: 1280, h: 800 });
+  for (const ap of [Dn, G1, G2]) await conta(ap);
+  // sem bots: no T6 ninguém passa o lance do convidado na frente
+  const cod = await Dn.p.evaluate(() => TM.leilaoSessao.criarSala({ liga: "br", vagas: 3, bots: 0, tempo: 10 }).then(S => S.codigo));
+  await Dn.p.evaluate(() => TM.ui.go("leilao-saguao"));
+  for (const ap of [G1, G2]) await ap.p.evaluate(c => TM.leilaoSessao.entrar(c).then(() => TM.ui.go("leilao-saguao")), cod);
+  await ate(Dn.p, () => document.querySelectorAll(".lei-pedido").length === 2, null, 30000);
+  // a medida do corte: o texto que não cabe na caixa (scrollWidth > clientWidth)
+  const cortes = (ap, sel) => ap.p.evaluate(s => [...document.querySelectorAll(s)].filter(e => e.offsetParent !== null)
+    .map(e => ({ txt: e.textContent, sw: e.scrollWidth, cw: e.clientWidth })).filter(x => x.sw > x.cw + 1), sel);
+  async function emTamanhos(ap, tams, fn) {
+    const vp0 = ap.p.viewportSize(), out = [];
+    for (const [w, h] of tams) { await ap.p.setViewportSize({ width: w, height: h }); await espera(260); out.push(...(await fn()).map(x => Object.assign({ tela: w + "x" + h }, x))); }
+    await ap.p.setViewportSize(vp0); await espera(150);
+    return out;
+  }
+  const OITO = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080]];
+
+  /* T1 os pedidos: o nome inteiro à vista em todos os tamanhos (antes, em 820×1180 e 844×390, só "M.") */
+  const c1 = await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-pedido .lei-part-n"));
+  const nPed = await Dn.p.evaluate(() => [...document.querySelectorAll(".lei-pedido .lei-part-n")].map(e => e.textContent));
+  confere(`${ID}1 os pedidos de entrada com nomes de 16 letras: o nome inteiro à vista nos 8 tamanhos (o número desce; os botões descem pela largura da coluna)`,
+    nPed.length === 2 && nPed.every(n => NOMES.includes(n)) && !c1.length, { nPed, cortes: c1.slice(0, 6) });
+
+  /* T2 o foco pelo teclado depois de Aceitar: vai ao Aceitar do próximo pedido (antes caía no começo da página) */
+  await Dn.p.evaluate(() => { const b = [...document.querySelectorAll(".lei-pedido button")].find(x => /^Aceitar/.test(x.getAttribute("aria-label") || "")); b.focus(); });
+  const antes = await Dn.p.evaluate(() => document.activeElement && document.activeElement.getAttribute("aria-label"));
+  await Dn.p.keyboard.press("Enter");
+  await ate(Dn.p, () => document.querySelectorAll(".lei-pedido").length === 1, null, 20000);
+  await espera(400);
+  const depois = await Dn.p.evaluate(() => { const a = document.activeElement; return a ? (a.tagName + " " + (a.getAttribute("aria-label") || a.textContent.trim().slice(0, 30))) : null; });
+  confere(`${ID}2 o foco pelo teclado depois de Aceitar vai ao Aceitar do próximo pedido (não ao começo da página)`,
+    /^Aceitar/.test(antes || "") && /^BUTTON Aceitar/.test(depois || "") && !(depois || "").includes(antes), { antes, depois });
+  // o 2º pedido também: sem mais pedidos, o foco fica no rótulo da seção
+  await Dn.p.keyboard.press("Enter");
+  await ate(Dn.p, () => !document.querySelector(".lei-pedido") && TM.leilaoSessao.atual().ver().tecnicos.length === 3, null, 20000);
+  await espera(400);
+  const depois2 = await Dn.p.evaluate(() => { const a = document.activeElement; return a ? a.tagName + "." + a.className : null; });
+  confere(`${ID}2b sem mais pedidos, o foco fica no rótulo "Pedidos de entrada" (não no BODY)`, /lei-rotulo/.test(depois2 || ""), { depois2 });
+  // (com o foco perdido o Enter não aceitou: aceita pela API para os itens seguintes valerem sozinhos)
+  await Dn.p.evaluate(u => { const V = TM.leilaoSessao.atual().ver(); if (V.saguao.pedidos.some(p => p.uid === u)) return TM.leilaoSessao.atual().aceitar(u); }, "uidTb");
+  await ate(G2.p, () => { const S = TM.leilaoSessao.atual(); return S && S.eu >= 0 && !S.pedido; }, null, 20000);
+
+  /* T3 os participantes com nomes de 16 letras: inteiros nos 8 tamanhos, no dono e nos convidados (também com o Pronto) */
+  await G1.p.evaluate(() => TM.leilaoSessao.atual().pronto(true));
+  await ate(Dn.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 20000);
+  await ate(G1.p, () => document.querySelectorAll(".lei-part").length === 3, null, 20000);
+  const c3 = (await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-part .lei-part-n"))).concat(await emTamanhos(G1, OITO, () => cortes(G1, ".lei-part .lei-part-n")));
+  const nsT = await nadaSobreNada(Dn, "telas-saguao-dono", () => !!document.querySelector(".lei-sagbar"));
+  confere(`${ID}3 os participantes com nomes de 16 letras: o nome inteiro nos 8 tamanhos (o dono e o convidado pronto) e nada sobre nada`,
+    !c3.length && !nsT.ruins.length, { cortes: c3.slice(0, 6), ruins: nsT.ruins.slice(0, 3) });
+
+  /* T4 o Salvar do clube: apagado ao abrir o saguão, aceso depois de mudar a sigla, apagado de novo depois de salvo */
+  await G2.p.evaluate(() => TM.ui.go("leilao-saguao"));
+  const temSalvar = await ate(G2.p, () => !!document.querySelector(".lei-salvar"), null, 20000);
+  if (!temSalvar) confere(`${ID}4 o Salvar do clube aparece no saguão do convidado`, false, await G2.p.evaluate(() => ({ rota: TM.ui.current(), txt: document.body.innerText.slice(0, 300) })));
+  await espera(300);
+  const s0 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  await G2.p.evaluate(() => { const i = document.querySelector(".lei-campo-sigla"); i.value = "BCX"; i.dispatchEvent(new Event("input", { bubbles: true })); });
+  const s1 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  await G2.p.evaluate(() => document.querySelector(".lei-salvar").click());
+  const salvo = await ateNode(() => { const s = sala(cod); return !!(s && s.tec.uidTb && s.tec.uidTb.clube.sigla === "BCX"); }, 20000);
+  await ate(G2.p, () => document.querySelector(".lei-salvar") && document.querySelector(".lei-salvar").disabled, null, 10000);
+  const s2 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  confere(`${ID}4 o Salvar do clube: apagado ao abrir, aceso depois de mudar a sigla e apagado de novo depois de salvo (antes ficava sempre aceso)`,
+    s0 === true && s1 === false && salvo && s2 === true, { s0, s1, salvo, s2 });
+
+  /* T5 a barra do saguão com a sala "Atualizando…" (a volta da página, o ack a caminho): o motivo é "Atualizando a sala…" */
+  await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._estadoBate = "atualizando"; S._notificar(); });
+  await espera(300);
+  const barra5 = await G1.p.evaluate(() => ({ faixa: (document.querySelector(".lei-aviso-sala") || {}).textContent || "", msg: (document.querySelector(".lei-sagbar-msg") || {}).textContent || "" }));
+  await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._bateEmVoo = false; S._bater(); });
+  await ate(G1.p, () => TM.leilaoSessao.atual().ver().rede === "ok", null, 20000);
+  confere(`${ID}5 a sala "Atualizando…": a barra do saguão diz "Atualizando a sala…" (não "Sem conexão")`,
+    /Atualizando a sala/.test(barra5.msg) && !/Sem conexão/.test(barra5.msg), barra5);
+
+  /* T6 o "lidera" do placar sempre à vista com o nome de 16 letras (360×740) */
+  await ate(G2.p, () => !TM.leilaoSessao.atual().pedido, null, 10000);
+  await G2.p.evaluate(() => TM.leilaoSessao.atual().pronto(true));
+  await ate(Dn.p, () => TM.leilaoSessao.atual().ver().saguao.podeComecar, null, 30000);
+  await Dn.p.evaluate(() => TM.leilaoSessao.atual().comecar());
+  await ateNode(async () => { const vs = await Promise.all([Dn, G1, G2].map(ver)); return vs.every(V => V && V.vivo && V.estado === "leilao"); }, 30000);
+  vigia(cod);
+  await Dn.p.setViewportSize({ width: 360, height: 740 });
+  await Dn.p.evaluate(() => TM.ui.go("leilao-lote"));
+  await ate(G1.p, () => { const V = TM.leilaoSessao.atual().ver(); return V.botoes && V.botoes["+1"].pode && V.lote && V.lote.restante > 6000; }, null, real(60000) + 10000);
+  await G1.p.evaluate(() => TM.leilaoSessao.atual().lance("+1"));
+  const lidera = await ate(Dn.p, n => { const x = document.querySelector(".lei-lider-nome"); return x && x.textContent === n; }, NOMES[1], 20000);
+  const p6 = await Dn.p.evaluate(() => {
+    const v = document.querySelector(".lei-lider-v"), pl = document.querySelector(".lei-placar");
+    if (!v || !pl) return null;
+    const a = v.getBoundingClientRect(), b = pl.getBoundingClientRect();
+    return { txt: v.textContent, dentro: a.width > 4 && a.left >= b.left - 1 && a.right <= b.right + 1, sw: v.scrollWidth, cw: v.clientWidth };
+  });
+  confere(`${ID}6 o placar com o líder de 16 letras em 360×740: "lidera" inteiro à vista (o nome encolhe)`, lidera && p6 && p6.txt === "lidera" && p6.dentro && p6.sw <= p6.cw + 1, p6);
+
+  /* T7–T8 a sala congelada (o vivo mexido no servidor): "Sala parada" na Entrada e "Parada" nas Minhas salas */
+  const vv = vivoServ(cod); vv.cx[0][0] += 50; banco.gravar("leiloes/" + cod + "/vivo", vv);
+  await ate(G1.p, () => !!TM.leilaoSessao.atual().ver().alterada, null, 20000);
+  await G1.p.evaluate(() => TM.ui.go("leilao"));
+  await ate(G1.p, () => !!document.querySelector(".lei-andamento"), null, 20000);
+  await espera(300);
+  const t7 = await G1.p.evaluate(() => ({ cartao: document.querySelector(".lei-andamento").innerText.replace(/\s+/g, " "), linha: [...document.querySelectorAll(".lei-sala .lei-sala-s")].map(e => e.textContent) }));
+  confere(`${ID}7 a sala congelada aparece "Sala parada" na Entrada (não "Leilão em andamento")`, /Sala parada/i.test(t7.cartao) && /alterada fora das regras/.test(t7.cartao) && !/em andamento/i.test(t7.cartao), t7);
+  const c8 = await emTamanhos(G1, [[360, 740], [390, 844]], () => cortes(G1, ".lei-sala .lei-sala-s, .lei-sala .lei-sala-t, .lei-andamento .lei-sala-s"));
+  confere(`${ID}8 as Minhas salas: a linha da sala congelada começa por "Parada" e não corta em 360×740 e 390×844`, t7.linha.some(x => /^Parada/.test(x)) && !c8.length, { linha: t7.linha, cortes: c8 });
+  for (const ap of [Dn, G1, G2]) await ap.p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); }).catch(() => {});
+  for (const ap of [Dn, G1, G2]) await ap.cx.close().catch(() => {});
+}
+
+/* ====================================================================================================== */
 try {
+  if (caso("telas")) await casoTelas();
   if (caso("dois")) await casoDois();
   if (caso("quatro")) await casoQuatro();
   if (caso("oito")) await casoOito();
