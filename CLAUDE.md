@@ -146,11 +146,14 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   referência; a cara é a do TM (verde e preto, Inter, ícones `TM.ic`, sem emoji, modo claro, "nada sobre nada"); nada de
   Pix, doação nem Total Coins; testes nunca com o Firebase de verdade; modo novo em "Mais modos". Branch `claude/leilao`
   (o item 45 do golaco segue pausado em outro branch); plano em `legacy-total-match/PLANO-LEILAO.md` (6 PRs, ~111 h; as
-  decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 PRONTO** (PR
-  #640, rascunho; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação; a aba Campeonato diz "em breve".
-  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximos: PR 2 com os amigos online (a sala privada, o saguão, o
-  `firebase()`), PR 3 o campeonato (os 3 formatos, simulado), PR 4 o 3D contra bot, PR 5 o 3D contra amigo, PR 6 as notas
-  escondidas. A avisar ao dono: no máximo 3 treinos guardados no aparelho (o 4º tira o mais antigo).
+  decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 ENTREGUE**
+  (#640; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação. **PR 2 PRONTO** (branch `claude/leilao`;
+  TM v383): COM OS AMIGOS ONLINE — a sala privada por código ou link (o dono aceita cada pedido), o Saguão e o leilão ao
+  vivo no Firebase do TM (`leiloes/{CÓDIGO}`); a aba Campeonato continua "em breve". Detalhes técnicos na seção TOTAL MATCH
+  ("Modo Leilão"). Próximos: PR 3 o campeonato (os 3 formatos, simulado), PR 4 o 3D contra bot, PR 5 o 3D contra amigo,
+  PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos guardados no aparelho (o 4º tira o mais antigo); o bloco
+  `.validate` OPCIONAL do Firebase (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); a
+  pergunta do plano grátis (Spark): um leilão de 8 técnicos (104 lotes) baixa ~1,0–1,1 MB por página (~9 MB no total).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -1332,9 +1335,57 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   grade, o treino inteiro pela tela, recarregar no meio, nada sobre nada nos 8 tamanhos — por cima, ENCOSTADO (< 2 px entre
   clicáveis) ou texto saindo do botão — com a barra fixa numa camada própria e os blocos abertos, o tema claro com contraste
   ≥ 4,5:1, as folhas modais (tela inerte, Tab preso), o foco nunca atrás da barra (scroll-padding), o que fica escrito na
-  `#lei-vivo` (falas juntas, ≥ 1 s cada); ~3 min, fora do CI até o PR 2). Lições: teste de regra confere contra a conta
-  feita no próprio teste (as cotas, o completar), nunca contra a função testada; a região ao vivo trocada no mesmo quadro
-  cala a fala anterior. Próximos PRs: 2 online, 3 campeonato, 4 e 5 o 3D, 6 notas escondidas.
+  `#lei-vivo` (falas juntas, ≥ 1 s cada); ~3 min). Lições: teste de regra confere contra a conta feita no próprio teste
+  (as cotas, o completar), nunca contra a função testada; a região ao vivo trocada no mesmo quadro cala a fala anterior.
+  **PR 2 (v383): COM OS AMIGOS ONLINE** — a sala privada por código de 6 letras (sem I, O, 0 e 1; nasce por transação de
+  null) ou pelo link `?leilao=CÓDIGO` (`app.js` → a Entrada, que entra sozinha uma vez por carga); o PEDIDO que o dono
+  aceita ou recusa (tirar = recusado: não pede de novo); 2 a 8 técnicos contando os bots (os bots sempre depois das
+  pessoas); a edição do dono para todos (a pública troca sozinha, a pro só com a chave); as `regras` do `leilao.js` (quem
+  é da sala sempre volta, também depois de um deploy; com outras regras, só olha); o Saguão (o código atrás do olho, Copiar
+  convite, Compartilhar só com `navigator.share`, o QR do Online 3D, pedidos, participantes, a configuração que zera os
+  Pronto, o Meu clube com o seletor de escudo do Ultimate, o Pronto e o Começar por transação; depois do Começar, o dono
+  passa o clube de quem trocou de aparelho); presença por conexão e o batimento de 5 s, que é a TESTEMUNHA da hora (toda
+  decisão por prazo pela hora do servidor; o relógio de nenhum aparelho decide); as ações escalonadas (o k-ésimo presente
+  espera 1,5 s × k); quem some (12 s sem batimento ou "Sair da sala") passa sozinho e não gasta; "Conferindo…" do ack
+  perdido; outra aba ("Usar aqui"); a limpeza (30 min no saguão, 24 h sem atividade); as Minhas salas online; a sala
+  adulterada congela ("A sala foi alterada fora das regras"). Arquivos: `leilao-rede.js` `firebase(codigo)` (a mesma
+  interface da `memoria()`: a transação OUVE o caminho e espera o 1º valor do servidor antes de rodar; a `ouvir` entrega
+  sempre depois e na ordem; os erros com `codigo`; `horaServidor` = o relógio monótono + a testemunha de menor ida e volta;
+  `salto()`), a sessão online no `leilao-sessao.js` (`criarSala`, `entrar`, `abrir`, `conferirSalas`, `esquecer`; na sessão
+  `aceitar`, `recusar`, `tirar`, `configurar`, `pronto`, `meuClube`, `comecar`, `passarClube`, `encerrar`, `assumir`,
+  `reconectar`), as telas no `leilao-tela.js` (a Entrada pela conta do TM, a Criar sala `{ online: true }`, a aba Saguão, a
+  faixa da sala com a rede: sem internet, Reconectando…, Atualizando…, "Servidor cheio"; ganchos de teste no topo), o
+  bloco LEILÃO do `styles.css` e o bloco `.validate` OPCIONAL (`firebase/regras-leilao-validate.json` +
+  `LEIA-ME-leilao.md`: o dono publica no console se quiser; as regras de hoje NÃO mudaram; não protege o lance em nome de
+  outro técnico). Testes: o banco falso como o SDK compat 10.12.5 (`ferramentas/lib/banco-falso.mjs`, também o do
+  `testar-online3d`; o topo diz o que ele imita e o que não; `relogioAcelerado`, com `window.__relogioPula(ms)` na página);
+  o `testar-leilao.mjs` ganhou o F (a `firebase()` sobre o banco falso) e o O (o leilão online pela sessão em 2, 4 e 8
+  aparelhos em Node, ~8 s; ~40 s o arquivo inteiro); `ferramentas/testar-leilao-online.mjs` (navegador: cada página um
+  aparelho contra o banco falso, o relógio ×6 nas páginas e no servidor, o servidor confere CADA gravação do vivo — nenhum
+  lote fecha antes do fim; lance depois do fim só até 1,5 s de jogo, o caminho da mensagem —, as pessoas por um piloto
+  na página que decide como um robô e age pelos BOTÕES ou pela API; `--so dois,quatro,oito`: D1–D14 a sala e o leilão
+  inteiro pela tela — criar, convite, o link, aceitar, recusar, as recusas, Pronto, Começar, a corrida, o ack perdido, o
+  lance velho, recarregar pelo link e pelas Minhas salas depois do deploy, a escalação —, Q1–Q6 4 páginas + 2 bots com os
+  relógios ±5 s, o pulo de +60 s, quem some, passar o clube e a queda do dono, O1–O3 8 páginas e os bytes, G0–G2 a guarda
+  do Firebase de verdade e nenhum erro; ~1 + 2 + 3 min; o nada sobre nada do Saguão e do Leilão em 360×740, 844×390 e
+  1280×800, escuro e claro). CI (`.github/workflows/tm-testes.yml`): o Node, o `--tela`, os três casos do online e o
+  `testar-online3d` (sem a senha, o Viverde sai como "pulado") em jobs paralelos; o check `tm-testes` só passa com todos.
+  Rodar: `NODE_PATH=<playwright> node ferramentas/testar-leilao-online.mjs [--so dois] [--fator 6]`. Fica para o PR 3: a
+  aba Campeonato. Lições: a 1ª rodada da transação do SDK é com o CACHE local (`null` num caminho que ninguém ouve: aborta
+  sem perguntar ao servidor) — ouvir antes; `set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo; o
+  teste do online com o relógio acelerado separa o que é estrito (fechar cedo) do que tem o caminho da mensagem (o lance
+  tarde); a tela que só aparece num estado (o aviso de outra versão depois do Começar) só se acha pelo fluxo de verdade.
+  **Revisão do PR 2** (PLANO §8, "A revisão do PR 2"): o vivo apagado congela (não recomeça o leilão); o Começar usa a
+  edição DA SALA e só mantém lotes IGUAIS aos do mundo-base; quem vê a sala sumir apaga de novo pelo mesmo socket
+  (`rede.varrer()`: o bate a caminho não recria a sala); o `goOffline()/goOnline()` só com o socket PRESO e nenhuma outra
+  sala online do TM aberta (ele vale para o TM inteiro: o servidor rodava o `onDisconnect` da sala do Online 3D e dos
+  outros modos — regressão achada); o `.validate` opcional com regras nos PAIS (apagar antes não desfaz mais as recusas);
+  a conta vinculada em dois aparelhos com o bloco publicado fica sem remédio dentro da sala (PENDENTE). Telas: o nome
+  antes do número, os botões do pedido pela largura da coluna, o Salvar do clube pelo `limpaClube`, o foco depois de
+  Aceitar, "Sala parada", "Atualizando a sala…". Testes O7, O8 e o caso `telas` (T1–T8; um job a mais no CI). Lições:
+  mexer na conexão global do SDK (goOffline) derruba as salas dos outros modos pelo `onDisconnect`; o `.validate` não
+  vale para `null` — a regra que protege um nó de ser apagado mora no PAI; o Firebase devolve as chaves em outra ordem
+  (comparar pelo mesmo canal, nunca o texto cru); o botão que fica apagado durante a ação perde o foco para o BODY.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

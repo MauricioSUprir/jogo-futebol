@@ -1128,6 +1128,8 @@
     criarLigacao: criarLigacao,
     calcD0: calcD0,
     limpaCodigo: limpaCodigo,
+    /** O QR (SVG) de um texto (o link do convite): o Leilão usa o mesmo. */
+    qrSvg: qrSvg,
     criarSala: function () { criarSala(0); },
     entrar: function (codigo) { entrar(codigo, null); },
     sair: function () { sairDaSala(); redesenha(); },

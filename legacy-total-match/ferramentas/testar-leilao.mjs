@@ -4,9 +4,18 @@
    listas do escudo desenhado; o TM.ui de mentira) e os arquivos do leilão, nas duas edições (pública e pro), e roda:
      L1 lotes · L2 ordem · L3 lance · L4 relógio · L5 fechar · L6 fim · L7 robôs · L8 protocolo (o leilão inteiro
      pela sessão e pela rede em memória = a máquina pura) · L9 formações e escalação · L10 conferência ·
-     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas)
+     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas) ·
+     F a rede firebase() sobre o banco falso que se comporta como o SDK compat (ferramentas/lib/banco-falso.mjs): a mesma
+     bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, o onDisconnect ·
+     O o leilão ONLINE: as sessões (criarSala, entrar, abrir) pela firebase() sobre o banco falso em 2, 4 e 8 "aparelhos"
+     (a sala por transação, as recusas, o leilão inteiro igual em todos, o relógio ±5 s, o que pula e o que dorme, quem cai,
+     quem some, o ack perdido, o lance velho, recarregar, outra aba, a presença, passar o clube, a limpeza, a sala mexida —
+     o vivo apagado, os lotes trocados, a edição trocada — e a volta da página sem derrubar a conexão do TM); o servidor
+     falso confere cada gravação do vivo: nenhum lote fecha antes do fim, nenhum lance entra depois
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
-   Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v]
+   Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v] [--rapido] [--caso O1,O4,quatro]
+   (--rapido: o leilão online de 8 até a metade e sem o da queda; --caso: só esses pedaços do O; LEILAO_DEPURA=1 mostra
+   o andamento do O)
    --tela: o navegador num aparelho (§4.2; o Chromium do Playwright, o TM servido daqui, o relógio do treino acelerado pelo
    gancho da sessão): "Mais modos" com 13 atalhos, o treino inteiro com 3 bots (os botões, os apagados com o motivo, o Tudo
    de dois toques, passar, outro valor), recarregar no meio, a escalação, nada sobre nada nos 8 tamanhos, a barra de lance à
@@ -1211,6 +1220,76 @@ bloco("L10", "conferência: o vivo adulterado é acusado", (ok, nota) => {
   nota(`${honestas} transições honestas (também com estados pulados), ${motivos.length} adulterações acusadas (${[...new Set(motivos)].join(", ")}); ${paresHonestos} pares honestos com saltos de qualquer tamanho (${comRep} na repescagem, ${comFim} no fim), ${motivosPulo.length} adulterações com o seq pulando ou depois do fim (${[...new Set(motivosPulo)].join(", ")})`);
 });
 
+/* ============================== a bateria comum das redes (R na memória, F no Firebase falso) ==============================
+   M: rede, agora(), avanca(ms) (o tempo de mentira anda e o que estava marcado acontece), outro(latencia) (outro aparelho
+   na MESMA sala), cair(rede)/voltar(rede) (a conexão daquele aparelho), arvore() (a sala no servidor), tolTS (o quanto o
+   carimbo devolvido pela transação pode ficar longe da hora do servidor: no online é a estimativa local). */
+async function bateriaRede(ok, M) {
+  const { rede } = M, TS = rede.TS;
+  // espera a promessa andando o tempo (o que ela pede ao "servidor" leva a latência)
+  const ja = async (p, ms = 200) => { await M.avanca(ms); return p; };
+  const vistos = [];
+  const para = rede.ouvir("vivo", v => vistos.push(v));
+  await M.avanca(0);
+  ok(vistos.length === 1 && vistos[0] === null, "ouvir entrega o valor de agora (null): " + JSON.stringify(vistos));
+  // a transação com o carimbo da hora e sem campos vazios
+  const t0 = M.agora();
+  let r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 1, t: TS, h: [], p: "00", sem: [], lider: -1 } : undefined));
+  await M.avanca(0);
+  const noServidor = (M.arvore() || {}).vivo || {};
+  ok(r.feito && Math.abs(r.valor.t - t0) <= M.tolTS && noServidor.t === t0 && !("h" in r.valor) && !("sem" in r.valor) && r.valor.lider === -1 && !("h" in noServidor),
+    "transação: carimbo resolvido e vazios fora: " + JSON.stringify(r.valor) + " no servidor " + JSON.stringify(noServidor));
+  ok(vistos.length === 2 && vistos[1].seq === 1 && vistos[1].t === t0, "o ouvinte viu a transação (uma vez, com a hora do servidor): " + JSON.stringify(vistos));
+  r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 9 } : undefined));
+  ok(!r.feito && r.valor && r.valor.seq === 1, "transação abortada devolve o atual: " + JSON.stringify(r));
+  // atualizar em vários caminhos e gravar null apaga
+  await ja(rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3", pronto: true } }));
+  ok((await ja(rede.ler("escal/1/formacao"))) === "4-3-3", "atualizar com caminhos");
+  await ja(rede.gravar("escal/0", null));
+  ok((await ja(rede.ler("escal/0"))) === null && (await ja(rede.ler("escal/1"))) !== null, "gravar null apaga");
+  await ja(rede.gravar("escal/1", null));
+  ok(!("escal" in (M.arvore() || {})), "o pai vazio some");
+  // dois aparelhos no mesmo banco, com latência e transações concorrentes
+  const b = M.outro(30);
+  await M.avanca(100);
+  const p1 = b.transacao("cont", c => (c || 0) + 1), p2 = rede.transacao("cont", c => (c || 0) + 1), p3 = b.transacao("cont", c => (c || 0) + 1);
+  await M.avanca(1000);
+  await Promise.all([p1, p2, p3]);
+  ok((await ja(rede.ler("cont"))) === 3, "três transações concorrentes somam 3");
+  // a queda: a operação espera a volta; aoCair e aoVoltar avisam
+  let caiu = 0, voltou = 0; b.aoCair(() => caiu++); b.aoVoltar(() => voltou++);
+  M.cair(b);
+  await M.avanca(0);
+  ok(!b.conectado() && caiu === 1, "aoCair e conectado");
+  let feito = false; const p4 = b.gravar("x", 1).then(() => { feito = true; });
+  await M.avanca(100);
+  ok(!feito && (await ja(rede.ler("x"))) === null, "sem conexão a gravação espera");
+  M.voltar(b);
+  await M.avanca(200); await p4;
+  ok(feito && (await ja(rede.ler("x"))) === 1 && voltou === 1 && b.conectado(), "na volta a gravação vai (e aoVoltar avisa)");
+  // o que o servidor faz quando a conexão cai (aoDesconectar): vale uma vez; cancelar tira
+  await ja(b.gravar("pres/b/k1", true)); await ja(b.gravar("pres/b/k2", true));
+  await ja(b.aoDesconectar("pres/b/k1").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").cancelar());
+  const vp = []; const paraP = rede.ouvir("pres", v => vp.push(v));
+  await M.avanca(100);
+  M.cair(b); await M.avanca(100);
+  ok(JSON.stringify(vp[vp.length - 1]) === JSON.stringify({ b: { k2: true } }), "aoDesconectar: o servidor apaga quando cai (o cancelado fica): " + JSON.stringify(vp));
+  M.voltar(b); await M.avanca(200);
+  await ja(b.gravar("pres/b/k1", true));
+  M.cair(b); await M.avanca(100);
+  ok((await ja(rede.ler("pres/b/k1"))) === true, "aoDesconectar vale uma vez (na volta, rearme)");
+  M.voltar(b); await M.avanca(200);
+  // a testemunha da hora: a hora que o servidor pôs
+  const tb = M.agora();
+  const tw = await ja(rede.testemunha("bate/eu", { sid: "s1" }));
+  const bate = await ja(rede.ler("bate/eu"));
+  ok(typeof tw === "number" && Math.abs(tw - tb) <= M.tolTS && bate && bate.ts === tw && bate.sid === "s1", "testemunha: a hora do servidor (" + (tw - tb) + " ms) e o que gravou " + JSON.stringify(bate));
+  paraP(); para();
+  return b;
+}
+
 /* ===================================================== R rede em memória ===================================================== */
 async function testeRede() {
   if (SO && !SO.includes("R")) return;
@@ -1224,57 +1303,928 @@ async function testeRede() {
   const agendar = (fn, ms) => agendaFila.push({ at: hora + ms, fn });
   const roda = async () => { for (let i = 0; i < 50; i++) { await new Promise(r => setImmediate(r)); agendaFila.sort((a, b) => a.at - b.at); while (agendaFila.length && agendaFila[0].at <= hora) agendaFila.shift().fn(); } };
   const rede = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
-  const vistos = [];
-  const para = rede.ouvir("vivo", v => vistos.push(v));
-  await roda();
-  ok(vistos.length === 1 && vistos[0] === null, "ouvir entrega o valor de agora (null)");
-  // a transação com o carimbo da hora e sem campos vazios
-  let r = await rede.transacao("vivo", cur => cur === null ? { seq: 1, t: R.TS, h: [], p: "00", sem: [], lider: -1 } : undefined);
-  await roda();
-  ok(r.feito && r.valor.t === 1000 && !("h" in r.valor) && !("sem" in r.valor) && r.valor.lider === -1, "transação: carimbo resolvido e vazios fora: " + JSON.stringify(r.valor));
-  ok(vistos.length === 2 && vistos[1].seq === 1, "o ouvinte viu a transação");
-  r = await rede.transacao("vivo", cur => cur === null ? { seq: 9 } : undefined);
-  ok(!r.feito && r.valor.seq === 1, "transação abortada devolve o atual");
-  // atualizar em vários caminhos e gravar null apaga
-  await rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3", pronto: true } });
-  ok((await rede.ler("escal/1/formacao")) === "4-3-3", "atualizar com caminhos");
-  await rede.gravar("escal/0", null);
-  ok((await rede.ler("escal/0")) === null && (await rede.ler("escal/1")) !== null, "gravar null apaga");
-  await rede.gravar("escal/1", null);
-  ok(!("escal" in rede._arvore()), "o pai vazio some");
+  await bateriaRede(ok, {
+    rede, tolTS: 0, agora: () => hora,
+    // anda até cada coisa marcada (na hora dela) e só então até o fim
+    avanca: async ms => {
+      const alvo = hora + ms;
+      for (let i = 0; i < 10000; i++) {
+        await roda();
+        agendaFila.sort((a, b) => a.at - b.at);
+        if (!agendaFila.length || agendaFila[0].at > alvo) break;
+        hora = Math.max(hora, agendaFila[0].at);
+      }
+      hora = alvo; await roda();
+    },
+    outro: lat => rede.outroCliente({ latencia: lat }),
+    cair: b => b._cair(), voltar: b => b._voltar(),
+    arvore: () => rede._arvore()
+  });
   // a gravação no aparelho: outra rede com o mesmo código volta ao mesmo ponto
   hora += 500; await roda();
   ok(guardado["leilao:sala:TREINO1"] && JSON.parse(guardado["leilao:salas"]).includes("TREINO1"), "gravou a sala e o índice");
   const volta = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
   ok((await volta.ler("vivo")).seq === 1, "o treino volta depois de recarregar");
   ok(jsonIgual(R.salasGuardadas(armazem), ["TREINO1"]), "salasGuardadas");
-  // dois aparelhos no mesmo banco, com latência e transações concorrentes
-  const b = rede.outroCliente({ latencia: 30 });
-  const p1 = b.transacao("cont", c => (c || 0) + 1), p2 = rede.transacao("cont", c => (c || 0) + 1), p3 = b.transacao("cont", c => (c || 0) + 1);
-  hora += 100; await roda();
-  await Promise.all([p1, p2, p3]);
-  ok((await rede.ler("cont")) === 3, "três transações concorrentes somam 3");
-  // a queda: a operação espera a volta; aoCair avisa
-  let caiu = 0; b.aoCair(() => caiu++);
-  b._cair();
-  ok(!b.conectado() && caiu === 1, "aoCair e conectado");
-  let feito = false; const p4 = b.gravar("x", 1).then(() => { feito = true; });
-  hora += 100; await roda();
-  ok(!feito && (await rede.ler("x")) === null, "sem conexão a gravação espera");
-  b._voltar(); await p4; hora += 10; await roda();
-  ok(feito && (await rede.ler("x")) === 1, "na volta a gravação vai");
-  para();
+  // reconectar: cai e volta (os dois avisos)
+  let c2 = 0, v2 = 0; rede.aoCair(() => c2++); rede.aoVoltar(() => v2++);
+  rede.reconectar();
+  ok(c2 === 1 && v2 === 1 && rede.conectado(), "reconectar: cai e volta");
+  rede.fechar();
   rede.apagar();
   ok(!guardado["leilao:sala:TREINO1"] && !guardado["leilao:salas"], "apagar some com a gravação");
   const ms = performance.now() - t0;
-  console.log(`${erros.length ? "REPROVOU" : "ok      "} R    rede em memória: ouvir, transação, carimbo, vazios, gravação, concorrência, queda (${(ms / 1000).toFixed(1)} s)`);
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} R    rede em memória: ouvir, transação, carimbo, vazios, gravação, concorrência, queda, aoDesconectar, testemunha (${(ms / 1000).toFixed(1)} s)`);
   if (erros.length) { falhas++; erros.forEach(e => console.log("         · " + e)); }
+}
+
+/* ============================================ F rede no Firebase (o banco falso) ============================================
+   A rede firebase() do leilao-rede.js sobre o banco falso que se comporta como o SDK compat 10.12.5
+   (ferramentas/lib/banco-falso.mjs): a MESMA bateria do R e o que só o online tem — a transação com o cache velho repete, a
+   1ª rodada com o valor do servidor (o SDK rodaria com null e abortaria sem perguntar), o TIMESTAMP resolvido no servidor (a
+   estimativa no valor devolvido), a hora pela testemunha de menor ida e volta (o relógio do aparelho ±5 s e pulando depois
+   da calibração), o ack perdido ('desconectado' e o servidor gravou), a gravação sem conexão reenviada, o onDisconnect no
+   servidor, a permissão recusada, a limpeza dos valores, o ouvir sempre depois, reconectar, apagar e a disputa de 4
+   aparelhos. Nenhum Firebase de verdade. */
+async function testeFirebase() {
+  if (SO && !SO.includes("F")) return;
+  const t00 = performance.now(), erros = [], notas = [];
+  const ok = (c, m) => { if (!c) erros.push(m); return !!c; };
+  const R = TMs.public.leilaoRede;
+  const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+  // o tempo de mentira: o servidor, o agendador e os relógios dos aparelhos andam juntos
+  const T = { hora: 1000, fila: [], seq: 0 };
+  const agendar = (fn, ms) => { T.fila.push({ at: T.hora + Math.max(0, +ms || 0), fn, s: T.seq++ }); };
+  const avanca = async (ms = 0) => {
+    const alvo = T.hora + ms;
+    const proximo = () => { T.fila.sort((a, b) => a.at - b.at || a.s - b.s); return T.fila.length && T.fila[0].at <= alvo; };
+    for (let volta = 0; volta < 200000; volta++) {
+      for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+      // as promessas em cadeia podem marcar mais coisa: espera mais um pouco antes de dar o tempo por andado
+      if (!proximo()) { for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r)); if (!proximo()) break; }
+      const it = T.fila.shift(); T.hora = Math.max(T.hora, it.at); it.fn();
+    }
+    T.hora = Math.max(T.hora, alvo);
+  };
+  // espera a promessa andando o tempo (o pedido e a resposta levam a latência dos dois lados)
+  const ja = async (p, ms = 400) => { await avanca(ms); return p; };
+  const banco = new BancoFalso({ relogio: () => T.hora, tempo: () => T.hora, agendar });
+  let nAparelho = 0;
+  const redes = new Map();   // rede → o cid do cliente dela no banco falso
+  // um aparelho: o cliente do banco falso (o SDK) + a rede firebase() da sala; desvio = o relógio de parede dele (±5 s)
+  function aparelho(codigo, o = {}) {
+    const cli = banco.cliente({ uid: o.uid || "u" + (++nAparelho), latencia: o.latencia ?? 0, relogio: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    const mono = { base: 50000 + nAparelho * 1000, pulo: 0 };
+    const rede = R.firebase(codigo, { db: cli.db, firebase: cli.firebase, relogio: () => T.hora - 1000 + mono.base + mono.pulo, relogioParede: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    redes.set(rede, cli.cid);
+    return { cli, rede, mono };
+  }
+  const sala = c => banco.ler("leiloes/" + c);
+  try {
+
+  /* F1 a mesma bateria do R */
+  const A = aparelho("SALA1");
+  await avanca(0);
+  await bateriaRede(ok, {
+    rede: A.rede, tolTS: 0, agora: () => T.hora, avanca,
+    outro: lat => aparelho("SALA1", { latencia: lat }).rede,
+    cair: rd => banco.derrubar(redes.get(rd)), voltar: rd => banco.conectar(redes.get(rd)),
+    arvore: () => sala("SALA1")
+  });
+
+  /* F2 a transação: a 1ª rodada com o valor do servidor; o cache velho repete; a armadilha do SDK */
+  banco.gravar("leiloes/SALA2/cont", 3);
+  banco.gravar("leiloes/SALA2/novo", 3);
+  const B = aparelho("SALA2", { latencia: { sobe: 10, desce: 120 } });
+  await avanca(500);
+  // o SDK puro (sem a rede): no caminho que ninguém ouve, a 1ª rodada vê null e a fn que aborta com null nem pergunta
+  const viuSdk = [];
+  let rs = await ja(B.cli.db.ref("leiloes/SALA2/cont").transaction(c => { viuSdk.push(c); return c == null ? undefined : c + 1; }, undefined, false));
+  ok(viuSdk.length === 1 && viuSdk[0] === null && !rs.committed && sala("SALA2").cont === 3, "o SDK falso imita a armadilha: 1ª rodada com null aborta sem perguntar ao servidor " + JSON.stringify(viuSdk));
+  // a rede: ouve antes, a fn vê o valor do servidor (num caminho que este aparelho nunca ouviu)
+  const viuRede = [];
+  let pr = B.rede.transacao("novo", c => { viuRede.push(c); return c == null ? undefined : c + 1; });
+  await avanca(1000); let r = await pr;
+  ok(r.feito && r.valor === 4 && viuRede[0] === 3 && sala("SALA2").novo === 4, "a rede: a 1ª rodada já com o valor do servidor " + JSON.stringify(viuRede));
+  await ja(B.rede.transacao("cont", c => c + 1));   // o cont vai a 4, como o novo
+  // o cache velho: B ouve, o servidor muda e o dado demora 120 ms a chegar; a transação de B repete com o valor de lá
+  const vistosB = []; const paraB = B.rede.ouvir("cont", v => vistosB.push(v));
+  await avanca(500);
+  banco.gravar("leiloes/SALA2/cont", 10);
+  const viuVelho = [];
+  pr = B.rede.transacao("cont", c => { viuVelho.push(c); return (c || 0) + 1; });
+  await avanca(2000); r = await pr;
+  ok(r.feito && r.valor === 11 && viuVelho.join() === "4,10" && sala("SALA2").cont === 11, "o cache velho: o servidor recusa ('datastale') e a fn roda de novo com o valor de lá: " + viuVelho.join(" → "));
+  ok(vistosB.join() === "4,10,11", "o ouvinte viu só valores do servidor (sem o líder falso do applyLocally): " + vistosB.join(","));
+  paraB();
+  // nenhuma escuta esquecida (a transação solta a dela)
+  await new Promise(res => setTimeout(res, 10)); await avanca(100);
+  ok(!B.cli.db.__falso.estado().escutas.length, "a transação não deixa escuta pendurada: " + JSON.stringify(B.cli.db.__falso.estado().escutas));
+
+  /* F3 a hora: o TIMESTAMP no servidor, a estimativa no valor, a testemunha de menor ida e volta, o relógio que pula */
+  let desvio = 5000;
+  const H = aparelho("SALA3", { latencia: 40, desvio: () => desvio });
+  await avanca(300);
+  const offSdk = H.rede._hora().offsetSdk;
+  ok(Math.abs(offSdk - (-5000 - 40)) < 1, "o .info/serverTimeOffset do aperto de mão: " + offSdk);
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 45, "antes da testemunha, a hora pelo aperto de mão (erro = a volta): " + (H.rede.horaServidor() - T.hora));
+  const tTx = T.hora;
+  pr = H.rede.transacao("x", c => ({ t: H.rede.TS, v: 1 }));
+  await avanca(500); r = await pr;
+  const srvX = sala("SALA3").x.t;
+  ok(r.feito && srvX >= tTx && srvX <= tTx + 200 && Math.abs(r.valor.t - srvX) <= 100, `TIMESTAMP: o servidor pôs ${srvX - tTx} ms depois; a transação devolve a estimativa (${r.valor.t - srvX} ms de diferença)`);
+  const tg = T.hora;
+  await ja(H.rede.gravar("y", { t: H.rede.TS }));
+  ok(typeof sala("SALA3").y.t === "number" && sala("SALA3").y.t === tg + 40, "gravar com o carimbo: a hora do servidor quando chegou (" + (sala("SALA3").y.t - tg) + " ms)");
+  // as testemunhas (latências diferentes: vale a de menor ida e volta)
+  const amostrasIda = [80, 15, 120, 40];
+  for (const lat of amostrasIda) {
+    banco.definirLatencia(H.cli.cid, lat);
+    const s0 = T.hora; pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(lat * 4 + 50); const tw = await pr;
+    ok(typeof tw === "number" && tw === s0 + lat, "a testemunha devolve a hora em que o servidor gravou (" + (tw - s0) + " ms, latência " + lat + ")");
+    await avanca(400);   // o que ainda está no caminho (o fim da escuta da leitura) chega antes da próxima
+
+  }
+  const esc = H.rede._hora().escolhida;
+  ok(esc && esc.ida === 30 && Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, `a hora pela amostra de menor ida e volta (${esc && esc.ida} ms): erro ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms`);
+  // o relógio de parede pula +60 s depois da calibração: a hora não muda (o relógio monótono)
+  desvio = 65000;
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, "o relógio de parede pula +60 s depois da calibração: a hora não muda");
+  // o relógio monótono pula (o aparelho dormiu e ele parou 3 s): a próxima testemunha não cruza e recomeça a janela
+  H.mono.pulo = -3000;
+  const errDepois = H.rede.horaServidor() - T.hora;
+  banco.definirLatencia(H.cli.cid, 60);
+  pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(400); await pr;
+  ok(Math.abs(errDepois + 3000) < 20 && Math.abs(H.rede.horaServidor() - T.hora) <= 60.5 && H.rede._hora().amostras === 1, `o relógio monótono pulou 3 s: a testemunha recomeça a janela (erro ${errDepois.toFixed(0)} → ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms)`);
+  // o relógio de um aparelho ±5 s: as horas gravadas são as do servidor
+  desvio = -5000;
+  const H2 = aparelho("SALA3", { latencia: 25, desvio: () => -5000 });
+  await avanca(200);
+  pr = H2.rede.testemunha("bate/h2", {}); const s2 = T.hora; await avanca(300); const tw2 = await pr;
+  ok(tw2 >= s2 && tw2 <= s2 + 100 && Math.abs(H2.rede.horaServidor() - T.hora) <= 25.5, "o aparelho atrasado 5 s: a testemunha e a hora são as do servidor");
+
+  // duas abas da mesma conta gravam o mesmo bate: a leitura de depois do ack é a da outra — sem testemunho, sem calibrar
+  const X = aparelho("SALA7", { latencia: 50 }), Y = aparelho("SALA7", { latencia: 10 });
+  await avanca(300);
+  pr = X.rede.testemunha("bate/eu", { sid: "x" });
+  await avanca(50);
+  Y.rede.gravar("bate/eu", { sid: "y", ts: 1 });
+  await avanca(500); const twX = await pr;
+  ok(twX === null && X.rede._hora().amostras === 0 && sala("SALA7").bate.eu.sid === "y", "outra aba gravou o mesmo bate antes da leitura: a testemunha devolve null e não calibra");
+
+  /* F4 o ack perdido: a transação rejeita com 'desconectado' e o servidor gravou; conferir lendo de novo */
+  const K = aparelho("SALA4", { latencia: 20 });
+  await avanca(200);
+  await ja(K.rede.gravar("cont", 1)); await avanca(100);
+  banco.cairNoProximoAck(K.cli.cid);
+  let erro = null;
+  pr = K.rede.transacao("cont", c => (c || 0) + 1).catch(e => { erro = e; });
+  await avanca(500); await pr;
+  ok(erro && erro.codigo === "desconectado" && sala("SALA4").cont === 2 && !K.rede.conectado(), "o ack perdido: rejeita com 'desconectado' e o servidor gravou (" + (erro && erro.message) + ")");
+  banco.conectar(K.cli.cid); await avanca(300);
+  ok((await ja(K.rede.ler("cont"))) === 2 && K.rede.conectado(), "na volta, ler de novo resolve o 'Conferindo…'");
+  // a gravação com o ack perdido: fica guardada, vai de novo na volta e só então resolve
+  banco.cairNoProximoAck(K.cli.cid);
+  let gravou = false; const pg = K.rede.gravar("g", { v: 7 }).then(() => { gravou = true; });
+  await avanca(300);
+  ok(!gravou && sala("SALA4").g && sala("SALA4").g.v === 7, "set com o ack perdido: o servidor tem, a promessa espera");
+  banco.conectar(K.cli.cid); await avanca(300); await pg;
+  ok(gravou && sala("SALA4").g.v === 7, "na volta, o set vai de novo e resolve");
+  // a transação feita sem conexão vai na volta (o SDK guarda a que não foi mandada)
+  banco.derrubar(K.cli.cid); await avanca(50);
+  let feitoOff = null; pr = K.rede.transacao("cont", c => (c || 0) + 10).then(x => { feitoOff = x; });
+  await avanca(500);
+  ok(feitoOff === null && sala("SALA4").cont === 2, "sem conexão a transação espera");
+  banco.conectar(K.cli.cid); await avanca(500); await pr;
+  ok(feitoOff && feitoOff.feito && sala("SALA4").cont === 12, "na volta a transação vai: " + JSON.stringify(feitoOff));
+
+  /* F5 permissão recusada e a limpeza dos valores */
+  banco.negar = (op, caminho) => caminho.includes("/proibido");
+  let ep = null; await ja(K.rede.gravar("proibido", 1).catch(e => { ep = e; })); await avanca(100);
+  let et = null; pr = K.rede.transacao("proibido", () => 1).catch(e => { et = e; }); await avanca(300); await pr;
+  ok(ep && ep.codigo === "permissao" && et && et.codigo === "permissao" && sala("SALA4").proibido == null, "sem permissão: gravar e transação rejeitam com 'permissao'");
+  banco.negar = null;
+  let lancou = null; try { K.cli.db.ref("leiloes/SALA4/z").set({ a: undefined }); } catch (e) { lancou = e.message; }
+  await ja(K.rede.gravar("z", { a: undefined, b: NaN, c: [], d: 1, e: { f: undefined } })); await avanca(100);
+  ok(/contains undefined/.test(lancou || "") && jsonIgual(sala("SALA4").z, { d: 1 }), "o SDK recusa undefined; a rede limpa como a memória: " + JSON.stringify(sala("SALA4").z));
+  await ja(K.rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3" } })); await avanca(100);
+  const escal = await ja(K.rede.ler("escal"));
+  ok(Array.isArray(escal) && escal.length === 2, "o nó de chaves 0..n volta como LISTA (o val() do SDK; a sessão aceita os dois)");
+
+  /* F6 o ouvir sempre depois (o SDK chama dentro do on() e do set) */
+  const O = aparelho("SALA5");
+  await avanca(100);
+  await ja(O.rede.gravar("a", 1)); await avanca(50);
+  const pO = O.rede.ouvir("a", () => {}); await avanca(50);   // o caminho fica com o cache pronto
+  let dentro = 0, depois = 0, fase = "on";
+  const pO2 = O.rede.ouvir("a", () => { if (fase === "on" || fase === "set") dentro++; else depois++; });
+  fase = "set"; O.rede.gravar("a", 2); fase = "fora";
+  await avanca(100);
+  ok(dentro === 0 && depois === 2, `o ouvir nunca chama dentro do on() nem do set (dentro ${dentro}, depois ${depois})`);
+  pO(); pO2();
+
+  /* F7 reconectar (goOffline/goOnline: o servidor roda o onDisconnect), aoCair/aoVoltar, apagar, indisponível */
+  let caiu = 0, voltou = 0; O.rede.aoCair(() => caiu++); O.rede.aoVoltar(() => voltou++);
+  await ja(O.rede.gravar("pres/o", true)); await ja(O.rede.aoDesconectar("pres/o").apagar()); await avanca(50);
+  O.rede.reconectar(); await avanca(300);
+  ok(caiu === 1 && voltou === 1 && O.rede.conectado() && sala("SALA5").pres == null, "reconectar: cai (o onDisconnect roda no servidor) e volta");
+  await ja(O.rede.apagar()); await avanca(100);
+  let ea = null; await O.rede.gravar("a", 3).catch(e => { ea = e; });
+  ok(sala("SALA5") == null && ea && ea.codigo === "apagada", "apagar: a sala some no servidor e nada mais grava");
+  let ei = null; try { R.firebase("X", {}); } catch (e) { ei = e; }
+  ok(ei && ei.codigo === "indisponivel", "sem o banco do TM: erro 'indisponivel'");
+  O.rede.fechar();
+
+  /* F8 a disputa: 4 aparelhos, 12 incrementos cada, latências diferentes, todos no mesmo instante */
+  const D = [0, 15, 40, 90].map((lat, i) => aparelho("SALA6", { latencia: lat, uid: "d" + i }));
+  await avanca(300);
+  const tentativas = [0, 0, 0, 0];
+  const ps = [];
+  for (let k = 0; k < 12; k++) D.forEach((d, i) => ps.push(d.rede.transacao("cont", c => { tentativas[i]++; return (c || 0) + 1; }).catch(e => ({ feito: false, erro: e.codigo }))));
+  await avanca(20000);
+  const rs8 = await Promise.all(ps);
+  ok(rs8.every(x => x.feito) && sala("SALA6").cont === 48, "4 aparelhos × 12 incrementos ao mesmo tempo somam 48: " + sala("SALA6").cont);
+  notas.push(`disputa: ${tentativas.reduce((a, b) => a + b, 0)} rodadas da fn para 48 gravações`);
+  notas.push(`bytes baixados pelo aparelho da bateria ${banco.bytes(A.cli.cid).desce}`);
+  } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+
+  const ms = performance.now() - t00;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} F    rede no Firebase (banco falso como o SDK): a bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, onDisconnect, permissão, limpeza, ouvir depois, disputa${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) { falhas++; erros.slice(0, VERBOSO ? 200 : 12).forEach(e => console.log("         · " + e)); }
+}
+
+/* ============================================ O o leilão online (a sessão sobre o Firebase falso) ============================================
+   As sessões online (criarSala, entrar, abrir) pela rede firebase() do leilao-rede.js sobre o banco falso que se comporta
+   como o SDK compat (ferramentas/lib/banco-falso.mjs), com o tempo de mentira, em 2, 4 e 8 "aparelhos" (cada um com o seu
+   cliente, a sua latência e o seu relógio): a sala por transação (pedido, aceitar, recusar, tirar, configurar, Pronto,
+   Começar), as recusas (código, sala cheia, recusado, edição, regras, fair play), o leilão inteiro com os mesmos vivo,
+   compras e caixas em todos, a corrida de lances, o relógio ±5 s e o pulo depois da calibração (o servidor confere que
+   ninguém fecha cedo e nenhum lance entra depois do fim), quem cai, quem some, o ack perdido, o lance velho na
+   repescagem, recarregar, a sala adulterada, passar o clube, outra aba, a presença, a limpeza e as Minhas salas; O7 a sala
+   mexida fora das regras (o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho
+   depois de encerrar) e O8 a volta da página escondida sem derrubar a conexão do TM inteiro (as salas dos outros modos).
+   Nenhum Firebase de verdade. --rapido: só os leilões de 2 e 4 aparelhos inteiros (o de 8 corta na metade). */
+async function testeOnline() {
+  if (SO && !SO.includes("O")) return;
+  const t00 = performance.now(), erros = [], notas = [];
+  const DEPURA = !!process.env.LEILAO_DEPURA;
+  const ok = (c, m) => { if (!c) { erros.push(m); if (DEPURA) process.stderr.write("  ✗ " + m + "\n"); } return !!c; };
+  const marca = s => { if (DEPURA) process.stderr.write(`[${((performance.now() - t00) / 1000).toFixed(1)} s · ${(T.hora / 1000).toFixed(0)} · ${eventos}] ${s}\n`); };
+  const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, R = TMx.leilaoRede;
+  const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+  const RAPIDO = args.includes("--rapido");
+  // --caso O1,O4,quatro: só esses pedaços (para depurar)
+  const CASOS = opt("--caso", null) ? opt("--caso").split(",") : null, caso = n => !CASOS || CASOS.includes(n);
+  // o tempo de mentira: o servidor, os agendadores das sessões e os relógios dos aparelhos andam juntos
+  const T = { hora: 5_000_000, fila: [], seq: 0 };
+  const agendar = (fn, ms) => { const e = { at: T.hora + Math.max(0, +ms || 0), fn, s: T.seq++, morto: false }; T.fila.push(e); return e; };
+  const cancelar = e => { if (e) e.morto = true; };
+  const respira = async () => { for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r)); };
+  let eventos = 0;
+  // anda o tempo de acontecimento em acontecimento até pare() (ou até limiteMs de tempo de mentira); um laço que roda
+  // 20 mil acontecimentos sem o tempo andar é defeito (a sessão tentando a mesma coisa na hora): reprova em vez de travar
+  async function anda(pare, limiteMs = 2 * 3600_000) {
+    const fim = T.hora + limiteMs;
+    let parado = 0, horaAntes = T.hora;
+    for (let k = 0; k < 4_000_000; k++) {
+      if (T.hora !== horaAntes) { horaAntes = T.hora; parado = 0; } else if (++parado > 20000) throw new Error("laço sem o tempo andar em " + T.hora);
+      await respira();
+      if (pare && pare()) return true;
+      if (T.fila.length > 4000) T.fila = T.fila.filter(e => !e.morto);
+      let m = -1;
+      for (let i = 0; i < T.fila.length; i++) { const e = T.fila[i]; if (e.morto) continue; if (m < 0 || e.at < T.fila[m].at || (e.at === T.fila[m].at && e.s < T.fila[m].s)) m = i; }
+      if (m < 0 || T.fila[m].at > fim) {
+        for (let i = 0; i < 4; i++) await respira();
+        if (pare && pare()) return true;
+        if (T.fila.some(e => !e.morto && e.at <= fim)) continue;
+        T.hora = Math.max(T.hora, fim === Infinity ? T.hora : fim);
+        return !!(pare && pare());
+      }
+      const e = T.fila.splice(m, 1)[0];
+      T.hora = Math.max(T.hora, e.at); eventos++;
+      try { e.fn(); } catch (er) { erros.push("exceção num acontecimento: " + (er && er.stack || er)); }
+    }
+    return false;
+  }
+  const passa = ms => anda(null, ms);
+  async function espera(p, limiteMs = 120_000) {
+    let feito = false, val, err;
+    p.then(v => { feito = true; val = v; }, e => { feito = true; err = e; });
+    await anda(() => feito, limiteMs);
+    if (!feito) throw new Error("a promessa não resolveu em " + limiteMs + " ms");
+    if (err) throw err;
+    return val;
+  }
+  async function rejeita(p, limiteMs) { try { await espera(p, limiteMs); return null; } catch (e) { return e && e.codigo ? e.codigo : String(e && e.message || e); } }
+  const banco = new BancoFalso({ relogio: () => T.hora, tempo: () => T.hora, agendar });
+
+  // ---------- o servidor confere cada gravação do vivo: ninguém fecha cedo, nenhum lance depois do fim ----------
+  const conf = {};   // código → { ctx, cedo: [], tarde: [], fechados, lances }
+  const escreveOrig = banco._escreve.bind(banco);
+  banco._escreve = itens => {
+    const vivos = [];
+    for (const [ps] of itens) if (ps.length === 3 && ps[0] === "leiloes" && ps[2] === "vivo" && conf[ps[1]]) vivos.push(ps[1]);
+    const antes = vivos.map(c => banco.ler("leiloes/" + c + "/vivo"));
+    escreveOrig(itens);
+    vivos.forEach((c, j) => {
+      const C = conf[c], A = antes[j], B = banco.ler("leiloes/" + c + "/vivo");
+      if (!C.ctx || !A || !B) return;
+      const a = Lx.norm(A, C.ctx), b = Lx.norm(B, C.ctx), fimA = Lx.fimDoLote(a, C.ctx);
+      if (a.fase === "fim" || a.i < 0) return;
+      if (b.seq === a.seq && b.n > a.n) { C.lances++; if (T.hora >= fimA) C.tarde.push({ seq: a.seq, n: b.n, hora: T.hora, fim: fimA }); }
+      if (b.seq > a.seq) {
+        C.fechados++; C.fechouEm[a.seq] = { hora: T.hora, fim: fimA };
+        if (T.hora < fimA && !Lx.todosPassaram(a, C.ctx)) {
+          // antes do fim só fecha o passe que deixa todos passados
+          let porPasse = false;
+          for (let t = 0; t < C.ctx.T && !porPasse; t++) {
+            if (t === a.lider || a.p.charAt(t) === "1") continue;
+            const a2 = Object.assign({}, a, { p: a.p.slice(0, t) + "1" + a.p.slice(t + 1) });
+            if (Lx.todosPassaram(a2, C.ctx) && b.p !== a2.p) porPasse = true;
+          }
+          if (!porPasse) C.cedo.push({ seq: a.seq, hora: T.hora, fim: fimA, falta: fimA - T.hora });
+        }
+      }
+    });
+  };
+  function vigia(codigo) {
+    conf[codigo] = conf[codigo] || { ctx: null, cedo: [], tarde: [], fechados: 0, lances: 0, fechouEm: {} };
+    const C = conf[codigo], lt = banco.ler("leiloes/" + codigo + "/lotes"), s = banco.ler("leiloes/" + codigo + "/sala");
+    if (lt && s && s.ordem) C.ctx = Lx.contexto({ T: s.ordem.length, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg.tempo });
+    return C;
+  }
+
+  // ---------- os aparelhos ----------
+  let nAp = 0;
+  const DOCS = [];
+  function documento() { const d = { hidden: false, ouvintes: [], addEventListener(n, f) { if (n === "visibilitychange") this.ouvintes.push(f); }, removeEventListener(n, f) { this.ouvintes = this.ouvintes.filter(x => x !== f); }, esconde(sim) { this.hidden = sim; this.ouvintes.slice().forEach(f => f()); } }; DOCS.push(d); return d; }
+  // um aparelho: o cliente do banco falso (o SDK), a identidade (uid do TM e o da autenticação), a edição, o armazém das
+  // Minhas salas e a página (a visibilidade); desvio = o relógio de parede dele; mono.pulo = o relógio monótono pulando
+  function aparelho(uid, o = {}) {
+    nAp++;
+    const dev = { uid, ed: o.ed || "public", liberado: !!o.liberado, suspenso: false, desvio: o.desvio || 0, arm: armazemFalso(), doc: documento(), sessoes: [] };
+    dev.cli = banco.cliente({ uid: "auth-" + uid, latencia: o.latencia ?? 20, relogio: () => T.hora + dev.desvio });
+    dev.mono = { base: 40_000 + nAp * 977, pulo: 0 };
+    dev.redePara = codigo => R.firebase(codigo, { db: dev.cli.db, firebase: dev.cli.firebase, relogio: () => T.hora - 5_000_000 + dev.mono.base + dev.mono.pulo, relogioParede: () => T.hora + dev.desvio });
+    dev.opc = extra => Object.assign({
+      id: { uid, auth: "auth-" + uid, nome: o.nome || ("Pessoa " + uid.toUpperCase()), num: "1000-" + String(nAp).padStart(4, "0") },
+      redePara: dev.redePara, edicao: () => dev.ed, suUnlocked: () => dev.liberado, trocarEdicao: ed => { dev.ed = ed; dev.trocou = ed; return ed; },
+      fairplay: () => dev.suspenso, armazem: dev.arm, agendar, cancelar, mundo: MUNDO[dev.ed === "pro" ? "pro" : "public"], doc: dev.doc, semAtual: true
+    }, extra || {});
+    dev.criar = (c, extra) => espera(SS.criarSala(Object.assign(dev.opc(extra), c))).then(S => { dev.sessoes.push(S); return S; });
+    dev.entrar = (codigo, extra) => espera(SS.entrar(codigo, dev.opc(extra))).then(S => { dev.sessoes.push(S); return S; });
+    dev.abrir = (codigo, extra) => espera(SS.abrir(codigo, dev.opc(Object.assign({ online: true }, extra)))).then(S => { dev.sessoes.push(S); return S; });
+    dev.cair = (volta) => banco.derrubar(dev.cli.cid, volta != null ? { volta } : {});
+    dev.voltar = () => banco.conectar(dev.cli.cid);
+    dev.bytes = () => banco.bytes(dev.cli.cid);
+    return dev;
+  }
+  const mesmo = (Ss) => { const j = Ss.map(S => JSON.stringify(S.vivo)); return j.every(x => x === j[0]); };
+  function sala(c) { return banco.ler("leiloes/" + c + "/sala"); }
+  function fimOk(S, id) {
+    const v = S.vivoN, ctx = S.ctx;
+    if (!ok(v && v.fase === "fim", `${id}: não chegou ao fim`)) return;
+    for (let t = 0; t < ctx.T; t++) {
+      const time = Lx.timeDe(v, ctx, t);
+      ok(time.length === 11 && Lx.formacoesQueCabem(Lx.contaMascaras(time)).length > 0, `${id}: técnico ${t} com ${time.length} que não cabem`);
+    }
+    ok(!S.alterada, `${id}: a conferência acusou a sala honesta (${S.alterada})`);
+  }
+  // as vendas registradas batem com o vivo (o dono de cada lote e o caixa = 100 − a soma dos preços)
+  function vendasOk(codigo, ctx, id) {
+    const v = Lx.norm(banco.ler("leiloes/" + codigo + "/vivo"), ctx), vd = banco.ler("leiloes/" + codigo + "/vendas") || {}, soma = new Array(ctx.T).fill(0);
+    let erradas = 0, n = 0;
+    Object.keys(vd).forEach(k => { const x = vd[k]; if (!x) return; n++; if (Lx.LETRAS.indexOf(v.d.charAt(+k)) !== x.t) erradas++; soma[x.t] += x.v; });
+    const vendidos = v.d.split("").filter(c => c !== "-").length;
+    ok(!erradas && n === vendidos, `${id}: vendas registradas ${n} × ${vendidos} vendidos (${erradas} com outro dono)`);
+    for (let t = 0; t < ctx.T; t++) ok(Lx.SALDO - v.cx[t][0] === soma[t], `${id}: o caixa do técnico ${t} (${v.cx[t][0]}) ≠ 100 − as vendas (${soma[t]})`);
+  }
+  function confOk(C, id) {
+    ok(!C.cedo.length, `${id}: ${C.cedo.length} lotes fechados ANTES do fim pela hora do servidor: ${JSON.stringify(C.cedo.slice(0, 3))}`);
+    ok(!C.tarde.length, `${id}: ${C.tarde.length} lances entraram DEPOIS do fim: ${JSON.stringify(C.tarde.slice(0, 3))}`);
+  }
+
+  try {
+
+  if (caso("O1")) /* ---------- O1 entrar: pedido, aceitar, recusar, tirar, as recusas, configurar, Pronto e o Começar ---------- */
+  {
+    const A = aparelho("a"), B = aparelho("b"), C = aparelho("c"), D = aparelho("d"), E = aparelho("e"), G = aparelho("g");
+    // o código sem colisão: AAAAAA já existe (a criação é transação de null: tenta outro)
+    banco.gravar("leiloes/AAAAAA/sala", { meta: { dono: "x", estado: "saguao" } });
+    const SA = await A.criar({ liga: "br", vagas: 4, bots: 1, tempo: 10, formacao: "4-3-3", codigo: "AAAAAA", clube: { nome: "Leões do Norte", sigla: "LDN", cor: "#ef4444", escudo: "redondo|crown" }, semente: "O1" });
+    const cod = SA.codigo;
+    ok(cod !== "AAAAAA" && /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(cod) && sala("AAAAAA").meta.dono === "x", "o código colidido vira outro (6 letras sem I, O, 0, 1): " + cod);
+    let s = sala(cod);
+    ok(s && s.meta.estado === "saguao" && s.meta.dono === "a" && s.meta.regras === Lx.REGRAS && s.meta.edicao === "public" && s.cfg.vagas === 4 && s.cfg.bots === 1 && typeof s.meta.criada === "number",
+      "a sala nasce no saguão: " + JSON.stringify(s && s.meta));
+    ok(s.tec.a.papel === "dono" && s.tec.a.auth === "auth-a" && s.tec.bot1 && s.tec.bot1.papel === "bot" && s.tec.bot1.clube.cor !== "#ef4444", "o dono e o bot: " + JSON.stringify(Object.keys(s.tec)));
+    ok(SS.salas({ armazem: A.arm }).some(x => x.codigo === cod && x.online && x.estado === "saguao"), "Minhas salas do dono tem a sala online");
+    await passa(200);
+    ok(banco.ler(`leiloes/${cod}/pres/a`) && Object.keys(banco.ler(`leiloes/${cod}/pres/a`)).length === 1 && banco.ler(`leiloes/${cod}/bate/a`).sid === SA.sid, "presença por conexão e o 1º bate do dono");
+    ok((await rejeita(SS.entrar("ABC12", B.opc()))) === "codigo" && (await rejeita(SS.entrar("ZZZZZZ", B.opc()))) === "naoExiste", "código com 5 letras e código que não existe");
+    // o pedido pelo link colado; o dono aceita (a cor repetida vira outra)
+    marca("O1 pedido");
+    const SB = await B.entrar("https://exemplo/?leilao=" + cod.toLowerCase(), { clube: { nome: "Leões", sigla: "LEO", cor: "#ef4444", escudo: "classico|star" } });
+    ok(SB.pedido && SB.pedido.estado === "esperando" && SB.eu === -1 && sala(cod).pedidos.b && sala(cod).pedidos.b.auth === "auth-b", "o pedido de entrada: " + JSON.stringify(SB.pedido));
+    await passa(200);
+    ok(SA.ver().saguao.pedidos.length === 1 && SA.ver().saguao.pedidos[0].uid === "b", "o dono vê o pedido");
+    let r = await espera(SB.aceitar("b")); ok(!r.ok && r.motivo === "naoMembro", "quem só pediu não aceita ninguém: " + JSON.stringify(r));
+    const aceitos = []; SB.on("aceito", () => aceitos.push(1));
+    r = await espera(SA.aceitar("b")); await passa(300);
+    s = sala(cod);
+    ok(r.ok && aceitos.length === 1 && SB.eu === 1 && !SB.pedido && s.tec.b.papel === "tecnico" && !s.pedidos, "aceito: " + JSON.stringify(r) + " eu " + SB.eu);
+    ok(s.tec.b.clube.cor !== "#ef4444" && s.tec.bot1.clube.cor !== s.tec.b.clube.cor && SS._sala.ordemPrevista(s).join() === "a,b,bot1", "as cores sem repetir e a ordem (o bot depois das pessoas): " + SS._sala.ordemPrevista(s).join());
+    ok(SB.ver().tecnicos.length === 3 && SB.ver().tecnicos[1].eu && SB.ver().tecnicos[2].bot, "o técnico novo vê a sala");
+    r = await espera(SB.tirar("bot1")); ok(!r.ok && r.motivo === "dono", "quem não é dono não tira ninguém: " + JSON.stringify(r));
+    // recusado: não entra de novo
+    const SC = await C.entrar(cod);
+    const recus = []; SC.on("recusado", () => recus.push(1));
+    await passa(200);
+    r = await espera(SA.recusar("c")); await passa(300);
+    ok(r.ok && recus.length === 1 && SC.parado && sala(cod).recusados.c, "recusado: " + JSON.stringify(r));
+    ok((await rejeita(SS.entrar(cod, C.opc()))) === "recusado" && !SS.salas({ armazem: C.arm }).length, "quem foi recusado não pede de novo (e a sala sai das Minhas salas dele)");
+    // a sala cheia (4 vagas: a, b, bot1 e d)
+    const SD = await D.entrar(cod); await passa(200); r = await espera(SA.aceitar("d")); await passa(300);
+    ok(r.ok && SD.eu === 2 && sala(cod).tec.bot1 && SS._sala.ordemPrevista(sala(cod)).join() === "a,b,d,bot1", "o 3º entra: " + SS._sala.ordemPrevista(sala(cod)).join());
+    ok((await rejeita(SS.entrar(cod, E.opc()))) === "cheia", "a sala cheia (com o bot contando)");
+    // configurar (só o dono) zera os Pronto
+    r = await espera(SB.pronto(true)); r = await espera(SD.pronto(true)); await passa(300);
+    ok(SA.ver().saguao.prontos === 3 && SA.ver().saguao.total === 3 && SA.ver().saguao.podeComecar, "todos prontos: " + JSON.stringify(SA.ver().saguao));
+    r = await espera(SA.configurar({ tempo: 15 })); await passa(300);
+    ok(r.ok && sala(cod).cfg.tempo === 15000 && SA.ver().saguao.prontos === 1 && SA.ver().saguao.faltam.length === 2, "configurar zera os Pronto: " + JSON.stringify(SA.ver().saguao));
+    r = await espera(SA.configurar({ vagas: 2 })); ok(!r.ok && r.motivo === "vagas", "vagas a menos que os técnicos: " + JSON.stringify(r));
+    // tirar
+    const tirados = []; SD.on("tirado", () => tirados.push(1));
+    r = await espera(SA.tirar("d")); await passa(300);
+    ok(r.ok && tirados.length === 1 && SD.parado && !sala(cod).tec.d && sala(cod).recusados.d, "tirar: " + JSON.stringify(r));
+    // a cor de outro técnico
+    r = await espera(SB.meuClube({ nome: "Leões", sigla: "LEO", cor: sala(cod).tec.a.clube.cor, escudo: "classico|star" })); ok(!r.ok && r.motivo === "cor", "a cor de outro técnico: " + JSON.stringify(r));
+    r = await espera(SB.meuClube({ nome: "Tigres", sigla: "TIG", cor: "#a855f7", escudo: "hexagono|flame" })); await passa(300);
+    ok(r.ok && sala(cod).tec.b.clube.nome === "Tigres" && sala(cod).tec.bot1.clube.cor !== "#a855f7", "o clube no saguão (o bot muda de cor se precisar)");
+    // fair play e a edição
+    G.suspenso = true;
+    ok((await rejeita(SS.entrar(cod, G.opc()))) === "fairplay" && (await rejeita(SS.criarSala(G.opc({ liga: "br", vagas: 2 })))) === "fairplay", "suspenso pelo fair play não cria nem entra");
+    // o Começar: com alguém sem Pronto, recusa; dois Começar ao mesmo tempo = 1
+    marca("O1 começar");
+    r = await espera(SA.comecar()); ok(!r.ok && r.motivo === "prontos", "o Começar com alguém sem Pronto: " + JSON.stringify(r));
+    await espera(SB.pronto(true)); await passa(300);
+    const iniciais = []; const paraIni = SA.rede.ouvir("vivo", v => { if (v && v.seq === 1) iniciais.push(v); });
+    const [c1, c2] = await espera(Promise.all([SA.comecar(), SA.comecar()]));
+    await anda(() => SA.vivoN && SB.vivoN && SA.ctx && SB.ctx, 30_000);
+    s = sala(cod);
+    ok([c1, c2].filter(x => x.ok).length === 1 && s.meta.estado === "leilao" && s.ordem.join() === "a,b,bot1" && s.cfg.T === 3, "dois Começar ao mesmo tempo = 1: " + JSON.stringify([c1, c2]));
+    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 39 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 39 && SB.ctx.L === 39, "os lotes para 3 técnicos");
+    ok(SA.vivoN.seq === 1 && iniciais.length === 1 && JSON.stringify(SA.vivo) === JSON.stringify(SB.vivo), "um vivo inicial só, o mesmo nos dois aparelhos");
+    paraIni();
+    ok((await rejeita(SS.entrar(cod, aparelho("f").opc()))) === null && sala(cod).pedidos.f && sala(cod).pedidos.f.depois, "depois do Começar, o pedido fica (para passar o clube)");
+    r = await espera(SA.aceitar("f")); ok(!r.ok && r.motivo === "comecou", "e não dá para aceitar: " + JSON.stringify(r));
+    [SA, SB].forEach(x => x.parar());
+    nota_("O1", `colisão do código, pedido pelo link, aceitar, recusar, cheia, configurar zera os Pronto, tirar, cor, fair play, dois Começar = 1`);
+  }
+
+    marca("O2");
+  if (caso("O2")) /* ---------- O2 a edição, as regras e a versão ---------- */
+  {
+    const P = aparelho("p", { ed: "pro", liberado: true }), Q = aparelho("q"), W = aparelho("w", { liberado: true }), U = aparelho("u", { ed: "pro", liberado: true });
+    const SP = await P.criar({ liga: "br", vagas: 4, bots: 0, semente: "O2" });
+    ok(sala(SP.codigo).meta.edicao === "pro", "a sala da Season Update");
+    ok((await rejeita(SS.entrar(SP.codigo, Q.opc()))) === "edicao" && Q.ed === "public", "na pro, sem a chave: não entra");
+    const SW = await W.entrar(SP.codigo);
+    ok(W.trocou === "pro" && SW.pedido && sala(SP.codigo).pedidos.w.edicao === "pro", "na pro, com a chave: troca de edição sozinho e pede");
+    const SX = await aparelho("x").criar({ liga: "es", vagas: 3, bots: 0, semente: "O2b" });
+    const SU = await U.entrar(SX.codigo);
+    ok(U.trocou === "public" && SU.pedido, "quem está na pro entra na pública trocando sozinho");
+    // regras de outra versão: quem não é da sala não entra; quem é, só olha
+    await espera(SX.aceitar("u")); await passa(300);
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, Lx.REGRAS + 1);
+    await passa(300);
+    ok((await rejeita(SS.entrar(SX.codigo, aparelho("y").opc()))) === "regras", "regras de outra versão: quem não é da sala não entra");
+    ok(SU.soOlhar && SX.soOlhar && (await espera(SU.pronto(true))).ok === false, "quem é da sala, com outras regras, só olha");
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, Lx.REGRAS);
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/versaoTM`, "v-velha");
+    SU.parar(); await passa(200);
+    const SU2 = await U.abrir(SX.codigo);
+    ok(SU2.eu === 1 && !SU2.soOlhar && SU2.ver().versaoDiferente, "outra versão do TM: quem é da sala volta (com o aviso)");
+    [SP, SW, SX, SU2].forEach(x => x.parar());
+    nota_("O2", "pro sem chave recusa, pro com chave e pública trocam sozinhos, regras de outra versão, versão do TM só avisa");
+  }
+
+    marca("O3");
+  /* ---------- O3 os leilões inteiros: 2, 4 e 8 aparelhos ---------- */
+  // o piloto: cada pessoa decide como um robô com o perfil do seu índice e age pela API da sessão (o lance e o passe)
+  function pilotoOnline(S) {
+    const perfil = Lx.perfilRobo(S.ctx.semente, S.eu);
+    let pend = null, chave = null, parado = false, acoes = 0;
+    const olha = () => {
+      const v = S.vivoN;
+      if (parado || !v || !S.ctx || v.fase === "fim" || !S.sala || S.sala.meta.estado !== "leilao") { cancelar(pend); pend = null; return; }
+      const k = v.seq + ":" + v.n + ":" + v.p;
+      if (k === chave) return;
+      chave = k; cancelar(pend); pend = null;
+      const a = Lx.robo(v, S.ctx, perfil);
+      if (!a) return;
+      pend = agendar(() => { pend = null; acoes++; if (a.acao === "lance") S.lance(a.alvo); else S.passar(); }, a.quando + 3 - S.hora());
+    };
+    const off = S.aoMudar(olha);
+    olha();
+    return { parar() { parado = true; off(); cancelar(pend); }, acoes: () => acoes };
+  }
+  async function leilaoInteiro(id, n, nb, o = {}) {
+    const devs = [];
+    for (let k = 0; k < n; k++) devs.push(aparelho(id + "p" + k, { latencia: o.lat ? o.lat(k) : 20, desvio: o.desvio ? o.desvio(k) : 0 }));
+    const dono = devs[0];
+    const S0 = await dono.criar({ liga: o.liga || "en", vagas: n + nb, bots: nb, tempo: 10, semente: "O3-" + id });
+    const cod = S0.codigo, Ss = [S0];
+    for (let k = 1; k < n; k++) { Ss.push(await devs[k].entrar(cod)); }
+    await passa(300);
+    for (let k = 1; k < n; k++) await espera(S0.aceitar(devs[k].uid));
+    await passa(500);
+    for (let k = 1; k < n; k++) await espera(Ss[k].pronto(true));
+    await passa(500);
+    marca(id + ": começar");
+    const rc = await espera(S0.comecar());
+    ok(rc.ok, `${id}: o Começar: ${JSON.stringify(rc)}`);
+    await anda(() => Ss.every(S => S.ctx && S.vivoN), 60_000);
+    const C = vigia(cod);
+    // o relógio de um aparelho pula +60 s DEPOIS da calibração (o de parede; o monótono segue)
+    if (o.pula != null) await anda(() => Ss[o.pula].rede._hora().escolhida, 30_000), (devs[o.pula].desvio += 60_000);
+    const pils = Ss.map(S => pilotoOnline(S));
+    // o aparelho que "dormiu": o relógio monótono fica 4 s para trás no meio do leilão (sem testemunha nova, a hora dele
+    // atrasaria 4 s: os lances dele e os dos bots que ele roda entrariam depois do fim)
+    if (o.dorme != null) {
+      await anda(() => Ss[0].vivoN && Ss[0].vivoN.seq >= 12, 3600_000);
+      devs[o.dorme].mono.pulo -= 4000;
+    }
+    // os DOIS relógios de um aparelho adiantam 5 s juntos (sem salto entre eles): a hora dele fica 5 s à frente até a
+    // próxima testemunha; só a testemunha antes de fechar impede o fechamento cedo
+    if (o.adianta != null) {
+      await anda(() => Ss[0].vivoN && Ss[0].vivoN.seq >= 20, 3600_000);
+      devs[o.adianta].mono.pulo += 5000; devs[o.adianta].desvio += 5000;
+    }
+    let caiu = null;
+    if (o.cai) {
+      // o 1º aparelho (o dono) cai na metade e não volta
+      let ult = -1;
+      await anda(() => { if (DEPURA && S0.vivoN && S0.vivoN.seq !== ult) { ult = S0.vivoN.seq; marca(id + " antes da queda seq " + ult + " " + Ss.map(S => S.vivoN && S.vivoN.seq + ":" + S.vivoN.n).join(",")); } return S0.vivoN && S0.vivoN.seq >= Math.floor(S0.ctx.fila.length / 2); }, 3 * 3600_000);
+      caiu = { cx: S0.vivoN.cx[0].slice(), d: S0.vivoN.d, seq: S0.vivoN.seq };
+      pils[0].parar(); dono.cair(); S0.parar();
+    }
+    const vivos = Ss.filter(S => !S.parado);
+    const metade = o.corta ? Math.floor(Ss[0].ctx.fila.length / 2) : null;
+    let ultSeq = -1;
+    const chegou = await anda(() => {
+      if (DEPURA && vivos[0].vivoN && vivos[0].vivoN.seq !== ultSeq && vivos[0].vivoN.seq % 10 === 0) { ultSeq = vivos[0].vivoN.seq; marca(id + " seq " + ultSeq + " " + vivos.map(S => S.vivoN && S.vivoN.seq).join(",")); }
+      return vivos.every(S => S.vivoN && (metade ? S.vivoN.seq >= metade : S.vivoN.fase === "fim")) && mesmo(vivos);
+    }, 4 * 3600_000);
+    ok(chegou, `${id}: não ${metade ? "chegou à metade" : "terminou"} (seq ${vivos.map(S => S.vivoN && S.vivoN.seq).join(",")})`);
+    pils.forEach(p => p.parar());
+    if (!metade) {
+      await anda(() => vivos.every(S => S.sala && S.sala.meta.estado === "camp"), 120_000);
+      ok(vivos.every(S => S.sala.meta.estado === "camp"), `${id}: a sala não passou à escalação e ao campeonato`);
+      vivos.forEach(S => fimOk(S, id + "/" + S.eu));
+      vendasOk(cod, vivos[0].ctx, id);
+      ok(vivos.every(S => JSON.stringify(S.vivo) === JSON.stringify(banco.ler(`leiloes/${cod}/vivo`))), `${id}: algum aparelho viu outro fim`);
+    }
+    ok(vivos.every(S => !S.alterada), `${id}: a conferência congelou uma sala honesta: ${vivos.map(S => S.alterada).join(",")}`);
+    confOk(C, id);
+    if (caiu) {
+      const v = vivos[0].vivoN;
+      ok(v.cx[0][0] === caiu.cx[0] && v.d.split("").filter((x, i) => x === "a" && caiu.d.charAt(i) !== "a").length === 0, `${id}: quem caiu gastou depois de cair (${caiu.cx[0]} → ${v.cx[0][0]})`);
+    }
+    const acoes = pils.reduce((a, p) => a + p.acoes(), 0);
+    ok(acoes > 0, `${id}: as pessoas não agiram`);
+    const bytes = devs.map(d => d.bytes().desce);
+    Ss.forEach(S => S.parar());
+    return { cod, C, acoes, bytes, fila: vivos[0].ctx.fila.length };
+  }
+  {
+    const vazio = { C: { lances: 0, fechados: 0 }, bytes: [], fila: 0 };
+    const r2 = caso("dois") ? await leilaoInteiro("dois", 2, 0, { liga: "it", lat: k => [15, 60][k] }) : vazio;
+    const r4 = caso("quatro") ? await leilaoInteiro("quatro", 4, 2, { liga: "br", lat: k => [0, 25, 70, 140][k], desvio: k => [0, 5000, -5000, 0][k], pula: 3, dorme: 0, adianta: 2 }) : vazio;
+    const r8 = caso("oito") ? await leilaoInteiro("oito", 8, 0, { liga: "de", lat: k => [0, 10, 20, 40, 60, 90, 120, 150][k], desvio: k => (k % 3 - 1) * 5000, corta: RAPIDO }) : vazio;
+    const rq = RAPIDO || !caso("queda") ? null : await leilaoInteiro("queda", 4, 1, { liga: "es", lat: k => [30, 10, 50, 80][k], cai: true });
+    const kb = b => (b / 1024).toFixed(0);
+    nota_("O3", `2 aparelhos (${r2.fila} lotes, ${r2.C.lances} lances), 4 + 2 bots com ±5 s, o pulo de +60 s e o dono que dorme 4 s, um adiantado 5 s nos dois relógios (${r4.C.lances} lances), 8 (${r8.C.lances} lances${RAPIDO ? ", até a metade" : ""})` +
+      (rq ? `, o 1º caindo na metade (${rq.C.fechados} lotes)` : "") + `; ninguém fechou cedo, nenhum lance depois do fim; KB baixados por aparelho: ${r2.bytes.map(kb).join("/")} · ${r4.bytes.map(kb).join("/")} · ${r8.bytes.map(kb).join("/")}`);
+  }
+
+    marca("O4");
+  if (caso("O4")) /* ---------- O4 dois aparelhos na mão: a corrida, o ack perdido, quem some, o lance velho, recarregar, outra aba ---------- */
+  {
+    // A e B na mão; C entra, fica pronto e esconde a página (ausente o leilão inteiro: passa sozinho em todo lote)
+    const A = aparelho("ma", { latencia: 20 }), B = aparelho("mb", { latencia: 20 }), Cc = aparelho("mc", { latencia: 20 });
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 0, tempo: 10, semente: "O4" });
+    const cod = SA.codigo;
+    let SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("mb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    const SCc = await Cc.entrar(cod); await passa(200); await espera(SA.aceitar("mc")); await passa(300); await espera(SCc.pronto(true)); await passa(300);
+    Cc.doc.esconde(true);
+    await espera(SA.comecar());
+    await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    const C = vigia(cod);
+    const liberou = S => S.vivoN && S.ctx && S.hora() >= S.vivoN.abre + S.ctx.espera + 50 && S.ver().botoes && S.ver().botoes["+1"].pode;
+    // a corrida: os dois +1 no mesmo instante
+    await anda(() => liberou(SA) && liberou(SB), 30_000);
+    marca("O4 corrida");
+    const [ra, rb] = await espera(Promise.all([SA.lance("+1"), SB.lance("+1")]));
+    const venc = ra.ok ? ra : rb, perd = ra.ok ? rb : ra;
+    ok([ra, rb].filter(x => x.ok).length === 1 && venc.valor === 1 && perd.estado === "antes" && perd.valor === 1, "dois lances no mesmo instante: um vence, o outro vê 'antes' (" + JSON.stringify([ra, rb]) + ")");
+    // o ack perdido: o servidor grava e a conexão cai antes da resposta → "Conferindo…" e o resultado certo na volta
+    const quem = ra.ok ? SB : SA, dev = ra.ok ? B : A;
+    await anda(() => quem.ver().botoes && quem.ver().botoes["+1"].pode, 30_000);
+    const seqAck = quem.vivoN.seq;
+    banco.cairNoProximoAck(dev.cli.cid);
+    const pAck = quem.lance("+1");
+    await anda(() => quem.ver().conferindo, 5_000);
+    const w = quem.ver();
+    ok(w.conferindo && w.botoes && w.botoes["+1"].motivo === "conferindo" && (w.rede === "offline" || w.rede === "atualizando"), "o ack perdido: 'Conferindo…' com os botões desligados: " + JSON.stringify({ c: w.conferindo, m: w.botoes && w.botoes["+1"].motivo, rede: w.rede }));
+    await passa(400); dev.voltar();
+    const rAck = await espera(pAck, 30_000);
+    ok(rAck.ok && rAck.conferido && rAck.estado === "aceito" && (quem.vivoN.seq !== seqAck || quem.vivoN.lider === quem.eu) && quem.ver().rede === "ok", "na volta, o resultado certo (o lance tinha entrado): " + JSON.stringify(rAck));
+    // o aparelho que acorda: o relógio monótono parou 5 s (dormiu) e a hora estimada ficou 5 s para trás; o lance no
+    // mesmo instante, com o lote já vencido para o servidor (quem fecha está lento), não pode sair com a hora velha
+    marca("O4 acorda");
+    banco.definirLatencia(A.cli.cid, 600);
+    ok(await anda(() => liberou(SB) && SA.vivoN.lider !== SB.eu, 120_000), "o teste do aparelho que acorda precisa de um lote em que B pode dar lance");
+    const fimS = Lx.fimDoLote(SB.vivoN, SB.ctx), seqS = SB.vivoN.seq;
+    agendar(() => {}, fimS + 150 - T.hora);   // um acontecimento na hora certa (o tempo só para em acontecimentos)
+    await anda(() => T.hora >= fimS + 150, 30_000);
+    if (ok(SB.vivoN.seq === seqS && banco.ler(`leiloes/${cod}/vivo`).seq === seqS, "o lote ainda aberto no servidor depois do fim (o teste precisa)")) {
+      B.mono.pulo -= 5_000;
+      const rs = await espera(SB.lance("+1"), 60_000);
+      ok(!rs.ok && !C.tarde.length, "o aparelho que acordou com a hora velha não dá lance depois do fim: " + JSON.stringify(rs));
+    }
+    banco.definirLatencia(A.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok" && SA.ver().rede === "ok" && SB.vivoN.seq > seqS, 60_000);
+    // o aparelho adiantado: os DOIS relógios de A pulam +10 s juntos (sem salto entre eles) logo que o lote libera e logo
+    // depois de um bate; o passe de B faz A refazer as contas com a hora errada; só a testemunha antes de fechar impede o
+    // fechamento 10 s antes da hora
+    marca("O4 adiantado");
+    const achou = await anda(() => SA.vivoN.fase === "lotes" && SA.vivoN.n === 0 && T.hora - SA.vivoN.abre >= SA.ctx.espera && T.hora - SA.vivoN.abre < SA.ctx.espera + 800 && SB.ver().botoes && SB.ver().botoes.passar.pode, 120_000);
+    ok(achou, "o teste do adiantado precisa de um lote novo em que B pode passar");
+    const seqAd = SA.vivoN.seq, cedoAntes = C.cedo.length;
+    A.mono.pulo += 10_000; A.desvio += 10_000;
+    SA._limpaBate(); SA._timerBate = agendar(() => { SA._timerBate = null; SA._bater(); }, 5000);   // o próximo bate só daqui a 5 s
+    await espera(SB.passar());
+    await anda(() => banco.ler(`leiloes/${cod}/vivo`).seq > seqAd, 60_000);
+    // ninguém passou por A neste lote: ele só pode fechar na hora (o passe que fecharia não existiu)
+    const fAd = C.fechouEm[seqAd];
+    ok(C.cedo.length === cedoAntes && fAd && fAd.hora >= fAd.fim, "o aparelho com os dois relógios 10 s adiantados não fecha o lote cedo (a testemunha): " + JSON.stringify(fAd && { falta: fAd.fim - fAd.hora }));
+    // quem some (a página escondida: sem bate) passa sozinho e não gasta; volta ao controle quando volta
+    const caixaB = () => SA.vivoN.cx[SB.eu][0];
+    const pilA = pilotoOnline(SA);
+    ok(await anda(() => SA.vivoN.seq >= seqAck + 2, 120_000), "o leilão andou depois do ack perdido");
+    const antesB = caixaB(), dAntes = SA.vivoN.d;
+    marca("O4 some");
+    B.doc.esconde(true);
+    await passa(13_000);
+    const ausVisto = SA.ver().tecnicos[SB.eu].ausente, seqSome = SA.vivoN.seq;
+    // o último estado de cada lote (visto por A) desde que B virou ausente: B passou ou não podia
+    const ultimos = {}, offU = SA.aoMudar(() => { if (SA.vivoN && SA.vivoN.fase !== "fim") ultimos[SA.vivoN.seq] = SA.vivoN; });
+    await anda(() => SA.vivoN.seq >= seqSome + 5, 300_000);
+    offU();
+    const vSome = SA.vivoN, lotesSome = Object.keys(ultimos).map(Number).filter(q => q > seqSome && q < vSome.seq).map(q => ultimos[q]);
+    ok(ausVisto && caixaB() === antesB && vSome.d.split("").every((x, i) => x !== Lx.letra(SB.eu) || dAntes.charAt(i) === x), `quem some não gasta (R$ ${antesB} → ${caixaB()}) e aparece ausente (${ausVisto})`);
+    ok(lotesSome.length >= 3 && lotesSome.every(v => v.p.charAt(SB.eu) === "1" || !Lx.pode(v, SA.ctx, SB.eu).pode), "e passa sozinho em cada lote: " + lotesSome.map(v => v.p).join(" "));
+    B.doc.esconde(false);
+    await anda(() => SB.ver().rede === "ok" && !SA.ver().tecnicos[SB.eu].ausente, 30_000);
+    ok(SB.ver().rede === "ok" && !SA.ver().tecnicos[SB.eu].ausente, "de volta (depois de > 5 s escondida): reconecta e fica em dia");
+    await anda(() => liberou(SB) && SA.vivoN.lider !== SB.eu, 120_000);
+    const rVolta = await espera(SB.lance(SB.ver().botoes.tudo.alvo));
+    ok(rVolta.ok || rVolta.estado === "antes", "de volta ao controle, o lance vale: " + JSON.stringify(rVolta));
+    pilA.parar();
+    // recarregar no meio: a sessão para e abre de novo (outro sid); o mesmo estado e o mesmo técnico
+    const vAntes = JSON.stringify(SB.vivo);
+    SB.parar(); await passa(50);
+    SB = await B.abrir(cod);
+    ok(SB.eu === 1 && SB.ctx && (JSON.stringify(SB.vivo) === vAntes || SB.vivoN.seq >= JSON.parse(vAntes).seq), "recarregar no meio: o mesmo técnico e o leilão de onde estava");
+    // a presença: o servidor apaga quando a conexão cai e a sessão rearma na volta
+    const presB = () => Object.keys(banco.ler(`leiloes/${cod}/pres/mb`) || {});
+    await anda(() => presB().includes(SB.sid), 5_000);
+    ok(presB().includes(SB.sid), "a presença de quem está: " + presB());
+    B.cair(); await passa(300);
+    ok(!presB().length && SB.ver().rede === "offline" && SB.ver().botoes && !SB.ver().botoes["+1"].pode && ["conexao", "lider", "passou", "pausa", "fim", "completo", "goleiro", "posicao", "max", "tarde"].includes(SB.ver().botoes["+1"].motivo), "a conexão caiu: a presença sai (onDisconnect) e os botões desligam");
+    B.voltar(); await anda(() => SB.ver().rede === "ok", 30_000);
+    ok(presB().includes(SB.sid) && SB.ver().rede === "ok", "na volta, a presença rearmada");
+    // bate sem ack em 3 s = "Reconectando…"
+    banco.definirLatencia(B.cli.cid, 2500);
+    await anda(() => SB.ver().rede === "reconectando", 20_000);
+    ok(SB.ver().rede === "reconectando", "o bate sem ack em 3 s: 'Reconectando…'");
+    banco.definirLatencia(B.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    // o lance velho guardado: o socket meio aberto (a conexão parece de pé, mas o que sobe fica parado 60 s); o lote
+    // daquele lance fecha (sem lance, vai para a repescagem e reabre depois com outro seq); quando o lance chega, é recusado
+    marca("O4 lance velho");
+    ok(await anda(() => liberou(SB) && SB.vivoN.fase === "lotes", 120_000), "o teste do lance velho precisa de um lote (fase lotes) em que B pode dar lance");
+    const iVelho = SB.vivoN.i, seqVelho = SB.vivoN.seq;
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    const pVelho = SB.lance("+1");
+    await passa(10); banco.definirLatencia(B.cli.cid, 20);
+    const rv = await espera(pVelho, 5 * 60_000);
+    await anda(() => SB.ver().rede === "ok", 60_000);
+    const vVelho = Lx.norm(banco.ler(`leiloes/${cod}/vivo`), SA.ctx);
+    ok(!rv.ok && (rv.estado === "fechado" || rv.motivo === "velho") && vVelho.seq > seqVelho && vVelho.d.charAt(iVelho) !== Lx.letra(SB.eu),
+      `o lance velho guardado é recusado: ${JSON.stringify(rv)} (o lote ${iVelho} ${vVelho.d.charAt(iVelho) === "-" ? (vVelho.sem.includes(iVelho) ? "foi para a repescagem" : "sem dono") : "ficou com " + vVelho.d.charAt(iVelho)})`);
+    // outra aba da mesma conta: a mais nova age; a mais velha fica só olhando (e volta quando a nova some)
+    marca("O4 outra aba");
+    await anda(() => SB._desde != null, 30_000);
+    // as transações e as testemunhas da aba velha enquanto a nova manda (tem de ser nenhuma: nem o motor age)
+    const txVelha = { n: 0, ativo: false }, txOrig = SB.rede.transacao, twOrig = SB.rede.testemunha;
+    SB.rede.transacao = (c, f) => { if (txVelha.ativo) txVelha.n++; return txOrig(c, f); };
+    SB.rede.testemunha = (c, x) => { if (txVelha.ativo) txVelha.n++; return twOrig(c, x); };
+    const SB2 = await B.abrir(cod);
+    await anda(() => SB.outraAba, 10_000);
+    // A escondida: a aba nova de B é a 1ª presente (a que age na hora); a velha não pode agir junto
+    txVelha.ativo = true;
+    A.doc.esconde(true);
+    await passa(25_000);
+    A.doc.esconde(false); txVelha.ativo = false;
+    await anda(() => SA.ver().rede === "ok", 30_000);
+    ok(SB.outraAba && !SB2.outraAba && SB._impede() === "outraAba" && txVelha.n === 0 && banco.ler(`leiloes/${cod}/bate/mb`).sid === SB2.sid,
+      `outra aba: só a mais recente age (${SB.outraAba}/${SB2.outraAba}; a velha fez ${txVelha.n} transações/testemunhas)`);
+    SB2.parar(); await passa(20_000);
+    ok(!SB.outraAba, "a mais nova fechou: a mais velha volta a agir");
+    await anda(() => SA.vivoN.fase === "fim" && SB.vivoN && SB.vivoN.fase === "fim", 3 * 3600_000);
+    fimOk(SA, "O4"); fimOk(SB, "O4b"); confOk(C, "O4");
+    // a sala adulterada (o saldo que sobe, gravado direto no servidor): todos congelam
+    const alt = []; SA.on("alterada", x => alt.push(x)); SB.on("alterada", x => alt.push(x));
+    const vv = banco.ler(`leiloes/${cod}/vivo`); vv.cx[0][0] += 50; banco.gravar(`leiloes/${cod}/vivo`, vv);
+    await passa(500);
+    ok(SA.alterada && SB.alterada && alt.length === 2 && SA.ver().alterada, "a sala alterada fora das regras congela em todos: " + SA.alterada + "/" + SB.alterada);
+    [SA, SB].forEach(x => x.parar());
+    nota_("O4", "a corrida, o ack perdido (Conferindo…), quem some passa e volta, recarregar, outra aba, a presença, Reconectando…, o lance velho na repescagem, a sala adulterada");
+  }
+
+    marca("O5");
+  if (caso("O5")) /* ---------- O5 passar o clube de quem trocou de aparelho ---------- */
+  {
+    const A = aparelho("ca"), B = aparelho("cb"), B2 = aparelho("cb-novo");
+    const SA = await A.criar({ liga: "fr", vagas: 3, bots: 1, semente: "O5" }), cod = SA.codigo;
+    const SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("cb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    await espera(SA.comecar()); await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    const passados = []; SB.on("passado", () => passados.push(1));
+    // a pessoa limpou os dados: outra conta pede para entrar
+    const SN = await B2.entrar(cod); await passa(300);
+    ok(SN.pedido && SN.pedido.depois && SA.ver().pedidosDepois && SA.ver().pedidosDepois.some(p => p.uid === "cb-novo"), "o pedido de quem trocou de aparelho aparece para o dono");
+    let r = await espera(SA.passarClube("cb", "cb-novo")); await passa(500);
+    const s = sala(cod);
+    ok(r.ok && s.ordem[1] === "cb-novo" && s.tec["cb-novo"] && !s.tec.cb && SN.eu === 1 && !SN.pedido && passados.length === 1 && SB.eu === -1, "passar o clube: " + JSON.stringify(r) + " ordem " + s.ordem);
+    await anda(() => SN.ver().botoes && SN.ver().botoes.passar.pode, 60_000);
+    r = await espera(SN.passar());
+    ok(r.ok, "a conta nova age pelo clube: " + JSON.stringify(r));
+    ok((await espera(SB.lance("+1"))).ok === false, "a conta velha não age mais");
+    [SA, SB, SN].forEach(x => x.parar());
+    nota_("O5", "o pedido depois do Começar, passar o clube, a conta nova age e a velha não");
+  }
+
+    marca("O6");
+  if (caso("O6")) /* ---------- O6 a limpeza e as Minhas salas ---------- */
+  {
+    const A = aparelho("la"), B = aparelho("lb");
+    // 30 min parada no saguão: a sessão de quem está apaga (pela testemunha)
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 1, semente: "O6" }), cod = SA.codigo;
+    const apagadas = []; SA.on("apagada", () => apagadas.push(1));
+    await passa(29 * 60000);
+    ok(sala(cod), "com 29 min parada no saguão, a sala continua");
+    await passa(2 * 60000);
+    ok(!sala(cod) && apagadas.length === 1 && SA.parado && !SS.salas({ armazem: A.arm }).length, "30 min parada no saguão: a sala some (e sai das Minhas salas)");
+    // 24 h sem atividade: quem abre a sala vencida apaga; a entrada de quem não é da sala recusa
+    const SA2 = await A.criar({ liga: "en", vagas: 2, bots: 1, semente: "O6b" }), cod2 = SA2.codigo;
+    await espera(SA2.comecar()); await anda(() => SA2.vivoN && SA2.vivoN.seq >= 3, 120_000);
+    SA2.parar(); await passa(25 * 3600_000);
+    ok(sala(cod2) && (await rejeita(SS.entrar(cod2, B.opc()))) === "vencida", "a sala vencida recusa a entrada");
+    const SA3 = await A.abrir(cod2);
+    await anda(() => !sala(cod2), 60_000);
+    ok(!sala(cod2) && SA3.apagada && !SS.salas({ armazem: A.arm }).length, "24 h sem atividade: quem abre apaga");
+    // encerrar: some para todos; as Minhas salas dos outros conferem
+    const SA4 = await A.criar({ liga: "it", vagas: 3, bots: 0, semente: "O6c" }), cod4 = SA4.codigo;
+    const SB4 = await B.entrar(cod4); await passa(200); await espera(SA4.aceitar("lb")); await passa(300);
+    ok(SS.salas({ armazem: B.arm }).some(x => x.codigo === cod4), "a sala nas Minhas salas de quem entrou");
+    SB4.parar(); await passa(100);
+    await espera(SA4.encerrar()); await passa(300);
+    const lista = await espera(SS.conferirSalas(B.opc()));
+    ok(!sala(cod4) && !lista.some(x => x.codigo === cod4) && (await rejeita(SS.abrir(cod4, B.opc({ online: true })))) === "naoExiste", "o dono encerra: a sala some e sai das Minhas salas na conferência");
+    nota_("O6", "30 min no saguão, 24 h sem atividade, a vencida recusa a entrada, encerrar, conferirSalas");
+  }
+
+    marca("O7");
+  if (caso("O7")) /* ---------- O7 a sala mexida fora das regras e o rastro: o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho depois de encerrar ---------- */
+  {
+    // (a) o vivo apagado no meio do leilão (uma gravação de qualquer conta logada): congela em todos, nada recomeça
+    const A = aparelho("va"), B = aparelho("vb");
+    const SA = await A.criar({ liga: "en", vagas: 4, bots: 2, tempo: 10, semente: "O7" }), cod = SA.codigo;
+    let SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("vb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    await espera(SA.comecar()); await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    await anda(() => SA.vivoN.seq >= 6, 3600_000);
+    const altV = []; [SA, SB].forEach(S => S.on("alterada", x => altV.push(x.motivo)));
+    banco.gravar(`leiloes/${cod}/vivo`, null);
+    await passa(20_000);
+    ok(!banco.ler(`leiloes/${cod}/vivo`) && SA.alterada && SB.alterada && altV.length === 2 && SA.ver().alterada,
+      `o vivo apagado no meio: a sala congela em todos e o leilão não recomeça do zero (alterada ${SA.alterada}/${SB.alterada}, vivo ${JSON.stringify(banco.ler(`leiloes/${cod}/vivo`) && banco.ler(`leiloes/${cod}/vivo`).seq)})`);
+    // (b) recarregar com o vivo apagado e as vendas gravadas: também congela (não refaz o vivo inicial)
+    SB.parar(); await passa(100);
+    SB = await B.abrir(cod); await passa(10_000);
+    ok(SB.alterada && !banco.ler(`leiloes/${cod}/vivo`), `recarregar com o vivo apagado e vendas gravadas: congela (${SB.alterada})`);
+    [SA, SB].forEach(x => x.parar());
+    // (c) os lotes trocados no saguão por outra conta (mesmo T e liga, outras notas): o Começar grava os deste aparelho
+    const C1 = aparelho("vc"), C2 = aparelho("vd");
+    const SC = await C1.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7c" }), codC = SC.codigo;
+    const SD = await C2.entrar(codC); await passa(200); await espera(SC.aceitar("vd")); await passa(300); await espera(SD.pronto(true)); await passa(300);
+    const certos = TMs.public.leilao.criarLotes(MUNDO.public, "en", 3), mexidos = { l: JSON.parse(JSON.stringify(certos.lotes)), f: certos.fora, T: 3, liga: "en" };
+    mexidos.l.forEach(r => { r.overall = 99; });
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos);
+    await passa(300);
+    const rC = await espera(SC.comecar());
+    await anda(() => SC.ctx && SD.ctx && SC.vivoN && SD.vivoN, 30_000);
+    const ltC = banco.ler(`leiloes/${codC}/lotes`);
+    ok(rC.ok && ltC.l.every((r, i) => r.overall === certos.lotes[i].overall) && ltC.ed === "public" && SC.ctx.lotes.every(r => r.overall !== 99) && SD.ctx.lotes.every(r => r.overall !== 99) && !SC.alterada && !SD.alterada,
+      "os lotes trocados no saguão: o Começar grava os do mundo-base (com a edição da sala) e as duas sessões usam esses: " + JSON.stringify(rC));
+    // depois do Começar, lotes trocados = a sala congela (como antes)
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos); await passa(500);
+    ok(SC.alterada === "lotes" && SD.alterada === "lotes", "os lotes trocados depois do Começar: congela");
+    [SC, SD].forEach(x => x.parar());
+    // (d) a edição do aparelho do dono trocada antes do Começar (a tela de início faz isso sem recarregar): os lotes saem
+    // da edição DA SALA, nunca da Season Update numa sala pública
+    const E = { ed: "public" }, edOrig = TMs.public.storage.edition;
+    const D1 = aparelho("ve"), D2 = aparelho("vf");
+    const edHooks = { edicao: () => E.ed, trocarEdicao: ed => { E.ed = ed; return ed; }, suUnlocked: () => true, mundo: null };
+    TMs.public.storage.edition = () => E.ed;
+    try {
+      const SE = await D1.criar({ liga: "br", ligaNome: "Brasil", vagas: 3, bots: 1, tempo: 10, semente: "O7d" }, edHooks), codE = SE.codigo;
+      const SF = await D2.entrar(codE); await passa(200); await espera(SE.aceitar("vf")); await passa(300); await espera(SF.pronto(true)); await passa(300);
+      E.ed = "pro";
+      const rE = await espera(SE.comecar());
+      await anda(() => SE.ctx && SF.ctx, 30_000);
+      const ltE = banco.ler(`leiloes/${codE}/lotes`), pub = TMs.public.leilao.criarLotes(MUNDO.public, "br", 3);
+      ok(rE.ok && E.ed === "public" && ltE && ltE.ed === "public" && ltE.l.every((r, i) => r.id === pub.lotes[i].id) && !SF.alterada,
+        `a edição trocada antes do Começar: volta à da sala e os lotes são os da pública (${JSON.stringify(rE)}, edição ${E.ed}, 1º ${ltE && ltE.l[0].name} × ${pub.lotes[0].name})`);
+      [SE, SF].forEach(x => x.parar());
+    } finally { TMs.public.storage.edition = edOrig; }
+    // (e) o bate a caminho quando o dono encerra: nada fica órfão em leiloes/{código}
+    const G0 = aparelho("vg", { latencia: 0 }), G1 = aparelho("vh", { latencia: 200 });
+    const SG = await G0.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7e" }), codG = SG.codigo;
+    const SH = await G1.entrar(codG); await passa(1500); await espera(SG.aceitar("vh")); await passa(6000);
+    await anda(() => SH._bateEmVoo, 60_000); await passa(20);
+    const rG = await espera(SG.encerrar()); await passa(5000);
+    ok(rG.ok && SH.apagada && banco.ler(`leiloes/${codG}`) == null, "o bate a caminho quando o dono encerra: a sala não volta (sobrou " + JSON.stringify(banco.ler(`leiloes/${codG}`)) + ")");
+    [SG, SH].forEach(x => x.parar());
+    nota_("O7", "o vivo apagado congela (também ao recarregar), os lotes trocados no saguão são regravados no Começar, a edição trocada volta à da sala, o bate a caminho não recria a sala encerrada");
+  }
+
+    marca("O8");
+  if (caso("O8")) /* ---------- O8 a volta da página escondida não derruba a conexão do TM inteiro (as salas dos outros modos) ---------- */
+  {
+    // o goOffline/goOnline vale para o TM todo: o servidor roda o onDisconnect das salas do Online 3D e dos outros modos.
+    // Só com o socket preso (o bate sem ack em 3 s depois da volta) e sem outra sala online aberta
+    const outra = { v: false };
+    const A = aparelho("xa"), B = aparelho("xb");
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O8" }), cod = SA.codigo;
+    const SB = await B.entrar(cod, { outrasSalas: () => outra.v }); await passa(200); await espera(SA.aceitar("xb")); await passa(300);
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    // a sala de outro modo deste aparelho: some se a conexão cair (o onDisconnect dela)
+    B.cli.db.ref("salas3d/OUTRA").set({ dono: "xb" }); B.cli.db.ref("salas3d/OUTRA").onDisconnect().remove();
+    await passa(500);
+    let reconexoes = 0; const recOrig = SB.rede.reconectar; SB.rede.reconectar = () => { reconexoes++; recOrig(); };
+    // (a) escondida 7 s com o socket bom: volta "Atualizando…", fica em dia sem reconectar e a outra sala continua
+    B.doc.esconde(true); await passa(7000); B.doc.esconde(false);
+    const atualizando = SB.ver().rede === "atualizando";
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    ok(atualizando && SB.ver().rede === "ok" && reconexoes === 0 && banco.ler("salas3d/OUTRA"),
+      `a volta depois de 7 s escondida com o socket bom: "Atualizando…", em dia sem derrubar a conexão (${reconexoes} reconexões; a sala do outro modo ${banco.ler("salas3d/OUTRA") ? "continua" : "SUMIU"})`);
+    // (b) o socket preso na volta (o que sobe fica parado): sem outra sala aberta, reconecta UMA vez depois de 3 s sem ack
+    outra.v = true;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    ok(reconexoes === 0 && SB.ver().rede === "reconectando" && banco.ler("salas3d/OUTRA"), `o socket preso com outra sala online aberta: "Reconectando…" sem derrubar a conexão (${reconexoes} reconexões, ${SB.ver().rede})`);
+    banco.definirLatencia(B.cli.cid, 20); await anda(() => SB.ver().rede === "ok", 120_000);
+    outra.v = false;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    banco.definirLatencia(B.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok", 120_000);
+    ok(reconexoes === 1 && SB.ver().rede === "ok", `o socket preso sem outra sala: reconecta uma vez e fica em dia (${reconexoes} reconexões, ${SB.ver().rede})`);
+    [SA, SB].forEach(x => x.parar());
+    banco.gravar("salas3d/OUTRA", null);
+    nota_("O8", "a volta com o socket bom não reconecta (a sala de outro modo continua); com o socket preso, só sem outra sala online aberta");
+  }
+  } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+  function nota_(b, s) { notas.push(b + ": " + s); }
+
+  DOCS.length = 0;
+  const ms = performance.now() - t00;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} O    leilão online (a sessão sobre o Firebase falso): a sala por transação, as recusas, 2/4/8 aparelhos, o relógio, quem cai e quem some, o ack perdido, o lance velho, recarregar, outra aba, passar o clube, a limpeza (${(ms / 1000).toFixed(1)} s, ${eventos} acontecimentos)`);
+  if (VERBOSO || erros.length) notas.forEach(n => console.log("         " + n));
+  if (erros.length) { falhas++; erros.slice(0, VERBOSO ? 200 : 14).forEach(e => console.log("         · " + e)); if (erros.length > 14 && !VERBOSO) console.log(`         · … mais ${erros.length - 14}`); }
 }
 
 await testeProtocolo();
 await testeSessao();
 await testeRede();
-console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + (SO && !SO.includes("R") ? 0 : 1) - falhas} de ${resultados.length + (SO && !SO.includes("R") ? 0 : 1)} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
+await testeFirebase();
+await testeOnline();
+const nAsync = ["R", "F", "O"].filter(b => !SO || SO.includes(b)).length;
+console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + nAsync - falhas} de ${resultados.length + nAsync} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
 process.exit(falhas ? 1 : 0);
 
 /* ================= --tela: o navegador num aparelho (PLANO-LEILAO.md §4.2) =================
@@ -1432,7 +2382,8 @@ async function testeTela() {
     await espera(400);
     const entrada = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
       off: [...document.querySelectorAll(".lei-online button")].map(b => b.disabled) }));
-    confere("T2 o atalho abre a Entrada: Treinar contra bots, o online 'Em breve' com os botões desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Em breve/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
+    // (aqui o SDK do Firebase é um vazio: sem a conta online, a Entrada oferece só o Treino e diz por quê)
+    confere("T2 o atalho abre a Entrada: Treinar contra bots e, sem conexão com o servidor, o online com Criar sala e Entrar com código desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Sem conexão com o servidor/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
     await nadaSobreNada(p, "entrada");
     await clica(p, "^Treinar contra bots$");
     await espera(400);
@@ -1776,6 +2727,22 @@ async function testeTela() {
     await ate(p, () => TM.ui.current() === "leilao", null, 10000);
     const saiu = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().length }));
     confere("T9 'Sair da sala' pede confirmação, volta à Entrada e apaga o treino", !saiu.atual && saiu.salas === 0, saiu);
+
+    /* T10 o convite pelo link (?leilao=CÓDIGO): a Entrada com o código, guardado uma vez por carga da página */
+    {
+      const cx = await nav.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+      await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+      const p = await cx.newPage();
+      p.on("pageerror", e => errosPagina.push(String(e).slice(0, 300)));
+      await p.goto(srv.url + "index.html?leilao=" + encodeURIComponent("https://x/?leilao=ab2cd3"), { waitUntil: "load" });
+      await ate(p, () => window.TM && TM.ui && TM.ui.current && TM.ui.current() === "leilao", null, 30000);
+      const r1 = await p.evaluate(() => ({ rota: TM.ui.current(), convite: TM.leilaoTela.convite() }));
+      // voltar à Entrada não guarda de novo; usar o convite o tira
+      const r2 = await p.evaluate(() => { TM.leilaoTela.convite(true); TM.ui.go("modes"); TM.ui.go("leilao", { codigo: "ZZZZZZ", auto: true }); return TM.leilaoTela.convite(); });
+      confere("T10 o link ?leilao=CÓDIGO abre a Entrada do leilão com o convite (o link colado limpo, maiúsculas), uma vez por carga da página",
+        r1.rota === "leilao" && r1.convite === "AB2CD3" && r2 === null, { r1, r2 });
+      await cx.close();
+    }
   } catch (e) {
     confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
   } finally {

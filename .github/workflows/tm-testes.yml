@@ -1,20 +1,27 @@
 name: Total Match — testes
-# Os testes do Total Match (legacy-total-match/) em todo PR que mexe nele: até aqui um PR só do TM não tinha check nenhum
-# (o golaco-testes.yml só olha golaco/**). Modo Leilão, PR 1 (legacy-total-match/PLANO-LEILAO.md §4.4): o Node do leilão
-# (testar-leilao.mjs: o núcleo puro, os robôs, a rede em memória e a sessão; ~30 s, sem navegador e sem rede) e o
-# conferir-estilos.py (controle sem estilo no css/styles.css = visual padrão do navegador). A partir do PR 2 entram também
-# os de navegador (Playwright, como no golaco-testes.yml). O deploy (deploy-pages.yml) não muda.
+# Os testes do Total Match (legacy-total-match/) em todo PR que mexe nele: até o Modo Leilão um PR só do TM não tinha check
+# nenhum (o golaco-testes.yml só olha golaco/**). PLANO-LEILAO.md §4.4.
+#   node        o Node do leilão (testar-leilao.mjs: o núcleo puro, os robôs, a rede em memória, a firebase() sobre o banco
+#               falso e o leilão online pela sessão; ~40 s, sem navegador e sem rede) e o conferir-estilos.py (controle sem
+#               estilo no css/styles.css = visual padrão do navegador)
+#   navegador   (a partir do PR 2 do Leilão) os de navegador, em partes ao mesmo tempo, com o Playwright e o Chromium como no
+#               golaco-testes.yml: o treino num aparelho (testar-leilao.mjs --tela), o leilão online em várias páginas contra
+#               o banco falso (testar-leilao-online.mjs, um job por caso: telas, dois, quatro, oito) e o Online 3D com o quadro de
+#               ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado")
+#   tm-testes   o nome que o PR mostra: só passa se todos passaram
+# Nenhum teste fala com o Firebase de verdade. O deploy (deploy-pages.yml) não muda.
 on:
   pull_request:
     paths:
       - 'legacy-total-match/**'
       - '.github/workflows/tm-testes.yml'
+      - 'golaco/tools/lib/navegador.mjs'
   workflow_dispatch:
 permissions:
   contents: read
 jobs:
-  tm-testes:
-    name: tm-testes
+  node:
+    name: node
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -27,3 +34,61 @@ jobs:
       - name: Controles sem estilo (conferir-estilos.py)
         working-directory: legacy-total-match
         run: python3 ferramentas/conferir-estilos.py
+  navegador:
+    name: navegador (${{ matrix.parte }})
+    # (fixo no Ubuntu 24.04, como o golaco-testes.yml: o Playwright 1.56 não instala o Chromium no 26.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - parte: treino na tela
+            cmd: node ferramentas/testar-leilao.mjs --tela --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, as telas
+            cmd: node ferramentas/testar-leilao-online.mjs --so telas --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, 2 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so dois --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, 4 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so quatro --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, 8 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so oito --prints "$RUNNER_TEMP/prints"
+          - parte: Online 3D
+            # o TM servido na raiz (como no GitHub Pages; o quadro do 3D é a página de ensaio, sem o /golaco/)
+            cmd: |
+              python3 -m http.server 8283 --bind 127.0.0.1 > /dev/null 2>&1 &
+              for i in $(seq 1 30); do curl -sf http://127.0.0.1:8283/index.html > /dev/null && break; sleep 0.5; done
+              node ferramentas/testar-online3d.mjs http://127.0.0.1:8283 "$RUNNER_TEMP/prints"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright (Chromium) para os testes no navegador
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: ${{ matrix.parte }}
+        working-directory: legacy-total-match
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: ${{ matrix.cmd }}
+      - name: Prints da parte que reprovou
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prints-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/prints
+          if-no-files-found: ignore
+          retention-days: 7
+  tm-testes:
+    name: tm-testes
+    needs: [node, navegador]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Todas as partes passaram
+        run: |
+          echo "node: ${{ needs.node.result }} · navegador (5 partes): ${{ needs.navegador.result }}"
+          test "${{ needs.node.result }}" = success
+          test "${{ needs.navegador.result }}" = success
