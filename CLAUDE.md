@@ -147,13 +147,20 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   Pix, doação nem Total Coins; testes nunca com o Firebase de verdade; modo novo em "Mais modos". Branch `claude/leilao`
   (o item 45 do golaco segue pausado em outro branch); plano em `legacy-total-match/PLANO-LEILAO.md` (6 PRs, ~111 h; as
   decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 ENTREGUE**
-  (#640; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação. **PR 2 PRONTO** (branch `claude/leilao`;
-  TM v383): COM OS AMIGOS ONLINE — a sala privada por código ou link (o dono aceita cada pedido), o Saguão e o leilão ao
-  vivo no Firebase do TM (`leiloes/{CÓDIGO}`); a aba Campeonato continua "em breve". Detalhes técnicos na seção TOTAL MATCH
-  ("Modo Leilão"). Próximos: PR 3 o campeonato (os 3 formatos, simulado), PR 4 o 3D contra bot, PR 5 o 3D contra amigo,
-  PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos guardados no aparelho (o 4º tira o mais antigo); o bloco
-  `.validate` OPCIONAL do Firebase (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); a
-  pergunta do plano grátis (Spark): um leilão de 8 técnicos (104 lotes) baixa ~1,0–1,1 MB por página (~9 MB no total).
+  (#640; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação. **PR 2 ENTREGUE** (#641; TM v383): COM
+  OS AMIGOS ONLINE — a sala privada por código ou link (o dono aceita cada pedido), o Saguão e o leilão ao vivo no
+  Firebase do TM (`leiloes/{CÓDIGO}`). **PR 3 PRONTO** (branch `claude/leilao`; TM v384): O CAMPEONATO, no treino e
+  online, com os jogos SIMULADOS — Mata-mata (o padrão; gol de ouro e pênaltis), Pontos corridos (turno e returno,
+  3/1/0) e Pontos + mata-mata (até 4 técnicos, a final; de 5 a 8, as semifinais), escolhido na Criar sala ou no Saguão
+  com a duração estimada; o "Simular partida" do seu jogo contra um bot (o prazo de 2 min, que só corre com você na
+  sala), o "Ver o jogo" no 2D sem pausa, "Simular os pendentes" do dono, a tabela, a chave, a artilharia e o fim (o
+  campeão, a classificação, o artilheiro e o melhor time). Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão").
+  Próximos: PR 4 o 3D contra bot, PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
+  guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
+  (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
+  simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"); a
+  pergunta do plano grátis (Spark): um leilão de 8 técnicos (104 lotes) baixa ~1,0–1,1 MB por página (~9 MB no total) e o
+  campeonato soma ~30 KB no mata-mata e ~0,5 MB nos pontos corridos com 8 (no pior caso ~12,5 MB a sala de 8).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -1368,11 +1375,11 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   lance velho, recarregar pelo link e pelas Minhas salas depois do deploy, a escalação —, Q1–Q6 4 páginas + 2 bots com os
   relógios ±5 s, o pulo de +60 s, quem some, passar o clube e a queda do dono, O1–O3 8 páginas e os bytes, G0–G2 a guarda
   do Firebase de verdade e nenhum erro; ~1 + 2 + 3 min; o nada sobre nada do Saguão e do Leilão em 360×740, 844×390 e
-  1280×800, escuro e claro). CI (`.github/workflows/tm-testes.yml`): o Node, o `--tela`, os três casos do online e o
+  1280×800, escuro e claro). CI (`.github/workflows/tm-testes.yml`): o Node, o `--tela`, os casos do online e o
   `testar-online3d` (sem a senha, o Viverde sai como "pulado") em jobs paralelos; o check `tm-testes` só passa com todos.
-  Rodar: `NODE_PATH=<playwright> node ferramentas/testar-leilao-online.mjs [--so dois] [--fator 6]`. Fica para o PR 3: a
-  aba Campeonato. Lições: a 1ª rodada da transação do SDK é com o CACHE local (`null` num caminho que ninguém ouve: aborta
-  sem perguntar ao servidor) — ouvir antes; `set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo; o
+  Rodar: `NODE_PATH=<playwright> node ferramentas/testar-leilao-online.mjs [--so telas,dois,quatro,oito] [--fator 6]`.
+  Lições: a 1ª rodada da transação do SDK é com o CACHE local (`null` num caminho que ninguém ouve: aborta sem perguntar
+  ao servidor) — ouvir antes; `set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo; o
   teste do online com o relógio acelerado separa o que é estrito (fechar cedo) do que tem o caminho da mensagem (o lance
   tarde); a tela que só aparece num estado (o aviso de outra versão depois do Começar) só se acha pelo fluxo de verdade.
   **Revisão do PR 2** (PLANO §8, "A revisão do PR 2"): o vivo apagado congela (não recomeça o leilão); o Começar usa a
@@ -1386,6 +1393,48 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   mexer na conexão global do SDK (goOffline) derruba as salas dos outros modos pelo `onDisconnect`; o `.validate` não
   vale para `null` — a regra que protege um nó de ser apagado mora no PAI; o Firebase devolve as chaves em outra ordem
   (comparar pelo mesmo canal, nunca o texto cru); o botão que fica apagado durante a ação perde o foco para o BODY.
+  **PR 3 (v384): O CAMPEONATO** (PLANO §1.7, §1.8, §2.6, §3.1–§3.3, §3.6 só a simulação; o que mudou na §8, "Durante o
+  PR 3"): todos os jogos SIMULADOS, no treino e online pelo MESMO código (a interface da rede). `js/leilao-camp.js`
+  (`TM.leilaoCamp`, PURO): os 3 formatos (`mata` o padrão, com as folgas espalhadas pela chave; `pontos` turno e returno
+  pelo método do círculo, 3/1/0, o desempate pontos → saldo → gols pró → confronto direto recursivo → sorteio pela
+  semente → técnico; `misto` com os classificados), a vista montada SÓ dos jogos gravados (`montar`: rodadas, tabela,
+  chave, o campeão, a classificação, a artilharia, o melhor time pela soma das notas), `timeDoTecnico` (os 11 nas vagas,
+  a camisa pela vaga, `colors` e `escudoUT`), `simularJogo` (o motor com `semLesao` dentro de `comSemente`, realismo 3,
+  mando neutro; no mata-mata empatado os 91'–120' cortados no 1º gol — o gol de ouro sem mexer no motor — e os pênaltis
+  sem os expulsos), a semente `"leilao:"+código+":"+jogo+":"+trava` e a MÁQUINA de cada jogo em `jogos/{id}` (aberto →
+  reservado → feito, uma transação por passo; a trava = a hora do SERVIDOR gravada ao reservar; o prazo de 2 min do jogo
+  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, até o PR 5, pessoa × pessoa
+  simulados ao abrir a rodada; `proximaAcao`, `conferirJogo`; ids `r{rodada}j{k}` e `m{rodada}j{par}`). `js/engine.js`:
+  a opção `semLesao` (sem ela, o motor igual à main: o C7 confere com a `ferramentas/dados/motor-ref.json`; mudança de
+  propósito no motor = `--gravar-motor` e dizer no PR). A sessão: o campeonato nasce numa transação (`meta.camp`), quem
+  age é escalonado com a testemunha da hora, `simular(id?)` (grava e só então responde), `simularPendentes()` (o dono),
+  `partida(id)` (os times pelas escalações GRAVADAS), `ver().camp`; a escalação mudada vale no próximo jogo que não
+  começou; QUEM SOME: os jogos dele esperam (o prazo parado) até ele voltar ou o dono simular os pendentes; quem sai da
+  sala conta como bot; todo resultado simulado é recalculado UMA vez por aparelho (a conferência; qualquer diferença
+  congela a sala). As telas: o Formato na Criar e no Saguão (com a duração estimada), a aba Campeonato (Seu jogo com o
+  prazo e o Simular partida, a rodada com ‹ ›, a tabela, a chave, a artilharia; o "Simular os pendentes" só online e 8 s
+  depois de a rodada abrir; o fim no pôster do TM), o "Ver o jogo" (rota `leilao-jogo`: o `TM.matchview.play` com o
+  resultado GRAVADO e `pauseSide` null — sem a pausa, que sortearia o resto de novo —, depois a prorrogação com o gol de
+  ouro e os pênaltis gravados). Fora do leilão (§3.7): `TM.ui.escudoUT` no pôster, no `crestOf` do 2D e nos pênaltis; o
+  `pickColors` lê `t.colors` (o 2D do Ultimate passou a mostrar o escudo desenhado e as cores do clube); a `prorrogacao`
+  com `golDeOuro`. O `.validate` opcional ganhou `jogos/$j` e `meta.camp`/`fimCamp`. Não conta no ranking nem no h2h e
+  não usa Total Coins. Testes: `testar-leilao.mjs` C1–C8 (o núcleo e o motor), K (o campeonato no treino pela sessão),
+  KO (online no banco falso: dois, limpeza, passar, quatro, oito; as regras opcionais em cada gravação) — ~60 s o
+  arquivo inteiro; `--tela` T11–T13 (o treino até o campeão nos 3 formatos pela tela, o 2D conferido contra o gravado,
+  nada sobre nada em 96 telas); `testar-leilao-online.mjs` com o campeonato nos casos: `dois` o misto com 2, `quatro` os
+  pontos corridos com 6 pela tela (o Simular de cada página e o 2D só com o jogo gravado, o prazo com o relógio +5 s, a
+  página que cai e volta, recarregar, o dono "Simular os pendentes", nada sobre nada no meio e no fim), `oito` o
+  mata-mata com 8 e os bytes; em todo caso a história de cada jogo no servidor (uma reserva e um resultado, o prazo pela
+  hora do servidor) e o G3 (as regras opcionais em cada gravação das páginas, pela `ferramentas/lib/regras-leilao.mjs`).
+  Os testes acharam e corrigiram: o 2D que não abria depois do Simular (a resposta da transação antes do dado pelo
+  ouvinte: a tela espera o jogo na vista) e, com o `.validate` publicado, o aparelho que perdeu o clube preso em
+  "Reconectando…" (a recusa por permissão do batimento não é queda de conexão). Fica para os PRs 4–6: o "Jogar em 3D"
+  contra bot (o gancho `gravar` no `tm3d.js`, `duracao3d`, o W.O. do 3D sem resultado — as funções puras já existem:
+  `prazo3d`, `wo`), o par no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas
+  escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
+  tela a partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois); no teste online, o
+  acontecimento que depende do sorteio do calendário se procura no servidor e o piloto segura o toque até ele (sem
+  deadlock: o prazo simula o jogo se ele não vier).
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

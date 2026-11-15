@@ -618,7 +618,7 @@ parágrafo do `CLAUDE.md` atualizado.
 
 | Risco | Mitigação |
 |---|---|
-| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~1,0–1,1 MB por página (~9 MB no total; medido no PR 2 em Node e no navegador — a estimativa era ~2 MB e ~16 MB): dá ~1 100 leilões de 8 por mês. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
+| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~1,0–1,1 MB por página (~9 MB no total; medido no PR 2 em Node e no navegador — a estimativa era ~2 MB e ~16 MB): dá ~1 100 leilões de 8 por mês. O campeonato simulado (PR 3) soma pouco no mata-mata — a escalação e os 7 jogos do mata-mata com 8, ~28–30 KB por página no navegador (o leilão e o campeonato juntos: o maior 1,04–1,10 MB por página, 8,3–8,8 MB as 8, em duas rodadas) — e bem mais nos pontos corridos com 8 (56 jogos de ~3 KB baixados por todos, mais os batimentos: ~0,5 MB por aparelho, no Node com o mesmo banco falso): no pior caso ~1,6 MB por página e ~12,5 MB a sala de 8, ~800 salas assim por mês. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
 | **Trapaça** (a raiz aberta) | Transações com as regras; tudo deriva do `vivo` e de `jogos`; a conferência pelos aparelhos honestos; o `.validate` opcional (3.4). Entre amigos |
 | **Relógio** (hora errada, ajuste no meio, latência) | A testemunha da hora em toda decisão; o fim derivado; a tela nunca é a juíza; teste com ±5 s e com o pulo depois da calibração |
 | **Celular que dorme** (o iPhone para o JavaScript; o socket fica meio aberto; com a aba escondida o SDK pode esperar até 5 min para reconectar) | Wake Lock; a decisão pelo `bate`, não pelo `pres`; `goOffline/goOnline` ao voltar; qualquer aparelho age; ausente passa |
@@ -1033,6 +1033,15 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     continua; com o socket preso, só sem outra sala aberta) no bloco O; o caso `telas` (um job a mais no CI do TM).
 
 **Durante o PR 3** (o que o código real pediu de diferente do plano):
+- **Em resumo** (o que o dono precisa saber; os detalhes nos quatro passos abaixo): todos os jogos SIMULADOS (o 3D contra
+  bot é do PR 4, você contra um amigo em 3D é do PR 5); o mata-mata é o padrão; o jogo de uma pessoa contra um bot tem o
+  "Simular partida" e o prazo de 2 min, que só corre com ela presente; **quem some não é simulado pelo prazo sozinho**: os
+  jogos dele esperam (o prazo parado) até ele voltar ou o dono tocar em "Simular os pendentes" (só online, 8 s depois de a
+  rodada abrir); quem sai da sala conta como bot; a prorrogação do mata-mata vai até o 1º gol (gol de ouro) e depois os
+  pênaltis, sem os expulsos; o misto com 2 técnicos é um jogo de pontos e a final; o melhor time é a soma das notas dos 11;
+  o 2D do Ultimate passou a mostrar o escudo desenhado e as cores do clube. Os testes de navegador
+  online acharam e corrigiram dois defeitos: o 2D que não abria depois do "Simular partida" e, com o `.validate` publicado,
+  o aparelho que perdeu o clube preso em "Reconectando…".
 - **O núcleo e o motor** (o passo 1: `js/engine.js`, `js/leilao-camp.js`, o bloco C do `testar-leilao.mjs`):
   - **O motor sorteia só com `Math.floor/max/min/round/random`** (nem o `abs` do §1.7; nada de `exp/log/pow/sin`) e não
     percorre chaves de objeto; os dois `sort` (as substituições e os batedores dos pênaltis) têm comparador e o `sort` é
@@ -1209,7 +1218,55 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   - **testar-leilao-online D14** deixou o "em breve": as duas páginas vão sozinhas ao Campeonato, a Final de amigo contra
     amigo é simulada ao abrir a rodada (motivo `abertura`), o mesmo resultado e o mesmo campeão nas duas; D14b o Ver o jogo
     com o placar gravado, sem pausa e com os escudos desenhados. O campeonato com o prazo vencido e o jogo reaberto no online
-    pela tela (o resto do §4.3) fica para o próximo passo.
+    pela tela (o resto do §4.3) ficou para o passo 4 (abaixo).
   - **Achados pelos testes**: o campeão não era falado para quem estava no Ver o jogo quando o campeonato acabou (agora, ao
     voltar ao Campeonato, uma vez por sala); no teste, com o relógio do treino a ×40, os 60 s da escalação passavam antes de a
     tela chegar a ela (o teste volta o relógio ao normal no fim do leilão).
+- **O teste online do campeonato e o CI** (o passo 4: `ferramentas/testar-leilao-online.mjs`, `ferramentas/lib/
+  regras-leilao.mjs`, `.github/workflows/tm-testes.yml`):
+  - **O campeonato entrou nos casos que já fazem o leilão** (do leilão até o campeão, com o banco falso em todas as páginas e
+    o relógio ×6), um formato em cada: `dois` o MISTO com 2 (a Criar sala com "Pontos + mata-mata"; a rodada de pontos e a
+    Final de amigo contra amigo simuladas ao abrir a rodada; D14, D14b), `quatro` os PONTOS CORRIDOS com 6 (as 4 páginas e
+    os 2 bots; 30 jogos) pela tela (Q7–Q15) e `oito` o MATA-MATA com 8 (O4–O8). O misto de verdade (com as semifinais) fica
+    com o Node (K1, KO quatro) e o `--tela` (T13: misto com 8): no online com 2 ele é o caso mínimo. O CI continua com um
+    job por caso (~1, 3 e 3 min; o `telas` ~15 s).
+  - **O que o servidor confere em todo caso**: a história de cada nó `jogos/{id}` (como o KO: uma reserva e um resultado,
+    o último, com a mesma trava, os mesmos times e as mesmas escalações; o reservado pelo prazo só com a hora do SERVIDOR
+    além do prazo e 2 min correndo) e as regras opcionais em CADA gravação das páginas (G3: o avaliador saiu do
+    `testar-leilao.mjs` para a `lib/regras-leilao.mjs`). Todas as páginas veem a mesma vista (rodadas, tabela, chave,
+    artilharia, campeão) e os nós dos jogos de cada uma são os do servidor (pelo texto canônico); ninguém congela a sala.
+  - **quatro, pela tela** (cada página tem um piloto no Node que toca em "Simular partida" quando a política deixa e passa
+    pelo 2D que abre): a escalação (P1 pelo Pronto, as outras pela API, logo no fim do leilão: os 60 s dela são 10 s de
+    verdade) e o dono que caiu no leilão volta pelo link `?leilao=` com o relógio −5 s (é da sala: volta, não pede); o
+    "Simular partida" em cada página (14 toques) abre o 2D só com o jogo gravado também na vista da página, o placar do 2D
+    = o do servidor, sem o botão de pausa, com os escudos desenhados e nenhum sorteio do `matchview.js`; o prazo de 2 min
+    com o relógio de P1 +5 s — a tela mostra o prazo pela hora do servidor (0,1 a 1,1 s de diferença em 66 amostras: o
+    arredondamento do M:SS) e o jogo é simulado pelo prazo ~0,2 s depois de vencer, com 120 s correndo; a página que CAI
+    no meio (P3, `banco.derrubar` com o prazo correndo contra um bot) — as outras seguem (os outros jogos da rodada saem),
+    o prazo dela para no servidor e ninguém reserva o jogo enquanto ela está fora; de volta, o prazo corre de novo e ela
+    simula pela tela; recarregar no meio (P2b volta pelo `?leilao=` à aba com a mesma vista; o jogo reaberto não joga de
+    novo: a história de cada jogo tem uma reserva só); o dono toca em "Simular os pendentes" pela tela com P3 escondida e o
+    prazo dela parado; nada sobre nada no meio (o dono, com a caixa dos pendentes) e no fim (a tabela e o pôster) em
+    360×740, 844×390 e 1280×800, escuro e claro, com a tabela sem rolar de lado e só escudos desenhados.
+  - **oito**: a escalação pela tela em duas páginas e pela API nas outras 6, o campeonato com todos prontos, a mesma
+    chave e o mesmo campeão nas 8 e no servidor (os 7 jogos pela abertura), o Ver o jogo (a Final nas duas, as semifinais na
+    1ª), nada sobre nada no fim do mata-mata e os **bytes**: a escalação e o mata-mata com 8 baixam ~28–30 KB por página; com
+    o leilão, o maior 1,04–1,10 MB por página e 8,3–8,8 MB as 8 em duas rodadas (§6; os pontos corridos com 8, ~0,5 MB por
+    aparelho no KO).
+  - **Achados e corrigidos**: (1) o "Simular partida" às vezes não abria o 2D (1 toque em 14 no 1º Q10): a resposta da
+    transação chegava antes do dado novo pelo ouvinte, a rota do 2D lia a vista, não achava o jogo feito e voltava ao
+    Campeonato — agora a tela espera o jogo gravado aparecer na vista (no máximo 8 s; `quandoNaVista`); (2) com o
+    `.validate` publicado, o batimento que está a caminho quando o dono passa o clube a outro aparelho é recusado (a conta
+    já não é da sala) e a sessão tomava a recusa por queda de conexão: o aparelho velho, que só olha, ficava em
+    "Reconectando…" — agora a recusa por permissão (e o ack que falta depois de a conta deixar a sala) não muda o estado da
+    conexão (caso `passar` do KO, com as regras VALENDO para o bate e a pres: reprova antes, passa depois). O G3 separa essa
+    recusa como esperada (o batimento ou a presença de uma conta que não está mais em `sala/tec`).
+  - **Medido** (local, Chromium 141, 4 CPUs): `dois` 20 de 20 em ~53 s; `quatro` 20 de 20 em ~153 s; `oito` 13 de 13 em ~171
+    s; `telas` + `dois` 29 de 29 em ~75 s; `oito` + `dois` 29 de 29 em ~226 s; `telas` + `quatro` 29 de 29 em ~165 s; o Node
+    inteiro 17 de 17 blocos em ~59 s. Cada caso rodou duas vezes inteiro e verde depois das correções (antes delas, o
+    `quatro` reprovou o Q10 — o 2D — numa rodada e o G3 — o batimento — noutra).
+  - **Lições**: o piloto pela tela que espera o ESTADO (o jogo aberto no servidor, a página parada na aba) e não um tempo
+    fixo aguenta o relógio ×6; o acontecimento que depende do sorteio do calendário (a queda, os pendentes) se procura no
+    servidor (o 1º jogo da pessoa contra um bot a partir da 2ª rodada, com o prazo correndo) e a política do piloto segura o
+    toque até ele acontecer — sem deadlock: se o acontecimento não vier, o prazo simula o jogo; a ação que abre uma tela a
+    partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois).

@@ -67,7 +67,11 @@ Este bloco não foi rodado num servidor do Firebase de verdade (os testes do Tot
 Na revisão do PR 2 ele passou por um avaliador das regras (a mesma semântica do `.validate`: só valores não nulos, no nó
 gravado, nos de dentro e nos de cima) ligado em cada gravação do leilão online dos testes: 6 673 gravações, nenhuma
 honesta recusada (só o batimento de uma aba velha logo antes de ela virar "outra aba", sem efeito, e o batimento que
-chegou depois de a sala ser encerrada, que deve mesmo ser recusado). No PR 3 o avaliador virou parte do teste
-(`ferramentas/testar-leilao.mjs`, bloco KO, a função `avaliadorRegras`, que lê ESTE arquivo): o campeonato online de 2, 4
-e 8 aparelhos passa por ele em cada gravação (~2 900; nenhuma recusada) e as adulterações da máquina do jogo são
-recusadas. Por isso ele é opcional, e o plano B do passo 2 é importante.
+chegou depois de a sala ser encerrada, que deve mesmo ser recusado). No PR 3 o avaliador virou parte dos testes
+(`ferramentas/lib/regras-leilao.mjs`, que lê ESTE arquivo): no `testar-leilao.mjs` (bloco KO) o campeonato online de 2,
+4 e 8 aparelhos passa por ele em cada gravação (~2 900; nenhuma recusada) e as adulterações da máquina do jogo são
+recusadas; no `testar-leilao-online.mjs` (o G3) cada gravação das páginas do navegador, do saguão ao campeão (~270 no
+caso de 2 páginas, ~1 500 no de 4, ~2 800 no de 8; nenhuma honesta recusada). Uma recusa é de propósito: o batimento (ou
+a presença) que estava a caminho no instante em que o dono passa o clube a outro aparelho — a conta já não é da sala. A
+sessão não toma essa recusa por queda de conexão (antes do PR 3, o aparelho velho ficava em "Reconectando…"; o caso
+`passar` do bloco KO roda com as regras VALENDO). Por isso ele é opcional, e o plano B do passo 2 é importante.
