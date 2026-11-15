@@ -573,20 +573,9 @@ if (fr) {
 // 3D; 'parado' = não responde: o X do TM fica à vista). O golaco de verdade, com a tela, está nas seções 1–3 (e no
 // golaco/tools/teste-prepartida-tela.mjs E14)
 {
-  const ENSAIO = `<!doctype html><meta charset="utf-8"><title>ensaio</title><script>
-(function () {
-  var id = new URLSearchParams(location.search).get("tm"), modo = localStorage.getItem("ensaio3d:modo") || "simular", ped = null;
-  try { ped = JSON.parse(localStorage.getItem("tm3d:pedido:" + id)); } catch (e) {}
-  localStorage.setItem("ensaio3d:ultimo", JSON.stringify({ id: id, url: location.search, titulo: ped && ped.titulo, casa: ped && ped.home && ped.home.name,
-    fora: ped && ped.away && ped.away.name, nCasa: ped && ped.home ? ped.home.players.length : 0, nFora: ped && ped.away ? ped.away.players.length : 0,
-    userSide: ped && ped.userSide, controle: ped && ped.controle }));
-  if (modo === "parado") return;
-  parent.postMessage({ tipo: "tm3d:pronto", id: id }, location.origin);
-  setTimeout(function () { parent.postMessage({ tipo: "tm3d:sair", id: id, motivo: modo === "erro" ? "erro" : "simular" }, location.origin); }, 250);
-})();
-</script>`;
-  const ROTA_ENSAIO = /\/golaco\/ensaio-3d\.html(\?|$)/;
-  await cx.route(ROTA_ENSAIO, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ENSAIO }));
+  // (a página de ensaio mora em ferramentas/lib/ensaio-3d.mjs: o testar-leilao.mjs --tela e o testar-leilao-online.mjs usam a mesma)
+  const { ENSAIO_3D, ROTA_ENSAIO_3D: ROTA_ENSAIO } = await import(path.join(AQUI, "lib/ensaio-3d.mjs"));
+  await cx.route(ROTA_ENSAIO, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ENSAIO_3D }));
   const pastaReal = await p.evaluate(() => { const v = TM.tm3d.PASTA; TM.tm3d.PASTA = "golaco/ensaio-3d.html"; return v; });
   await p.evaluate(() => { const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s); });
   // (um quadro que sobrou de um caso que não voltou sai antes do próximo: senão o próximo caso o via como "o quadro abriu")

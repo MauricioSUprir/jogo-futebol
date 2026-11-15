@@ -41,8 +41,11 @@
    vista com o relógio rodando, o tema claro, o Formato na Criar, o campeonato no treino pela tela (os 3 formatos até o
    campeão: Seu jogo com o prazo, o Simular partida que grava antes de mostrar, o Ver o jogo no 2D sem pausa com a
    prorrogação do gol de ouro e os pênaltis gravados, a tabela, a chave com folgas, o fim) nos 8 tamanhos, no escuro e no
-   claro, e nenhum erro no console. Uso: node ferramentas/testar-leilao.mjs --tela [--prints <pasta>]. Nenhum teste usa o
-   Firebase: o SDK do gstatic é trocado por um vazio. */
+   claro, e nenhum erro no console; e (T14, PR 4) o jogo contra um bot em 3D pela página de ensaio do 3D
+   (ferramentas/lib/ensaio-3d.mjs): as Partidas em 3D na Criar, o pedido de 11 + 11, o resultado do 3D gravado antes do 2D
+   sem pausa, o "Simular partida" da tela do 3D, o 3D fechado sem resultado = W.O. depois do prazo, o "Sempre simular" e
+   recarregar no meio do 3D (aberto: W.O.; nem aberto: o simulado em 2 min). Uso: node ferramentas/testar-leilao.mjs --tela
+   [--so3d: só o T14] [--prints <pasta>]. Nenhum teste usa o Firebase: o SDK do gstatic é trocado por um vazio. */
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
@@ -50,6 +53,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import { avaliadorRegras } from "./lib/regras-leilao.mjs";
+import { PASTA_ENSAIO_3D, servirEnsaio3d } from "./lib/ensaio-3d.mjs";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -57,6 +61,7 @@ const opt = (n, p) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const SO = opt("--so", null) ? opt("--so").split(",").map(s => s.trim().toUpperCase()) : null;
 const N_LEILOES = +opt("--leiloes", 1000);
 const VERBOSO = args.includes("-v");
+const SO_3D = args.includes("--so3d");
 if (args.includes("--tela")) process.exit(await testeTela());
 const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/ultimate.js", "js/engine.js", "js/leilao.js", "js/leilao-camp.js", "js/leilao-rede.js", "js/leilao-sessao.js"];
 const REF_MOTOR = path.join(RAIZ, "ferramentas/dados/motor-ref.json");
@@ -4032,9 +4037,241 @@ async function testeTela() {
     }
     return vis;
   }
+  // um treino pela Criar sala (T técnicos, o formato; antes(p): o que mais escolher na Criar) até a aba Campeonato: o leilão
+  // passando tudo com o relógio a ×40, a escalação e o Pronto
+  async function treinoAte(p, T, formato, antes, fatorCamp = 20) {
+    await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
+    await espera(400);
+    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]');
+      for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
+    await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
+    if (antes) await antes(p);
+    await clica(p, "Começar o treino");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 30000);
+    // (no fim do leilão o relógio volta ao normal na hora: com ele a ×40, os 60 s da escalação passariam antes de a tela ir até ela)
+    for (let i = 0; i < 4000; i++) {
+      const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(1); return V.estado; });
+      if (e !== "leilao") break;
+      await espera(40);
+    }
+    await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
+    await p.evaluate(f => TM.leilaoSessao.acelerar(f), fatorCamp);
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
+    await espera(300);
+    const V = await ver(p);
+    return { T: V.T, formato: V.camp && V.camp.formato };
+  }
+  /* T14 o jogo contra um bot em 3D (PR 4; PLANO-LEILAO.md §4.2) pela PÁGINA DE ENSAIO do 3D (ferramentas/lib/ensaio-3d.mjs no
+     lugar do golaco; o GOLAÇO de verdade com o time de 11 está no testar-3d.mjs, seção 7): um treino de Pontos corridos com 4
+     (os 6 jogos meus contra os bots) com as Partidas em 3D escolhidas na Criar (3 min, Difícil). Jogo 1: o 3D acaba com o
+     resultado (o pedido com 11 + 11, a duração e a dificuldade travadas, mando neutro; o resultado do 3D gravado ANTES do 2D e o
+     2D sem pausa com o placar gravado); jogo 2: o "Simular partida" da tela do 3D com os titulares (o simulado gravado antes de
+     mostrar); jogo 3: o 3D aberto e fechado sem resultado (de volta ao Campeonato com "Jogando em 3D" e o prazo; nada sobre nada
+     com a caixa do 3D; o W.O. contra mim depois do prazo, pelo relógio acelerado); jogo 4: "Sempre simular" (o Jogar simula, sem
+     o quadro); jogo 5: recarregar no meio do 3D aberto (volta com "Jogando em 3D", o quadro fechado, e o W.O. depois do prazo);
+     jogo 6: recarregar com o 3D que nem abriu (volta com "Abrindo o 3D" e, em 2 min, o simulado). Nada sobre nada da Criar com as
+     Partidas em 3D nos 8 tamanhos, no escuro e no claro. Sozinho: --tela --so3d. */
+  async function t14() {
+    const { cx, p } = await aparelho(390, 844, true);
+    await servirEnsaio3d(cx);
+    // o quadro do 3D vira a página de ensaio (também depois de recarregar); sem WebGL 2 no Chromium do teste, o TM o daria por
+    // ausente: o teste não desenha nada em 3D, então a sonda do tm3d.js recebe um contexto de mentira só quando o real falta
+    const ligaEnsaio = PASTA => {
+      if (window !== window.top) return;
+      const gc = HTMLCanvasElement.prototype.getContext;
+      HTMLCanvasElement.prototype.getContext = function (t) { const c = gc.apply(this, arguments); return c || (t === "webgl2" ? {} : c); };
+      const iv = setInterval(() => { if (window.TM && TM.tm3d) { TM.tm3d.PASTA = PASTA; clearInterval(iv); } }, 10);
+    };
+    await cx.addInitScript(ligaEnsaio, PASTA_ENSAIO_3D);
+    await p.evaluate(ligaEnsaio, PASTA_ENSAIO_3D);
+    // o que a página vê: cada gravar3d (a hora em que respondeu e o que ficou gravado), a 1ª vez que o placar do 2D aparece (a
+    // rota, o placar, o botão de pausa), o quadro do 3D e os sorteios do 2D (o resimRest da pausa: têm de ser 0)
+    const vigia3d = () => p.evaluate(() => {
+      const S = TM.leilaoSessao.atual();
+      if (!S || S.__v3d) return;
+      S.__v3d = true;
+      const W = window.__v3d = window.__v3d || { gravados: [], vista: null, quadro: false, sims2d: 0 };
+      const g3 = S.gravar3d;
+      S.gravar3d = function () {
+        const a = arguments;
+        return g3.apply(S, a).then(r => { W.gravados.push({ t: performance.now(), origem: a[2], tit: !!a[3], ok: !!(r && r.ok), gravou: !!(r && r.gravou), e: r && r.jogo ? r.jogo.e : null, fim: r && r.jogo ? r.jogo.fim : null,
+          score: r && r.res ? r.res.score : null, em3d: !!(r && r.res && r.res.em3d), wo: r && r.res ? r.res.wo : null }); return r; });
+      };
+      if (!window.__v3dOb) {
+        window.__v3dOb = new MutationObserver(() => {
+          if (document.querySelector(".tm3d-quadro")) W.quadro = true;
+          const sc = document.querySelector(".screen.is-active .live-score");
+          if (sc && !W.vista) W.vista = { t: performance.now(), rota: TM.ui.current(), placar: sc.textContent, pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)), overlay: !!document.querySelector(".pause-overlay") };
+        });
+        window.__v3dOb.observe(document.body, { subtree: true, childList: true, characterData: true });
+        const o = TM.engine.simulate;
+        TM.engine.simulate = function () { if (/matchview\.js/.test(new Error().stack || "")) W.sims2d++; return o.apply(this, arguments); };
+      }
+    });
+    const zera = (modo, placar) => p.evaluate(([m, pl]) => {
+      localStorage.setItem("ensaio3d:modo", m); localStorage.setItem("ensaio3d:placar", pl); ["ensaio3d:ultimo", "ensaio3d:resultado"].forEach(k => localStorage.removeItem(k));
+      Object.assign(window.__v3d, { gravados: [], vista: null, quadro: false, sims2d: 0 });
+    }, [modo, placar || "2-1"]);
+    // o meu jogo da rodada aberto com o Jogar à mão; toca nele e devolve o id
+    async function tocaJogar(modo, placar) {
+      await vigia3d();
+      await zera(modo, placar);
+      const pode = await ate(p, () => { const V = TM.leilaoSessao.atual().ver(), mj = V.camp && V.camp.meuJogo, b = document.querySelector(".lei-jogar");
+        return TM.ui.current() === "leilao-camp" && !!(mj && mj.e === "aberto" && mj.podeJogar && b && !b.disabled); }, null, 20000);
+      const id = await p.evaluate(() => TM.leilaoSessao.atual().ver().camp.meuJogo.id);
+      await p.click(".lei-jogar");
+      return { id, pode };
+    }
+    // do 2D (o placar, a prorrogação, os pênaltis) até o Campeonato
+    async function ateCamp() {
+      for (let k = 0; k < 10; k++) {
+        if (await p.evaluate(() => TM.ui.current() === "leilao-camp")) return true;
+        await p.evaluate(() => { const bs = [...document.querySelectorAll(".screen.is-active button")]; const b = bs.find(x => /^Pular/.test(x.textContent.trim())) || bs.find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); });
+        await espera(300);
+      }
+      return p.evaluate(() => TM.ui.current() === "leilao-camp");
+    }
+    const jogo = id => p.evaluate(id => { const j = TM.leilaoSessao.atual().jogos[id]; return j ? JSON.parse(JSON.stringify(j)) : null; }, id);
+    // o estado do jogo na lista da rodada dele (‹ até ela; depois "Ir à rodada da vez")
+    async function linha(id) {
+      let t = null;
+      for (let k = 0; k < 8 && t == null; k++) {
+        t = await p.evaluate(id => { const e = document.querySelector(`.lei-rodada .lei-jogo[data-jogo="${id}"] .lei-jg-est`); return e ? e.textContent : null; }, id);
+        if (t == null) { await p.evaluate(() => { const b = document.querySelector(".lei-rod-bt[data-foco='rod-ant']"); if (b && !b.disabled) b.click(); }); await espera(120); }
+      }
+      await p.evaluate(() => { const b = document.querySelector('[data-foco="rod-vez"]'); if (b) b.click(); });
+      return t;
+    }
+    const W = () => p.evaluate(() => JSON.parse(JSON.stringify(window.__v3d)));
+    // recarregar e voltar pela Entrada (Minhas salas → Continuar) ao Campeonato
+    async function recarrega() {
+      await p.reload({ waitUntil: "load" });
+      await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+      await p.evaluate(() => TM.ui.go("leilao"));
+      await espera(300);
+      await clica(p, "^Continuar$");
+      await ate(p, () => !!TM.leilaoSessao.atual(), null, 20000);
+      await p.evaluate(() => { if (TM.ui.current() !== "leilao-camp") TM.ui.go("leilao-camp"); });
+      return ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-seujogo"), null, 20000);
+    }
+    // o relógio do treino acelerado até o jogo ser feito; volta ao normal no mesmo instante (o prazo do próximo jogo corre)
+    const feitoAcelerado = (id, f, ms = 30000) => { return p.evaluate(f => TM.leilaoSessao.acelerar(f), f).then(() => ate(p, id => { const S = TM.leilaoSessao.atual(), j = S && S.jogos[id];
+      if (j && j.e === "feito") { TM.leilaoSessao.acelerar(1); return true; } return false; }, id, ms)); };
+
+    // a Criar com as Partidas em 3D: 3 min e Difícil; nada sobre nada nos 8 tamanhos, escuro e claro
+    let criar = null;
+    const tc = await treinoAte(p, 4, "pontos", async p => {
+      await p.click('.lei-criar [data-foco="dur3d-3"]');
+      await p.click('.lei-criar [data-foco="dif3d-dificil"]');
+      await espera(200);
+      criar = await p.evaluate(() => ({ dur: [...document.querySelectorAll(".lei-dur3d .seg-btn")].map(b => b.textContent + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
+        dif: [...document.querySelectorAll(".lei-dif3d .seg-btn")].map(b => b.textContent + (b.getAttribute("aria-pressed") === "true" ? "*" : "")), resumo: document.querySelector(".lei-criar-resumo").textContent }));
+      await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+      await nadaSobreNadaTemas(p, "criar3d");
+      await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    }, 1);
+    const V0 = await ver(p);
+    const ruinsCriar = nadaSobre.filter(x => /^criar3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
+    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D: 3 min por tempo, Difícil' e a sala guarda os dois",
+      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D: 3 min por tempo, Difícil/.test(criar.resumo)
+      && tc.T === 4 && tc.formato === "pontos" && V0.duracao3d === 3 && V0.dificuldade3d === "dificil", { criar, tc, d3: [V0.duracao3d, V0.dificuldade3d] });
+    confere(`T14 nada sobre nada na Criar sala com as Partidas em 3D (${nadaSobre.filter(x => /^criar3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruinsCriar.length, ruinsCriar.slice(0, 4));
+
+    /* jogo 1: o 3D acaba com o resultado (2 × 1) */
+    const j1 = await tocaJogar("fim", "2-1");
+    const viu1 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    await espera(250);
+    const placar1 = await p.evaluate(() => (document.querySelector(".screen.is-active .live-score") || {}).textContent);
+    const w1 = await W(), ped1 = await p.evaluate(() => JSON.parse(localStorage.getItem("ensaio3d:ultimo") || "null")), r3 = await p.evaluate(() => JSON.parse(localStorage.getItem("ensaio3d:resultado") || "null"));
+    const g1 = await jogo(j1.id);
+    const autores = g1 && g1.res ? g1.res.events.filter(e => e.type === "goal" || e.type === "pengoal").map(e => e.playerId) : null;
+    confere("T14 o Jogar abre o 3D com o pedido do leilão: 11 + 11 sem banco, 3 min por tempo, Difícil travada (ajustesFixos), mando neutro, os escudos desenhados; o 3D aberto marca o abriu",
+      j1.pode && !!ped1 && ped1.nCasa === 11 && ped1.nFora === 11 && !!ped1.partida && ped1.partida.minutosPorTempo === 3 && ped1.partida.dificuldade === "dificil" && ped1.partida.ajustesFixos && ped1.partida.neutro
+      && !!ped1.escudos && ped1.escudos.every(e => e && e.tipo === "ultimate" && e.svg) && !!g1 && g1.modo === "3d" && g1.abriu != null, { j1, ped1, modo: g1 && g1.modo, abriu: g1 && g1.abriu });
+    confere("T14 jogo 1, o fim do 3D: o resultado do 3D gravado ANTES do 2D (feito, fim '3d', 2 × 1 com os autores do 3D) e o 2D sem pausa, com o placar gravado e nada sorteado por ele",
+      viu1 && w1.gravados.length === 1 && w1.gravados[0].origem === "3d" && w1.gravados[0].e === "feito" && w1.gravados[0].gravou && w1.gravados[0].t <= w1.vista.t && w1.vista.rota === "leilao-jogar"
+      && !w1.vista.pausa && !w1.vista.overlay && placar1 === "2 - 1" && w1.sims2d === 0 && g1.e === "feito" && g1.fim === "3d" && g1.res.em3d && g1.res.score.join() === "2,1"
+      && !!r3 && JSON.stringify(autores) === JSON.stringify(r3.gols.slice().sort((a, b) => a.minuto - b.minuto).map(x => x.tmId)), { w1, placar1, fim: g1 && g1.fim, res: g1 && g1.res && { score: g1.res.score, em3d: g1.res.em3d }, autores, r3: r3 && r3.gols });
+    const volta1 = await ateCamp();
+    await espera(300);
+    const l1 = await linha(j1.id), alt1 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 1: de volta ao Campeonato, a rodada diz 'Jogado em 3D' e a sala confere o resultado do 3D (não congela)", volta1 && /^Jogado em 3D/.test(l1 || "") && !alt1, { volta1, l1, alt1 });
+
+    /* jogo 2: o "Simular partida" da tela do 3D, com os titulares */
+    const j2 = await tocaJogar("simularTit");
+    const viu2 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    const w2 = await W(), g2 = await jogo(j2.id);
+    const pausa2 = await p.evaluate(() => [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)));
+    const volta2 = await ateCamp();
+    const w2b = await W(), l2 = await linha(j2.id), alt2 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 2, o 'Simular partida' da tela do 3D (com os titulares): o simulado com a semente gravado ANTES de mostrar (fim 'simulado', sem escSim com os mesmos 11), o 2D sem pausa e sem sorteio; a rodada diz 'Simulado'",
+      j2.pode && viu2 && w2.gravados.length === 1 && w2.gravados[0].origem === "simulado" && w2.gravados[0].tit && w2.gravados[0].e === "feito" && w2.gravados[0].t <= w2.vista.t && !w2.vista.pausa && !pausa2
+      && w2b.sims2d === 0 && !!g2 && g2.e === "feito" && g2.fim === "simulado" && !g2.res.em3d && g2.escSim == null && volta2 && /^Simulado/.test(l2 || "") && !alt2, { j2, w2, fim: g2 && g2.fim, escSim: g2 && g2.escSim, l2, alt2 });
+
+    /* jogo 3: o 3D aberto e fechado sem resultado: nada gravado, "Jogando em 3D" e, depois do prazo, o W.O. contra mim */
+    const j3 = await tocaJogar("sair");
+    const volta3 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return TM.ui.current() === "leilao-camp" && !!(j && j.abriu != null) && !!document.querySelector(".lei-sj-3d"); }, j3.id, 20000);
+    await espera(300);
+    const w3 = await W(), g3a = await jogo(j3.id);
+    const sj3 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, nota: (document.querySelector(".lei-seujogo .lei-sj-nota") || {}).textContent, botoes: document.querySelectorAll(".lei-seujogo .lei-acoes button").length }));
+    const l3a = await linha(j3.id);
+    confere("T14 jogo 3, o 3D aberto e fechado sem resultado: nada gravado, de volta ao Campeonato com 'Jogando em 3D · M:SS de prazo para o resultado.', a nota do W.O. e sem botões; a rodada diz 'Jogando em 3D'",
+      volta3 && !w3.gravados.length && g3a.e === "reservado" && g3a.modo === "3d" && /^Jogando em 3D · \d+:\d\d de prazo para o resultado\.$/.test(sj3.est || "") && /W\.O\. contra você/.test(sj3.nota || "") && sj3.botoes === 0 && l3a === "Jogando em 3D",
+      { volta3, w3: w3.gravados, e: g3a && g3a.e, sj3, l3a });
+    await nadaSobreNadaTemas(p, "camp-3d", extraCamp);
+    const ruins3d = nadaSobre.filter(x => /^camp-3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.tabelaRola || x.escudosReais));
+    confere(`T14 nada sobre nada no Campeonato com o Seu jogo em 3D (${nadaSobre.filter(x => /^camp-3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruins3d.length, ruins3d.slice(0, 4));
+    const feito3 = await feitoAcelerado(j3.id, 150);
+    const g3 = await jogo(j3.id), eu3 = await p.evaluate(() => TM.leilaoSessao.atual().eu);
+    const pz3 = await p.evaluate(() => TM.leilaoCamp.prazo3d(3));
+    await espera(300);
+    const l3 = await linha(j3.id), alt3 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 3: o prazo do 3D (2 × 3 min × 1,3 + 8 min) vence e o jogo vira W.O. contra mim (3 × 0 do bot), gravado só depois do prazo; a rodada diz 'W.O.' e a sala não congela",
+      feito3 && g3.e === "feito" && g3.res.wo === g3.ab.indexOf(eu3) && g3.ts >= g3.inicio + pz3 && l3 === "W.O." && !alt3, { feito3, res: g3 && g3.res && { wo: g3.res.wo, score: g3.res.score }, ab: g3 && g3.ab, eu3, ts: g3 && g3.ts - g3.inicio, pz3, l3, alt3 });
+
+    /* jogo 4: "Sempre simular" na Config: o Jogar simula direto (sem o quadro) */
+    await p.evaluate(() => TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { partidasTela: "simular" })));
+    const j4 = await tocaJogar("fim");
+    const viu4 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    const w4 = await W(), g4 = await jogo(j4.id);
+    const volta4 = await ateCamp();
+    await p.evaluate(() => TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { partidasTela: "tela" })));
+    confere("T14 jogo 4, 'Sempre simular' na Config: o Jogar simula direto (o quadro do 3D não abre), grava antes de mostrar e o 2D vem sem pausa",
+      j4.pode && viu4 && !w4.quadro && w4.vista.rota === "leilao-jogo" && !w4.vista.pausa && !!g4 && g4.e === "feito" && g4.modo === "simulado" && !g4.res.em3d && volta4, { j4, w4, modo: g4 && g4.modo, volta4 });
+
+    /* jogo 5: recarregar no meio do 3D aberto: volta com "Jogando em 3D" e o W.O. depois do prazo */
+    const j5 = await tocaJogar("aberto");
+    const abriu5 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.abriu != null); }, j5.id, 20000);
+    const trava5 = (await jogo(j5.id) || {}).trava;
+    const voltou5 = await recarrega();
+    await espera(400);
+    const g5a = await jogo(j5.id), sj5 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, quadro: !!document.querySelector(".tm3d-quadro") }));
+    confere("T14 jogo 5, recarregar no meio do 3D aberto: volta ao Campeonato com o jogo reservado no 3D (a mesma trava, o abriu), 'Jogando em 3D' com o prazo e o quadro fechado",
+      abriu5 && voltou5 && !!g5a && g5a.e === "reservado" && g5a.trava === trava5 && g5a.abriu != null && /^Jogando em 3D · \d+:\d\d de prazo/.test(sj5.est || "") && !sj5.quadro, { abriu5, voltou5, e: g5a && g5a.e, sj5 });
+    const feito5 = await feitoAcelerado(j5.id, 150);
+    const g5 = await jogo(j5.id), eu5 = await p.evaluate(() => TM.leilaoSessao.atual().eu);
+    confere("T14 jogo 5: depois do prazo do 3D, o W.O. contra mim", feito5 && g5.e === "feito" && g5.res.wo === g5.ab.indexOf(eu5), { feito5, res: g5 && g5.res && { wo: g5.res.wo, score: g5.res.score } });
+
+    /* jogo 6: recarregar com o 3D que nem abriu: "Abrindo o 3D" e, em 2 min, o simulado */
+    const j6 = await tocaJogar("parado");
+    const res6 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.e === "reservado" && j.modo === "3d") && !!document.querySelector(".tm3d-quadro"); }, j6.id, 20000);
+    const voltou6 = await recarrega();
+    await espera(400);
+    const g6a = await jogo(j6.id), sj6 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, nota: (document.querySelector(".lei-seujogo .lei-sj-nota") || {}).textContent }));
+    confere("T14 jogo 6, recarregar com o 3D que nem abriu: volta com 'Abrindo o 3D · M:SS para abrir.' e a nota do simulado",
+      res6 && voltou6 && !!g6a && g6a.e === "reservado" && g6a.abriu == null && /^Abrindo o 3D · \d:\d\d para abrir\.$/.test(sj6.est || "") && /é simulado/.test(sj6.nota || ""), { res6, voltou6, e: g6a && g6a.e, sj6 });
+    const feito6 = await feitoAcelerado(j6.id, 30);
+    const g6 = await jogo(j6.id), alt6 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 6: passados os 2 min sem o 3D abrir, o simulado com a semente (fim 'simulado', sem W.O.) e a sala confere",
+      feito6 && g6.e === "feito" && g6.fim === "simulado" && g6.res.wo == null && !g6.res.em3d && g6.ts >= g6.inicio + 120000 && !alt6, { feito6, fim: g6 && g6.fim, wo: g6 && g6.res && g6.res.wo, alt6 });
+    await cx.close();
+  }
   const textoMotivos = await (async () => { const { p } = await aparelho(390, 844, true); const m = await p.evaluate(() => ["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim"].map(k => [k, TM.leilaoSessao.textoMotivo(k, { max: 0 })])); await p.context().close(); return m; })();
 
   try {
+    // (--so3d: só o T14; os T1–T13 ficam com a indentação de antes dentro do if)
+    if (!SO_3D) {
     /* T1 "Mais modos": 13 atalhos, 7 + 6 no PC (com a barra de rolagem) e no tablet, 3·4 + 1 no celular */
     const pc = await aparelho(1280, 800, false);
     const grade = [];
@@ -4540,28 +4777,7 @@ async function testeTela() {
     /* T13 os outros formatos até o campeão pela tela: Pontos corridos com 8 (a tabela com 8), Pontos + mata-mata com 8 (a
        tabela e a chave da fase final) e o Mata-mata com 6 (a chave com as folgas); nada sobre nada nos 8 tamanhos, no
        escuro e no claro. O leilão desses passa em tudo pela sessão (a tela do leilão já foi conferida no T3–T7). */
-    async function treinoAteCamp(T, formato) {
-      await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
-      await espera(400);
-      await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]');
-        for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
-      await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
-      await clica(p, "Começar o treino");
-      await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 30000);
-      // (no fim do leilão o relógio volta ao normal na hora: com ele a ×40, os 60 s da escalação passariam antes de a tela ir até ela)
-      for (let i = 0; i < 4000; i++) {
-        const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(1); return V.estado; });
-        if (e !== "leilao") break;
-        await espera(40);
-      }
-      await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
-      await p.evaluate(() => TM.leilaoSessao.acelerar(20));
-      await clica(p, "^Pronto$");
-      await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
-      await espera(300);
-      const V = await ver(p);
-      return { T: V.T, formato: V.camp && V.camp.formato };
-    }
+    const treinoAteCamp = (T, formato) => treinoAte(p, T, formato);
     const fimDe = () => p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return { estado: V.estado, n: document.querySelectorAll(".lei-class .lei-cl").length,
       classe: [...document.querySelectorAll(".lei-class .lei-cl-n")].map(e => e.textContent).join("|"), esperado: C.classificacao.map(t => V.tecnicos[t].clube.nome).join("|"),
       x: [...document.querySelectorAll(".lei-class .lei-cl-x")].map(e => e.textContent), poster: !!document.querySelector(".lei-campeao .utx-escudo") }; });
@@ -4619,6 +4835,8 @@ async function testeTela() {
     const ruinsCamp = nadaSobre.filter(x => /^(camp|fim)/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.tabelaRola || x.escudosReais));
     confere(`T13 nada sobre nada no Campeonato e no fim (${nadaSobre.filter(x => /^(camp|fim)/.test(x.tela)).length} telas: mata 4, pontos 8, misto 8, mata 6 e os fins, nos 8 tamanhos, escuro e claro): nem encostado, nem texto fora do botão, a tabela sem rolar de lado, só escudos desenhados`,
       !ruinsCamp.length, ruinsCamp.slice(0, 6));
+    }
+    await t14();
   } catch (e) {
     confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
   } finally {
