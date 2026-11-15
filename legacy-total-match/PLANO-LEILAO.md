@@ -746,3 +746,40 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   posições e 82% com notas altas e baixas; o 1º goleiro cai, em média, a 6% da fila.
 - O `testar-leilao.mjs` ganhou o bloco **R** (a rede em memória sozinha); o **L8** (o protocolo inteiro pela rede)
   entra com a sessão.
+- **A sessão** (`leilao-sessao.js`, `TM.leilaoSessao`): `criarTreino`, `abrir` (o treino guardado e, nos testes, outro
+  "aparelho" no mesmo banco), `salas` ("Minhas salas"), `atual`, `textoMotivo` e o gancho `acelerar`; a sessão expõe
+  `ver()` (o que as telas mostram), as ações (`lance('+1'|'+5'|'+10'|'tudo'|número)`, `passar`, `mudarFormacao`, `trocar`,
+  `prontoEscalacao`, `sair`, `parar`) e os eventos (`lote`, `lance`, `superado`, `vendido`, `semLance`, `formacao`, `fim`,
+  `estado`, `alterada`). O treino passa pelo mesmo protocolo do online: a sala nasce no `saguao` e o Começar é uma
+  transação; o `vivo` inicial é a transação de `null` do motor. A conferência (§3.3) já roda no treino.
+- **O lance aborta se houve QUALQUER lance depois do que a pessoa viu** (o `n` mudou no mesmo lote), não só quando o valor
+  passou do alvo: o "+5" com um lance no meio também aborta ("Alguém chegou antes: R$ X"), como diz o §1.3 ("nunca sobe
+  sozinho"). Respostas do lance: `aceito`, `antes` (o preço novo), `fechado` (o lote já fechou), `recusado` (o motivo).
+- **O relógio do treino é da própria sala:** anda com a página aberta e à vista, PARA com ela fechada ou escondida (a
+  pessoa não perde lotes atendendo o telefone) e a hora da última ação vai para o caminho `relogio` da árvore. Recarregar
+  no meio volta ao mesmo lote com o tempo que faltava (testar-leilao L8, "recarregar"). No online (PR 2) a hora é a do
+  servidor e a página escondida segue a regra do ausente.
+- **Os caminhos:** `lotes` = `{ l: retratos, f: fora }`; `vendas/{i}` = `{ t, v (preço), s (seq) }`, gravado por quem fechou o
+  lote vendido; `escal/{t}` só leva `tit` quando a pessoa troca vagas à mão (sem `tit`, vale a automática); a sala ganhou
+  `meta.treino`, `meta.fimLeilao` (a escalação vai até ele + 60 s), `cfg.ligaNome` e `tec.entrou` (a `ordem` = o dono e
+  depois a ordem de entrada).
+- **A escalação automática** é `TM.leilao.escalacaoDe` (pura): a formação preferida (ou a que cabe e mais se parece) e os 11
+  nas vagas pelo método húngaro, com o menor custo de função (o `specificPenalty` do TM: −1/−2; cada um só numa vaga dos
+  SEUS grupos). A troca à mão (`trocarVagas`) só aceita vagas dos grupos de cada um; mudar a formação volta à automática.
+  Quando a compra tira a preferida, a sessão grava a nova e avisa (`formacao`).
+- **Os bots do treino:** o nome pelo perfil sorteado ("Bot Arrojado/Ousado/Vistoso" para quem compra estrelas, "Bot
+  Sereno/Calculista/Prudente", "Bot Paciente/Estrategista/Tranquilo"; avulsos quando acabam) e clubes inventados ("Cometa
+  Azul FC", "Granito EC"…), escudo desenhado (forma e símbolo do Ultimate) e cor que não repete a de ninguém.
+- **No máximo 3 treinos guardados no aparelho** (cada sala de 8 técnicos tem ~57 KB no `localStorage`, quase tudo os
+  retratos dos lotes; o armazenamento é o mesmo das carreiras): o 4º tira o mais antigo. A avisar ao dono.
+- **O Ultimate** só exporta pelo `TM.ut._i` as listas do escudo (`CORES`, `FORMAS`, `FORMA_ORDEM`, `SIMBOLOS`) e o
+  `escudoCfg`: o `escudoEl(cfg, cor, sigla)` e o `escudoSvg(cfg, cor, sigla)` de hoje já servem a qualquer clube (não leem
+  o `st()`), então não precisou de função nova.
+- **A rede em memória:** `apagar()` é final (nada que já estava a caminho grava a sala de novo) e `salvarAgora()` grava no
+  aparelho sem esperar (a página vai fechar).
+- **testar-leilao** L8: 18 leilões pela sessão (en/T6, br/T4, it/T8) — 1 aparelho com 40 ms, 3 escalonados (0; 1,5; 3 s),
+  3 ao mesmo tempo, latências sorteadas de 0 a 150 ms, o 1º aparelho caindo no meio e recarregar no meio — com um
+  "humano" que age pela API da sessão; o fim e as vendas = a máquina pura nos casos determinísticos. O bloco **S** testa
+  a sessão (identidades, botões e motivos, Tudo, antes/fechado, formação com aviso, trocar, Pronto → campeonato, pausa,
+  aceleração, só olhar, a sala adulterada que congela, Minhas salas) e o **L9** a escalação (o ótimo contra a força
+  bruta e contra qualquer troca de duas vagas).

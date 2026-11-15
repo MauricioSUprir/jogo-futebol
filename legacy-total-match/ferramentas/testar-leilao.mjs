@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* Testes do Modo Leilão (PLANO-LEILAO.md §4.1), em Node, sem navegador e sem rede.
-   Carrega num `vm` o rng.js, o data.js (com um TM.storage falso), o viverde.js, o competitions.js e os arquivos do
-   leilão, nas duas edições (pública e pro), e roda:
-     L1 lotes · L2 ordem · L3 lance · L4 relógio · L5 fechar · L6 fim · L7 robôs · L8 protocolo (próximo passo)
-     L9 formações · L10 conferência · R a rede em memória
+   Carrega num `vm` o rng.js, o data.js (com um TM.storage falso), o viverde.js, o competitions.js, o ultimate.js (as
+   listas do escudo desenhado; o TM.ui de mentira) e os arquivos do leilão, nas duas edições (pública e pro), e roda:
+     L1 lotes · L2 ordem · L3 lance · L4 relógio · L5 fechar · L6 fim · L7 robôs · L8 protocolo (o leilão inteiro
+     pela sessão e pela rede em memória = a máquina pura) · L9 formações e escalação · L10 conferência ·
+     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas)
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
    Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v]
    (--tela, o navegador, vem no passo das telas.) Nenhum teste usa o Firebase. */
@@ -18,12 +19,12 @@ const opt = (n, p) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const SO = opt("--so", null) ? opt("--so").split(",").map(s => s.trim().toUpperCase()) : null;
 const N_LEILOES = +opt("--leiloes", 1000);
 const VERBOSO = args.includes("-v");
-const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/leilao.js", "js/leilao-rede.js"];
+const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/ultimate.js", "js/leilao.js", "js/leilao-rede.js", "js/leilao-sessao.js"];
 
 /* ---------- o carregador: um mundo por edição, com um TM.storage falso ---------- */
 function carrega(ed, guardado) {
   const store = Object.assign({}, guardado || {});
-  const ctx = { console, Math, Date, JSON, Promise, setTimeout, clearTimeout };
+  const ctx = { console, Math, Date, JSON, Promise, setTimeout, clearTimeout, Uint32Array, crypto: globalThis.crypto };
   ctx.window = ctx;
   vm.createContext(ctx);
   ctx.TM = {
@@ -32,9 +33,12 @@ function carrega(ed, guardado) {
       read: (k, f) => (k in store ? JSON.parse(store[k]) : f),
       write: (k, v) => { store[k] = JSON.stringify(v); return true; },
       remove: k => { delete store[k]; },
+      readRaw: () => null, writeRaw: () => true, removeRaw: () => {},
       suUnlocked: () => false,
       settings: () => ({})
-    }
+    },
+    // o ultimate.js só usa o TM.ui nas telas: na carga, basta existir
+    ui: { el: () => null, register: () => {}, go: () => {} }
   };
   for (const f of ARQS) vm.runInContext(fs.readFileSync(path.join(RAIZ, f), "utf8"), ctx, { filename: f });
   ctx.TM._store = store;
@@ -508,15 +512,373 @@ bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs`, (ok, nota) => {
   nota(`${(pc * 100).toFixed(1)}% completos sem a reposição; quartil de cima mais caro em ${(ps * 100).toFixed(0)}%; ~${(minutos / N_LEILOES).toFixed(1)} min de leilão em média; sobra média R$ ${(sobra / tecs).toFixed(0)} por técnico`);
 });
 
-/* ===================================================== L8 protocolo ===================================================== */
-bloco("L8", "protocolo pela rede em memória", (ok, nota) => {
-  // O leilão inteiro pela rede em memória (latência, transações concorrentes, ações escalonadas) = a máquina pura:
-  // entra com a sessão (leilao-sessao.js), no próximo passo do PR 1.
-  nota("pendente: entra com a sessão (próximo passo)");
-});
+/* ===================================================== L8 protocolo (a sessão) ===================================================== */
+// o relógio e a agenda de mentira: a hora só anda de um acontecimento para o próximo (o leilão inteiro em segundos)
+function relogioVirtual(inicio) {
+  const V = { hora: inicio || 1_000_000, fila: [], id: 0 };
+  V.relogio = () => V.hora;
+  V.agendar = (fn, ms) => { const e = { at: V.hora + Math.max(0, +ms || 0), fn, id: ++V.id, morto: false }; V.fila.push(e); return e; };
+  V.cancelar = e => { if (e) e.morto = true; };
+  // roda até pare() ou a agenda esvaziar; entre um acontecimento e outro, todas as promessas pendentes
+  V.anda = async (pare, max = 400000) => {
+    for (let k = 0; k < max; k++) {
+      await new Promise(r => setImmediate(r));
+      if (pare && pare()) return true;
+      V.fila = V.fila.filter(e => !e.morto);
+      if (!V.fila.length) return !!(pare && pare());
+      let m = 0;
+      for (let i = 1; i < V.fila.length; i++) { const a = V.fila[i], b = V.fila[m]; if (a.at < b.at || (a.at === b.at && a.id < b.id)) m = i; }
+      const e = V.fila.splice(m, 1)[0];
+      V.hora = Math.max(V.hora, e.at);
+      e.fn();
+    }
+    return false;
+  };
+  // espera uma promessa que depende da agenda (a latência da rede): anda até ela resolver
+  V.espera = async p => { let feito = false; p.then(() => { feito = true; }, () => { feito = true; }); await V.anda(() => feito); return p; };
+  return V;
+}
+function armazemFalso(guardado) {
+  const g = guardado || {};
+  return { g, ler: (k, p) => (k in g ? JSON.parse(g[k]) : p), gravar: (k, v) => { g[k] = JSON.stringify(v); }, apagar: k => { delete g[k]; } };
+}
+// o "humano" de teste: decide como um robô com o perfil do técnico 0 e age pela API da sessão (lance/passar), meio
+// milissegundo depois do robô que empataria com ele (na máquina pura o robô ganha o empate)
+function piloto(S, V, Lx) {
+  const perfil = Lx.perfilRobo(S.ctx.semente, S.eu);
+  let pend = null, chave = null, parado = false, acoes = 0;
+  const olha = () => {
+    const v = S.vivoN;
+    if (parado || !v || v.fase === "fim" || !S.sala || S.sala.meta.estado !== "leilao") { if (pend) V.cancelar(pend); pend = null; return; }
+    const k = v.seq + ":" + v.n + ":" + v.p;
+    if (k === chave) return;
+    chave = k;
+    if (pend) V.cancelar(pend);
+    pend = null;
+    const a = Lx.robo(v, S.ctx, perfil);
+    if (!a) return;
+    pend = V.agendar(() => { pend = null; acoes++; if (a.acao === "lance") S.lance(a.alvo); else S.passar(); }, a.quando + 0.5 - S.hora());
+  };
+  const off = S.aoMudar(olha);
+  olha();
+  return { parar() { parado = true; off(); if (pend) V.cancelar(pend); }, acoes: () => acoes };
+}
+function politicaPiloto(Lx, semente) {
+  const perfil = Lx.perfilRobo(semente, 0);
+  return (v, c, t) => { const a = Lx.robo(v, c, perfil); return a && Object.assign({}, a, { quando: a.quando + 0.5 }); };
+}
+// conta as transações que cada aparelho tentou e as que abortaram (para provar que houve disputa)
+function contaTransacoes(rede) {
+  const c = { tentou: 0, abortou: 0 }, orig = rede.transacao;
+  rede.transacao = (cam, fn) => { c.tentou++; return orig(cam, fn).then(r => { if (!r.feito) c.abortou++; return r; }); };
+  return c;
+}
+function resumoFinal(v) { return v ? JSON.stringify({ d: v.d, cx: v.cx, f: v.f || "", sem: v.sem || [] }) : "sem vivo"; }
+function vendasDaRede(arv) {
+  const out = [], vd = arv && arv.vendas;
+  if (vd) Object.keys(vd).forEach(k => { if (vd[k]) out.push({ i: +k, t: vd[k].t, preco: vd[k].v }); });
+  return out.sort((a, b) => a.i - b.i);
+}
+async function blocoAsync(nome, titulo, fn) {
+  if (SO && !SO.includes(nome)) return;
+  const t0 = performance.now(), erros = [], notas = [];
+  const ok = (c, msg) => { if (!c) erros.push(msg); return !!c; };
+  try { await fn(ok, s => notas.push(s)); } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+  const ms = performance.now() - t0;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} ${nome.padEnd(4)} ${titulo}${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) {
+    falhas++;
+    erros.slice(0, VERBOSO ? 200 : 8).forEach(e => console.log("         · " + e));
+    if (erros.length > 8 && !VERBOSO) console.log(`         · … mais ${erros.length - 8}`);
+  }
+  resultados.push({ nome, ok: !erros.length });
+}
+// confere um fim de leilão visto por uma sessão: 11 que cabem para todos, o vivo de cada aparelho = o do banco
+function confereFimSessao(ok, S, id) {
+  const Lx = TMs.public.leilao, v = S.vivoN, ctx = S.ctx;
+  ok(v && v.fase === "fim", `${id}: não chegou ao fim`);
+  if (!v) return;
+  for (let t = 0; t < ctx.T; t++) {
+    const time = Lx.timeDe(v, ctx, t);
+    ok(time.length === 11 && Lx.formacoesQueCabem(Lx.contaMascaras(time)).length > 0, `${id}: técnico ${t} com ${time.length} que ${Lx.formacoesQueCabem(Lx.contaMascaras(time)).length ? "" : "não "}cabem`);
+    const e = S.escalacao(t);
+    ok(e && e.tit.length === 11 && e.tit.every(k => k >= 0) && e.n === 11, `${id}: escalação do técnico ${t} incompleta: ${JSON.stringify(e && e.tit)}`);
+  }
+  ok(!S.alterada, `${id}: a conferência acusou a sala honesta (${S.alterada})`);
+}
+
+// anda o relógio virtual até a hora h (os acontecimentos antes dela acontecem)
+// (na hora da sessão S, que pode estar acelerada ou deslocada da hora da agenda)
+async function ate(V, h, S) {
+  const agora = () => (S ? S.hora() : V.hora), f = S && S._fator ? S._fator() : 1;
+  if (h > agora()) V.agendar(() => {}, (h - agora()) / f);
+  await V.anda(() => agora() >= h);
+}
+
+async function testeSessao() {
+  await blocoAsync("S", "sessão: identidades, botões e motivos, Tudo, antes/fechado, formação, escalação, Pronto, pausa, Minhas salas", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, U = TMx.ut._i, mundo = MUNDO.public;
+    // --- identidades: 7 bots com nomes e clubes fictícios, cores sem repetir (nem a do humano), escudo desenhado
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "br", bots: 7, semente: "S-ident", codigo: "SIDENT", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true,
+        clube: { nome: "Um Nome de Clube Muito Comprido", sigla: "abcd", cor: "#EF4444", escudo: "diamante|crown" } }));
+      const tv = A.ver().tecnicos;
+      ok(tv.length === 8 && A.eu === 0 && tv[0].eu && !tv[0].bot && tv.slice(1).every(t => t.bot), "8 técnicos, o humano no 0 e 7 bots");
+      ok(tv[0].clube.nome === "Um Nome de Clube" && tv[0].clube.sigla === "ABC" && tv[0].clube.cor === "#ef4444" && tv[0].clube.escudo === "diamante|crown", "o clube do humano limpo: " + JSON.stringify(tv[0].clube));
+      const nomes = tv.slice(1).map(t => t.nome), clubes = tv.slice(1).map(t => t.clube.nome), cores = tv.map(t => t.clube.cor.toLowerCase());
+      ok(nomes.every(n => /^Bot [A-ZÀ-Ú][a-zà-ú]+$/.test(n)) && new Set(nomes).size === 7, "nomes dos bots: " + nomes.join(", "));
+      ok(clubes.every(c => SS.CLUBES_BOT.some(x => x[0] === c)) && new Set(clubes).size === 7, "clubes dos bots: " + clubes.join(", "));
+      ok(new Set(cores).size === 8, "cores repetidas: " + cores.join(" "));
+      ok(tv.every(t => { const c = U.escudoCfg({ escudo: t.clube.escudo }); return c.forma + "|" + c.simb === t.clube.escudo && U.FORMAS[c.forma] && U.SIMBOLOS.includes(c.simb) && t.clube.nome.length <= 16 && /^[A-Z0-9À-Ú]{1,3}$/.test(t.clube.sigla); }), "escudos: " + tv.map(t => t.clube.escudo).join(" "));
+      // os nomes pelo perfil (Arrojado/Ousado… para quem compra estrelas)
+      // o nome vem do perfil (Arrojado/Ousado… para quem compra estrelas); um nome avulso só com os do perfil já usados
+      ok(tv.slice(1).every(t => { const lst = SS.NOMES_BOT[Lx.perfilRobo("S-ident", t.t).perfil]; return lst.includes(t.nome) || lst.every(n => nomes.slice(0, t.t - 1).includes(n)); }),
+        "nome × perfil: " + tv.slice(1).map(t => t.nome + "/" + Lx.perfilRobo("S-ident", t.t).perfil).join(", "));
+      const B = await V.espera(SS.criarTreino({ liga: "br", bots: 3, semente: "S-ident2", codigo: "SIDEN2", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true }));
+      ok(jsonIgual(B.ver().tecnicos[0].clube, { nome: "Meu Clube", sigla: "MEU", cor: "#22c55e", escudo: "classico|tm-bola" }), "sem o Ultimate, o clube padrão: " + JSON.stringify(B.ver().tecnicos[0].clube));
+      A.parar(); B.parar();
+    }
+    // --- botões, motivos e respostas do lance (3 técnicos; a pessoa com latência de 40 ms, o "outro aparelho" sem)
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "en", bots: 2, semente: "S-botoes", codigo: "SBOTAO", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: 40, semAtual: true }));
+      const outro = A.rede.outroCliente({ latencia: 0 }), ctx = A.ctx;
+      const lanceDe = (t, alvo) => V.espera(outro.transacao("vivo", cur => { const r = Lx.lance(cur, ctx, t, alvo, cur.seq, outro.horaServidor()); return r.ok ? r.vivo : undefined; }));
+      await V.anda(() => !!A.vivoN);
+      let w = A.ver();
+      ok(w.lote && w.lote.pausa && w.botoes["+1"].motivo === "pausa" && !w.botoes.passar.pode, "na pausa entre lotes, os botões desligados: " + JSON.stringify(w.botoes && w.botoes["+1"]));
+      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 39 && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 39 com o retrato, 10 s e os 5 próximos");
+      await ate(V, w.lote.liberado + 10, A);
+      w = A.ver();
+      ok(w.botoes["+1"].pode && w.botoes["+1"].alvo === 1 && w.botoes["+5"].alvo === 5 && w.botoes["+10"].alvo === 10 && w.botoes.tudo.alvo === 90 && w.botoes.outro.min === 1 && w.botoes.outro.max === 90 && w.botoes.passar.pode, "os alvos sobre o valor visto (0) e o Tudo R$ 90: " + JSON.stringify(w.botoes));
+      let r = await V.espera(A.lance("+1"));
+      w = A.ver();
+      ok(r.ok && r.estado === "aceito" && w.lote.lider === 0 && w.lote.valor === 1, "o +1 aceito: " + JSON.stringify(r));
+      ok(w.botoes["+1"].motivo === "lider" && !w.botoes.passar.pode && w.tecnicos[0].lider, "quem lidera não dá lance nem passa");
+      await lanceDe(1, 2);
+      // a pessoa toca no +1 (vê R$ 2) e o técnico 2 chega antes com R$ 3
+      const pa = A.lance("+1"); await lanceDe(2, 3); r = await V.espera(pa);
+      ok(!r.ok && r.estado === "antes" && r.valor === 3 && A.ver().lote.lider === 2, "alguém chegou antes: " + JSON.stringify(r));
+      // o +5 também é sobre o valor VISTO: com um lance no meio, aborta (nunca sobe sozinho, mesmo cobrindo o novo)
+      const pb = A.lance("+5"); await lanceDe(1, 4); r = await V.espera(pb);
+      ok(!r.ok && r.estado === "antes" && r.valor === 4 && A.ver().lote.lider === 1, "o +5 com um lance no meio: " + JSON.stringify(r));
+      r = await V.espera(A.lance(1000)); ok(!r.ok && r.motivo === "max" && r.max === 90, "outro valor acima do máximo: " + JSON.stringify(r));
+      r = await V.espera(A.lance(4)); ok(!r.ok && r.motivo === "valor", "outro valor que não passa do atual: " + JSON.stringify(r));
+      const vendidos = []; A.on("vendido", x => vendidos.push(x));
+      r = await V.espera(A.lance("tudo"));
+      ok(r.ok && r.valor === 90, "o Tudo: " + JSON.stringify(r));
+      await V.anda(() => A.vivoN.seq > w.lote.seq);   // ninguém cobre R$ 90: todos passaram, fecha na hora
+      w = A.ver();
+      ok(vendidos.length === 1 && vendidos[0].t === 0 && vendidos[0].preco === 90 && vendidos[0].eu, "vendido para a pessoa por R$ 90: " + JSON.stringify(vendidos));
+      ok(w.tecnicos[0].saldo === 10 && w.tecnicos[0].vagas === 10 && w.tecnicos[0].max === 1 && w.ultimo && w.ultimo.tipo === "vendido", "o caixa depois do Tudo: " + JSON.stringify(w.tecnicos[0]));
+      ok(w.meu.time.length === 1 && w.meu.escalacao.n === 1 && w.meu.escalacao.tit.filter(k => k >= 0).length === 1, "o comprado no campinho");
+      await V.anda(() => A.vendas[vendidos[0].i]);
+      ok(A.ver().vendas.some(x => x.i === vendidos[0].i && x.t === 0 && x.preco === 90), "a venda registrada (vendas)");
+      // o próximo lote: passar; depois o lance chega com o lote já fechado
+      await ate(V, A.ver().lote.liberado + 10, A);
+      if (A.ver().botoes.passar.pode) {
+        r = await V.espera(A.passar());
+        ok(r.ok && A.ver().botoes["+1"].motivo === "passou" && A.ver().tecnicos[0].passou, "passar: " + JSON.stringify(r));
+      } else ok(false, "não pôde passar: " + JSON.stringify(A.ver().botoes.passar));
+      await V.anda(() => A.ver().lote && !A.ver().lote.pausa && A.ver().botoes["+1"].pode);
+      const pf = A.lance("+1");
+      await V.espera(outro.transacao("vivo", cur => Lx.fechar(cur, ctx, cur.seq, Lx.fimDoLote(cur, ctx)).vivo));
+      r = await V.espera(pf);
+      ok(!r.ok && r.estado === "fechado", "o lance que chega com o lote fechado: " + JSON.stringify(r));
+      // textos dos motivos (as telas mostram)
+      ok(SS.textoMotivo("max", { max: 90 }) === "Acima do seu máximo R$ 90" && SS.textoMotivo("goleiro") === "Você já tem goleiro" && SS.textoMotivo("antes", { valor: 7 }) === "Alguém chegou antes: R$ 7", "textoMotivo");
+      // pausa e aceleração do relógio do treino (ganchos)
+      const h0 = A.hora(); A.pausar(); V.hora += 5000;
+      ok(A.hora() === h0 && A.pausado(), "pausado, o relógio do treino não anda");
+      const seqP = A.vivoN.seq; await V.anda(null, 30);
+      ok(A.vivoN.seq === seqP, "pausado, nada acontece");
+      A.retomar(); A.acelerar(10); const h1 = A.hora(); V.hora += 100;
+      ok(Math.abs(A.hora() - h1 - 1000) < 1e-6, "acelerado 10×: " + (A.hora() - h1));
+      A.acelerar(1);
+      A.parar();
+    }
+    // --- formação e escalação: a preferida que deixa de caber muda sozinha (com aviso); trocar; Pronto → campeonato
+    {
+      // a preferida: uma em que o time que a pessoa vai ganhar de graça NÃO cabe (pela máquina pura, sem lances dela)
+      const ctxE = Lx.contexto(Object.assign({ T: 4, semente: "S-esc" }, Lx.criarLotes(mundo, "en", 4)));
+      const puraE = leilaoRobos(ctxE, { LE: Lx, humanos: [0], politica: () => null });
+      const cabemE = Lx.formacoesQueCabem(Lx.contaMascaras(Lx.timeDe(puraE.v, ctxE, 0)));
+      const pref = Lx.FORMACOES.find(f => !cabemE.includes(f)) || "4-2-4";
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "en", bots: 3, formacao: pref, semente: "S-esc", codigo: "SESCAL", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true }));
+      const avisos = [], estados = []; A.on("formacao", x => avisos.push(x)); A.on("estado", x => estados.push(x.estado));
+      await V.anda(() => !!A.vivoN);
+      let r = await V.espera(A.trocar(0, 1)); ok(!r.ok && r.motivo === "incompleto", "trocar com o time incompleto: " + JSON.stringify(r));
+      r = await V.espera(A.mudarFormacao("4-3-3")); ok(r.ok && A.escalacao(0).formacao === "4-3-3", "mudar a formação no começo");
+      r = await V.espera(A.mudarFormacao(pref)); ok(r.ok, "de volta à preferida " + pref);
+      // a pessoa não dá lance: completa de graça no fim (com os melhores de fora, sem olhar a preferida)
+      await V.anda(() => A.vivoN.fase === "fim");
+      await V.anda(() => A.sala.meta.estado === "escalacao");
+      const time = Lx.timeDe(A.vivoN, A.ctx, 0), cabem = Lx.formacoesQueCabem(Lx.contaMascaras(time));
+      const e = A.escalacao(0);
+      ok(cabem.includes(e.formacao) && e.n === 11 && e.tit.every(k => k >= 0), "a escalação no fim cabe: " + e.formacao + " em " + cabem);
+      ok(jsonIgual(cabem, cabemE), "o time de graça ≠ o da máquina pura: " + cabem + " × " + cabemE);
+      ok(!cabem.includes(pref) && avisos.length >= 1 && avisos[0].de === pref && avisos[avisos.length - 1].para === e.formacao && A.escal[0].formacao === e.formacao && e.pref === e.formacao && !e.aviso,
+        `o ${pref} deixou de caber: o aviso e a formação nova (${JSON.stringify(avisos)}, escal ${JSON.stringify(A.escal[0])})`);
+      const naoCabe = Lx.FORMACOES.find(f => !cabem.includes(f));
+      if (naoCabe) { r = await V.espera(A.mudarFormacao(naoCabe)); ok(!r.ok && r.motivo === "naoCabe", "mudar para uma que não cabe: " + JSON.stringify(r)); }
+      // trocar duas vagas do mesmo grupo vale; o goleiro com um zagueiro, não
+      const slots = Lx.slotsDe(e.formacao), dfs = slots.map((s, i) => s[0] === "DF" ? i : -1).filter(i => i >= 0);
+      r = await V.espera(A.trocar(dfs[0], dfs[1]));
+      const e2 = A.escalacao(0);
+      ok(r.ok && e2.manual && e2.tit[dfs[0]] === e.tit[dfs[1]] && e2.tit[dfs[1]] === e.tit[dfs[0]], "trocar dois zagueiros: " + JSON.stringify(r));
+      r = await V.espera(A.trocar(0, dfs[0])); ok(!r.ok && r.motivo === "grupo", "o goleiro na vaga do zagueiro: " + JSON.stringify(r));
+      // a formação nova desfaz a troca à mão (a automática da formação nova)
+      const outra = cabem.find(f => f !== e.formacao);
+      if (outra) { r = await V.espera(A.mudarFormacao(outra)); ok(r.ok && !A.escalacao(0).manual && A.escalacao(0).formacao === outra, "outra formação: a automática"); }
+      // Pronto: com só uma pessoa, o campeonato abre na hora (sem esperar os 60 s)
+      const hP = A.hora();
+      r = await V.espera(A.prontoEscalacao(true));
+      await V.anda(() => A.sala.meta.estado === "camp");
+      ok(A.sala.meta.estado === "camp" && A.hora() - hP < 1000 && A.ver().meu.pronto, "Pronto leva ao campeonato: " + A.sala.meta.estado + " em " + (A.hora() - hP) + " ms");
+      ok(jsonIgual(estados, ["escalacao", "camp"]), "estados da sala: " + estados);
+      A.parar();
+    }
+    // --- só olhar (regras de outra versão), conferência e Minhas salas
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "es", bots: 2, semente: "S-x", codigo: "SXAAAA" }, base)));
+      await V.anda(() => A.vivoN && A.vivoN.seq >= 3);
+      A.parar(); await V.anda(null, 30);
+      // a sala gravada com outras regras: abre só para olhar (nada anda)
+      const g = JSON.parse(arm.g["leilao:sala:SXAAAA"]); g.sala.meta.regras = Lx.REGRAS + 1; arm.g["leilao:sala:SXAAAA"] = JSON.stringify(g);
+      const O = await V.espera(SS.abrir("SXAAAA", base));
+      const seqO = O.vivoN.seq; await V.anda(null, 40);
+      const rO = await V.espera(O.lance("+1"));
+      ok(O.soOlhar && O.vivoN.seq === seqO && !rO.ok && rO.motivo === "fase", "regras de outra versão: só olha");
+      O.parar();
+      g.sala.meta.regras = Lx.REGRAS; arm.g["leilao:sala:SXAAAA"] = JSON.stringify(g);
+      // um vivo adulterado (o saldo que volta) congela a sessão
+      const B = await V.espera(SS.abrir("SXAAAA", base)), alt = [];
+      B.on("alterada", x => alt.push(x.motivo));
+      const outro = B.rede.outroCliente();
+      await V.espera(outro.transacao("vivo", cur => { cur.cx[1][0] = 150; return cur; }));
+      const seqB = B.vivoN.seq; await V.anda(null, 40);
+      ok(B.alterada && alt.length === 1 && B.vivoN.seq === seqB && !B.ver().botoes["+1"].pode, "o vivo adulterado congela: " + B.alterada);
+      B.parar();
+      // Minhas salas: até 3 treinos guardados (o 4º tira o mais antigo)
+      for (const c of ["SXBBBB", "SXCCCC", "SXDDDD"]) { const X = await V.espera(SS.criarTreino(Object.assign({ liga: "de", bots: 1, semente: c, codigo: c }, base))); await V.anda(null, 5); X.parar(); V.hora += 1000; }
+      await V.anda(null, 30);
+      const ls = SS.salas({ armazem: arm });
+      ok(jsonIgual(ls.map(x => x.codigo), ["SXDDDD", "SXCCCC", "SXBBBB"]) && ls.every(x => x.treino && x.T === 2 && x.estado === "leilao" && x.regrasOk && x.clube), "Minhas salas: " + JSON.stringify(ls.map(x => [x.codigo, x.estado, x.T])));
+      ok(!arm.g["leilao:sala:SXAAAA"], "o 4º treino não tirou o mais antigo");
+    }
+    nota("identidades, Tudo de R$ 90, antes/fechado/max/valor, passar, formação com aviso, trocar, Pronto, pausa, aceleração, só olhar, conferência, Minhas salas");
+  });
+}
+
+async function testeProtocolo() {
+  await blocoAsync("L8", "protocolo: o leilão inteiro pela sessão e pela rede em memória = a máquina pura", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, mundo = MUNDO.public;
+    const ligas = [["en", 5], ["br", 3], ["it", 7]];
+    let cenarios = 0, abortos = 0, transacoes = 0, lances = 0;
+    for (const [liga, bots] of ligas) {
+      const sem = "L8-" + liga, cod = "L8" + liga.toUpperCase();
+      // a máquina pura com o mesmo "humano"
+      const ctxP = Lx.contexto(Object.assign({ T: bots + 1, semente: sem }, (() => { const r = Lx.criarLotes(mundo, liga, bots + 1); return { lotes: r.lotes, fora: r.fora }; })()));
+      const pura = leilaoRobos(ctxP, { LE: Lx, humanos: [0], politica: politicaPiloto(Lx, sem) });
+      ok(!pura.erros.length, `${liga}: a máquina pura: ${pura.erros[0]}`);
+      const esperado = resumoFinal(pura.v);
+      const vendasPuras = pura.vendas.slice().sort((a, b) => a.i - b.i);
+
+      // (a) 1 aparelho (o treino no celular), latência 40 ms; (b) 3 aparelhos escalonados (0; 1,5; 3 s); (c) 3 ao mesmo
+      // tempo; (d) latências sorteadas de 0 a 150 ms com 3 ao mesmo tempo (só os invariantes); (e) o 1º aparelho cai no
+      // meio (os outros seguem; invariantes)
+      for (const cen of ["a", "b", "c", "d", "e"]) {
+        cenarios++;
+        const V = relogioVirtual(), arm = armazemFalso(), id = `${liga}/T${bots + 1}/${cen}`;
+        const rs = TMx.rng.make(TMx.rng.hashStr("lat:" + id));
+        const lat = cen === "d" ? () => Math.floor(rs() * 151) : 40;
+        const A = await V.espera(SS.criarTreino({ liga, bots, formacao: "4-4-2", semente: sem, codigo: cod + cen, mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: lat, semAtual: true }));
+        const sessoes = [A], contas = [contaTransacoes(A.rede)];
+        if (cen !== "a") {
+          for (const k of [1, 2]) {
+            const rede = A.rede.outroCliente({ latencia: lat });
+            contas.push(contaTransacoes(rede));
+            sessoes.push(await V.espera(SS.abrir(A.codigo, { rede, eu: -1, atraso: cen === "b" || cen === "e" ? 1500 * k : 0, agendar: V.agendar, cancelar: V.cancelar, semAtual: true })));
+          }
+        }
+        const pil = piloto(A, V, Lx);
+        if (cen === "e") {
+          // o 1º aparelho (com o "humano") cai quando o leilão passa da metade
+          await V.anda(() => A.vivoN && A.vivoN.seq >= Math.floor(ctxP.fila.length / 2));
+          pil.parar(); A.parar();
+        }
+        const fim = sessoes[sessoes.length - 1];
+        const chegou = await V.anda(() => fim.vivoN && fim.vivoN.fase === "fim" && sessoes.every(S => S.parado || (S.vivoN && S.vivoN.fase === "fim")));
+        ok(chegou, `${id}: o leilão não terminou (seq ${fim.vivoN && fim.vivoN.seq})`);
+        // a sala passa à escalação e, com 60 s (ninguém marcou "Pronto"), ao campeonato
+        await V.anda(() => fim.sala && fim.sala.meta.estado === "camp");
+        ok(fim.sala && fim.sala.meta.estado === "camp", `${id}: a sala não passou à escalação e ao campeonato (${fim.sala && fim.sala.meta.estado})`);
+        const banco = A.rede._arvore();
+        for (const S of sessoes) if (!S.parado) {
+          confereFimSessao(ok, S, id);
+          ok(resumoFinal(S.vivoN) === resumoFinal(Lx.norm(banco.vivo, S.ctx)), `${id}: o aparelho ${sessoes.indexOf(S)} viu outro fim`);
+        }
+        if (cen === "a" || cen === "b" || cen === "c") {
+          ok(resumoFinal(Lx.norm(banco.vivo, A.ctx)) === esperado, `${id}: o leilão pela rede ≠ a máquina pura`);
+          const vr = vendasDaRede(banco);
+          ok(jsonIgual(vr, vendasPuras), `${id}: as vendas gravadas ≠ as da máquina pura (${vr.length} × ${vendasPuras.length}): ${JSON.stringify(vendasPuras.filter(x => !vr.some(y => jsonIgual(x, y))))} × ${JSON.stringify(vr.filter(x => !vendasPuras.some(y => jsonIgual(x, y))))}`);
+        }
+        // ao mesmo tempo, os outros aparelhos disputam (e abortam); escalonados, quase não tentam (o 1º já agiu)
+        const tentOutros = contas.slice(1).reduce((s, c) => s + c.tentou, 0), abOutros = contas.slice(1).reduce((s, c) => s + c.abortou, 0);
+        if (cen === "c") ok(abOutros > 0, `${id}: nenhuma transação dos outros aparelhos abortou (o teste não testou a disputa)`);
+        if (cen === "b") ok(tentOutros <= 0.05 * contas[0].tentou, `${id}: escalonados, os outros aparelhos tentaram ${tentOutros} transações (o 1º, ${contas[0].tentou})`);
+        abortos += abOutros;
+        transacoes += contas.reduce((s, c) => s + c.tentou, 0);
+        lances += pil.acoes();
+        ok(pil.acoes() > 0, `${id}: o "humano" não agiu`);
+        sessoes.forEach(S => S.parar());
+        pil.parar();
+      }
+
+      // (f) recarregar a página no meio: o mesmo estado, o mesmo tempo que faltava, e o fim = a máquina pura
+      {
+        cenarios++;
+        const V = relogioVirtual(), arm = armazemFalso(), id = `${liga}/T${bots + 1}/recarregar`;
+        const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: 40, semAtual: true };
+        const A = await V.espera(SS.criarTreino(Object.assign({ liga, bots, formacao: "4-4-2", semente: sem, codigo: cod + "F", mundo }, base)));
+        let pil = piloto(A, V, Lx);
+        // para no meio de um lote com lance (tempo correndo)
+        await V.anda(() => A.vivoN && A.vivoN.seq >= 12 && (A.vivoN.n || 0) >= 1 && A.hora() > A.vivoN.t + 300);
+        const horaAntes = A.hora();
+        pil.parar(); A.parar();
+        // o que já estava a caminho da rede termina (no treino a "rede" é a própria página) e vai para o aparelho
+        await V.anda(null, 60);
+        const gravado = JSON.parse(arm.g["leilao:sala:" + A.codigo]), vivoGravado = JSON.stringify(gravado.vivo);
+        const hEsperada = Math.max(gravado.relogio || 0, gravado.vivo.abre || 0, gravado.vivo.t || 0);
+        const fimG = Lx.fimDoLote(gravado.vivo, A.ctx), restanteG = fimG - Math.max(hEsperada, gravado.vivo.abre + A.ctx.espera);
+        V.hora += 10 * 60000;                          // a página ficou fechada 10 min: o relógio do treino não anda
+        const B = await V.espera(SS.abrir(A.codigo, base));
+        ok(JSON.stringify(B.vivo) === vivoGravado, `${id}: depois de recarregar, outro vivo`);
+        ok(Math.abs(B.hora() - hEsperada) < 1 && B.hora() - horaAntes < 100, `${id}: o relógio do treino andou com a página fechada (${B.hora() - horaAntes} ms)`);
+        const depois = B.ver();
+        ok(depois.lote && depois.lote.i === gravado.vivo.i && Math.abs(depois.lote.restante - restanteG) < 1 && restanteG > 0, `${id}: o lote voltou com outro tempo (${restanteG} → ${depois.lote && depois.lote.restante})`);
+        ok(B.eu === 0 && depois.tecnicos.length === bots + 1, `${id}: voltou como outro técnico`);
+        pil = piloto(B, V, Lx);
+        await V.anda(() => B.vivoN && B.vivoN.fase === "fim");
+        confereFimSessao(ok, B, id);
+        ok(resumoFinal(B.vivoN) === esperado, `${id}: recarregando no meio, o leilão ≠ a máquina pura`);
+        pil.parar();
+        // sair da sala apaga o treino do aparelho (e nada grava de novo depois)
+        await V.espera(B.sair());
+        await V.anda(null, 50);
+        ok(!Object.keys(arm.g).some(k => k.indexOf("leilao:sala:") === 0) && !(arm.g["leilao:salas"] && JSON.parse(arm.g["leilao:salas"]).length), `${id}: sair da sala não apagou o treino: ${Object.keys(arm.g)}`);
+      }
+    }
+    nota(`${cenarios} leilões pela sessão (${ligas.map(x => x[0] + "/T" + (x[1] + 1)).join(", ")}; 1 aparelho, 3 escalonados, 3 ao mesmo tempo, latências sorteadas, o 1º aparelho caindo, recarregar no meio); ${transacoes} transações, ${abortos} abortadas pela disputa; ${lances} ações do "humano"`);
+  });
+}
 
 /* ===================================================== L9 formações ===================================================== */
-bloco("L9", "formações: os grupos do jogador, nunca dois goleiros, as vagas do TM", (ok) => {
+bloco("L9", "formações e escalação: os grupos do jogador, nunca dois goleiros, as vagas do TM, o encaixe de menor custo", (ok, nota) => {
   const F = TMs.public.comp.FORMATIONS;
   for (const f of LE.FORMACOES) {
     ok(!!F[f], `${f} não existe em TM.comp.FORMATIONS`);
@@ -558,7 +920,64 @@ bloco("L9", "formações: os grupos do jogador, nunca dois goleiros, as vagas do
   }
   ok(lotes.filter(l => l.pos === "GK").every(l => jsonIgual(l.grupos, ["GK"])), "goleiro com outro grupo");
   ok(lotes.filter(l => l.pos !== "GK").every(l => !l.grupos.includes("GK")), "jogador de linha com o grupo dos goleiros");
-});
+
+  // a escalação: os 11 de cada time no fim, cada um numa vaga dos SEUS grupos, com o menor custo de função (−1/−2);
+  // nenhuma troca de duas vagas baixa o custo (o encaixe é o ótimo) e o custo é o do specificPenalty do TM
+  let times = 0, penTot = 0, comPen = 0, versaUsado = 0;
+  for (const [liga, T] of [["br", 4], ["en", 8], ["jp", 3], ["it", 6]]) {
+    const ctx = ctxDe("public", liga, T, "esc-" + liga), res = leilaoRobos(ctx);
+    for (let t = 0; t < T; t++) {
+      times++;
+      const e = LE.escalacaoDe(res.v, ctx, t, null, "4-4-2"), slots = LE.slotsDe(e.formacao);
+      const ok11 = e.n === 11 && e.tit.length === 11 && new Set(e.tit).size === 11 && e.tit.every(k => k >= 0);
+      ok(ok11, `${liga}/T${T}/t${t}: escalação ${JSON.stringify(e.tit)}`);
+      if (!ok11) continue;
+      ok(e.formacao === LE.formacaoPara("4-4-2", LE.timeDe(res.v, ctx, t)), `${liga}/t${t}: formação ${e.formacao}`);
+      const custo = tit => tit.reduce((s, k, i) => s + LE.custoVaga(LE.retratoDe(ctx, k), slots[i]), 0);
+      const c0 = custo(e.tit);
+      ok(c0 < LE.FORA_VAGA && c0 === e.pen.reduce((a, b) => a + b, 0), `${liga}/t${t}: custo ${c0} × pen ${e.pen}`);
+      penTot += c0; if (c0) comPen++;
+      e.tit.forEach((k, i) => { const r = LE.retratoDe(ctx, k); if (slots[i][0] !== r.pos) versaUsado++; ok(r.grupos.includes(slots[i][0]), `${liga}/t${t}: ${r.pos} ${r.grupos} na vaga ${slots[i][0]}`); });
+      for (let a = 0; a < 11; a++) for (let b = a + 1; b < 11; b++) {
+        const tt = e.tit.slice(); [tt[a], tt[b]] = [tt[b], tt[a]];
+        if (custo(tt) < c0) { ok(false, `${liga}/t${t}: trocar ${a} e ${b} baixa o custo (${custo(tt)} < ${c0})`); a = 11; break; }
+      }
+      // o custo da vaga = o specificPenalty do TM com o jogador de verdade (sem gravar nada no retrato)
+      const k0 = e.tit[5], r0 = LE.retratoDe(ctx, k0), p0 = MUNDO.public.playersById[r0.id];
+      ok(LE.custoVaga(r0, slots[5]) === TMs.public.comp.specificPenalty(p0, slots[5]) && !("_versa" in r0), `${liga}/t${t}: custo da vaga ≠ specificPenalty (${r0.id})`);
+      // trocar à mão: o goleiro com um de linha não; dois do mesmo grupo sim (e a manual vale enquanto for válida)
+      const gk = slots.findIndex(sl => sl[0] === "GK"), df = slots.map((sl, i) => sl[0] === "DF" ? i : -1).filter(i => i >= 0);
+      ok(LE.trocarVagas(e, ctx, gk, df[0]).erro === "grupo", `${liga}/t${t}: goleiro trocado com zagueiro`);
+      const tr = LE.trocarVagas(e, ctx, df[0], df[1]);
+      ok(tr.tit && tr.tit[df[0]] === e.tit[df[1]], `${liga}/t${t}: troca de zagueiros recusada (${tr.erro})`);
+      const em = LE.escalacaoDe(res.v, ctx, t, { formacao: e.formacao, tit: tr.tit }, "4-4-2");
+      ok(em.manual && jsonIgual(em.tit, tr.tit), `${liga}/t${t}: a escalação à mão não vale`);
+      const ruim = tr.tit.slice(); ruim[gk] = tr.tit[df[0]]; ruim[df[0]] = tr.tit[gk];
+      ok(!LE.escalacaoDe(res.v, ctx, t, { formacao: e.formacao, tit: ruim }, "4-4-2").manual, `${liga}/t${t}: a escalação à mão inválida valeu`);
+    }
+  }
+  // o método húngaro contra a força bruta (matrizes pequenas sorteadas)
+  {
+    const r = rngT("hungaro");
+    const perms = (m, n) => { const out = []; const rec = (pre, usados) => { if (pre.length === n) { out.push(pre.slice()); return; } for (let j = 0; j < m; j++) if (!usados[j]) { usados[j] = 1; pre.push(j); rec(pre, usados); pre.pop(); usados[j] = 0; } }; rec([], []); return out; };
+    let errados = 0;
+    for (let caso = 0; caso < 300; caso++) {
+      const n = 1 + Math.floor(r() * 5), m = n + Math.floor(r() * 3);
+      // vagas e jogadores de mentira com grupos sorteados: o custo pela própria escalacao (slots do 4-4-2 cortados)
+      const a = []; for (let i = 0; i < n; i++) { a.push([]); for (let j = 0; j < m; j++) a[i].push(r() < 0.25 ? LE.FORA_VAGA : Math.floor(r() * 3)); }
+      let melhor = Infinity; for (const p of perms(m, n)) { let c = 0; for (let i = 0; i < n; i++) c += a[i][p[i]]; melhor = Math.min(melhor, c); }
+      const col = LE._hungaro(a, n, m); let c = 0; for (let i = 0; i < n; i++) c += a[i][col[i]];
+      if (c !== melhor || new Set(col).size !== n) errados++;
+    }
+    ok(errados === 0, `o método húngaro errou ${errados} de 300 contra a força bruta`);
+  }
+  // time incompleto (durante o leilão): os que tem nas vagas, o resto vazio
+  {
+    const ctx = ctxDe("public", "br", 4, "esc-parcial"), res = leilaoRobos(ctx), meio = res.estados[Math.floor(res.estados.length / 2)];
+    const e = LE.escalacaoDe(meio, ctx, 0, null, "4-4-2"), idx = LE.timeIdx(meio, ctx, 0);
+    ok(e.n === idx.length && e.n < 11 && e.tit.filter(k => k >= 0).length === e.n && e.tit.filter(k => k < 0).length === 11 - e.n, `escalação com ${idx.length}: ${JSON.stringify(e.tit)}`);
+  }
+  nota(`${times} times escalados no ótimo (${comPen} com −1/−2, custo médio ${(penTot / Math.max(1, times)).toFixed(2)}; ${versaUsado} jogadores fora do grupo principal, em grupo seu)`);});
 
 /* ===================================================== L10 conferência ===================================================== */
 bloco("L10", "conferência: o vivo adulterado é acusado", (ok, nota) => {
@@ -674,6 +1093,8 @@ async function testeRede() {
   if (erros.length) { falhas++; erros.forEach(e => console.log("         · " + e)); }
 }
 
+await testeProtocolo();
+await testeSessao();
 await testeRede();
 console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + (SO && !SO.includes("R") ? 0 : 1) - falhas} de ${resultados.length + (SO && !SO.includes("R") ? 0 : 1)} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
 process.exit(falhas ? 1 : 0);
