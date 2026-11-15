@@ -1148,3 +1148,68 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     o pulo de +60 s, quem some e volta, quem some de vez e o dono) e oito (quem sai). O arquivo inteiro: 17 blocos em ~67 s.
     Sete mutações da sessão reprovam: sem os jogos na limpeza, sem a testemunha no prazo do jogo, sem pausar, sem a volta do
     reservado, a escalação de quando a rodada abriu, retomar sem a pessoa e sem a conferência do resultado.
+- **As telas** (o passo 3: `js/leilao-tela.js`, o bloco LEILÃO do `css/styles.css`, `js/matchview.js`, `js/pitch2d.js`,
+  `js/ui.js`; v384):
+  - **O Formato** na Criar (treino e online) e no Saguão (o dono muda; zera os Pronto): 3 cartões com o ícone (`swords`,
+    `list`, `layers`), a frase e "N rodadas com T técnicos · ~X a Y min" (`TM.leilaoCamp.duracaoEstimada`, o simulado); o
+    resumo da Criar e o Saguão dizem a duração do leilão e a do campeonato. Os cartões ficam em coluna em todo tamanho (a
+    frase quebra dentro do botão; em 3 colunas não cabia em 620 px).
+  - **A aba Campeonato** lê só o `ver().camp`: o cabeçalho (o formato e "Rodada N de M · 1º turno"), **Seu jogo**
+    (`.next-match`: os dois escudos desenhados, o clube e o técnico; contra um bot o prazo "Simulado sozinho em M:SS" pela
+    hora da sala, "Prazo parado em M:SS" e o **Simular partida**; contra um amigo "simulado ao abrir a rodada" até o PR 5;
+    feito, o placar, "Vitória/Derrota (nos pênaltis, no gol de ouro)" e o Ver o jogo; folga e eliminado dizem isso), **a
+    rodada à mostra** (‹ › por todas, começando na da vez; cada jogo com o estado — "Simulado · pênaltis 4 × 3", "Simulado
+    · gol de ouro", "Esperando", "Simulando…", "Esperando a rodada", "A definir" — e o Ver o jogo; nada de "Jogando em 3D"
+    ainda), **a tabela** (pontos e misto; os classificados do misto marcados; V/E/D somem abaixo de 400 px para a tabela
+    não rolar de lado), **a chave** (mata-mata e a fase final do misto; as rodadas uma embaixo da outra, em 3 colunas no
+    PC com 3 rodadas; as folgas na própria rodada, o vencedor em verde) e **a artilharia** (os 5 primeiros, com empate na
+    posição). No PC e no celular deitado, duas colunas (Seu jogo e a rodada; a tabela, a chave e a artilharia).
+  - **Simular os pendentes** só no online e só 8 s depois de a rodada abrir (os jogos dos bots e os de amigo contra amigo
+    são simulados na abertura, escalonados: o botão piscava a cada rodada). No treino não aparece: o único jogo que espera
+    é o da própria pessoa, que tem o Simular partida.
+  - **O fim** (§1.8): o campeão no pôster do fim de jogo do TM (`md-poster fim`, escuro nos dois temas, como o de sempre)
+    com a coroa, o escudo desenhado, o técnico, a campanha ("Final: 2 × 1 contra X", "31 pontos em 14 jogos") e a pílula
+    "Você é o campeão" ou "Seu lugar: Nº"; a classificação final (até onde cada um foi: Campeão, Vice, Semifinal, Quartas
+    de final, "Fase de pontos · Nº", ou os pontos); o artilheiro (com quantos empataram) e o melhor time pela soma das
+    notas; Voltar e Criar outra sala. A rodada, a tabela, a chave e a artilharia continuam embaixo para consulta.
+  - **O "Ver o jogo"** é a rota `leilao-jogo` ({ id }): o `TM.matchview.play` com o resultado GRAVADO (cópia), `pauseSide`
+    null (sem o botão de pausa: o `resimRest` só é chamado pelo "Retomar" da pausa, que só existe com um lado; e sem o 3D: o
+    `tm3d.js` só entra com `pauseSide`), depois a `prorrogacao` com `golDeOuro` e os `pen-shootout` com os `kicks` gravados.
+    O "Simular partida" chama `simular()` e só abre o 2D com a resposta (o jogo já feito). A rota fica fora das rotas da sala:
+    no treino o relógio para enquanto a pessoa vê o jogo. O motor do 2D não sorteia nada no Ver o jogo (o teste conta as
+    chamadas do `TM.engine.simulate` que vêm do `matchview.js`: 0); as falas de ambiente do feed continuam com
+    `Math.random` (só texto, não mexem no resultado).
+  - **Fora do leilão** (§3.7): `TM.ui.escudoUT(t, cls)` desenha o escudo do Ultimate de um time sem clube nem seleção
+    (`{ forma, simb, cor }` do Ultimate ou `{ escudo: "forma|simb", cor, sigla }` do leilão) e é usado pelo `escudoDe` do
+    pôster, pelo `crestOf` do 2D e pelo dos pênaltis; o `pickColors` do Campo 2D e a cor do lance do gol leem `t.colors`
+    depois do clube e da seleção; a `prorrogacao` com `golDeOuro` diz "PRORROGAÇÃO · GOL DE OURO", "o 1º gol acaba o jogo"
+    e marca o gol (também o de pênalti). Sem `escudoUT`, `colors` e `golDeOuro`, nada muda — mas **o time do Ultimate (e os
+    adversários dele) já tinham `escudoUT` e `colors`**: no 2D do Ultimate passam a aparecer o escudo desenhado e as cores
+    do clube (antes, sem escudo e com o azul/vermelho de reserva). A rota `prorrogacao` passou a chamar o `E()` (o `el` do
+    módulo era preenchido só pelo `play`).
+  - **A região ao vivo** fala a rodada que abre ("Semifinal começou"), o fim do MEU jogo com o placar e o campeão; da
+    Escalação, quem já confirmou o Pronto vai sozinho ao Campeonato quando ele começa. O foco do teclado volta ao mesmo
+    botão quando a aba se refaz (o ‹ ›, o Simular, o Ver o jogo; o ‹ que apaga passa ao ›).
+  - **Ganchos de teste** (no topo do `leilao-tela.js`): `TM.leilaoTela.estado()` ganhou `prazo`, `rodadaVista` e `jogo`;
+    seletores estáveis `.lei-fmt[data-fmt]`, `.lei-simular`, `.lei-pend-bt`, `.lei-rodada[data-rodada]`,
+    `.lei-jogo[data-jogo][data-e]`, `.lei-jg-ver`, `.lei-ch-jogo[data-jogo]`, `.lei-campeao`, `.lei-class`, `.lei-dest`.
+  - **A partida comum no 2D não mudou**: o placar do `matchview` (clubes, seleção e um time sem nada), o cabeçalho do Campo
+    2D e a `prorrogacao` sem `golDeOuro` saem com o MESMO HTML na main (c6c39bd6) e no branch (conferido no navegador, com o
+    sorteio preso).
+  - **testar-leilao --tela** (58 itens em ~324 s; antes 38 em ~224 s): T2 o Formato na Criar; T8 o Pronto leva sozinho ao
+    Campeonato; T11 Seu jogo (o prazo andando pelo relógio da sala, os dois escudos), o tema claro, a Escalação que "vale a
+    partir do próximo jogo", o Simular partida que só abre o 2D com o jogo JÁ feito (o `TM.ui.go` vigiado), o 2D sem o botão
+    de pausa e sem sorteio vindo do `matchview.js` (o `TM.engine.simulate` vigiado pela pilha: a conferência da sessão também
+    simula, por outro caminho), o estado de cada jogo e o ‹ › com o foco; T12 o mata-mata de 4 até o campeão pela tela, o fim
+    (o pôster, a classificação na ordem da sessão, o artilheiro, o melhor time, Voltar e Criar outra sala) e a região ao vivo;
+    T13 Pontos corridos com 8, Pontos + mata-mata com 8 e Mata-mata com 6 até o campeão pela tela — 24 jogos vistos no 2D com
+    o placar dos 90' conferido contra o gravado, as prorrogações (o gol de ouro) e os pênaltis também — e nada sobre nada em
+    96 telas do Campeonato e do fim (8 tamanhos, escuro e claro; a tabela sem rolar de lado; só escudos desenhados). O
+    `testar-sobreposicao` nas rotas `leilao` e `leilao-criar`: 0 nos 7 tamanhos.
+  - **testar-leilao-online D14** deixou o "em breve": as duas páginas vão sozinhas ao Campeonato, a Final de amigo contra
+    amigo é simulada ao abrir a rodada (motivo `abertura`), o mesmo resultado e o mesmo campeão nas duas; D14b o Ver o jogo
+    com o placar gravado, sem pausa e com os escudos desenhados. O campeonato com o prazo vencido e o jogo reaberto no online
+    pela tela (o resto do §4.3) fica para o próximo passo.
+  - **Achados pelos testes**: o campeão não era falado para quem estava no Ver o jogo quando o campeonato acabou (agora, ao
+    voltar ao Campeonato, uma vez por sala); no teste, com o relógio do treino a ×40, os 60 s da escalação passavam antes de a
+    tela chegar a ela (o teste volta o relógio ao normal no fim do leilão).
