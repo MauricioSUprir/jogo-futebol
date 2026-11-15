@@ -22,6 +22,10 @@
      nos 3 formatos até o campeão (o prazo de 2 min no jogo da pessoa, o Simular que grava antes de responder, cada jogo
      reservado e gravado uma vez e conferido, a mesma vista noutro "aparelho"), K2 recarregar no meio = os mesmos
      resultados, K3 a escalação mudada vale a partir do próximo jogo que não começou, K4 a sala adulterada congela ·
+     TD o jogo contra um bot em 3D (PR 4): o resultado do 3D convertido (o gol de ouro e os pênaltis do empate com a
+     semente), gravar uma vez, o W.O. depois do prazo do 3D pelo relógio do servidor, o 3D que não abriu = o simulado,
+     duas abas do mesmo técnico (uma reserva só), a duração e a dificuldade do 3D na sala e a conferência que aceita o 3D
+     e acusa o adulterado ·
      KO o campeonato ONLINE pela firebase() sobre o banco falso (2, 4 e 8 aparelhos; a limpeza; as regras opcionais do
      firebase/regras-leilao-validate.json avaliadas em cada gravação: nenhuma honesta recusada, as adulterações recusadas)
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
@@ -3026,6 +3030,241 @@ async function testeCampSessao() {
   });
 }
 
+/* ===================================================== TD o jogo contra um bot em 3D (PR 4) =====================================================
+   O "Jogar" da pessoa contra um bot (leilao-camp.js resDo3d/res3dValido/marcarAbriu/naoAbriu/wo e a sessão jogar3d/abriu3d/
+   gravar3d), sem navegador: TD1 o resultado do 3D convertido (a vitória com gol, gol contra e pênalti, os cartões e o
+   expulso, as estatísticas; o empate do mata-mata com o gol de ouro e os pênaltis simulados com a semente — o mesmo em todo
+   aparelho, outro com outra trava —; o empate nos pontos); TD2 a máquina (o abriu uma vez, gravar uma vez, o fim e o res
+   do 3D); TD3 a duração e a dificuldade do 3D na cfg e no ver(); TD4 o gravar('3d') pela sessão grava UMA vez e o 2º
+   devolve o gravado; TD5 o "Simular partida" da tela do 3D (o simulado com a semente, as escalações da reserva); TD6 o
+   W.O. depois do prazo do 3D pelo relógio do servidor (e não antes); TD7 o 3D que não abriu = o simulado depois de 2 min;
+   TD8 duas abas do mesmo técnico: uma reserva só; TD9 a conferência aceita o 3D e acusa o adulterado. */
+async function testeCamp3d() {
+  await blocoAsync("TD", "o jogo contra um bot em 3D: o resultado convertido, gravar uma vez, o W.O. pelo prazo, o que não abriu, duas abas, a conferência", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, LC = TMx.leilaoCamp, mundo = MUNDO.public;
+    const cont = { wo: 0, naoAbriu: 0, pror: 0, ouro: 0, pen: 0 };
+    // um treino de mata-mata com 2 (o único jogo: a pessoa contra o bot) até o jogo da pessoa abrir
+    async function treino(cod, extra) {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "br", bots: 1, semente: "TD-" + cod, codigo: cod, formato: "mata", tempo: 10 }, extra || {}, base)));
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      await V.espera(A.prontoEscalacao(true));
+      await V.anda(() => A.jogos.m1j0 && A.jogos.m1j0.e === "aberto");
+      return { V, A, base };
+    }
+    // um resultado do 3D (o formato do golaco) para os dois times do jogo
+    function r3De(T, gols, cartoes, stats) {
+      const pl = (lado, i) => T[lado].players[i];
+      return {
+        homeGoals: gols.filter(g => g[0] === 0).length, awayGoals: gols.filter(g => g[0] === 1).length,
+        gols: gols.map(([lado, i, minuto, x]) => { const p = x === "contra" ? pl(1 - lado, i) : pl(lado, i); return { lado, tmId: p.id, nome: p.name, minuto, penalti: x === "pen", contra: x === "contra" }; }),
+        cartoes: (cartoes || []).map(([lado, i, minuto, cor]) => ({ lado, tmId: pl(lado, i).id, nome: pl(lado, i).name, minuto, cor })),
+        stats: stats || { possession: [55, 45], shots: [11, 7], onTarget: [5, 3] }
+      };
+    }
+
+    /* ---- TD1 o resultado do 3D convertido ---- */
+    {
+      const { A } = await treino("TD1RES");
+      A.pausar();
+      const c = A._campCtx(), esc = [LC.escalacaoDoJogo(c, 0), LC.escalacaoDoJogo(c, 1)];
+      const j = LC.reservar(null, { ab: [0, 1], esc, modo: "3d", por: 0, motivo: "pedido", ts: 5000 }).jogo;
+      const T = [LC.timeDoTecnico(c, 0, esc[0]), LC.timeDoTecnico(c, 1, esc[1])];
+      // a vitória: gol, pênalti do outro, gol contra a favor, amarelo e vermelho
+      const r3 = r3De(T, [[0, 9, 12], [1, 10, 50, "pen"], [0, 3, 77, "contra"]], [[1, 5, 30, "yellow"], [0, 4, 60, "red"]]);
+      const res = LC.resDo3d(c, "m1j0", j, r3), ev = res.events;
+      const gols = ev.filter(e => e.type === "goal" || e.type === "pengoal");
+      ok(res.em3d === true && res.score.join() === "2,1" && res.placar.join() === "2,1" && res.v === 0 && !res.pror && !res.pen && LC.resValido(res, true), "TD1 vitória: " + JSON.stringify({ s: res.score, p: res.placar, v: res.v }));
+      ok(gols.length === 3 && gols[0].playerId === T[0].players[9].id && gols[0].minute === 12 && gols[1].type === "pengoal" && gols[1].team === 1 && gols[1].playerId === T[1].players[10].id &&
+        gols[2].team === 0 && gols[2].playerId == null && /\(contra\)/.test(gols[2].player) && gols[2].score.join() === "2,1", "TD1 os gols (autor, pênalti, gol contra sem autor): " + JSON.stringify(gols.map(g => [g.type, g.team, g.playerId, g.minute])));
+      const am = ev.find(e => e.type === "yellow"), vm = ev.find(e => e.type === "red");
+      ok(am && am.team === 1 && am.playerId === T[1].players[5].id && vm && vm.team === 0 && res.sentOff && res.sentOff.length === 1 && res.sentOff[0].id === T[0].players[4].id && res.sentOff[0].side === 0, "TD1 os cartões e o expulso");
+      ok(ev.some(e => e.type === "half" && e.minute === 45 && e.score.join() === "1,0") && ev[ev.length - 1].type === "full" && ev.every((e, i) => !i || ev[i - 1].minute <= e.minute), "TD1 o intervalo, o fim e a ordem dos lances");
+      ok(res.stats.possession.join() === "55,45" && res.stats.shots.join() === "11,7" && res.stats.onTarget.join() === "5,3", "TD1 as estatísticas do 3D");
+      const feito = LC.gravar(j, { trava: 5000, res, ts: 6000, mata: true, fim: "3d" });
+      ok(feito.ok && feito.jogo.fim === "3d" && LC.res3dValido(c, "m1j0", feito.jogo), "TD1 o feito do 3D com a forma certa");
+      // o empate no mata-mata: o gol de ouro e os pênaltis com a semente do jogo (o mesmo noutro aparelho; outro com outra trava)
+      const e11 = r3De(T, [[0, 9, 20], [1, 10, 70]]);
+      let difere = 0;
+      for (let k = 0; k < 40; k++) {
+        const jk = Object.assign({}, j, { trava: 7000 + k });
+        const a = LC.resDo3d(c, "m1j0", jk, e11), b = TMs.pro.leilaoCamp.resDo3d(c, "m1j0", jk, JSON.parse(JSON.stringify(e11)));
+        ok(LC.canon(a) === LC.canon(b), `TD1 empate (trava ${7000 + k}): outro resultado noutro aparelho`);
+        ok(a.score.join() === "1,1" && a.pror && a.placar.join() === a.pror.score.join() && a.v !== -1 && LC.resValido(a, true), `TD1 empate (trava ${7000 + k}) sem o gol de ouro/pênaltis: ${JSON.stringify({ p: a.placar, v: a.v })}`);
+        ok(LC.canon(LC.completarMata({ score: [1, 1], events: a.events }, T[0], T[1], LC.sementeJogo(c.codigo, "m1j0", 7000 + k)).pror) === LC.canon(a.pror), "TD1 o gol de ouro não é o da semente do jogo");
+        cont.pror++; if (a.pror.ouro != null) cont.ouro++; if (a.pen) cont.pen++;
+        if (k && LC.canon(a.pror) !== LC.canon(LC.resDo3d(c, "m1j0", j, e11).pror)) difere++;
+      }
+      ok(cont.ouro > 0 && cont.pen > 0 && difere > 0, `TD1 empates: ${cont.ouro} gols de ouro, ${cont.pen} pênaltis, ${difere} diferentes com outra trava`);
+      // o empate nos pontos: fica empate (sem prorrogação)
+      const ep = LC.resDo3d(c, "r1j0", j, e11);
+      ok(ep.v === -1 && !ep.pror && !ep.pen && ep.placar.join() === "1,1" && LC.resValido(ep, false), "TD1 o empate nos pontos");
+      // o 3D com mais gols no placar que na lista: o placar vale, sem autor
+      const r3b = r3De(T, [[0, 9, 12]]); r3b.homeGoals = 2;
+      const rb = LC.resDo3d(c, "r1j0", j, r3b);
+      ok(rb.score.join() === "2,0" && rb.events.filter(e => e.type === "goal").length === 2, "TD1 o gol sem autor do placar do 3D");
+      A.parar();
+    }
+
+    /* ---- TD2 a máquina: o abriu uma vez, gravar uma vez, o fim do 3D ---- */
+    {
+      const c = LC.contexto({ formato: "mata", T: 2, semente: "td2" });
+      const j = LC.reservar(null, { ab: [0, 1], esc: [{ formacao: "4-4-2", tit: [] }, { formacao: "4-4-2", tit: [] }], modo: "3d", por: 0, motivo: "pedido", ts: 1000 }).jogo;
+      const a1 = LC.marcarAbriu(j, { trava: 1000, ts: 1500 });
+      ok(a1.ok && a1.jogo.abriu === 1500 && LC.marcarAbriu(a1.jogo, { trava: 1000, ts: 1600 }).motivo === "abriu" && LC.marcarAbriu(j, { trava: 999, ts: 1600 }).motivo === "trava", "TD2 o abriu: uma vez, com a mesma trava");
+      const rs = { score: [1, 0], placar: [1, 0], events: [{ minute: 10, type: "goal", team: 0 }], v: 0, em3d: true }, rsim = Object.assign({}, rs, { em3d: undefined });
+      ok(LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true }).motivo === "fim" && LC.gravar(a1.jogo, { trava: 1000, res: rsim, ts: 2000, mata: true, fim: "3d" }).motivo === "res" &&
+        LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true, fim: "simulado" }).motivo === "res", "TD2 gravar o 3D sem o fim ou com o resultado trocado");
+      const g = LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true, fim: "3d" });
+      ok(g.ok && g.jogo.e === "feito" && g.jogo.fim === "3d" && g.jogo.abriu === 1500 && LC.gravar(g.jogo, { trava: 1000, res: rs, ts: 2100, mata: true, fim: "3d" }).motivo === "feito" &&
+        LC.wo(g.jogo, { trava: 1000, hora: 1e13, ts: 1 }, c).motivo === "feito" && LC.naoAbriu(g.jogo, { trava: 1000, hora: 1e13, ts: 1, res: rsim }, c).motivo === "feito", "TD2 o 3D gravado uma vez só");
+      ok(LC.naoAbriu(a1.jogo, { trava: 1000, hora: 1e13, ts: 1, res: rsim }, c).motivo === "abriu" && LC.naoAbriu(j, { trava: 1000, hora: 1000 + LC.PRAZO - 1, ts: 1, res: rsim }, c).motivo === "cedo" &&
+        LC.naoAbriu(j, { trava: 1000, hora: 1000 + LC.PRAZO, ts: 3, res: rsim }, c).jogo.fim === "simulado", "TD2 o simulado do 3D que não abriu (só depois de 2 min, só sem o abriu)");
+      ok(LC.duracao3dDe(7) === 4 && LC.duracao3dDe("8") === 8 && LC.dificuldade3dDe("x") === "normal" && LC.dificuldade3dDe("lenda") === "lenda" && LC.prazo3d(3) === 948000 && LC.prazo3d() === 1104000, "TD2 a duração e a dificuldade (padrões) e o prazo");
+      const d4 = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata", tresD: true, duracao3d: 4 }), d10 = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata", tresD: true, duracao3d: 10 });
+      ok(d10.camp.lo > d4.camp.lo && d10.camp.hi > d4.camp.hi, "TD2 a duração estimada conta a duração do 3D");
+    }
+
+    /* ---- TD3 a duração e a dificuldade do 3D na cfg da sala e no ver(); TD4 gravar('3d') uma vez ---- */
+    {
+      const { V, A, base } = await treino("TD4GRA", { duracao3d: 6, dificuldade3d: "dificil" });
+      const w = A.ver(), mj = w.camp.meuJogo;
+      ok(A.sala.cfg.duracao3d === 6 && A.sala.cfg.dificuldade3d === "dificil" && w.duracao3d === 6 && w.dificuldade3d === "dificil" && A._campCtx().duracao3d === 6, "TD3 a cfg e o ver(): " + JSON.stringify([A.sala.cfg.duracao3d, A.sala.cfg.dificuldade3d, w.duracao3d, w.dificuldade3d]));
+      ok(mj && mj.contraBot && mj.podeJogar && mj.podeSimular && !mj.tresD, "TD3 o Jogar no meu jogo contra o bot");
+      const r = await V.espera(A.jogar3d());
+      ok(r.ok && r.id === "m1j0" && r.jogo.modo === "3d" && r.jogo.motivo === "pedido" && r.jogo.por === 0 && r.jogo.inicio === r.trava && r.duracao3d === 6 && r.dificuldade3d === "dificil" &&
+        r.times.length === 2 && r.times[r.lado].players.length === 11 && r.times[r.lado].id === "leilao_TD4GRA_0" && r.times[1 - r.lado].id === "leilao_TD4GRA_1", "TD3 o jogar3d: " + JSON.stringify(Object.assign({}, r, { times: null, jogo: null })));
+      await V.anda(() => A.ver().camp.meuJogo.e === "reservado");
+      const mj2 = A.ver().camp.meuJogo;
+      ok(mj2.e === "reservado" && mj2.tresD && !mj2.tresD.abriu && mj2.tresD.fim === r.trava + LC.PRAZO && !mj2.podeJogar && !mj2.podeSimular && (await V.espera(A.simular())).motivo === "jogando" && (await V.espera(A.jogar3d())).motivo === "jogando", "TD3 o 3D reservado: o prazo de abrir, sem Jogar nem Simular");
+      await V.espera(A.abriu3d(r.id, r.trava));
+      await V.anda(() => A.jogos.m1j0.abriu != null);
+      ok(A.jogos.m1j0.abriu >= r.trava && A.ver().camp.meuJogo.tresD.abriu && A.ver().camp.meuJogo.tresD.fim === r.trava + LC.prazo3d(6) && !A.alterada, "TD3 o abriu e o prazo da partida (6 min por tempo)");
+      const T = r.times, eu = r.lado, r3 = r3De(T, [[eu, 9, 33], [eu, 8, 81]], [[1 - eu, 2, 44, "yellow"]]);
+      const g1 = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3));
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0;
+      ok(g1.ok && g1.gravou && g1.res.em3d && g1.res.placar[eu] === 2 && g1.res.placar[1 - eu] === 0 && jf.e === "feito" && jf.fim === "3d" && LC.canon(jf.res) === LC.canon(g1.res) && jf.trava === r.trava, "TD4 o gravar('3d') pela sessão: " + JSON.stringify({ ok: g1.ok, gravou: g1.gravou, fim: jf.fim }));
+      const r3x = r3De(T, [[1 - eu, 9, 10]]);
+      const g2 = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3x)), g3 = await V.espera(A.gravar3d(r.id, r.trava, "simulado", null));
+      ok(g2.ok && !g2.gravou && LC.canon(g2.res) === LC.canon(jf.res) && g3.ok && !g3.gravou && LC.canon(g3.res) === LC.canon(jf.res) && LC.canon(A.jogos.m1j0) === LC.canon(jf), "TD4 o 2º gravar regravou (ou não devolveu o gravado)");
+      await V.anda(() => A.ver().camp.fim);
+      ok(LC.conferirJogo(A._campCtx(), A.ver().camp.rodadas[0].jogos[0], jf) === null && !A.alterada && A.ver().camp.fim && A.ver().camp.campeao === 0, "TD4 o 3D conferido e o campeonato no fim: " + JSON.stringify([A.alterada, A.alteradaJogo]));
+      // a mesma vista noutro aparelho (a conferência dele aceita o 3D)
+      const B = await V.espera(SS.abrir("TD4GRA", Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      await V.anda(() => B.ver().camp && B.ver().camp.campeao != null);
+      ok(!B.alterada && B.ver().camp.campeao === 0 && B.partida("m1j0").res.em3d, "TD4 outro aparelho congelou ou viu outro resultado: " + JSON.stringify(B.alteradaJogo));
+      B.parar(); A.parar();
+    }
+
+    /* ---- TD5 o "Simular partida" da tela do 3D: o simulado com a semente e as escalações da reserva ---- */
+    {
+      const { V, A } = await treino("TD5SIM");
+      const r = await V.espera(A.jogar3d());
+      await V.espera(A.abriu3d(r.id, r.trava));
+      // os titulares da tela (os mesmos 11, noutra ordem) e um de fora: a escalação não muda
+      const tit = { home: r.times[0].players.map(p => p.id).reverse(), away: r.times[1].players.map(p => p.id) };
+      const g = await V.espera(A.gravar3d(r.id, r.trava, "simulado", tit));
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0, c = A._campCtx();
+      ok(g.ok && g.gravou && !g.res.em3d && jf.fim === "simulado" && !jf.escSim && LC.canon(jf.res) === LC.canon(LC.resultadoDoJogo(c, "m1j0", jf)) && !A.alterada, "TD5 o simulado da tela: " + JSON.stringify({ fim: jf.fim, escSim: !!jf.escSim, alterada: A.alterada }));
+      ok(LC.escDaTela(c, jf, { home: ["x"], away: null }) === null && LC.escDaTela(c, jf, tit) === null, "TD5 a tela com os mesmos 11 (ou inválida) mudou a escalação");
+      A.parar();
+    }
+
+    /* ---- TD6 o W.O. depois do prazo do 3D (o relógio do servidor), não antes ---- */
+    {
+      const { V, A } = await treino("TD6WOP", { duracao3d: 3 });
+      const r = await V.espera(A.jogar3d());
+      await V.espera(A.abriu3d(r.id, r.trava));
+      const pz = r.trava + LC.prazo3d(3);
+      let antes = null;
+      V.agendar(() => { antes = A.jogos.m1j0.e; }, pz - 2000 - V.hora);
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      ok(antes === "reservado", `TD6 o W.O. antes do prazo (2 s antes: ${antes})`);
+      const jf = A.jogos.m1j0;
+      cont.wo++;
+      ok(jf.res.wo === r.lado && jf.res.placar[r.lado] === 0 && jf.res.placar[1 - r.lado] === LC.WO && jf.ts >= pz && jf.ts < pz + 5000 && !A.alterada, `TD6 o W.O. de quem reservou ${(jf.ts - r.trava) / 60000} min depois (prazo ${LC.prazo3d(3) / 60000} min): ${JSON.stringify(jf.res)}`);
+      await V.anda(() => A.ver().camp.fim);
+      ok(A.ver().camp.fim && A.ver().camp.campeao === 1 && A.partida("m1j0").res.wo === r.lado, "TD6 o campeonato com o W.O.");
+      // o gravar('3d') que chega depois do W.O.: devolve o gravado (o W.O.), nada regravado
+      const g = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3De(r.times, [[r.lado, 9, 10]])));
+      ok(g.ok && !g.gravou && g.res.wo === r.lado, "TD6 o 3D atrasado regravou o W.O.");
+      A.parar();
+    }
+
+    /* ---- TD7 o 3D que não abriu = o simulado depois de 2 min ---- */
+    {
+      const { V, A } = await treino("TD7NAO");
+      const r = await V.espera(A.jogar3d());
+      let antes = null;
+      V.agendar(() => { antes = A.jogos.m1j0.e; }, r.trava + LC.PRAZO - 1000 - V.hora);
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      ok(antes === "reservado", `TD7 o simulado antes de 2 min (1 s antes: ${antes})`);
+      const jf = A.jogos.m1j0, c = A._campCtx();
+      cont.naoAbriu++;
+      ok(jf.fim === "simulado" && jf.res.wo == null && !jf.res.em3d && jf.abriu == null && jf.ts >= r.trava + LC.PRAZO && jf.ts < r.trava + LC.PRAZO + 5000 &&
+        LC.canon(jf.res) === LC.canon(LC.resultadoDoJogo(c, "m1j0", jf)) && !A.alterada, `TD7 o 3D que não abriu: ${JSON.stringify({ fim: jf.fim, wo: jf.res.wo, dt: jf.ts - r.trava })}`);
+      // o abriu que chega tarde não muda o feito
+      ok((await V.espera(A.abriu3d(r.id, r.trava))).feito === false, "TD7 o abriu depois do simulado");
+      A.parar();
+    }
+
+    /* ---- TD8 duas abas do mesmo técnico: uma reserva só ---- */
+    {
+      const { V, A, base } = await treino("TD8ABA");
+      const B = await V.espera(SS.abrir("TD8ABA", Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      await V.anda(() => B.ver().camp && B.ver().camp.meuJogo && B.ver().camp.meuJogo.podeJogar);
+      const [ra, rb] = await V.espera(Promise.all([A.jogar3d(), B.jogar3d()]));
+      await V.anda(() => B.ver().camp.meuJogo.e === "reservado" && A.ver().camp.meuJogo.e === "reservado");
+      const oks = [ra, rb].filter(x => x.ok);
+      ok(oks.length === 1 && [ra, rb].filter(x => !x.ok)[0].motivo === "jogando" && A.jogos.m1j0.trava === oks[0].trava && !A.alterada && !B.alterada, "TD8 duas reservas: " + JSON.stringify([ra.ok, ra.motivo, rb.ok, rb.motivo]));
+      ok(B.ver().camp.meuJogo.tresD && !B.ver().camp.meuJogo.podeJogar, "TD8 a outra aba sem o 3D em andamento");
+      B.parar(); A.parar();
+    }
+
+    /* ---- TD9 a conferência aceita o 3D e acusa o adulterado ---- */
+    {
+      const { V, A } = await treino("TD9CON");
+      A.pausar();
+      const c = A._campCtx(), g = A._vista().rodadas[0].jogos[0], esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)], eu = g.a === 0 ? 0 : 1;
+      const T = [LC.timeDoTecnico(c, g.a, esc[0]), LC.timeDoTecnico(c, g.b, esc[1])];
+      const res0 = LC.reservar(null, { ab: [g.a, g.b], esc, modo: "3d", por: 0, motivo: "pedido", ts: 5000 }).jogo, ab0 = LC.marcarAbriu(res0, { trava: 5000, ts: 5100 }).jogo;
+      const f3d = (r3, id) => LC.gravar(ab0, { trava: 5000, res: LC.resDo3d(c, id || "m1j0", ab0, r3), ts: 9000, mata: true, fim: "3d" }).jogo;
+      const honesto = f3d(r3De(T, [[0, 9, 12]])), empate = f3d(r3De(T, [[0, 9, 12], [1, 9, 80]]));
+      const wo = LC.wo(ab0, { trava: 5000, hora: 5000 + LC.prazo3d(4), ts: 5000 + LC.prazo3d(4) + 10 }, c).jogo;
+      const sim = LC.naoAbriu(res0, { trava: 5000, hora: 5000 + LC.PRAZO, ts: 5000 + LC.PRAZO + 5, res: LC.resultadoDoJogo(c, "m1j0", res0) }, c).jogo;
+      const cp = x => JSON.parse(JSON.stringify(x));
+      ok([res0, ab0, honesto, empate, wo, sim].every(j => LC.conferirJogo(c, g, j) === null), "TD9 o honesto acusado: " + JSON.stringify([res0, ab0, honesto, empate, wo, sim].map(j => LC.conferirJogo(c, g, j))));
+      const casos = [
+        ["o placar do 3D sem o gol", () => { const j = cp(honesto); j.res.score = [2, 0]; j.res.placar = [2, 0]; return j; }, "resultado"],
+        ["o gol de um jogador do outro time", () => { const j = cp(honesto); j.res.events.find(e => e.type === "goal").playerId = T[1].players[9].id; return j; }, "resultado"],
+        ["o lance fora dos 90'", () => { const j = cp(honesto); j.res.events.find(e => e.type === "goal").minute = 95; return j; }, "resultado"],
+        ["o gol de ouro trocado", () => { const j = cp(empate); j.res.pror.events = j.res.pror.events.slice(0, 1); j.res.pror.score = [2, 1]; j.res.placar = [2, 1]; j.res.v = 0; delete j.res.pen; return j; }, "resultado"],
+        ["o W.O. antes do prazo", () => { const j = cp(wo); j.ts = 5000 + LC.prazo3d(4) - 1000; return j; }, "wo"],
+        ["o W.O. do 3D que não abriu", () => { const j = cp(wo); delete j.abriu; return j; }, "wo"],
+        ["o W.O. contra quem não reservou", () => { const j = cp(wo); j.res = LC.resultadoWO(1 - eu); return j; }, "wo"],
+        ["o 3D pelo prazo", () => { const j = cp(res0); j.motivo = "prazo"; return j; }, "forma"],
+        ["o 3D sem o fim", () => { const j = cp(honesto); delete j.fim; return j; }, "forma"],
+        ["o simulado do 3D com outro resultado", () => { const j = cp(sim); j.res.events[0].text = "outro"; return j; }, "resultado"],
+        ["o resultado do 3D num jogo simulado", () => { const j = cp(honesto); j.modo = "simulado"; return j; }, "forma"]
+      ];
+      casos.forEach(([nome, faz, motivo]) => { const m = LC.conferirJogo(c, g, faz()); ok(m === motivo, `TD9 ${nome}: ${m} (esperado ${motivo})`); });
+      // pela sessão: o reservado que ganha o abriu não congela; o abriu que some depois de visto congela
+      const X = A.rede.outroCliente();
+      await V.espera(X.gravar("jogos/m1j0", res0)); await V.anda(() => A.jogos.m1j0.e === "reservado");
+      await V.espera(X.gravar("jogos/m1j0", ab0)); await V.anda(() => A.jogos.m1j0.abriu != null);
+      ok(!A.alterada, "TD9 o abriu honesto congelou: " + JSON.stringify(A.alteradaJogo));
+      await V.espera(X.gravar("jogos/m1j0", res0)); await V.anda(() => A.alterada || A.jogos.m1j0.abriu == null);
+      await V.anda(() => !!A.alterada, 50);
+      ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta", "TD9 o abriu apagado (o W.O. vira simulado) não congelou: " + JSON.stringify(A.alteradaJogo));
+      A.parar();
+    }
+    nota(`TD1 ${cont.pror} empates no mata-mata (${cont.ouro} no gol de ouro, ${cont.pen} nos pênaltis); TD6 ${cont.wo} W.O. pelo prazo; TD7 ${cont.naoAbriu} 3D que não abriu = simulado`);
+  });
+}
+
 /* ============================================ KO o campeonato online (a sessão sobre o Firebase falso) ============================================
    A sala montada no banco falso já no fim do leilão (o leilão de cada um é o bloco O) e as sessões online (abrir) em 2, 4 e
    8 "aparelhos", cada um com o seu cliente, a sua latência e o seu relógio: todos veem os mesmos jogos, resultados,
@@ -3594,6 +3833,7 @@ async function testeCampOnline() {
 
 await testeCamp();
 await testeCampSessao();
+await testeCamp3d();
 await testeCampOnline();
 await testeProtocolo();
 await testeSessao();
