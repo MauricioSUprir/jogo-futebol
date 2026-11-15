@@ -90,16 +90,24 @@ na v1), a 6 (quem some passa, sem piloto que gasta), a 7 (Jogar/Simular na tela 
 jogadores em todo aparelho, sem o Editor nem o clube criado ou o Viverde de uma carreira. Fica de fora clube ou jogador
 `especial`. (Se o `mundoBase` passar de 1 s no celular, a reserva é a Criar sala recusar a liga com edições.)
 
-**Quantos lotes:** 13 por técnico (T = técnicos, contando os bots): 52 com 4, 104 com 8, como nas fotos.
+**Quantos lotes:** 20 por técnico (T = técnicos, contando os bots): 40 com 2, 80 com 4, 160 com 8 (dono, 15/11: "para
+sobrar mais opção na hora de montar o time"; eram 13, como nas fotos: 52 com 4, 104 com 8). `LOTES_POR_TEC` no
+`leilao.js`; as salas criadas antes (regras 1 e 2) seguem com 13 (`lotesPorTec(regras)`; detalhes no §8, "Lotes por
+técnico (15/11)").
 
 **Por posição (cota)**, pela posição principal (`pos`), medida nas 30 ligas e nas duas edições (só pela nota, os 52
-melhores da Série B pro têm 0 goleiros):
+melhores da Série B pro têm 0 goleiros). Goleiros e atacantes na proporção das fotos (1,5 e 2,5 de cada 13 lotes), com
+n = lotes por técnico × T:
 
 | Goleiros | Defensores | Meias | Atacantes |
 |---|---|---|---|
-| ⌈1,5·T⌉ | (13T − GK − FW)/2, a sobra ímpar no DF | o restante | ⌈2,5·T⌉ |
+| ⌈3n/26⌉ (⌈30T/13⌉ com 20) | (n − GK − FW)/2, a sobra ímpar no DF | o restante | ⌈5n/26⌉ (⌈50T/13⌉ com 20) |
 
-Exemplo com 4: 6 GK, 18 DF, 18 MF e 10 FW = 52. Dentro do grupo, os melhores por `overall`, desempate pelo `id`.
+Exemplo com 4: 10 GK, 27 DF, 27 MF e 16 FW = 80 (com 13 por técnico: 6, 18, 18 e 10 = 52). Dentro do grupo, os
+melhores por `overall`, desempate pelo `id`. A cota nunca come a reserva de `fora` (1 GK, 5 DF, 5 MF e 4 FW por técnico:
+o máximo de cada grupo numa formação), para qualquer time completar os 11 de graça no fim, compre o que comprar; o que
+falta num grupo vai para os outros e, sem folga, a liga fica com menos lotes: só a Liga Suíça A e a Liga Paraguai A da
+edição pública (240 jogadores), com 135 lotes com 7 técnicos e 120 com 8.
 
 **Ordem:** sorteio pela semente da sala, em blocos de T com posições e faixas de nota variadas; o 1º goleiro nos
 primeiros 20% e nenhum no último bloco. A lista **"Próximos lotes"** (recolhível) mostra os 5 seguintes a todos.
@@ -179,7 +187,7 @@ de transferência, `placeholders.js`), `number`, `height`, `weight`. A altura n�
 
 - Mata-mata com T que não é potência de 2: a semente escolhe quem folga. Pontos corridos com T ímpar: uma folga por
   rodada (o `roundRobin` de hoje põe um time contra ele mesmo; o leilão tem o seu rodízio).
-- A Criar sala mostra a **duração estimada** do leilão (104 lotes ≈ 20–35 min) e do campeonato (8 técnicos em pontos
+- A Criar sala mostra a **duração estimada** do leilão (160 lotes ≈ 20–45 min) e do campeonato (8 técnicos em pontos
   corridos com 3D passam de 3 h).
 - **Sala fixa para todos:** realismo 3, mando neutro, a duração do 3D (padrão 4 min por tempo) e a dificuldade dos
   bots no 3D (padrão Normal, travada: `simOpts.dificuldade3d` + `ajustesFixos3d`).
@@ -439,6 +447,8 @@ lidera e valor + passo ≤ L, dá o lance; senão aborta"). Valores do zer2 e da
    menos de 0,6 s; acima de L, passa.
 7. **Fim de jogo:** com vagas ≥ lotes que cabem e restam, L sobe até o necessário, sempre ≤ o máximo legal.
 8. **Notas escondidas:** a nota percebida.
+9. **Abaixo do nível de reposição** (15/11, com os 20 lotes por técnico): na fase dos lotes, o lote fora dos D_p melhores
+   que restam no grupo → passa (fica para a repescagem e o fim de jogo).
 
 ### 3.6 Simulação e 3D
 
@@ -518,7 +528,7 @@ duas edições.
 
 | Bloco | O que prova |
 |---|---|
-| L1 lotes | Nas 30 ligas × 2 edições × T de 2 a 8: 13T lotes, cota por grupo, sem especial, sem repetidos, do mundo-base (com edições e clube criado no armazenamento falso, os lotes não mudam), a mesma semente dá os mesmos lotes |
+| L1 lotes | Nas 30 ligas × 2 edições × T de 2 a 8: 20T lotes (13T nas salas de regras 1 e 2), cota por grupo, a reserva de `fora`, sem especial, sem repetidos, do mundo-base (com edições e clube criado no armazenamento falso, os lotes não mudam), a mesma semente dá os mesmos lotes |
 | L2 ordem | Goleiros espalhados; a mesma semente dá a mesma ordem |
 | L3 lance | Mínimo R$ 1; máximo = s − (v − 1); Tudo; não cabe → recusado; completo → recusado; `seq` visto diferente → aborta (também na repescagem do mesmo lote); toque velho → aborta; valor ≤ atual → aborta; líder não passa |
 | L4 relógio | fim = max(abre + espera + dur, t + ext); lance depois do fim recusado; com 3 s faltando → 8 s |
@@ -1481,6 +1491,73 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   partida quando o app fecha; uma confirmação aberta pode sobreviver ao estado que a criou: o que ela promete tem de ir
   junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
   já volta depois de queda e de recarregar), não um laço solto na tela.
+
+**Lotes por técnico (15/11)** (pedido do dono: 20 jogadores por técnico, contando os bots, "para sobrar mais opção na
+hora de montar o time"; eram 13: 2 técnicos 26 → 40, 4 técnicos 52 → 80, 8 técnicos 104 → 160):
+- **A constante e as cotas** (`leilao.js`): `LOTES_POR_TEC` 20 e as cotas na mesma proporção das fotos, escritas em função
+  dela (GK ⌈3n/26⌉, FW ⌈5n/26⌉, DF e MF o resto, n = lotes por técnico × T; com 13, as de antes exatamente):
+
+  | T | Lotes | GK | DF | MF | FW |
+  |---|---|---|---|---|---|
+  | 2 | 26 → 40 | 3 → 5 | 9 → 14 | 9 → 13 | 5 → 8 |
+  | 4 | 52 → 80 | 6 → 10 | 18 → 27 | 18 → 27 | 10 → 16 |
+  | 8 | 104 → 160 | 12 → 19 | 36 → 55 | 36 → 55 | 20 → 31 |
+
+- **As ligas que não fecham:** contadas as 30 ligas nas duas edições, só a Liga Suíça A e a Liga Paraguai A da edição
+  pública (240 jogadores cada: 24 GK, 84 DF, 84 MF, 48 FW) não têm gente para 160 lotes com 8 técnicos: sobravam 80
+  jogadores para 88 vagas, e com todos passando os 8 times terminavam com 10 (o L6 reprovou assim). Decisão (a mais simples e
+  segura): a cota nunca come a reserva de `fora`, que é o máximo de cada grupo numa formação (1 GK, 5 DF, 5 MF e 4 FW por
+  técnico): qualquer time completa os 11 de graça no fim, compre o que comprar. O que falta num grupo vai para os outros e,
+  sem folga, a liga fica com menos lotes: essas duas, com 7 técnicos, 135 lotes (eram 91) e, com 8, 120 (eram 104). Nas
+  outras 58, 20 por técnico em todo T, e `fora` com o máximo inteiro em todos os 420 casos (antes, abaixo do alvo em 2).
+  Limitar os técnicos da liga na Criar sala também resolvia, mas mexia na tela que a frente visual está refazendo. A
+  Criar sala ainda diz "Os 140/160 melhores" nesses dois casos (o número da conta, sem a liga); o chip "Jogador N de M"
+  usa os lotes da sala.
+- **As salas misturadas:** `REGRAS` 3 (as de 2, do PR 4, e as de 1 seguem aceitas: `REGRAS_ACEITAS` [1, 2, 3]). O aparelho
+  de antes só olha as salas novas (não entra: "atualize a página"); este aparelho joga as antigas com 13 por técnico
+  (`lotesPorTec(regras)`): o Começar grava os lotes pelas regras da SALA (`criarLotes(…, { regras })`, a conta de antes,
+  sem a reserva: o aparelho de antes, na mesma sala, monta o leilão com exatamente 13T lotes) e a carga confere a lotação
+  pelo `T` gravado com os lotes (a liga pequena tem menos que 20T). Sala em andamento: vale o que está gravado. O treino
+  guardado no aparelho antes da mudança reabre com os 13T dele e anda até o fim. A conferência e o `.validate` opcional
+  não amarravam o 13 (usam o tamanho dos lotes da sala).
+- **Os robôs** (§3.5, item 9): com 20 por técnico sobram 9 lotes por técnico, e o robô dava R$ 1 em tudo o que cabia
+  (o lote abaixo do nível de reposição vale ~R$ 1): enchia o time cedo de quem não valia nada e sobrava dinheiro. Agora, na
+  fase dos lotes, ele passa no lote fora dos D melhores que restam no grupo; na repescagem e no fim de jogo, como antes.
+  Nos 1 000 leilões só de robôs do L7 (as mesmas sementes; T de 2 a 8, as duas edições):
+
+  | | 13 por técnico (antes) | 20, os robôs de antes | 20, os robôs novos |
+  |---|---|---|---|
+  | Lotes (média) | 64 | 98 | 98 |
+  | Completam sem a reposição | 100% | 100% | 100% |
+  | Preço médio de uma compra | R$ 6,64 | R$ 4,72 | R$ 7,44 |
+  | Compras a R$ 1 | 43% | 71% | 28% |
+  | Lotes sem dono no fim | 15,4% | 45,0% | 45,0% |
+  | Sobra por técnico | R$ 25,9 (p90 48) | R$ 47,5 (p90 85) | R$ 16,9 (p90 37) |
+  | Gasto na 1ª metade da fila | 68% | 94% | 60% |
+  | Time completo aos (da fila) | 78% | 58% | 89% |
+  | Nota média do time | 74,6 | 73,7 | 74,8 |
+  | Quartil de cima mais caro | 100% | 100% | 100% |
+  | Lotes abertos (repescagem) | 54,4 (0,1) | 54,4 (0,0) | 100,1 (4,0) |
+  | Duração só de robôs | 9,1 min (p90 14,3) | 7,2 (p90 11,4) | 12,7 (p90 20,3) |
+
+  Por T (300 leilões cada, antes → depois): com 2, sobra R$ 36,5 → 25,6, preço R$ 5,77 → 6,76, 99,7% → 100% completos,
+  3,6 → 4,9 min; com 4, R$ 27,8 → 18,1, R$ 6,56 → 7,44, 7,5 → 10,5 min; com 8, R$ 25,1 → 15,9, R$ 6,81 → 7,64,
+  14,5 → 20,5 min. O robô novo nas salas de 13 por técnico: sobra R$ 25,9 → 17,0, nota 74,6 → 74,8, 99,8% completam
+  (meta ≥ 99%). Numa sala de regras 2 com um aparelho de antes e um novo, o robô decide pelo aparelho que roda a transação
+  (as duas contas são honestas para a conferência; nada congela).
+- **A duração estimada** (`leilao-camp.js duracaoEstimada`, agora a única: a tela usava uma cópia): ~0,75 × o relógio por
+  lote quando todos passam rápido (medido: 0,73 com 2, 0,79 com 4, 0,77 com 8; era 0,9, a metade com 2) e o relógio + 7 s
+  quando ninguém passa. Com 10 s: 2 técnicos 2–7 → 5–11 min, 4 técnicos 8–15 → 10–23, 8 técnicos 16–29 → 20–45.
+- **Os bytes** (testar-leilao O3, no Node, por aparelho): 2 aparelhos 91 → 114 KB, 4 + 2 bots ~490 → ~915 KB, 8
+  técnicos ~1,1 → ~2,2 MB (o `vivo` leva o `d` com um caractere por lote e há ~1,5× mais lotes abertos). No plano grátis
+  (Spark, 10 GB/mês): ~17–18 MB a sala de 8, ~570 leilões de 8 por mês (eram ~1 100).
+- **Testes**: L1 (20T nas 30 ligas × 2 edições × T 2–8, a conta das cotas feita no teste, a reserva de `fora` inteira, as
+  ligas com menos lotes, a sala de regras 2 com os mesmos lotes da conta de antes; na base reprova pelo número de lotes e
+  pelas cotas), L5 (a montagem do "pulado" com 10 goleiros), L6 (com 20 e sem a reserva, a Paraguai A pública com 8 e todos
+  passando reprovava), K0 (as durações novas), K3 (a liga em que o time de graça da pessoa cabe em 2+ formações), TD10
+  (regras 3), S (o treino de regras 2 reabre com 39 lotes e anda até o fim; "Minhas salas" com os lotes da sala), O1 (60
+  lotes com 3), O2 (o Começar de uma sala de regras 2 grava 26 com 2) e os totais do `--tela` e do online (40, 80, 120,
+  160).
 
 ---
 
