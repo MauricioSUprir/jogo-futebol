@@ -186,8 +186,10 @@
   /* ---------- a ordem dos lotes (§1.2) ---------- */
   // sorteio pela semente em blocos de T: os grupos espalhados na proporção (cada um em passos iguais com um sorteio
   // dentro do passo), as faixas de nota de cada grupo alternadas (alto, médio, baixo em ordem sorteada a cada volta);
-  // o 1º goleiro nos primeiros 20% e nenhum goleiro no último bloco
-  function ordem(lotes, semente, T) {
+  // o 1º goleiro nos primeiros 20% e nenhum goleiro no último bloco. semFaixas (as notas escondidas, PR 6): dentro de cada
+  // grupo, um sorteio só, sem as faixas — com elas, cada trinca seguida do grupo tinha um de cada faixa em ~89% e o lote da
+  // vez entregava a faixa dos próximos (os de antes, à mostra, seguem bit a bit iguais)
+  function ordem(lotes, semente, T, semFaixas) {
     var r = rngDe(semente, "ordem"), L = lotes.length, chaves = [];
     function embaralha(a) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; } return a; }
     GRUPOS.forEach(function (g, gi) {
@@ -195,6 +197,7 @@
       lotes.forEach(function (l, i) { if (l.pos === g) lista.push(i); });
       lista.sort(function (a, b) { return cmpNota(lotes[a], lotes[b]); });
       var n = lista.length; if (!n) return;
+      if (semFaixas) { embaralha(lista).forEach(function (li, j) { chaves.push({ li: li, k: (j + r()) / n, g: gi }); }); return; }
       var nb = Math.min(3, n), faixas = [];
       for (var b = 0; b < nb; b++) faixas.push(embaralha(lista.slice(Math.floor(b * n / nb), Math.floor((b + 1) * n / nb))));
       var seq = [];
@@ -228,7 +231,7 @@
     var ovs = ov.slice().sort(function (a, b) { return a - b; });
     var ctx = {
       T: T, lotes: lotes, fora: fora, semente: sem0, L: lotes.length, notasOcultas: oc, ov: ov,
-      fila: o.fila || ordem(lotes, String(o.semente), T),
+      fila: o.fila || ordem(lotes, String(o.semente), T, oc),
       dur: dur, ext: Math.min(EXT, dur), durRep: DUR_REP, extRep: Math.min(EXT, DUR_REP), espera: ESPERA,
       mL: lotes.map(mascara), gL: lotes.map(function (l) { return IDX[l.pos]; }),
       mF: fora.map(mascara), gF: fora.map(function (l) { return IDX[l.pos]; }),
@@ -412,11 +415,21 @@
     }
     return pen;
   }
+  // com as notas escondidas, a ordem das linhas do húngaro: os lotes vêm ordenados pela nota de verdade (criarLotes) e o
+  // húngaro desempata pela ordem das linhas — o melhor de dois da mesma função ia para a vaga de índice menor (e a camisa
+  // menor) em ~85% dos pares. Pelo hash da semente da sala + o id (o mesmo em todo aparelho: a escalação automática entra na
+  // conferência dos jogos); o índice global de cada um volta junto (o `tit` não muda de forma). À mostra, a ordem de antes.
+  function embaralhaTime(idx, ctx) {
+    if (!ctx.notasOcultas || idx.length < 2) return idx;
+    var h = {};
+    idx.forEach(function (k) { var l = retratoDe(ctx, k); h[k] = TM.rng.hashStr("leilao:" + ctx.semente + ":escala:" + (l ? l.id : k)); });
+    return idx.slice().sort(function (a, b) { return (h[a] - h[b]) || (a - b); });
+  }
   /** A escalação do técnico t: a gravada (escal/{t}: { formacao, tit }) se ainda vale; senão a automática (função pura
    *  das compras: ninguém precisa gravar). A formação é a preferida se o time cabe nela; senão a que cabe e mais se
    *  parece (aviso). { formacao, pref, aviso, tit (índice global em cada vaga, -1 = vazia), pen, manual, n }. */
   function escalacaoDe(v0, ctx, t, escal, prefPadrao) {
-    var v = norm(v0, ctx), idx = timeIdx(v, ctx, t), rs = idx.map(function (k) { return retratoDe(ctx, k); });
+    var v = norm(v0, ctx), idx = embaralhaTime(timeIdx(v, ctx, t), ctx), rs = idx.map(function (k) { return retratoDe(ctx, k); });
     var pref = (escal && VAGAS_FORM[escal.formacao]) ? escal.formacao : (VAGAS_FORM[prefPadrao] ? prefPadrao : "4-4-2");
     var f = formacaoPara(pref, rs) || pref;
     var penM = escal && escal.formacao === f ? manualValida(escal.tit, idx, f, ctx) : null;
