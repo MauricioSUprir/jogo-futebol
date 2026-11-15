@@ -7303,6 +7303,18 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-selo.ausente, .lei-selo.saiu { background: rgba(240,82,82,.10); color: #f87171; border-color: rgba(240,82,82,.35); }
 .lei-selo.completo { color: var(--info); }
 .lei-cfg-tempo { display: flex; flex-direction: column; gap: 6px; }
+/* as partidas em 3D da sala (Criar sala e Saguão): a duração de cada tempo (3 + 3) e a dificuldade dos bots (4 numa linha) */
+.lei-3d-op { display: flex; flex-direction: column; gap: 6px; }
+.lei-3d-rot { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.lei-3d-rot + .segmented { margin-bottom: 4px; }
+.lei-dur3d, .lei-dif3d { display: grid; gap: 6px; }
+.lei-dur3d { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lei-dif3d { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lei-dur3d .seg-btn, .lei-dif3d .seg-btn { min-width: 0; padding: 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 560px) { .lei-criar .lei-dur3d { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+/* o Seu jogo com o 3D em andamento (noutro aparelho ou aba): o prazo em destaque */
+.lei-sj-3d { color: var(--alerta); }
+body.theme-light .lei-sj-3d { color: #92400e; }
 .lei-salvar-l { display: flex; justify-content: flex-end; }
 .lei-salvar { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; }
 .lei-salvar:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
