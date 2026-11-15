@@ -357,11 +357,7 @@
         if (naSala()) anuncia("O campeonato começou");
         setTimeout(function () { if (sessao() === S && TM.ui.current() === "leilao-escalacao" && S.ver().meu && S.ver().meu.pronto) TM.ui.go("leilao-camp"); }, 900);
       }
-      if (e.estado === "fim" && naSala()) {
-        var Vf = S.ver(), Cf = Vf.camp;
-        Som.toca("fim");
-        anuncia("O campeonato acabou" + (Cf && Cf.campeao != null ? ": campeão " + nomeClube(Vf, Cf.campeao) : ""));
-      }
+      if (e.estado === "fim" && naSala()) falaFim(S, S.ver());
       // o dono começou: do Saguão vai sozinho para a aba Leilão
       if (e.estado === "leilao" && S.online) {
         if (naSala()) anuncia("O leilão começou");
@@ -1235,8 +1231,18 @@
     if (!C || !V.online || V.treino || !C.podePendentes || !C.rodada) return false;
     return V.agora - (C.rodada.abre || 0) >= PEND_ESPERA;
   }
+  // o campeão na região ao vivo, uma vez por sala: na hora do fim ou, se a pessoa estava fora da sala (vendo um jogo no
+  // 2D), quando ela volta ao Campeonato
+  function falaFim(S, V) {
+    var C = V && V.camp;
+    if (!C || !C.fim || VIEW.fimFalado === S) return;
+    VIEW.fimFalado = S;
+    Som.toca("fim");
+    anuncia("O campeonato acabou" + (C.campeao != null ? ": campeão " + nomeClube(V, C.campeao) : ""));
+  }
   function atualizaCamp(S, V) {
     var P = VIEW.partes; if (!P) return;
+    if (V.camp && V.camp.fim) falaFim(S, V);
     var chave = chaveCamp(V);
     if (chave !== P.chave) { P.chave = chave; montaCamp(S, V); }
     tickCamp(S);
