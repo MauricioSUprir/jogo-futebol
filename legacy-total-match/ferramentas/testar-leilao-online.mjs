@@ -1365,7 +1365,12 @@ async function casoTelas() {
     s0 === true && s1 === false && salvo && s2 === true, { s0, s1, salvo, s2 });
 
   /* T5 a barra do saguão com a sala "Atualizando…" (a volta da página, o ack a caminho): o motivo é "Atualizando a sala…" */
-  await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._estadoBate = "atualizando"; S._notificar(); });
+  // sem batimento a caminho nem agendado: o ack de um bate em voo voltava nos 300 ms e punha a sala "ok" de novo (a barra lia
+  // o motivo de antes; reprovava às vezes com a máquina carregada). O _bater() abaixo religa o ciclo
+  await ate(G1.p, () => {
+    const S = TM.leilaoSessao.atual(); if (S._bateEmVoo) return false;
+    S._limpaBate(); S._estadoBate = "atualizando"; S._notificar(); return true;
+  }, null, 10000);
   await espera(300);
   const barra5 = await G1.p.evaluate(() => ({ faixa: (document.querySelector(".lei-aviso-sala") || {}).textContent || "", msg: (document.querySelector(".lei-sagbar-msg") || {}).textContent || "" }));
   await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._bateEmVoo = false; S._bater(); });
