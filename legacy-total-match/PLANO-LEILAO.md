@@ -783,3 +783,27 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   a sessão (identidades, botões e motivos, Tudo, antes/fechado, formação com aviso, trocar, Pronto → campeonato, pausa,
   aceleração, só olhar, a sala adulterada que congela, Minhas salas) e o **L9** a escalação (o ótimo contra a força
   bruta e contra qualquer troca de duas vagas).
+- **As telas (o passo 3 do PR 1):**
+  - O relógio do treino também PARA com a pessoa fora das telas da sala (o menu, a Entrada): `sessão.segurar("tela")`,
+    junto com a página escondida (`segurar("pagina")`); a Entrada mostra "Leilão em andamento" com "Voltar à sala".
+  - As abas Leilão · Escalação · Campeonato são próprias (`.lei-abas`, `nav` com `aria-current`), não o `TM.ui.sectorBar`
+    (que rola de lado): cabem nos 8 tamanhos; a concluída troca o ícone pelo `circle-check`, sem emoji.
+  - A barra da sessão: no celular os rótulos curtos ("Sair", "Som", "Regras", "Técnicos", "Vendas"; o nome inteiro no
+    `aria-label`), os nomes completos ("Sair da sala", "Como funciona", "Participantes") a partir de 600 px e, no celular
+    deitado, só os ícones na mesma linha das abas.
+  - A barra de lance tem o valor que cada botão paga embaixo dele ("+5 / R$ 13"); a linha de cima mostra o retorno do
+    toque por 2,5 s, senão o motivo do +1 apagado, senão "Seu máximo neste jogador: R$ X". "Conferindo…" (o ack perdido)
+    e "passar o clube" só existem online: PR 2.
+  - O "Começar o treino" fica no FIM da coluna da Criar, não numa barra fixa: fixa, ela ficava por cima dos campos nas
+    larguras de celular (o `testar-sobreposicao` reprova). A Criar do treino não tem o Formato (PR 3) nem a duração e a
+    dificuldade do 3D (PR 4); tem o tempo do lote em "Mais opções" e a duração estimada, medida com os robôs: ~0,9 × o
+    relógio por lote quando todos passam rápido e relógio + 7 s quando ninguém passa (4 técnicos: 8 a 15 min; 8: 16 a 30).
+  - O campinho do leilão tem sempre a proporção do celular (.62) e a carta pela largura dele (`cqw`); a separação das
+    cartas (`separaCampo`) roda de novo quando a tela muda de tamanho. Com o .70 do Ultimate no PC, o goleiro encostava no
+    zagueiro na 5-4-1 e na 3-5-2 (medido: folga −1,3 px; agora ≥ 8,7 px em todas as formações e tamanhos).
+  - "Mais modos": o Leilão entra depois do Online 3D; 7 + 6 a partir de 790 px (o limite medido com a barra de 15 px é
+    ~765), 5 + 5 + 3 de 760 a 789 px e 3 + 3 + 3 + 3 + 1 no celular.
+  - A Entrada tem o título "Modo Leilão" (o sobretítulo da cena "mesa" já diz "Leilão"); o online aparece "Em breve" com
+    os botões desligados. Uma rota da sala aberta sem sessão (depois de recarregar a página) oferece "Continuar o treino".
+  - O "nada sobre nada" do `testar-leilao --tela` usa o critério do `testar-online3d` com a barra de lance (fixa) numa
+    camada própria: o que rola por baixo dela não conta como encostar; no fim da rolagem, nada fica atrás dela.
