@@ -7015,6 +7015,23 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-forma-esc.on, .lei-simb.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(34,197,94,.3); color: var(--gold); }
 .lei-simb .tm-ic { width: 20px; height: 20px; }
 .lei-tempos .seg-btn { flex: 1 1 0; }
+/* o formato do campeonato: 3 cartões (o ícone, o nome, a frase e "N rodadas com T técnicos · ~X min") */
+.lei-formatos { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.lei-fmt { display: grid; grid-template-columns: 36px minmax(0, 1fr) 22px; align-items: center; gap: 10px; width: 100%; min-height: 64px; padding: 9px 12px;
+  border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lei-fmt:hover:not(:disabled) { border-color: rgba(34,197,94,.55); }
+.lei-fmt.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(34,197,94,.22); }
+.lei-fmt:disabled { opacity: .55; cursor: not-allowed; }
+.lei-fmt.on:disabled { opacity: .8; }
+.lei-fmt-ic { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(34,197,94,.12); color: var(--gold); }
+.lei-fmt-ic .tm-ic { width: 19px; height: 19px; }
+.lei-fmt-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-fmt-n { font-weight: 800; font-size: 14.5px; line-height: 1.25; }
+.lei-fmt-f { font-size: 12.5px; line-height: 1.35; color: var(--text-dim); }
+.lei-fmt-s { font-size: 11.5px; font-weight: 700; line-height: 1.35; color: var(--gold); }
+.lei-fmt-ok { display: inline-flex; color: var(--gold); }
+.lei-fmt-ok .tm-ic { width: 20px; height: 20px; }
+.lei-sag-dur { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); }
 .lei-rodape { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 6px 0 10px; text-align: center; }
 .lei-criar-resumo { font-size: 13px; font-weight: 600; color: var(--text-dim); }
 .lei-comecar { width: 100%; max-width: 360px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
@@ -7234,7 +7251,7 @@ body.theme-light .lei-lance { background: rgba(255,255,255,.97); border-top-colo
 body.theme-light .lei-vendido { background: rgba(255,255,255,.97); color: var(--text); box-shadow: 0 10px 26px rgba(0,0,0,.14); }
 body.theme-light .lei-sb, body.theme-light .lei-aba, body.theme-light .lei-tec, body.theme-light .lei-part, body.theme-light .lei-prox,
 body.theme-light .lei-liga-bt, body.theme-light .lei-liga, body.theme-light .lei-passo-bt, body.theme-light .lei-forma-esc, body.theme-light .lei-simb,
-body.theme-light .lei-valor, body.theme-light .lei-campo, body.theme-light .lei-ficha-bt, body.theme-light .lei-sala-x { background: #ffffff; }
+body.theme-light .lei-valor, body.theme-light .lei-campo, body.theme-light .lei-ficha-bt, body.theme-light .lei-sala-x, body.theme-light .lei-fmt { background: #ffffff; }
 body.theme-light .lei-aba.on { background: linear-gradient(180deg, #1c9e4d, #12803d); color: #fff; }
 body.theme-light .lei-lb { background: #ffffff; }
 body.theme-light .lei-lb-tudo, body.theme-light .lei-lb-dar { background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: #ffffff; }

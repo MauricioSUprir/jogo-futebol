@@ -511,6 +511,8 @@
     if (V.estado === "saguao" && V.souDono) return ["Encerrar a sala?", "A sala some para todos: quem está nela volta ao início do Leilão.", "Encerrar a sala"];
     if (V.estado === "saguao") return ["Sair da sala?", "Você sai do saguão. Para voltar, peça de novo pelo código.", "Sair da sala"];
     if (V.eu < 0) return ["Sair da sala?", "Você só estava olhando esta sala.", "Sair da sala"];
+    if (V.estado === "fim") return ["Sair da sala?", "O campeonato acabou: a sala some da sua lista.", "Sair da sala"];
+    if (V.estado === "camp" || V.estado === "escalacao") return ["Sair da sala?", "O seu clube fica no campeonato e os seus jogos passam a ser simulados como os de um bot.", "Sair da sala"];
     return ["Sair da sala?", "O seu clube fica e passa sozinho em cada jogador até o fim do leilão.", "Sair da sala"];
   }
   function confirmaSair(S) {
@@ -1124,7 +1126,7 @@
     } else {
       P.prazo = null;
       if (V.estado === "camp" || V.estado === "fim") b.appendChild(el("div", { class: "lei-caixa lei-esc-camp" }, [
-        el("p", { class: "intro-text", text: "A escalação vale para o campeonato, que chega numa próxima atualização." }),
+        el("p", { class: "intro-text", text: V.estado === "fim" ? "O campeonato acabou: esta foi a escalação do fim." : "A escalação mudada vale a partir do seu próximo jogo que ainda não começou." }),
         botao("Ver o campeonato", function () { TM.ui.go("leilao-camp"); }, "btn", "trophy")
       ]));
     }
@@ -1344,9 +1346,13 @@
     b.appendChild(el("h2", { class: "lei-sag-tit", text: "Prepare seu clube." }));
     b.appendChild(el("p", { class: "lei-sag-resumo", text: "Cada técnico entra com " + rs(L().SALDO) + " (dinheiro do jogo) e compra os " + L().VAGAS +
       " do time no leilão dos melhores da " + ((V.liga && V.liga.nome) || "liga") + ". O que sobrar não vale nada no campeonato." }));
-    var etq = [(V.liga && V.liga.nome) || "", "Até " + (sg ? sg.vagas : cfg.vagas) + " técnicos", sg && sg.bots ? sg.bots + (sg.bots === 1 ? " bot" : " bots") : "Só gente de verdade",
-      seg + " s por jogador", "Sem chat"];
+    var vagas = sg ? sg.vagas : cfg.vagas;
+    var etq = [(V.liga && V.liga.nome) || "", "Até " + vagas + " técnicos", sg && sg.bots ? sg.bots + (sg.bots === 1 ? " bot" : " bots") : "Só gente de verdade",
+      nomeFormato(V.formato), seg + " s por jogador", "Sem chat"];
     b.appendChild(el("div", { class: "lei-etqs" }, etq.filter(Boolean).map(function (t) { return el("span", { class: "lei-etq", text: t }); })));
+    // a duração estimada com a sala cheia: o leilão (a régua do PR 1) e o campeonato simulado
+    var d = duracaoEstimada(vagas, cfg.tempo || L().DUR), dc = duracaoCamp(V.formato, vagas, cfg.tempo || L().DUR);
+    b.appendChild(el("p", { class: "lei-sag-dur", text: "Com a sala cheia: leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato (" + nomeFormato(V.formato).toLowerCase() + ") de " + dc.lo + " a " + dc.hi + " min." }));
     if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
   }
   // o convite: o código escondido (o olho mostra), Copiar convite (o link ?leilao=), Compartilhar (só com navigator.share)
@@ -1490,6 +1496,8 @@
       segT.appendChild(x);
     });
     b.appendChild(el("div", { class: "lei-cfg-tempo" }, [el("div", { class: "setting-label", text: "Tempo de cada jogador" }), segT]));
+    b.appendChild(el("div", { class: "lei-cfg-tempo" }, [el("div", { class: "setting-label", text: "Formato" }),
+      seletorFormato(V.formato, vagas, cfg.tempo || L().DUR, function (f) { muda({ formato: f }); }, { desliga: des })]));
     b.appendChild(el("p", { class: "lei-sag-nota", text: "Mudar a configuração zera os Pronto de todos." }));
   }
   // o meu clube no saguão (o nome, a sigla e o escudo; Salvar grava) e a formação preferida (vale na hora)
@@ -1676,7 +1684,11 @@
         "Passar vale só para aquele jogador. Quando todos passam, ele fecha na hora.",
         "O time tem de caber numa das 6 formações: ninguém compra dois goleiros.",
         "Jogador sem lance vai para a repescagem no fim (" + Math.round(L().DUR_REP / 1000) + " s). Quem ainda tiver vaga completa de graça com jogadores de fora dos lotes, que são piores.",
-        "O que sobrar de dinheiro não vale nada no campeonato."
+        "O que sobrar de dinheiro não vale nada no campeonato.",
+        "Depois da escalação, o campeonato (" + nomeFormato(V && V.formato).toLowerCase() + "): " + fraseFormato(V && V.formato, V ? V.T : 4).replace(/^./, function (x) { return x.toLowerCase(); }),
+        "O seu jogo contra um bot: toque em Simular partida; sem o toque, ele é simulado sozinho em 2 min (o prazo só corre com você na sala). Contra um amigo, o jogo é simulado quando a rodada abre. Os jogos dos bots, na hora.",
+        "Cada resultado é gravado uma vez e todos veem o mesmo: ninguém joga de novo. A escalação mudada vale a partir do próximo jogo que ainda não começou.",
+        "Não conta no ranking online nem no confronto direto, e não usa Total Coins."
       ];
       c.appendChild(el("ul", { class: "lei-regras" }, itens.map(function (t) { return el("li", { text: t }); })));
     });
@@ -1820,7 +1832,7 @@
     corpo.appendChild(cartaoOnline(S));
     corpo.appendChild(el("div", { class: "next-match lei-cartao lei-treino" }, [
       el("div", { class: "nm-label", text: "Treinar contra bots" }),
-      el("p", { class: "intro-text", text: "Você contra 1 a 7 bots, neste aparelho: o leilão inteiro e a escalação. Funciona sem internet." }),
+      el("p", { class: "intro-text", text: "Você contra 1 a 7 bots, neste aparelho: o leilão, a escalação e o campeonato. Funciona sem internet." }),
       el("div", { class: "lei-acoes" }, [botao("Treinar contra bots", function () { TM.ui.go("leilao-criar"); }, "btn", "bot")])
     ]));
     var salasBox = el("div", { class: "lei-salas-box" });
@@ -1837,7 +1849,7 @@
     corpo.appendChild(el("ul", { class: "lei-regras lei-regras-curtas" }, [
       el("li", { text: "Cada técnico entra com R$ 100 (dinheiro do jogo) e compra os 11 do time no leilão dos melhores jogadores da liga escolhida." }),
       el("li", { text: "Cada jogador fica 10 s no martelo: +1, +5, +10, Tudo ou outro valor. Dá para passar." }),
-      el("li", { text: "Depois, a escalação no campinho e o campeonato (em breve)." })
+      el("li", { text: "Depois, a escalação no campinho e o campeonato: mata-mata, pontos corridos ou os dois. Todos veem o mesmo resultado, gravado uma vez." })
     ]));
   });
   // o cartão "Com os amigos online": sem a conta (sem internet), só o Treino; com a conta entrando, a espera; suspenso
@@ -2050,6 +2062,51 @@
     return raiz;
   }
 
+  /* ---------- o formato do campeonato (Criar sala e Saguão; PLANO-LEILAO.md §1.7 e §2.2) ---------- */
+  function LC() { return TM.leilaoCamp || null; }
+  var FORMATOS = [
+    { id: "mata", nome: "Mata-mata", icone: "swords" },
+    { id: "pontos", nome: "Pontos corridos", icone: "list" },
+    { id: "misto", nome: "Pontos + mata-mata", icone: "layers" }
+  ];
+  function formatoId(f) { return LC() ? LC().formatoDe(f) : (f === "pontos" || f === "misto" ? f : "mata"); }
+  function nomeFormato(f) { f = formatoId(f); return FORMATOS.filter(function (x) { return x.id === f; })[0].nome; }
+  function fraseFormato(f, T) {
+    f = formatoId(f);
+    if (f === "pontos") return "Turno e returno: 3 pontos por vitória e 1 pelo empate.";
+    if (f === "misto") return T <= 4 ? "Turno único; os 2 primeiros fazem a final." : "Turno único; os 4 primeiros vão às semifinais (1º × 4º, 2º × 3º) e à final.";
+    return "Jogo único. Empate: prorrogação com gol de ouro e, seguindo empatado, pênaltis.";
+  }
+  // "2 rodadas com 4 técnicos · ~1 a 4 min" (o campeonato simulado; o 3D chega no PR 4)
+  function linhaFormato(f, T, tempo) {
+    if (!LC()) return "";
+    var d = LC().duracaoEstimada({ T: T, tempo: tempo, formato: formatoId(f) }).camp;
+    return d.rodadas + (d.rodadas === 1 ? " rodada" : " rodadas") + " com " + T + " técnicos · ~" + d.lo + " a " + d.hi + " min";
+  }
+  function duracaoCamp(f, T, tempo) { return LC() ? LC().duracaoEstimada({ T: T, tempo: tempo, formato: formatoId(f) }).camp : { lo: 1, hi: 2 }; }
+  // os 3 cartões do formato (um grupo de botões com aria-pressed); fn(id) no toque; opc.desliga apaga todos
+  function seletorFormato(atual, T, tempo, fn, opc) {
+    opc = opc || {};
+    atual = formatoId(atual);
+    var g = el("div", { class: "lei-formatos", role: "group", "aria-label": "Formato do campeonato" });
+    FORMATOS.forEach(function (x) {
+      var on = x.id === atual;
+      var b = el("button", { class: "lei-fmt" + (on ? " on" : ""), type: "button", "aria-pressed": on ? "true" : "false", data: { foco: "fmt-" + x.id, fmt: x.id },
+        on: { click: function () { if (!on && !opc.desliga) fn(x.id); } } }, [
+        el("span", { class: "lei-fmt-ic" }, [ic(x.icone)]),
+        el("span", { class: "lei-fmt-txt" }, [
+          el("span", { class: "lei-fmt-n", text: x.nome }),
+          el("span", { class: "lei-fmt-f", text: fraseFormato(x.id, T) }),
+          el("span", { class: "lei-fmt-s", text: linhaFormato(x.id, T, tempo) })
+        ]),
+        el("span", { class: "lei-fmt-ok" }, [on ? ic("circle-check") : null])
+      ]);
+      if (opc.desliga) b.disabled = true;
+      g.appendChild(b);
+    });
+    return g;
+  }
+
   /* ---------- Criar sala: o Treino e a sala online (leilao-criar; { online: true }) ---------- */
   function duracaoEstimada(T, tempoMs) {
     // medido com os robôs (o leilão inteiro): ~0,9 × o relógio por lote quando todos passam rápido, ~relógio + 7 s quando
@@ -2090,6 +2147,7 @@
       bots: online && pref.bots >= 0 && pref.bots <= L().TEC_MAX - 1 ? pref.bots : 0,
       formacao: L().FORMACOES.indexOf(pref.formacao) >= 0 ? pref.formacao : "4-4-2",
       tempo: L().TEMPOS.indexOf(pref.tempo) >= 0 ? pref.tempo : L().DUR,
+      formato: formatoId(pref.formato),
       clube: SS().limpaClube(pref.clube || SS().clubeInicial())
     };
     if (online && F.bots > F.T - 1) F.bots = F.T - 1;
@@ -2121,13 +2179,25 @@
         passoB.poe(F.bots, 0, F.T - 1);
         hintB.textContent = F.bots ? (F.bots === 1 ? "1 bot completa a sala" : F.bots + " bots completam a sala") + " · as vagas que sobram são de gente de verdade" : "Só gente de verdade";
       } else hintT.textContent = "Você e " + (F.T - 1) + (F.T - 1 === 1 ? " bot" : " bots") + " · " + duracaoEstimada(F.T, F.tempo).n + " jogadores no leilão";
-      poeLiga(); poeResumo();
+      poeLiga(); poeFmt(); poeResumo();
     }
     corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
       el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Técnicos na sala" }), hintT]), passoT])
     ]));
     if (online) corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
       el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Bots de treino" }), hintB]), passoB])
+    ]));
+
+    // o formato do campeonato (o padrão é o mata-mata; a duração de cada um pelo número de técnicos)
+    var caixaFmt = el("div", { class: "lei-fmt-caixa" });
+    function poeFmt() {
+      TM.ui.clear(caixaFmt);
+      caixaFmt.appendChild(seletorFormato(F.formato, F.T, F.tempo, function (f) { F.formato = f; poeFmt(); poeResumo(); }));
+    }
+    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
+      el("div", { class: "setting-label", text: "Formato" }), caixaFmt,
+      el("div", { class: "setting-hint", text: online ? "Os jogos são simulados: o seu contra um bot quando você tocar em Simular (ou em 2 min); contra um amigo, quando a rodada abre."
+        : "Os jogos são simulados: o seu quando você tocar em Simular (ou em 2 min); os dos bots, na hora." })
     ]));
 
     // a formação (a preferência durante o leilão)
@@ -2178,10 +2248,11 @@
     var comecar = online ? botao("Criar sala", function () { criarSalaOnline(F, comecar, lgs); }, "btn primary big lei-comecar", "gavel")
       : botao("Começar o treino", function () { criar(F, comecar); }, "btn primary big lei-comecar", "gavel");
     function poeResumo() {
-      var lg = ligaDe(F.liga), d = duracaoEstimada(F.T, F.tempo);
+      var lg = ligaDe(F.liga), d = duracaoEstimada(F.T, F.tempo), dc = duracaoCamp(F.formato, F.T, F.tempo);
+      var tempos = "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min";
       resumo.textContent = online
-        ? (lg ? lg.name : "") + " · até " + F.T + " técnicos" + (F.bots ? " (" + F.bots + (F.bots === 1 ? " bot" : " bots") + ")" : "") + " · " + F.formacao + " · com a sala cheia, leilão de cerca de " + d.lo + " a " + d.hi + " min"
-        : (lg ? lg.name : "") + " · " + F.T + " técnicos · " + F.formacao + " · leilão de cerca de " + d.lo + " a " + d.hi + " min";
+        ? (lg ? lg.name : "") + " · até " + F.T + " técnicos" + (F.bots ? " (" + F.bots + (F.bots === 1 ? " bot" : " bots") + ")" : "") + " · " + F.formacao + " · " + nomeFormato(F.formato) + " · com a sala cheia, " + tempos
+        : (lg ? lg.name : "") + " · " + F.T + " técnicos · " + F.formacao + " · " + nomeFormato(F.formato) + " · " + tempos;
     }
     corpo.appendChild(el("div", { class: "lei-rodape" }, [resumo, comecar, el("p", { class: "lei-criar-nota", text: online
       ? "Sala privada: só entra quem tiver o convite e for aceito por você. Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade; não conta no ranking."
@@ -2209,11 +2280,11 @@
     bt.disabled = true; bt.setAttribute("aria-busy", "true");
     var rot = bt.querySelector("span:last-child"); if (rot) rot.textContent = "Preparando os lotes…";
     var clubeLimpo = SS().limpaClube(F.clube);
-    gravar("leilao:criar", { liga: F.liga, T: F.T, formacao: F.formacao, tempo: F.tempo, clube: clubeLimpo });
+    gravar("leilao:criar", { liga: F.liga, T: F.T, formacao: F.formacao, tempo: F.tempo, formato: F.formato, clube: clubeLimpo });
     // um quadro para o "Preparando…" aparecer antes da conta dos lotes (o mundo-base leva uma fração de segundo)
     setTimeout(function () {
       var mundo = null; try { mundo = TM.data.mundoBase(); } catch (e) { mundo = null; }
-      SS().criarTreino({ liga: F.liga, bots: F.T - 1, formacao: F.formacao, tempo: F.tempo, clube: clubeLimpo, mundo: mundo || undefined }).then(function () {
+      SS().criarTreino({ liga: F.liga, bots: F.T - 1, formacao: F.formacao, tempo: F.tempo, formato: F.formato, clube: clubeLimpo, mundo: mundo || undefined }).then(function () {
         VIEW.criando = false;
         TM.ui.go("leilao-lote");
       }, function (e) {
@@ -2236,9 +2307,9 @@
     VIEW.criando = true;
     bt.disabled = true; bt.setAttribute("aria-busy", "true"); rotuloBt(bt, "Criando a sala…");
     var clubeLimpo = SS().limpaClube(F.clube), lg = lgs.filter(function (l) { return l.id === F.liga; })[0];
-    gravar("leilao:criarOnline", { liga: F.liga, T: F.T, bots: F.bots, formacao: F.formacao, tempo: F.tempo, clube: clubeLimpo });
+    gravar("leilao:criarOnline", { liga: F.liga, T: F.T, bots: F.bots, formacao: F.formacao, tempo: F.tempo, formato: F.formato, clube: clubeLimpo });
     var prazo = setTimeout(function () { if (bt.isConnected) TM.ui.toast(semInternet() ? "Sem internet: confira a conexão." : "Servidor cheio, tente em alguns minutos.", "alerta"); }, AJUSTES.cheioMs);
-    SS().criarSala({ liga: F.liga, ligaNome: lg ? lg.name : F.liga, vagas: F.T, bots: F.bots, tempo: F.tempo, formacao: F.formacao, clube: clubeLimpo }).then(function () {
+    SS().criarSala({ liga: F.liga, ligaNome: lg ? lg.name : F.liga, vagas: F.T, bots: F.bots, tempo: F.tempo, formacao: F.formacao, formato: F.formato, clube: clubeLimpo }).then(function () {
       clearTimeout(prazo);
       VIEW.criando = false;
       VIEW.codigoVisivel = false;
