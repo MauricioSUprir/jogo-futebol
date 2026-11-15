@@ -17,6 +17,8 @@
                                    SERVIDOR pôs (a testemunha da hora, §3.3; null = outra aba gravou por cima). No online
                                    também recalibra o horaServidor()
      horaServidor()              → ms (a hora do servidor; no treino, a do relógio da sala)
+     salto()                     → ms: o desencontro entre o relógio de parede e o monótono desde a última testemunha (um
+                                   deles pulou: o aparelho dormiu ou a hora mudou); a memória dá sempre 0
      aoCair(fn) · aoVoltar(fn)   → fn() quando a conexão cai · volta; devolvem a função que para de avisar
      conectado()                 → bool
      aoDesconectar(caminho)      → { gravar(v), atualizar(o), apagar(), cancelar() }: o que o SERVIDOR faz quando esta
@@ -193,6 +195,7 @@
       codigo: banco.codigo,
       TS: TS,
       horaServidor: function () { return banco.relogio(); },
+      salto: function () { return 0; },
       conectado: function () { return C.on; },
       aoCair: function (fn) { C.quedas.push(fn); return function () { C.quedas = C.quedas.filter(function (x) { return x !== fn; }); }; },
       aoVoltar: function (fn) { C.voltas.push(fn); return function () { C.voltas = C.voltas.filter(function (x) { return x !== fn; }); }; },
@@ -326,7 +329,7 @@
     var parede = opc.relogioParede || function () { return Date.now(); };
     var raiz = db.ref((opc.raiz || "leiloes") + "/" + String(codigo));
     function ref(c) { var ps = partes(c); return ps.length ? raiz.child(ps.join("/")) : raiz; }
-    var ligado = false, offsetSdk = 0, quedas = [], voltas = [], amostras = [], escolhida = null, meus = [], apagada = false, nonce = 0;
+    var ligado = false, offsetSdk = 0, quedas = [], voltas = [], amostras = [], escolhida = null, meus = [], apagada = false, nonce = 0, difBase = null;
 
     function avisa(lista) { lista.slice().forEach(function (fn) { Promise.resolve().then(function () { try { fn(); } catch (e) { if (global.console) console.error(e); } }); }); }
     function remover(lista, fn) { return function () { var i = lista.indexOf(fn); if (i >= 0) lista.splice(i, 1); }; }
@@ -347,6 +350,7 @@
       amostras.push(a);
       if (amostras.length > JANELA) amostras.shift();
       escolhida = amostras.reduce(function (m, x) { return !m || x.ida < m.ida ? x : m; }, null);
+      difBase = parede() - mono();
     }
     function horaServidor() { return escolhida ? mono() + escolhida.off : parede() + offsetSdk; }
     function vivo(acao) { if (apagada) return Promise.reject(erroCodigo("apagada", "A sala foi apagada (" + acao + ").")); return null; }
@@ -357,6 +361,9 @@
       codigo: String(codigo),
       TS: TSv,
       horaServidor: horaServidor,
+      // o quanto o relógio de parede e o monótono se desencontraram desde a última testemunha (ms): um deles pulou (o
+      // aparelho dormiu, a hora foi ajustada); a sessão não decide nada até a próxima testemunha
+      salto: function () { return difBase == null ? 0 : (parede() - mono()) - difBase; },
       conectado: function () { return ligado; },
       aoCair: function (fn) { quedas.push(fn); return remover(quedas, fn); },
       aoVoltar: function (fn) { voltas.push(fn); return remover(voltas, fn); },
