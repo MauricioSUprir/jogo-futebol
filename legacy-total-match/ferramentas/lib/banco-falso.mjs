@@ -822,13 +822,15 @@ export class BancoFalso {
 /* ---------------- o relógio acelerado: o servidor (Node) e as páginas na MESMA conta ---------------- */
 /** Um relógio que anda `fator` vezes mais rápido a partir de agora. agora() é a hora (para o BancoFalso: relogio) e
  *  scriptPagina(desvio) o texto para o addInitScript: Date.now/new Date(), performance.now e os timers da página no mesmo
- *  relógio (com um desvio próprio do aparelho, em ms, só no Date). */
+ *  relógio (com um desvio próprio do aparelho, em ms, só no Date). Na página, window.__relogioPula(ms) soma ao desvio (o
+ *  relógio de parede do aparelho pula; o monótono, o performance.now, segue) e devolve o desvio novo. */
 export function relogioAcelerado({ fator = 1, inicio = Date.now() } = {}) {
   const real0 = Date.now();
   const agora = () => inicio + (Date.now() - real0) * fator;
   function patch(real0, inicio, fator, desvio) {
     var D = Date, agoraReal = D.now.bind(D), perf = performance.now.bind(performance), p0 = perf();
     function agora() { return inicio + (agoraReal() - real0) * fator + desvio; }
+    window.__relogioPula = function (ms) { desvio += +ms || 0; return desvio; };
     function Falso() {
       if (!(this instanceof Falso)) return new D(agora()).toString();
       if (!arguments.length) return new D(agora());
