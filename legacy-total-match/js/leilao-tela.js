@@ -46,7 +46,8 @@
     screen: null, rota: null, raf: 0, tick: null, desliga: [], partes: null, V: null, abas: null, avisoSala: null,
     conf: { ate: 0, seq: -1, valor: 0 },   // o "Tudo" de dois toques: o 1º vira "Confirmar R$ X" por 2 s
     enviando: null, msg: null, msgAte: 0, folha: null, sessaoLigada: null, selVaga: -1, criando: false,
-    abertos: { time: false, tecnicos: false, proximos: false }, anuncios: [], anunciado5: -1
+    abertos: { time: false, tecnicos: false, proximos: false }, anuncios: [], anunciado5: -1,
+    convite: null, conviteFeito: false    // o código do link ?leilao= (app.js), guardado uma vez por carga da página
   };
 
   function funcaoDe(r) { return (r && (FUNCAO[r.pos2] || GRUPO_NOME[r.pos])) || ""; }
@@ -1096,7 +1097,11 @@
     if (x.estado === "camp") return "Campeonato em breve";
     return "Saguão";
   }
-  TM.ui.register("leilao", function (screen) {
+  TM.ui.register("leilao", function (screen, params) {
+    params = params || {};
+    // o convite pelo link: guardado uma vez só (como o VIEW.autoFeito do Online 3D: voltar a esta tela não entra de novo);
+    // a Entrada do online usa para entrar sozinha
+    if (params.codigo && params.auto && !VIEW.conviteFeito) { VIEW.conviteFeito = true; VIEW.convite = SS() ? SS().limpaCodigo(params.codigo) : String(params.codigo).toUpperCase(); }
     screen.classList.add("lei-screen", "lei-entrada");
     screen.appendChild(TM.ui.topbar("Modo Leilão", function () { TM.ui.go("modes"); }));
     var corpo = el("div", { class: "panel-narrow lei-entrada-corpo" });
@@ -1355,6 +1360,8 @@
   TM.leilaoTela = {
     /** Gancho de teste: o que foi para a região ao vivo (as últimas 40 falas). */
     anuncios: function () { return VIEW.anuncios.slice(); },
+    /** O código do convite (?leilao=) ainda não usado, ou null; usar(true) o dá por usado. */
+    convite: function (usar) { var c = VIEW.convite; if (usar) VIEW.convite = null; return c; },
     duracaoEstimada: duracaoEstimada
   };
 })(window);

@@ -2620,6 +2620,22 @@ async function testeTela() {
     await ate(p, () => TM.ui.current() === "leilao", null, 10000);
     const saiu = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().length }));
     confere("T9 'Sair da sala' pede confirmação, volta à Entrada e apaga o treino", !saiu.atual && saiu.salas === 0, saiu);
+
+    /* T10 o convite pelo link (?leilao=CÓDIGO): a Entrada com o código, guardado uma vez por carga da página */
+    {
+      const cx = await nav.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+      await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+      const p = await cx.newPage();
+      p.on("pageerror", e => errosPagina.push(String(e).slice(0, 300)));
+      await p.goto(srv.url + "index.html?leilao=" + encodeURIComponent("https://x/?leilao=ab2cd3"), { waitUntil: "load" });
+      await ate(p, () => window.TM && TM.ui && TM.ui.current && TM.ui.current() === "leilao", null, 30000);
+      const r1 = await p.evaluate(() => ({ rota: TM.ui.current(), convite: TM.leilaoTela.convite() }));
+      // voltar à Entrada não guarda de novo; usar o convite o tira
+      const r2 = await p.evaluate(() => { TM.leilaoTela.convite(true); TM.ui.go("modes"); TM.ui.go("leilao", { codigo: "ZZZZZZ", auto: true }); return TM.leilaoTela.convite(); });
+      confere("T10 o link ?leilao=CÓDIGO abre a Entrada do leilão com o convite (o link colado limpo, maiúsculas), uma vez por carga da página",
+        r1.rota === "leilao" && r1.convite === "AB2CD3" && r2 === null, { r1, r2 });
+      await cx.close();
+    }
   } catch (e) {
     confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
   } finally {
