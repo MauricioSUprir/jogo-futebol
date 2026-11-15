@@ -1375,17 +1375,29 @@
     VIEW.ocupado = "simular";
     if (bt) { bt.disabled = true; bt.setAttribute("aria-busy", "true"); var r0 = bt.querySelector("span:last-child"); if (r0) r0.textContent = "Simulando…"; }
     S.simular().then(function (r) {
-      VIEW.ocupado = null;
-      if (!r || !r.ok) { TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro"); atualiza(); return; }
-      // gravado: só então o 2D (sem pausa) mostra o que ficou gravado
-      if (sessao() === S && TM.ui.current() === "leilao-camp") verJogo(r.id);
-      else atualiza();
+      if (!r || !r.ok) { VIEW.ocupado = null; TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro"); atualiza(); return; }
+      // gravado: só então o 2D (sem pausa) mostra o que ficou gravado — com o jogo feito também na vista desta página (a
+      // resposta da transação pode chegar antes do dado novo pelo ouvinte: sem esperar, a rota do 2D não achava o jogo
+      // feito e voltava ao Campeonato)
+      quandoNaVista(S, r.id, function () {
+        VIEW.ocupado = null;
+        if (sessao() === S && TM.ui.current() === "leilao-camp" && S.partida(r.id)) verJogo(r.id);
+        else atualiza();
+      });
     }, function (e) {
       VIEW.ocupado = null;
       if (global.console) console.error(e);
       TM.ui.toast("Não deu para simular: tente de novo.", "erro");
       atualiza();
     });
+  }
+  // chama fim() quando o jogo gravado já está na vista da sessão (S.partida), ou em 8 s
+  function quandoNaVista(S, id, fim) {
+    if (S.partida(id)) { fim(); return; }
+    var feito = false, off = null, t = null;
+    function acaba() { if (feito) return; feito = true; if (off) off(); clearTimeout(t); fim(); }
+    off = S.aoMudar(function () { if (S.partida(id)) acaba(); });
+    t = setTimeout(acaba, 8000);
   }
   function caixaPendentes(S, V, C) {
     var oc = VIEW.ocupado === "pendentes";
