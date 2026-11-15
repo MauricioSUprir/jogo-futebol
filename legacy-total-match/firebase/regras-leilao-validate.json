@@ -1,0 +1,63 @@
+{
+  "rules": {
+    "leiloes": {
+      "$c": {
+        "sala": {
+          "meta": {
+            "dono": { ".validate": "!data.exists() || newData.val() === data.val()" },
+            "estado": { ".validate": "newData.isString() && newData.val().matches(/^(saguao|leilao|escalacao|camp|fim)$/)" },
+            "regras": { ".validate": "newData.isNumber()" },
+            "criada": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "atividade": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "fimLeilao": { ".validate": "newData.val() === now || newData.val() === data.val()" }
+          },
+          "tec": {
+            "$uid": {
+              "auth": { ".validate": "newData.val() === data.val() || (!data.exists() && (newData.val() === auth.uid || newData.val() === root.child('leiloes').child($c).child('sala/pedidos').child($uid).child('auth').val()))" }
+            }
+          },
+          "pedidos": {
+            "$uid": {
+              ".validate": "(!data.exists() && newData.child('auth').val() === auth.uid) || (data.exists() && newData.child('auth').val() === data.child('auth').val())",
+              "ts": { ".validate": "newData.val() === now || newData.val() === data.val()" }
+            }
+          }
+        },
+        "lotes": {
+          ".validate": "!data.exists() || root.child('leiloes').child($c).child('sala/meta/estado').val() === 'saguao'"
+        },
+        "vivo": {
+          ".validate": "!data.exists() || (newData.child('seq').val() >= data.child('seq').val() && (newData.child('seq').val() !== data.child('seq').val() || (newData.child('valor').val() >= data.child('valor').val() && (newData.child('n').val() === data.child('n').val() || ((data.child('fase').val() === 'rep' && (now < data.child('abre').val() + 7500 || now < data.child('t').val() + 6000)) || (data.child('fase').val() !== 'rep' && (now < data.child('abre').val() + 1500 + root.child('leiloes').child($c).child('sala/cfg/tempo').val() || now < data.child('t').val() + 8000)))))))",
+          "abre": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+          "t": { ".validate": "newData.val() === now || newData.val() === data.val() || newData.val() === 0" }
+        },
+        "vendas": {
+          "$i": { ".validate": "!data.exists()" }
+        },
+        "escal": {
+          "$t": { ".validate": "root.child('leiloes').child($c).child('sala/tec').child(root.child('leiloes').child($c).child('sala/ordem').child($t).val()).child('auth').val() === auth.uid" }
+        },
+        "bate": {
+          "$uid": {
+            ".validate": "newData.hasChildren(['ts', 'sid']) && root.child('leiloes').child($c).child('sala/tec').child($uid).child('auth').val() === auth.uid",
+            "ts": { ".validate": "newData.val() === now" },
+            "desde": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "sid": { ".validate": "newData.isString()" },
+            "n": { ".validate": "newData.isString()" }
+          }
+        },
+        "pres": {
+          "$uid": {
+            ".validate": "root.child('leiloes').child($c).child('sala/tec').child($uid).child('auth').val() === auth.uid",
+            "$k": { ".validate": "newData.isBoolean()" }
+          }
+        },
+        "jogos": {
+          "$j": {
+            "res": { ".validate": "!data.exists()" }
+          }
+        }
+      }
+    }
+  }
+}
