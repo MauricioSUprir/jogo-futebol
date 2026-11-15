@@ -60,8 +60,11 @@ const args = process.argv.slice(2);
 const opt = (n, p) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : p; };
 const SO = opt("--so", null) ? opt("--so").split(",").map(s => s.trim().toUpperCase()) : null;
 const N_LEILOES = +opt("--leiloes", 1000);
+// --ocultas: o L7 com as notas escondidas (os robôs pela nota percebida, PR 6) — a medida "depois" do PLANO §8 "Durante o PR 6"
+const OCULTAS_L7 = args.includes("--ocultas");
 const VERBOSO = args.includes("-v");
 const SO_3D = args.includes("--so3d");
+const SO_OCULTAS = args.includes("--soOcultas");
 if (args.includes("--tela")) process.exit(await testeTela());
 const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/ultimate.js", "js/engine.js", "js/leilao.js", "js/leilao-camp.js", "js/leilao-rede.js", "js/leilao-sessao.js"];
 const REF_MOTOR = path.join(RAIZ, "ferramentas/dados/motor-ref.json");
@@ -572,13 +575,16 @@ bloco("L6", "fim: 11 que cabem, 1 goleiro, o completar só com os de fora", (ok,
 });
 
 /* ===================================================== L7 robôs ===================================================== */
-bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs`, (ok, nota) => {
+bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs${OCULTAS_L7 ? " com as notas escondidas (a nota percebida)" : ""}`, (ok, nota) => {
   const r = rngT("L7");
   let completos = 0, recusas = 0, acimaMax = 0, precoSobe = 0, comQuartis = 0, minutos = 0, sobra = 0, tecs = 0, conf = 0;
+  let somaPreco = 0, nVendas = 0, somaNotaTime = 0, nTimes = 0;
   const amostra = [];
   for (let n = 0; n < N_LEILOES; n++) {
     const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7);
-    const ctx = ctxDe(ed, liga, T, "L7-" + n), res = leilaoRobos(ctx);
+    const ctx = ctxDe(ed, liga, T, "L7-" + n, OCULTAS_L7 ? { notasOcultas: true } : null), res = leilaoRobos(ctx);
+    res.vendas.forEach(x => { somaPreco += x.preco; nVendas++; });
+    if (res.v.fase === "fim") for (let t = 0; t < T; t++) { const tm = LE.timeDe(res.v, ctx, t); if (tm.length) { somaNotaTime += tm.reduce((a, l) => a + l.overall, 0) / tm.length; nTimes++; } }
     if (res.erros.length) { recusas++; if (recusas <= 5) ok(false, `${ed}/${liga}/T${T}/L7-${n}: ${res.erros[0]}`); }
     if (res.v.fase === "fim" && !(res.v.f || "").replace(/-/g, "").length) completos++;
     minutos += res.minutos;
@@ -604,7 +610,7 @@ bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs`, (ok, nota) => {
   ok(ps >= 0.9, `o quartil de cima custa mais em ${(ps * 100).toFixed(1)}% dos leilões (meta ≥ 90%)`);
   // a mesma semente dá o mesmo leilão
   for (const { ctx, res } of amostra.slice(0, 10)) {
-    const ctx2 = LE.contexto({ T: ctx.T, lotes: ctx.lotes, fora: ctx.fora, semente: ctx.semente });
+    const ctx2 = LE.contexto({ T: ctx.T, lotes: ctx.lotes, fora: ctx.fora, semente: ctx.semente, notasOcultas: ctx.notasOcultas });
     ok(jsonIgual(leilaoRobos(ctx2).vendas, res.vendas), `mesma semente, outro leilão (${ctx.semente})`);
   }
   // dois robôs com o MESMO perfil não repetem a sequência (o sorteio leva o técnico)
@@ -654,7 +660,7 @@ bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs`, (ok, nota) => {
     ok(abortos > 0, "3 aparelhos sem nenhuma transação abortada (o teste não testou nada)");
   }
   ok(conf === 0, `conferência acusou ${conf} transições honestas`);
-  nota(`${(pc * 100).toFixed(1)}% completos sem a reposição; quartil de cima mais caro em ${(ps * 100).toFixed(0)}%; ~${(minutos / N_LEILOES).toFixed(1)} min de leilão em média; sobra média R$ ${(sobra / tecs).toFixed(0)} por técnico`);
+  nota(`${(pc * 100).toFixed(1)}% completos sem a reposição; quartil de cima mais caro em ${(ps * 100).toFixed(0)}%; ~${(minutos / N_LEILOES).toFixed(1)} min de leilão em média; sobra média R$ ${(sobra / tecs).toFixed(1)} por técnico; preço médio R$ ${(somaPreco / Math.max(1, nVendas)).toFixed(2)}; nota média do time ${(somaNotaTime / Math.max(1, nTimes)).toFixed(2)}`);
 });
 
 /* ===================================================== L8 protocolo (a sessão) ===================================================== */
@@ -1841,6 +1847,20 @@ async function testeOnline() {
     r = await espera(SA.configurar({ tempo: 15 })); await passa(300);
     ok(r.ok && sala(cod).cfg.tempo === 15000 && SA.ver().saguao.prontos === 1 && SA.ver().saguao.faltam.length === 2, "configurar zera os Pronto: " + JSON.stringify(SA.ver().saguao));
     r = await espera(SA.configurar({ vagas: 2 })); ok(!r.ok && r.motivo === "vagas", "vagas a menos que os técnicos: " + JSON.stringify(r));
+    // o Overall da sala (PR 6): só o dono muda, zera os Pronto, todos veem; numa sala de regras 4 (antes do PR 6) é recusado
+    ok(sala(cod).cfg.overall === "mostra" && SB.ver().overall === "mostra" && !SB.ver().notasOcultas, "a sala nasce com o Overall à mostra: " + sala(cod).cfg.overall);
+    r = await espera(SB.pronto(true)); await passa(300);
+    r = await espera(SB.configurar({ overall: "escondido" })); ok(!r.ok && sala(cod).cfg.overall === "mostra", "quem não é dono não muda o Overall: " + JSON.stringify(r));
+    r = await espera(SA.configurar({ overall: "escondido" })); await passa(300);
+    ok(r.ok && sala(cod).cfg.overall === "escondido" && SB.ver().overall === "escondido" && SB.ver().notasOcultas && SA.ver().saguao.prontos === 1, "o Overall escondido pelo dono (zera os Pronto): " + JSON.stringify({ cfg: sala(cod).cfg.overall, v: SB.ver().overall, p: SA.ver().saguao.prontos }));
+    r = await espera(SA.configurar({ overall: "mostra" })); await passa(300);
+    ok(r.ok && sala(cod).cfg.overall === "mostra" && !SB.ver().notasOcultas, "o Overall de volta à mostra");
+    {
+      const s4 = JSON.parse(JSON.stringify(sala(cod))); s4.meta.regras = 4; banco.gravar(`leiloes/${cod}/sala/meta/regras`, 4); await passa(300);
+      r = await espera(SA.configurar({ overall: "escondido" })); await passa(300);
+      ok(!r.ok && r.motivo === "regras" && sala(cod).cfg.overall === "mostra", "numa sala de regras 4 o Overall não muda (as de antes ficam à mostra): " + JSON.stringify(r));
+      banco.gravar(`leiloes/${cod}/sala/meta/regras`, Lx.REGRAS); await passa(300);
+    }
     // tirar
     const tirados = []; SD.on("tirado", () => tirados.push(1));
     r = await espera(SA.tirar("d")); await passa(300);
@@ -2207,7 +2227,7 @@ async function testeOnline() {
   }
 
     marca("O7");
-  if (caso("O7")) /* ---------- O7 a sala mexida fora das regras e o rastro: o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho depois de encerrar ---------- */
+  if (caso("O7")) /* ---------- O7 a sala mexida fora das regras e o rastro: o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho depois de encerrar, o Overall e as regras mudados depois do Começar (revisão do PR 6) ---------- */
   {
     // (a) o vivo apagado no meio do leilão (uma gravação de qualquer conta logada): congela em todos, nada recomeça
     const A = aparelho("va"), B = aparelho("vb");
@@ -2267,7 +2287,26 @@ async function testeOnline() {
     const rG = await espera(SG.encerrar()); await passa(5000);
     ok(rG.ok && SH.apagada && banco.ler(`leiloes/${codG}`) == null, "o bate a caminho quando o dono encerra: a sala não volta (sobrou " + JSON.stringify(banco.ler(`leiloes/${codG}`)) + ")");
     [SG, SH].forEach(x => x.parar());
-    nota_("O7", "o vivo apagado congela (também ao recarregar), os lotes trocados no saguão são regravados no Começar, a edição trocada volta à da sala, o bate a caminho não recria a sala encerrada");
+    // (f) o Overall escondido gravado com os lotes no Começar (revisão do PR 6): o cfg.overall ou o meta.regras mudados depois,
+    // direto no banco, congelam a sala em todos — e quem abre a sala depois também congela —, sempre com as notas escondidas
+    for (const [nome, cam, val] of [["o Overall", "sala/cfg/overall", "mostra"], ["as regras", "sala/meta/regras", 4]]) {
+      const K1 = aparelho("vk" + cam.length), K2 = aparelho("vl" + cam.length);
+      const SK = await K1.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7f" + cam.length, overall: "escondido" }), codK = SK.codigo;
+      let SL = await K2.entrar(codK); await passa(200); await espera(SK.aceitar("vl" + cam.length)); await passa(300); await espera(SL.pronto(true)); await passa(300);
+      const rK = await espera(SK.comecar());
+      await anda(() => SK.ctx && SL.ctx && SK.vivoN && SL.vivoN, 30_000);
+      const ltK = banco.ler(`leiloes/${codK}/lotes`);
+      ok(rK.ok && ltK && ltK.ov === "escondido" && SK.ctx.notasOcultas && SL.ctx.notasOcultas && !SK.alterada && !SL.alterada, `${nome}: os lotes gravados no Começar com o Overall escondido (${ltK && ltK.ov})`);
+      banco.gravar(`leiloes/${codK}/${cam}`, val); await passa(500);
+      const vk = SK.ver(), vl = SL.ver();
+      ok(SK.alterada === "overall" && SL.alterada === "overall" && vk.notasOcultas && vl.notasOcultas && vk.overall === "escondido" && vl.overall === "escondido",
+        `${nome} mudado no banco depois do Começar: congela em todos com as notas escondidas (${SK.alterada}/${SL.alterada}, ${vk.overall}/${vl.overall})`);
+      SL.parar(); await passa(100);
+      SL = await K2.abrir(codK); await passa(2000);
+      ok(SL.alterada === "overall" && SL.ver().notasOcultas, `${nome}: recarregar a sala mexida congela com as notas escondidas (${SL.alterada}, ${SL.ver().notasOcultas})`);
+      [SK, SL].forEach(x => x.parar());
+    }
+    nota_("O7", "o vivo apagado congela (também ao recarregar), os lotes trocados no saguão são regravados no Começar, a edição trocada volta à da sala, o bate a caminho não recria a sala encerrada, o Overall e as regras mudados depois do Começar congelam com as notas escondidas");
   }
 
     marca("O8");
@@ -2898,6 +2937,305 @@ function pilotoCamp(S, V, simula) {
   olha();
   return { parar() { parado = true; off(); }, pedidos };
 }
+/* ===================================================== NO as notas escondidas (PR 6) ===================================================== */
+// a conta da nota percebida feita AQUI (sem o leilao.js): o mulberry32 do rng.js sobre o FNV-1a de "leilao:{semente}:percebida:{id}",
+// a nota + ⌊r × 7⌋ − 3
+function fnvRef(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberryRef(seed) {
+  let a = seed >>> 0;
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const percebidaRef = (sem, id, ov) => ov + Math.floor(mulberryRef(fnvRef("leilao:" + sem + ":percebida:" + id))() * 7) - 3;
+// as medidas de um leilão só de robôs (o "antes e depois" do PLANO §8): preço de uma compra, completo sem a reposição, a sobra
+// e a nota média (a de verdade) do time de cada técnico
+function medidasRobos(ctx, res, Lx) {
+  const m = { vendas: res.vendas.length, preco: res.vendas.reduce((a, x) => a + x.preco, 0), completo: res.v.fase === "fim" && !(res.v.f || "").replace(/-/g, "").length ? 1 : 0, sobra: 0, tecs: 0, nota: 0, times: 0 };
+  res.v.cx.forEach(c => { m.sobra += c[0]; m.tecs++; });
+  if (res.v.fase === "fim") for (let t = 0; t < ctx.T; t++) { const tm = (Lx || LE).timeDe(res.v, ctx, t); if (tm.length) { m.nota += tm.reduce((a, l) => a + l.overall, 0) / tm.length; m.times++; } }
+  return m;
+}
+async function testeOcultas() {
+  await blocoAsync("NO", "notas escondidas (PR 6): as regras, a nota percebida conferida, os robôs só com ela, a opção da sala e a revelação no fim", async (ok, nota) => {
+    const TMx = TMs.public, Lx = TMx.leilao, LC = TMx.leilaoCamp, SS = TMx.leilaoSessao, mundo = MUNDO.public;
+    /* ---- NO1 as regras: 5, as de antes aceitas e à mostra ---- */
+    ok(Lx.REGRAS === 5 && Lx.REGRAS_OCULTAS === 5 && jsonIgual(Lx.REGRAS_ACEITAS, [1, 2, 3, 4, 5]) && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6),
+      `NO1 regras ${Lx.REGRAS}, aceitas ${JSON.stringify(Lx.REGRAS_ACEITAS)}`);
+    const sala = (regras, overall) => ({ meta: { regras }, cfg: { overall } });
+    ok(Lx.ocultasNaSala(sala(5, "escondido")) && !Lx.ocultasNaSala(sala(5, "mostra")) && !Lx.ocultasNaSala(sala(5, undefined)) && !Lx.ocultasNaSala(sala(5, "sim")) &&
+      [1, 2, 3, 4].every(r => !Lx.ocultasNaSala(sala(r, "escondido"))) && !Lx.ocultasNaSala(null) && !Lx.ocultasNaSala({ meta: {} }),
+      "NO1 ocultasNaSala: só cfg.overall 'escondido' numa sala de regras ≥ 5 (as de antes ficam à mostra)");
+    ok(Lx.REVELA_NOTAS === "campeonato" && Lx.PERCEBIDA === 3, `NO1 a decisão 13 (revelar no fim do campeonato) e a nota ± 3: ${Lx.REVELA_NOTAS}, ${Lx.PERCEBIDA}`);
+    /* ---- NO2 a nota percebida: a conta feita aqui, ± 3, as duas edições (dois "aparelhos"), outra semente = outra nota ---- */
+    {
+      const cont = {}; let dif = 0, difSem = 0, n = 0;
+      for (const ed of ["public", "pro"]) for (const p of Object.values(MUNDO[ed].playersById).slice(0, 1500)) {
+        for (const sem of ["NO-a", "NO-b", "123456789"]) {
+          const pc = Lx.notaPercebida(sem, p.id, p.overall), d = pc - p.overall; n++;
+          if (pc !== percebidaRef(sem, p.id, p.overall)) dif++;
+          if (pc !== TMs.pro.leilao.notaPercebida(sem, p.id, p.overall)) dif++;
+          cont[d] = (cont[d] || 0) + 1;
+        }
+        if (Lx.notaPercebida("NO-a", p.id, p.overall) !== Lx.notaPercebida("NO-b", p.id, p.overall)) difSem++;
+        // o ruído não depende da nota (a conta é sobre o id): outra nota, a mesma diferença
+        if (Lx.notaPercebida("NO-a", p.id, 50) - 50 !== Lx.notaPercebida("NO-a", p.id, p.overall) - p.overall) dif++;
+      }
+      ok(dif === 0, `NO2 a nota percebida diferente da conta feita aqui (ou entre os dois "aparelhos") em ${dif} casos`);
+      const chaves = Object.keys(cont).map(Number).sort((a, b) => a - b);
+      ok(jsonIgual(chaves, [-3, -2, -1, 0, 1, 2, 3]) && chaves.every(k => cont[k] / n > 0.12 && cont[k] / n < 0.165), `NO2 a nota ± 3, uniforme: ${JSON.stringify(cont)} em ${n}`);
+      ok(difSem > 3000 * 0.8, `NO2 outra semente, outra nota percebida em só ${difSem} de 3000`);
+      nota(`NO2 ${n} notas percebidas conferidas (${chaves.map(k => k + ": " + (100 * cont[k] / n).toFixed(1) + "%").join(", ")})`);
+    }
+    /* ---- NO3 o contexto: os robôs com a nota percebida, os lotes iguais e a fila (revisão do PR 6) sorteada SEM as faixas de
+       nota com elas escondidas; à mostra, a fila de antes bit a bit ---- */
+    {
+      const v = ctxDe("pro", "br", 4, "NO3"), o = ctxDe("pro", "br", 4, "NO3", { notasOcultas: true });
+      ok(!v.notasOcultas && o.notasOcultas && v.lotes === o.lotes && !jsonIgual(v.fila, o.fila), "NO3 os lotes mudaram (ou a fila não mudou) com as notas escondidas");
+      ok(v.ov.every((x, i) => x === v.lotes[i].overall) && o.ov.every((x, i) => x === percebidaRef("NO3", o.lotes[i].id, o.lotes[i].overall)), "NO3 ctx.ov: a nota de verdade à mostra, a percebida escondida");
+      ok(o.ov.some((x, i) => x !== o.lotes[i].overall), "NO3 com as notas escondidas, nenhuma nota percebida difere da de verdade (o teste não testou nada)");
+      // a fila dos lotes entregava a faixa de nota: em cada grupo, cada trinca seguida tinha um de cada faixa (alta, média, baixa)
+      // em ~89% (o sorteio puro dá ~22%). Escondida, sem as faixas; à mostra, igual à de antes (o ordem() de 3 argumentos)
+      let trincas = 0, cheiasO = 0, cheiasM = 0, filaAntes = 0, ruimFila = 0, n = 0;
+      for (const liga of ["br", "en", "es", "it", "de"]) for (let T = 2; T <= 8; T++) for (let k = 0; k < 6; k++) {
+        const sem = "NO3t-" + k, { lotes, fora } = lotesDe("pro", liga, T);
+        const cm = TMs.pro.leilao.contexto({ T, lotes, fora, semente: sem }), co = TMs.pro.leilao.contexto({ T, lotes, fora, semente: sem, notasOcultas: true });
+        n++;
+        if (jsonIgual(cm.fila, TMs.pro.leilao.ordem(lotes, sem, T))) filaAntes++;
+        const L0 = lotes.length, gks = co.fila.map((li, q) => lotes[li].pos === "GK" ? q : -1).filter(q => q >= 0);
+        if (new Set(co.fila).size !== L0 || co.fila.length !== L0 || gks[0] >= Math.max(1, Math.floor(0.2 * L0)) || gks.some(q => q >= L0 - T)
+          || !jsonIgual(co.fila, TMs.public.leilao.contexto({ T, lotes, fora, semente: sem, notasOcultas: true }).fila)) ruimFila++;
+        for (const g of ["DF", "MF", "FW"]) {
+          const idx = []; lotes.forEach((l, i) => { if (l.pos === g) idx.push(i); });
+          const m = idx.length, faixa = {};
+          idx.forEach((li, r) => { faixa[li] = Math.min(2, Math.floor(r * 3 / m)); });   // (os lotes vêm ordenados pela nota)
+          const subO = co.fila.filter(li => lotes[li].pos === g), subM = cm.fila.filter(li => lotes[li].pos === g);
+          for (let q = 0; q + 2 < Math.floor(m / 3) * 3; q += 3) {
+            trincas++;
+            if (new Set([faixa[subO[q]], faixa[subO[q + 1]], faixa[subO[q + 2]]]).size === 3) cheiasO++;
+            if (new Set([faixa[subM[q]], faixa[subM[q + 1]], faixa[subM[q + 2]]]).size === 3) cheiasM++;
+          }
+        }
+      }
+      const pO = 100 * cheiasO / trincas, pM = 100 * cheiasM / trincas;
+      ok(filaAntes === n, `NO3 à mostra, a fila diferente da de antes em ${n - filaAntes} de ${n} salas`);
+      ok(ruimFila === 0, `NO3 a fila escondida não é permutação, quebra a regra dos goleiros ou muda entre os "aparelhos" em ${ruimFila} de ${n} salas`);
+      ok(pO < 35 && pM > 80, `NO3 as trincas da fila com um lote de cada faixa de nota: escondida ${pO.toFixed(1)}% (meta < 35%; o sorteio puro dá ~22%), à mostra ${pM.toFixed(1)}% (a de antes, ~89%)`);
+      nota(`NO3 a fila: trincas com uma de cada faixa ${pM.toFixed(1)}% à mostra → ${pO.toFixed(1)}% escondida (${trincas} trincas)`);
+    }
+    /* ---- NO4 os robôs só sabem a nota percebida: escondido sobre os lotes de verdade = à mostra sobre lotes com a nota
+       trocada pela percebida (a mesma fila) — o leilão inteiro igual, venda a venda ---- */
+    {
+      const r = rngT("NO4");
+      let iguais = 0, mudou = 0;
+      for (let n = 0; n < 40; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO4-" + n;
+        const o = ctxDe(ed, liga, T, sem, { notasOcultas: true });
+        const copia = o.lotes.map(l => Object.assign({}, l, { overall: percebidaRef(sem, l.id, l.overall) }));
+        const v = TMs[ed].leilao.contexto({ T, lotes: copia, fora: o.fora, semente: sem, fila: o.fila });
+        const ro = leilaoRobos(o), rv = leilaoRobos(v), rr = leilaoRobos(ctxDe(ed, liga, T, sem));
+        if (jsonIgual(ro.vendas, rv.vendas) && resumoFinal(ro.v) === resumoFinal(rv.v)) iguais++;
+        if (!jsonIgual(ro.vendas, rr.vendas)) mudou++;
+      }
+      ok(iguais === 40, `NO4 os robôs com as notas escondidas = os robôs olhando só a nota percebida em ${iguais} de 40 leilões`);
+      ok(mudou >= 30, `NO4 escondido e à mostra deram o mesmo leilão em ${40 - mudou} de 40 (a nota percebida não mudou nada)`);
+    }
+    /* ---- NO5 as medidas pareadas (as mesmas sementes): à mostra × escondido; nunca acima do máximo, a conferência, ≥ 99%
+       completos; o mesmo leilão em 3 "aparelhos" (as duas edições carregadas e a de novo) ---- */
+    {
+      const N = Math.min(N_LEILOES, 300), r = rngT("NO5"), soma = { mostra: null, oculta: null };
+      let acimaMax = 0, conf = 0, recus = 0, aparelhos = 0;
+      const junta = (k, m) => { const a = soma[k] || (soma[k] = { vendas: 0, preco: 0, completo: 0, sobra: 0, tecs: 0, nota: 0, times: 0, n: 0 }); Object.keys(m).forEach(x => { a[x] += m[x]; }); a.n++; };
+      for (let n = 0; n < N; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO5-" + n;
+        const cm = ctxDe(ed, liga, T, sem), co = ctxDe(ed, liga, T, sem, { notasOcultas: true });
+        const rm = leilaoRobos(cm), ro = leilaoRobos(co);
+        if (rm.erros.length || ro.erros.length) { recus++; if (recus <= 3) ok(false, `NO5 ${sem}: ${rm.erros[0] || ro.erros[0]}`); }
+        junta("mostra", medidasRobos(cm, rm)); junta("oculta", medidasRobos(co, ro));
+        for (let k = 1; k < ro.estados.length; k++) {
+          const a = ro.estados[k - 1], b = ro.estados[k];
+          if (b.seq === a.seq && (b.n || 0) > (a.n || 0) && b.valor > Lx.maximo(a, co, b.lider)) acimaMax++;
+          if (n < 30) { const c = Lx.conferir(a, b, co); if (!c.ok) { conf++; if (conf <= 3) ok(false, `NO5 a conferência acusou um leilão honesto escondido: ${c.motivo} (${sem}, passo ${k})`); } }
+        }
+        if (n < 8) {
+          const otherL = TMs[ed === "pro" ? "public" : "pro"].leilao;
+          const c2 = otherL.contexto({ T, lotes: co.lotes, fora: co.fora, semente: sem, notasOcultas: true });
+          const r2 = leilaoRobos(c2, { LE: otherL }), r3 = leilaoRobos(ctxDe(ed, liga, T, sem, { notasOcultas: true }));
+          if (jsonIgual(r2.vendas, ro.vendas) && jsonIgual(r3.vendas, ro.vendas) && resumoFinal(r2.v) === resumoFinal(ro.v)) aparelhos++;
+        }
+      }
+      const fmt = a => ({ preco: a.preco / Math.max(1, a.vendas), completos: 100 * a.completo / a.n, sobra: a.sobra / a.tecs, nota: a.nota / Math.max(1, a.times) });
+      const M = fmt(soma.mostra), O = fmt(soma.oculta);
+      ok(acimaMax === 0, `NO5 ${acimaMax} lances acima do máximo com as notas escondidas`);
+      ok(conf === 0 && recus === 0, `NO5 a conferência acusou ${conf} transições honestas; ${recus} leilões com ação recusada`);
+      ok(O.completos >= 99, `NO5 completam sem a reposição com as notas escondidas: ${O.completos.toFixed(1)}% (meta ≥ 99%)`);
+      ok(aparelhos === 8, `NO5 o mesmo leilão escondido em 3 "aparelhos" em ${aparelhos} de 8`);
+      // os robôs não sabem mais que as pessoas: com a nota percebida eles compram um pouco pior (a nota média do time não sobe)
+      ok(O.nota <= M.nota + 0.05, `NO5 a nota média do time subiu com as notas escondidas: ${M.nota.toFixed(2)} → ${O.nota.toFixed(2)}`);
+      nota(`NO5 ${N} leilões pareados, à mostra → escondido: preço médio R$ ${M.preco.toFixed(2)} → ${O.preco.toFixed(2)}, completos ${M.completos.toFixed(1)}% → ${O.completos.toFixed(1)}%, sobra R$ ${M.sobra.toFixed(1)} → ${O.sobra.toFixed(1)}, nota média do time ${M.nota.toFixed(2)} → ${O.nota.toFixed(2)}`);
+    }
+    /* ---- NO6 a revelação (leilao-camp.js revelados): no fim do campeonato; a alternativa, a cada partida ---- */
+    {
+      const vista = (fim, jogos) => ({ fim, rodadas: [{ jogos }] });
+      const meio = vista(false, [{ e: "feito", a: 0, b: 1 }, { e: "aberto", a: 2, b: 3 }]);
+      let x = LC.revelados("campeonato", meio, 4);
+      ok(!x.todas && jsonIgual(x.t, [false, false, false, false]), "NO6 'campeonato': nada antes do fim — " + JSON.stringify(x));
+      x = LC.revelados("campeonato", vista(true, []), 4);
+      ok(x.todas && x.t.every(Boolean), "NO6 'campeonato': todas no fim — " + JSON.stringify(x));
+      x = LC.revelados("campeonato", null, 3);
+      ok(!x.todas && x.t.length === 3 && !x.t.some(Boolean), "NO6 sem campeonato (o leilão): nada — " + JSON.stringify(x));
+      x = LC.revelados("partida", meio, 4);
+      ok(!x.todas && jsonIgual(x.t, [true, true, false, false]), "NO6 'partida' (a alternativa): os dois times do jogo feito — " + JSON.stringify(x));
+      x = LC.revelados("partida", vista(false, [{ e: "feito", a: 0, b: 1 }, { e: "feito", a: 2, b: 3 }]), 4);
+      ok(x.todas, "NO6 'partida': todos jogaram = todas — " + JSON.stringify(x));
+      // quem comprou melhor: a nota de cada compra contra a reta nota × preço das vendas da sala (a conta feita aqui)
+      const ref = (vs, T) => {
+        const n = vs.length, mp = vs.reduce((a, v) => a + v.preco, 0) / n, mn = vs.reduce((a, v) => a + v.nota, 0) / n;
+        const sxx = vs.reduce((a, v) => a + (v.preco - mp) ** 2, 0), b = sxx > 1e-9 ? vs.reduce((a, v) => a + (v.preco - mp) * (v.nota - mn), 0) / sxx : 0;
+        const ac = Array.from({ length: T }, () => 0); vs.forEach(v => { ac[v.t] += v.nota - (mn + b * (v.preco - mp)); });
+        return ac.map(x => Math.round(x * 10) / 10);
+      };
+      const rr = rngT("NO6");
+      let ruins = 0;
+      for (let k = 0; k < 200; k++) {
+        const T = 2 + Math.floor(rr() * 7), vs = Array.from({ length: 5 + Math.floor(rr() * 40) }, () => ({ t: Math.floor(rr() * T), preco: 1 + Math.floor(rr() * 30), nota: 60 + Math.floor(rr() * 30) }));
+        const got = LC.compraram(vs, T), esp = ref(vs, T);
+        if (got.length !== T || got.some(o => Math.abs(o.acima - esp[o.t]) > 0.11 || o.compras !== vs.filter(v => v.t === o.t).length || o.gasto !== vs.filter(v => v.t === o.t).reduce((a, v) => a + v.preco, 0))) ruins++;
+        // (a ordem: quem comprou, de quem levou mais nota do que pagou para quem levou menos; depois quem não comprou nada)
+        for (let i = 1; i < got.length; i++) if ((got[i].compras && !got[i - 1].compras) || (!!got[i].compras === !!got[i - 1].compras && got[i].acima > got[i - 1].acima)) ruins++;
+      }
+      ok(ruins === 0, `NO6 compraram: a conta diferente da feita aqui (ou fora de ordem) em ${ruins} de 200 salas`);
+      // o mesmo preço: quem levou a nota maior; quem não comprou nada fica no 0 e vai para o FIM da lista, nunca acima de quem
+      // comprou (nem de quem levou menos do que pagou; revisão do PR 6)
+      x = LC.compraram([{ t: 0, preco: 5, nota: 80 }, { t: 1, preco: 5, nota: 70 }], 3);
+      ok(x[0].t === 0 && x[0].acima === 5 && x[1].t === 1 && x[1].acima === -5 && x[2].t === 2 && x[2].acima === 0 && x[2].compras === 0, "NO6 compraram com um preço só: " + JSON.stringify(x));
+      // (o caso da revisão: t2 passou tudo e ficou com o time de graça)
+      x = LC.compraram([{ t: 0, preco: 5, nota: 80 }, { t: 0, preco: 20, nota: 82 }, { t: 1, preco: 30, nota: 79 }, { t: 1, preco: 6, nota: 74 }], 3);
+      ok(x[2].t === 2 && x[2].compras === 0 && x.slice(0, 2).every(o => o.compras > 0), "NO6 quem não comprou nada no fim da lista: " + JSON.stringify(x));
+    }
+    /* ---- NO8 a escalação automática não entrega a ordem das notas (revisão do PR 6): os lotes vêm ordenados pela nota de
+       verdade e o húngaro desempatava pela ordem das linhas — o melhor de dois da mesma função na vaga de índice menor (e com a
+       camisa menor: timeDoTecnico, number = vaga + 1) em ~85% dos pares. Escondidas, as linhas pelo hash da semente + o id:
+       os pares empatados perto de 50% (dentro de 3 erros-padrão por time, os pares de um time não são independentes), a
+       mesma escalação noutro "aparelho" (entra na conferência dos jogos), o mesmo custo; à mostra, a escalação de antes ---- */
+    {
+      const r = rngT("NO8"), cl = { o: [], m: [] };
+      let times = 0, difAparelho = 0, difAntes = 0, difCusto = 0, difForma = 0;
+      const soma = a => a.reduce((x, y) => x + (y || 0), 0);
+      for (let n = 0; n < 150; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO8-" + n;
+        const L2 = TMs[ed].leilao, outro = TMs[ed === "pro" ? "public" : "pro"].leilao;
+        const co = ctxDe(ed, liga, T, sem, { notasOcultas: true }), cm = ctxDe(ed, liga, T, sem);
+        const co2 = outro.contexto({ T, lotes: co.lotes, fora: co.fora, semente: sem, notasOcultas: true });
+        const res = leilaoRobos(co, { LE: L2 });
+        if (res.v.fase !== "fim") continue;
+        for (let t = 0; t < T; t++) {
+          const pref = L2.perfilRobo(sem, t).formacao;
+          const eo = L2.escalacaoDe(res.v, co, t, null, pref), em = L2.escalacaoDe(res.v, cm, t, null, pref);
+          if (eo.n !== 11) continue;
+          times++;
+          if (!jsonIgual(outro.escalacaoDe(res.v, co2, t, null, pref), eo)) difAparelho++;
+          if (eo.formacao !== em.formacao) difForma++;
+          if (soma(eo.pen) !== soma(em.pen)) difCusto++;
+          // à mostra, a de antes: o húngaro na ordem do timeIdx (a ordem dos lotes)
+          const idx = L2.timeIdx(res.v, cm, t), e0 = L2.escalacao(idx.map(k => L2.retratoDe(cm, k)), em.formacao);
+          if (!e0 || !jsonIgual(em.tit, e0.tit.map(i => (i < 0 ? -1 : idx[i]))) || !jsonIgual(em.pen, e0.pen)) difAntes++;
+          for (const [k, e, c] of [["o", eo, co], ["m", em, cm]]) {
+            const slots = L2.slotsDe(e.formacao);
+            let x = 0, np = 0;
+            for (let a = 0; a < 11; a++) for (let b = a + 1; b < 11; b++) {
+              const ra = L2.retratoDe(c, e.tit[a]), rb = L2.retratoDe(c, e.tit[b]);
+              // o empate: os dois sem custo nas duas vagas (trocar não muda nada); notas iguais não contam
+              if (L2.custoVaga(ra, slots[a]) || L2.custoVaga(ra, slots[b]) || L2.custoVaga(rb, slots[a]) || L2.custoVaga(rb, slots[b]) || ra.overall === rb.overall) continue;
+              np++; if (ra.overall > rb.overall) x++;
+            }
+            if (np) cl[k].push([x, np]);
+          }
+        }
+      }
+      // a proporção e o erro-padrão por grupos (cada time um grupo)
+      const est = g => { const X = g.reduce((a, q) => a + q[0], 0), N = g.reduce((a, q) => a + q[1], 0), p = X / N; return { p, se: Math.sqrt(g.reduce((a, q) => a + (q[0] - p * q[1]) ** 2, 0)) / N, N }; };
+      const O = est(cl.o), M = est(cl.m);
+      ok(difAparelho === 0, `NO8 a escalação escondida diferente noutro "aparelho" em ${difAparelho} de ${times} times`);
+      ok(difAntes === 0, `NO8 à mostra, a escalação diferente da de antes em ${difAntes} de ${times} times`);
+      ok(difCusto === 0 && difForma === 0, `NO8 a escalação escondida com outro custo (${difCusto}) ou outra formação (${difForma}) que a de antes`);
+      ok(O.N >= 500 && O.se < 0.03 && Math.abs(O.p - 0.5) <= 3 * O.se, `NO8 os pares empatados da mesma função: o melhor na vaga de índice menor em ${(100 * O.p).toFixed(1)}% ± ${(100 * O.se).toFixed(1)} (${O.N} pares; meta: 50% dentro de 3 erros-padrão)`);
+      ok(M.p > 0.7, `NO8 à mostra (a escalação de antes) o melhor na vaga de índice menor em só ${(100 * M.p).toFixed(1)}%: a medida não mede o que devia`);
+      nota(`NO8 ${times} times, os pares empatados da mesma função com o melhor na vaga de índice menor (e a camisa menor): ${(100 * M.p).toFixed(1)}% à mostra → ${(100 * O.p).toFixed(1)}% ± ${(100 * O.se).toFixed(1)} escondida (${O.N} pares)`);
+    }
+    /* ---- NO9 o Overall vale o gravado com os lotes no Começar (revisão do PR 6): o cfg.overall ou o meta.regras mudados depois
+       (um aparelho adulterado) congelam a sala e a vista segue escondida, também noutro aparelho que abre a sala depois; as
+       regras opcionais recusam as duas gravações ---- */
+    {
+      const V = relogioVirtual(), arm = armazemFalso(), base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      for (const [nome, mexe] of [["o Overall", s2 => { s2.cfg.overall = "mostra"; }], ["as regras", s2 => { s2.meta.regras = 4; }]]) {
+        const cod = nome === "o Overall" ? "NO9OVR" : "NO9REG";
+        const A = await V.espera(SS.criarTreino(Object.assign({ liga: "it", bots: 2, semente: "NO9-" + cod, codigo: cod, tempo: 10, overall: "escondido" }, base)));
+        await V.anda(() => A.ctx && A.vivoN && A.vivoN.seq >= 2);
+        const lt = await V.espera(A.rede.ler("lotes"));
+        ok(lt && lt.ov === "escondido" && A.ctx.notasOcultas && !A.alterada, `NO9 ${nome}: os lotes gravados com o Overall da sala (${lt && lt.ov})`);
+        await V.espera(A.rede.transacao("sala", s2 => { mexe(s2); return s2; }));
+        await V.anda(() => !!A.alterada, 5000);
+        const w = A.ver();
+        ok(A.alterada === "overall" && w.overall === "escondido" && w.notasOcultas, `NO9 ${nome} mudado depois do Começar: a sala congela e as notas seguem escondidas (${A.alterada}, ${w.overall}, ${w.notasOcultas})`);
+        const B = await V.espera(SS.abrir(cod, Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+        const wb = B.ver();
+        ok(B.alterada === "overall" && B.ctx && B.ctx.notasOcultas && wb.overall === "escondido" && wb.notasOcultas, `NO9 ${nome}: outro aparelho que abre a sala mexida congela e não mostra as notas (${B.alterada}, ${wb.overall}, ${wb.notasOcultas})`);
+        B.parar(); A.parar();
+      }
+      // as regras opcionais (firebase/regras-leilao-validate.json): o Overall só muda no saguão; as regras nunca mudam
+      const confere = avaliadorRegras(path.join(RAIZ, "firebase/regras-leilao-validate.json"));
+      const sala = estado => ({ leiloes: { X: { sala: { meta: { dono: "u", estado, regras: 5, criada: 1 }, cfg: { liga: "it", overall: "escondido", T: 3 }, tec: { u: { auth: "u" } } } } } });
+      const recusa = (raiz, cam, v) => confere(raiz, ("leiloes/X/" + cam).split("/"), v, 9000, "u").length > 0;
+      const novaSala = { meta: { dono: "u", estado: "saguao", regras: 5, criada: { ".sv": "timestamp" } }, cfg: { liga: "it", overall: "escondido" }, tec: { u: { auth: "u" } } };
+      const comeca = JSON.parse(JSON.stringify(sala("saguao").leiloes.X.sala)); comeca.meta.estado = "leilao"; comeca.cfg.T = 3;
+      const honesto = [
+        ["criar a sala escondida", recusa({}, "sala", novaSala)],
+        ["mudar o Overall no saguão", recusa(sala("saguao"), "sala/cfg/overall", "mostra")],
+        ["o Começar (o estado e o cfg.T)", recusa(sala("saguao"), "sala", comeca)],
+        ["outra opção do cfg depois do Começar com o mesmo Overall", recusa(sala("leilao"), "sala/cfg/T", 3)]
+      ].filter(x => x[1]);
+      ok(!honesto.length, "NO9 as regras opcionais recusaram um passo honesto: " + honesto.map(x => x[0]).join(", "));
+      const adult = [
+        ["o Overall mudado no leilão", recusa(sala("leilao"), "sala/cfg/overall", "mostra")],
+        ["o Overall apagado no campeonato", recusa(sala("camp"), "sala/cfg/overall", null)],
+        ["o cfg inteiro trocado no leilão", recusa(sala("leilao"), "sala/cfg", { liga: "it", overall: "mostra", T: 3 })],
+        ["as regras mudadas no leilão", recusa(sala("leilao"), "sala/meta/regras", 4)],
+        ["as regras mudadas no saguão", recusa(sala("saguao"), "sala/meta/regras", 4)]
+      ].filter(x => !x[1]);
+      ok(!adult.length, "NO9 as regras opcionais deixaram passar: " + adult.map(x => x[0]).join(", "));
+    }
+    /* ---- NO7 o treino pela sessão: a opção na sala, os robôs com a nota percebida, escondidas até o fim do campeonato ---- */
+    for (const [overall, formato, bots] of [["escondido", "mata", 3], ["mostra", "mata", 1], [undefined, "pontos", 1]]) {
+      const V = relogioVirtual(), arm = armazemFalso(), id = `NO7 ${overall || "padrão"} ${formato}`, cod = ("NO7" + (overall || "pd").slice(0, 2) + formato.slice(0, 1)).toUpperCase();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "it", bots, semente: id, codigo: cod, formato, tempo: 10, overall }, base)));
+      const esc = overall === "escondido";
+      let w = A.ver();
+      ok(A.sala.meta.regras === 5 && A.sala.cfg.overall === (esc ? "escondido" : "mostra") && w.overall === (esc ? "escondido" : "mostra") && w.notasOcultas === esc && !!A.ctx.notasOcultas === esc,
+        `${id}: a sala (${A.sala.cfg.overall}, regras ${A.sala.meta.regras}) e a vista (${w.overall}, ${w.notasOcultas}, ctx ${A.ctx.notasOcultas})`);
+      ok(A.ctx.ov.every((x, i) => x === (esc ? percebidaRef(id, A.ctx.lotes[i].id, A.ctx.lotes[i].overall) : A.ctx.lotes[i].overall)), `${id}: os robôs da sessão sem a nota ${esc ? "percebida" : "de verdade"}`);
+      let viuAberta = false;
+      // (o fim do campeonato = o último jogo gravado: a vista diz fim um pouco antes de a sala gravar o estado 'fim')
+      const off = A.aoMudar(() => { const x = A.ver(); if (esc && !(x.camp && x.camp.fim) && !x.notasOcultas) viuAberta = true; });
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      w = A.ver();
+      ok(w.notasOcultas === esc, `${id}: na escalação, notasOcultas ${w.notasOcultas}`);
+      await V.espera(A.prontoEscalacao(true));
+      const pil = pilotoCamp(A, V, () => true);
+      const chegou = await V.anda(() => A.sala && A.sala.meta.estado === "fim");
+      pil.parar(); off();
+      w = A.ver();
+      ok(chegou && w.camp && w.camp.fim, `${id}: o campeonato não acabou`);
+      ok(!viuAberta, `${id}: as notas apareceram antes do fim do campeonato`);
+      ok(w.notasOcultas === false && w.overall === (esc ? "escondido" : "mostra") && (esc ? w.revelados && w.revelados.length === bots + 1 && w.revelados.every(Boolean) : w.revelados === null),
+        `${id}: no fim, reveladas: ${w.notasOcultas} ${JSON.stringify(w.revelados)}`);
+      ok(w.camp.notas && w.camp.notas.length === bots + 1 && w.camp.melhorTime, `${id}: o fim sem a soma das notas`);
+      // a mesma sala noutro "aparelho": as mesmas notas escondidas
+      const B = await V.espera(SS.abrir(cod, Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      ok(!!B.ctx.notasOcultas === esc && jsonIgual(B.ctx.ov, A.ctx.ov) && B.ver().overall === w.overall, `${id}: outro aparelho, outra nota percebida`);
+      B.parar(); A.parar();
+    }
+  });
+}
 async function testeCampSessao() {
   await blocoAsync("K", "campeonato pela sessão: o formato, o treino nos 3 formatos até o campeão, o prazo, Simular, recarregar, a escalação do próximo jogo", async (ok, nota) => {
     const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, LC = TMx.leilaoCamp, Rd = TMx.leilaoRede, mundo = MUNDO.public;
@@ -3345,7 +3683,7 @@ async function testeCamp3d() {
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 4 (o par; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
+      ok(Lx.REGRAS === 5 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 5 (as notas escondidas, PR 6; o par desde as 4; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -3532,14 +3870,19 @@ async function testeCamp3d() {
     ].filter(([x, y]) => x !== y);
     ok(!ok3.length, "PAR3 a vez do jogo de duas pessoas e do par: " + JSON.stringify(ok3));
 
-    /* ---- PAR4 as regras: 4 (o par), as salas de regras 1, 2 e 3 aceitas (sem ele), a de 5 só olhar; o Jogar contra um bot não é o par ---- */
-    ok(Lx.REGRAS === 4 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5), "PAR4 as regras 4 e as aceitas");
+    /* ---- PAR4 as regras: 5 (as notas escondidas, PR 6; o par desde as 4), as salas de regras 1 a 4 aceitas (as de 1 a 3 sem o
+       par; a de 4 COM ele, o jogo contra um amigo em 3D), a de 6 só olhar; o Jogar contra um bot não é o par ---- */
+    ok(Lx.REGRAS === 5 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6), "PAR4 as regras 5 (as notas escondidas, PR 6; o par desde as 4) e as aceitas");
     A.retomar();
     const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
-    ok(A.sala.meta.regras === 4 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
+    ok(A.sala.meta.regras === Lx.REGRAS && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
     // (as salas de regras 3 — os 20 lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
     const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
     ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));
+    // (a sala de regras 4, criada antes do PR 6: o jogo contra um amigo em 3D — o par — continua, e as notas à mostra)
+    A.sala.meta.regras = 4; A._jogosVer++;
+    const r4 = { par: A._comPar(), d3: A._com3d(), olhar: A.soOlhar, jogar: A.ver().camp.meuJogo.podeJogar, ocultas: Lx.ocultasNaSala(A.sala) };
+    ok(r4.par && r4.d3 && !r4.olhar && r4.jogar && !r4.ocultas, "PAR4 a sala de regras 4 mantém o jogo contra um amigo em 3D (o par): " + JSON.stringify(r4));
     A.parar();
     nota(`PAR1–PAR4: a máquina, ${adult.length} adulterações acusadas, a vez em 9 estados`);
   });
@@ -4327,6 +4670,7 @@ async function testeCampOnline() {
 }
 
 await testeCamp();
+await testeOcultas();
 await testeCampSessao();
 await testeCamp3d();
 await testeCampOnline();
@@ -4448,10 +4792,10 @@ async function testeTela() {
     await espera(250);
   }
   // os 8 tamanhos no escuro e no claro (o tema volta ao escuro no fim)
-  async function nadaSobreNadaTemas(p, rotulo, extra) {
-    await nadaSobreNada(p, rotulo, extra);
+  async function nadaSobreNadaTemas(p, rotulo, extra, tams) {
+    await nadaSobreNada(p, rotulo, extra, tams);
     await p.evaluate(() => TM.ui.applyTheme("light"));
-    await nadaSobreNada(p, rotulo + "-claro", extra);
+    await nadaSobreNada(p, rotulo + "-claro", extra, tams);
     await p.evaluate(() => TM.ui.applyTheme("dark"));
   }
   // o campeonato no tema claro: caixas e jogos claros, texto escuro (o pôster do campeão fica escuro, como o do fim de jogo)
@@ -4570,6 +4914,173 @@ async function testeTela() {
      abrir (a confirmação ainda na tela): o simulado, não o W.O.; jogo 9: o jogo decidido por outro caminho com o 3D aberto (o
      "Simular" de outra aba): o 3D fecha na hora e o 2D mostra o gravado. Nada sobre nada da Criar com as
      Partidas em 3D nos 8 tamanhos, no escuro e no claro. Sozinho: --tela --so3d. */
+  /* T15 as notas escondidas (PR 6): o Overall na Criar sala ("À mostra" padrão, "Escondido"; o resumo), um treino de 3 com o
+     Overall escondido pela tela (Pontos corridos) — a aba Leilão, a ficha (i), as Vendas (o meu time e o de um bot), a Escalação, o Campeonato e o
+     2D do "Ver o jogo" sem nenhum número de nota nem o que a entregue (o selo "?", nada de .lei-cv-ov/.lei-prox-ov/atributos,
+     nenhum "Nota N", "Média N", "Soma … N", "geral N" no texto, nos aria-label e nos title, nem na região ao vivo), nos 8 tamanhos
+     e em 667×375, escuro e claro, com nada sobre nada. O "−1/−2" de fora da função FICA (revisão do PR 6: vem do specificPenalty,
+     a posição e os grupos, nunca a nota). O fim do campeonato revela: "Quem comprou melhor" (a frase "levou N pontos de nota a
+     mais/menos do que pagou", o negativo e o "sem compras" em cor neutra, quem não comprou no fim) e "As notas, reveladas" (a
+     soma das notas de cada time, da maior para a menor — não o ranking de quem comprou melhor —, o toque abre o time; o nome
+     acessível começa pelo texto à vista e diz "Ver o seu time" no meu). Sozinho: --tela --soOcultas. */
+  const vazamentos = p => p.evaluate(() => {
+    const vis = e => { const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; let a = e; while (a) { const cs = getComputedStyle(a); if (cs.display === "none" || cs.visibility === "hidden") return false; a = a.parentElement; } return true; };
+    const out = [];
+    // (o "−1/−2" de fora da função fica: .lei-pen e "−N fora da função" não entregam a nota — revisão do PR 6)
+    document.querySelectorAll(".lei-cv-ov, .lei-prox-ov, .ut-card, .lei-ficha-at, .lei-revela").forEach(e => { if (vis(e)) out.push("elemento ." + String(e.className).split(" ")[0] + " " + e.textContent.trim().slice(0, 12)); });
+    document.querySelectorAll(".lei-pen").forEach(e => { if (vis(e) && !/^\u2212[12]$/.test(e.textContent.trim())) out.push("o −N com outro texto: " + e.textContent); });
+    document.querySelectorAll(".lei-nota b").forEach(e => { if (vis(e) && e.textContent.trim() !== "?") out.push("selo " + e.textContent); });
+    const rx = [/\bnotas?\s*\d/i, /\bm[ée]dia\s+\d/i, /\bsoma\b[^\n.]{0,30}\d/i, /\bgeral\s*\d/i, /\boverall\s*\d/i];
+    const textos = [document.body.innerText];
+    document.querySelectorAll("[aria-label], [title]").forEach(e => { if (!vis(e) && !e.closest("[role=dialog]")) return; textos.push(e.getAttribute("aria-label") || ""); textos.push(e.getAttribute("title") || ""); });
+    textos.forEach(t => rx.forEach(r => { const m = t.match(r); if (m) out.push("texto '" + t.slice(Math.max(0, m.index - 20), m.index + m[0].length + 10).replace(/\s+/g, " ") + "'"); }));
+    return [...new Set(out)];
+  });
+  // (as telas escondidas nos 8 tamanhos e no celular deitado estreito, 667×375: revisão do PR 6)
+  const TAM_OCULTO = TAMANHOS.concat([[667, 375]]);
+  async function t15() {
+    const { cx, p } = await aparelho(390, 844, true);
+    const ruinsVaza = [];
+    const comVaza = rotulo => async p2 => { const v = await vazamentos(p2); if (v.length) ruinsVaza.push({ rotulo, v: v.slice(0, 4) }); return { vaza: v.length }; };
+    // a Criar sala: o Overall
+    await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
+    await espera(400);
+    const op = await p.evaluate(() => {
+      const seg = document.querySelector('.lei-cs[data-secao="overall"] .lei-overall'), bts = seg ? [...seg.querySelectorAll(".seg-btn")] : [];
+      return { tit: (document.querySelector("#lei-cs-overall") || {}).textContent, bts: bts.map(b => b.textContent.trim()), ativo: bts.filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()),
+        dica: ((document.querySelector('.lei-cs[data-secao="overall"] .lei-cs-hint') || {}).textContent || ""), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    await p.evaluate(() => { const menos = document.querySelector('[aria-label="Menos um bot"]'), mais = document.querySelector('[aria-label="Mais um bot"]'); for (let i = 0; i < 10; i++) menos.click(); mais.click(); });
+    // (Pontos corridos com 3: turno e returno com as folgas — o 1º jogo meu nunca é o último do campeonato)
+    await p.click('.lei-criar .lei-fmt[data-fmt="pontos"]');
+    await p.click('.lei-overall .seg-btn[data-foco="overall-escondido"]');
+    await espera(150);
+    const op2 = await p.evaluate(() => ({ ativo: [...document.querySelectorAll(".lei-overall .seg-btn")].filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()), resumo: document.querySelector(".lei-criar-resumo").title,
+      secoes: [...document.querySelectorAll(".lei-criar .lei-cs")].map(e => e.dataset.secao) }));
+    // (revisão do PR 6: "notas escondidas" logo depois do formato, antes do "…" da linha; o Overall depois do Tempo e antes das
+    // Partidas em 3D, o mesmo lugar do Saguão — D6f do testar-leilao-online)
+    const iOv = op2.secoes.indexOf("overall");
+    confere("T15 a Criar sala tem o Overall no segmentado ('À mostra' o padrão e 'Escondido'), logo depois do Tempo e antes das Partidas em 3D; o toque troca e o resumo diz 'notas escondidas' logo depois do formato",
+      op.tit === "Overall" && op.bts.join("|") === "À mostra|Escondido" && op.ativo.join() === "À mostra" && /aparecem no fim do campeonato/.test(op.dica) && !/escondidas/.test(op.resumo)
+      && op2.ativo.join() === "Escondido" && /pontos corridos, notas escondidas, /i.test(op2.resumo) && iOv > 0 && op2.secoes[iOv - 1] === "tempo" && op2.secoes[iOv + 1] === "3d", { op, op2 });
+    await clica(p, "Começar o treino");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual() && !!document.querySelector(".lei-lote-card .lei-nota"), null, 30000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    let V = await ver(p);
+    confere("T15 a sala do treino com o Overall escondido (regras 5): a vista com as notas escondidas e o selo '?'",
+      V.overall === "escondido" && V.notasOcultas && (await p.evaluate(() => TM.leilaoSessao.atual().sala.meta.regras)) === 5 && (await p.evaluate(() => document.querySelector(".lei-lote-card .lei-nota b").textContent)) === "?", { overall: V.overall, oc: V.notasOcultas });
+    // a aba Leilão nos 8 tamanhos, escuro e claro (com os Próximos lotes abertos)
+    await p.evaluate(() => { const b = document.querySelector(".lei-bloco-bt"); if (b && b.getAttribute("aria-expanded") !== "true") b.click(); });
+    await nadaSobreNadaTemas(p, "oculto-lote", comVaza("lote"), TAM_OCULTO);
+    // a região ao vivo durante o leilão (as últimas 40 falas são guardadas: junta as de agora com as do fim do leilão)
+    const falas = new Set(await p.evaluate(() => TM.leilaoTela.anuncios()));
+    // a ficha do (i)
+    await p.click(".lei-lote-card .lei-ficha-bt");
+    await espera(250);
+    const ficha = await p.evaluate(() => ({ aberta: !!document.querySelector(".lei-folha [role=dialog]"), at: document.querySelectorAll(".lei-ficha-at").length, dt: [...document.querySelectorAll(".lei-ficha-dl dt")].map(d => d.textContent) }));
+    const vazaFicha = await vazamentos(p);
+    await p.keyboard.press("Escape");
+    confere("T15 a ficha (i) sem a nota e sem os 6 atributos (os números da carta), com a posição, o clube, o país e a altura", ficha.aberta && !ficha.at && !ficha.dt.includes("Nota") && ficha.dt.includes("Clube") && !vazaFicha.length, { ficha, vazaFicha });
+    // o leilão passando (a pessoa passa, os bots compram) até algumas vendas: as Vendas com o meu time e o de um bot
+    await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    for (let i = 0; i < 2000; i++) {
+      const n = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); return V.vendas.length; });
+      if (n >= 8) break;
+      await espera(40);
+    }
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    await p.click('.lei-sb[aria-label="Vendas"]');
+    await espera(300);
+    const vend = await p.evaluate(() => ({ n: document.querySelectorAll(".lei-vend").length, jo: [...document.querySelectorAll(".lei-vend-jo")].map(e => e.textContent).slice(0, 4) }));
+    const vazaVend = await vazamentos(p);
+    await p.evaluate(() => { const b = [...document.querySelectorAll(".lei-vend-tec")].find(x => !/Você/.test(x.textContent)); if (b) b.click(); });
+    await espera(250);
+    const vazaVendBot = await vazamentos(p);
+    const cheiasBot = await p.evaluate(() => document.querySelectorAll(".lei-cv-folha .lei-cv-vaga.cheia").length);
+    await p.keyboard.press("Escape");
+    confere("T15 as Vendas sem 'Nota N' (só quem comprou) e o campinho de um bot sem a nota (o −1/−2 de fora da função pode ficar)", vend.n >= 8 && vend.jo.every(t => !/Nota/.test(t)) && !vazaVend.length && cheiasBot > 0 && !vazaVendBot.length, { vend, vazaVend, vazaVendBot, cheiasBot });
+    // o resto do leilão (passando) e a Escalação
+    await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    for (let i = 0; i < 4000; i++) {
+      const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(0.02); return V.estado; });
+      if (e !== "leilao") break;
+      await espera(40);
+    }
+    await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
+    await espera(300);
+    (await p.evaluate(() => TM.leilaoTela.anuncios())).forEach(a => falas.add(a));
+    const esc = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual(), e = S.escalacao(S.ver().eu);
+      return { resumo: document.querySelector(".lei-esc-resumo").textContent, fotos: document.querySelectorAll(".lei-cv-esc .lei-cv-vaga.cheia").length, dica: (document.querySelector(".lei-esc-dica") || {}).textContent || "",
+        pen: e.pen.reduce((a, x) => a + (x || 0), 0), pens: [...document.querySelectorAll(".lei-cv-esc .lei-pen")].map(x => x.textContent).join(","), fora: e.pen.filter(x => x > 0).length };
+    });
+    // (o "−N fora da função" FICA com as notas escondidas: ele vem da posição, não da nota — revisão do PR 6)
+    confere("T15 a Escalação sem a média; o '11/11', o '−N fora da função' (quando há) e o '−1/−2' no campinho ficam, e a dica diz '−1 e −2' (sem 'laranja')",
+      esc.fotos === 11 && /11\/11/.test(esc.resumo) && !/Média/.test(esc.resumo) && (esc.pen ? new RegExp("\u2212" + esc.pen + " fora da função").test(esc.resumo) && esc.pens.split(",").length === esc.fora : !/fora da função/.test(esc.resumo))
+        && /\u22121 e \u22122 marcam quem está fora da função/.test(esc.dica) && !/laranja/.test(esc.dica), esc);
+    await nadaSobreNadaTemas(p, "oculto-escalacao", comVaza("escalacao"), TAM_OCULTO);
+    // o Campeonato: o meu 1º jogo pela tela (o Simular e o 2D), a aba nos 8 tamanhos e o 2D do Ver o jogo
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
+    const v1 = await campPelaTela(p, "V.camp.rodadas.some(R => R.jogos.some(g => g.e === 'feito' && (g.a === V.eu || g.b === V.eu)))", 120000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    V = await ver(p);
+    confere("T15 no Campeonato as notas seguem escondidas (até o fim)", V.notasOcultas && !V.camp.fim, { oc: V.notasOcultas, fim: V.camp && V.camp.fim, ruins: v1.ruins.slice(0, 2) });
+    await nadaSobreNadaTemas(p, "oculto-camp", comVaza("camp"), TAM_OCULTO);
+    const idFeito = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); for (const R of V.camp.rodadas) for (const g of R.jogos) if (g.e === "feito" && g.res && g.res.wo == null) return g.id; return null; });
+    await p.evaluate(id => { TM.ui.go("leilao-jogo", { id, rapido: true }); }, idFeito);
+    await espera(600);
+    const vaza2d = await vazamentos(p);
+    confere("T15 o 2D do 'Ver o jogo' sem nota", !!idFeito && !vaza2d.length, { idFeito, vaza2d });
+    await p.evaluate(() => TM.ui.go("leilao-camp"));
+    await espera(300);
+    (await p.evaluate(() => TM.leilaoTela.anuncios())).forEach(a => falas.add(a));
+    const an = [...falas];
+    confere("T15 a região ao vivo nunca falou a nota (o lote: 'Jogador N de 60: nome, função', sem ', nota N')", an.some(a => /Jogador \d+ de 60: [^,.]+, [^,.]+(\.|$)/.test(a)) && !an.some(a => /nota \d/i.test(a)), an.filter(a => /Jogador|nota/i.test(a)).slice(-4));
+    // até o fim: a revelação
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const v2 = await campPelaTela(p, null, 180000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await espera(400);
+    V = await ver(p);
+    const fim = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual(), V = S.ver(), C = V.camp;
+      const linhasC = [...document.querySelectorAll(".lei-revela-compras-l > li")], bts = [...document.querySelectorAll(".lei-revela-bt")];
+      const x = e => e.querySelector(".lei-cl-x"), cor = e => getComputedStyle(e).color;
+      return { revela: !!document.querySelector(".lei-revela"), linhas: bts.length, compra: (document.querySelector(".lei-revela-compras") || {}).textContent || "",
+        frase: (document.querySelector(".lei-revela-frase") || {}).textContent || "",
+        tit: (document.querySelector("#lei-revela-t") || {}).textContent, melhor: [...document.querySelectorAll(".lei-dest")].some(d => /Melhor time pela soma das notas/.test(d.textContent) && /Soma das notas dos 11: \d+/.test(d.textContent)),
+        // quem comprou melhor: os valores, a cor de cada um e quem é o meu (a pessoa passou tudo: sem compras)
+        compras: linhasC.map(li => ({ x: x(li).textContent, cls: x(li).className, cor: cor(x(li)), eu: li.classList.contains("eu") })),
+        verde: getComputedStyle(document.querySelector(".lei-cl.campeao .lei-cl-p") || document.body).color,
+        // as notas, reveladas: a soma de cada time na ordem da tela e a do campeonato (somaNotas), e os nomes acessíveis
+        somas: bts.map(b => +x(b).textContent.replace(/\D+/g, "")), notas: (C.notas || []).map(n => n.soma), ordemT: (C.notas || []).map(n => n.t),
+        ordemCompra: TM.leilaoCamp.compraram(V.vendas.map(v => ({ t: v.t, preco: v.preco, nota: v.retrato.overall })), V.T).map(o => o.t),
+        aria: bts.map(b => ({ a: b.getAttribute("aria-label"), vis: [".lei-cl-p", ".lei-cl-n", ".lei-cl-s", ".lei-cl-x"].map(q => (b.querySelector(q) || {}).textContent || "").join(" "), eu: b.classList.contains("eu") })) };
+    });
+    // (WCAG 2.5.3: o nome acessível começa pelo texto à vista, na mesma ordem, sem contar a pontuação)
+    const pal = t => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const ariaRuins = fim.aria.filter(b => !pal(b.a).startsWith(pal(b.vis)) || (b.eu ? !/Ver o seu time/.test(b.a) : !/Ver o time de /.test(b.a)));
+    const meuC = fim.compras.find(c => c.eu), negs = fim.compras.filter(c => /^\u2212|^0$|sem compras/.test(c.x));
+    await p.click(".lei-revela-bt");
+    await espera(300);
+    const fimFolha = await p.evaluate(() => ({ ov: document.querySelectorAll(".lei-cv-folha .lei-cv-ov").length, nota: [...document.querySelectorAll(".lei-vend-jo")].filter(e => /^Nota \d+ · /.test(e.textContent)).length }));
+    await p.keyboard.press("Escape");
+    confere("T15 o fim do campeonato revela: as notas à mostra; 'Quem comprou melhor' com a frase ('levou N pontos de nota a mais/menos do que pagou (N compras)'), quem não comprou no fim com 'sem compras' e o negativo/zero numa cor que não é o verde; 'As notas, reveladas' com a soma de cada um dos 3 times da maior para a menor (a do campeonato, não o ranking de quem comprou melhor), o nome acessível que começa pelo texto à vista ('Ver o seu time' no meu) e o toque abre o time com as 11 notas e as vendas com 'Nota N'",
+      v2.fim && !V.notasOcultas && V.revelados && V.revelados.every(Boolean) && fim.revela && fim.linhas === 3 && /Quem comprou melhor/.test(fim.compra)
+      && /^.+ levou (\d+ pontos? de nota a (mais|menos) do que pagou|a nota que pagou) \(\d+ compras?\)/.test(fim.frase)
+      && fim.compras.length === 3 && meuC && meuC.x === "sem compras" && fim.compras[fim.compras.length - 1] === meuC && negs.every(c => c.cor !== fim.verde && /\b(neg|nada)\b/.test(c.cls))
+      && fim.compras.filter(c => /^\+/.test(c.x)).every(c => /\bpos\b/.test(c.cls))
+      && fim.tit === "As notas, reveladas" && fim.somas.length === 3 && fim.somas.join() === fim.notas.join() && fim.somas.every((v, i) => !i || v <= fim.somas[i - 1])
+      && !ariaRuins.length && fim.melhor && fimFolha.ov === 11 && fimFolha.nota > 0, { oc: V.notasOcultas, fim, ariaRuins, fimFolha, ruins: v2.ruins.slice(0, 2) });
+    await nadaSobreNadaTemas(p, "oculto-fim", null, TAM_OCULTO);
+    const ruins = nadaSobre.filter(x => /^oculto/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
+    const telas = nadaSobre.filter(x => /^oculto/.test(x.tela)).length;
+    confere(`T15 nenhum número de nota escondida na tela (${telas - 18} telas: a aba Leilão, a Escalação e o Campeonato, nos 8 tamanhos e em 667×375, escuro e claro) e nada sobre nada também no fim que revela (${telas} telas)`,
+      !ruinsVaza.length && !ruins.length && telas === 72, { vaza: ruinsVaza.slice(0, 4), ruins: ruins.slice(0, 4), telas });
+    await cx.close();
+  }
   async function t14() {
     const { cx, p } = await aparelho(390, 844, true);
     await servirEnsaio3d(cx);
@@ -4813,7 +5324,7 @@ async function testeTela() {
 
   try {
     // (--so3d: só o T14; os T1–T13 ficam com a indentação de antes dentro do if)
-    if (!SO_3D) {
+    if (!SO_3D && !SO_OCULTAS) {
     /* T1 "Mais modos": 13 atalhos, 7 + 6 no PC (com a barra de rolagem) e no tablet, 3·4 + 1 no celular */
     const pc = await aparelho(1280, 800, false);
     const grade = [];
@@ -5718,7 +6229,8 @@ async function testeTela() {
     confere(`T13 nada sobre nada no Campeonato e no fim (${nadaSobre.filter(x => /^(camp|fim)/.test(x.tela)).length} telas: mata 4, pontos 8, misto 8, mata 6 e os fins, nos 8 tamanhos, escuro e claro): nem encostado, nem texto fora do botão, a tabela sem rolar de lado, só escudos desenhados`,
       !ruinsCamp.length, ruinsCamp.slice(0, 6));
     }
-    await t14();
+    if (!SO_OCULTAS) await t14();
+    if (!SO_3D) await t15();
   } catch (e) {
     confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
   } finally {

@@ -62,6 +62,12 @@
 //   E25 (item 35) o clássico pelo ?classico=1 fora do TM: o selo "Clássico" no PC (1280×720, .pp-classico) e o prefixo
 //       "Clássico · " no estádio no celular (844×390 com toque), com m.classico true; sem o parâmetro, nem o selo nem o prefixo e
 //       o campo ausente (como antes). Na base reprova (o selo só vinha do pedido do TM)
+//   E27 (o Modo Leilão do TM, PR 6: as notas escondidas; ?notasOcultas=1 = o partida.notasOcultas do pedido) no PC (1280×720) e no
+//       celular (844×390 com toque), o meu time e o adversário: as 11 fichas com "?" e a raridade neutra (r-n), o canto sem o GERAL
+//       nem as estrelas, a lista do leitor de tela sem "nota N" nem "geral N", a régua da tela (MEDIR) sem problema e as fichas no
+//       mesmo lugar que sem o parâmetro; sem ele, as notas de sempre (números e as raridades b/s/g/l). Na base reprova (as notas à
+//       mostra com o parâmetro). E27b (revisão do PR 6): o pedido do TM com partida.notasOcultas e o ?notasOcultas=0 no endereço
+//       continua escondido (o parâmetro só liga); na versão de antes da revisão reprova (o "=0" passava por cima do pedido)
 //   E26 (item 106, a TELA CEDO: a tela à vista enquanto o 3D monta; a sonda — addInitScript — marca a tela à vista, o quadro do
 //       navegador em que ela fica à vista e em que a cena 3D nasce, e o __golaco.pronto, e faz os gestos "antes do pronto" DENTRO da
 //       página; na base a tela só aparece com o 3D pronto e tudo reprova; --casos a,c,d,h,hp,i,j,k,l roda só esses blocos):
@@ -1018,6 +1024,51 @@ if (faz('ajustes')) {
     }
     meta('E25 o clássico pelo ?classico=1 (item 35): o selo "Clássico" no PC e "Clássico · " no estádio no celular, com m.classico; sem o parâmetro nada',
       out.join(' · '), 'o selo/prefixo e true com o parâmetro; nada sem', ok);
+  }
+  // E27 (o Modo Leilão do TM, PR 6): as notas escondidas pelo ?notasOcultas=1 (o partida.notasOcultas do pedido); sem ele, as de sempre
+  {
+    const out = [];
+    let ok = true;
+    for (const [w, h, toque] of [[1280, 720, false], [844, 390, true]]) {
+      const lugares = {};
+      for (const oc of [true, false]) {
+        const { navegador, pagina: pg } = await abrirPagina({ w, h, toque, q: `${Q}&prepartida=1&semente=3${oc ? '&notasOcultas=1' : ''}` });
+        try {
+          await quadros(pg, 3);
+          for (const lado of ['meu', 'adv']) {
+            if (lado === 'adv') { await tecla(pg, 'KeyE'); await quadros(pg, 3); }
+            const r = await pg.evaluate(MEDIR_TXT => {
+              const M = new Function('return ' + MEDIR_TXT)()();
+              const fs = [...document.querySelectorAll('#prepartida .pp-ficha')];
+              const rx = /\b(nota|geral)\s*\d/i;
+              return { flag: window.__golaco.notasOcultas, n: fs.length, notas: [...new Set(fs.map(f => f.querySelector('.pp-nota').textContent))], rar: [...new Set(fs.map(f => [...f.classList].find(c => /^r-/.test(c))))],
+                geral: document.querySelectorAll('#prepartida .pp-geral, #prepartida .pp-est').length, lista: rx.test(document.querySelector('#prepartida .pp-lista').textContent), texto: rx.test(document.getElementById('prepartida').innerText),
+                prob: M ? M.prob : ['sem a tela'], lugares: fs.map(f => { const b = f.getBoundingClientRect(); return f.dataset.vaga + ':' + Math.round(b.left) + ',' + Math.round(b.top); }).join(' ') };
+            }, MEDIR.toString());
+            lugares[lado + oc] = r.lugares;
+            const bom = oc ? r.flag === true && r.n === 11 && r.notas.join() === '?' && r.rar.join() === 'r-n' && !r.geral && !r.lista && !r.texto && !r.prob.length
+              : r.flag === false && r.n === 11 && r.notas.every(x => /^\d+$/.test(x)) && r.rar.every(c => /^r-[bsgl]$/.test(c)) && r.geral === 2 && r.lista && !r.prob.length;
+            out.push(`${w}×${h} ${lado}${oc ? ' escondidas' : ''}: notas ${r.notas.slice(0, 4).join('/')}, ${r.rar.join('/')}, geral ${r.geral}, lista ${r.lista ? 'com nota' : 'sem nota'}${r.prob.length ? ', ' + r.prob.slice(0, 2).join(', ') : ''}`);
+            if (!bom) ok = false;
+          }
+        } finally { await navegador.close(); }
+      }
+      if (lugares.meutrue !== lugares.meufalse || lugares.advtrue !== lugares.advfalse) { ok = false; out.push(`${w}×${h}: as fichas mudaram de lugar com as notas escondidas`); }
+    }
+    // E27b (revisão do PR 6) o parâmetro só LIGA: o pedido do TM que manda esconder (partida.notasOcultas) vale também com o
+    // ?notasOcultas=0 no endereço (antes, o "=0" passava por cima do pedido e mostrava as notas da sala escondida)
+    {
+      const ped = { ...PED_A, id: 'tOcultasPP', partida: { ...PED_A.partida, notasOcultas: true } };
+      const { navegador, pagina: pg } = await abrirPagina({ w: 844, h: 390, toque: true, q: `${Q}&prepartida=1&tm=${ped.id}&notasOcultas=0`, pedido: ped });
+      try {
+        await quadros(pg, 3);
+        const r = await pg.evaluate(() => ({ flag: window.__golaco.notasOcultas, notas: [...new Set([...document.querySelectorAll('#prepartida .pp-ficha .pp-nota')].map(x => x.textContent))] }));
+        out.push(`E27b o pedido escondido com ?notasOcultas=0: flag ${r.flag}, notas ${r.notas.slice(0, 3).join('/')}`);
+        if (!(r.flag === true && r.notas.join() === '?')) ok = false;
+      } finally { await navegador.close(); }
+    }
+    meta('E27 as notas escondidas (o Modo Leilão do TM, PR 6; ?notasOcultas=1): as fichas com "?" e a raridade neutra, sem o GERAL e sem nota na lista, a tela sem problema e as fichas no mesmo lugar; sem o parâmetro, as notas de sempre',
+      out.join(' · '), 'escondidas: ?, r-n, sem geral nem nota; sem: os números', ok);
   }
   // E24 e E24b: pelo ≡ (a pausa "antes do jogo") → Modo de jogo → Duração 6 e Dificuldade Lenda
   for (const personalizar of [false, true]) {

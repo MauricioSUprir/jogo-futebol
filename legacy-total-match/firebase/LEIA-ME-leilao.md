@@ -15,7 +15,8 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 | `vivo/abre`, `vivo/t` | hora que não seja a do servidor (`now`) |
 | `bate/<uid>` | batimento com hora que não seja a do servidor; batimento gravado por outra conta; a presença contínua (`ant`, `cont`, `falta`: bates anteriores) no futuro ou fora de número |
 | `pres/<uid>`, `escal/<t>` | presença e escalação gravadas por outra conta (o autor tem de ser o `auth.uid` gravado em `sala/tec/<uid>/auth`) |
-| `sala`, `sala/meta` | apagar só a `sala`, a `meta` ou o dono, o estado, as regras ou a criação; trocar o dono; `criada`, `atividade` e `fimLeilao` com hora que não seja a do servidor; estado fora da lista |
+| `sala`, `sala/meta` | apagar só a `sala`, a `meta` ou o dono, o estado, as regras ou a criação; trocar o dono; **trocar as regras da sala depois de criada** (revisão do PR 6: as regras 4 numa sala de regras 5 mostrariam as notas escondidas); `criada`, `atividade` e `fimLeilao` com hora que não seja a do servidor; estado fora da lista |
+| `sala/cfg` | **o Overall (`cfg/overall`: à mostra ou escondido) mudado ou apagado fora do saguão** (revisão do PR 6: depois do Começar ele não muda; os aparelhos também conferem contra o gravado com os lotes e congelam a sala) |
 | `sala/tec/<uid>/auth` | trocar a conta de um técnico (só ao entrar, com a do próprio pedido); apagar só a conta |
 | `sala/pedidos/<uid>` | pedido em nome de outra conta |
 | `lotes` | trocar ou apagar os jogadores depois do Começar |

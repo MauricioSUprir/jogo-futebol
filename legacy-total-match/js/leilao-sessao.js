@@ -7,7 +7,8 @@
 
    A sala (os caminhos dentro de leiloes/{CÓDIGO}; no treino, a mesma árvore em memória, gravada no aparelho):
      sala    { meta: { dono, proto, regras, versaoTM, edicao, criada, estado, semente, atividade, treino, fimLeilao },
-               cfg: { liga, ligaNome, T, tempo (ms do relógio do lote), formato, overall, duracao3d (min por tempo no 3D),
+               cfg: { liga, ligaNome, T, tempo (ms do relógio do lote), formato, overall ('mostra' | 'escondido': as notas
+                      escondidas, PR 6, só nas salas de regras ≥ 5 — leilao.js ocultasNaSala), duracao3d (min por tempo no 3D),
                       dificuldade3d (a dos bots no 3D), vagas e bots (online) },
                tec: { uid: { nome, num, papel: 'dono'|'tecnico'|'bot', pronto, entrou, auth, saiu, clube: { nome, sigla, cor,
                       escudo ("forma|símbolo", o do Ultimate) }, formacao } },
@@ -15,7 +16,8 @@
                recusados: { uid: true } (online),
                ordem: [uid × T] (o índice t de cada técnico; gravada no Começar) }
      lotes   { l: [retrato × lotesPorTec(regras)·T: 20T (menos nas ligas pequenas com 7 e 8), 13T nas salas de regras 1 e
-               2], f: [retrato] (os de fora, para completar de graça), T, liga (online) }  gravados uma vez
+               2], f: [retrato] (os de fora, para completar de graça), T, liga, ed (online), ov ('mostra' | 'escondido':
+               o Overall da sala no Começar, PR 6 — é ele que vale até o fim; sem ele, à mostra) }  gravados uma vez
      vivo    o estado do leilão (leilao.js); SÓ por transação
      escal/{t}  { formacao, tit: [índice global × 11] (só a escalação feita à mão), pronto }; a automática é função pura
      vendas/{i} { t, v (o preço), s (o seq do lote) }: registro para a tela (a verdade é o vivo.d)
@@ -70,11 +72,12 @@
 
    API (TM.leilaoSessao):
      criarTreino(opc) → Promise(sessão)   opc: { liga, bots (1–7), formacao, tempo (s ou ms), formato ('mata' padrão,
-                                           'pontos', 'misto'), duracao3d (4 padrão), dificuldade3d ('normal' padrão),
+                                           'pontos', 'misto'), duracao3d (4 padrão), dificuldade3d ('normal' padrão), overall
+                                           ('mostra' padrão | 'escondido': as notas escondidas, PR 6),
                                            clube?, semente?, codigo?
                                            e, só nos testes: relogio, agendar, cancelar, armazem, latencia, atraso }
      criarSala(opc) → Promise(sessão)     o online: { liga, ligaNome?, vagas (2–8, contando os bots), bots, tempo, formacao,
-                                           formato, clube?, semente?, mundo? } — o código de 6 letras (sem I, O, 0 e 1) nasce por
+                                           formato, overall, clube?, semente?, mundo? } — o código de 6 letras (sem I, O, 0 e 1) nasce por
                                            transação de null (sem colisão)
      entrar(codigo, opc) → Promise(sessão) o pedido (ou a volta de quem já é da sala); rejeita com `codigo`: codigo,
                                            naoExiste, recusado, cheia, edicao, regras, fairplay, conta, vencida, indisponivel
@@ -150,6 +153,8 @@
   function LE() { return TM.leilao; }
   function LC() { return TM.leilaoCamp; }
   function formatoDe(x) { return LC() ? LC().formatoDe(x) : "mata"; }
+  // o "Overall" da sala (PR 6): 'escondido' ou 'mostra' (o padrão; qualquer outro valor)
+  function overallDe(x) { return x === "escondido" ? "escondido" : "mostra"; }
   // o nó jogos como objeto (as chaves r1j0, m2j1… nunca viram lista no Firebase; o vazio volta null)
   function objJogos(v) { return v && typeof v === "object" && !Array.isArray(v) ? v : {}; }
   function jogoDaVista(V, id) {
@@ -564,13 +569,19 @@
       var edS = s.meta.edicao === "pro" ? "pro" : "public";
       if ((lt.liga != null && s.cfg && lt.liga !== s.cfg.liga) || (lt.ed != null && lt.ed !== edS) || (S._lotesMeus && canon(lt) !== S._lotesMeus)) { S._congela("lotes"); return; }
     }
-    S.ctx = L.contexto({ T: T, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg && s.cfg.tempo });
+    // o Overall é o gravado com os lotes no Começar (`ov`, PR 6; os lotes de antes, sem ele, são de salas à mostra): com as
+    // notas escondidas, os robôs pela nota percebida
+    var ovLotes = lt.ov === "escondido";
+    S.ctx = L.contexto({ T: T, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg && s.cfg.tempo, notasOcultas: ovLotes });
     S._lotesJson = S.online ? JSON.stringify(lt) : null;
     S.bots = [];
     ordem.forEach(function (uid, t) {
       var tc = s.tec && s.tec[uid];
       if (tc && tc.papel === "bot") S.bots.push(L.perfilRobo(S.ctx.semente, t));
     });
+    // o Overall da sala diferente do gravado com os lotes = a sala mexida (um aparelho que gravou o cfg.overall ou o meta.regras
+    // depois do Começar): congela, e a vista continua com o dos lotes (S.ctx), nunca com as notas à mostra
+    if (ovLotes !== L.ocultasNaSala(s)) S._congela("overall");
     if (S._vivoPend) { var v = S._vivoPend; S._vivoPend = null; S._naVivo(v); }
   };
   P._ouvir = function () {
@@ -606,6 +617,8 @@
     }
     var antes = S.sala ? S.sala.meta && S.sala.meta.estado : undefined, euAntes = S.eu;
     S.sala = s;
+    // depois do Começar, o Overall é o dos lotes (S.ctx.notasOcultas): o cfg.overall ou o meta.regras mudados = a sala mexida
+    if (S.ctx && !!S.ctx.notasOcultas !== LE().ocultasNaSala(s)) S._congela("overall");
     S.soOlhar = !!s.meta && !LE().regrasAceitas(s.meta.regras);
     S._defineEu();
     if (s.ordem && S.ctx && S.ctx.T !== s.ordem.length) S._montaCtx();
@@ -1611,7 +1624,12 @@
       rede: S._estadoRede(), conferindo: !!S.conferindo, outraAba: S.outraAba, apagada: S.apagada, oculta: S._oculta,
       pedido: S.pedido, souDono: !!(S.online && S.uidEu && meta.dono === S.uidEu), saguao: null,
       versaoDiferente: !!(S.online && meta.versaoTM && meta.versaoTM !== versao()), edicao: meta.edicao || null,
-      regrasSala: meta.regras != null ? meta.regras : null
+      regrasSala: meta.regras != null ? meta.regras : null,
+      // as notas escondidas (PR 6): overall = a opção da sala ('mostra' | 'escondido'); notasOcultas = as telas não mostram nota
+      // (nem o que a entregue) agora; revelados = [bool × T] os times cujas notas já apareceram (leilao.js REVELA_NOTAS: com o
+      // "campeonato", todos juntos no fim dele — e aí notasOcultas fica false). Depois do Começar vale o gravado com os lotes
+      // (S.ctx.notasOcultas), nunca o cfg.overall de agora: um aparelho que o mudasse no meio mostraria as notas a todos
+      overall: (ctx ? ctx.notasOcultas : L.ocultasNaSala(sala)) ? "escondido" : "mostra", notasOcultas: !!(ctx ? ctx.notasOcultas : L.ocultasNaSala(sala)), revelados: null
     };
     ordem.forEach(function (uid, t) {
       var tc = (sala.tec && sala.tec[uid]) || {}, c = v ? v.cx[t] : [L.SALDO, L.VAGAS, 0, 0, 0, 0];
@@ -1677,6 +1695,10 @@
     });
     out.vendas.sort(function (a, b2) { return a.seq - b2.seq; });
     out.camp = S._verCamp(agora);
+    if (out.overall === "escondido") {
+      var rv = LC() ? LC().revelados(L.REVELA_NOTAS, out.camp, out.T) : { todas: false, t: [] };
+      out.notasOcultas = !rv.todas; out.revelados = rv.t;
+    }
     return out;
   };
   /** O campeonato para as telas (null antes dele): { formato, T, rodadas (montar: cada jogo com e 'espera'|'livre'|
@@ -2316,8 +2338,8 @@
       return null;
     });
   };
-  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo, formato, duracao3d, dificuldade3d }. Zera
-   *  os Pronto. */
+  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo, formato, duracao3d, dificuldade3d, overall
+   *  ('mostra' | 'escondido'; só nas salas de regras ≥ 5) }. Zera os Pronto. */
   P.configurar = function (parcial) {
     var S = this, L = LE(), m = S._naoPodeSala(true); if (m) return recusa(m);
     parcial = parcial || {};
@@ -2335,6 +2357,11 @@
       cfg.duracao3d = LC().duracao3dDe(parcial.duracao3d != null ? parcial.duracao3d : cfg.duracao3d);
       cfg.dificuldade3d = LC().dificuldade3dDe(parcial.dificuldade3d != null ? parcial.dificuldade3d : cfg.dificuldade3d);
       cfg.vagas = vagas; cfg.bots = nb; cfg.tempo = tempo;
+      // (as notas escondidas só existem nas salas de regras ≥ 5: as de antes ficam à mostra, como foram criadas)
+      if (parcial.overall != null) {
+        if (!(typeof s.meta.regras === "number" && s.meta.regras >= L.REGRAS_OCULTAS)) return "regras";
+        cfg.overall = overallDe(parcial.overall);
+      }
       s.cfg = cfg;
       humanosDe(s).forEach(function (u) { if (s.tec[u].papel !== "dono") s.tec[u].pronto = false; });
       refazBots(s);
@@ -2388,14 +2415,16 @@
     var lg = mundo.leaguesById && mundo.leaguesById[liga];
     if (!lg) return recusa("liga");
     // os lotes pelas regras da SALA (a de regras 1 e 2, criada antes, segue com 13T: o aparelho de antes, nela, conta 13T)
-    var lt = L.criarLotes(mundo, liga, T, { regras: s0.meta.regras }), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed }, meus = canon(dados);
+    // (o `ov`: o Overall da sala no Começar, gravado com os lotes — que não mudam mais —, PR 6: é ele que vale até o fim)
+    var ov = L.ocultasNaSala(s0) ? "escondido" : "mostra";
+    var lt = L.criarLotes(mundo, liga, T, { regras: s0.meta.regras }), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed, ov: ov }, meus = canon(dados);
     // os lotes que já estão lá só ficam se forem IGUAIS aos deste aparelho (gravados no saguão por outra conta: troca)
     return rede.transacao("lotes", function (cur) { return cur && canon(cur) === meus ? undefined : dados; }).then(function () {
       S._lotesMeus = meus;
       return S._transSala(function (s) {
         if (s.meta.estado !== "saguao") return "comecou";
         var ord = ordemPrevista(s);
-        if (ord.length !== T || (s.cfg && s.cfg.liga) !== liga) return "mudou";
+        if (ord.length !== T || (s.cfg && s.cfg.liga) !== liga || (L.ocultasNaSala(s) ? "escondido" : "mostra") !== ov) return "mudou";
         if (ord.length < L.TEC_MIN || ord.length > L.TEC_MAX) return "poucos";
         if (prontosDe(s).faltam.length) return "prontos";
         s.meta.estado = "leilao"; s.ordem = ord; s.cfg.T = T;
@@ -2591,12 +2620,12 @@
       identidadesBots(semente, nb, [clube.cor], 1, false).forEach(function (b) { tec[b.uid] = { nome: b.nome, papel: b.papel, pronto: true, entrou: b.entrou, clube: b.clube, formacao: b.formacao }; });
       var sala = {
         meta: { dono: uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: edicao(), criada: TS, estado: "saguao", semente: semente, atividade: TS, treino: true },
-        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra",
+        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: formatoDe(opc.formato), overall: overallDe(opc.overall),
                duracao3d: LC().duracao3dDe(opc.duracao3d), dificuldade3d: LC().dificuldade3dDe(opc.dificuldade3d) },
         tec: tec
       };
       var esc = {}; esc["escal/0"] = { formacao: formacao };
-      return rede.atualizar("", { sala: sala, lotes: { l: lotes.lotes, f: lotes.fora } }).then(function () {
+      return rede.atualizar("", { sala: sala, lotes: { l: lotes.lotes, f: lotes.fora, ov: L.ocultasNaSala(sala) ? "escondido" : "mostra" } }).then(function () {
         return rede.atualizar("", esc);
       }).then(function () {
         // o Começar (§3.3): só do saguão, com todos prontos e os lotes gravados; grava a ordem dos técnicos
@@ -2663,7 +2692,7 @@
         tec[id.uid] = { nome: id.nome, num: id.num || null, papel: "dono", pronto: true, auth: id.auth, entrou: 0, clube: clube, formacao: formacao };
         var sala = {
           meta: { dono: id.uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: opcEdicao(opc), criada: TS, estado: "saguao", semente: semente, atividade: TS },
-          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra",
+          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: formatoDe(opc.formato), overall: overallDe(opc.overall),
                  duracao3d: LC().duracao3dDe(opc.duracao3d), dificuldade3d: LC().dificuldade3dDe(opc.dificuldade3d) },
           tec: tec
         };

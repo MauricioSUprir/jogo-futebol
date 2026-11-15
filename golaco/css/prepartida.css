@@ -175,6 +175,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .r-s { --f1: #ffffff; --f2: #7d8894; --f3: #e6ebf0; --f4: #4d5762; --acc: #b8c3cd; --acc2: #f1f5f8; }
 #prepartida .r-g { --f1: #fff3c2; --f2: #b8860b; --f3: #ffd966; --f4: #6e4f08; --acc: #e5b53a; --acc2: #ffe38c; }
 #prepartida .r-l { --f1: #c8ffe0; --f2: #14903f; --f3: #4ade80; --f4: #064d22; --acc: #22c55e; --acc2: #86efac; }
+/* a raridade neutra das notas escondidas (o Modo Leilão do TM, PR 6): grafite, sem nenhuma das cores que entregam a nota */
+#prepartida .r-n { --f1: #6b7680; --f2: #262e35; --f3: #46505a; --f4: #151a1f; --acc: #4b5560; --acc2: #8a949e; }
 /* os cantos de baixo: a formação e o selo | o geral e as estrelas */
 #prepartida .pp-canto-esq, #prepartida .pp-canto-dir { position: absolute; line-height: 1.05; pointer-events: none; white-space: nowrap; }
 #prepartida .pp-canto-dir { text-align: right; }

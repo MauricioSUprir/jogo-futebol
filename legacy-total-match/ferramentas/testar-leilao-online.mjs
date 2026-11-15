@@ -425,6 +425,8 @@ const sobreposicao = p => p.evaluate(() => {
     tabelaRola: tab ? tab.scrollWidth > tab.clientWidth + 1 : false, escudosReais: document.querySelectorAll(".lei-corpo-camp img").length };
 });
 const TAMANHOS = [[360, 740], [844, 390], [1280, 800]];
+// os 8 tamanhos do PLANO §2 (o Saguão com o Overall escondido, D6f: revisão do PR 6)
+const TAMANHOS_8 = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080]];
 const DEZ = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080], [667, 375], [740, 360]];
 // mede a tela nos 3 tamanhos (ou nos dados), no escuro e no claro; devolve as medidas ruins (e a quantidade de medidas)
 async function nadaSobreNada(ap, rotulo, pronto, tams = TAMANHOS) {
@@ -1027,6 +1029,43 @@ async function casoDois() {
       && d6d.etq3.includes("1 bot") && d6d.etq3.some(e => /^3D: \d+ min · /.test(e)) && d6d.etq3.includes("Pontos corridos")
       && d6d.ponta === "true,false,true" && d6d.botsPonta === 1
       && d6d.fim.tempo === 10000 && d6d.fim.formato === "misto" && d6d.fim.vagas === 2 && d6d.fim.bots === 0, d6d);
+
+  /* D6f o Overall da sala (PR 6) pela tela: só o dono vê o segmentado "À mostra · Escondido" em Sala e clube (o convidado só a
+     etiqueta); Escondido zera o Pronto do convidado, a etiqueta "Overall escondido" aparece no resumo dos dois e a vista diz as
+     notas escondidas; À mostra de novo tira a etiqueta (a sala volta ao que era) */
+  const d6f = {};
+  await clicaSel(B, ".lei-sagbar-bt");
+  d6f.pronto0 = await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 15000) && await prontoB();
+  d6f.opA = await A.p.evaluate(() => { const g = document.querySelector(".lei-sag-cfg .lei-overall"); return g ? [...g.querySelectorAll(".seg-btn")].map(b => b.textContent.trim() + (b.getAttribute("aria-pressed") === "true" ? "*" : "")) : null; });
+  d6f.opB = await B.p.evaluate(() => !!document.querySelector(".lei-overall"));
+  d6f.etq0 = await etqB();
+  await clicaSel(A, '.lei-sag-cfg .lei-overall [data-foco="overall-escondido"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().overall === "escondido", null, 10000);
+  await ate(B.p, () => [...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => e.textContent === "Overall escondido"), null, 10000);
+  await espera(400);
+  Object.assign(d6f, { prontoB1: await prontoB(), etq1: await etqB(), etqA1: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-res .lei-etq")].map(e => e.textContent)),
+    vB: await B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { o: V.overall, oc: V.notasOcultas, cfg: V.cfg.overall }; }),
+    resB: await B.p.evaluate(() => (document.querySelector(".lei-sag-resumo") || {}).textContent || ""),
+    // nada sobre nada no Saguão escondido (o segmentado do Overall no dono, a etiqueta e a frase a mais nos dois)
+    nsA: await nadaSobreNada(A, "saguao-oculto-dono", () => !!document.querySelector(".lei-sagbar"), TAMANHOS_8),
+    nsB: await nadaSobreNada(B, "saguao-oculto-convidado", () => !!document.querySelector(".lei-sagbar"), TAMANHOS_8),
+    // o Overall no mesmo lugar da Criar sala: depois do Tempo e antes das Partidas em 3D (revisão do PR 6)
+    rotsA: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-cfg .lei-sag-rot")].map(e => e.textContent)),
+    ativo: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-cfg .lei-overall .seg-btn")].filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()).join()) });
+  await clicaSel(A, '.lei-sag-cfg .lei-overall [data-foco="overall-mostra"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().overall === "mostra", null, 10000);
+  await ate(B.p, () => ![...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => e.textContent === "Overall escondido"), null, 10000);
+  await ate(B.p, () => !!document.querySelector(".lei-sagbar-bt:not(:disabled)"), null, 10000);
+  await espera(300);
+  d6f.etq2 = await etqB();
+  d6f.vB2 = await B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { o: V.overall, oc: V.notasOcultas }; });
+  const iOv = d6f.rotsA.indexOf("Overall"), iT = d6f.rotsA.indexOf("Tempo de cada jogador"), i3 = d6f.rotsA.indexOf("Partidas em 3D");
+  confere(`${ID}6f o Overall pela tela do dono (À mostra · Escondido em Sala e clube, logo depois do Tempo e antes das Partidas em 3D, como na Criar sala; o convidado só vê a etiqueta): Escondido zera o Pronto do convidado, "Overall escondido" e a frase no resumo dos dois, as notas escondidas na vista e nada sobre nada (os dois, nos 8 tamanhos, escuro e claro); À mostra de novo tira a etiqueta`,
+    d6f.pronto0 && d6f.opA && d6f.opA.join("|") === "À mostra*|Escondido" && !d6f.opB && !d6f.etq0.includes("Overall escondido")
+      && !d6f.prontoB1 && d6f.etq1.includes("Overall escondido") && d6f.etqA1.includes("Overall escondido") && /notas ficam escondidas até o fim do campeonato/.test(d6f.resB) && d6f.vB.o === "escondido" && d6f.vB.oc && d6f.vB.cfg === "escondido" && d6f.ativo === "Escondido"
+      && !d6f.nsA.ruins.length && !d6f.nsB.ruins.length && d6f.nsA.medidas.length === 16 && d6f.nsB.medidas.length === 16
+      && iOv === iT + 1 && i3 === iOv + 1
+      && !d6f.etq2.includes("Overall escondido") && d6f.vB2.o === "mostra" && !d6f.vB2.oc, Object.assign({}, d6f, { nsA: d6f.nsA.ruins.slice(0, 3), nsB: d6f.nsB.ruins.slice(0, 3) }));
 
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");

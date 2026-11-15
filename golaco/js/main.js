@@ -164,7 +164,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, classicoDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, classicoDoPedido, notasOcultasDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -324,6 +324,12 @@ const DIF_PARAM = nivelValido(params.get('dif'));
 // do anfitrião, o mesmo nos dois aparelhos) > desligado. Só no modo 'partida' (o Livre e os Pênaltis nunca: criarMundoTreino).
 const CLASSICO_PARAM = params.get('classico') === '1' ? true : params.get('classico') === '0' ? false : null;
 const CLASSICO_PAG = CLASSICO_PARAM ?? (TM ? classicoDoPedido(PEDIDO_TM) : false);
+// As notas escondidas (o Modo Leilão do TM com o "Overall escondido", PR 6 do leilão): a tela antes do jogo e o Editar time sem a
+// nota, os números da carta e o GERAL (a pausa não mostra nota). De onde vem: o pedido do TM (partida.notasOcultas) OU o
+// ?notasOcultas=1 (testes). O parâmetro só LIGA: nada no endereço desliga o que o pedido manda esconder (com o "=0" por cima
+// do pedido, quem abrisse o quadro do 3D com o endereço mexido via as notas de uma sala escondida). Só a TELA: a simulação, o
+// hash e o resultado não mudam.
+const NOTAS_OCULTAS = params.get('notasOcultas') === '1' || (TM ? notasOcultasDoPedido(PEDIDO_TM) : false);
 const ajustes = {
   minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
     : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
@@ -474,7 +480,7 @@ const SOB = {
   editor: {
     carga: null, ok: false,
     baixar: () => { pedirFontesDisp(); return Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md); },
-    criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() }); },
+    criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor(), notasOcultas: NOTAS_OCULTAS }); },
   },
   // as cenas das paradas (o cartão e o intervalo): as cenas puras, as constantes delas (js/cenas-config.js chega junto, pelo
   // import delas), o cartão 3D, a tela das tarjas e o CSS dela (antes do prejogo.css, como o do editor); o guardador de lances
@@ -3551,6 +3557,8 @@ function dadosPrepartida() {
     hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
     // (a dificuldade da IA contra a pessoa, item 33: o "Beginner, 6 minutes" do FC; sem ela no online, no Livre e nos Pênaltis)
     dificuldade: dificuldadeNaTela(),
+    // (o Overall escondido do Modo Leilão do TM: as fichas sem nota e sem a cor da raridade, o canto sem o GERAL)
+    notasOcultas: NOTAS_OCULTAS,
   });
 }
 /** O nível que a tela antes do jogo mostra: o do mundo (o Normal sem o campo); null no online e fora da partida. */
@@ -4731,6 +4739,8 @@ const api = {
     duracao(min) { return mudarAjuste('duracao', min); },
     dificuldade(n) { return mudarAjuste('dificuldade', n); },
   },
+  /** As notas escondidas (o Overall escondido do Modo Leilão do TM, PR 6; ?notasOcultas=1 nos testes): só a tela. */
+  get notasOcultas() { return NOTAS_OCULTAS; },
   /** Põe uma edição do time na fila (entra no próximo passo, como a do "Editar time"). */
   editarTime(ed) { edicaoNaFila = ed ?? null; },
   get edicaoNaFila() { return edicaoNaFila; },

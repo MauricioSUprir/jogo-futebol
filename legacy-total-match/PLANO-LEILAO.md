@@ -175,7 +175,8 @@ de transferência, `placeholders.js`), `number`, `height`, `weight`. A altura n�
 - **À mostra** (padrão): a carta inteira.
 - **Escondido** (só no PR 6): a carta neutra (sem a nota, a cor da raridade, a barra e os atributos); os bots usam a
   "nota percebida" (nota ± 3); no 3D somem a nota, os números da carta e o GERAL. Quem abrir o console vê as notas
-  (aceitável entre amigos). Falta saber do dono quando as notas aparecem (decisão 13).
+  (aceitável entre amigos). Falta saber do dono quando as notas aparecem (decisão 13). Feito no PR 6 (§8, "Durante o PR 6"):
+  as notas aparecem só no fim do campeonato, com quem comprou melhor.
 
 ### 1.7 Os formatos e as partidas
 
@@ -661,7 +662,7 @@ parágrafo do `CLAUDE.md` atualizado.
 | 10 | Segurança | **"Entre amigos"** (as regras do Firebase como estão) + a conferência pelos aparelhos. Opcional: o bloco `.validate` só do leilão, que você publica no console (não mexe nos outros modos) |
 | 11 | Ranking e moedas | **Não conta no ranking online nem no h2h, e não usa Total Coins** |
 | 12 | Elenco | **Só os 11, sem reservas; lesão desligada no leilão;** cartões não passam de um jogo para o outro. Alternativa: 1–3 reservas (mais lotes) |
-| 13 | Notas escondidas | **Entram no PR 6.** Pergunta: as notas aparecem no fim de CADA partida (a foto diz "no fim das partidas") ou só no fim do campeonato? |
+| 13 | Notas escondidas | **Entram no PR 6.** Pergunta: as notas aparecem no fim de CADA partida (a foto diz "no fim das partidas") ou só no fim do campeonato? **Aplicada no PR 6: só no fim do campeonato** (`leilao.js REVELA_NOTAS` "campeonato"); a alternativa, revelar a cada partida os dois times que jogaram, é trocar a constante para "partida" (§8, "Durante o PR 6") |
 | 14 | Classificados do formato misto | **Até 4 técnicos, os 2 primeiros fazem a final; de 5 a 8, os 4 primeiros** |
 | 15 | Jogo em 3D que fica sem resultado (fechou o app, o celular travou) | **W.O. de quem reservou**, a mesma regra do Online 3D; o 3D que nem chegou a abrir = simulado. Alternativa: o resto simulado a partir do placar parcial (um recado novo do 3D, +3 h) |
 | 16 | Quem entra na sala | **Você aceita cada pedido** (um toque, como no Online 3D) |
@@ -1708,6 +1709,151 @@ coordenação):
   amigo era simulado ao abrir a rodada), `testar-online3d.mjs` 24/24 e `--golaco` 18/18, o GOLAÇO `teste-online` (O17) e
   `teste-prepartida-tela --so online` 18/18, `hash-partida` IGUAL, `hash-igual --ref origin/main` IGUAL, `fecho-hash --diff
   origin/main` 0, `conferir-estilos.py` sem controle sem estilo.
+
+**Durante o PR 6** (as notas escondidas, o "leilão no olho"; o que o código real pediu de diferente do plano; `js/leilao.js`,
+`js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leilao-tela.js`, `js/tm3d.js`, `css/styles.css` e, no GOLAÇO, `js/ajustes-partida.js`,
+`js/main.js`, `js/prepartida.js`, `js/prepartida-tela.js`, `js/editor-time.js` e `css/prepartida.css`):
+- **Em resumo** (para o dono): na Criar sala e no Saguão (o dono), o "Overall: À mostra · Escondido" (o padrão, à mostra; mudar
+  zera os Pronto, como as outras opções; o resumo diz "notas escondidas" e o Saguão a etiqueta "Overall escondido"). Escondido,
+  ninguém vê nota nenhuma do leilão ao fim do campeonato — nem no 3D —, e os bots também não: dão lance pela "nota percebida"
+  (a nota com até 3 pontos de erro para cima ou para baixo, a mesma em todo aparelho). No fim do campeonato as notas aparecem:
+  o time de cada um com as notas, o melhor time pela soma e quem comprou melhor.
+- **A opção** (`cfg.overall`, 'mostra' | 'escondido': o campo já existia, sempre 'mostra', desde o PR 1): `criarTreino`/`criarSala`
+  com `overall` e `configurar({ overall })` (só o dono, zera os Pronto). Na tela, `segOverall` no segmentado das fotos: na Criar,
+  a seção "Overall" depois do tempo de cada jogador; no Saguão, em "Sala e clube", só para o dono (o convidado vê a etiqueta).
+- **Regras 5** (`REGRAS` 5, aceitas 1 a 5, `REGRAS_OCULTAS` 5): a regra é uma por versão — o aparelho de antes só olha TODA sala
+  nova (a escondida mostraria as notas e daria lances pela nota de verdade). As salas de antes ficam à mostra:
+  `ocultasNaSala(sala)` pede `cfg.overall === "escondido"` E regras ≥ 5, e o `configurar` do Overall numa sala de regras 4
+  devolve 'regras'.
+- **A nota percebida** (`notaPercebida(semente, id, overall)` = a nota + ⌊r × 7⌋ − 3, r = o mulberry32 do `TM.rng` sobre o
+  FNV-1a de "leilao:{semente}:percebida:{id}"): uniforme de −3 a +3, igual em todo aparelho e conferível (o teste refaz a conta
+  sem o `leilao.js`). O `contexto({ …, notasOcultas })` guarda `ctx.ov` (a percebida, ou a de verdade à mostra) e o robô só usa
+  ela: o mercado (o nível de reposição e o valor de cada lote), o p80 do perfil "estrelas" e a ordem por nota (`ctx.rank`). A fila
+  dos lotes, o completar e a conferência não mudam (não dependem do robô). À mostra, `ctx.ov` = a nota: o leilão bit a bit igual
+  ao de antes (o L7 abaixo).
+- **As medidas dos robôs** (`testar-leilao.mjs --so L7`, 1 000 leilões só de robôs, as mesmas sementes; "depois" = `--ocultas`):
+
+  | | main e7124abc | à mostra (PR 6) | escondido (PR 6) |
+  |---|---|---|---|
+  | Completam sem a reposição | 100,0% | 100,0% | 99,9% |
+  | Preço médio de uma compra | R$ 7,56 | R$ 7,56 | R$ 7,67 |
+  | Sobra por técnico | R$ 16,8 | R$ 16,8 | R$ 15,6 |
+  | Nota média do time (a de verdade) | 74,78 | 74,78 | 74,43 |
+  | Quartil de cima mais caro | 100% | 100% | 99% |
+  | Duração só de robôs | 12,7 min | 12,7 min | 12,9 min |
+
+  Os robôs compram um pouco pior sem saber a nota (−0,35 na média do time), gastam um pouco mais e quase sempre completam o time.
+- **A revelação** (decisão 13, a recomendada): `REVELA_NOTAS` "campeonato" — tudo junto quando o campeonato acaba (a vista diz
+  `fim` no último jogo gravado, um instante antes de a sala gravar o estado 'fim'); durante as partidas, inclusive no 3D, ficam
+  escondidas. A alternativa "partida" está pronta na mesma constante: `leilao-camp.js revelados(modo, vista, T)` marca os dois
+  times de cada jogo feito, e a tela mostra as notas por técnico (`notaOcultaDe(t)`); o 3D continua escondido até o fim. A sessão
+  diz `ver().overall`, `notasOcultas` (agora) e `revelados` ([bool × T]).
+- **As telas escondidas** (`leilao-tela.js`): o selo "?" no cartão do lote, sem a nota no campinho e nos Próximos lotes, a ficha
+  sem a nota e os 6 atributos (já desde o passo 1 do §9); agora também a fala do lote ("Jogador N de M: nome, função", sem
+  ", nota N"), a Escalação sem a "Média N" e as Vendas sem "Nota N". O "−1/−2" de fora da função FICA (revisão do PR 6, abaixo:
+  ele vem do `specificPenalty`, a posição e os grupos, nunca a nota; a borda âmbar da foto também).
+  A posição, o país, o clube, a idade e a altura continuam. Ao jogo: `simOpts.notasOcultas` (contra um bot) e `partida.notasOcultas`
+  (o par) — o `tm3d.js partidaDe` põe o `partida.notasOcultas` no pedido.
+- **O fim** (`revelacao`): depois dos destaques, "Quem comprou melhor" e "As notas, reveladas" — os técnicos pela conta de quem
+  comprou melhor, com a soma das notas dos 11; o toque abre as Vendas do técnico (o campinho com as 11 notas e as vendas com
+  "Nota N"). **Quem comprou melhor** = a nota de cada compra contra a nota que o PREÇO pagava no leilão da sala (a reta dos
+  mínimos quadrados nota × preço de todas as vendas; `leilao-camp.js compraram`), somado por técnico ("+4 de nota acima do preço
+  em 11 compras"). A 1ª conta, a soma das notas menos o gasto, premiava quem não comprava nada (no treino em que a pessoa passou
+  tudo, o time de graça "comprou melhor" com R$ 0).
+- **No GOLAÇO** (só a tela; `fecho-hash --diff origin/main` 0, `hash-partida` e `hash-igual --ref origin/main` IGUAIS): o
+  `partida.notasOcultas` (ou `?notasOcultas=1` nos testes) esconde as notas na tela antes do jogo e no Editar time; a pausa não
+  mostra nota. Detalhes no `golaco/CONTRATOS.md` ("Ponte com o Total Match", parte "As notas escondidas do Modo Leilão").
+- **Diferente do plano:**
+  - **A carta neutra (`cardEl` com `semNota`) não foi preciso:** desde o §9 (as fotos, 15/11) a sala não usa a carta do Ultimate
+    (nenhuma `.ut-card`: T4 e T15 conferem); o que havia de nota (o selo, o campinho, os próximos, a ficha) já tinha o
+    `notasOcultas` desligado, e o PR 6 o ligou.
+  - **O `elenco.js notaExibida` não mudou:** ele é do fecho do hash (mexer nele dá `fecho-hash` ≠ 0). A nota some nas telas que a
+    mostram: `prepartida.js dadosDaPartida` (com `notasOcultas`, nota null) e `editor-time.js` (`opc.notasOcultas`).
+  - **A raridade no 3D:** escondida, a ficha da tela antes do jogo vai de grafite (`r-n`), não bronze/prata/ouro/verde.
+  - **"Quem comprou melhor"** pelo preço (acima), e "o time de cada técnico com as notas" pelo toque na lista (as 88 notas de 8
+    técnicos de uma vez não cabem no celular sem rolar muito).
+- **Testes** (antes → depois; o antes é a main e7124abc com os testes novos):
+
+  | teste | main e7124abc | PR 6 |
+  |---|---|---|
+  | `testar-leilao.mjs` NO (as regras, a nota percebida contra a conta do teste, os robôs só com ela, 300 leilões pareados, os 3 aparelhos, revelados/compraram, o treino escondido até o fim) | reprova (regras 4; sem `ocultasNaSala`) | passa |
+  | `testar-leilao.mjs` O1 (o Overall pelo `configurar`, zera os Pronto, recusado na sala de regras 4) | reprova (o `configurar` ignora o Overall) | passa |
+  | `testar-leilao.mjs --tela` T15 (a opção na Criar; o treino escondido sem nenhuma nota em 48 telas; o fim que revela) | reprova (sem a opção) | passa |
+  | `testar-leilao-online.mjs --so telas` D6f (o Overall pelo Saguão) | reprova (sem o segmentado) | passa |
+  | golaco `teste-ponte-tm` P15, `teste-prepartida-tela` E27, `teste-editor-tela` 17 | reprovam (as notas à mostra com o pedido escondido; o controle sem o parâmetro também, pela falta do `__golaco.notasOcultas`) | passam |
+  | golaco `teste-pausa-tela` P14 (a pausa sem nota e o cartão igual) | passa (a pausa nunca mostrou nota: guarda) | passa |
+  | `testar-3d.mjs` seção 8 (o GOLAÇO de verdade com o pedido escondido) | reprova por construção (o pedido sem o campo; não rodado na base) | passa |
+
+  Rodados no fim: `testar-leilao.mjs` 20/20 blocos (103 s), `--tela` 103/103 (517 s), `testar-leilao-online.mjs --so telas,dois`
+  39/39, `testar-3d.mjs` (a 1ª rodada inteira achou dois erros do próprio teste novo — a tela mostra um time por vez; com 1 bot o
+  jogo é a final e as notas aparecem no fim dele —, corrigidos e a seção 7 + 8 de novo, verde), golaco `teste-ponte-tm`,
+  `teste-editor-tela` (49), `teste-prepartida-tela --so ajustes`, `teste-pausa-tela --so notas`, `hash-partida` IGUAL, `hash-igual
+  --ref origin/main` IGUAL, `fecho-hash --diff origin/main` 0 e `conferir-estilos.py` sem controle sem estilo.
+
+**A revisão do PR 6** (duas revisões independentes, só de leitura; cada defeito com um teste que reprova antes e passa depois):
+- **Em resumo** (para o dono): com as notas escondidas, nada mais entrega a ordem das notas — nem a vaga e a camisa no campinho,
+  nem a fila dos lotes —; o Overall escolhido no Começar vale até o fim, mesmo que alguém mexa na sala; o "−1/−2" de fora da
+  função volta (ele vem da posição, não da nota); o fim mostra quem comprou melhor com frases claras e, separado, a soma das notas
+  de cada time.
+- **A vaga e a camisa entregavam a ordem das notas** (médio): os lotes vêm ordenados pela nota (`criarLotes`) e o húngaro da
+  escalação automática desempatava pela ordem das linhas — o melhor de dois da mesma função na vaga de índice menor (e na camisa
+  menor: `timeDoTecnico`, número = vaga + 1) em ~85% dos pares. Agora, com as notas escondidas, as linhas vão pelo hash da semente
+  da sala + o id (`leilao.js embaralhaTime`, dentro do `escalacaoDe`: a mesma em todo aparelho, porque entra na conferência dos
+  jogos) e voltam ao índice global. À mostra, a ordem de antes: a escalação, as vendas e o fim de 200 leilões só de robôs iguais
+  aos da main, bit a bit (`bitabit` da revisão, com a escalação de cada técnico). A camisa e o campinho das Vendas saem da mesma
+  escalação.
+- **O Overall e as regras mudados depois do Começar valiam para todos** (médio): o `ver()` lia o `cfg.overall` ao vivo. Agora o
+  Começar grava o Overall com os lotes (`lotes.ov`, no online e no treino; os lotes só se gravam no saguão), o `_montaCtx` monta o
+  `ctx` com ele e o `ver()` usa o `S.ctx.notasOcultas` depois do Começar. A sala com o Overall (ou as regras) diferente do dos
+  lotes congela ("overall"), no `_montaCtx` (quem abre depois) e no `_naSala` (quem já está nela), e a vista continua escondida.
+  A transação do Começar recusa ("mudou") o Overall trocado entre os lotes e a sala. Nas regras opcionais
+  (`firebase/regras-leilao-validate.json` e o LEIA-ME): o `cfg/overall` só muda com o estado 'saguao' e o `meta/regras` não muda
+  depois de criado.
+- **O "−1/−2" de fora da função fica** com as notas escondidas: no campinho, no "−N fora da função" da Escalação, no rótulo do
+  leitor de tela e na dica ("−1 e −2 marcam quem está fora da função"; a cor é âmbar, não laranja).
+- **A fila dos lotes entregava a faixa de nota** (leve): o `ordem` alternava alta, média e baixa dentro de cada grupo (cada trinca
+  seguida com uma de cada faixa em ~89%). Escondidas, a fila é sorteada SEM faixas dentro de cada grupo (`ordem(…, semFaixas)`, pela
+  semente da sala, igual em todo aparelho; as regras dos goleiros continuam): ~24–26% (o sorteio puro dá ~22%). À mostra, a fila de
+  antes.
+- **O fim que revela** (leve): "Quem comprou melhor" é uma lista própria — a frase do 1º ("Granito EC levou 10 pontos de nota a
+  mais do que pagou (11 compras)"; no negativo, "… a menos do que pagou"), o número de cada um (positivo em verde; o zero, o
+  negativo e o "sem compras" em cor neutra) e quem não comprou nada no FIM, com "sem compras" (`compraram`). "As notas,
+  reveladas" mostra a soma das notas dos 11 de cada time, da maior para a menor (`somaNotas`, não o ranking de quem comprou
+  melhor); o toque abre o time com a nota de cada jogador, e o nome acessível começa pelo texto à vista ("1º Granito EC, Bot
+  Estrategista, soma 883. Ver o time de Bot Estrategista com as notas"; no meu, "Ver o seu time": WCAG 2.5.3).
+- **As medidas dos robôs depois da revisão** (`testar-leilao.mjs --so L7`, 1 000 leilões, as mesmas sementes; a fila sem faixas
+  muda o leilão escondido): à mostra, igual à main (100,0% completos, R$ 7,56, sobra R$ 16,8, nota média 74,78, quartil de cima
+  mais caro 100%, 12,7 min); escondido, 100,0% completos, preço médio R$ 7,61, sobra R$ 16,2, nota média do time 74,42, quartil
+  de cima mais caro 98%, 12,8 min (antes da revisão: 99,9%, R$ 7,67, R$ 15,6, 74,43, 99%, 12,9 min).
+- **A Criar sala e o Saguão**: "notas escondidas" logo depois do formato no resumo (no fim da linha, o "…" cortava); o Overall no
+  mesmo lugar nas duas telas (depois do Tempo e antes das Partidas em 3D: no Saguão ele vinha depois do 3D).
+- **No GOLAÇO**: o `?notasOcultas=0` não passa mais por cima do pedido do TM que manda esconder (o parâmetro só liga; `main.js`).
+  Só página: `hash-partida` e `hash-igual --ref origin/main` IGUAIS e `fecho-hash --diff origin/main` 0.
+- **Ficam como estão** (sem conserto no cliente):
+  - um aparelho com o TM de antes que JÁ era da sala (entrou antes de atualizar) entra em "só olhar" numa sala de regras 5 e, ali,
+    vê as notas: o código velho não sabe escondê-las e não há como mudar o que ele mostra. A v390 encurta a janela (quem atualiza
+    passa a jogar a sala escondida);
+  - as regras 5 valem também nas salas À mostra: o aparelho de antes não entra em nenhuma sala nova, escondida ou não (a regra é uma
+    por versão; separar por sala abriria a porta de uma sala "à mostra" virar escondida depois).
+- **Testes** (antes = a branch antes da revisão, com os testes novos; depois = com a revisão):
+
+  | teste | antes | depois |
+  |---|---|---|
+  | `testar-leilao.mjs` NO3 (a fila: trincas com uma de cada faixa; à mostra = a de antes; as regras dos goleiros e o mesmo em 2 "aparelhos") | reprova (88,9% escondida) | passa (88,9% à mostra → ~26% escondida) |
+  | `testar-leilao.mjs` NO6 (quem não comprou nada no fim da lista) | reprova | passa |
+  | `testar-leilao.mjs` NO8 (os pares empatados da mesma função: o melhor na vaga de índice menor; 150 leilões, ~750 times; a mesma escalação em 2 "aparelhos", o mesmo custo; à mostra = a de antes) | reprova (84,9%) | passa (81,1% à mostra → 50,3% ± 1,7 escondida) |
+  | `testar-leilao.mjs` NO9 (o Overall e as regras mudados depois do Começar no treino: congela, a vista escondida, também em quem abre depois; as regras opcionais recusam as duas gravações e aceitam o fluxo honesto) | reprova | passa |
+  | `testar-leilao.mjs` O7 (f) (o mesmo no online, pelo banco falso: os lotes com o `ov`, o Overall e as regras gravados no banco depois do Começar, recarregar) | reprova | passa |
+  | `testar-leilao.mjs` PAR4 (a sala de regras 4 mantém o jogo contra um amigo em 3D) | passa (guarda) | passa |
+  | `testar-leilao.mjs --tela` T15 (o −1/−2 e a dica, a Criar com o Overall no lugar e o resumo, o fim que revela, também em 667×375) | reprova por construção (não rodado na base: a dica "laranja", o resumo e o fim de antes) | passa |
+  | `testar-leilao-online.mjs --so telas` D6f (o Saguão nos 8 tamanhos e o Overall depois do Tempo) | reprova por construção (não rodado na base: o Overall vinha depois do 3D) | passa |
+  | golaco `teste-prepartida-tela` E27b (o pedido escondido com `?notasOcultas=0`) | reprova (`--raiz` na base: 4/5 metas) | passa (5/5) |
+
+  Rodados no fim: `testar-leilao.mjs` 20/20 blocos (116 s), o L7 com e sem `--ocultas` (acima), `--tela` 103/103 (547 s; o fim
+  que revela com o contraste ≥ 4,8 nos 9 tamanhos, escuro e claro), `testar-leilao-online.mjs --so telas,dois` 39/39,
+  `conferir-estilos.py` sem controle sem estilo; golaco `teste-prepartida-tela --so ajustes` 5/5, `teste-ponte-tm`,
+  `hash-partida` IGUAL (400 hashes), `hash-igual --ref origin/main` IGUAL e `fecho-hash --diff origin/main` 0. As provas da
+  revisão (`hungaro-ordem` 87,1% → 49,6%, `fila-faixas` 89,2% → 23,8%, `cfg-depois`, `bitabit` 200/200 com a escalação) também.
 
 ---
 
