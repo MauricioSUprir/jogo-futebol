@@ -2035,7 +2035,9 @@
         secao(P, "sCfg", JSON.stringify([V.souDono, V.cfg, V.formato, V.duracao3d, V.dificuldade3d, sg.humanos, sg.vagas, sg.bots, ag, oc]), function (b) { poeConfig(b, S, V); });
         var eu = V.tecnicos[V.eu] || null;
         var usadas = V.tecnicos.filter(function (t) { return !t.bot && !t.eu; }).map(function (t) { return String(t.clube.cor).toLowerCase(); }).sort();
-        secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, oc === "clube" || oc === "forma"]), function (b) { poeMeuClube(b, S, V, usadas); });
+        // (a chave com qualquer ação a caminho, como o apagado do poeMeuClube: só com o "clube" e o "forma", a seção refeita no meio de
+        // um Aceitar — a cor de quem entrou muda as usadas — ficava apagada depois dele)
+        secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, !!oc]), function (b) { poeMeuClube(b, S, V, usadas); });
       } else secao(P, "sPedidos", JSON.stringify([V.souDono, V.pedidosDepois, V.tecnicos.map(function (t) { return [t.uid, t.nome, t.papel, t.saiu, t.ausente]; }), ag, oc]), function (b) { poePedidosDepois(b, S, V); });
       secao(P, "sPart", JSON.stringify([modo, V.estado, V.souDono, ag, oc, sg && sg.vagas, V.tecnicos.map(function (t) {
         return [t.uid, t.nome, t.num, t.papel, t.pronto, t.ausente, t.saiu, t.clube, t.eu, seloDe(V, t)[1]];

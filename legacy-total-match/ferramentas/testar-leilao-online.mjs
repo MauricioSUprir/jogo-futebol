@@ -484,6 +484,7 @@ const olhaSaguao = ap => ap.p.evaluate(() => {
       tempo: segOn(".lei-tempos"), dur3d: segOn(".lei-dur3d"), dif3d: segOn(".lei-dif3d"), nota: tx(sala.querySelector(".lei-sag-cfg .lei-sag-nota")),
       campos: [...sala.querySelectorAll(".lei-sag-clube .lei-campo")].map(i => parseFloat(getComputedStyle(i).fontSize)), escolher: tx(sala.querySelector(".lei-esc-escolher-t")),
       salvar: !!sala.querySelector(".lei-salvar"), forma: segOn(".lei-forma-seg"), formas: sala.querySelectorAll(".lei-forma-seg .seg-btn").length,
+      apagados: [...sala.querySelectorAll(".lei-sag-clube .lei-campo, .lei-sag-clube .lei-esc-escolher, .lei-forma-seg .seg-btn")].filter(x => x.disabled).length,
       vagasCampo: sala.querySelectorAll(".lei-sag-clube .lei-cv .lei-cv-vaga").length } : null,
     barra: bar ? { fixa: getComputedStyle(bar).position, embaixo: Math.abs(bb.b - innerHeight) <= 1, txt: tx(q(".lei-sagbar-txt")), b: tx(q(".lei-sagbar-txt b")),
       bt: tx(bt), btH: r(bt).h, btCls: bt.className, btDes: bt.disabled, btIc: !!bt.querySelector(".lei-bt-ic svg, .lei-bt-ic .tm-ic") } : null
@@ -889,7 +890,9 @@ async function casoDois() {
     && ps.every(x => x.papelMaius && x.estMaius && x.estDentro) && ps.filter(x => x.voce).map(x => x.uid).join() === eu;
   const tirarA = lin(sA.parts, "uidBruno").tirar;
   const salaA = sA.sala || {}, salaB = sB.sala || {};
-  const clubeOk = x => x.campos.length === 2 && x.campos.every(f => f >= 16) && x.escolher === "Escolher escudo" && x.salvar && x.forma === "4-4-2" && x.formas === 6 && x.vagasCampo === 11
+  // (o seu clube aceso: depois do Aceitar do dono a seção ficava apagada — refeita no meio da ação, a cor de quem entrou muda as
+  // cores usadas — e não voltava)
+  const clubeOk = x => x.campos.length === 2 && x.campos.every(f => f >= 16) && x.escolher === "Escolher escudo" && x.salvar && x.forma === "4-4-2" && x.formas === 6 && x.vagasCampo === 11 && x.apagados === 0
     && x.rots.includes("Seu clube") && x.rots.includes("Sua formação") && x.tit === "Sala e clube";
   confere(`${ID}6b o Saguão pelas fotos (o dono em 390×844 e o convidado em 1280×800): o título grande e "2/2 participantes"; o papel e o estado em caixa alta (PRONTO, AGUARDANDO), o VOCÊ só na sua linha e o Tirar do dono num ícone de 44 px; o resumo verde com as etiquetas da sala e "1 de 2 prontos"; Sala e clube (o dono muda, o convidado só vê o formato) com o seu clube e a formação; a barra fixa com o botão de 56 px`,
     [sA, sB].every(x => x.tit === "Prepare seu clube." && x.titPx >= 28 && !!x.frase && x.conta === "2/2 participantes" && x.partTit === "Participantes" && x.partN === "2/2")
@@ -903,7 +906,7 @@ async function casoDois() {
       && clubeOk(salaA) && clubeOk(salaB)
       && sA.barra.fixa === "fixed" && sA.barra.embaixo && sA.barra.b === "1 de 2 prontos." && sA.barra.txt === "1 de 2 prontos. Falta confirmar: Bruno." && sA.barra.bt === "Começar o leilão" && sA.barra.btDes && sA.barra.btH >= 56 && sA.barra.btIc
       && sB.barra.fixa === "fixed" && sB.barra.embaixo && sB.barra.bt === "Pronto" && /primary/.test(sB.barra.btCls) && !sB.barra.btDes && sB.barra.btH >= 56,
-    { sA: Object.assign({}, sA, { cod: undefined }), sB: { parts: sB.parts, res: sB.res, sala: sB.sala, barra: sB.barra, conta: sB.conta } });
+    { apagados: [salaA.apagados, salaB.apagados], sA: Object.assign({}, sA, { cod: undefined, convite: undefined }), sB: { parts: sB.parts, res: sB.res, sala: sB.sala, barra: sB.barra, conta: sB.conta } });
   // o contraste de todo texto do Saguão (≥ 4,5:1) no escuro e no claro, no dono e no convidado; no claro, os cartões brancos e o
   // resumo num verde bem claro
   const crsD = [];
