@@ -5,7 +5,8 @@
    (TM.leilaoSessao: `ver()`, no campeonato `ver().camp`) e chamam as ações dela; nenhuma regra mora aqui.
    Rotas: leilao (Entrada: Criar sala, Entrar com código, Treinar contra bots, Minhas salas), leilao-criar (o Treino;
    com { online: true }, a sala online; o Formato do campeonato e a duração estimada), leilao-saguao (a aba Saguão, só no
-   online: o convite, os pedidos, os participantes, a configuração com o Formato, o meu clube e o Pronto/Começar),
+   online, pelas fotos de 14/11: o código e o convite, os pedidos, os participantes, o resumo, "Sala e clube" — as opções da
+   sala com o Formato, o meu clube e a formação — e o Pronto/Começar),
    leilao-lote (a aba Leilão), leilao-escalacao, leilao-camp (o Campeonato: Seu jogo com o Jogar — o 3D — e o Simular
    partida, Simular os pendentes do dono, a rodada, a tabela, a chave, a artilharia e o fim), leilao-jogo ({ id }: o "Ver o
    jogo", o resultado GRAVADO no 2D do TM.matchview sem pausa — pauseSide null —, a prorrogação com o gol de ouro e os
@@ -31,9 +32,11 @@
                                      padrão 9 s) } — os testes encurtam
    As ações online passam todas pela sessão (o banco falso dos testes é o SDK falso instalado na página: a tela não sabe
    que é de mentira). Seletores estáveis para os testes: .lei-online (o cartão da Entrada), .lei-entrar-cod (o campo do
-   código), .lei-conv-cod (o código, •••••• até o olho .lei-olho), .lei-pedido (um pedido, com Aceitar e Recusar),
-   .lei-part[data-uid] (um participante), .lei-sagbar (a barra fixa do saguão: .lei-sagbar-txt e o botão
-   .lei-sagbar-bt), .lei-aviso-sala (a faixa da sala); o Formato: .lei-fmt[data-fmt] (aria-pressed); o Campeonato:
+   código), .lei-conv-cod (o código, •••••• até o olho .lei-olho; .lei-cod-copia copia o código), .lei-pedido (um pedido,
+   com Aceitar e Recusar), .lei-part[data-uid] (um participante; no Saguão .lei-part.sag com o estado em .lei-estado),
+   .lei-sag-res (o resumo do Saguão: .lei-etq), .lei-sag-sala (Sala e clube), .lei-sagbar (a barra fixa do saguão:
+   .lei-sagbar-txt e o botão .lei-sagbar-bt), .lei-aviso-sala (a faixa da sala); o Formato: .lei-fmt[data-fmt]
+   (aria-pressed); o Campeonato:
    .lei-seujogo (o Seu jogo; .lei-jogar = o Jogar no 3D, .lei-simular = o Simular partida), .lei-pend-bt (Simular os
    pendentes), .lei-dur3d e .lei-dif3d (a duração e a dificuldade do 3D: .seg-btn[data-foco]), .lei-rodada[data-rodada]
    (a rodada à mostra; .lei-rod-bt = ‹ ›), .lei-jogo[data-jogo][data-e] (um jogo com o estado; .lei-jg-ver = Ver o jogo),
@@ -157,10 +160,13 @@
       p: { id: r.id, name: r.name, clubId: r.clubId, homeClubId: r.homeClubId, pos: r.pos, pos2: r.pos2, overall: ov, nationId: r.nationId, number: r.number }
     };
   }
-  function escudo(cl, cls) {
-    var u = UT(); cl = cl || {};
-    if (u && u.escudoEl && u.escudoCfg) return u.escudoEl(u.escudoCfg({ escudo: cl.escudo }), cl.cor || "#22c55e", cl.sigla || "", "lei-esc" + (cls ? " " + cls : ""));
-    return el("span", { class: "lei-esc lei-esc-txt" + (cls ? " " + cls : ""), text: cl.sigla || "" });
+  // (deco: o escudo ao lado do nome é enfeite; a sigla desenhada nele não entra no nome lido pelo leitor de tela)
+  function escudo(cl, cls, deco) {
+    var u = UT(), e; cl = cl || {};
+    if (u && u.escudoEl && u.escudoCfg) e = u.escudoEl(u.escudoCfg({ escudo: cl.escudo }), cl.cor || "#22c55e", cl.sigla || "", "lei-esc" + (cls ? " " + cls : ""));
+    else e = el("span", { class: "lei-esc lei-esc-txt" + (cls ? " " + cls : ""), text: cl.sigla || "" });
+    if (deco) e.setAttribute("aria-hidden", "true");
+    return e;
   }
 
   /* ---------- som (Web Audio, liberado no 1º toque) e vibração ---------- */
@@ -945,9 +951,10 @@
   // ver (role="img"). Cada linha da formação fica reta e com as vagas à mesma distância (o y médio da linha e o x de ponta a
   // ponta dela: o FORMATIONS do TM é em arco e é de todos; no meio do 3-5-2 as três do centro ficavam a 16% e as notas
   // encostavam) e o sobrenome cabe até o vizinho da mesma linha (não encosta no do lado nem sai do campo).
+  // Sem a sessão (S null: a Criar sala), só a formação de opc.formacao com as vagas vazias; opc.rotulo troca o aria-label.
   function campinhoVagas(S, t, opc) {
     opc = typeof opc === "string" ? { cls: opc } : (opc || {});
-    var e = S.escalacao(t), f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notasOcultas();
+    var e = S ? S.escalacao(t) : { formacao: opc.formacao }, f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notasOcultas();
     var linhas = {}, pos = [];
     slots.forEach(function (sl, s) { (linhas[sl[0]] = linhas[sl[0]] || []).push(s); });
     Object.keys(linhas).forEach(function (g) {
@@ -958,7 +965,7 @@
     });
     var n = 0, vagas = [], troca = opc.troca;
     slots.forEach(function (slot, s) {
-      var k = e && e.tit ? e.tit[s] : -1, r = k >= 0 && S.ctx ? L().retratoDe(S.ctx, k) : null, pen = (e && e.pen && e.pen[s]) || 0;
+      var k = e && e.tit ? e.tit[s] : -1, r = k >= 0 && S && S.ctx ? L().retratoDe(S.ctx, k) : null, pen = (e && e.pen && e.pen[s]) || 0;
       if (r) n++;
       var x = pos[s].x;
       // (a largura do nome em % da largura do campo = cqw: até o vizinho com folga, nunca para fora da borda)
@@ -982,7 +989,7 @@
       }
       vagas.push(v);
     });
-    var rot = (t === (VIEW.V && VIEW.V.eu) ? "Seu time" : "Time") + " na " + f + ": " + n + " de " + slots.length;
+    var rot = opc.rotulo || ((t === (VIEW.V && VIEW.V.eu) ? "Seu time" : "Time") + " na " + f + ": " + n + " de " + slots.length);
     var campo = el("div", { class: "lei-cv" + (opc.cls ? " " + opc.cls : ""), role: troca ? "group" : "img", "aria-label": rot },
       [el("span", { class: "lei-cv-linhas", "aria-hidden": "true" }, [el("i", { class: "c" }), el("i", { class: "m" }), el("i", { class: "a1" }), el("i", { class: "a2" })])].concat(vagas).concat([
         el("span", { class: "lei-cv-forma", "aria-hidden": "true", text: f }),
@@ -1992,12 +1999,18 @@
     P.fp[nome] = foco; focaRotulo(box);
   }
   function focaRotulo(box) {
-    var r = box.querySelector(".lei-rotulo"); if (!r) return;
+    var r = box.querySelector(".lei-sag-ctit, .lei-sag-rot, .lei-rotulo"); if (!r) return;
     r.setAttribute("tabindex", "-1");
     try { r.focus({ preventScroll: true }); } catch (e) {}
   }
+  // O Saguão pelas fotos de 14/11 (PLANO-LEILAO.md §9): o título grande com a frase do convite e "N/M participantes"; o código
+  // numa caixa tracejada com o olho e o copiar; Copiar convite e Compartilhar lado a lado; os pedidos de entrada (só o dono);
+  // os participantes em cartões (o papel e o estado em caixa alta); o resumo num cartão de destaque verde; "Sala e clube" num
+  // cartão só (as opções da sala: o dono muda — mudar zera os Pronto — e os outros só veem o formato; o seu clube e a sua
+  // formação); embaixo a barra FIXA com "N de M prontos" e o Pronto ou o Começar.
   TM.ui.register("leilao-saguao", function (screen) {
     var M = moldura(screen, "leilao-saguao"); if (!M) return;
+    screen.classList.add("lei-tela-sag");
     M.corpo.classList.add("lei-corpo-sag");
     VIEW.partes = { corpo: M.corpo, modo: null, k: {} };
     VIEW.partes.sagBar = barraSaguao(screen);
@@ -2015,18 +2028,22 @@
     if (modo !== P.modo) { P.modo = modo; P.k = {}; montaSaguao(S, V); }
     if (modo === "pedido") secao(P, "sPed", JSON.stringify(V.pedido), function (b) { poePedido(b, S, V); });
     if (modo === "saguao" || modo === "depois") {
-      secao(P, "sCab", JSON.stringify([modo, V.cfg, V.saguao && [V.saguao.vagas, V.saguao.bots], V.liga, V.versaoDiferente]), function (b) { poeCabSaguao(b, V, modo); });
+      var sg = V.saguao;
+      secao(P, "sCab", JSON.stringify([modo, V.estado, V.tecnicos.length, sg && sg.vagas, V.versaoDiferente]), function (b) { poeCabSaguao(b, V, modo); });
       secao(P, "sConv", [V.codigo, VIEW.codigoVisivel, modo, V.souDono].join("|"), function (b) { poeConvite(b, V, modo); });
       var ag = podeAgir(V), oc = VIEW.ocupado || "";
       if (modo === "saguao") {
-        secao(P, "sPedidos", JSON.stringify([V.souDono, V.saguao.pedidos, V.saguao.lotada, ag, oc]), function (b) { poePedidos(b, S, V); });
-        secao(P, "sCfg", JSON.stringify([V.souDono, V.cfg, V.saguao.humanos, ag, oc]), function (b) { poeConfig(b, S, V); });
+        secao(P, "sPedidos", JSON.stringify([V.souDono, sg.pedidos, sg.lotada, ag, oc]), function (b) { poePedidos(b, S, V); });
+        secao(P, "sRes", JSON.stringify([V.cfg, V.liga, V.formato, V.duracao3d, V.dificuldade3d, sg.vagas, sg.bots, sg.prontos, sg.total, V.versaoDiferente]), function (b) { poeResumo(b, V); });
+        secao(P, "sCfg", JSON.stringify([V.souDono, V.cfg, V.formato, V.duracao3d, V.dificuldade3d, sg.humanos, sg.vagas, sg.bots, ag, oc]), function (b) { poeConfig(b, S, V); });
         var eu = V.tecnicos[V.eu] || null;
         var usadas = V.tecnicos.filter(function (t) { return !t.bot && !t.eu; }).map(function (t) { return String(t.clube.cor).toLowerCase(); }).sort();
-        secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, oc === "clube" || oc === "forma"]), function (b) { poeMeuClube(b, S, V, usadas); });
+        // (a chave com qualquer ação a caminho, como o apagado do poeMeuClube: só com o "clube" e o "forma", a seção refeita no meio de
+        // um Aceitar — a cor de quem entrou muda as usadas — ficava apagada depois dele)
+        secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, !!oc]), function (b) { poeMeuClube(b, S, V, usadas); });
       } else secao(P, "sPedidos", JSON.stringify([V.souDono, V.pedidosDepois, V.tecnicos.map(function (t) { return [t.uid, t.nome, t.papel, t.saiu, t.ausente]; }), ag, oc]), function (b) { poePedidosDepois(b, S, V); });
-      secao(P, "sPart", JSON.stringify([modo, V.souDono, ag, oc, V.saguao && V.saguao.vagas, V.tecnicos.map(function (t) {
-        return [t.uid, t.nome, t.num, t.papel, t.pronto, t.ausente, t.saiu, t.clube, t.eu];
+      secao(P, "sPart", JSON.stringify([modo, V.estado, V.souDono, ag, oc, sg && sg.vagas, VIEW.gerir === V.codigo, V.tecnicos.map(function (t) {
+        return [t.uid, t.nome, t.num, t.papel, t.pronto, t.ausente, t.saiu, t.clube, t.eu, seloDe(V, t)[1]];
       })]), function (b) { poeParticipantes(b, S, V, modo); });
     }
     atualizaBarraSag(V);
@@ -2035,7 +2052,7 @@
     var P = VIEW.partes, c = P.corpo;
     TM.ui.clear(c);
     c.classList.remove("uma");
-    ["sPed", "sCab", "sConv", "sPedidos", "sPart", "sCfg", "sClube", "espaco"].forEach(function (k) { P[k] = null; });
+    ["sPed", "sCab", "sConv", "sPedidos", "sPart", "sRes", "sCfg", "sClube", "espaco"].forEach(function (k) { P[k] = null; });
     if (P.modo === "treino") {
       c.classList.add("uma");
       c.appendChild(el("div", { class: "next-match lei-cartao lei-embreve" }, [
@@ -2046,20 +2063,21 @@
       P.sPed = el("div", { class: "lei-sec" }); c.appendChild(P.sPed);
       c.classList.add("uma");
     } else {
+      // à esquerda (ou em cima): o título, o convite, os pedidos e os participantes; à direita (ou embaixo): o resumo e "Sala e
+      // clube" (no PC e no celular deitado largo, duas colunas)
       P.sCab = el("div", { class: "lei-sec lei-sag-cab" });
-      P.sConv = el("section", { class: "lei-caixa lei-convite", "aria-label": "Convite" });
-      P.sPedidos = el("section", { class: "lei-caixa lei-pedidos", "aria-label": "Pedidos de entrada" });
-      P.sPart = el("section", { class: "lei-caixa lei-parts", "aria-label": "Participantes" });
-      // a ordem: o resumo, o convite e os pedidos (o dono age), os participantes, a configuração e o meu clube (no PC, duas
-      // colunas: à esquerda o convite, os pedidos e os participantes; à direita a configuração e o meu clube)
-      var ca = el("div", { class: "lei-col-a" }), cb = el("div", { class: "lei-col-b" });
-      c.appendChild(P.sCab); ca.appendChild(P.sConv); ca.appendChild(P.sPedidos); ca.appendChild(P.sPart);
-      c.appendChild(ca);
+      P.sConv = el("section", { class: "lei-convite", "aria-label": "Convite" });
+      P.sPedidos = el("section", { class: "lei-sag-card lei-pedidos", "aria-labelledby": "lei-sag-ped-t" });
+      P.sPart = el("section", { class: "lei-sag-card lei-parts", "aria-labelledby": "lei-sag-part-t" });
+      c.appendChild(el("div", { class: "lei-col-a" }, [P.sCab, P.sConv, P.sPedidos, P.sPart]));
       if (P.modo === "saguao") {
-        P.sCfg = el("section", { class: "lei-caixa lei-cfg", "aria-label": "Configuração da sala" });
-        P.sClube = el("section", { class: "lei-caixa lei-meuclube", "aria-label": "Meu clube" });
-        cb.appendChild(P.sCfg); cb.appendChild(P.sClube);
-        c.appendChild(cb);
+        P.sRes = el("section", { class: "lei-sag-res", "aria-labelledby": "lei-sag-res-t" });
+        P.sCfg = el("div", { class: "lei-sag-cfg" });
+        P.sClube = el("div", { class: "lei-sag-clube" });
+        var sala = el("section", { class: "lei-sag-card lei-sag-sala", "aria-labelledby": "lei-sag-sala-t" }, [
+          el("h2", { class: "lei-sag-ctit", id: "lei-sag-sala-t", text: "Sala e clube" }), P.sCfg, P.sClube
+        ]);
+        c.appendChild(el("div", { class: "lei-col-b" }, [P.sRes, sala]));
       } else c.classList.add("uma");
     }
     P.espaco = el("div", { class: "lei-espaco", "aria-hidden": "true" });
@@ -2079,8 +2097,8 @@
       }, "btn", esperando ? "x" : "log-out")])
     ]));
   }
+  // o título grande, a frase do convite e "N/M participantes" (depois do Começar: o cartão "O leilão começou")
   function poeCabSaguao(b, V, modo) {
-    var cfg = V.cfg || {}, sg = V.saguao, seg = Math.round((cfg.tempo || L().DUR) / 1000);
     if (modo === "depois") {
       b.appendChild(el("div", { class: "next-match lei-cartao" }, [
         el("div", { class: "nm-label", text: "O leilão começou" }),
@@ -2091,37 +2109,37 @@
       if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
       return;
     }
+    var sg = V.saguao, n = V.tecnicos.length, vagas = sg ? sg.vagas : (V.cfg || {}).vagas;
     b.appendChild(el("h2", { class: "lei-sag-tit", text: "Prepare seu clube." }));
-    b.appendChild(el("p", { class: "lei-sag-resumo", text: "Cada técnico entra com " + rs(L().SALDO) + " (dinheiro do jogo) e compra os " + L().VAGAS +
-      " do time no leilão dos melhores da " + ((V.liga && V.liga.nome) || "liga") + ". O que sobrar não vale nada no campeonato." }));
-    var vagas = sg ? sg.vagas : cfg.vagas;
-    var etq = [(V.liga && V.liga.nome) || "", "Até " + vagas + " técnicos", sg && sg.bots ? sg.bots + (sg.bots === 1 ? " bot" : " bots") : "Só gente de verdade",
-      nomeFormato(V.formato), seg + " s por jogador", sg && sg.bots ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : "", "Sem chat"];
-    b.appendChild(el("div", { class: "lei-etqs" }, etq.filter(Boolean).map(function (t) { return el("span", { class: "lei-etq", text: t }); })));
-    // a duração estimada com a sala cheia: o leilão (a régua do PR 1) e o campeonato simulado
-    var d = duracaoEstimada(vagas, cfg.tempo || L().DUR), dc = duracaoCamp(V.formato, vagas, cfg.tempo || L().DUR, sg && sg.bots > 0 ? V.duracao3d : null);
-    b.appendChild(el("p", { class: "lei-sag-dur", text: "Com a sala cheia: leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato (" + nomeFormato(V.formato).toLowerCase() + ") de " + dc.lo + " a " + dc.hi + " min." }));
-    if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
+    b.appendChild(el("p", { class: "lei-sag-frase", text: "Mande o convite para quem você conhece e monte o seu clube enquanto eles chegam." }));
+    b.appendChild(el("p", { class: "lei-sag-conta" }, [el("span", { class: "lei-sag-conta-ic" }, [ic("users")]),
+      el("span", { class: "lei-sag-conta-n", text: n + "/" + vagas + " participantes" })]));
   }
-  // o convite: o código escondido (o olho mostra), Copiar convite (o link ?leilao=), Compartilhar (só com navigator.share)
-  // e o QR (só com o código à mostra: ele leva o código)
+  // o convite: o código numa caixa tracejada (escondido: o olho mostra o código e o QR; o copiar copia só o código), e embaixo
+  // Copiar convite (o link ?leilao=) e Compartilhar (só com navigator.share) lado a lado
   function poeConvite(b, V, modo) {
     var vis = VIEW.codigoVisivel, link = linkDa(V.codigo), cod = V.codigo || "";
-    b.appendChild(el("div", { class: "lei-rotulo", text: modo === "depois" ? "Convite (para quem trocou de aparelho)" : "Convite" }));
-    var olho = el("button", { class: "lei-olho", type: "button", "aria-pressed": vis ? "true" : "false", "aria-label": vis ? "Esconder o código" : "Mostrar o código",
+    if (modo === "depois") b.appendChild(el("h2", { class: "lei-sag-ctit lei-sag-ctit-s", text: "Convite (para quem trocou de aparelho)" }));
+    var olho = el("button", { class: "lei-cod-bt lei-olho", type: "button", "aria-pressed": vis ? "true" : "false", "aria-label": vis ? "Esconder o código" : "Mostrar o código",
       title: vis ? "Esconder o código" : "Mostrar o código", data: { foco: "olho" }, on: { click: function () { VIEW.codigoVisivel = !VIEW.codigoVisivel; atualiza(); } } }, [ic(vis ? "eye-off" : "eye")]);
-    b.appendChild(el("div", { class: "lei-conv-l1" }, [
-      el("span", { class: "lei-conv-rot", text: "Código" }),
-      el("span", { class: "lei-conv-cod" + (vis ? " visivel" : ""), text: vis ? cod : "••••••", "aria-label": vis ? "Código " + cod.split("").join(" ") : "Código escondido" }),
-      olho
+    var copiaCod = el("button", { class: "lei-cod-bt lei-cod-copia", type: "button", "aria-label": "Copiar o código da sala", title: "Copiar o código",
+      data: { foco: "copia-cod" }, on: { click: function () { copia(cod, "Código copiado: mande só para quem você conhece."); } } }, [ic("copy")]);
+    b.appendChild(el("div", { class: "lei-cod-caixa" }, [
+      el("span", { class: "lei-conv-rot", text: "Código da sala" }),
+      el("span", { class: "lei-cod-l" }, [
+        el("span", { class: "lei-conv-cod" + (vis ? " visivel" : ""), text: vis ? cod : "••••••", "aria-label": vis ? "Código " + cod.split("").join(" ") : "Código escondido" }),
+        el("span", { class: "lei-cod-bts" }, [olho, copiaCod])
+      ])
     ]));
-    var bts = [botao("Copiar convite", function () { copia(link, "Convite copiado: mande só para quem você conhece."); }, "btn small", "copy")];
+    var bts = [botao("Copiar convite", function () { copia(link, "Convite copiado: mande só para quem você conhece."); }, "btn primary lei-conv-copiar", "copy")];
     if (global.navigator && global.navigator.share) bts.push(botao("Compartilhar", function () {
       try { global.navigator.share({ title: "Total Match · Leilão", text: "Entre na minha sala do Leilão no Total Match", url: link }).catch(function () {}); } catch (e) {}
-    }, "btn small", "share-2"));
+    }, "btn lei-conv-comp", "share-2"));
     b.appendChild(el("div", { class: "lei-conv-bts" }, bts));
-    if (vis) { var q = qr(link); if (q) b.appendChild(q); }
-    b.appendChild(el("p", { class: "lei-conv-nota", text: vis ? "Quem tiver o convite pede para entrar e o dono aceita." : "O código fica escondido (quem compartilha a tela não o mostra): o olho mostra o código e o QR." }));
+    if (vis) {
+      var q = qr(link); if (q) b.appendChild(q);
+      b.appendChild(el("p", { class: "lei-conv-nota", text: "Quem tiver o convite pede para entrar e o dono aceita." }));
+    }
   }
   function acaoSala(S, chave, fn, ok) {
     if (VIEW.ocupado) return;
@@ -2132,39 +2150,49 @@
       atualiza();
     }, function (e) { VIEW.ocupado = null; if (global.console) console.error(e); TM.ui.toast("Falha na conexão: tente de novo", "erro"); atualiza(); });
   }
+  // o cabeçalho de um cartão do Saguão: o título e, à direita, a contagem ("3/4"; para o leitor de tela, "3 de 4")
+  function cabCartao(id, titulo, conta, falada) {
+    return el("div", { class: "lei-sag-ccab" }, [
+      el("h2", id ? { class: "lei-sag-ctit", id: id, text: titulo } : { class: "lei-sag-ctit", text: titulo }),
+      conta ? el("span", { class: "lei-sag-cn" }, [el("span", { "aria-hidden": "true", text: conta }), el("span", { class: "lei-sr", text: falada || conta })]) : null
+    ]);
+  }
   function poePedidos(b, S, V) {
     b.hidden = !V.souDono;
     if (!V.souDono) return;
     var sg = V.saguao, ps = sg.pedidos || [], ag = podeAgir(V) && !VIEW.ocupado;
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Pedidos de entrada" + (ps.length ? " (" + ps.length + ")" : "") }));
+    b.appendChild(cabCartao("lei-sag-ped-t", "Pedidos de entrada", ps.length ? String(ps.length) : "", ps.length + (ps.length === 1 ? " pedido" : " pedidos")));
     if (!ps.length) { b.appendChild(el("p", { class: "lei-vazio", text: "Nenhum pedido agora. Quem tiver o convite pede para entrar e aparece aqui." })); return; }
+    var lista = el("div", { class: "lei-sag-lista" });
     ps.forEach(function (p) {
       // (quem entrou a região ao vivo fala pela mudança do saguão: anunciaSaguao)
       var aceitar = botao("Aceitar", function () { acaoSala(S, "aceitar", function () { return S.aceitar(p.uid); }); }, "btn small primary", "check");
-      var recusar = botao("Recusar", function () { acaoSala(S, "recusar", function () { return S.recusar(p.uid); }); }, "btn small", "x");
+      var recusar = botao("Recusar", function () { acaoSala(S, "recusar", function () { return S.recusar(p.uid); }); }, "btn small lei-bt-tom", "x");
       aceitar.dataset.foco = "aceitar-" + p.uid; recusar.dataset.foco = "recusar-" + p.uid;
       aceitar.setAttribute("aria-label", "Aceitar " + comNum(p.nome, p.num)); recusar.setAttribute("aria-label", "Recusar " + comNum(p.nome, p.num));
       if (!ag || sg.lotada) aceitar.disabled = true;
       if (!ag) recusar.disabled = true;
-      b.appendChild(el("div", { class: "lei-pedido", data: { uid: p.uid } }, [
-        escudo(p.clube, "p"),
+      lista.appendChild(el("div", { class: "lei-pedido", data: { uid: p.uid } }, [
+        escudo(p.clube, "p", true),
         el("span", { class: "lei-tec-nome" }, [
-          el("span", { class: "lei-tec-quem" }, [el("span", { class: "lei-part-n", text: p.nome }), p.num ? el("span", { class: "lei-num", text: "#" + p.num }) : null]),
-          el("span", { class: "lei-tec-clube", text: ((p.clube && p.clube.nome) || "Clube") + " · quer entrar" })
+          el("span", { class: "lei-tec-quem" }, [el("span", { class: "lei-part-n", text: p.nome })]),
+          el("span", { class: "lei-part-papel" }, [el("span", { class: "lei-part-pp", text: "Quer entrar" }), p.num ? el("span", { class: "lei-num", text: "#" + p.num }) : null])
         ]),
         el("span", { class: "lei-pedido-bts" }, [aceitar, recusar])
       ]));
     });
-    if (sg.lotada) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala está cheia: aumente os técnicos ou tire um bot na configuração para aceitar." }));
+    b.appendChild(lista);
+    if (sg.lotada) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala está cheia: aumente os técnicos ou tire um bot em Sala e clube para aceitar." }));
   }
-  // depois do Começar, os pedidos de quem trocou de aparelho: o dono escolhe de quem é o clube (ou recusa)
-  function poePedidosDepois(b, S, V) {
+  // depois do Começar, os pedidos de quem trocou de aparelho: o dono escolhe de quem é o clube (ou recusa); naFolha = na
+  // folha Participantes (o título sem o id do cartão do Saguão)
+  function poePedidosDepois(b, S, V, naFolha) {
     var ps = V.pedidosDepois || [];
     b.hidden = !V.souDono || !ps.length;
     if (b.hidden) return;
     var ag = podeAgir(V) && !VIEW.ocupado;
     var donos = V.tecnicos.filter(function (t) { return !t.bot && t.papel === "tecnico"; });
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Pedidos de quem trocou de aparelho" }));
+    b.appendChild(cabCartao(naFolha ? null : "lei-sag-ped-t", "Pedidos de quem trocou de aparelho", String(ps.length), ps.length + (ps.length === 1 ? " pedido" : " pedidos")));
     ps.forEach(function (p) {
       var bts = donos.map(function (t) {
         var x = botao("Passar o clube de " + t.nome, function () {
@@ -2172,12 +2200,12 @@
           TM.ui.confirm("Passar o clube?", "O clube " + t.clube.nome + " (de " + comNum(t.nome, t.num) + ") passa para " + comNum(p.nome, p.num) + ". A conta antiga só olha.", "Passar o clube", function () {
             acaoSala(S, "passar", function () { return S.passarClube(t.uid, p.uid); }, function () { TM.ui.toast("O clube passou para " + p.nome + ".", "ok"); anuncia("O clube de " + t.nome + " passou para " + p.nome); });
           });
-        }, "btn small", "users");
+        }, "btn small lei-bt-tom", "users");
         x.dataset.foco = "passar-" + p.uid + "-" + t.uid;
         if (!ag) x.disabled = true;
         return x;
       });
-      var rec = botao("Recusar", function () { acaoSala(S, "recusar", function () { return S.recusar(p.uid); }); }, "btn small", "x");
+      var rec = botao("Recusar", function () { acaoSala(S, "recusar", function () { return S.recusar(p.uid); }); }, "btn small lei-bt-tom", "x");
       rec.dataset.foco = "recusar-" + p.uid;
       if (!ag) rec.disabled = true;
       b.appendChild(el("div", { class: "lei-pedido lei-pedido-depois", data: { uid: p.uid } }, [
@@ -2189,34 +2217,97 @@
       ]));
     });
   }
+  // o estado na pílula do Saguão (em caixa alta pelo CSS): Pronto / Aguardando (o "Falta confirmar" de antes), Bot, Ausente,
+  // Saiu; depois do Começar, o de sempre (Presente, o do lote)
+  function seloSag(V, t) {
+    var s = seloDe(V, t);
+    return s[0] === "falta" ? ["falta", "Aguardando", "Falta confirmar o Pronto"] : s;
+  }
+  // uma linha de participante no Saguão (as fotos): o escudo, o nome (o VOCÊ junto), o papel em caixa alta embaixo e, à direita,
+  // o estado na pílula (para o leitor de tela, o "Falta confirmar o Pronto" de antes no lugar do "Aguardando"); com o "Tirar
+  // alguém da sala" do dono ligado, o Tirar no lugar da pílula. O #número só quando outro participante tem o mesmo nome (as
+  // fotos não o têm; a folha Participantes e o Tirar o dizem sempre)
+  function linhaSag(V, t, acoes) {
+    var s = seloSag(V, t), chave = function (x) { return String(x || "").trim().toLowerCase(); };
+    var homonimo = t.num && !t.bot && V.tecnicos.some(function (o) { return o !== t && chave(o.nome) === chave(t.nome); });
+    var selo = s[1] && !(acoes && acoes.length) ? el("span", { class: "lei-selo lei-estado " + s[0] }, s[2]
+      ? [el("span", { "aria-hidden": "true", text: s[1] }), el("span", { class: "lei-sr", text: s[2] })] : [el("span", { text: s[1] })]) : null;
+    return el("div", { class: "lei-part sag" + (t.eu ? " eu" : "") + (t.ausente && !t.eu ? " longe" : ""), data: { uid: t.uid } }, [
+      escudo(t.clube, "p", true),
+      el("span", { class: "lei-tec-nome" }, [
+        el("span", { class: "lei-tec-quem" }, [el("span", { class: "lei-part-n", text: t.nome }), t.eu ? el("span", { class: "lei-voce", text: "VOCÊ" }) : null]),
+        el("span", { class: "lei-part-papel" }, [el("span", { class: "lei-part-pp", text: papelDe(t) }), homonimo ? el("span", { class: "lei-num", text: "#" + t.num }) : null])
+      ]),
+      el("span", { class: "lei-part-dir" }, [selo].concat(acoes || []))
+    ]);
+  }
   function poeParticipantes(b, S, V, modo) {
     var sg = V.saguao, ag = podeAgir(V) && !VIEW.ocupado;
-    var n = V.tecnicos.length;
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Participantes" + (modo === "saguao" && sg ? " · " + n + " de " + sg.vagas : " · " + n) }));
+    var n = V.tecnicos.length, sag = modo === "saguao" && sg;
+    b.appendChild(cabCartao("lei-sag-part-t", "Participantes", sag ? n + "/" + sg.vagas : String(n), sag ? n + " de " + sg.vagas : null));
+    // o Tirar do dono fica atrás do "Tirar alguém da sala" (como o "Editar" de uma lista): a lista à vista é a das fotos, com a
+    // pílula do estado à direita na mesma linha do nome; ligado, cada técnico mostra o Tirar no lugar da pílula
+    var podeTirar = modo === "saguao" && V.souDono && V.tecnicos.some(function (t) { return !t.bot && t.papel === "tecnico"; });
+    if (!podeTirar && VIEW.gerir === V.codigo) VIEW.gerir = null;
+    var gerir = podeTirar && VIEW.gerir === V.codigo;
+    var lista = el("div", { class: "lei-sag-lista" + (gerir ? " gerir" : ""), id: "lei-sag-lista" });
     V.tecnicos.forEach(function (t) {
       var acoes = [];
-      if (modo === "saguao" && V.souDono && !t.bot && t.papel === "tecnico") {
-        var x = botao("Tirar", function () {
-          TM.ui.confirm("Tirar " + t.nome + " da sala?", comNum(t.nome, t.num) + " sai do saguão e não pode pedir de novo nesta sala.", "Tirar da sala", function () {
-            acaoSala(S, "tirar", function () { return S.tirar(t.uid); });
-          }, true);
-        }, "btn small lei-part-bt", "ban");
-        x.setAttribute("aria-label", "Tirar " + comNum(t.nome, t.num) + " da sala");
-        x.dataset.foco = "tirar-" + t.uid;
+      if (gerir && !t.bot && t.papel === "tecnico") {
+        var x = el("button", { class: "lei-part-tirar", type: "button", "aria-label": "Tirar " + comNum(t.nome, t.num) + " da sala", title: "Tirar da sala",
+          data: { foco: "tirar-" + t.uid }, on: { click: function () {
+            TM.ui.confirm("Tirar " + t.nome + " da sala?", comNum(t.nome, t.num) + " sai do saguão e não pode pedir de novo nesta sala.", "Tirar da sala", function () {
+              acaoSala(S, "tirar", function () { return S.tirar(t.uid); });
+            }, true);
+          } } }, [ic("ban")]);
         if (!ag) x.disabled = true;
         acoes.push(x);
       }
-      b.appendChild(linhaPart(V, t, acoes, false));
+      lista.appendChild(linhaSag(V, t, acoes));
     });
-    if (modo === "saguao" && sg && sg.vagas > n) b.appendChild(el("p", { class: "lei-vazio", text: (sg.vagas - n) + (sg.vagas - n === 1 ? " vaga livre" : " vagas livres") + ": mande o convite." }));
+    b.appendChild(lista);
+    if (sag && sg.vagas > n) b.appendChild(el("p", { class: "lei-vazio", text: (sg.vagas - n) + (sg.vagas - n === 1 ? " vaga livre" : " vagas livres") + ": mande o convite." }));
+    if (podeTirar) {
+      var g = botao(gerir ? "Concluir" : "Tirar alguém da sala", function () { VIEW.gerir = gerir ? null : V.codigo; atualiza(); }, "btn lei-bt-tom lei-gerir", gerir ? "check" : "ban");
+      g.dataset.foco = "gerir"; g.setAttribute("aria-pressed", gerir ? "true" : "false"); g.setAttribute("aria-controls", "lei-sag-lista");
+      b.appendChild(g);
+    }
   }
-  // a configuração (só o dono, só no saguão): a liga, as vagas, os bots e o tempo; mudar zera os Pronto de todos
+  // o resumo num cartão de destaque verde (as fotos; sem o amarelo do site): o dinheiro, a frase, as etiquetas da sala, a
+  // duração com a sala cheia e "X de N prontos"
+  function poeResumo(b, V) {
+    var cfg = V.cfg || {}, sg = V.saguao, tempo = cfg.tempo || L().DUR, seg = Math.round(tempo / 1000), vagas = sg.vagas, nb = sg.bots;
+    var d = duracaoEstimada(vagas, tempo), dc = duracaoCamp(V.formato, vagas, tempo, nb > 0 ? V.duracao3d : null);
+    var lg = (V.liga && V.liga.nome) || "";
+    b.appendChild(el("h2", { class: "lei-sag-res-tit", id: "lei-sag-res-t", text: "Cada técnico entra com " + rs(L().SALDO).replace(" ", "\u00a0") + "." }));
+    b.appendChild(el("p", { class: "lei-sag-resumo", text: "Dinheiro do jogo para comprar os " + L().VAGAS + " do time no leilão dos melhores da " + (lg || "liga") +
+      ". O que sobrar no bolso não vale nada no campeonato." }));
+    // (as etiquetas das fotos: os jogadores, o tempo e o formato; os bots e o 3D só quando há bots. A liga está na frase e os
+    // técnicos na contagem "N/M participantes": repetidas aqui, o cartão ficava com o dobro da altura do das fotos)
+    var etq = ["Até " + d.n + " jogadores", seg + " s por jogador", nomeFormato(V.formato), nb ? nb + (nb === 1 ? " bot" : " bots") : "",
+      nb ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : "", "Sem chat"];
+    b.appendChild(el("ul", { class: "lei-etqs", "aria-label": "A sala" }, etq.filter(Boolean).map(function (t) { return el("li", { class: "lei-etq", text: t }); })));
+    // (os números colados na unidade: "min." não fica sozinho na última linha)
+    var faixa = function (a, z) { return a + "\u00a0a\u00a0" + z + "\u00a0min"; };
+    b.appendChild(el("p", { class: "lei-sag-dur", text: "Com a sala cheia, o leilão leva de " + faixa(d.lo, d.hi) + " e o campeonato, de " + faixa(dc.lo, dc.hi) + "." }));
+    b.appendChild(el("p", { class: "lei-sag-prontos", text: sg.prontos + " de " + sg.total + (sg.total === 1 ? " pronto" : " prontos") }));
+    if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
+  }
+  // uma opção do cartão "Sala e clube" (o rótulo das fotos em cima e o controle embaixo)
+  function opcaoSag(rotulo, kids) { return el("div", { class: "lei-sag-op" }, [el("div", { class: "lei-sag-rot", text: rotulo })].concat(kids.filter(Boolean))); }
+  function dicaSag(txt) { return el("p", { class: "lei-sag-dica", text: txt }); }
+  // as opções da sala (só no saguão): o dono muda a liga, o formato, os técnicos, os bots, o tempo e o 3D (mudar zera os Pronto
+  // de todos); os outros só veem o formato (o resto está nas etiquetas do resumo)
   function poeConfig(b, S, V) {
-    b.hidden = !V.souDono;
-    if (!V.souDono) return;
-    var cfg = V.cfg || {}, sg = V.saguao, hs = sg.humanos, vagas = sg.vagas, nb = sg.bots, des = !podeAgir(V) || !!VIEW.ocupado;
+    var cfg = V.cfg || {}, sg = V.saguao, hs = sg.humanos, vagas = sg.vagas, nb = sg.bots, tempo = cfg.tempo || L().DUR, d3 = nb > 0 ? V.duracao3d : null;
+    function plural(v, um, muitos) { return v + " " + (v === 1 ? um : muitos); }
+    if (!V.souDono) {
+      b.appendChild(opcaoSag("Formato do campeonato", [seletorFormato(V.formato, vagas, tempo, function () {}, { lista: true, soVer: true, d3: d3 })]));
+      b.appendChild(el("p", { class: "lei-sag-nota", text: "Só o dono muda as opções da sala; as outras estão no resumo." }));
+      return;
+    }
+    var des = !podeAgir(V) || !!VIEW.ocupado;
     function muda(parcial) { acaoSala(S, "cfg", function () { return S.configurar(parcial); }, function () { anuncia("Configuração mudada: os Pronto foram zerados"); }); }
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Configuração da sala" }));
     var lgs = ligas();
     var lb = botaoLiga(lgs, function () {
       escolheLiga(lgs, cfg.liga, function (id) {
@@ -2226,32 +2317,27 @@
       });
     });
     lb.poe(cfg.liga, vagas, { ate: true, desliga: des });
-    b.appendChild(lb);
-    var pV = passo("Técnicos na sala", "um técnico", function (v) { muda({ vagas: v }); }, { id: "vagas" });
+    b.appendChild(opcaoSag("Liga", [lb]));
+    b.appendChild(opcaoSag("Formato do campeonato", [seletorFormato(V.formato, vagas, tempo, function (f) { muda({ formato: f }); }, { desliga: des, d3: d3, lista: true })]));
+    // (o deslizante grava ao SOLTAR: a seção é refeita a cada mudança da sala e o arraste não pode perder o controle no meio)
+    var pV = passo("Técnicos na sala", "um técnico", function (v) { muda({ vagas: v }); },
+      { id: "vagas", deslizante: "Quantos técnicos", soltar: true, valor: function (v) { return plural(v, "técnico", "técnicos"); } });
     pV.poe(vagas, Math.max(L().TEC_MIN, hs + nb), L().TEC_MAX, des);
-    var pB = passo("Bots de treino", "um bot", function (v) { muda({ bots: v }); }, { id: "bots" });
+    b.appendChild(opcaoSag("Técnicos na sala", [pV, dicaSag(plural(hs, "pessoa", "pessoas") + " agora, contando você. Dá para começar com dois.")]));
+    var pB = passo("Bots de treino", "um bot", function (v) { muda({ bots: v }); },
+      { id: "bots", deslizante: "Quantos bots", soltar: true, valor: function (v) { return plural(v, "bot", "bots"); } });
     pB.poe(nb, 0, Math.max(0, vagas - hs), des);
-    b.appendChild(el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Técnicos na sala" }),
-      el("div", { class: "setting-hint", text: hs + (hs === 1 ? " pessoa" : " pessoas") + " agora · dá para começar com dois" })]), pV]));
-    b.appendChild(el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Bots de treino" }),
-      el("div", { class: "setting-hint", text: nb ? (nb === 1 ? "1 bot completa a sala" : nb + " bots completam a sala") : "Só gente de verdade" })]), pB]));
-    var segT = el("div", { class: "segmented lei-tempos", role: "group", "aria-label": "Tempo de cada jogador" });
-    L().TEMPOS.forEach(function (t) {
-      var on = t === cfg.tempo;
-      var x = el("button", { class: "seg-btn" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false", text: (t / 1000) + " s", data: { foco: "tempo-" + t },
-        on: { click: function () { if (!on) muda({ tempo: t }); } } });
-      if (des) x.disabled = true;
-      segT.appendChild(x);
-    });
-    b.appendChild(el("div", { class: "lei-cfg-tempo" }, [el("div", { class: "setting-label", text: "Tempo de cada jogador" }), segT]));
-    b.appendChild(el("div", { class: "lei-cfg-tempo" }, [el("div", { class: "setting-label", text: "Formato" }),
-      seletorFormato(V.formato, vagas, cfg.tempo || L().DUR, function (f) { muda({ formato: f }); }, { desliga: des, d3: nb > 0 ? V.duracao3d : null })]));
-    // (o jogo em 3D é o de uma pessoa contra um bot até o PR 5: sem bots, o bloco não aparece)
-    if (nb > 0) b.appendChild(el("div", { class: "lei-cfg-tempo" }, [el("div", { class: "setting-label", text: "Partidas em 3D" }),
-      seletor3d(V.duracao3d, V.dificuldade3d, function (m) { muda({ duracao3d: m }); }, function (d) { muda({ dificuldade3d: d }); }, { desliga: des })]));
-    b.appendChild(el("p", { class: "lei-sag-nota", text: "Mudar a configuração zera os Pronto de todos." }));
+    b.appendChild(opcaoSag("Bots de treino", [pB, dicaSag(nb ? (nb === 1 ? "1 bot completa a sala." : nb + " bots completam a sala.") : "Só gente de verdade.")]));
+    var segT = segmentado("Tempo de cada jogador", "lei-tempos", L().TEMPOS.map(function (t) { return { v: t, txt: (t / 1000) + " s", foco: "tempo-" + t }; }), cfg.tempo,
+      function (t) { muda({ tempo: t }); });
+    if (des) [].forEach.call(segT.querySelectorAll("button"), function (x) { x.disabled = true; });
+    b.appendChild(opcaoSag("Tempo de cada jogador", [segT]));
+    // (o jogo em 3D é o de uma pessoa contra um bot até o PR 5: sem bots, a opção não aparece)
+    if (nb > 0) b.appendChild(opcaoSag("Partidas em 3D", [seletor3d(V.duracao3d, V.dificuldade3d, function (m) { muda({ duracao3d: m }); }, function (dd) { muda({ dificuldade3d: dd }); }, { desliga: des, seg: true })]));
+    b.appendChild(el("p", { class: "lei-sag-nota", text: "Mudar uma opção da sala zera os Pronto de todos." }));
   }
-  // o meu clube no saguão (o nome, a sigla e o escudo; Salvar grava) e a formação preferida (vale na hora)
+  // o meu clube no saguão (o nome, a sigla e o "Escolher escudo"; Salvar grava) e a formação preferida (vale na hora), com o
+  // campinho das vagas embaixo
   function poeMeuClube(b, S, V, usadas) {
     var t = V.tecnicos[V.eu]; b.hidden = !t;
     if (!t) return;
@@ -2259,36 +2345,33 @@
     // e o "mudou?" pelo texto cru dava sempre sim (o Salvar nunca apagava e a cópia do editor não se renovava)
     var base = JSON.stringify(SS().limpaClube(t.clube)), M = VIEW.meuClube, des = !podeAgir(V) || !!VIEW.ocupado;
     if (!M || M.codigo !== V.codigo || (!M.sujo && M.base !== base)) M = VIEW.meuClube = { codigo: V.codigo, base: base, F: JSON.parse(base), sujo: false, aberto: false };
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Meu clube" }));
     var salvar = botao(VIEW.ocupado === "clube" ? "Salvando…" : "Salvar o clube", function () {
       acaoSala(S, "clube", function () { return S.meuClube(SS().limpaClube(M.F)); }, function () { M.sujo = false; M.base = null; TM.ui.toast("Clube salvo.", "ok"); anuncia("Clube salvo"); });
-    }, "btn small primary lei-salvar", "save");
+    }, "btn primary lei-salvar", "save");
     salvar.dataset.foco = "salvar-clube";
-    function poeSalvar() { M.sujo = JSON.stringify(SS().limpaClube(M.F)) !== base; salvar.disabled = des || !M.sujo; }
-    b.appendChild(editorClube(M.F, poeSalvar, { id: "sag", usadas: usadas, desliga: des, aberto: M.aberto, aoAbrir: function (ab) { M.aberto = ab; } }));
+    // (o Salvar só aparece com o que salvar — o nome, a sigla ou o escudo mudados — ou salvando: sempre à vista e apagado,
+    // parecia quebrado; as fotos só têm o "Escolher escudo")
+    var linhaSalvar = el("div", { class: "lei-salvar-l" }, [salvar]);
+    function poeSalvar() { M.sujo = JSON.stringify(SS().limpaClube(M.F)) !== base; salvar.disabled = des || !M.sujo; linhaSalvar.hidden = !M.sujo && VIEW.ocupado !== "clube"; }
+    var ed = editorClube(M.F, poeSalvar, { id: "sag", usadas: usadas, desliga: des, aberto: M.aberto, aoAbrir: function (ab) { M.aberto = ab; }, escolher: true });
     poeSalvar();
-    b.appendChild(el("div", { class: "lei-salvar-l" }, [salvar]));
+    b.appendChild(opcaoSag("Seu clube", [ed, linhaSalvar]));
     var f = t.formacao || "4-4-2";
-    var seg = el("div", { class: "segmented lei-formas", role: "group", "aria-label": "Sua formação" });
-    L().FORMACOES.forEach(function (fm) {
-      var on = fm === f;
-      var x = el("button", { class: "seg-btn lei-forma-bt" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false", data: { foco: "forma-" + fm },
-        on: { click: function () { if (!on) acaoSala(S, "forma", function () { return S.mudarFormacao(fm); }); } } },
-        [el("span", { class: "lei-forma-f", text: fm }), FORMA_NOME[fm] ? el("span", { class: "lei-forma-n", text: FORMA_NOME[fm] }) : null]);
-      if (des) x.disabled = true;
-      seg.appendChild(x);
-    });
-    b.appendChild(el("div", { class: "lei-rotulo", text: "Sua formação" }));
-    b.appendChild(seg);
-    b.appendChild(el("p", { class: "lei-sag-nota", text: "É a sua preferência no leilão: se uma compra não couber nela, ela muda sozinha." }));
+    var segF = segmentado("Sua formação", "lei-forma-seg", L().FORMACOES.map(function (fm) {
+      return { v: fm, txt: fm, sub: FORMA_NOME[fm], cls: "lei-forma-bt", tcls: "lei-forma-f", scls: "lei-forma-n", foco: "forma-" + fm };
+    }), f, function (fm) { acaoSala(S, "forma", function () { return S.mudarFormacao(fm); }); });
+    if (des) [].forEach.call(segF.querySelectorAll("button"), function (x) { x.disabled = true; });
+    b.appendChild(opcaoSag("Sua formação", [segF, dicaSag("É a sua preferência no leilão: se uma compra não couber nela, ela muda sozinha."),
+      el("div", { class: "lei-cs-campo" }, [campinhoVagas(null, -1, { formacao: f, cls: "lei-cv-criar", rotulo: "A " + f + " no campinho: " + L().VAGAS + " vagas, todas vazias" })])]));
   }
-  // a barra fixa do saguão: "X de N prontos. Falta confirmar: …" e o Pronto (ou o Começar, do dono, apagado com o motivo)
+  // a barra fixa do saguão: "X de N prontos. Falta confirmar: …" (o número em negrito) e o Pronto (ou o Começar, do dono,
+  // apagado até todos estarem prontos); a linha de baixo só com o que importa agora (a conexão, um erro, faltar gente)
   function barraSaguao(screen) {
     var B = {};
-    B.txt = el("p", { class: "lei-sagbar-txt" });
+    B.txt = el("p", { class: "lei-sagbar-txt", id: "lei-sag-txt" });
     B.msg = el("p", { class: "lei-lance-msg lei-sagbar-msg", id: "lei-sag-msg" });
     B.msgBase = "lei-lance-msg lei-sagbar-msg";
-    B.bt = el("button", { class: "btn primary lei-sagbar-bt", type: "button", "aria-describedby": "lei-sag-msg", on: { click: clicaSagBar } }, [el("span", { class: "lei-bt-ic" }), el("span")]);
+    B.bt = el("button", { class: "btn primary lei-sagbar-bt", type: "button", "aria-describedby": "lei-sag-txt lei-sag-msg", on: { click: clicaSagBar } }, [el("span", { class: "lei-bt-ic" }), el("span")]);
     B.raiz = el("div", { class: "lei-sagbar", role: "group", "aria-label": "Pronto para começar" }, [el("div", { class: "lei-sagbar-in" }, [el("div", { class: "lei-sagbar-l" }, [B.txt, B.msg]), B.bt])]);
     B.raiz.hidden = true;
     screen.appendChild(B.raiz);
@@ -2300,23 +2383,29 @@
     B.raiz.hidden = !mostra;
     ajustaEspaco();
     if (!mostra) return;
-    var txt = sg.total <= 1 && !sg.bots ? "Só você na sala: mande o convite ou ponha bots."
-      : sg.prontos + " de " + sg.total + (sg.total === 1 ? " pronto." : " prontos.") + (sg.faltam.length ? " Falta confirmar: " + sg.faltam.join(", ") + "." : " Todos prontos.");
-    if (B.txt.textContent !== txt) B.txt.textContent = txt;
+    var so = sg.total <= 1 && !sg.bots, cont = sg.prontos + " de " + sg.total + (sg.total === 1 ? " pronto." : " prontos.");
+    var resto = sg.faltam.length ? "Falta confirmar: " + sg.faltam.join(", ") + "." : "Todos prontos.";
+    var chave = so ? "so" : cont + "|" + resto;
+    if (B.chave !== chave) {
+      // (numa linha com "…", como nas fotos e na Criar; o texto inteiro no title e no aria-describedby do botão. O "Só você" em
+      // duas: é a única frase que diz o que fazer)
+      B.chave = chave; TM.ui.clear(B.txt);
+      B.txt.classList.toggle("dois", so);
+      if (so) B.txt.textContent = "Só você na sala: mande o convite ou ponha bots.";
+      else { B.txt.appendChild(el("b", { text: cont })); B.txt.appendChild(doc.createTextNode(" " + resto)); }
+      B.txt.title = B.txt.textContent;
+    }
     var ag = podeAgir(V), eu = V.tecnicos[V.eu], ocup = VIEW.ocupado, rot, icone, cls, pode, motivo = "";
     if (V.souDono) {
       rot = ocup === "comecar" ? "Preparando os lotes…" : "Começar o leilão"; icone = "gavel"; cls = "btn primary lei-sagbar-bt";
       pode = ag && sg.podeComecar && !ocup;
       if (!ag) motivo = motivoAgir(V);
       else if (sg.humanos + sg.bots < L().TEC_MIN) motivo = SS().textoMotivo("poucos") + ": aceite alguém ou ponha um bot";
-      else if (sg.faltam.length) motivo = SS().textoMotivo("prontos");
-      else motivo = "Todos prontos: toque em Começar.";
     } else {
       var pronto = !!(eu && eu.pronto);
-      rot = pronto ? "Pronto · toque para cancelar" : "Pronto"; icone = pronto ? "circle-check" : "check"; cls = "btn lei-sagbar-bt" + (pronto ? " on" : " primary");
+      rot = pronto ? "Pronto. Toque para cancelar" : "Pronto"; icone = "check"; cls = "btn lei-sagbar-bt" + (pronto ? " on" : " primary");
       pode = ag && !ocup;
       if (!ag) motivo = motivoAgir(V);
-      else motivo = pronto ? "Você está pronto: o dono começa quando todos estiverem." : "Toque em Pronto quando o seu clube estiver certo.";
     }
     if (B.bt.className !== cls) B.bt.className = cls;
     if (B.bt.lastChild.textContent !== rot) B.bt.lastChild.textContent = rot;
@@ -2488,7 +2577,7 @@
       // depois do Começar, o dono passa o clube de quem trocou de aparelho (os pedidos que chegaram depois)
       if (V.online && V.souDono && V.estado !== "saguao" && (V.pedidosDepois || []).length) {
         var box = el("div", { class: "lei-pedidos lei-folha-pedidos" });
-        poePedidosDepois(box, S, V);
+        poePedidosDepois(box, S, V, true);
         c.appendChild(box);
       }
     }, { vivo: true, chave: chave });
@@ -2765,14 +2854,16 @@
     var inSigla = el("input", { class: "lei-campo lei-campo-sigla", type: "text", maxlength: "3", autocomplete: "off", "aria-label": "Sigla do clube", data: { foco: "clube-sigla" },
       on: { input: function () { inSigla.value = inSigla.value.replace(/[^0-9A-Za-zÀ-ÿ]/g, "").toUpperCase().slice(0, 3); F.sigla = inSigla.value; poeEsc(false); muda(); } } });
     var editor = el("div", { class: "lei-criar-escudo", id: idEd });
-    var abreEsc = el("button", { class: "lei-bloco-bt lei-esc-abre", type: "button", "aria-controls": idEd, "aria-expanded": "false", data: { foco: "clube-esc" }, on: { click: function () {
+    // (opc.escolher: o botão tonal das fotos, "Escolher escudo" com o escudo dentro, no lugar do escudo grande + "Mudar o escudo")
+    var abreEsc = el("button", { class: (opc.escolher ? "lei-esc-escolher" : "lei-bloco-bt") + " lei-esc-abre", type: "button", "aria-controls": idEd, "aria-expanded": "false", data: { foco: "clube-esc" }, on: { click: function () {
       var ab = editor.hidden; editor.hidden = !ab; abreEsc.setAttribute("aria-expanded", ab ? "true" : "false"); abreEsc.classList.toggle("aberto", ab);
       if (opc.aoAbrir) opc.aoAbrir(ab);
-    } } }, [el("span", { class: "lei-bloco-ic" }, [ic("palette")]), el("span", { class: "lei-bloco-tit", text: "Mudar o escudo" }), el("span", { class: "lei-bloco-seta" }, [ic("chevron-down")])]);
+    } } }, opc.escolher ? [prevEsc, el("span", { class: "lei-esc-escolher-t", text: "Escolher escudo" })]
+      : [el("span", { class: "lei-bloco-ic" }, [ic("palette")]), el("span", { class: "lei-bloco-tit", text: "Mudar o escudo" }), el("span", { class: "lei-bloco-seta" }, [ic("chevron-down")])]);
     editor.hidden = !opc.aberto;
     if (opc.aberto) { abreEsc.setAttribute("aria-expanded", "true"); abreEsc.classList.add("aberto"); }
     function poeEsc(tudo) {
-      TM.ui.clear(prevEsc); prevEsc.appendChild(escudo(F, "g"));
+      TM.ui.clear(prevEsc); prevEsc.appendChild(escudo(F, opc.escolher ? "p" : "g", !!opc.escolher));
       if (!tudo) return;
       inNome.value = F.nome; inSigla.value = F.sigla;
       TM.ui.clear(editor);
@@ -2810,6 +2901,10 @@
     editor.addEventListener("click", function (e) { var b = e.target && e.target.closest ? e.target.closest("[data-foco]") : null; if (b) foco = b.dataset.foco; }, true);
     poeEsc(true);
     if (opc.desliga) { inNome.disabled = true; inSigla.disabled = true; }
+    if (opc.escolher) {
+      inNome.placeholder = "Nome do clube"; inSigla.placeholder = "Sigla";
+      return el("div", { class: "lei-editor-clube escolher" }, [el("div", { class: "lei-criar-campos" }, [inNome, inSigla]), abreEsc, editor]);
+    }
     return el("div", { class: "lei-editor-clube" }, [
       el("div", { class: "lei-criar-clube" }, [prevEsc, el("div", { class: "lei-criar-campos" }, [inNome, inSigla])]),
       abreEsc, editor
@@ -2817,19 +2912,74 @@
   }
   // o − N + (técnicos, bots): um controle que se atualiza no lugar (poe(valor, min, max, desliga)); o toque lê o valor de
   // agora (o mesmo botão tocado várias vezes seguidas sobe ou desce um a cada toque)
+  // (opc.deslizante = o rótulo do deslizante ligado ao passo, como nas fotos da Criar sala: "Quantos técnicos"; opc.valor(v) =
+  // o texto do valor para o leitor de tela, "4 técnicos")
   function passo(rotulo, nomeUm, fn, opc) {
     opc = opc || {};
     var st = { v: 0, min: 0, max: 0, desliga: false };
     var n = el("span", { class: "lei-passo-n", "aria-live": "polite" });
     var menos = el("button", { class: "lei-passo-bt", type: "button", "aria-label": "Menos " + nomeUm, data: { foco: "menos-" + (opc.id || nomeUm) }, on: { click: function () { if (!st.desliga && st.v > st.min) fn(st.v - 1); } } }, [ic("minus")]);
     var mais = el("button", { class: "lei-passo-bt", type: "button", "aria-label": "Mais " + nomeUm, data: { foco: "mais-" + (opc.id || nomeUm) }, on: { click: function () { if (!st.desliga && st.v < st.max) fn(st.v + 1); } } }, [ic("plus")]);
-    var raiz = el("div", { class: "lei-passo", role: "group", "aria-label": rotulo }, [menos, n, mais]);
+    var desl = null;
+    // (opc.soltar: o deslizante só mostra o número enquanto arrasta e grava ao soltar — no Saguão, cada mudança vai ao
+    // servidor e refaz a seção: gravar a cada passo do arraste tiraria o controle do dedo no meio)
+    function ok(v) { return !st.desliga && v !== st.v && v >= st.min && v <= st.max; }
+    if (opc.deslizante) {
+      desl = el("input", { class: "lei-passo-desl", type: "range", step: "1", "aria-label": opc.deslizante, data: { foco: "desl-" + (opc.id || nomeUm) },
+        on: {
+          input: function () { var v = Math.round(+desl.value); if (opc.soltar) mostra(v); else if (ok(v)) fn(v); },
+          change: function () { var v = Math.round(+desl.value); if (opc.soltar && ok(v)) fn(v); }
+        } });
+    }
+    var raiz = el("div", { class: "lei-passo" + (desl ? " desl" : ""), role: "group", "aria-label": rotulo }, [menos, n, mais, desl]);
+    function mostra(v) {
+      n.textContent = String(v);
+      if (!desl) return;
+      desl.setAttribute("aria-valuetext", opc.valor ? opc.valor(v) : String(v));
+      desl.style.setProperty("--p", (st.max > st.min ? Math.round((v - st.min) / (st.max - st.min) * 1000) / 10 : 0) + "%");
+    }
+    // (na ponta, o − ou o + fica apagado com aria-disabled e o toque não faz nada: com disabled, o foco do teclado de quem
+    // apertou até a ponta caía no BODY — na Criar — ou no 1º rótulo do cartão — no Saguão, refeito)
+    function trava(b, ponta) { b.disabled = st.desliga; if (ponta && !st.desliga) b.setAttribute("aria-disabled", "true"); else b.removeAttribute("aria-disabled"); }
     raiz.poe = function (v, min, max, desliga) {
       st.v = v; st.min = min; st.max = max; st.desliga = !!desliga;
-      n.textContent = String(v);
-      menos.disabled = st.desliga || v <= min; mais.disabled = st.desliga || v >= max;
+      trava(menos, v <= min); trava(mais, v >= max);
+      if (desl) {
+        // (o min e o max antes do valor: o navegador prende o valor no intervalo de antes)
+        desl.min = String(min); desl.max = String(max); desl.value = String(v);
+        desl.disabled = st.desliga || min >= max;
+      }
+      mostra(v);
     };
     return raiz;
+  }
+  // o segmentado das fotos (um trilho tonal, a escolhida em relevo): os botões ficam e o poe(v) troca a marcada no lugar (o
+  // foco do teclado não se perde); opcoes = [{ v, txt, sub, cls, tcls, scls, foco }]
+  function segmentado(rotulo, cls, opcoes, atual, fn) {
+    var g = el("div", { class: "lei-seg" + (cls ? " " + cls : ""), role: "group", "aria-label": rotulo });
+    var bts = opcoes.map(function (o) {
+      var b = el("button", { class: "seg-btn" + (o.cls ? " " + o.cls : ""), type: "button", data: { foco: o.foco || String(o.v) },
+        on: { click: function () { if (g.atual !== o.v) fn(o.v); } } }, [
+        el("span", { class: "lei-seg-t" + (o.tcls ? " " + o.tcls : ""), text: o.txt }),
+        o.sub ? el("span", { class: "lei-seg-s" + (o.scls ? " " + o.scls : ""), text: o.sub }) : null
+      ]);
+      b._v = o.v;
+      g.appendChild(b);
+      return b;
+    });
+    g.poe = function (v) {
+      g.atual = v;
+      bts.forEach(function (b) { var on = b._v === v; b.classList.toggle("active", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
+    };
+    g.poe(atual);
+    return g;
+  }
+  // refaz um pedaço da tela e devolve o foco ao botão de mesmo data-foco (o toque no teclado não perde o lugar)
+  function refazComFoco(caixa, monta) {
+    var a = doc.activeElement, foco = a && caixa.contains(a) && a.dataset ? a.dataset.foco : null;
+    TM.ui.clear(caixa);
+    monta();
+    if (foco) { var f = caixa.querySelector('[data-foco="' + foco + '"]'); if (f) { try { f.focus(); } catch (e) {} } }
   }
 
   /* ---------- o formato do campeonato (Criar sala e Saguão; PLANO-LEILAO.md §1.7 e §2.2) ---------- */
@@ -2868,17 +3018,18 @@
     opc = opc || {};
     var Lc = LC(), dd = Lc ? Lc.DURACOES_3D : [3, 4, 5, 6, 8, 10], df = Lc ? Lc.DIFICULDADES : ["facil", "normal", "dificil", "lenda"];
     function seg(cls, rotulo, lista, atual, nome, fn, foco) {
-      var g = el("div", { class: "segmented " + cls, role: "group", "aria-label": rotulo });
+      // (opc.seg: o segmentado das fotos, o da Criar sala)
+      var g = el("div", { class: (opc.seg ? "lei-seg " : "segmented ") + cls, role: "group", "aria-label": rotulo });
       lista.forEach(function (x) {
         var on = x === atual;
-        var b = el("button", { class: "seg-btn" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false", text: nome(x), data: { foco: foco + x },
-          on: { click: function () { if (!on && !opc.desliga) fn(x); } } });
+        var b = el("button", { class: "seg-btn" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false", data: { foco: foco + x },
+          on: { click: function () { if (!on && !opc.desliga) fn(x); } } }, opc.seg ? [el("span", { class: "lei-seg-t", text: nome(x) })] : [nome(x)]);
         if (opc.desliga) b.disabled = true;
         g.appendChild(b);
       });
       return g;
     }
-    return el("div", { class: "lei-3d-op" }, [
+    return el("div", { class: "lei-3d-op" + (opc.seg ? " seg" : "") }, [
       el("div", { class: "lei-3d-rot", text: "Duração de cada tempo" }),
       seg("lei-dur3d", "Duração de cada tempo no 3D", dd, dur, function (m) { return m + " min"; }, fnDur, "dur3d-"),
       el("div", { class: "lei-3d-rot", text: "Dificuldade dos bots" }),
@@ -2886,24 +3037,62 @@
     ]);
   }
   // os 3 cartões do formato (um grupo de botões com aria-pressed); fn(id) no toque; opc.desliga apaga todos
+  // o desenho de cada formato (as fotos da Criar sala): a tabela (barras), a chave (dois pares que dão num ponto) e as duas
+  // juntas; em currentColor (cinza; verde no marcado), decorativo
+  function svgEl(tag, at) { var e = doc.createElementNS(NS, tag); Object.keys(at || {}).forEach(function (k) { e.setAttribute(k, at[k]); }); return e; }
+  function desenhoFormato(id) {
+    id = formatoId(id);
+    var s = svgEl("svg", { class: "lei-fmt-svg", viewBox: "0 0 96 64", "aria-hidden": "true", focusable: "false", "data-desenho": id === "pontos" ? "tabela" : id === "mata" ? "chave" : "tabela-chave" });
+    function barras(x, w, cheios) {
+      cheios.forEach(function (c, i) {
+        var y = 32 - (cheios.length * 11 - 5) / 2 + i * 11;
+        s.appendChild(svgEl("rect", { class: "tr", x: x, y: y, width: w, height: 6, rx: 3 }));
+        s.appendChild(svgEl("rect", { class: "ch", x: x, y: y, width: Math.round(w * c), height: 6, rx: 3 }));
+      });
+    }
+    function linha(d) { s.appendChild(svgEl("path", { class: "ln", d: d })); }
+    function ponto(x, r) { s.appendChild(svgEl("circle", { class: "pt", cx: x, cy: 32, r: r })); }
+    if (id === "pontos") barras(8, 80, [1, 0.74, 0.54, 0.34]);
+    else if (id === "mata") {
+      linha("M8 12H28V26H8M28 19H46M8 38H28V52H8M28 45H46M46 19V45M46 32H70");
+      ponto(78, 6);
+    } else {
+      barras(4, 40, [1, 0.74, 0.54, 0.34]);
+      linha("M54 21H66V43H54M66 32H78");
+      ponto(84, 5);
+    }
+    return s;
+  }
+  // a mesma linha, com a duração ("~1 a 31 min") sem quebrar no meio
+  // (a duração numa linha só dela, embaixo de "N rodadas com T técnicos": na mesma linha, no celular o "·" ficava pendurado no fim
+  // da 1ª linha ou no começo da 2ª; o " · " continua para o leitor de tela)
+  function linhaFormatoEl(f, T, tempo, d3) {
+    var t = linhaFormato(f, T, tempo, d3), i = t.lastIndexOf(" · ");
+    return el("span", { class: "lei-fmt-s" }, i < 0 ? [t] : [t.slice(0, i), el("span", { class: "lei-sr", text: " · " }), el("span", { class: "lei-fmt-dur", text: t.slice(i + 3) })]);
+  }
   function seletorFormato(atual, T, tempo, fn, opc) {
-    // (opc.d3: a duração do 3D da sala, para a duração estimada; null = tudo simulado)
+    // (opc.d3: a duração do 3D da sala, para a duração estimada; null = tudo simulado; opc.ilustrado: os cartões das fotos
+    // da Criar sala, com o desenho no lugar do ícone e sem o check: a borda e o fundo marcam o escolhido)
+    // (opc.lista: a lista das fotos do Saguão, num trilho tonal com o escolhido em relevo, sem ícone nem check; opc.soVer: só
+    // para ver — quem não é o dono —, os botões apagados sem perder o contraste)
     opc = opc || {};
     atual = formatoId(atual);
-    var g = el("div", { class: "lei-formatos", role: "group", "aria-label": "Formato do campeonato" });
-    FORMATOS.forEach(function (x) {
+    var g = el("div", { class: "lei-formatos" + (opc.ilustrado ? " ilu" : "") + (opc.lista ? " lista" : "") + (opc.soVer ? " so-ver" : ""), role: "group", "aria-label": "Formato do campeonato" });
+    var limpo = opc.ilustrado || opc.lista;
+    // (nos cartões e na lista das fotos, a ordem delas: Pontos corridos, Mata-mata, Pontos + mata-mata; o Mata-mata segue o padrão)
+    (limpo ? ["pontos", "mata", "misto"].map(function (id) { return FORMATOS.filter(function (x) { return x.id === id; })[0]; }) : FORMATOS).forEach(function (x) {
       var on = x.id === atual;
       var b = el("button", { class: "lei-fmt" + (on ? " on" : ""), type: "button", "aria-pressed": on ? "true" : "false", data: { foco: "fmt-" + x.id, fmt: x.id },
-        on: { click: function () { if (!on && !opc.desliga) fn(x.id); } } }, [
-        el("span", { class: "lei-fmt-ic" }, [ic(x.icone)]),
+        on: { click: function () { if (!on && !opc.desliga && !opc.soVer) fn(x.id); } } }, [
+        opc.ilustrado ? el("span", { class: "lei-fmt-des" }, [desenhoFormato(x.id)]) : opc.lista ? null : el("span", { class: "lei-fmt-ic" }, [ic(x.icone)]),
         el("span", { class: "lei-fmt-txt" }, [
           el("span", { class: "lei-fmt-n", text: x.nome }),
           el("span", { class: "lei-fmt-f", text: fraseFormato(x.id, T) }),
-          el("span", { class: "lei-fmt-s", text: linhaFormato(x.id, T, tempo, opc.d3) })
+          limpo ? linhaFormatoEl(x.id, T, tempo, opc.d3) : el("span", { class: "lei-fmt-s", text: linhaFormato(x.id, T, tempo, opc.d3) })
         ]),
-        el("span", { class: "lei-fmt-ok" }, [on ? ic("circle-check") : null])
+        limpo ? null : el("span", { class: "lei-fmt-ok" }, [on ? ic("circle-check") : null])
       ]);
-      if (opc.desliga) b.disabled = true;
+      if (opc.desliga || opc.soVer) b.disabled = true;
       g.appendChild(b);
     });
     return g;
@@ -2934,6 +3123,14 @@
     };
     return bt;
   }
+  // uma seção solta da Criar sala (as fotos): o título grande fora de caixa e o conteúdo embaixo
+  function secaoCriar(titulo, id, kids) {
+    return el("section", { class: "lei-cs", "aria-labelledby": "lei-cs-" + id, data: { secao: id } }, [el("h2", { class: "lei-cs-tit", id: "lei-cs-" + id, text: titulo })].concat(kids));
+  }
+  // A Criar sala pelas fotos de 14/11 (PLANO-LEILAO.md §9): seções soltas com o título grande — a liga num cartão com o
+  // Trocar, o formato em 3 cartões ilustrados, os técnicos e os bots no passo com o deslizante (no treino, só os bots), o tempo
+  // de cada jogador e as partidas em 3D em segmentados, a formação no segmentado 3 × 2 com o campinho das vagas e o seu clube
+  // com o "Escolher escudo" —; embaixo a barra FIXA com o resumo numa linha e o botão principal.
   TM.ui.register("leilao-criar", function (screen, params) {
     var online = !!(params && params.online);
     screen.classList.add("lei-screen", "lei-criar");
@@ -2956,7 +3153,6 @@
     if (online && F.bots > F.T - 1) F.bots = F.T - 1;
     var corpo = el("div", { class: "panel-narrow lei-criar-corpo" });
     screen.appendChild(corpo);
-    var resumo = el("p", { class: "lei-criar-resumo" });
     function ligaDe(id) { return lgs.filter(function (l) { return l.id === id; })[0] || null; }
     if (online && contaEstado() !== "pronta") {
       // a conta ainda entrando (ou sem conexão): a tela fica, o Criar espera por ela
@@ -2966,116 +3162,137 @@
       if (c === "conectando") quandoConta("leilao-criar");
     }
 
-    // a liga
+    // a liga: a escolhida num cartão grande; o toque (o "Trocar") abre a folha das 30 ligas
     var ligaBt = botaoLiga(lgs, function () { escolheLiga(lgs, F.liga, function (id) { F.liga = id; poeLiga(); poeResumo(); }); });
     function poeLiga() { ligaBt.poe(F.liga, F.T, { ate: online }); }
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [el("div", { class: "setting-label", text: "Liga" }), ligaBt]));
+    corpo.appendChild(secaoCriar("Liga", "liga", [ligaBt]));
 
-    // os técnicos (contando os bots); no online, as vagas da sala e os bots de treino que completam
-    var hintT = el("div", { class: "setting-hint" }), hintB = el("div", { class: "setting-hint" });
-    var passoT = passo("Técnicos na sala", "um técnico", function (v) { F.T = v; if (online && F.bots > F.T - 1) F.bots = F.T - 1; poeT(); }, { id: "tec" });
-    var passoB = passo("Bots de treino", "um bot", function (v) { F.bots = v; poeT(); }, { id: "bot" });
-    function poeT() {
-      passoT.poe(F.T, L().TEC_MIN, L().TEC_MAX);
-      if (online) {
-        hintT.textContent = "Até " + F.T + " técnicos, contando os bots · dá para começar com dois";
-        passoB.poe(F.bots, 0, F.T - 1);
-        hintB.textContent = F.bots ? (F.bots === 1 ? "1 bot completa a sala" : F.bots + " bots completam a sala") + " · as vagas que sobram são de gente de verdade" : "Só gente de verdade";
-      } else hintT.textContent = "Você e " + (F.T - 1) + (F.T - 1 === 1 ? " bot" : " bots") + " · " + duracaoEstimada(F.T, F.tempo).n + " jogadores no leilão";
-      poeLiga(); poeFmt(); poeResumo();
-    }
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
-      el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Técnicos na sala" }), hintT]), passoT])
-    ]));
-    if (online) corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
-      el("div", { class: "lei-criar-linha" }, [el("div", { class: "lei-criar-lt" }, [el("div", { class: "setting-label", text: "Bots de treino" }), hintB]), passoB])
-    ]));
-
-    // o formato do campeonato (o padrão é o mata-mata; a duração de cada um pelo número de técnicos)
+    // o formato do campeonato: os 3 cartões com o desenho (o padrão é o mata-mata; a duração de cada um pelo número de técnicos)
     var caixaFmt = el("div", { class: "lei-fmt-caixa" });
     function poeFmt() {
-      TM.ui.clear(caixaFmt);
-      caixaFmt.appendChild(seletorFormato(F.formato, F.T, F.tempo, function (f) { F.formato = f; poeFmt(); poeResumo(); }, { d3: d3() }));
+      refazComFoco(caixaFmt, function () {
+        caixaFmt.appendChild(seletorFormato(F.formato, F.T, F.tempo, function (f) { F.formato = f; poeFmt(); poeResumo(); }, { d3: d3(), ilustrado: true }));
+      });
     }
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
-      el("div", { class: "setting-label", text: "Formato" }), caixaFmt,
-      el("div", { class: "setting-hint", text: online ? "O seu jogo contra um bot: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min). Contra um amigo, simulado quando a rodada abre."
-        : "O seu jogo: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min). Os dos bots, simulados na hora." })
-    ]));
+    // (como nas fotos, o Formato só com os cartões: o que acontece com o seu jogo — Jogar em 3D ou Simular — foi para a dica das
+    // Partidas em 3D)
+    corpo.appendChild(secaoCriar("Formato", "formato", [caixaFmt]));
 
-    // as partidas em 3D: a duração de cada tempo e a dificuldade dos bots (iguais para todos da sala, travadas no 3D)
+    // os técnicos (no online, as vagas da sala, contando os bots) e os bots de treino: o − e o + com o deslizante (no treino,
+    // só os bots: você e mais 1 a 7)
+    var hintT = el("p", { class: "lei-cs-hint" }), hintB = el("p", { class: "lei-cs-hint" });
+    function plural(v, um, muitos) { return v + " " + (v === 1 ? um : muitos); }
+    var passoT = online ? passo("Técnicos na sala", "um técnico", function (v) { F.T = v; if (F.bots > F.T - 1) F.bots = F.T - 1; poeT(); },
+      { id: "tec", deslizante: "Quantos técnicos", valor: function (v) { return plural(v, "técnico", "técnicos"); } }) : null;
+    var passoB = passo("Bots de treino", "um bot", function (v) { if (online) F.bots = v; else F.T = v + 1; poeT(); },
+      { id: "bot", deslizante: "Quantos bots", valor: function (v) { return plural(v, "bot", "bots"); } });
+    function poeT() {
+      if (online) {
+        passoT.poe(F.T, L().TEC_MIN, L().TEC_MAX);
+        hintT.textContent = "Contando os bots. A sala não precisa encher: dá para começar com dois.";
+        passoB.poe(F.bots, 0, F.T - 1);
+        hintB.textContent = F.bots ? (F.bots === 1 ? "1 bot completa a sala" : F.bots + " bots completam a sala") + "; as outras vagas são de gente de verdade." : "Só gente de verdade.";
+      } else {
+        passoB.poe(F.T - 1, L().TEC_MIN - 1, L().TEC_MAX - 1);
+        hintB.textContent = "Você e " + plural(F.T - 1, "bot", "bots") + " · " + duracaoEstimada(F.T, F.tempo).n + " jogadores no leilão";
+      }
+      poeLiga(); poeFmt(); poeTempoHint(); poeResumo();
+    }
+    if (online) corpo.appendChild(secaoCriar("Técnicos na sala", "tec", [passoT, hintT]));
+    corpo.appendChild(secaoCriar("Bots de treino", "bots", [passoB, hintB]));
+
+    // o tempo de cada jogador no martelo
+    var segT = segmentado("Tempo de cada jogador", "lei-tempos", L().TEMPOS.map(function (t) { return { v: t, txt: (t / 1000) + " s", foco: "tempo-" + t }; }), F.tempo,
+      function (t) { F.tempo = t; segT.poe(t); poeT(); });
+    var hintTempo = el("p", { class: "lei-cs-hint" });
+    function poeTempoHint() {
+      var d = duracaoEstimada(F.T, F.tempo);
+      hintTempo.textContent = "O relógio de cada lance. O leilão leva cerca de " + d.lo + "\u00a0a\u00a0" + d.hi + "\u00a0min" + (online ? " com a sala cheia." : ".");
+    }
+    corpo.appendChild(secaoCriar("Tempo de cada jogador", "tempo", [segT, hintTempo]));
+
+    // as partidas em 3D: a duração de cada tempo e a dificuldade dos bots (iguais para todos da sala, travadas no 3D; no
+    // online sem bots não há jogo em 3D até o PR 5: a seção some)
     var caixa3d = el("div", { class: "lei-3d-caixa" });
     function poe3d() {
-      TM.ui.clear(caixa3d);
-      caixa3d.appendChild(seletor3d(F.duracao3d, F.dificuldade3d, function (m) { F.duracao3d = m; poe3d(); poeFmt(); poeResumo(); },
-        function (d) { F.dificuldade3d = d; poe3d(); poeResumo(); }));
+      refazComFoco(caixa3d, function () {
+        caixa3d.appendChild(seletor3d(F.duracao3d, F.dificuldade3d, function (m) { F.duracao3d = m; poe3d(); poeFmt(); poeResumo(); },
+          function (d) { F.dificuldade3d = d; poe3d(); poeResumo(); }, { seg: true }));
+      });
     }
-    // (no online sem bots não há jogo em 3D até o PR 5: o bloco some)
-    var bloco3d = el("div", { class: "setting lei-criar-bloco" }, [
-      el("div", { class: "setting-label", text: "Partidas em 3D" }), caixa3d,
-      el("div", { class: "setting-hint", text: "Valem para todos da sala e ficam travadas no 3D." })
-    ]);
-    corpo.appendChild(bloco3d);
+    var sec3d = secaoCriar("Partidas em 3D", "3d", [caixa3d, el("p", { class: "lei-cs-hint", text: online
+      ? "Valem para todos da sala e ficam travadas no 3D. O seu jogo contra um bot: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min); contra um amigo, simulado quando a rodada abre."
+      : "Valem para todos da sala e ficam travadas no 3D. O seu jogo: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min); os dos bots, simulados na hora." })]);
+    corpo.appendChild(sec3d);
 
-    // a formação (a preferência durante o leilão)
-    var segF = el("div", { class: "segmented lei-formas", role: "group", "aria-label": "Sua formação" });
-    var mini = el("div", { class: "lei-mini-campo", "aria-hidden": "true" });
-    function poeF() {
-      TM.ui.clear(segF);
-      L().FORMACOES.forEach(function (f) {
-        var on = f === F.formacao;
-        segF.appendChild(el("button", { class: "seg-btn lei-forma-bt" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false",
-          on: { click: function () { F.formacao = f; poeF(); poeResumo(); } } }, [el("span", { class: "lei-forma-f", text: f }), FORMA_NOME[f] ? el("span", { class: "lei-forma-n", text: FORMA_NOME[f] }) : null]));
-      });
-      TM.ui.clear(mini);
-      (L().slotsDe(F.formacao) || []).forEach(function (s) {
-        mini.appendChild(el("span", { class: "lei-mini-vaga gr-" + s[0], style: "left:" + s[1] + "%;top:" + s[2] + "%", text: GRUPO_CURTO[s[0]] }));
-      });
-      mini.appendChild(el("span", { class: "lei-mini-n", text: "0/" + L().VAGAS }));
+    // a formação (a preferência durante o leilão): o segmentado 3 × 2 e o campinho das vagas embaixo
+    var segF = segmentado("Sua formação", "lei-forma-seg", L().FORMACOES.map(function (f) {
+      return { v: f, txt: f, sub: FORMA_NOME[f], cls: "lei-forma-bt", tcls: "lei-forma-f", scls: "lei-forma-n", foco: "forma-" + f };
+    }), F.formacao, function (f) { F.formacao = f; segF.poe(f); poeCampo(); poeResumo(); });
+    var caixaCampo = el("div", { class: "lei-cs-campo" });
+    function poeCampo() {
+      TM.ui.clear(caixaCampo);
+      caixaCampo.appendChild(campinhoVagas(null, -1, { formacao: F.formacao, cls: "lei-cv-criar", rotulo: "A " + F.formacao + " no campinho: " + L().VAGAS + " vagas, todas vazias" }));
     }
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [
-      el("div", { class: "setting-label", text: "Sua formação" }),
-      el("div", { class: "lei-criar-forma" }, [segF, mini]),
-      el("div", { class: "setting-hint", text: "Se uma compra não couber nela, ela muda sozinha para a que cabe." })
-    ]));
+    corpo.appendChild(secaoCriar("Sua formação", "forma", [segF,
+      el("p", { class: "lei-cs-hint", text: "Se uma compra não couber nela, ela muda sozinha para a que cabe." }), caixaCampo]));
 
     // o seu clube: o nome, a sigla e o escudo desenhado (começa com o do seu Ultimate, se houver)
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [el("div", { class: "setting-label", text: "Seu clube" }), editorClube(F.clube, null, { id: "criar" })]));
+    corpo.appendChild(secaoCriar("Seu clube", "clube", [editorClube(F.clube, null, { id: "criar", escolher: true })]));
+    // (o fim da página no cartão de destaque verde, como na foto: o dinheiro de cada técnico e a nota do dinheiro do jogo)
+    corpo.appendChild(el("div", { class: "lei-criar-res" }, [
+      el("p", { class: "lei-criar-res-tit", text: "Cada técnico entra com " + rs(L().SALDO).replace(" ", "\u00a0") + "." }),
+      el("p", { class: "lei-criar-nota", text: online
+        ? "Sala privada: só entra quem tiver o convite e for aceito por você. Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade; não conta no ranking."
+        : "Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade." })
+    ]));
+    // a página termina com um espaço da altura da barra fixa (no fim da rolagem nada fica atrás dela)
+    var espaco = el("div", { class: "lei-espaco", "aria-hidden": "true" });
+    corpo.appendChild(espaco);
 
-    // mais opções: o tempo de cada jogador
-    var segT = el("div", { class: "segmented lei-tempos", role: "group", "aria-label": "Tempo de cada jogador" });
-    function poeTempo() {
-      TM.ui.clear(segT);
-      L().TEMPOS.forEach(function (t) {
-        var on = t === F.tempo;
-        segT.appendChild(el("button", { class: "seg-btn" + (on ? " active" : ""), type: "button", "aria-pressed": on ? "true" : "false", text: (t / 1000) + " s",
-          on: { click: function () { F.tempo = t; poeTempo(); poeT(); } } }));
-      });
-    }
-    var maisOp = el("div", { class: "lei-mais-op", id: "lei-mais-op" });
-    maisOp.hidden = true;
-    var abreOp = el("button", { class: "lei-bloco-bt", type: "button", "aria-controls": "lei-mais-op", "aria-expanded": "false", on: { click: function () {
-      var ab = maisOp.hidden; maisOp.hidden = !ab; abreOp.setAttribute("aria-expanded", ab ? "true" : "false"); abreOp.classList.toggle("aberto", ab);
-    } } }, [el("span", { class: "lei-bloco-ic" }, [ic("sliders-horizontal")]), el("span", { class: "lei-bloco-tit", text: "Mais opções" }), el("span", { class: "lei-bloco-seta" }, [ic("chevron-down")])]);
-    maisOp.appendChild(el("div", { class: "lei-rotulo", text: "Tempo de cada jogador no martelo" }));
-    maisOp.appendChild(segT);
-    corpo.appendChild(el("div", { class: "setting lei-criar-bloco" }, [abreOp, maisOp]));
-
-    // o fim da coluna: o resumo, a duração estimada e o Começar (treino) ou o Criar sala (online)
+    // a barra fixa: o resumo numa linha (com "…"; o texto inteiro no title e para o leitor de tela) e o Começar o treino (ou o
+    // Criar sala, no online)
+    var resumo = el("p", { class: "lei-criar-resumo" });
     var comecar = online ? botao("Criar sala", function () { criarSalaOnline(F, comecar, lgs); }, "btn primary big lei-comecar", "gavel")
       : botao("Começar o treino", function () { criar(F, comecar); }, "btn primary big lei-comecar", "gavel");
+    var barra = el("div", { class: "lei-criarbar", role: "group", "aria-label": online ? "Criar a sala" : "Começar o treino" }, [el("div", { class: "lei-criarbar-in" }, [resumo, comecar])]);
+    screen.appendChild(barra);
     function poeResumo() {
       var lg = ligaDe(F.liga), d = duracaoEstimada(F.T, F.tempo), dc = duracaoCamp(F.formato, F.T, F.tempo, d3());
-      bloco3d.hidden = d3() == null;
-      var tempos = "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min";
-      resumo.textContent = online
-        ? (lg ? lg.name : "") + " · até " + F.T + " técnicos" + (F.bots ? " (" + F.bots + (F.bots === 1 ? " bot" : " bots") + ")" : "") + " · " + F.formacao + " · " + nomeFormato(F.formato) + " · com a sala cheia, " + tempos
-        : (lg ? lg.name : "") + " · " + F.T + " técnicos · " + F.formacao + " · " + nomeFormato(F.formato) + " · 3D: " + F.duracao3d + " min por tempo, " + difNome(F.dificuldade3d) + " · " + tempos;
+      sec3d.hidden = d3() == null;
+      var partes = [online ? "até " + plural(F.T, "técnico", "técnicos") + (F.bots ? " (" + plural(F.bots, "bot", "bots") + ")" : "") : plural(F.T, "técnico", "técnicos"),
+        nomeFormato(F.formato).toLowerCase(), F.formacao,
+        (online ? "com a sala cheia, " : "") + "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min"];
+      if (d3() != null) partes.push("3D de " + F.duracao3d + " min por tempo no " + difNome(F.dificuldade3d));
+      var nomeLg = lg ? lg.name + "." : "", txt = partes.join(", ");
+      TM.ui.clear(resumo);
+      if (nomeLg) { resumo.appendChild(el("b", { text: nomeLg })); resumo.appendChild(doc.createTextNode(" ")); }
+      resumo.appendChild(doc.createTextNode(txt.charAt(0).toUpperCase() + txt.slice(1)));
+      resumo.title = (nomeLg ? nomeLg + " " : "") + txt.charAt(0).toUpperCase() + txt.slice(1);
     }
-    corpo.appendChild(el("div", { class: "lei-rodape" }, [resumo, comecar, el("p", { class: "lei-criar-nota", text: online
-      ? "Sala privada: só entra quem tiver o convite e for aceito por você. Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade; não conta no ranking."
-      : "Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade." })]));
-    poeT(); poeF(); poeTempo(); poe3d(); poeResumo();
+    // o espaço do fim e o scroll-padding (o foco do teclado não fica atrás da barra) pela altura da barra; quando a tela sai
+    // (o roteador limpa o #app), solta tudo — só desfaz o scroll-padding que ela mesma pôs (a sala põe o dela)
+    var meuPad = "";
+    function ajustaBarra() {
+      if (!barra.isConnected) { soltaBarra(); return; }
+      var px = (barra.offsetHeight + 16) + "px", raiz = doc.documentElement.style;
+      if (espaco.style.height !== px) espaco.style.height = px;
+      if (raiz.scrollPaddingBottom !== px) raiz.scrollPaddingBottom = px;
+      meuPad = px;
+    }
+    var ro = global.ResizeObserver ? new global.ResizeObserver(ajustaBarra) : null;
+    function soltaBarra() {
+      if (ro) ro.disconnect();
+      global.removeEventListener("resize", ajustaBarra);
+      try { if (meuPad && doc.documentElement.style.scrollPaddingBottom === meuPad) doc.documentElement.style.scrollPaddingBottom = ""; } catch (e) {}
+      meuPad = "";
+    }
+    if (ro) ro.observe(barra);
+    global.addEventListener("resize", ajustaBarra);
+    poeT(); poe3d(); poeCampo(); poeResumo();
+    ajustaBarra();
+    // (vinda da sala, a tela de antes solta o scroll-padding no próximo quadro: põe de novo depois dele)
+    global.requestAnimationFrame(function () { global.requestAnimationFrame(ajustaBarra); });
   });
   function escolheLiga(lgs, atual, fn) {
     folha("Escolha a liga", function (c) {

@@ -369,7 +369,7 @@ const piloto = ap => ap.p.evaluate(() => window.__lt.estado()).catch(() => null)
 
 /* ---------- nada sobre nada (o critério do testar-leilao.mjs --tela, com as peças do saguão e do campeonato) ---------- */
 const sobreposicao = p => p.evaluate(() => {
-  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen";
+  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen, .lei-sag-card, .lei-sag-res, .lei-cod-caixa, .lei-estado";
   const visivel = e => {
     const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
     const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
@@ -403,7 +403,7 @@ const sobreposicao = p => p.evaluate(() => {
   const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
   // no fim da rolagem, o último da página termina acima da barra fixa (a de lance ou a do saguão)
   let atras = null;
-  const barra = document.querySelector(".lei-lance:not([hidden]), .lei-sagbar:not([hidden])");
+  const barra = document.querySelector(".lei-lance:not([hidden]), .lei-sagbar:not([hidden]), .lei-criarbar");
   if (barra) {
     const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
     const topo = barra.getBoundingClientRect().top;
@@ -418,13 +418,14 @@ const sobreposicao = p => p.evaluate(() => {
     tabelaRola: tab ? tab.scrollWidth > tab.clientWidth + 1 : false, escudosReais: document.querySelectorAll(".lei-corpo-camp img").length };
 });
 const TAMANHOS = [[360, 740], [844, 390], [1280, 800]];
-// mede a tela nos 3 tamanhos, no escuro e no claro; devolve as medidas ruins (e a quantidade de medidas)
-async function nadaSobreNada(ap, rotulo, pronto) {
+const DEZ = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080], [667, 375], [740, 360]];
+// mede a tela nos 3 tamanhos (ou nos dados), no escuro e no claro; devolve as medidas ruins (e a quantidade de medidas)
+async function nadaSobreNada(ap, rotulo, pronto, tams = TAMANHOS) {
   const ruins = [], medidas = [];
   const vp0 = ap.p.viewportSize();
   for (const tema of ["dark", "light"]) {
     await ap.p.evaluate(t => TM.ui.applyTheme(t), tema);
-    for (const [w, h] of TAMANHOS) {
+    for (const [w, h] of tams) {
       await ap.p.setViewportSize({ width: w, height: h });
       await espera(280);
       if (pronto) await ate(ap.p, pronto, null, 5000);
@@ -442,6 +443,98 @@ async function nadaSobreNada(ap, rotulo, pronto) {
   await espera(200);
   return { ruins, medidas };
 }
+
+/* ---------- o Saguão pelas fotos (PLANO-LEILAO.md §9): o que a tela mostra e o contraste dos textos ---------- */
+// o retrato do Saguão desta página: o título, a contagem, o código (a caixa tracejada, o olho e o copiar), os botões do convite,
+// os pedidos, cada participante (o papel e o estado em caixa alta, o VOCÊ, o Tirar), o resumo (as etiquetas, os prontos),
+// Sala e clube (o que o dono muda e o que os outros só veem) e a barra fixa
+const olhaSaguao = ap => ap.p.evaluate(() => {
+  const q = s => document.querySelector(s), qs = s => [...document.querySelectorAll(s)];
+  const vis = e => !!e && e.offsetParent !== null;
+  const r = e => { const x = e.getBoundingClientRect(); return { l: x.left, t: x.top, w: x.width, h: x.height, r: x.right, b: x.bottom }; };
+  const tx = e => (e ? e.textContent.replace(/\s+/g, " ").trim() : null);
+  const maius = e => !!e && getComputedStyle(e).textTransform === "uppercase";
+  const dentro = (a, b) => { const x = r(a), y = r(b); return x.l >= y.l - 1 && x.r <= y.r + 1 && x.t >= y.t - 1 && x.b <= y.b + 1; };
+  const cx = q(".lei-cod-caixa"), olho = q(".lei-cod-caixa .lei-olho"), copia = q(".lei-cod-caixa .lei-cod-copia");
+  const bts = qs(".lei-conv-bts .btn").filter(vis);
+  const parts = qs(".lei-corpo-sag .lei-part.sag").map(p => {
+    const est = p.querySelector(".lei-estado"), pp = p.querySelector(".lei-part-pp"), tirar = p.querySelector(".lei-part-tirar");
+    return { uid: p.dataset.uid, nome: tx(p.querySelector(".lei-part-n")), papel: tx(pp), papelMaius: maius(pp), voce: !!p.querySelector(".lei-voce"),
+      // (o texto à vista da pílula; o "Falta confirmar o Pronto" é o do leitor de tela, no lugar do "Aguardando")
+      estado: est ? tx(est.querySelector("[aria-hidden]") || est) : null, estSr: est ? tx(est.querySelector(".lei-sr")) : null,
+      estCls: est ? [...est.classList].filter(c => /^(pronto|falta|bot|ausente|saiu)$/.test(c))[0] || "" : "", estMaius: maius(est),
+      // (a pílula na mesma linha do nome, à direita dele: as fotos)
+      estDentro: !!est && dentro(est, p), estLado: !!est && r(est).l >= r(p.querySelector(".lei-part-n")).r - 1 && r(est).t < r(p.querySelector(".lei-part-n")).b,
+      num: !!p.querySelector(".lei-part-papel .lei-num"),
+      tirar: tirar ? { rot: tirar.getAttribute("aria-label"), w: r(tirar).w, h: r(tirar).h, texto: tirar.innerText.trim() } : null };
+  });
+  const gerir = q(".lei-parts .lei-gerir");
+  const peds = qs(".lei-corpo-sag .lei-pedido").map(p => ({ uid: p.dataset.uid, nome: tx(p.querySelector(".lei-part-n")), papel: tx(p.querySelector(".lei-part-pp")), papelMaius: maius(p.querySelector(".lei-part-pp")),
+    bts: [...p.querySelectorAll(".lei-pedido-bts .btn")].map(b => ({ t: tx(b), h: r(b).h, primario: b.classList.contains("primary"), des: b.disabled })) }));
+  const res = q(".lei-sag-res"), sala = q(".lei-sag-sala"), bar = q(".lei-sagbar"), bt = q(".lei-sagbar-bt");
+  const dv = d => d ? [+d.min, +d.max, +d.value, d.disabled ? 1 : 0].join() : null;
+  const passo = rot => { const g = sala && sala.querySelector('.lei-passo[aria-label="' + rot + '"]'); return g ? dv(g.querySelector(".lei-passo-desl")) : null; };
+  const segOn = sel => { const g = sala && sala.querySelector(sel); const b = g && g.querySelector(".seg-btn.active"); return b ? tx(b) : null; };
+  const bb = bar && r(bar);
+  return {
+    tit: tx(q(".lei-sag-tit")), titPx: q(".lei-sag-tit") ? parseFloat(getComputedStyle(q(".lei-sag-tit")).fontSize) : 0, frase: tx(q(".lei-sag-frase")), conta: tx(q(".lei-sag-conta")),
+    cod: cx ? { borda: getComputedStyle(cx).borderTopStyle, rot: tx(cx.querySelector(".lei-conv-rot")), olho: olho ? [r(olho).w, r(olho).h, olho.innerText.trim(), olho.getAttribute("aria-label"), dentro(olho, cx)] : null,
+      copia: copia ? [r(copia).w, r(copia).h, copia.innerText.trim(), copia.getAttribute("aria-label"), dentro(copia, cx)] : null } : null,
+    convite: bts.map(b => ({ t: tx(b), top: Math.round(r(b).t), l: r(b).l, r: r(b).r, h: r(b).h, primario: b.classList.contains("primary") })),
+    pedTit: tx(q(".lei-pedidos .lei-sag-ctit")), peds, partTit: tx(q(".lei-parts .lei-sag-ctit")), partN: tx(q(".lei-parts .lei-sag-cn [aria-hidden]")), parts,
+    gerir: gerir ? { t: tx(gerir), h: r(gerir).h, pressed: gerir.getAttribute("aria-pressed") } : null,
+    res: res ? { tit: tx(res.querySelector(".lei-sag-res-tit")), texto: tx(res.querySelector(".lei-sag-resumo")), etqs: [...res.querySelectorAll(".lei-etq")].map(tx), prontos: tx(res.querySelector(".lei-sag-prontos")),
+      dur: tx(res.querySelector(".lei-sag-dur")), borda: getComputedStyle(res).borderTopColor, fundoImg: getComputedStyle(res).backgroundImage, fundo: getComputedStyle(res).backgroundColor } : null,
+    sala: sala ? { tit: tx(sala.querySelector(".lei-sag-ctit")), rots: [...sala.querySelectorAll(".lei-sag-rot")].map(tx), liga: !!sala.querySelector(".lei-liga-bt"),
+      fmts: [...sala.querySelectorAll(".lei-fmt")].map(b => (b.getAttribute("aria-pressed") === "true" ? "*" : "") + b.dataset.fmt + (b.disabled ? "-" : "")),
+      fmtLista: !!sala.querySelector(".lei-formatos.lista"), soVer: !!sala.querySelector(".lei-formatos.so-ver"), vagas: passo("Técnicos na sala"), bots: passo("Bots de treino"),
+      tempo: segOn(".lei-tempos"), dur3d: segOn(".lei-dur3d"), dif3d: segOn(".lei-dif3d"), nota: tx(sala.querySelector(".lei-sag-cfg .lei-sag-nota")),
+      deslFora: [...sala.querySelectorAll(".lei-passo-desl")].filter(d => r(d).r > r(d.closest(".lei-passo")).r + 0.5).length,
+      campos: [...sala.querySelectorAll(".lei-sag-clube .lei-campo")].map(i => parseFloat(getComputedStyle(i).fontSize)), escolher: tx(sala.querySelector(".lei-esc-escolher-t")),
+      salvar: !!sala.querySelector(".lei-salvar") && !vis(sala.querySelector(".lei-salvar")), forma: segOn(".lei-forma-seg"), formas: sala.querySelectorAll(".lei-forma-seg .seg-btn").length,
+      apagados: [...sala.querySelectorAll(".lei-sag-clube .lei-campo, .lei-sag-clube .lei-esc-escolher, .lei-forma-seg .seg-btn")].filter(x => x.disabled).length,
+      vagasCampo: sala.querySelectorAll(".lei-sag-clube .lei-cv .lei-cv-vaga").length } : null,
+    barra: bar ? { fixa: getComputedStyle(bar).position, embaixo: Math.abs(bb.b - innerHeight) <= 1, txt: tx(q(".lei-sagbar-txt")), b: tx(q(".lei-sagbar-txt b")),
+      bt: tx(bt), btH: r(bt).h, btCls: bt.className, btDes: bt.disabled, btIc: !!bt.querySelector(".lei-bt-ic svg, .lei-bt-ic .tm-ic") } : null
+  };
+});
+// o contraste (≥ 4,5:1) de cada texto do Saguão sobre o fundo de verdade (as camadas até a 1ª opaca); os botões cheios sobre as
+// duas pontas do degradê
+const contrasteSag = ap => ap.p.evaluate(() => {
+  const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+  const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+  const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+  const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+  const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+  // os fundos possíveis por baixo do texto: da 1ª camada opaca para cima, cada elemento com a cor de fundo e, por cima dela, as
+  // pontas do degradê (o resumo verde, os botões cheios): o pior de todos vale
+  const fundos = e => {
+    const cadeia = []; for (let a = e; a; a = a.parentElement) { cadeia.push(a); if (rgba(getComputedStyle(a).backgroundColor)[3] >= 1) break; }
+    let base = [rgba(getComputedStyle(document.body).backgroundColor)];
+    cadeia.reverse().forEach(a => {
+      const cs = getComputedStyle(a), c = rgba(cs.backgroundColor);
+      if (c[3] > 0) base = base.map(f => sobre(c, f));
+      const st = (cs.backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba);
+      if (st.length) { const nv = []; base.forEach(f => st.forEach(x => nv.push(sobre(x, f)))); base = nv; }
+    });
+    return base;
+  };
+  const op = e => { let o = 1; for (let a = e; a; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+  const texto = e => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e); return Math.min(...fundos(e).map(f => cr(sobre(c, f), f))); };
+  const out = {};
+  // (fora da conta: o botão apagado de propósito; o formato "só para ver" de quem não é o dono conta: ele fica à vista sem apagar)
+  const apagado = e => { const x = e.closest("button:disabled"); return !!x && !x.closest(".lei-formatos.so-ver"); };
+  const min = (k, sel) => { const xs = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null && e.textContent.trim() && !apagado(e)); if (xs.length) out[k] = Math.min(...xs.map(texto)); };
+  min("titulo", ".lei-sag-tit"); min("frase", ".lei-sag-frase"); min("conta", ".lei-sag-conta-n"); min("codRot", ".lei-conv-rot"); min("cod", ".lei-conv-cod");
+  min("convite", ".lei-conv-bts .btn span:last-child"); min("cartaoTit", ".lei-sag-ctit"); min("cartaoN", ".lei-sag-cn [aria-hidden]"); min("nome", ".lei-corpo-sag .lei-part-n");
+  min("papel", ".lei-corpo-sag .lei-part-pp"); min("num", ".lei-corpo-sag .lei-part-papel .lei-num"); min("pronto", ".lei-corpo-sag .lei-estado.pronto"); min("aguardando", ".lei-corpo-sag .lei-estado.falta");
+  min("voce", ".lei-corpo-sag .lei-voce"); min("vazio", ".lei-corpo-sag .lei-vazio"); min("resTit", ".lei-sag-res-tit"); min("resTexto", ".lei-sag-resumo"); min("etq", ".lei-sag-res .lei-etq");
+  min("dur", ".lei-sag-res .lei-sag-dur"); min("prontos", ".lei-sag-prontos"); min("rotulo", ".lei-sag-rot"); min("dica", ".lei-sag-dica"); min("nota", ".lei-corpo-sag .lei-sag-nota");
+  min("fmtNome", ".lei-sag-sala .lei-fmt-n"); min("fmtFrase", ".lei-sag-sala .lei-fmt-f"); min("fmtLinha", ".lei-sag-sala .lei-fmt-s"); min("segOn", ".lei-sag-sala .lei-seg .seg-btn.active .lei-seg-t");
+  min("segOff", ".lei-sag-sala .lei-seg .seg-btn:not(.active) .lei-seg-t"); min("ligaN", ".lei-sag-sala .lei-liga-n"); min("ligaS", ".lei-sag-sala .lei-liga-s"); min("escolher", ".lei-sag-sala .lei-esc-escolher-t");
+  min("barraTxt", ".lei-sagbar-txt"); min("barraB", ".lei-sagbar-txt b"); min("barraBt", ".lei-sagbar-bt:not(:disabled) span:last-child"); min("pedBt", ".lei-pedido-bts .btn:not(:disabled) span:last-child");
+  return out;
+});
 
 /* ---------- as conferências do fim ---------- */
 // o mesmo vivo em todas as páginas e no servidor; as vendas registradas = o vivo; o caixa = 100 − as vendas; os 11 de cada
@@ -687,6 +780,20 @@ async function casoDois() {
   // o formato Pontos + mata-mata (o campeonato misto com 2: a rodada de pontos e a Final)
   await clicaSel(A, ".lei-fmt[data-fmt='misto']");
   const fmtD = await ate(A.p, () => { const b = document.querySelector(".lei-fmt[data-fmt='misto']"); return !!(b && b.getAttribute("aria-pressed") === "true"); }, null, 5000);
+  // a Criar das fotos com a conta online: o passo com o deslizante (2 técnicos e nenhum bot), o formato marcado no cartão com o
+  // desenho, as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada (escuro e claro)
+  const criarD = await A.p.evaluate(() => {
+    const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]'), dv = d => d ? [+d.min, +d.max, +d.value].join() : null;
+    const fm = q(".lei-fmt[data-fmt='misto']"), sv = fm && fm.querySelector("svg.lei-fmt-svg");
+    return { dT: dv(g("Técnicos na sala").querySelector(".lei-passo-desl")), dB: dv(g("Bots de treino").querySelector(".lei-passo-desl")), aviso: !!q(".lei-criar .lei-aviso-sala"),
+      des: sv ? sv.getAttribute("data-desenho") : null, check: !!q(".lei-criar .lei-fmt-ok"), sem3d: q('.lei-criar [data-secao="3d"]').hidden,
+      fixa: getComputedStyle(q(".lei-criarbar")).position, resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
+  });
+  const nsCriar = await nadaSobreNada(A, "dois-criar", () => !!document.querySelector(".lei-criarbar"));
+  confere(`${ID}1b a Criar sala das fotos com a conta online: sem o aviso, 2 técnicos e nenhum bot no − e + com o deslizante (2–8 e 0–1), o Pontos + mata-mata marcado no cartão com o desenho (sem o check), as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada nem atrás da barra (${nsCriar.medidas.length} telas)`,
+    !criarD.aviso && criarD.dT === "2,8,2" && criarD.dB === "0,1,0" && criarD.des === "tabela-chave" && !criarD.check && criarD.sem3d && criarD.fixa === "fixed"
+      && /\. Até 2 técnicos, pontos \+ mata-mata, 4-4-2, com a sala cheia, /.test(criarD.resumo) && criarD.bt === "Criar sala" && !nsCriar.ruins.length,
+    { criarD, ruins: nsCriar.ruins.slice(0, 3) });
   await clicaSel(A, ".lei-comecar");
   await ate(A.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-conv-cod") && TM.leilaoSessao.atual(), null, 30000);
   const cod = await A.p.evaluate(() => TM.leilaoSessao.atual().codigo);
@@ -704,6 +811,20 @@ async function casoDois() {
       !escondido.txt.includes(cod) && !escondido.qr && !escondido.topo.includes(cod) && visto.txt.includes(cod) && visto.qr &&
       conv.copiado.length === 1 && conv.copiado[0].endsWith("?leilao=" + cod) && conv.comp.length === 1 && conv.comp[0] === conv.copiado[0],
     { cod, meta: s && s.meta, cfg: s && s.cfg, escondido, visto, conv });
+  /* D1c o código e o convite pelas fotos (PLANO-LEILAO.md §9): a caixa tracejada com "Código da sala", o olho e o copiar (ícones de
+     44 px sem texto, com o rótulo, dentro da caixa); o copiar copia SÓ o código; Copiar convite (verde cheio) e Compartilhar (tonal)
+     lado a lado na mesma linha em 390×844, sem encostar */
+  const sag1 = await olhaSaguao(A);
+  const nCop = await A.p.evaluate(() => window.__copiado.length);
+  await clicaSel(A, ".lei-cod-copia");
+  await ate(A.p, n => window.__copiado.length > n, nCop, 5000);
+  const copCod = await A.p.evaluate(() => window.__copiado[window.__copiado.length - 1]);
+  const c1 = sag1.cod, cv = sag1.convite;
+  confere(`${ID}1c o código pelas fotos: a caixa tracejada com "Código da sala", o olho e o copiar como ícones de 44 px (sem texto, com o rótulo) dentro dela; o copiar copia só o código (${copCod}); Copiar convite (verde cheio) e Compartilhar (tonal) lado a lado em 390×844, com 44 px ou mais`,
+    !!c1 && c1.borda === "dashed" && c1.rot === "Código da sala" && [c1.olho, c1.copia].every(x => x && x[0] >= 44 && x[1] >= 44 && !x[2] && !!x[3] && x[4])
+      && copCod === cod && cv.length === 2 && cv[0].t === "Copiar convite" && cv[0].primario && cv[1].t === "Compartilhar" && !cv[1].primario
+      && Math.abs(cv[0].top - cv[1].top) <= 1 && cv[1].l >= cv[0].r + 2 && cv.every(x => x.h >= 44),
+    { cod: c1, convite: cv, copCod });
 
   /* D3 o pedido pelo código e o dono RECUSA (antes do Bruno: com 2 vagas, a sala enche) */
   await conta(Cc);
@@ -711,6 +832,7 @@ async function casoDois() {
   await ate(Cc.p, () => TM.ui.current() === "leilao-saguao" && TM.leilaoSessao.atual() && TM.leilaoSessao.atual().pedido, null, 15000);
   const esperaC = await telaTxt(Cc);
   await ate(A.p, () => !!document.querySelector(".lei-pedido[data-uid='uidCarla']"), null, 15000);
+  const sagPed = await olhaSaguao(A), pedC = sagPed.peds.find(x => x.uid === "uidCarla");
   await A.p.evaluate(() => [...document.querySelectorAll(".lei-pedido[data-uid='uidCarla'] button")].find(b => /Recusar/.test(b.textContent)).click());
   await ate(Cc.p, () => TM.ui.current() === "leilao" && !TM.leilaoSessao.atual(), null, 15000);
   await espera(150);
@@ -720,6 +842,11 @@ async function casoDois() {
   confere(`${ID}3 o pedido pelo código (minúsculas) e o dono recusa pela tela: quem pediu volta à Entrada com o recado, fica em recusados e não pede de novo`,
     errC == null && /Esperando o dono aceitar/.test(esperaC) && /recusou/.test(recadoC || "") && /recusou a sua entrada/.test(errC2 || "") && s.recusados && s.recusados.uidCarla && !(s.pedidos && s.pedidos.uidCarla),
     { errC, esperaC: esperaC.slice(0, 200), recadoC, errC2, recusados: s.recusados });
+  const semPed = await A.p.evaluate(() => ({ linha: !!document.querySelector(".lei-pedido[data-uid='uidCarla']"), vazio: (document.querySelector(".lei-pedidos .lei-vazio") || {}).textContent || "" }));
+  confere(`${ID}3b o pedido de entrada pelas fotos no cartão "Pedidos de entrada" (só o dono): o nome, "Quer entrar" em caixa alta, Aceitar (verde cheio) e Recusar com 44 px; recusado pela tela, a linha some e fica "Nenhum pedido agora"`,
+    sagPed.pedTit === "Pedidos de entrada" && !!pedC && pedC.nome === "Carla" && pedC.papel === "Quer entrar" && pedC.papelMaius && pedC.bts.length === 2
+      && /^Aceitar/.test(pedC.bts[0].t) && pedC.bts[0].primario && /^Recusar/.test(pedC.bts[1].t) && !pedC.bts[1].primario && pedC.bts.every(b => b.h >= 44 && !b.des)
+      && !semPed.linha && /Nenhum pedido agora/.test(semPed.vazio), { pedTit: sagPed.pedTit, pedC, semPed });
 
   /* D2 o pedido pelo LINK (?leilao=) e o dono ACEITA */
   await B.p.goto(BASE + "/index.html?leilao=" + cod, { waitUntil: "load" });
@@ -756,6 +883,66 @@ async function casoDois() {
       !(sala("EDPR23").pedidos) && !(sala("RGRS23").pedidos) && !(sala(cod).pedidos),
     { e1, e2, e3, e4, e5, edE });
 
+  /* D6b o Saguão pelas fotos (PLANO-LEILAO.md §9), no dono (390×844) e no convidado (1280×800): o título grande, "2/2
+     participantes", cada participante com o papel e o estado em caixa alta (PRONTO verde, AGUARDANDO no tom; o VOCÊ só na sua
+     linha; a pílula à direita do nome, na mesma linha; o Tirar do dono num ícone de 44 px, só nas linhas dos técnicos e só para ele,
+     atrás do "Tirar alguém da sala"), o resumo verde com as etiquetas certas e
+     "1 de 2 prontos", Sala e clube (o dono muda a liga, o formato, os técnicos, os bots e o tempo; o convidado só vê o formato), o
+     seu clube e a formação com o campinho, e a barra fixa embaixo com "1 de 2 prontos." em negrito e o botão de 56 px */
+  await ate(B.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-sag-res"), null, 10000);
+  const sA = await olhaSaguao(A), sB = await olhaSaguao(B), ligaD = (await ver(A)).liga.nome;
+  // (as etiquetas das fotos: sem a liga — está na frase — nem os técnicos — estão em "2/2 participantes" —; sem bots, quatro)
+  // (2 técnicos × os lotes por técnico desta versão: 40 desde os 20 por técnico, #645)
+  const etqD = ["Até " + (2 * await A.p.evaluate(() => TM.leilao.LOTES_POR_TEC)) + " jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
+  const lin = (ps, u) => ps.find(x => x.uid === u) || {};
+  const verde = c => { const m = (c.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 && m[1] > m[0] + 40 && m[1] > m[2] + 20; };
+  const partsOk = (ps, eu) => ps.length === 2 && lin(ps, "uidAna").papel === "Dono da sala" && lin(ps, "uidAna").estado === "Pronto" && lin(ps, "uidAna").estCls === "pronto"
+    && lin(ps, "uidBruno").papel === "Técnico" && lin(ps, "uidBruno").estado === "Aguardando" && lin(ps, "uidBruno").estCls === "falta" && /Falta confirmar/.test(lin(ps, "uidBruno").estSr)
+    && ps.every(x => x.papelMaius && x.estMaius && x.estDentro && x.estLado && !x.num && !x.tirar) && ps.filter(x => x.voce).map(x => x.uid).join() === eu;
+  // o Tirar do dono atrás do "Tirar alguém da sala" (como o "Editar" de uma lista): ligado, o Tirar de 44 px no lugar da pílula, só nas
+  // linhas dos técnicos; o "Concluir" volta à lista das fotos
+  await A.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(A.p, () => !!document.querySelector(".lei-part-tirar"), null, 5000);
+  const sAg = await olhaSaguao(A), tirarA = lin(sAg.parts, "uidBruno").tirar;
+  await A.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  const voltou = await ate(A.p, () => !document.querySelector(".lei-part-tirar") && document.querySelector(".lei-parts .lei-gerir").getAttribute("aria-pressed") === "false", null, 5000);
+  const salaA = sA.sala || {}, salaB = sB.sala || {};
+  // (o seu clube aceso: depois do Aceitar do dono a seção ficava apagada — refeita no meio da ação, a cor de quem entrou muda as
+  // cores usadas — e não voltava)
+  const clubeOk = x => x.campos.length === 2 && x.campos.every(f => f >= 16) && x.escolher === "Escolher escudo" && x.salvar && x.forma === "4-4-2" && x.formas === 6 && x.vagasCampo === 11 && x.apagados === 0
+    && x.rots.includes("Seu clube") && x.rots.includes("Sua formação") && x.tit === "Sala e clube";
+  confere(`${ID}6b o Saguão pelas fotos (o dono em 390×844 e o convidado em 1280×800): o título grande e "2/2 participantes"; o papel e o estado em caixa alta (PRONTO, AGUARDANDO) com a pílula na linha do nome, o VOCÊ só na sua linha e o Tirar do dono num ícone de 44 px atrás do "Tirar alguém da sala"; o resumo verde com as etiquetas da sala e "1 de 2 prontos"; Sala e clube (o dono muda, o convidado só vê o formato) com o seu clube e a formação; a barra fixa com o botão de 56 px`,
+    [sA, sB].every(x => x.tit === "Prepare seu clube." && x.titPx >= 28 && !!x.frase && x.conta === "2/2 participantes" && x.partTit === "Participantes" && x.partN === "2/2")
+      && partsOk(sA.parts, "uidAna") && partsOk(sB.parts, "uidBruno")
+      && !!sA.gerir && sA.gerir.t === "Tirar alguém da sala" && sA.gerir.pressed === "false" && sA.gerir.h >= 44 && !sB.gerir
+      && !!tirarA && tirarA.w >= 44 && tirarA.h >= 44 && !tirarA.texto && /^Tirar Bruno/.test(tirarA.rot || "") && lin(sAg.parts, "uidBruno").estado == null && !lin(sAg.parts, "uidAna").tirar
+      && lin(sAg.parts, "uidAna").estado === "Pronto" && sAg.gerir && sAg.gerir.t === "Concluir" && sAg.gerir.pressed === "true" && voltou
+      && [sA, sB].every(x => x.res && x.res.tit === "Cada técnico entra com R$ 100." && JSON.stringify(x.res.etqs) === JSON.stringify(etqD) && (x.res.texto || "").includes(ligaD) && x.res.prontos === "1 de 2 prontos"
+        && /Com a sala cheia/.test(x.res.dur || "") && verde(x.res.borda) && /linear-gradient/.test(x.res.fundoImg))
+      && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.deslFora === 0 && salaA.fmts.join() === "pontos,mata,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
+      && salaA.dur3d == null && /zera os Pronto/.test(salaA.nota || "") && ["Liga", "Formato do campeonato", "Técnicos na sala", "Bots de treino", "Tempo de cada jogador"].every(r => salaA.rots.includes(r))
+      && !salaB.liga && salaB.fmtLista && salaB.soVer && salaB.fmts.join() === "pontos-,mata-,*misto-" && salaB.vagas == null && salaB.bots == null && salaB.tempo == null && /Só o dono/.test(salaB.nota || "")
+      && clubeOk(salaA) && clubeOk(salaB)
+      && sA.barra.fixa === "fixed" && sA.barra.embaixo && sA.barra.b === "1 de 2 prontos." && sA.barra.txt === "1 de 2 prontos. Falta confirmar: Bruno." && sA.barra.bt === "Começar o leilão" && sA.barra.btDes && sA.barra.btH >= 56 && sA.barra.btIc
+      && sB.barra.fixa === "fixed" && sB.barra.embaixo && sB.barra.bt === "Pronto" && /primary/.test(sB.barra.btCls) && !sB.barra.btDes && sB.barra.btH >= 56,
+    { apagados: [salaA.apagados, salaB.apagados], sA: Object.assign({}, sA, { cod: undefined, convite: undefined }), sAg: { parts: sAg.parts, gerir: sAg.gerir }, voltou,
+      sB: { parts: sB.parts, res: sB.res, sala: sB.sala, barra: sB.barra, conta: sB.conta } });
+  // o contraste de todo texto do Saguão (≥ 4,5:1) no escuro e no claro, no dono e no convidado; no claro, os cartões brancos e o
+  // resumo num verde bem claro
+  const crsD = [];
+  for (const ap of [A, B]) for (const tema of ["dark", "light"]) {
+    await ap.p.evaluate(t => TM.ui.applyTheme(t), tema); await espera(200);
+    const c = await contrasteSag(ap), o = tema === "light" ? await ap.p.evaluate(() => {
+      const m = c => (c.match(/[\d.]+/g) || []).map(Number), lum = c => { const x = m(c); return (0.2126 * x[0] + 0.7152 * x[1] + 0.0722 * x[2]) / 255; };
+      const res = getComputedStyle(document.querySelector(".lei-sag-res")).backgroundColor, card = getComputedStyle(document.querySelector(".lei-sag-card")).backgroundColor;
+      return { res: lum(res), resVerde: m(res)[1] > m(res)[0] + 5 && m(res)[1] > m(res)[2], card: lum(card), tit: lum(getComputedStyle(document.querySelector(".lei-sag-tit")).color) };
+    }) : null;
+    crsD.push({ quem: ap.nome, tema, n: Object.keys(c).length, ruins: Object.keys(c).filter(k => c[k] < 4.5).map(k => k + " " + c[k]), claro: o });
+  }
+  for (const ap of [A, B]) await ap.p.evaluate(() => TM.ui.applyTheme("dark"));
+  confere(`${ID}6e contraste ≥ 4,5:1 de todo texto do Saguão (o dono e o convidado, escuro e claro: ${crsD.map(x => x.n).join("/")} grupos de texto); no claro, os cartões brancos, o resumo num verde bem claro e o texto escuro`,
+    crsD.every(x => x.n >= 22 && !x.ruins.length) && crsD.filter(x => x.claro).every(x => x.claro.card > 0.97 && x.claro.res > 0.85 && x.claro.res < x.claro.card && x.claro.resVerde && x.claro.tit < 0.3), crsD);
+
   /* D6 nada sobre nada no Saguão: o dono e o convidado */
   const nsDono = await nadaSobreNada(A, "saguao-dono", () => !!document.querySelector(".lei-sagbar"));
   const nsConv = await nadaSobreNada(B, "saguao-convidado", () => !!document.querySelector(".lei-sagbar"));
@@ -775,9 +962,72 @@ async function casoDois() {
   confere(`${ID}6c o selo VOCÊ da sua linha no Saguão é a pílula verde no escuro e no claro (≥ 4,5:1)`,
     !!voce.escuro && !!voce.claro && voce.escuro.txt === "VOCÊ" && [voce.escuro, voce.claro].every(x => x.fundo >= 1 && x.cr >= 4.5), voce);
 
+  /* D6d o dono muda as opções da sala PELA TELA (antes só a API mudava nos testes): o tempo pelo teclado (Enter; o foco fica no mesmo
+     botão depois da seção refeita) zera o Pronto do convidado e a etiqueta dele acompanha; o formato pela lista; mais um técnico e
+     um bot pelo deslizante (o input só mostra o número, o change grava) fazem aparecer as Partidas em 3D e as etiquetas do 3D no
+     convidado; na ponta, o + apagado segura o foco do teclado e o Enter não muda nada. No fim, a sala volta ao que era */
+  const cfgA = () => A.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { tempo: V.cfg.tempo, formato: V.formato, vagas: V.saguao.vagas, bots: V.saguao.bots, prontos: V.saguao.prontos }; });
+  const prontoB = () => B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return !!V.tecnicos[V.eu].pronto; });
+  const focoA = () => A.p.evaluate(() => { const a = document.activeElement; return a && a.dataset ? a.dataset.foco || a.tagName : null; });
+  const etqB = () => B.p.evaluate(() => [...document.querySelectorAll(".lei-sag-res .lei-etq")].map(e => e.textContent));
+  const d6d = {};
+  await clicaSel(B, ".lei-sagbar-bt");
+  d6d.pronto0 = await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 15000) && await prontoB();
+  await A.p.focus('.lei-sag-cfg [data-foco="tempo-15000"]');
+  await A.p.keyboard.press("Enter");
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().cfg.tempo === 15000, null, 10000);
+  await ate(B.p, () => { const V = TM.leilaoSessao.atual().ver(); return !V.tecnicos[V.eu].pronto; }, null, 10000);
+  await ate(B.p, () => [...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => e.textContent === "15 s por jogador"), null, 10000);
+  await espera(400);
+  Object.assign(d6d, { tempo: (await cfgA()).tempo, prontoB1: await prontoB(), focoTempo: await focoA(), etq1: await etqB(),
+    barraB1: await B.p.evaluate(() => document.querySelector(".lei-sagbar-bt").className) });
+  await clicaSel(A, '.lei-sag-cfg .lei-fmt[data-fmt="pontos"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().formato === "pontos", null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Mais um técnico"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.vagas === 3 && !!document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl:not(:disabled)'), null, 10000);
+  await espera(300);
+  await A.p.evaluate(() => { const d = document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl'); d.value = "1"; d.dispatchEvent(new Event("input", { bubbles: true })); });
+  await espera(400);
+  d6d.durante = { n: await A.p.evaluate(() => document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-n').textContent), bots: (await cfgA()).bots };
+  await A.p.evaluate(() => document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl').dispatchEvent(new Event("change", { bubbles: true })));
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.bots === 1, null, 10000);
+  await ate(B.p, () => [...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => /^3D: /.test(e.textContent)), null, 10000);
+  await espera(400);
+  Object.assign(d6d, { c3: await cfgA(), rots3: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-cfg .lei-sag-rot")].map(e => e.textContent)), etq3: await etqB() });
+  // (na ponta: 3 técnicos com 2 pessoas = 1 bot no máximo)
+  await A.p.focus('.lei-sag-cfg [aria-label="Mais um bot"]');
+  await A.p.keyboard.press("Enter");
+  await espera(600);
+  Object.assign(d6d, { ponta: await A.p.evaluate(() => { const b = document.querySelector('.lei-sag-cfg [aria-label="Mais um bot"]'); return [b.getAttribute("aria-disabled"), b.disabled, document.activeElement === b].join(); }), botsPonta: (await cfgA()).bots });
+  // a sala de volta: sem bots, 2 técnicos, Pontos + mata-mata e 10 s
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Menos um bot"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.bots === 0 && !!document.querySelector('.lei-sag-cfg [aria-label="Menos um técnico"]:not([aria-disabled="true"]):not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Menos um técnico"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.vagas === 2 && !!document.querySelector('.lei-sag-cfg .lei-fmt[data-fmt="misto"]:not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg .lei-fmt[data-fmt="misto"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().formato === "misto" && !!document.querySelector('.lei-sag-cfg [data-foco="tempo-10000"]:not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [data-foco="tempo-10000"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().cfg.tempo === 10000, null, 10000);
+  await ate(B.p, () => !!document.querySelector(".lei-sagbar-bt:not(:disabled)"), null, 10000);
+  await espera(400);
+  d6d.fim = await cfgA();
+  confere(`${ID}6d o dono muda as opções da sala pela tela: o tempo pelo teclado (o foco fica no botão) zera o Pronto do convidado e a etiqueta dele acompanha; o formato pela lista; mais um técnico e um bot pelo deslizante (o input só mostra, o change grava) com as Partidas em 3D e "1 bot" e "3D: …" no convidado; na ponta o + apagado segura o foco e o Enter não muda nada; a sala volta ao que era`,
+    d6d.pronto0 && d6d.tempo === 15000 && !d6d.prontoB1 && d6d.focoTempo === "tempo-15000" && d6d.etq1.includes("15 s por jogador") && /primary/.test(d6d.barraB1)
+      && d6d.durante.n === "1" && d6d.durante.bots === 0 && d6d.c3.formato === "pontos" && d6d.c3.vagas === 3 && d6d.c3.bots === 1 && d6d.rots3.includes("Partidas em 3D")
+      && d6d.etq3.includes("1 bot") && d6d.etq3.some(e => /^3D: \d+ min · /.test(e)) && d6d.etq3.includes("Pontos corridos")
+      && d6d.ponta === "true,false,true" && d6d.botsPonta === 1
+      && d6d.fim.tempo === 10000 && d6d.fim.formato === "misto" && d6d.fim.vagas === 2 && d6d.fim.bots === 0, d6d);
+
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");
   const todos = await ate(A.p, () => /Todos prontos/.test(TM.leilaoTela.estado().barra || ""), null, 15000);
+  await ate(A.p, () => !!document.querySelector(".lei-part[data-uid='uidBruno'] .lei-estado.pronto"), null, 10000);
+  await ate(B.p, () => /Toque para cancelar/.test((document.querySelector(".lei-sagbar-bt") || {}).textContent || ""), null, 10000);
+  const pr5A = await olhaSaguao(A), pr5B = await olhaSaguao(B);
+  confere(`${ID}5b o Pronto pela barra: no convidado o botão vira "Pronto. Toque para cancelar" (tonal, com o check); no dono a linha dele vira PRONTO, o resumo "2 de 2 prontos" e o Começar acende`,
+    pr5B.barra.bt === "Pronto. Toque para cancelar" && / on\b/.test(pr5B.barra.btCls) && !/primary/.test(pr5B.barra.btCls) && pr5B.barra.btIc && !pr5B.barra.btDes
+      && (pr5A.parts.find(x => x.uid === "uidBruno") || {}).estado === "Pronto" && pr5A.res.prontos === "2 de 2 prontos" && pr5A.barra.b === "2 de 2 prontos." && !pr5A.barra.btDes,
+    { barraB: pr5B.barra, barraA: pr5A.barra, partsA: pr5A.parts, res: pr5A.res && pr5A.res.prontos });
   await clicaSel(A, ".lei-sagbar-bt");
   const foi = await ateNode(async () => (await rota(A)) === "leilao-lote" && (await rota(B)) === "leilao-lote", 30000);
   await ateNode(() => vivoServ(cod) && vigia(cod).ctx, 20000);
@@ -939,7 +1189,7 @@ async function casoDois() {
 
 /* ====================================================================================================== */
 // junta N páginas na sala de um dono pela API (o pedido, o aceite e o Pronto): os casos grandes
-async function salaPelaApi(aps, cfg) {
+async function salaPelaApi(aps, cfg, antes) {
   const [dono, ...outros] = aps;
   for (const ap of aps) await conta(ap);
   const cod = await dono.p.evaluate(c => TM.leilaoSessao.criarSala(c).then(S => S.codigo), cfg);
@@ -949,6 +1199,7 @@ async function salaPelaApi(aps, cfg) {
   for (const ap of outros) await ate(ap.p, () => { const S = TM.leilaoSessao.atual(); return S && S.eu >= 0 && !S.pedido; }, null, 20000);
   for (const ap of outros) await ap.p.evaluate(() => TM.leilaoSessao.atual().pronto(true));
   await ate(dono.p, () => { const V = TM.leilaoSessao.atual().ver(); return V.saguao && V.saguao.podeComecar; }, null, 30000);
+  if (antes) await antes(dono, outros);
   const r = await dono.p.evaluate(() => TM.leilaoSessao.atual().comecar());
   await ateNode(async () => { const vs = await Promise.all(aps.map(ver)); return vs.every(V => V && V.vivo && V.estado === "leilao"); }, 30000);
   vigia(cod);
@@ -1329,7 +1580,8 @@ async function casoTelas() {
   await ate(Dn.p, () => !document.querySelector(".lei-pedido") && TM.leilaoSessao.atual().ver().tecnicos.length === 3, null, 20000);
   await espera(400);
   const depois2 = await Dn.p.evaluate(() => { const a = document.activeElement; return a ? a.tagName + "." + a.className : null; });
-  confere(`${ID}2b sem mais pedidos, o foco fica no rótulo "Pedidos de entrada" (não no BODY)`, /lei-rotulo/.test(depois2 || ""), { depois2 });
+  const depois2t = await Dn.p.evaluate(() => (document.activeElement && document.activeElement.textContent || "").trim());
+  confere(`${ID}2b sem mais pedidos, o foco fica no título "Pedidos de entrada" do cartão (não no BODY)`, /^H2\.lei-sag-ctit/.test(depois2 || "") && depois2t === "Pedidos de entrada", { depois2, depois2t });
   // (com o foco perdido o Enter não aceitou: aceita pela API para os itens seguintes valerem sozinhos)
   await Dn.p.evaluate(u => { const V = TM.leilaoSessao.atual().ver(); if (V.saguao.pedidos.some(p => p.uid === u)) return TM.leilaoSessao.atual().aceitar(u); }, "uidTb");
   await ate(G2.p, () => { const S = TM.leilaoSessao.atual(); return S && S.eu >= 0 && !S.pedido; }, null, 20000);
@@ -1339,29 +1591,50 @@ async function casoTelas() {
   await ate(Dn.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 20000);
   await ate(G1.p, () => document.querySelectorAll(".lei-part").length === 3, null, 20000);
   const c3 = (await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-part .lei-part-n"))).concat(await emTamanhos(G1, OITO, () => cortes(G1, ".lei-part .lei-part-n")));
-  const nsT = await nadaSobreNada(Dn, "telas-saguao-dono", () => !!document.querySelector(".lei-sagbar"));
-  confere(`${ID}3 os participantes com nomes de 16 letras: o nome inteiro nos 8 tamanhos (o dono e o convidado pronto) e nada sobre nada`,
-    !c3.length && !nsT.ruins.length, { cortes: c3.slice(0, 6), ruins: nsT.ruins.slice(0, 3) });
+  // (a pílula do estado à direita do nome, na mesma linha, em todos os tamanhos: as fotos; antes, no celular em pé, ela descia)
+  const ladoRuim = ap => ap.p.evaluate(() => [...document.querySelectorAll(".lei-corpo-sag .lei-part.sag")].filter(p => {
+    const e = p.querySelector(".lei-estado"), n = p.querySelector(".lei-part-n"); if (!e || !n) return false;
+    const a = e.getBoundingClientRect(), b = n.getBoundingClientRect(); return !(a.left >= b.right - 1 && a.top < b.bottom);
+  }).map(p => ({ uid: p.dataset.uid })));
+  const lado3 = (await emTamanhos(Dn, OITO, () => ladoRuim(Dn))).concat(await emTamanhos(G1, OITO, () => ladoRuim(G1)));
+  const nsT = await nadaSobreNada(Dn, "telas-saguao-dono", () => !!document.querySelector(".lei-sagbar"), DEZ);
+  const nsTc = await nadaSobreNada(G1, "telas-saguao-convidado", () => !!document.querySelector(".lei-sagbar"), DEZ);
+  // o dono com o "Tirar alguém da sala" ligado: o Tirar de 44 px no lugar da pílula, o nome inteiro e nada sobre nada
+  await Dn.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(Dn.p, () => !!document.querySelector(".lei-part-tirar"), null, 5000);
+  const c3g = await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-part .lei-part-n"));
+  const nsTg = await nadaSobreNada(Dn, "telas-saguao-dono-tirar", () => !!document.querySelector(".lei-part-tirar"), DEZ);
+  await Dn.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(Dn.p, () => !document.querySelector(".lei-part-tirar"), null, 5000);
+  confere(`${ID}3 os participantes com nomes de 16 letras: o nome inteiro nos 8 tamanhos (o dono, o dono com o "Tirar alguém da sala" e o convidado pronto), a pílula do estado à direita do nome na mesma linha, e nada sobre nada nem atrás da barra no Saguão do dono (também com o Tirar) e do convidado (${nsT.medidas.length + nsTc.medidas.length + nsTg.medidas.length} medidas: os 8 tamanhos, 667×375 e 740×360, escuro e claro)`,
+    !c3.length && !c3g.length && !lado3.length && !nsT.ruins.length && !nsTc.ruins.length && !nsTg.ruins.length && nsT.medidas.length === 20 && nsTc.medidas.length === 20 && nsTg.medidas.length === 20
+      && nsT.medidas.concat(nsTc.medidas, nsTg.medidas).every(m => m.barra),
+    { cortes: c3.concat(c3g).slice(0, 6), lado: lado3.slice(0, 6), ruins: nsT.ruins.concat(nsTc.ruins, nsTg.ruins).slice(0, 4) });
 
   /* T4 o Salvar do clube: apagado ao abrir o saguão, aceso depois de mudar a sigla, apagado de novo depois de salvo */
   await G2.p.evaluate(() => TM.ui.go("leilao-saguao"));
   const temSalvar = await ate(G2.p, () => !!document.querySelector(".lei-salvar"), null, 20000);
   if (!temSalvar) confere(`${ID}4 o Salvar do clube aparece no saguão do convidado`, false, await G2.p.evaluate(() => ({ rota: TM.ui.current(), txt: document.body.innerText.slice(0, 300) })));
   await espera(300);
-  const s0 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  // (o Salvar só à vista com o que salvar: escondido e apagado ao abrir, à vista e aceso com a sigla mudada, escondido de novo salvo)
+  const estSalvar = () => G2.p.evaluate(() => { const b = document.querySelector(".lei-salvar"); return { des: b.disabled, vis: b.offsetParent !== null }; });
+  const s0 = await estSalvar();
   await G2.p.evaluate(() => { const i = document.querySelector(".lei-campo-sigla"); i.value = "BCX"; i.dispatchEvent(new Event("input", { bubbles: true })); });
-  const s1 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  const s1 = await estSalvar();
   await G2.p.evaluate(() => document.querySelector(".lei-salvar").click());
   const salvo = await ateNode(() => { const s = sala(cod); return !!(s && s.tec.uidTb && s.tec.uidTb.clube.sigla === "BCX"); }, 20000);
   await ate(G2.p, () => document.querySelector(".lei-salvar") && document.querySelector(".lei-salvar").disabled, null, 10000);
-  const s2 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
-  confere(`${ID}4 o Salvar do clube: apagado ao abrir, aceso depois de mudar a sigla e apagado de novo depois de salvo (antes ficava sempre aceso)`,
-    s0 === true && s1 === false && salvo && s2 === true, { s0, s1, salvo, s2 });
+  const s2 = await estSalvar();
+  confere(`${ID}4 o Salvar do clube: apagado e escondido ao abrir, à vista e aceso depois de mudar a sigla e escondido de novo depois de salvo (antes ficava sempre aceso; depois, sempre à vista e apagado)`,
+    s0.des && !s0.vis && !s1.des && s1.vis && salvo && s2.des && !s2.vis, { s0, s1, salvo, s2 });
 
   /* T5 a barra do saguão com a sala "Atualizando…" (a volta da página, o ack a caminho): o motivo é "Atualizando a sala…" */
-  await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._estadoBate = "atualizando"; S._notificar(); });
+  // (sem um batimento a caminho: a resposta dele devolvia "ok" no meio dos 300 ms e a faixa escondida ainda tinha o texto; o
+  // _bateEmVoo segura os batimentos novos até a volta, logo abaixo)
+  await ate(G1.p, () => !TM.leilaoSessao.atual()._bateEmVoo, null, 10000);
+  await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._bateEmVoo = true; S._estadoBate = "atualizando"; S._notificar(); });
   await espera(300);
-  const barra5 = await G1.p.evaluate(() => ({ faixa: (document.querySelector(".lei-aviso-sala") || {}).textContent || "", msg: (document.querySelector(".lei-sagbar-msg") || {}).textContent || "" }));
+  const barra5 = await G1.p.evaluate(() => { const f = document.querySelector(".lei-aviso-sala"); return { faixa: f && !f.hidden ? f.textContent : "", msg: (document.querySelector(".lei-sagbar-msg") || {}).textContent || "" }; });
   await G1.p.evaluate(() => { const S = TM.leilaoSessao.atual(); S._bateEmVoo = false; S._bater(); });
   await ate(G1.p, () => TM.leilaoSessao.atual().ver().rede === "ok", null, 20000);
   confere(`${ID}5 a sala "Atualizando…": a barra do saguão diz "Atualizando a sala…" (não "Sem conexão")`,
@@ -1394,9 +1667,21 @@ async function casoTelas() {
       cartas: document.querySelectorAll(".lei-corpo-lote .ut-card").length, sbTexto: [...document.querySelectorAll(".lei-cab .lei-sb")].filter(b => b.innerText.trim()).length };
   });
   const nsL = await nadaSobreNada(Dn, "telas-lote", () => !!document.querySelector(".lei-lote-card"));
-  confere(`${ID}6b a aba Leilão do online pelas fotos: as 4 pílulas numa linha em 360×740 (o Saguão com o check), o topo só de ícones, sem a carta e nada sobre nada (3 tamanhos, escuro e claro)`,
-    p6b.abas.join() === "Saguão,Leilão,Escalação,Campeonato" && p6b.linhas === 1 && p6b.feita.join() === "Saguão, concluído" && !p6b.cartas && !p6b.sbTexto && !nsL.ruins.length,
-    { p6b, ruins: nsL.ruins.slice(0, 3) });
+  // o alvo de toque das pílulas (o ::after de 44 px) a ≥ 2 px dos ícones do topo, e o toque na borda de baixo de cada ícone cai nele
+  // (no celular deitado estreito, com as 4 pílulas numa linha só delas, o alvo subia 3 px por cima do tema e do som e um toque ali
+  // trocava de aba; o nada sobre nada não vê o ::after)
+  const alvoAbas = await emTamanhos(Dn, [[360, 740], [390, 844], [667, 375], [740, 360], [600, 400], [799, 380], [844, 390]], () => Dn.p.evaluate(() => {
+    const sbs = [...document.querySelectorAll(".lei-cab .lei-sb")].map(e => e.getBoundingClientRect()), ruins = [];
+    [...document.querySelectorAll(".lei-abas .lei-aba")].forEach(e => {
+      const r = e.getBoundingClientRect(), a = getComputedStyle(e, "::after"), t = r.top - Math.max(0, -parseFloat(a.top) || 0), b = r.bottom + Math.max(0, -parseFloat(a.bottom) || 0);
+      sbs.forEach((s, j) => { const ix = Math.min(r.right, s.right) - Math.max(r.left, s.left), iy = Math.min(b, s.bottom + 2) - Math.max(t, s.top - 2); if (ix > 0 && iy > 0) ruins.push(e.textContent.trim() + " × ícone " + j + " (" + iy.toFixed(1) + " px)"); });
+    });
+    sbs.forEach((s, j) => { const x = document.elementFromPoint(s.left + s.width / 2, s.bottom - 1); if (!x || !x.closest(".lei-sb")) ruins.push("o toque na borda de baixo do ícone " + j + " cai em " + (x ? (x.closest(".lei-aba") ? "pílula " + x.closest(".lei-aba").textContent.trim() : x.className) : "nada")); });
+    return ruins.map(m => ({ m }));
+  }));
+  confere(`${ID}6b a aba Leilão do online pelas fotos: as 4 pílulas numa linha em 360×740 (o Saguão com o check), o topo só de ícones, sem a carta, o alvo de toque das pílulas a ≥ 2 px dos ícones (7 tamanhos, com o deitado estreito) e nada sobre nada (3 tamanhos, escuro e claro)`,
+    p6b.abas.join() === "Saguão,Leilão,Escalação,Campeonato" && p6b.linhas === 1 && p6b.feita.join() === "Saguão, concluído" && !p6b.cartas && !p6b.sbTexto && !alvoAbas.length && !nsL.ruins.length,
+    { p6b, alvoAbas: alvoAbas.slice(0, 6), ruins: nsL.ruins.slice(0, 3) });
 
   /* T7–T8 a sala congelada (o vivo mexido no servidor): "Sala parada" na Entrada e "Parada" nas Minhas salas */
   const vv = vivoServ(cod); vv.cx[0][0] += 50; REGRAS.adulteradas.add(cod); banco.gravar("leiloes/" + cod + "/vivo", vv);
@@ -1420,7 +1705,20 @@ async function casoTresD() {
   const ID = "3D";
   const A = await aparelho("TresD-A", "uid3dA", { w: 390, h: 844, toque: true, ensaio3d: true });
   const B = await aparelho("TresD-B", "uid3dB", { w: 1280, h: 800, lat: 12, ensaio3d: true });
-  const { cod, r } = await salaPelaApi([A, B], { liga: "br", vagas: 3, bots: 1, tempo: 10, formato: "pontos", duracao3d: 3 });
+  // (antes do Começar, o Saguão com o 3D: a etiqueta "3D: 3 min · Normal" no resumo das duas páginas e as Partidas em 3D nas opções
+  // do dono — no convidado, só a etiqueta)
+  let sag3d = null;
+  const { cod, r } = await salaPelaApi([A, B], { liga: "br", vagas: 3, bots: 1, tempo: 10, formato: "pontos", duracao3d: 3 }, async (dono, outros) => {
+    for (const ap of [dono].concat(outros)) await ap.p.evaluate(() => TM.ui.go("leilao-saguao"));
+    for (const ap of [dono].concat(outros)) await ate(ap.p, () => !!document.querySelector(".lei-sag-res .lei-etq"), null, 10000);
+    sag3d = { dono: await olhaSaguao(dono), outro: await olhaSaguao(outros[0]) };
+  });
+  const e3 = x => (x && x.res && x.res.etqs) || [];
+  confere(`${ID}0 o Saguão com as Partidas em 3D (1 bot): a etiqueta "3D: 3 min · Normal" e "1 bot" no resumo do dono e do convidado; nas opções do dono, as Partidas em 3D com 3 min e Normal marcados (o convidado não as muda)`,
+    !!sag3d && [sag3d.dono, sag3d.outro].every(x => e3(x).includes("3D: 3 min · Normal") && e3(x).includes("1 bot") && e3(x).includes("Pontos corridos"))
+      && sag3d.dono.sala.rots.includes("Partidas em 3D") && sag3d.dono.sala.dur3d === "3 min" && sag3d.dono.sala.dif3d === "Normal"
+      && !sag3d.outro.sala.rots.includes("Partidas em 3D") && sag3d.outro.sala.dur3d == null,
+    sag3d && { dono: { etqs: e3(sag3d.dono), rots: sag3d.dono.sala.rots, dur3d: sag3d.dono.sala.dur3d, dif3d: sag3d.dono.sala.dif3d }, outro: { etqs: e3(sag3d.outro), rots: sag3d.outro.sala.rots } });
   // o leilão: as duas pessoas passam em tudo (o 11 de cada uma sai do completar); o 3D é o que se testa aqui
   for (const ap of [A, B]) await ap.p.evaluate(() => {
     const iv = setInterval(() => { const S = TM.leilaoSessao.atual(); if (!S) return; const V = S.ver(); if (V.estado !== "leilao") { clearInterval(iv); return; } if (V.botoes && V.botoes.passar.pode) S.passar(); }, 300);

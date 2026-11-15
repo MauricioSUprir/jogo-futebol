@@ -1638,3 +1638,120 @@ reprova com qualquer `.ut-card` na aba Leilão.
   na pausa, "Aguarde o próximo jogador · seu máximo R$ X"; o T5 mede o placeholder de verdade.
 - **Fica:** em 568 × 320 (o iPhone SE de 1ª geração deitado) o anel fica 30 px abaixo da barra até rolar (o topo de 44 px e
   as pílulas em 2 linhas); no 5-4-1 e no 3-5-2 em 360–390 os sobrenomes de 9–10 letras da linha de 5 ainda saem com "…".
+
+**Feito no passo 2 (a Criar sala, branch `leilao-visual-b`; o Saguão fica para o passo 3):**
+- `js/leilao-tela.js` (rota `leilao-criar`), pelas fotos `a8c8ed5a`, `79d4002b` e `a177cbb4`: seções soltas (`.lei-cs`, o título
+  `h2.lei-cs-tit` de 20 px, sem caixa): a **Liga** num cartão grande marcado com o "Trocar" (a folha das 30 ligas fica); o
+  **Formato** em 3 cartões com o desenho em SVG (`desenhoFormato`: a tabela, a chave, as duas; `seletorFormato(…, { ilustrado })`),
+  marcados pela borda e pelo fundo, sem o check, com "N rodadas com T técnicos · ~X a Y min" (a duração não quebra); os
+  **Técnicos na sala** (só no online) e os **Bots de treino** no − e + quadrados tonais com o número de 44 px e o deslizante
+  ligado (`passo(…, { deslizante })`; no treino só os bots, 1 a 7); o **Tempo de cada jogador** no segmentado das fotos (saiu do
+  "Mais opções", que acabou; a dica diz quanto dura o leilão); as **Partidas em 3D** no mesmo segmentado (`seletor3d(…, { seg })`,
+  só com bots); **Sua formação** no segmentado 3 × 2 com o campinho das vagas embaixo (`campinhoVagas(null, −1, { formacao })`: o
+  mesmo da aba Leilão, vazio, 62% da largura); **Seu clube** com o nome, a sigla e o "Escolher escudo" tonal com o escudo dentro
+  (`editorClube(…, { escolher })`, abre o seletor de hoje); e a nota do dinheiro do jogo. Embaixo a **barra fixa**
+  `.lei-criarbar`: o resumo numa linha com "…" ("**Liga Brasil A.** 4 técnicos, mata-mata, 4-4-2, leilão de cerca de …"; o
+  texto inteiro no `title`) e o "Começar o treino" / "Criar sala"; a página termina com o espaço da altura dela e o
+  scroll-padding (pelo `ResizeObserver`; ao sair, só desfaz o que ela pôs). Lado a lado a partir de 600 px de largura.
+- O Saguão continua igual: as peças novas são opções (`deslizante`, `ilustrado`, `seg`, `escolher`) e o CSS delas mora em
+  classes novas (`.lei-seg`, `.lei-formatos.ilu`, `.lei-passo.desl`, `.lei-esc-escolher`, `.lei-criar …`).
+- Testes: no `--tela` (T2) o treino com só os bots (1–7, o deslizante junto), os cartões do formato (o desenho certo, sem o
+  check, o marcado pela borda e pelo fundo e os outros iguais), a formação 3 × 2 com o campinho (as 11 vagas vazias com a
+  sigla, "0/11", o toque troca), o contraste ≥ 4,5:1 de todo texto nos dois temas, o claro, a Criar online sem a conta (os
+  técnicos 2–8, os bots 0 a T − 1 e presos quando os técnicos descem, o 3D só com bots) e, em 40 telas (treino e online, os 8
+  tamanhos e 667 × 375 e 740 × 360, escuro e claro), a barra fixa embaixo com o resumo numa linha, o último campo acima dela no
+  fim da rolagem, as seções sem caixa e a coluna ≤ 600 px; o "atrás da barra" do nada sobre nada vale também para ela. No
+  online, o D1b (a Criar com a conta: o deslizante 2–8 e 0–1, o cartão marcado, a barra e nada sobre nada nas 3 telas, escuro
+  e claro).
+
+**Feito no passo 3 (o Saguão, branch `leilao-visual-b`):**
+- `js/leilao-tela.js` (rota `leilao-saguao`), pelas fotos `c0a68c56`, `ec336399`, `16df9adb` e `5a8e090c`: o título "Prepare seu
+  clube." (30 px) com a frase do convite e "N/M participantes" com o ícone; o **código** numa caixa tracejada (`.lei-cod-caixa`:
+  "Código da sala", o código ou ••••••, o olho e o copiar como ícones de 44 px; o copiar copia só o código, o Copiar convite copia o
+  link; o QR continua com o olho); **Copiar convite** (verde cheio) e **Compartilhar** (tonal, só com `navigator.share`) lado a
+  lado; os **Pedidos de entrada** (só o dono, um cartão; "Quer entrar" em caixa alta, Aceitar e Recusar com 44 px; sem pedido,
+  "Nenhum pedido agora"); os **Participantes** num cartão com "N/M", cada um numa linha-cartão (`.lei-part.sag`): o escudo, o
+  nome (quebra em duas linhas em vez de cortar) com o VOCÊ, o papel em caixa alta com o #número e, à direita, o estado numa
+  pílula em caixa alta (PRONTO verde, AGUARDANDO no tom — o "Falta confirmar" de antes, no `title` —, BOT, AUSENTE, SAIU) e o
+  Tirar do dono num ícone de 44 px; na coluna estreita (o celular em pé; com o Tirar, até 360 px de coluna) a pílula e o Tirar
+  descem para baixo do nome, a lista inteira do mesmo jeito; o **resumo** num cartão de destaque verde do TM (`.lei-sag-res`:
+  "Cada técnico entra com R$ 100.", a frase, as etiquetas — a liga, até N técnicos, os bots ou "Só gente de verdade", até N
+  jogadores, o tempo, o formato, "3D: N min · Dificuldade" com bots e "Sem chat" —, a duração com a sala cheia e "X de N
+  prontos"); **Sala e clube** num cartão só (`.lei-sag-sala`): as opções da sala do dono (a liga no cartão da Criar com o Trocar,
+  o formato na lista das fotos — `seletorFormato(…, { lista })`, o trilho tonal com o escolhido em relevo —, técnicos e bots no
+  passo com o deslizante que grava ao SOLTAR — `passo(…, { soltar })`: a seção é refeita a cada mudança e o arraste perderia o
+  dedo —, o tempo e as Partidas em 3D nos segmentados; "Mudar uma opção da sala zera os Pronto de todos"); quem não é o dono só vê
+  o formato (`{ soVer }`, sem apagar) e "Só o dono muda as opções da sala"; depois de uma linha, o seu clube (o nome, a sigla, o
+  "Escolher escudo" da Criar e o Salvar) e a sua formação no segmentado 3 × 2 com o campinho das vagas; a **barra fixa** com
+  "**N de M prontos.** Falta confirmar: …" e o botão de 56 px (Pronto verde cheio; pronto, "Pronto. Toque para cancelar" tonal
+  com o check; o dono, "Começar o leilão"); a linha do motivo só com o que importa agora (a conexão, um erro, faltar gente).
+  Uma coluna de 560 px; duas (o convite e os participantes | o resumo e Sala e clube) no PC (até 1000 px) e no celular deitado a
+  partir de 800 px. Ficam: a tela do pedido esperando, o modo "depois do Começar" (o convite para quem trocou de aparelho, os
+  pedidos dele com o Passar o clube), as falas da região ao vivo, o foco que volta ao mesmo botão.
+- A moldura: as 4 pílulas do online numa linha até 400 px (em 390 o Campeonato quebrava); deitado de 560 a 799 px, numa linha só
+  delas embaixo da marca e dos ícones (quebravam no meio do topo).
+- Achado de passagem (já existia): a seção do seu clube refeita no meio de um Aceitar (a cor de quem entrou muda as cores
+  usadas) ficava apagada depois dele — a chave dela só olhava as ações "clube" e "forma"; agora qualquer ação a caminho.
+- Testes (`testar-leilao-online.mjs`): D1c (a caixa tracejada, o olho e o copiar de 44 px, o copiar só com o código, os dois
+  botões do convite lado a lado), D3b (o pedido no cartão e, recusado pela tela, "Nenhum pedido agora"), D6b (o Saguão do dono e
+  do convidado: o título, a contagem, o papel e o estado em caixa alta, o VOCÊ, o Tirar só do dono, as etiquetas do resumo,
+  Sala e clube do dono e só para ver, o seu clube aceso, a barra), D6e (o contraste ≥ 4,5:1 de todo texto nos dois temas, no dono e
+  no convidado; os cartões brancos e o resumo verde claro no claro), D5b (o Pronto pela barra), 3D0 (a etiqueta e as opções do 3D
+  com bots) e o T3 com o nada sobre nada do dono e do convidado nos 8 tamanhos, 667 × 375 e 740 × 360, escuro e claro. Mudados
+  de propósito: o T2b (o foco no título do cartão) e o T5 (espera o batimento a caminho antes do "Atualizando…").
+
+**Revisão dos passos 2 e 3 (15/11; três lentes: fidelidade às fotos, nada sobre nada/claro/acessibilidade e regressão):**
+- **Médios:**
+  - Os participantes no celular em pé: a pílula do estado à direita do nome, na mesma linha, como na foto `c0a68c56`. Antes
+    ela descia para baixo do nome abaixo de 340 px de coluna, e cada linha tinha 96–114 px; agora tem 61 px com nome curto
+    e 83 com nome de duas linhas.
+  - O Tirar do dono foi para trás do "Tirar alguém da sala", como o "Editar" de uma lista ("Concluir" volta). Ligado, cada
+    técnico mostra o Tirar de 44 px no lugar da pílula.
+  - O #número aparece só quando dois participantes têm o mesmo nome. A folha Participantes e o Tirar o dizem sempre.
+  - O deslizante ficou dentro da coluna: com 100% de largura mais a margem, o trilho passava 8 px.
+  - No celular deitado de 560 a 799 px, com as 4 pílulas, ficam 11 px entre os ícones e as pílulas. O alvo de 44 px das
+    pílulas subia 3 px por cima do tema e do som, e um toque ali trocava de aba.
+- **Leves:**
+  - O resumo do Saguão mais perto da foto (500 → 419 px em 390):
+    - as etiquetas dos jogadores, do tempo e do formato; os bots e o 3D só com bots;
+    - a liga fica na frase, e os técnicos em "N/M participantes";
+    - etiquetas de 13 px e 30 px de altura;
+    - "min" colado no número.
+  - Os formatos na ordem das fotos (Pontos corridos, Mata-mata, Pontos + mata-mata). O Mata-mata continua o padrão.
+  - A duração do formato numa linha só dela: o "·" ficava pendurado.
+  - O − e o + na ponta ficam apagados por `aria-disabled`, e o foco do teclado fica neles. Antes caía no BODY na Criar e no
+    1º rótulo do cartão no Saguão.
+  - O escudo ao lado do nome e o do "Escolher escudo" não entram mais no nome lido pelo leitor de tela (`aria-hidden`).
+  - O AGUARDANDO é lido como "Falta confirmar o Pronto" (`.lei-sr`, antes um `title`).
+  - Os botões da Criar e do Saguão na Inter: saíam na fonte do navegador.
+  - A barra do Saguão numa linha com "…", com o texto inteiro no `title`. O "Só você na sala" fica em duas linhas.
+  - A barra da Criar no PC (≥ 1024 px) mostra o resumo inteiro em até duas linhas, com 880 px de largura.
+  - O nome do pedido de entrada fica ao lado do escudo (base de 140 px).
+  - As pílulas menores de 381 a 400 px só valem para as 4 do online: o treino volta ao da 1ª parte.
+  - O campinho da formação: o círculo central menor (13%) e as vagas vazias sem transparência. A linha passava por dentro
+    dos meias do meio.
+  - O "Salvar o clube" só fica à vista quando há o que salvar.
+  - O "Escolher escudo" perdeu a seta.
+  - A dica "Jogar em 3D ou Simular" saiu do Formato e foi para as Partidas em 3D.
+  - A Criar termina num cartão verde: "Cada técnico entra com R$ 100." e a nota do dinheiro do jogo.
+- **Testes:**
+  - D6b: a pílula na linha do nome, sem #número, o "Tirar alguém da sala" com o Tirar e o Concluir, as etiquetas novas, a
+    liga na frase, a ordem, o deslizante na coluna e o Salvar escondido.
+  - D6d, novo: o dono muda tempo, formato, técnicos e bots pela tela. Confere que o Pronto do convidado zera, que o foco
+    fica no botão depois do Enter, que o deslizante só grava no change, que as Partidas em 3D e as etiquetas aparecem e
+    que a ponta segura o foco.
+  - T3: a pílula ao lado do nome nos 8 tamanhos e o nada sobre nada também com o Tirar ligado (60 medidas).
+  - T4: o Salvar escondido, à vista e escondido de novo.
+  - T6b: o alvo das pílulas a ≥ 2 px dos ícones em 7 tamanhos, com o deitado estreito.
+  - No `--tela`, o T2: a ordem, a duração numa linha, o foco na ponta, o deslizante na coluna e o resumo inteiro no PC
+    nas 40 telas.
+  - `testar-sobreposicao.mjs` passou a comparar só elementos da mesma camada fixa. A barra fixa da Criar dava 15 falsos
+    positivos; agora dá 0 em `leilao-criar` e em `leilao`.
+- **Ficam** (diferentes das fotos ou de propósito):
+  - O deslizante "Técnicos na sala" do Saguão continua com o mínimo móvel (pessoas + bots). O trilho cheio ou vazio depende
+    de quem está na sala.
+  - As setas do teclado não andam nos segmentados (cada opção é uma parada do Tab).
+  - O T4 do "Vendido" mede o círculo de 28 px do (i), não o alvo de 40 px. A faixa tem `pointer-events: none`.
+  - O título do resumo do Saguão ocupa duas linhas em 390 (a Inter é ~15% mais larga que a condensada da foto).
+  - Com bots, o resumo tem 6 etiquetas em 3 linhas (a foto tem 4 em 2).
+  - O dono vê o Tirar só depois de um toque a mais.

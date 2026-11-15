@@ -4095,9 +4095,9 @@ async function testeTela() {
     });
     const larg = document.documentElement.clientWidth;
     const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
-    // no fim da rolagem, o último da página termina acima da barra fixa
+    // no fim da rolagem, o último da página termina acima da barra fixa (a de lance ou a da Criar sala)
     let atras = null;
-    const barra = document.querySelector(".lei-lance:not([hidden])");
+    const barra = document.querySelector(".lei-lance:not([hidden]), .lei-criarbar");
     if (barra) {
       const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
       const topo = barra.getBoundingClientRect().top;
@@ -4212,7 +4212,8 @@ async function testeTela() {
   async function treinoAte(p, T, formato, antes, fatorCamp = 20) {
     await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
     await espera(400);
-    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]');
+    // (no treino, só os bots: T técnicos = você + T − 1 bots)
+    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um bot"]'), mais = document.querySelector('[aria-label="Mais um bot"]');
       for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
     await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
     if (antes) await antes(p);
@@ -4341,8 +4342,8 @@ async function testeTela() {
     }, 1);
     const V0 = await ver(p);
     const ruinsCriar = nadaSobre.filter(x => /^criar3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
-    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D: 3 min por tempo, Difícil' e a sala guarda os dois",
-      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D: 3 min por tempo, Difícil/.test(criar.resumo)
+    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D de 3 min por tempo no Difícil' e a sala guarda os dois",
+      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D de 3 min por tempo no Difícil$/.test(criar.resumo)
       && tc.T === 6 && tc.formato === "pontos" && V0.duracao3d === 3 && V0.dificuldade3d === "dificil", { criar, tc, d3: [V0.duracao3d, V0.dificuldade3d] });
     confere(`T14 nada sobre nada na Criar sala com as Partidas em 3D (${nadaSobre.filter(x => /^criar3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruinsCriar.length, ruinsCriar.slice(0, 4));
 
@@ -4543,32 +4544,181 @@ async function testeTela() {
     await clica(p, "^Treinar contra bots$");
     await espera(400);
     confere("T2 'Treinar contra bots' abre a Criar sala", await p.evaluate(() => TM.ui.current()) === "leilao-criar");
-    await nadaSobreNada(p, "criar");
-    // os técnicos 2–8 (contando os bots)
-    const passo = await p.evaluate(async () => {
-      const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]'), n = () => +document.querySelector(".lei-passo-n").textContent;
-      for (let i = 0; i < 10; i++) menos.click();
-      const min = n(), menosOff = menos.disabled;
-      for (let i = 0; i < 10; i++) mais.click();
-      const max = n(), maisOff = mais.disabled, hint = document.querySelector(".lei-criar-lt .setting-hint").textContent;
-      for (let i = 0; i < 4; i++) menos.click();
-      return { min, menosOff, max, maisOff, hint, agora: n(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    // a Criar sala pelas fotos (15/11): em cada tamanho, a barra fixa embaixo (o resumo numa linha e o botão de ≥ 44 px), no fim
+    // da rolagem o último campo acima dela, as seções soltas (sem caixa) com o título de 19–20 px e a coluna com ≤ 600 px
+    const medeCriar = p => p.evaluate(async () => {
+      const bar = document.querySelector(".lei-criarbar"), rb = () => bar.getBoundingClientRect(), res = document.querySelector(".lei-criar-resumo"), bt = document.querySelector(".lei-criarbar .lei-comecar");
+      const fixa = getComputedStyle(bar).position === "fixed", embaixo = Math.abs(rb().bottom - innerHeight) <= 1 && rb().top < innerHeight - 40;
+      // (numa linha com "…" até 1023 px; no PC em até duas, e inteiro: com uma linha de 324 px só cabia a liga e os técnicos)
+      const pc = innerWidth >= 1024 && innerHeight > 520;
+      const linha = res.getBoundingClientRect().height <= parseFloat(getComputedStyle(res).lineHeight) * (pc ? 2.3 : 1.3) && (!pc || res.scrollHeight <= res.clientHeight + 1);
+      const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
+      await new Promise(r => requestAnimationFrame(() => r()));
+      const ultimo = Math.max(...[...document.querySelectorAll(".lei-criar-corpo > .lei-cs:not([hidden]), .lei-criar-res")].map(e => Math.round(e.getBoundingClientRect().bottom)));
+      const topoBarra = Math.round(rb().top);
+      scrollTo(0, y0);
+      const secs = [...document.querySelectorAll(".lei-criar .lei-cs")].filter(s => !s.hidden);
+      const caixa = secs.filter(s => { const c = getComputedStyle(s); return parseFloat(c.borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor); }).length;
+      const tit = secs.map(s => parseFloat(getComputedStyle(s.querySelector(".lei-cs-tit")).fontSize));
+      // (o deslizante dentro da coluna: a ponta do trilho alinhada com a dos outros controles; com a margem e 100% passava 8 px)
+      const desl = [...document.querySelectorAll(".lei-criar .lei-passo-desl")].filter(d => d.offsetParent !== null)
+        .map(d => Math.round((d.getBoundingClientRect().right - d.closest(".lei-passo").getBoundingClientRect().right) * 10) / 10);
+      return { fixa, embaixo, linha, btH: Math.round(bt.getBoundingClientRect().height), ultimo, topoBarra, larg: Math.round(document.querySelector(".lei-criar-corpo").getBoundingClientRect().width),
+        secs: secs.length, caixa, tit: [Math.min(...tit), Math.max(...tit)], desl, deslFora: desl.filter(x => x > 0.5).length };
     });
-    confere("T2 técnicos de 2 a 8 (os botões param nas pontas), 'Você e 7 bots', a duração estimada; volta a 4 (3 bots)",
-      passo.min === 2 && passo.menosOff && passo.max === 8 && passo.maisOff && /Você e 7 bots/.test(passo.hint) && passo.agora === 4 && /cerca de \d+ a \d+ min/.test(passo.resumo), passo);
-    // o Formato: 3 cartões, o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y min"; o toque troca e o resumo diz
+    const nadaSobreCriar = async (rotulo) => {
+      await nadaSobreNadaTemas(p, rotulo, medeCriar);
+      await nadaSobreNada(p, rotulo + "-deitado", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("light"));
+      await nadaSobreNada(p, rotulo + "-deitado-claro", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("dark"));
+    };
+    await nadaSobreCriar("criar");
+    // os bots do treino (1 a 7; você e eles = 2 a 8 técnicos; sem o "Técnicos na sala"): o − e o + param nas pontas, o
+    // deslizante vai junto e também muda o número
+    const passo = await p.evaluate(async () => {
+      const g = r => document.querySelector('[aria-label="' + r + '"]'), menos = g("Menos um bot"), mais = g("Mais um bot"), n = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const desl = g("Bots de treino").querySelector(".lei-passo-desl"), dv = () => [+desl.min, +desl.max, +desl.value].join(), dica = () => document.querySelector('[data-secao="bots"] .lei-cs-hint').textContent;
+      // (na ponta, o − e o + apagados por aria-disabled: o foco do teclado fica neles; o Enter ali não muda nada)
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      const tec = !!g("Técnicos na sala");
+      for (let i = 0; i < 10; i++) menos.click();
+      const min = n(), menosOff = off(menos), dMin = dv();
+      for (let i = 0; i < 10; i++) mais.click();
+      const max = n(), maisOff = off(mais), dMax = dv(), hint = dica();
+      mais.focus(); mais.click(); const focoPonta = document.activeElement === mais && n() === max;
+      desl.value = "2"; desl.dispatchEvent(new Event("input", { bubbles: true }));
+      const peloDesl = n(), hint2 = dica(), valorTxt = desl.getAttribute("aria-valuetext");
+      for (let i = 0; i < 1; i++) mais.click();
+      return { tec, min, menosOff, dMin, max, maisOff, dMax, hint, focoPonta, peloDesl, hint2, valorTxt, agora: n(), dAgora: dv(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    confere("T2 no treino só os bots (sem 'Técnicos na sala'): de 1 a 7 (o − e o + param nas pontas, apagados sem perder o foco do teclado, o deslizante de 1 a 7 vai junto), 'Você e 7 bots', o deslizante também muda ('2 bots', 'Você e 2 bots'); volta a 3 (4 técnicos) e o resumo com a duração",
+      !passo.tec && passo.min === 1 && passo.menosOff && passo.dMin === "1,7,1" && passo.max === 7 && passo.maisOff && passo.focoPonta && passo.dMax === "1,7,7" && /Você e 7 bots/.test(passo.hint)
+      && passo.peloDesl === 2 && /Você e 2 bots/.test(passo.hint2) && passo.valorTxt === "2 bots" && passo.agora === 3 && passo.dAgora === "1,7,3" && /^Liga .+\. 4 técnicos, /.test(passo.resumo) && /leilão de cerca de \d+ a \d+ min/.test(passo.resumo), passo);
+    // o Formato: 3 cartões com o desenho (a chave, a tabela, as duas), o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y
+    // min"; o marcado pela borda e pelo fundo (sem o check); o toque troca e o resumo diz
     const fmt = await p.evaluate(async () => {
       const cards = () => [...document.querySelectorAll(".lei-criar .lei-fmt")];
-      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent });
-      const a = ler();
-      const out = { a, passos: [] };
+      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), ordem: cards().map(b => b.dataset.fmt).join(),
+        linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent,
+        // (a duração numa linha só dela, inteira: nenhum "·" pendurado no começo ou no fim de uma linha)
+        pendura: cards().filter(b => { const du = b.querySelector(".lei-fmt-s .lei-fmt-dur"); return !du || !/^~\d+ a \d+ min$/.test(du.textContent) || getComputedStyle(du).display !== "block" || getComputedStyle(du).whiteSpace !== "nowrap" || du.getBoundingClientRect().height > 24; }).length,
+        cards: cards().map(b => { const c = getComputedStyle(b), sv = b.querySelector("svg.lei-fmt-svg");
+          return { f: b.dataset.fmt, on: b.getAttribute("aria-pressed") === "true", borda: c.borderTopColor, fundo: c.backgroundColor, anel: c.boxShadow !== "none", des: sv && sv.getAttribute("data-desenho"),
+            formas: sv ? sv.querySelectorAll("rect, path, circle").length : 0, largDes: sv ? Math.round(sv.getBBox().width) : 0, cor: sv && getComputedStyle(sv).color, check: !!b.querySelector(".lei-fmt-ok, .lei-fmt-ic, svg.tm-ic") }; }) });
+      const out = { a: ler(), passos: [] };
       for (const f of ["pontos", "misto", "mata"]) { document.querySelector('.lei-criar .lei-fmt[data-fmt="' + f + '"]').click(); await new Promise(r => setTimeout(r, 60)); out.passos.push(ler()); }
       return out;
     });
     const linhaOk = (l, n) => new RegExp("^" + n + " rodadas com 4 técnicos · ~\\d+ a \\d+ min$").test(l);
-    confere("T2 o Formato na Criar: Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato, as Partidas em 3D (PR 4: 4 min, Normal) e a duração do campeonato",
-      fmt.a.on.join() === "mata" && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4) && /Mata-mata · 3D: 4 min por tempo, Normal · leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min/.test(fmt.a.resumo)
-      && fmt.passos[0].on.join() === "pontos" && /Pontos corridos/.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /Pontos \+ mata-mata/.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
+    const DES = { mata: "chave", pontos: "tabela", misto: "tabela-chave" };
+    // um marcado só, com a borda, o fundo e o desenho de cor própria; os outros iguais entre si; nenhum check
+    const marcaOk = x => { const on = x.cards.filter(c => c.on), off = x.cards.filter(c => !c.on);
+      return x.cards.length === 3 && on.length === 1 && x.cards.every(c => c.des === DES[c.f] && c.formas >= 2 && c.largDes >= 60 && !c.check) && on[0].anel
+        && off.every(c => c.borda === off[0].borda && c.fundo === off[0].fundo && c.cor === off[0].cor && c.borda !== on[0].borda && c.fundo !== on[0].fundo && c.cor !== on[0].cor); };
+    confere("T2 o Formato na Criar: 3 cartões com o desenho (a chave, a tabela, as duas) e sem o check, o marcado pela borda e pelo fundo (os outros iguais); na ordem das fotos — Pontos corridos, Mata-mata (padrão) e Pontos + mata-mata — com 'N rodadas com 4 técnicos · ~X a Y min' (6, 2 e 4; a duração numa linha só dela); o toque troca e o resumo diz o formato, a duração e as Partidas em 3D (4 min, Normal)",
+      fmt.a.on.join() === "mata" && fmt.a.ordem === "pontos,mata,misto" && !fmt.a.pendura && marcaOk(fmt.a) && fmt.passos.every(marcaOk) && linhaOk(fmt.a.linhas[0], 6) && linhaOk(fmt.a.linhas[1], 2) && linhaOk(fmt.a.linhas[2], 4)
+      && /, mata-mata, 4-4-2, leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min, 3D de 4 min por tempo no Normal$/.test(fmt.a.resumo)
+      && fmt.passos[0].on.join() === "pontos" && /, pontos corridos, /.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /, pontos \+ mata-mata, /.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
+    // a formação no segmentado 3 × 2 e o campinho das vagas embaixo
+    const formaCr = await p.evaluate(async () => {
+      const seg = document.querySelector(".lei-criar .lei-forma-seg"), bts = [...seg.querySelectorAll(".lei-forma-bt")], rs = bts.map(b => b.getBoundingClientRect());
+      const tops = [...new Set(rs.map(r => Math.round(r.top)))], lefts = [...new Set(rs.map(r => Math.round(r.left)))];
+      const campo = () => document.querySelector(".lei-criar .lei-cs-campo .lei-cv");
+      const conta = () => { const o = {}; campo().querySelectorAll(".lei-cv-vaga").forEach(v => { const s = v.querySelector(".lei-cv-sig"), k = s ? s.textContent : "?"; o[k] = (o[k] || 0) + 1; }); return o; };
+      const ler = () => ({ ativo: seg.querySelector(".active .lei-forma-f").textContent, pressed: bts.filter(b => b.getAttribute("aria-pressed") === "true").length, vagas: campo().querySelectorAll(".lei-cv-vaga").length,
+        vazias: campo().querySelectorAll(".lei-cv-bola.vazia").length, conta: conta(), n: campo().querySelector(".lei-cv-n").textContent, f: campo().querySelector(".lei-cv-forma").textContent,
+        embaixo: campo().getBoundingClientRect().top >= seg.getBoundingClientRect().bottom, rot: campo().getAttribute("aria-label") });
+      const a = ler();
+      bts.find(b => b.textContent.startsWith("4-3-3")).click(); await new Promise(r => setTimeout(r, 60));
+      const b = ler();
+      bts.find(b => b.textContent.startsWith("4-4-2")).click(); await new Promise(r => setTimeout(r, 60));
+      return { n: bts.length, linhas: tops.length, cols: lefts.length, porLinha: tops.map(t => rs.filter(r => Math.round(r.top) === t).length).join(), subs: bts.map(b => (b.querySelector(".lei-forma-n") || {}).textContent || ""), a, b, fim: ler().ativo };
+    });
+    confere("T2 'Sua formação' no segmentado 3 × 2 ('5-4-1 Retranca', '4-2-4 Tudo ou nada') com o campinho das vagas embaixo: 11 vagas vazias com a sigla (4-4-2: GOL 1, DEF 4, MEI 4, ATA 2), '0/11' e a formação; o toque troca (4-3-3: MEI 3, ATA 3)",
+      formaCr.n === 6 && formaCr.linhas === 2 && formaCr.cols === 3 && formaCr.porLinha === "3,3" && formaCr.subs[4] === "Retranca" && formaCr.subs[5] === "Tudo ou nada"
+      && formaCr.a.ativo === "4-4-2" && formaCr.a.pressed === 1 && formaCr.a.vagas === 11 && formaCr.a.vazias === 11 && formaCr.a.conta.GOL === 1 && formaCr.a.conta.DEF === 4 && formaCr.a.conta.MEI === 4 && formaCr.a.conta.ATA === 2
+      && formaCr.a.n === "0/11" && formaCr.a.f === "4-4-2" && formaCr.a.embaixo && /4-4-2/.test(formaCr.a.rot)
+      && formaCr.b.ativo === "4-3-3" && formaCr.b.pressed === 1 && formaCr.b.conta.MEI === 3 && formaCr.b.conta.ATA === 3 && formaCr.b.f === "4-3-3" && formaCr.b.n === "0/11" && formaCr.fim === "4-4-2", formaCr);
+    // o contraste dos textos da Criar (≥ 4,5:1) nos dois temas, cada um sobre o fundo de verdade (as camadas até a 1ª opaca)
+    const contrasteCriar = () => p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+      const fundo = e => { const pilha = []; for (let a = e; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) pilha.push(c); if (c[3] >= 1) break; }
+        let f = pilha.length && pilha[pilha.length - 1][3] >= 1 ? pilha.pop() : rgba(getComputedStyle(document.body).backgroundColor);
+        while (pilha.length) f = sobre(pilha.pop(), f); return f; };
+      const op = e => { let o = 1; for (let a = e; a; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+      const texto = (e, f) => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e); return cr(sobre(c, f), f); };
+      const out = {};
+      const min = (k, sel) => { const xs = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null && e.textContent.trim()); if (xs.length) out[k] = Math.min(...xs.map(x => texto(x, fundo(x)))); };
+      min("titulo", ".lei-criar .lei-cs-tit"); min("dica", ".lei-criar .lei-cs-hint"); min("ligaN", ".lei-criar .lei-liga-n"); min("ligaS", ".lei-criar .lei-liga-s"); min("trocar", ".lei-criar .lei-liga-trocar");
+      min("fmtNome", ".lei-criar .lei-fmt-n"); min("fmtFrase", ".lei-criar .lei-fmt-f"); min("fmtLinha", ".lei-criar .lei-fmt-s"); min("passoN", ".lei-criar .lei-passo-n");
+      min("segOn", ".lei-criar .lei-seg .seg-btn.active .lei-seg-t"); min("segOff", ".lei-criar .lei-seg .seg-btn:not(.active) .lei-seg-t"); min("segSub", ".lei-criar .lei-seg-s"); min("rot3d", ".lei-criar .lei-3d-rot");
+      min("escolher", ".lei-criar .lei-esc-escolher-t"); min("nota", ".lei-criar .lei-criar-nota"); min("resTit", ".lei-criar .lei-criar-res-tit"); min("resumo", ".lei-criar-resumo"); min("resumoLiga", ".lei-criar-resumo b");
+      // o botão principal: o texto sobre as duas pontas do degradê
+      const bt = document.querySelector(".lei-criarbar .lei-comecar"), st = (getComputedStyle(bt).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba), tb = bt.querySelector("span:last-child");
+      if (st.length) out.comecar = Math.min(...st.map(c => texto(tb, sobre(c, fundo(bt.parentElement)))));
+      return out;
+    });
+    const ccEscuro = await contrasteCriar();
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await espera(250);
+    const ccClaro = await contrasteCriar();
+    const claroCriar = await p.evaluate(() => {
+      const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      const verde = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return m[1] > m[0] + 40 && m[1] > m[2] + 20; };
+      const cs = s => getComputedStyle(document.querySelector(s));
+      return { tit: lum(cs(".lei-criar .lei-cs-tit").color), fmtOff: lum(cs(".lei-criar .lei-fmt:not(.on)").backgroundColor), fmtOn: lum(cs(".lei-criar .lei-fmt.on").backgroundColor), bordaOn: verde(cs(".lei-criar .lei-fmt.on").borderTopColor),
+        segOn: lum(cs(".lei-criar .lei-seg .seg-btn.active").backgroundColor), barra: lum(cs(".lei-criarbar").backgroundColor), resumo: lum(cs(".lei-criar-resumo b").color),
+        grama: (cs(".lei-criar .lei-cv").backgroundImage.match(/rgba?\([^)]+\)/g) || []).every(verde) };
+    });
+    await print(p, "2-criar-claro");
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+    confere("T2 contraste ≥ 4,5:1 na Criar sala nos dois temas: títulos, dicas, a liga e o Trocar, os cartões do formato (o marcado e os outros), o número do passo, os segmentados (a escolhida e as outras), o Escolher escudo, a nota, o resumo e o botão da barra",
+      [ccEscuro, ccClaro].every(o => Object.keys(o).length >= 18 && Object.values(o).every(x => x >= 4.5)), { escuro: ccEscuro, claro: ccClaro });
+    confere("T2 tema claro da Criar sala: o texto escuro, o cartão do formato branco e o marcado num verde claro com a borda verde, a escolhida do segmentado branca, a barra clara e o campinho verde",
+      claroCriar.tit < 0.3 && claroCriar.fmtOff > 0.95 && claroCriar.fmtOn > 0.85 && claroCriar.fmtOn < claroCriar.fmtOff && claroCriar.bordaOn && claroCriar.segOn > 0.95 && claroCriar.barra > 0.9 && claroCriar.resumo < 0.3 && claroCriar.grama, claroCriar);
+    // a Criar da sala online (sem a conta online: a tela abre com o aviso): os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o
+    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D só com bots
+    await p.evaluate(() => TM.ui.go("leilao-criar", { online: true }));
+    await espera(400);
+    const onl = await p.evaluate(async () => {
+      const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]');
+      const nT = () => +g("Técnicos na sala").querySelector(".lei-passo-n").textContent, nB = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
+      const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
+      const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      for (let i = 0; i < 10; i++) g("Menos um bot").click();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d();
+      for (let i = 0; i < 10; i++) g("Menos um técnico").click();
+      const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
+      for (let i = 0; i < 10; i++) g("Mais um técnico").click();
+      const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
+      for (let i = 0; i < 10; i++) g("Mais um bot").click();
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), dB7 = dv(dB);
+      anda(dT, 3);
+      const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
+      // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
+      anda(dT, 4); anda(dB, 0);
+      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(),
+        resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
+    });
+    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D só com bots e 'Criar sala' na barra",
+      onl.aviso && onl.b0 === 0 && onl.menosBOff && onl.sem3d && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
+      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && onl.sem3dFim
+      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
+    await nadaSobreCriar("criar-online");
+    const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
+    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
+      criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora),
+      criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora)).slice(0, 4));
+    // de volta à Criar do treino (o padrão: 4 técnicos, o Mata-mata)
+    await p.evaluate(() => TM.ui.go("leilao-criar"));
+    await espera(400);
     // a liga pela folha; a formação 4-3-3; o clube
     await p.click(".lei-liga-bt");
     await espera(300);
@@ -4772,7 +4922,8 @@ async function testeTela() {
     await espera(150);
     const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"), S = TM.leilaoSessao.atual(), V = S.ver(), u = V.ultimo;
       const toca = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0; };
-      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-bt, .lei-lote-card .lei-nome")];
+      // (do (i), o círculo à vista: o botão tem 6 px de alvo transparente em volta, e a faixa não pega toque)
+      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-ic, .lei-lote-card .lei-nome")];
       return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled),
         quem: e && (e.querySelector(".lei-vendido-quem") || {}).textContent, vendidoEra: u && S.ctx.lotes[u.i] && S.ctx.lotes[u.i].name, novo: V.lote && V.lote.retrato.name,
         cobre: e ? chips.filter(c => toca(e, c)).map(c => c.textContent.slice(0, 16)) : [], msg: document.querySelector(".lei-lance-msg").textContent,
