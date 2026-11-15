@@ -3032,7 +3032,8 @@ async function testeCampSessao() {
    prazo correndo no servidor); quem some (a página escondida) para o prazo e volta; o dono simula os pendentes; quem
    recarrega vê tudo gravado; quem sai da sala conta como bot; a limpeza não apaga a sala no campeonato com atividade
    nos jogos e apaga a do fim 24 h depois; as regras opcionais (o .validate do LEIA-ME) não recusam nenhuma gravação
-   honesta. Nenhum Firebase de verdade. --caso dois,limpeza,quatro,oito. */
+   honesta; com elas VALENDO, o batimento a caminho de quem acaba de perder o clube é recusado e a sessão não toma isso por
+   queda de conexão (o "passar"). Nenhum Firebase de verdade. --caso dois,limpeza,passar,quatro,oito. */
 async function testeCampOnline() {
   await blocoAsync("KO", "campeonato online (banco falso): 2, 4 e 8 aparelhos, cada jogo uma vez, o prazo pelo servidor, quem some, o dono, recarregar, quem sai", async (ok, nota) => {
     const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, LC = TMx.leilaoCamp, R = TMx.leilaoRede;
@@ -3256,6 +3257,39 @@ async function testeCampOnline() {
         ok(banco.ler("leiloes/KOLIMP/sala") && !S1.apagada && !S1.alterada, `${id}: a sala no campeonato com um jogo gravado há 2 h sumiu (${S1.alterada})`);
         ok(!banco.ler("leiloes/KOLIM2/sala") && S2.apagada, `${id}: a sala do fim de 25 h atrás não sumiu (${S2.alterada} ${JSON.stringify(S2.alteradaJogo)})`);
         S1.parar(); S2.parar();
+      }
+
+      /* ---------- passar: com as regras opcionais VALENDO, o dono passa o clube no instante em que o batimento do aparelho
+         velho está a caminho: o servidor o recusa (sem permissão: a conta já não é da sala) e o aparelho velho, que só olha,
+         não fica em "Reconectando…" (a recusa por permissão não é queda de conexão) ---------- */
+      if (caso("passar")) {
+        const id = "KO passar", cod = "KOPASS";
+        salaPronta(cod, ["p0", "p1"], 2, "mata", "it", "KOp");
+        const A = aparelho("p0", { latencia: 15 }), B = aparelho("p1", { latencia: 20 }), N = aparelho("p9", { latencia: 20 });
+        const negarAntes = banco.negar;
+        let negadas = 0;
+        banco.negar = (op, caminho, valor, C) => {
+          const ps = String(caminho).split("/").filter(Boolean);
+          if (ps[0] === "leiloes" && ps[1] === cod && (ps[2] === "bate" || ps[2] === "pres") && confereRegras(banco.raiz, ps, valor, banco.relogio(), C ? C.uid : null).length) { negadas++; return true; }
+          return negarAntes(op, caminho, valor, C);
+        };
+        try {
+          const SA = await A.abrir(cod), SB = await B.abrir(cod);
+          await passa(12_000);
+          // a conta nova (outro aparelho da mesma pessoa) pede pelo código: o pedido "depois" do Começar
+          const SN = await espera(SS.entrar(cod, N.opc({ online: true })));
+          await anda(() => !!(SA.sala.pedidos && SA.sala.pedidos.p9), 30_000);
+          // o batimento do velho a caminho (1,5 s para subir; o ack em menos de 3 s): o dono passa o clube nesse instante
+          banco.definirLatencia(B.cli.cid, { sobe: 1500, desce: 20 });
+          await anda(() => SB._bateEmVoo, 30_000);
+          const em = SB._bateEmVoo, r = await espera(SA.passarClube("p1", "p9"));
+          await passa(12_000);
+          banco.definirLatencia(B.cli.cid, 20);
+          await passa(12_000);
+          ok(em && r.ok && SB.eu === -1 && SN.eu === 1 && negadas >= 1, `${id}: o clube não passou com o batimento a caminho (${JSON.stringify({ em, r, eu: SB.eu, novo: SN.eu, negadas })})`);
+          ok(SB._estadoRede() === "ok" && SB.ver().rede === "ok", `${id}: o aparelho velho ficou em '${SB._estadoRede()}' depois da recusa do batimento a caminho`);
+          SA.parar(); SB.parar(); SN.parar();
+        } finally { banco.negar = negarAntes; }
       }
 
       /* ---------- quatro: 4 pessoas + 2 bots no misto; ±5 s, o pulo de +60 s, quem some e volta, quem some e o dono ---------- */

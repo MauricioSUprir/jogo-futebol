@@ -899,7 +899,7 @@
       S._bateEmVoo = true;
       var meu = ++S._bateN;
       var t3 = S._agendar(function () {
-        if (!S._bateEmVoo || meu !== S._bateN || S.parado) return;
+        if (!S._bateEmVoo || meu !== S._bateN || S.parado || S.eu < 0) return;
         S._defBate("reconectando");
         // de volta depois de escondida e o bate sem resposta: o socket ficou meio aberto (o iPhone faz isso). Só então
         // derruba e refaz a conexão, e nunca com outra sala online do TM aberta (o goOffline vale para o TM inteiro: o
@@ -911,10 +911,12 @@
         S._cancelar(t3);
         if (S.parado) return;
         if (ts != null) { S._desconfia = false; S._defBate("ok"); S._programa(); }
-      }, function () {
+      }, function (e) {
         if (meu === S._bateN) S._bateEmVoo = false;
         S._cancelar(t3);
-        if (!S.parado) S._defBate("reconectando");
+        // a recusa por permissão (o .validate opcional publicado) não é queda de conexão: é o batimento que estava a caminho
+        // quando esta conta deixou de ser da sala (o clube passado a outro aparelho, tirado); a sala nova chega e ela só olha
+        if (!S.parado && !(e && e.codigo === "permissao") && S.eu >= 0) S._defBate("reconectando");
       });
     }
     S._timerBate = S._agendar(function () { S._timerBate = null; S._bater(); }, BATE_MS);
