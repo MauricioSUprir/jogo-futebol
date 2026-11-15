@@ -180,9 +180,33 @@ function rngT(s) { return TMs.public.rng.make(TMs.public.rng.hashStr(String(s)))
 /* ===================================================== L1 lotes ===================================================== */
 bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
   let casos = 0, falta = 0;
-  const curtos = [];
-  // o exemplo do plano: 4 técnicos = 6 GK, 18 DF, 18 MF e 10 FW
-  ok(jsonIgual(LE.cotas(4), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos: " + JSON.stringify(LE.cotas(4)));
+  const curtos = [], menos = [];
+  // 20 lotes por técnico (dono, 15/11; eram 13): 40 com 2, 80 com 4, 160 com 8. As cotas na proporção das fotos (1,5 GK e
+  // 2,5 FW de cada 13 lotes), feitas aqui sem o leilao.js: GK ⌈3n/26⌉, FW ⌈5n/26⌉, DF e MF dividem o resto (a sobra ímpar no
+  // DF), n = lotes por técnico × T
+  const POR = 20, MAXF = { GK: 1, DF: 5, MF: 5, FW: 4 };
+  const cotaEsp = (T, por) => { const n = por * T, gk = Math.ceil(n * 3 / 26), fw = Math.ceil(n * 5 / 26), r = n - gk - fw; return { GK: gk, DF: Math.ceil(r / 2), MF: Math.floor(r / 2), FW: fw }; };
+  ok(LE.LOTES_POR_TEC === POR && LE.lotesPorTec() === POR && LE.lotesPorTec(3) === POR && LE.lotesPorTec(2) === 13 && LE.lotesPorTec(1) === 13,
+    `20 lotes por técnico nas salas novas e 13 nas de regras 1 e 2: ${LE.LOTES_POR_TEC} · ${[1, 2, 3].map(r => LE.lotesPorTec(r)).join(", ")}`);
+  ok(jsonIgual(LE.cotas(2), { GK: 5, DF: 14, MF: 13, FW: 8 }) && jsonIgual(LE.cotas(4), { GK: 10, DF: 27, MF: 27, FW: 16 }) && jsonIgual(LE.cotas(8), { GK: 19, DF: 55, MF: 55, FW: 31 }),
+    "cotas de 2, 4 e 8 técnicos: " + [2, 4, 8].map(T => JSON.stringify(LE.cotas(T))).join(" · "));
+  // as salas de antes (regras 1 e 2): as cotas de 13 por técnico são as de antes (GK ⌈1,5T⌉, FW ⌈2,5T⌉): 4 técnicos = 6 GK,
+  // 18 DF, 18 MF e 10 FW
+  ok(jsonIgual(LE.cotas(4, 13), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos com 13: " + JSON.stringify(LE.cotas(4, 13)));
+  for (let T = 2; T <= 8; T++) {
+    const q = LE.cotas(T), q13 = LE.cotas(T, 13), gk = Math.ceil(1.5 * T), fw = Math.ceil(2.5 * T), df = Math.ceil((13 * T - gk - fw) / 2);
+    ok(q.GK + q.DF + q.MF + q.FW === POR * T && GR.every(g => q[g] >= T), `T${T}: as cotas somam ${q.GK + q.DF + q.MF + q.FW} (esperado ${POR * T}) ou um grupo com menos de 1 por técnico`);
+    ok(jsonIgual(q13, { GK: gk, DF: df, MF: 13 * T - gk - fw - df, FW: fw }), `T${T}: as cotas de 13 mudaram: ${JSON.stringify(q13)}`);
+  }
+  // a conta de antes (13 por técnico), feita aqui: os melhores de cada grupo pela cota, `fora` os melhores que sobram até
+  // o máximo do grupo numa formação por técnico
+  function lotesAntes(todos, T) {
+    const q = LE.cotas(T, 13), lotes = [], fora = [], usados = new Set();
+    for (const g of GR) todos.filter(p => p.pos === g).sort(cmpNota).slice(0, q[g]).forEach(p => { lotes.push(p.id); usados.add(p.id); });
+    const nf = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    todos.slice().sort(cmpNota).forEach(p => { if (!usados.has(p.id) && nf[p.pos] < MAXF[p.pos] * T) { nf[p.pos]++; fora.push(p.id); } });
+    return { lotes: lotes.sort(), fora };
+  }
   for (const ed of ["public", "pro"]) {
     const W = MUNDO[ed], L = TMs[ed].leilao;
     for (const liga of LIGAS) {
@@ -190,29 +214,40 @@ bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
       // todos os jogadores elegíveis da liga, para conferir "os melhores"
       const todos = [];
       lg.clubIds.forEach(cid => { const c = W.clubsById[cid]; if (c.custom || c.viverde || c.especial) return; c.playerIds.forEach(pid => { const p = W.playersById[pid]; if (p && !p.especial) todos.push(p); }); });
+      const naLiga = {}; GR.forEach(g => { naLiga[g] = todos.filter(p => p.pos === g).length; });
       for (let T = 2; T <= 8; T++) {
         casos++;
         const { lotes, fora } = L.criarLotes(W, liga, T), q = L.cotas(T), id = `${ed}/${liga}/T${T}`;
-        ok(lotes.length === 13 * T, `${id}: ${lotes.length} lotes (esperado ${13 * T})`);
-        // a fórmula do plano (§1.2), feita aqui sem o leilao.js: GK ⌈1,5T⌉, FW ⌈2,5T⌉, DF e MF dividem o resto (a sobra
-        // ímpar no DF)
-        const qGK = Math.ceil(1.5 * T), qFW = Math.ceil(2.5 * T), qDF = Math.ceil((13 * T - qGK - qFW) / 2);
-        const qEsp = { GK: qGK, DF: qDF, MF: 13 * T - qGK - qFW - qDF, FW: qFW };
+        const qEsp = cotaEsp(T, POR);
         ok(jsonIgual(q, qEsp), `${id}: cotas ${JSON.stringify(q)} (esperado ${JSON.stringify(qEsp)})`);
+        // a cota nunca come a reserva de `fora` (o máximo de cada grupo numa formação × T: qualquer time completa os 11 de graça,
+        // compre o que comprar); o que falta num grupo vai para os grupos com folga e, sem folga, a liga fica com menos lotes
+        const livre = {}, teto = {};
+        GR.forEach(g => { livre[g] = Math.max(0, naLiga[g] - MAXF[g] * T); teto[g] = Math.min(q[g], livre[g]); });
+        const faltou = GR.reduce((a, g) => a + q[g] - teto[g], 0), folga = GR.reduce((a, g) => a + livre[g] - teto[g], 0);
+        const esperado = GR.reduce((a, g) => a + teto[g], 0) + Math.min(faltou, folga);
+        ok(lotes.length === esperado && esperado <= POR * T, `${id}: ${lotes.length} lotes (esperado ${esperado})`);
+        if (esperado < POR * T) menos.push(`${id} ${esperado}`);
+        ok(lotes.length >= 13 * T, `${id}: ${lotes.length} lotes, menos que os ${13 * T} de antes`);
         for (const g of GR) {
           const n = lotes.filter(l => l.pos === g).length;
-          if (n !== q[g]) { falta++; ok(false, `${id}: ${n} ${g} (cota ${q[g]})`); }
+          if (n < teto[g] || n > livre[g]) { falta++; ok(false, `${id}: ${n} ${g} (a cota sem a reserva de fora: ${teto[g]}; livres ${livre[g]})`); }
+        }
+        // a sala de antes (regras 2): os mesmos lotes e os mesmos de fora da conta de antes, exatamente 13T
+        const de13 = L.criarLotes(W, liga, T, { regras: 2 }), ref = lotesAntes(todos, T);
+        ok(de13.lotes.length === 13 * T && jsonIgual(de13.lotes.map(l => l.id).sort(), ref.lotes) && jsonIgual(de13.fora.map(l => l.id), ref.fora), `${id}: os lotes da sala de regras 2 não são os de antes`);
+        for (const g of GR) {
           // os melhores do grupo: nenhum de fora dos lotes passa um do lote
           const noLote = new Set(lotes.map(l => l.id));
           const piorLote = lotes.filter(l => l.pos === g).sort(cmpNota).pop();
           const melhorFora = todos.filter(p => p.pos === g && !noLote.has(p.id)).sort(cmpNota)[0];
           if (piorLote && melhorFora) ok(cmpNota(piorLote, melhorFora) < 0, `${id}: ${g} ${melhorFora.id}(${melhorFora.overall}) fora e ${piorLote.id}(${piorLote.overall}) no lote`);
-          // fora: os melhores que sobraram, até o máximo do grupo numa formação por técnico (GK 1, DF 5, MF 5, FW 4);
-          // nunca abaixo do mínimo de uma formação (GK 1, DF 3, MF 2, FW 1) por técnico: todos completam de graça
-          const nf = fora.filter(l => l.pos === g).length, alvo = { GK: 1, DF: 5, MF: 5, FW: 4 }[g] * T, minimo = { GK: 1, DF: 3, MF: 2, FW: 1 }[g] * T;
+          // fora: os melhores que sobraram, até o máximo do grupo numa formação por técnico (GK 1, DF 5, MF 5, FW 4) — com a
+          // reserva, sempre ele inteiro: todos completam de graça, comprem o que comprarem
+          const nf = fora.filter(l => l.pos === g).length, alvo = MAXF[g] * T;
           const sobra = todos.filter(p => p.pos === g && !noLote.has(p.id)).length;
           ok(nf === Math.min(alvo, sobra), `${id}: fora com ${nf} ${g} (alvo ${alvo}, sobram ${sobra})`);
-          ok(nf >= minimo, `${id}: fora com ${nf} ${g}, abaixo do mínimo ${minimo}`);
+          ok(nf === alvo, `${id}: fora com ${nf} ${g}, abaixo do máximo de uma formação × T (${alvo})`);
           if (nf < alvo) curtos.push(`${id} ${g} ${nf}/${alvo}`);
         }
         const ids = lotes.concat(fora).map(l => l.id);
@@ -250,7 +285,7 @@ bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
     }
     ok(TMe.data.world() === carreira, `${ed}: o mundoBase mexeu no cache da carreira`);
   }
-  nota(`${casos} casos (30 ligas × 2 edições × T 2–8)${falta ? ", " + falta + " cotas faltando" : ""}; fora abaixo do alvo em ${curtos.length} (${curtos.join(", ")})`);
+  nota(`${casos} casos (30 ligas × 2 edições × T 2–8, ${POR} por técnico)${falta ? ", " + falta + " cotas faltando" : ""}; menos lotes (a reserva de fora) em ${menos.length} (${menos.join(", ")}); fora abaixo do alvo em ${curtos.length}${curtos.length ? " (" + curtos.join(", ") + ")" : ""}`);
 });
 
 /* ===================================================== L2 ordem ===================================================== */
@@ -460,7 +495,10 @@ bloco("L5", "fechar: vendido, sem lance, todos passaram, pulado, idempotente", (
   // ninguém pode: o lote é pulado (nem vai para a repescagem)
   let vp = JSON.parse(JSON.stringify(v0));
   for (let t = 0; t < 4; t++) vp = comCompras(ctx, vp, t, [gksDeFora[t]], 2);
-  const gkRestante = ctx.lotes.map((l, i) => l.pos === "GK" && !gksDeFora.slice(0, 4).includes(i) ? i : -1).filter(i => i >= 0)[0];
+  // um goleiro que sobrou com um lote livre antes dele e um que não é goleiro depois (com 20 por técnico há 10 goleiros: o
+  // primeiro que sobrou pode vir colado a outro)
+  const gkRestante = ctx.lotes.map((l, i) => l.pos === "GK" && !gksDeFora.slice(0, 4).includes(i) ? i : -1).filter(i => i >= 0)
+    .find(i => { const k = ctx.fila.indexOf(i); return k > 0 && k + 1 < ctx.fila.length && vp.d[ctx.fila[k - 1]] === "-" && ctx.lotes[ctx.fila[k + 1]].pos !== "GK"; });
   const kg = ctx.fila.indexOf(gkRestante);
   vp.k = kg - 1; vp.i = ctx.fila[kg - 1];
   if (vp.d[vp.i] !== "-") { ok(false, "montagem do pulado"); return; }
@@ -755,7 +793,7 @@ async function testeSessao() {
       await V.anda(() => !!A.vivoN);
       let w = A.ver();
       ok(w.lote && w.lote.pausa && w.botoes["+1"].motivo === "pausa" && !w.botoes.passar.pode, "na pausa entre lotes, os botões desligados: " + JSON.stringify(w.botoes && w.botoes["+1"]));
-      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 39 && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 39 com o retrato, 10 s e os 5 próximos");
+      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 3 * Lx.LOTES_POR_TEC && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 60 (3 técnicos × 20) com o retrato, 10 s e os 5 próximos: " + (w.lote && w.lote.total));
       await ate(V, w.lote.liberado + 10, A);
       w = A.ver();
       ok(w.botoes["+1"].pode && w.botoes["+1"].alvo === 1 && w.botoes["+5"].alvo === 5 && w.botoes["+10"].alvo === 10 && w.botoes.tudo.alvo === 90 && w.botoes.outro.min === 1 && w.botoes.outro.max === 90 && w.botoes.passar.pode, "os alvos sobre o valor visto (0) e o Tudo R$ 90: " + JSON.stringify(w.botoes));
@@ -870,6 +908,24 @@ async function testeSessao() {
       const seqB = B.vivoN.seq; await V.anda(null, 40);
       ok(B.alterada && alt.length === 1 && B.vivoN.seq === seqB && !B.ver().botoes["+1"].pode, "o vivo adulterado congela: " + B.alterada);
       B.parar();
+      // o treino de antes (regras 2, gravado no aparelho pela versão de 13 lotes por técnico): reabre com os 13T lotes dele,
+      // as Minhas salas contam "de 39" e ele anda até o fim com os 11 de cada um
+      {
+        const R0 = await V.espera(SS.criarTreino(Object.assign({ liga: "es", bots: 2, semente: "S-r2", codigo: "SXRGR2" }, base)));
+        await V.anda(() => !!R0.vivoN); R0.parar(); await V.anda(null, 30);
+        const g2 = JSON.parse(arm.g["leilao:sala:SXRGR2"]), lt13 = Lx.criarLotes(mundo, "es", 3, { regras: 2 });
+        const ctx13 = Lx.contexto({ T: 3, lotes: lt13.lotes, fora: lt13.fora, semente: g2.sala.meta.semente, tempo: g2.sala.cfg.tempo });
+        g2.sala.meta.regras = 2; g2.lotes = { l: lt13.lotes, f: lt13.fora }; g2.vivo = Lx.inicial(ctx13, g2.vivo.abre); delete g2.vendas;
+        arm.g["leilao:sala:SXRGR2"] = JSON.stringify(g2);
+        const x2 = SS.salas({ armazem: arm }).find(x => x.codigo === "SXRGR2");
+        const R2 = await V.espera(SS.abrir("SXRGR2", base));
+        ok(R2.ctx && R2.ctx.L === 39 && !R2.soOlhar && x2 && x2.lotes === 39 && x2.regrasOk, "o treino de regras 2 reabre com os 39 lotes dele: " + JSON.stringify({ L: R2.ctx && R2.ctx.L, so: R2.soOlhar, lotes: x2 && x2.lotes }));
+        await V.anda(() => R2.vivoN && R2.vivoN.fase === "fim");
+        const onze = [0, 1, 2].every(t => Lx.timeDe(R2.vivoN, R2.ctx, t).length === 11);
+        ok(R2.vivoN && R2.vivoN.fase === "fim" && onze && !R2.alterada, "o treino de regras 2 anda até o fim com os 11 de cada um: " + JSON.stringify({ fase: R2.vivoN && R2.vivoN.fase, onze, alt: R2.alterada }));
+        R2.parar(); await V.anda(null, 30);
+        R2.rede.apagar && R2.rede.apagar();
+      }
       // Minhas salas: até 3 treinos guardados (o 4º tira o mais antigo)
       for (const c of ["SXBBBB", "SXCCCC", "SXDDDD"]) { const X = await V.espera(SS.criarTreino(Object.assign({ liga: "de", bots: 1, semente: c, codigo: c }, base))); await V.anda(null, 5); X.parar(); V.hora += 1000; }
       await V.anda(null, 30);
@@ -1805,7 +1861,7 @@ async function testeOnline() {
     await anda(() => SA.vivoN && SB.vivoN && SA.ctx && SB.ctx, 30_000);
     s = sala(cod);
     ok([c1, c2].filter(x => x.ok).length === 1 && s.meta.estado === "leilao" && s.ordem.join() === "a,b,bot1" && s.cfg.T === 3, "dois Começar ao mesmo tempo = 1: " + JSON.stringify([c1, c2]));
-    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 39 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 39 && SB.ctx.L === 39, "os lotes para 3 técnicos");
+    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 60 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 60 && SB.ctx.L === 60, "os lotes para 3 técnicos (20 por técnico): " + SA.ctx.L);
     ok(SA.vivoN.seq === 1 && iniciais.length === 1 && JSON.stringify(SA.vivo) === JSON.stringify(SB.vivo), "um vivo inicial só, o mesmo nos dois aparelhos");
     paraIni();
     ok((await rejeita(SS.entrar(cod, aparelho("f").opc()))) === null && sala(cod).pedidos.f && sala(cod).pedidos.f.depois, "depois do Começar, o pedido fica (para passar o clube)");
@@ -1837,6 +1893,16 @@ async function testeOnline() {
     SU.parar(); await passa(200);
     const SU2 = await U.abrir(SX.codigo);
     ok(SU2.eu === 1 && !SU2.soOlhar && SU2.ver().versaoDiferente, "outra versão do TM: quem é da sala volta (com o aviso)");
+    // a sala de antes (regras 2: o aparelho da versão de 13 lotes por técnico, nela, conta 13): o Começar deste aparelho grava
+    // 13T lotes, e os dois montam o leilão com eles
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, 2);
+    await passa(300);
+    await espera(SU2.pronto(true)); await passa(300);
+    const rR2 = await espera(SX.comecar());
+    await anda(() => SX.ctx && SU2.ctx && SX.vivoN && SU2.vivoN, 30_000);
+    const lR2 = banco.ler(`leiloes/${SX.codigo}/lotes`);
+    ok(rR2.ok && lR2 && lR2.l.length === 26 && SX.ctx && SX.ctx.L === 26 && SU2.ctx && SU2.ctx.L === 26 && !SX.alterada && !SU2.alterada,
+      "a sala de regras 2 começa com 13 lotes por técnico (26 com 2): " + JSON.stringify({ r: rR2, n: lR2 && lR2.l.length, a: SX.ctx && SX.ctx.L, b: SU2.ctx && SU2.ctx.L }));
     [SP, SW, SX, SU2].forEach(x => x.parar());
     nota_("O2", "pro sem chave recusa, pro com chave e pública trocam sozinhos, regras de outra versão, versão do TM só avisa");
   }
@@ -2838,8 +2904,8 @@ async function testeCampSessao() {
     /* ---- K0 a duração estimada e o formato ---- */
     {
       const d = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata" }), d8 = LC.duracaoEstimada({ T: 8, tempo: 10000, formato: "pontos", tresD: true, duracao3d: 4 });
-      ok(d.leilao.n === 52 && d.leilao.lo === 8 && d.leilao.hi === 15 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
-      ok(d8.leilao.n === 104 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
+      ok(d.leilao.n === 80 && d.leilao.lo === 10 && d.leilao.hi === 23 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
+      ok(d8.leilao.n === 160 && d8.leilao.lo === 20 && d8.leilao.hi === 45 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
       for (let T = 2; T <= 8; T++) for (const f of LC.FORMATOS) {
         const e = LC.duracaoEstimada({ T, tempo: 15000, formato: f });
         ok(e.camp.rodadas === LC.rodadasDe(f, T) && e.camp.lo >= 1 && e.camp.hi > e.camp.lo && e.leilao.hi > e.leilao.lo, `K0 ${f} T${T}: ${JSON.stringify(e)}`);
@@ -2949,12 +3015,20 @@ async function testeCampSessao() {
 
     /* ---- K3 a escalação mudada vale a partir do próximo jogo que não começou ---- */
     {
-      const V = relogioVirtual(), arm = armazemFalso(), cod = "K3ESCA";
-      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
-      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "br", bots: 3, semente: "K3", codigo: cod, formato: "pontos", tempo: 10 }, base)));
-      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
-      const time = Lx.timeDe(A.vivoN, A.ctx, 0), cabem = Lx.formacoesQueCabem(Lx.contaMascaras(time));
-      ok(cabem.length >= 2, "K3: o time da pessoa cabe em menos de 2 formações: " + cabem);
+      // a 1ª liga em que o time de graça da pessoa (ela não dá lance) cabe em 2+ formações: o completar dá os melhores de fora
+      // e um time de 11 costuma caber numa só (com 20 por técnico, o da br só cabe no 3-4-3)
+      let V = null, A = null, cabem = [];
+      const cod = "K3ESCA";
+      for (const liga of ["br", "en", "es", "de", "fr", "pt", "it", "nl", "ar", "us"]) {
+        V = relogioVirtual();
+        const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: armazemFalso(), semAtual: true, mundo };
+        A = await V.espera(SS.criarTreino(Object.assign({ liga, bots: 3, semente: "K3", codigo: cod, formato: "pontos", tempo: 10 }, base)));
+        await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+        cabem = Lx.formacoesQueCabem(Lx.contaMascaras(Lx.timeDe(A.vivoN, A.ctx, 0)));
+        if (cabem.length >= 2) break;
+        A.parar();
+      }
+      ok(cabem.length >= 2, "K3: o time da pessoa cabe em menos de 2 formações em todas as ligas tentadas: " + cabem);
       // F1 no saguão da escalação, F2 com o 1º jogo aberto, F3 (= F1, outra que a F2) depois de ele começar
       const [F1, F2] = cabem, F3 = F1;
       await V.espera(A.mudarFormacao(F1));
@@ -3270,7 +3344,7 @@ async function testeCamp3d() {
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 2 && Lx.regrasAceitas(1) && Lx.regrasAceitas(2) && !Lx.regrasAceitas(3) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 2 e o Jogar na sala nova");
+      ok(Lx.REGRAS === 3 && Lx.regrasAceitas(1) && Lx.regrasAceitas(2) && Lx.regrasAceitas(3) && !Lx.regrasAceitas(4) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 3 (20 lotes por técnico) e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -4513,8 +4587,8 @@ async function testeTela() {
     await clica(p, "Começar o treino");
     const abriu = await ate(p, () => TM.ui.current() === "leilao-lote" && !!document.querySelector(".lei-relogio"));
     let V = await ver(p);
-    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 52 lotes, a liga e o clube escolhidos",
-      abriu && V && V.T === 4 && V.lote && V.lote.total === 52 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
+    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 80 lotes (20 por técnico), a liga e o clube escolhidos",
+      abriu && V && V.T === 4 && V.lote && V.lote.total === 80 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
       && V.tecnicos.filter(t => t.bot).every(t => /^Bot /.test(t.nome)), V && { T: V.T, liga: V.liga, clube: V.tecnicos[V.eu] && V.tecnicos[V.eu].clube });
     await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
 
@@ -4673,7 +4747,7 @@ async function testeTela() {
       fotos.length === 8 && fotos.every(x => x.cartas === 0 && !x.noCartao.length && /^Nota \d+$/.test(x.nota || "")), fotos.map(x => ({ t: x.t, c: x.cartas, falta: x.noCartao, nota: x.nota })));
     confere("T4 o topo só de ícones (6, sem texto à vista, com aria-label e title, ≥ 44 × 44) e as abas em pílula sem ícone (só o check da feita), nos 8 tamanhos",
       fotos.every(x => x.sb.n === 6 && !x.sb.comTexto && !x.sb.semRotulo && x.sb.min >= 44 && !x.abasIc), fotos.map(x => ({ t: x.t, sb: x.sb, abasIc: x.abasIc })));
-    confere("T4 as pílulas mais leves que o chip 'Jogador N de 52' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
+    confere("T4 as pílulas mais leves que o chip 'Jogador N de 80' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
       fotos.every(x => x.abaH < x.chipH && x.abaH >= 24 && x.abaAlvo), fotos.map(x => ({ t: x.t, aba: x.abaH, chip: x.chipH, alvo: x.abaAlvo })));
     confere("T4 o campinho do seu clube sempre à vista: as 11 vagas da formação, as compras nelas e 'n/11' (8 tamanhos)",
       fotos.every(x => x.vagas === 11 && x.cheias === x.meus && x.meus > 0 && x.conta === x.meus + "/11" && x.campinho > 200), fotos.map(x => ({ t: x.t, v: x.vagas, cheias: x.cheias, meus: x.meus, conta: x.conta, w: x.campinho })));
@@ -4888,7 +4962,7 @@ async function testeTela() {
     const depoisR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo, n: document.querySelector(".lei-lote-n").textContent }; });
     confere("T6 recarregar no meio: 'Minhas salas' lista o treino; 'Continuar' volta ao mesmo lote com o tempo que faltava (±1,5 s)",
       !minhas.atual && minhas.salas.includes(antesR.codigo) && depoisR.codigo === antesR.codigo && depoisR.seq === antesR.seq && depoisR.i === antesR.i && depoisR.saldo === antesR.saldo
-      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 52", { minhas, antesR, depoisR });
+      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 80", { minhas, antesR, depoisR });
 
     /* T7 o resto do leilão (o relógio acelerado; quem decide é a pessoa de teste pela tela) */
     await p.evaluate(() => TM.leilaoSessao.acelerar(10));
@@ -4933,7 +5007,7 @@ async function testeTela() {
     confere("T7 o leilão vai até o fim pela tela; sempre que o +1 apaga, a linha de cima diz o motivo (com o de goleiro/posição/máximo/completo entre eles)",
       V.estado !== "leilao" && n7 >= 3 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
     const an = await p.evaluate(() => TM.leilaoTela.anuncios());
-    confere("T7 a região ao vivo falou o lote ('Jogador N de 52: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 52: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
+    confere("T7 a região ao vivo falou o lote ('Jogador N de 80: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 80: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
     // o que ficou de fato na #lei-vivo: o "Vendido para X por R$ Y" fica escrito (antes, o lote novo o trocava no mesmo quadro) e
     // nenhuma fala sai antes de 1 s
     const vivo = await p.evaluate(() => { const v = window.__vivo || [], falas = [];
