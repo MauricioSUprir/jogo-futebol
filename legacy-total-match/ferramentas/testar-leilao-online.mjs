@@ -359,7 +359,7 @@ const piloto = ap => ap.p.evaluate(() => window.__lt.estado()).catch(() => null)
 
 /* ---------- nada sobre nada (o critério do testar-leilao.mjs --tela, com as peças do saguão e do campeonato) ---------- */
 const sobreposicao = p => p.evaluate(() => {
-  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga";
+  const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-part, .lei-pedido, .lei-etq, .qr-box, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen";
   const visivel = e => {
     const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
     const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;

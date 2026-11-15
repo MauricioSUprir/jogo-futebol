@@ -3645,7 +3645,7 @@ async function testeTela() {
   // nada sobre nada: o critério do testar-online3d.mjs (sobreposicao), com a barra de lance (fixa) numa camada própria — o
   // que rola por baixo dela não "encosta" nela; no fim da rolagem, nada fica atrás dela (o espaço do fim da página)
   const sobreposicao = p => p.evaluate(() => {
-    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga";
+    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen";
     const visivel = e => {
       const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
       const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
@@ -4211,20 +4211,22 @@ async function testeTela() {
     const foiEsc = await ate(p, () => TM.ui.current() === "leilao-escalacao", null, 15000);
     await espera(300);
     V = await ver(p);
-    const esc = await p.evaluate(() => ({ cartas: document.querySelectorAll(".lei-pitch-esc .ut-card:not(.empty)").length, vagas: document.querySelectorAll('.lei-pitch-esc .lei-vaga[role="button"]').length,
+    // (o campinho das vagas, o mesmo da aba Leilão: nenhuma carta do Ultimate na sala — o dono, 15/11)
+    const esc = await p.evaluate(() => ({ cartas: document.querySelectorAll(".lei-corpo-esc .ut-card").length, fotos: document.querySelectorAll(".lei-cv-esc .lei-cv-vaga.cheia .lei-foto").length,
+      vagas: document.querySelectorAll('.lei-cv-esc .lei-cv-vaga[role="button"]').length,
       n: document.querySelector(".lei-esc-n").textContent, prazo: (document.querySelector(".lei-esc-prazo") || {}).textContent }));
-    confere("T8 no fim do leilão a aba Escalação abre sozinha: 11/11, o campinho com as 11 cartas tocáveis e o prazo",
-      foiEsc && V.estado === "escalacao" && V.meu.escalacao.n === 11 && esc.cartas === 11 && esc.vagas === 11 && esc.n === "11/11" && /A escalação fecha em \d:\d\d/.test(esc.prazo || ""), { foiEsc, estado: V.estado, esc });
+    confere("T8 no fim do leilão a aba Escalação abre sozinha: 11/11, o campinho das vagas com as 11 fotos tocáveis (sem carta) e o prazo",
+      foiEsc && V.estado === "escalacao" && V.meu.escalacao.n === 11 && !esc.cartas && esc.fotos === 11 && esc.vagas === 11 && esc.n === "11/11" && /A escalação fecha em \d:\d\d/.test(esc.prazo || ""), { foiEsc, estado: V.estado, esc });
     await nadaSobreNada(p, "escalacao");
     const ruinsEsc = nadaSobre.filter(x => /^escalacao/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
     confere("T8 nada sobre nada na Escalação nos 8 tamanhos", !ruinsEsc.length, ruinsEsc.slice(0, 4));
     // trocar duas vagas do mesmo grupo
     const par = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), e = V.meu.escalacao, sl = TM.leilao.slotsDe(e.formacao);
       for (let i = 0; i < sl.length; i++) for (let j = i + 1; j < sl.length; j++) if (sl[i][0] === sl[j][0] && sl[i][0] !== "GK") return { i, j, ti: e.tit[i], tj: e.tit[j] }; return null; });
-    await p.click(`.lei-pitch-esc .lei-vaga[data-vaga="${par.i}"]`);
+    await p.click(`.lei-cv-esc .lei-cv-vaga[data-vaga="${par.i}"]`);
     await espera(150);
-    const marcada = await p.evaluate(i => !!document.querySelector(`.lei-pitch-esc .lei-vaga.sel[data-vaga="${i}"]`), par.i);
-    await p.click(`.lei-pitch-esc .lei-vaga[data-vaga="${par.j}"]`);
+    const marcada = await p.evaluate(i => !!document.querySelector(`.lei-cv-esc .lei-cv-vaga.sel[data-vaga="${i}"]`), par.i);
+    await p.click(`.lei-cv-esc .lei-cv-vaga[data-vaga="${par.j}"]`);
     await espera(300);
     V = await ver(p);
     confere("T8 tocar em dois troca as vagas (a 1ª fica marcada); vale a escalação à mão", marcada && V.meu.escalacao.manual && V.meu.escalacao.tit[par.i] === par.tj && V.meu.escalacao.tit[par.j] === par.ti, { par, marcada, tit: V.meu.escalacao.tit });
@@ -4266,7 +4268,7 @@ async function testeTela() {
     // a Escalação continua aberta no campeonato e diz que vale a partir do próximo jogo
     await p.click('.lei-aba[data-rota="leilao-escalacao"]');
     await espera(300);
-    const escCamp = await p.evaluate(() => ({ txt: document.querySelector(".lei-esc-camp").innerText, vagas: document.querySelectorAll('.lei-pitch-esc .lei-vaga[role="button"]').length }));
+    const escCamp = await p.evaluate(() => ({ txt: document.querySelector(".lei-esc-camp").innerText, vagas: document.querySelectorAll('.lei-cv-esc .lei-cv-vaga[role="button"]').length }));
     confere("T11 a Escalação no campeonato: as 11 vagas tocáveis e 'vale a partir do seu próximo jogo que ainda não começou'", escCamp.vagas === 11 && /próximo jogo que ainda não começou/.test(escCamp.txt), escCamp);
     await p.click('.lei-aba[data-rota="leilao-camp"]');
     await ate(p, () => !!document.querySelector(".lei-simular"), null, 10000);

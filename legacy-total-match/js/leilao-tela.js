@@ -153,13 +153,6 @@
       p: { id: r.id, name: r.name, clubId: r.clubId, homeClubId: r.homeClubId, pos: r.pos, pos2: r.pos2, overall: ov, nationId: r.nationId, number: r.number }
     };
   }
-  function cartaEl(r, cls, role) {
-    if (!TM.ut || !TM.ut.cardEl) return el("div", { class: "lei-carta-reserva", text: r ? r.name : (role || "") });
-    if (!r) return TM.ut.cardEl(null, { cls: cls, role: role });
-    var c = TM.ut.cardEl(dadosCarta(r), { cls: cls });
-    c.removeAttribute("title");
-    return c;
-  }
   function escudo(cl, cls) {
     var u = UT(); cl = cl || {};
     if (u && u.escudoEl && u.escudoCfg) return u.escudoEl(u.escudoCfg({ escudo: cl.escudo }), cl.cor || "#22c55e", cl.sigla || "", "lei-esc" + (cls ? " " + cls : ""));
@@ -275,12 +268,8 @@
     if (S.segurar) S.segurar("tela", false);
     var off = S.aoMudar(function () { atualiza(); });
     VIEW.desliga.push(off);
-    // a tela mudou de tamanho: o espaço do fim da página e as cartas do campinho afastadas de novo (nada sobre nada)
-    function redim() {
-      ajustaEspaco();
-      var u = UT();
-      if (u && u.separaCampo && VIEW.screen) [].forEach.call(VIEW.screen.querySelectorAll(".lei-pitch"), function (pt) { u.separaCampo(pt); });
-    }
+    // a tela mudou de tamanho: o espaço do fim da página (a barra fixa muda de altura)
+    function redim() { ajustaEspaco(); }
     global.addEventListener("resize", redim);
     VIEW.desliga.push(function () { global.removeEventListener("resize", redim); });
     if (!VIEW.raf) VIEW.raf = global.requestAnimationFrame(laco);
@@ -915,24 +904,51 @@
   }
 
   /* ---------- o campinho das vagas (as fotos: verde, as vagas em círculo) ---------- */
-  // Só para ver (role="img"): a vaga vazia com a sigla; a preenchida com a foto (ou a silhueta na cor do clube), o sobrenome,
-  // o "−N" de fora da função e a nota pequena; nos cantos de baixo a formação e "n/11". Serve à aba Leilão e à folha Vendas.
-  function campinhoVagas(S, t, cls) {
+  // A vaga vazia com a sigla; a preenchida com a foto (ou a silhueta na cor do clube), o sobrenome, o "−N" de fora da função e
+  // a nota pequena; nos cantos de baixo a formação e "n/11". Serve à aba Leilão, à folha Vendas e à Escalação.
+  // opc: { cls, troca (a Escalação: tocar em dois troca as vagas, só com os 11), sel (a vaga marcada) }. Sem a troca, só para
+  // ver (role="img"). Cada linha da formação fica reta e com as vagas à mesma distância (o y médio da linha e o x de ponta a
+  // ponta dela: o FORMATIONS do TM é em arco e é de todos; no meio do 3-5-2 as três do centro ficavam a 16% e as notas
+  // encostavam) e o sobrenome cabe até o vizinho da mesma linha (não encosta no do lado nem sai do campo).
+  function campinhoVagas(S, t, opc) {
+    opc = typeof opc === "string" ? { cls: opc } : (opc || {});
     var e = S.escalacao(t), f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notasOcultas();
-    var n = 0, vagas = [];
+    var linhas = {}, pos = [];
+    slots.forEach(function (sl, s) { (linhas[sl[0]] = linhas[sl[0]] || []).push(s); });
+    Object.keys(linhas).forEach(function (g) {
+      var ss = linhas[g].slice().sort(function (a, b) { return slots[a][1] - slots[b][1] || a - b; }), m = ss.length;
+      var y = Math.round(10 * ss.reduce(function (acc, s) { return acc + slots[s][2]; }, 0) / m) / 10;
+      var x0 = slots[ss[0]][1], x1 = slots[ss[m - 1]][1], passo = m > 1 ? (x1 - x0) / (m - 1) : 0;
+      ss.forEach(function (s, i) { pos[s] = { x: m > 1 ? Math.round(10 * (x0 + passo * i)) / 10 : x0, y: y, passo: m > 1 ? passo : 0 }; });
+    });
+    var n = 0, vagas = [], troca = opc.troca;
     slots.forEach(function (slot, s) {
       var k = e && e.tit ? e.tit[s] : -1, r = k >= 0 && S.ctx ? L().retratoDe(S.ctx, k) : null, pen = (e && e.pen && e.pen[s]) || 0;
       if (r) n++;
+      var x = pos[s].x;
+      // (a largura do nome em % da largura do campo = cqw: até o vizinho com folga, nunca para fora da borda)
+      var nw = Math.max(10, Math.min(24, pos[s].passo ? pos[s].passo - 1.8 : 24, 2 * Math.min(x, 100 - x) - 2));
       var kids;
       if (r) {
         kids = [
-          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen ? el("span", { class: "lei-pen", text: "−" + pen }) : null]),
-          el("span", { class: "lei-cv-nome", text: u && u.shortNm ? u.shortNm(r.name) : r.name })
+          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen ? el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }) : null]),
+          el("span", { class: "lei-cv-nome", style: "max-width:" + nw + "cqw", text: u && u.shortNm ? u.shortNm(r.name) : r.name })
         ];
       } else kids = [el("span", { class: "lei-cv-bola vazia" }, [el("span", { class: "lei-cv-sig", text: GRUPO_CURTO[slot[0]] })])];
-      vagas.push(el("div", { class: "lei-cv-vaga" + (r ? " cheia" : "") + (r && pen ? " fora" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", data: { vaga: String(s) } }, kids));
+      var at = { class: "lei-cv-vaga" + (r ? " cheia" : "") + (r && pen ? " fora" : "") + (opc.sel === s ? " sel" : ""), style: "left:" + x + "%;top:" + pos[s].y + "%", data: { vaga: String(s) } };
+      if (troca && r) {
+        at.role = "button"; at.tabindex = "0";
+        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função (−" + pen + ")" : "") + (opc.sel === s ? ", marcado" : "");
+      }
+      var v = el("div", at, kids);
+      if (troca && r) {
+        v.addEventListener("click", function () { troca(s); });
+        v.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); troca(s); } });
+      }
+      vagas.push(v);
     });
-    var campo = el("div", { class: "lei-cv" + (cls ? " " + cls : ""), role: "img", "aria-label": (t === (VIEW.V && VIEW.V.eu) ? "Seu time" : "Time") + " na " + f + ": " + n + " de " + slots.length },
+    var rot = (t === (VIEW.V && VIEW.V.eu) ? "Seu time" : "Time") + " na " + f + ": " + n + " de " + slots.length;
+    var campo = el("div", { class: "lei-cv" + (opc.cls ? " " + opc.cls : ""), role: troca ? "group" : "img", "aria-label": rot },
       [el("span", { class: "lei-cv-linhas", "aria-hidden": "true" }, [el("i", { class: "c" }), el("i", { class: "m" }), el("i", { class: "a1" }), el("i", { class: "a2" })])].concat(vagas).concat([
         el("span", { class: "lei-cv-forma", "aria-hidden": "true", text: f }),
         el("span", { class: "lei-cv-n", "aria-hidden": "true", text: n + "/" + slots.length })
@@ -1122,35 +1138,6 @@
     }, function (e) { VIEW.enviando = null; if (global.console) console.error(e); atualiza(); });
   }
 
-  /* ---------- o campinho (o do Ultimate: .ut-pitch, .ut-slot e a carta mini) ---------- */
-  // opc: { cls, troca (a escalação: tocar em dois troca as vagas), sel (a vaga marcada) }
-  function campinho(S, t, opc) {
-    opc = opc || {};
-    var e = S.escalacao(t), f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [];
-    var pitch = el("div", { class: "ut-pitch lei-pitch" + (opc.cls ? " " + opc.cls : ""), role: opc.troca ? "group" : "img",
-      "aria-label": "Campinho na " + f }, [el("div", { class: "ut-pmark circ" }), el("div", { class: "ut-pmark meio" }), el("div", { class: "ut-pmark area" })]);
-    slots.forEach(function (slot, s) {
-      var k = e && e.tit ? e.tit[s] : -1, r = k >= 0 && S.ctx ? L().retratoDe(S.ctx, k) : null, pen = (e && e.pen && e.pen[s]) || 0;
-      var role = GRUPO_CURTO[slot[0]];
-      var carta = cartaEl(r, "mini" + (r && pen ? " fora" : ""), role);
-      var kids = [carta];
-      if (r && pen) kids.push(el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }));
-      var at = { class: "ut-slot lei-vaga" + (opc.sel === s ? " sel" : "") + (r && pen ? " fora" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", data: { vaga: String(s) } };
-      if (opc.troca && r) {
-        at.role = "button"; at.tabindex = "0";
-        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função (−" + pen + ")" : "") + (opc.sel === s ? ", marcado" : "");
-      }
-      var v = el("div", at, kids);
-      if (opc.troca && r) {
-        v.addEventListener("click", function () { opc.troca(s); });
-        v.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); opc.troca(s); } });
-      }
-      pitch.appendChild(v);
-    });
-    var u = UT(); if (u && u.separaCampo) u.separaCampo(pitch);
-    return pitch;
-  }
-
   /* ---------- a aba Escalação ---------- */
   TM.ui.register("leilao-escalacao", function (screen) {
     var M = moldura(screen, "leilao-escalacao"); if (!M) return;
@@ -1209,7 +1196,7 @@
     b.appendChild(el("div", { class: "lei-caixa lei-esc-formas" }, [el("div", { class: "lei-rotulo", text: "Formação" }), seg]));
     if (e && e.aviso) b.appendChild(el("div", { class: "lei-esc-aviso", role: "note" }, [ic("triangle-alert"), el("span", { text: "O seu time não cabe na " + e.pref + ": vale a " + e.formacao + "." })]));
     // o campinho (tocar em dois troca as vagas: só com os 11)
-    var campo = campinho(S, V.eu, { cls: "lei-pitch-esc", sel: VIEW.selVaga, troca: cheio && !V.soOlhar && !V.alterada ? tocaVaga : null });
+    var campo = campinhoVagas(S, V.eu, { cls: "lei-cv-esc", sel: VIEW.selVaga, troca: cheio && !V.soOlhar && !V.alterada ? tocaVaga : null });
     b.appendChild(el("div", { class: "lei-esc-campo" }, [campo]));
     var dica = cheio ? "Toque em dois jogadores para trocar de lugar. Cada um só entra numa vaga da posição dele; −1 e −2 marcam quem está fora da função."
       : V.estado === "leilao" ? "Durante o leilão, a formação é a sua preferência: se uma compra não couber nela, ela muda sozinha. A troca de lugar abre com os 11."
@@ -2349,7 +2336,7 @@
       var ts = V.tecnicos[sel];
       if (ts) {
         c.appendChild(el("h3", { class: "lei-folha-sub", text: (ts.eu ? "Seu time" : "Time de " + ts.nome) + " · " + (S.escalacao(sel) || {}).formacao }));
-        c.appendChild(el("div", { class: "lei-vend-campo" }, [campinhoVagas(S, sel, "lei-cv-folha")]));
+        c.appendChild(el("div", { class: "lei-vend-campo" }, [campinhoVagas(S, sel, { cls: "lei-cv-folha" })]));
         var falta = [];
         var e = S.escalacao(sel), slots = e ? L().slotsDe(e.formacao) : [];
         ["GK", "DF", "MF", "FW"].forEach(function (g) {

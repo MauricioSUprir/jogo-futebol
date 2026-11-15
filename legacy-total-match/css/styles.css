@@ -6731,7 +6731,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 
 /* ================= LEILÃO (Modo Leilão; js/leilao-tela.js, PLANO-LEILAO.md §2) =================
    Verde e preto pelas variáveis do :root, Inter (a TM Cond só na carta), ícones pelo TM.ic e o tema claro em todo bloco
-   (o campinho continua escuro, como o do Ultimate). A barra de lance é PRÓPRIA (não o .bottom-nav): fixa embaixo em todo
+   (o campinho das vagas é verde nos dois temas, como nas fotos). A barra de lance é PRÓPRIA (não o .bottom-nav): fixa embaixo em todo
    layout, à vista com o relógio rodando também no celular deitado; a página termina com um espaço da altura dela. */
 .lei-vivo { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
 .lei-screen { padding-top: 14px; }
@@ -6911,7 +6911,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-cv-bola.vazia { background: rgba(0,0,0,.18); border: 1.5px solid rgba(255,255,255,.55); }
 .lei-cv-sig { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: #fff; }
 .lei-cv-foto { border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
-.lei-cv-nome { max-width: 15.5cqw; font-size: 11px; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-cv-nome { max-width: 20cqw; font-size: 11px; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lei-cv-ov { position: absolute; left: -8px; top: -5px; min-width: 18px; height: 16px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;
   background: #fff; color: #0c5f2e; font-size: 11px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
 .lei-cv .lei-pen { right: -10px; top: -6px; font-size: 11px; }
@@ -6919,6 +6919,13 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-cv-forma { left: 6%; }
 .lei-cv-n { right: 6%; }
 .lei-cv-folha { max-width: 380px; margin: 0 auto; }
+/* a Escalação: tocar em dois troca as vagas (a 1ª fica marcada com o anel branco); quem está fora da função com o anel âmbar */
+.lei-cv-vaga[role="button"] { cursor: pointer; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+.lei-cv-vaga[role="button"]:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.lei-cv-vaga.fora .lei-cv-foto { border-color: var(--alerta); }
+.lei-cv-vaga.sel .lei-cv-bola { box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(5,8,7,.55); border-radius: 50%; }
+.lei-cv-vaga.sel .lei-cv-nome { background: #fff; color: #0c5f2e; text-shadow: none; padding: 0 4px; border-radius: 4px; }
+.lei-cv-esc { max-width: 440px; margin: 0 auto; }
 /* os Próximos lotes: uma linha recolhível no fim (sem caixa, só a linha de cima) */
 .lei-bloco { width: 100%; border-top: 1px solid var(--line); margin-top: 6px; }
 .lei-bloco-bt { width: 100%; display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 10px 2px; border: 0; background: transparent; color: var(--text); font: inherit;
@@ -6995,14 +7002,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-valor:disabled { opacity: .45; }
 .lei-valor::placeholder { color: var(--text-dim); font-weight: 500; font-size: 16px; }
 
-/* ---------- campinho (o do Ultimate) ---------- */
-/* o campinho do leilão tem sempre a proporção do celular (.62: o goleiro não encosta nos zagueiros na 5-4-1 nem na 3-5-2) e a
-   carta pela largura dele (cqw), em qualquer tela */
-.lei-pitch { container-type: inline-size; aspect-ratio: .62; max-width: 360px; margin: 0 auto; }
-.lei-pitch .ut-card.mini { --w: clamp(32px, 14cqw, 60px); }
-.lei-vaga.sel .ut-card { outline: 3px solid var(--gold); outline-offset: 2px; }
-.lei-vaga[role="button"] { cursor: pointer; border-radius: 6px; }
-.lei-vaga[role="button"]:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 3px; }
+/* o −N de quem está fora da função (o campinho das vagas) */
 .lei-pen { position: absolute; right: -6px; top: -6px; z-index: 3; padding: 1px 5px; border-radius: 8px; background: var(--alerta); color: #1b1203; font-size: 10px; font-weight: 900; line-height: 1.3; }
 
 /* ---------- a aba Escalação ---------- */
@@ -7422,7 +7422,6 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-corpo-esc { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); column-gap: 24px; row-gap: 12px; align-items: start; }
   .lei-corpo-esc > * { grid-column: 2; }
   .lei-corpo-esc > .lei-esc-campo { grid-column: 1; grid-row: 1 / span 7; }
-  .lei-pitch-esc { max-width: 440px; }
   .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   /* na Escalação a coluna da direita é estreita até ~1100 px: 3 por linha, como no celular */
   .lei-corpo-esc .lei-formas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
