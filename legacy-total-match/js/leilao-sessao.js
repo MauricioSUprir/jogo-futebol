@@ -92,6 +92,7 @@
      guardado no aparelho até ficar gravado: a caixa "leilao:3d:" + código) · desistir3d(id, trava) (aceitar o W.O. agora: o
      meu 3D abriu e fechou sem resultado; no par, o meu W.O.) · jogarPar(id?) (o "Jogar" contra um amigo: reserva ou entra no
      par) · par(id?) (o par reservado para a tela ligar o Online 3D) · woPar(id, trava, perdedor) (o W.O. de quem saiu) ·
+     fimPar(id, trava, perdedor, motivo) (o fim do 3D do par sem o resultado: 'saiu' = o W.O. com o abriu; o resto, o simulado) ·
      simularPendentes() (o dono; sem ele
      há 5 min, qualquer técnico presente) · partida(id) (o jogo
      gravado com os dois times pelas escalações gravadas: o "Ver o jogo" no 2D)
@@ -1281,6 +1282,8 @@
       // (a caixa é deste aparelho: só existe para o 3D que ELE abriu — o meu jogo contra um bot ou o meu lado do par)
       var cx = j.modo === "3d" ? S._caixa3d() : null;
       if (cx && cx.id === g.id && cx.trava === j.trava) {
+        // (o par: o resultado do 3D só grava com o abriu — o abriu que não ficou gravado vai antes)
+        if (j.par === true && cx.abriu && j.abriu == null) return { acao: "abriu", id: g.id, quando: agora };
         if (S._r3Guardado(cx)) return { acao: "gravar3d", id: g.id, quando: agora };
         if (cx.abriu && j.abriu == null) return { acao: "abriu", id: g.id, quando: agora };
       }
@@ -1525,16 +1528,34 @@
       return S.gravar3d(g.id, cx.trava, "3d", S._r3Guardado(cx)).then(function (r) { return { feito: !!(r && r.ok), motivo: r && r.motivo }; });
     }
     if (a.acao === "wo") return S._transJogo(g.id, function (cur) { return LC().wo(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
-    if (a.acao === "naoVeio") return S._transJogo(g.id, function (cur) { return LC().naoVeio(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
-    if (a.acao === "naoAbriu") {
-      var memo = {};
-      return S._transJogo(g.id, function (cur) {
-        if (!cur || cur.e !== "reservado" || cur.modo !== "3d" || (cur.par !== true && cur.abriu != null)) return { ok: false, motivo: cur ? cur.e : "sem" };
-        var k = canon(cur), res = memo[k] || (memo[k] = LC().resultadoDoJogo(c, g.id, cur));
-        return LC().naoAbriu(cur, { trava: cur.trava, hora: hora, ts: TS, res: res, mata: LC().ehMata(g.id) }, c);
-      });
+    if (a.acao === "naoVeio") {
+      // (revisão do PR 5, M2: o W.O. de quem não tocou em Jogar só com ele NA SALA, sem buraco desde o chamado — pelos batimentos
+      // que chegaram até a testemunha, como os outros prazos do modo; fora dela, ele nem viu o chamado: o simulado)
+      if (!S._viuChamado(g, hora)) return S._naoAbriuJa(g, c, hora, TS, true);
+      return S._transJogo(g.id, function (cur) { return LC().naoVeio(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
     }
+    if (a.acao === "naoAbriu") return S._naoAbriuJa(g, c, hora, TS, false);
     return Promise.resolve({ feito: false, motivo: "nada" });
+  };
+  // o simulado do 3D reservado vencido (naoAbriu). soUm: o par com um só no Jogar e o outro fora da sala (M2) — só nesse estado
+  P._naoAbriuJa = function (g, c, hora, TS, soUm) {
+    var S = this, memo = {};
+    return S._transJogo(g.id, function (cur) {
+      if (!cur || cur.e !== "reservado" || cur.modo !== "3d" || (cur.par !== true && cur.abriu != null)) return { ok: false, motivo: cur ? cur.e : "sem" };
+      if (soUm && LC().vieram(cur)) return { ok: false, motivo: "vieram" };
+      var k = canon(cur), res = memo[k] || (memo[k] = LC().resultadoDoJogo(c, g.id, cur));
+      return LC().naoAbriu(cur, { trava: cur.trava, hora: hora, ts: TS, res: res, mata: LC().ehMata(g.id) }, c);
+    });
+  };
+  // o par com um só no Jogar: quem não tocou viu o chamado? Na sala agora (o bate fresco até a testemunha) e sem buraco desde o
+  // chamado (o inicio: a presença contínua começou antes dele). No treino (sem o par), sempre
+  P._viuChamado = function (g, hora) {
+    var S = this, j = g && g.j;
+    if (!S.online || !j || j.e !== "reservado" || j.par !== true) return true;
+    var lado = LC().vemDe(j, 0) == null ? 0 : 1, t = lado === 0 ? g.a : g.b;
+    if (S._ausente(t, hora)) return false;
+    var run = S._corrida(t);
+    return !(run && run.ini != null && run.ini > j.inicio);
   };
 
   /* ---------- o que as telas mostram ---------- */
@@ -1935,11 +1956,12 @@
     if (cx.pedido && TM.tm3d && TM.tm3d.soltaResultado) { try { TM.tm3d.soltaResultado(cx.pedido); } catch (e) {} }
   };
   // o resultado do 3D guardado: o da caixa ou o que o golaco gravou no apito (o pedido)
+  // (o do W.O. do Online 3D — o par: com o online.wo — é o placar parcial do meio do jogo, não o do apito: não serve)
   P._r3Guardado = function (cx) {
     if (!cx) return null;
-    if (cx.r3 && typeof cx.r3 === "object") return cx.r3;
+    if (cx.r3 && typeof cx.r3 === "object" && !(cx.r3.online && cx.r3.online.wo)) return cx.r3;
     if (!cx.pedido) return null;
-    try { var t = global.localStorage && global.localStorage.getItem("tm3d:resultado:" + cx.pedido); var r = t ? JSON.parse(t) : null; return r && typeof r === "object" ? r : null; } catch (e) { return null; }
+    try { var t = global.localStorage && global.localStorage.getItem("tm3d:resultado:" + cx.pedido); var r = t ? JSON.parse(t) : null; return r && typeof r === "object" && !(r.online && r.online.wo) ? r : null; } catch (e) { return null; }
   };
   // a caixa de um jogo já decidido (ou de outra trava) sai
   P._confere3d = function () {
@@ -2018,16 +2040,24 @@
     var adv = g.a === S.eu ? g.b : g.a, eu = S.eu, lado = g.a === eu ? 0 : 1;
     if (c.tipos[adv] !== "pessoa") return recusa("contraBot");
     if (!S._comPar()) return recusa("semPar");
-    var j0 = g.j, fn;
+    var j0 = g.j;
     if (j0 && j0.e === "reservado") {
       if (j0.par !== true) return recusa("jogando");
       if (LC().vemDe(j0, lado) != null) return recusa("veio");
-      var tr = j0.trava;
-      fn = function (cur) { return LC().entrarPar(cur, { trava: tr, por: eu, ts: rede.TS }); };
-    } else {
-      if (S.online && S._ausente(adv, S.hora())) return recusa("ausente");
-      var esc = [LC().escalacaoDoJogo(c, g.a), LC().escalacaoDoJogo(c, g.b)];
-      fn = function (cur) { return LC().reservarPar(cur, { ab: [g.a, g.b], esc: esc, por: eu, ts: rede.TS }); };
+    } else if (S.online && S._ausente(adv, S.hora())) return recusa("ausente");
+    var esc = [LC().escalacaoDoJogo(c, g.a), LC().escalacaoDoJogo(c, g.b)];
+    // a escolha é pelo nó DENTRO da transação (revisão do PR 5, M1: os dois tocando juntos, os dois viam o jogo livre e o 2º
+    // "reservar" era recusado — o toque dele se perdia e ele perdia por W.O.): o par reservado deste jogo, sem o meu toque →
+    // entrar (com a trava do servidor); senão, reservar
+    function fn(cur) {
+      if (cur && cur.e === "reservado" && cur.par === true && LC().ladoDe(cur, eu) === lado) {
+        var ab = Array.isArray(cur.ab) ? cur.ab : [cur.ab && cur.ab[0], cur.ab && cur.ab[1]];
+        if (ab[0] === g.a && ab[1] === g.b) {
+          if (LC().vemDe(cur, lado) != null) return { ok: false, motivo: "veio" };
+          return LC().entrarPar(cur, { trava: cur.trava, por: eu, ts: rede.TS });
+        }
+      }
+      return LC().reservarPar(cur, { ab: [g.a, g.b], esc: esc, por: eu, ts: rede.TS });
     }
     return S._transJogo(g.id, fn).then(function (r) {
       if (!r.feito) return { ok: false, estado: "recusado", motivo: r.motivo === "feito" ? "jaFeito" : r.motivo === "veio" ? "veio" : r.motivo === "reservado" ? "jogando" : r.motivo || "jogando" };
@@ -2081,6 +2111,25 @@
       var feitoJa = r.valor && r.valor.e === "feito" ? Promise.resolve(r.valor) : S.rede.ler("jogos/" + id).then(function (j) { return j && j.e === "feito" ? j : null; }, function () { return null; });
       return feitoJa.then(function (j) { if (j) S._larga3d(id); return j ? { ok: true, res: j.res, jogo: j, gravou: !!r.feito } : { ok: false, motivo: r.motivo || "naoGravou" }; });
     }, function (e) { return { ok: false, motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
+  };
+  /** O par: o fim do 3D sem o resultado do 3D (revisão do PR 5, M3 e M4). motivo 'saiu' (o "Sair da partida", o abandono
+   *  explícito: o meu ou o do outro, avisado pelo meu 3D) = o W.O. de quem saiu (perdedor = o lado), só com o 3D aberto — o abriu
+   *  no servidor; sem ele, o simulado —; qualquer outro ('caiu' = a ligação fechou, 'sumiu' = 90 s sem pacote, 'semAbrir' = o
+   *  abandono antes da tela do 3D) = o simulado com a semente: de quem foi a culpa ninguém sabe. Promise({ ok, res, jogo, gravou }
+   *  | { ok: false, motivo }), como o woPar e o gravar3d. */
+  P.fimPar = function (id, trava, perdedor, motivo) {
+    var S = this;
+    function simula() { return S.gravar3d(id, trava, "simulado", null); }
+    if (motivo !== "saiu") return simula();
+    function semAbriu(r) { return r && !r.ok && (r.motivo === "naoAbriu" || r.motivo === "vem"); }
+    return S.woPar(id, trava, perdedor).then(function (r) {
+      if (!semAbriu(r)) return r;
+      // (o abriu do outro aparelho a caminho deste: espera o nó com ele — ou o lê do servidor — e tenta de novo; sem ele, o simulado)
+      return S._noServidor(id, function (j) { return j && (j.e === "feito" || (j.e === "reservado" && j.abriu != null)) ? j : null; }).then(function (j) {
+        if (!j || j.e !== "reservado") return simula();
+        return S.woPar(id, trava, perdedor).then(function (r2) { return semAbriu(r2) ? simula() : r2; });
+      });
+    });
   };
   /** A reserva do 3D como o SERVIDOR a gravou. No online, o fim da transação traz a ESTIMATIVA local do TIMESTAMP (a trava
    *  de verdade chega pelos ouvintes, como no SDK: o testar-leilao-online.mjs tresd achou o abriu e o resultado do 3D
@@ -2183,6 +2232,16 @@
       return S.rede.ler("jogos/" + id).then(function (j) { return j && j.e === "feito" ? j : null; }, function () { return null; });
     }
     function resposta(j, gravou) { return j ? { ok: true, res: j.res, jogo: j, gravou: !!gravou } : { ok: false, motivo: "naoGravou" }; }
+    // (o par: o resultado do 3D só grava com o abriu; o abriu marcado pelo OUTRO aparelho pode estar a caminho deste — o SDK roda a
+    // transação no cache e, abortada, nem pergunta ao servidor: espera o nó com ele, ou lê do servidor, e tenta de novo, uma vez)
+    var tenta0 = tenta;
+    tenta = function () {
+      return tenta0().then(function (r) {
+        if (r.feito || r.motivo !== "abriu" || origem !== "3d") return r;
+        return S._noServidor(id, function (j) { return j && (j.e === "feito" || (j.e === "reservado" && j.abriu != null)) ? j : null; })
+          .then(function (j) { return j && j.e === "reservado" ? tenta0() : r; });
+      });
+    };
     return tenta().then(function (r) { return gravado(r).then(function (j) { return resposta(j, r.feito); }); }, function (e) {
       // a conexão caiu no meio: espera a sala ficar em dia (até 30 s) e tenta de novo, uma vez
       if (!S.online || !e || e.codigo !== "desconectado") return gravado(null).then(function (j) { return resposta(j, false); });

@@ -36,6 +36,7 @@ export function avaliadorRegras(arquivo) {
   class Snap {
     constructor(t, ps) { this.t = t; this.ps = ps; }
     child(k) { return new Snap(this.t, this.ps.concat(String(k).split("/").filter(Boolean))); }
+    parent() { return new Snap(this.t, this.ps.slice(0, -1)); }
     val() { return pega(this.t, this.ps); }
     exists() { return this.val() != null; }
     hasChildren(ks) { const v = this.val(); if (!v || typeof v !== "object") return false; return ks ? ks.every(k => v[k] != null) : true; }
