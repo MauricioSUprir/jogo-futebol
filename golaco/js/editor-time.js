@@ -109,12 +109,15 @@ export function tamanhoCarta(modo, W, H, k = 1) {
 }
 
 /**
- * Cria a tela. opc = {raiz (o #editar-time), aoPronto(ed | null), aoFechar()}.
+ * Cria a tela. opc = {raiz (o #editar-time), aoPronto(ed | null), aoFechar(), notasOcultas (o Modo Leilão do TM com o Overall
+ * escondido, PR 6: nenhuma nota na tela — o geral, as estrelas, a nota das cartas e os números da carta; só a tela)}.
  * Devolve {abrir(snapshot), voltar(), esc(), fechar(), aberto, rascunho, aba}.
  * snapshot = {time: cópia de m.times[t], fila: edição na fila | null, timeId: t}.
  */
 export function criarEditorTime(opc) {
   const raiz = opc.raiz;
+  // as notas escondidas (o pedido do TM: partida.notasOcultas): as cartas com "?", sem o geral nem os números da carta
+  const oculta = !!opc.notasOcultas;
   const st = {
     aberto: false, montado: false, aba: 'escalacao', modo: 'deitado', rasc: null, timeEstado: null, timeId: 0,
     info: null, hover: null, fase: 'sem', roving: { campo: null, reserva: null, forma: null }, ultimoFoco: null,
@@ -268,6 +271,7 @@ export function criarEditorTime(opc) {
     return h;
   }
   function renderNota() {
+    if (oculta) { el.nota.innerHTML = ''; el.nota.removeAttribute('aria-label'); el.nota.removeAttribute('role'); return; }
     const r = R();
     const agora = notaTime(r.vagas, forma());
     const antes = notaTime(r.original.vagas, FORMACOES[r.original.formacao]);
@@ -287,7 +291,7 @@ export function criarEditorTime(opc) {
     const pos = comVaga ? posVaga : j.pos;
     const enc = comVaga ? encaixeNaVaga(j, posVaga) : 'natural';
     const encTxt = enc === 'natural' ? 'na posição dele' : enc === 'alternativa' ? 'posição alternativa' : 'fora de posição';
-    return { nota, pos, enc, aria: `${j.nome}, número ${j.num}, ${nomePos(j.pos)}${comVaga ? `, na vaga ${posVaga}` : ''}, nota ${nota}${comVaga ? `, ${encTxt}` : ''}` };
+    return { nota, pos, enc, aria: `${j.nome}, número ${j.num}, ${nomePos(j.pos)}${comVaga ? `, na vaga ${posVaga}` : ''}${oculta ? '' : `, nota ${nota}`}${comVaga ? `, ${encTxt}` : ''}` };
   }
 
   /** Conteúdo de uma carta (campinho ou reservas). */
@@ -301,7 +305,8 @@ export function criarEditorTime(opc) {
     const sai = sit === 'sai';
     const saiu = sit === 'saiu';
     const expulso = sit === 'expulso';
-    const muitoFora = noCampo && t.enc === 'fora' && t.nota <= notaNatural(id) - 10;
+    // (o "muito fora" vem da nota: com as notas escondidas, só o "!" de fora de posição)
+    const muitoFora = !oculta && noCampo && t.enc === 'fora' && t.nota <= notaNatural(id) - 10;
     bt.dataset.jogador = String(id);
     bt.className = `carta ${noCampo ? 'no-campo' : 'na-lista'} enc-${t.enc}${muitoFora ? ' muito-fora' : ''}${entra ? ' entra' : ''}${sai ? ' sai' : ''}${saiu ? ' saiu' : ''}${expulso ? ' expulso' : ''}`;
     bt.setAttribute('aria-pressed', String(r.escolhido === id));
@@ -312,7 +317,7 @@ export function criarEditorTime(opc) {
     else if (sai) selo = `<span class="c-selo c-sai" title="Sai na próxima parada">${SVG.sai}</span>`;
     else if (t.enc === 'fora') selo = '<span class="c-selo c-fora" title="Fora de posição">!</span>';
     const alt = t.enc === 'alternativa' ? '<span class="c-alt" aria-hidden="true">°</span>' : '';
-    bt.innerHTML = `<span class="c-topo"><span class="c-nota">${t.nota}${alt}</span><span class="c-dir">${selo}<span class="c-pos">${t.pos}</span></span></span>`
+    bt.innerHTML = `<span class="c-topo"><span class="c-nota">${oculta ? '?' : t.nota}${alt}</span><span class="c-dir">${selo}<span class="c-pos">${t.pos}</span></span></span>`
       + `<span class="c-base"><span class="c-nome">${esc(j.camisa)}</span><span class="c-num">${j.num}</span></span>`;
     let aria = t.aria;
     if (entra) aria += `, entra no lugar de ${camisa(par.sai)} na próxima parada`;
@@ -421,7 +426,7 @@ export function criarEditorTime(opc) {
       for (const v of forma().vagas) {
         const id = r.vagas[v.id];
         const j = fichaDe(id);
-        if (j && encaixeNaVaga(j, v.pos) === 'fora') fora.push(`${esc(j.camisa)} como ${v.pos} (${notaNaVaga(id, v.pos)})`);
+        if (j && encaixeNaVaga(j, v.pos) === 'fora') fora.push(`${esc(j.camisa)} como ${v.pos}${oculta ? '' : ` (${notaNaVaga(id, v.pos)})`}`);
       }
       html = fora.length
         ? linha(`<b>${r.formacao}</b> · ${fora.length} fora de posição: ${fora.join(', ')}`) + linha('Troque com um reserva na aba Escalação.', 'fraca')
@@ -439,9 +444,10 @@ export function criarEditorTime(opc) {
         const vg = vagaDe(esc0);
         const posV = vg ? forma().porId[vg].pos : null;
         html = linha(`<b>${esc(j.camisa)}</b> · ${j.num} · ${j.pos} · pé ${j.pe} · ${altura(a.altura)}`);
-        html += posV ? linha(`Nesta vaga (${posV}): <b>${notaNaVaga(esc0, posV)}</b> · como ${j.pos}: ${notaNatural(esc0)}`)
+        if (oculta) html += posV ? linha(`Nesta vaga: <b>${posV}</b> · joga de ${j.pos}`) : linha(`Joga de ${j.pos} · ${toque.toLowerCase()} num titular para substituir`);
+        else html += posV ? linha(`Nesta vaga (${posV}): <b>${notaNaVaga(esc0, posV)}</b> · como ${j.pos}: ${notaNatural(esc0)}`)
           : linha(`Nota como ${j.pos}: <b>${notaNatural(esc0)}</b> · ${toque.toLowerCase()} num titular para substituir`);
-        if (pc) {
+        if (pc && !oculta) {
           const n = j.pos === 'GOL'
             ? { REF: a.reflexo, MER: a.mergulho, POS: a.posicionamento, ELA: a.impulsao, PAS: a.passeLongo, RIT: Math.round(0.55 * a.velocidade + 0.45 * a.aceleracao) }
             : numerosCarta(a);
@@ -719,10 +725,12 @@ export function criarEditorTime(opc) {
     let txt = null;
     if (vgE && vgB) {
       const pE = forma().porId[vgE].pos;
-      txt = `${esc(j.camisa)} (${j.pos} ${notaNatural(id)}) → na vaga ${pE}: <b>${notaNaVaga(id, pE)}</b> · ${esc(jE.camisa)} → ${forma().porId[vgB].pos}: <b>${notaNaVaga(esc0, forma().porId[vgB].pos)}</b>`;
+      txt = oculta ? `${esc(j.camisa)} (${j.pos}) → na vaga ${pE} · ${esc(jE.camisa)} → ${forma().porId[vgB].pos}`
+        : `${esc(j.camisa)} (${j.pos} ${notaNatural(id)}) → na vaga ${pE}: <b>${notaNaVaga(id, pE)}</b> · ${esc(jE.camisa)} → ${forma().porId[vgB].pos}: <b>${notaNaVaga(esc0, forma().porId[vgB].pos)}</b>`;
     } else if (vgE || vgB) {
       const vg = vgE ?? vgB, quem = vgE ? id : esc0, pos = forma().porId[vg].pos;
-      txt = `${esc(fichaDe(quem).camisa)} (${fichaDe(quem).pos} ${notaNatural(quem)}) → na vaga ${pos}: <b>${notaNaVaga(quem, pos)}</b>`;
+      txt = oculta ? `${esc(fichaDe(quem).camisa)} (${fichaDe(quem).pos}) → na vaga ${pos}`
+        : `${esc(fichaDe(quem).camisa)} (${fichaDe(quem).pos} ${notaNatural(quem)}) → na vaga ${pos}: <b>${notaNaVaga(quem, pos)}</b>`;
     }
     if (txt) { st.hover = txt; renderInfo(); }
   }

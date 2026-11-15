@@ -317,7 +317,8 @@ export function criarPrepartida(opc) {
       T.fichas.forEach((f, i) => { const p = porVaga.get(f.vaga); if (p) h += htmlFicha(f, p, T, i, null); });
       ce.innerHTML = `<div class="pp-forma${T.texto ? ' pp-forma-txt' : ''}">${esc(T.texto ?? T.formacao)}</div>`
         + (T.texto ? '' : `<div class="pp-selo">${icSelo(T.selo.id)}<span>${esc(T.selo.nome)}</span></div>`);
-      cd.innerHTML = T.texto ? '' : `<div class="pp-geral">GERAL ${T.geral}</div><div class="pp-est" aria-hidden="true">${estrelasTxt(T.estrelas)}</div>`;
+      // (as notas escondidas do Modo Leilão, PR 6: geral null — o canto sem o GERAL e sem as estrelas)
+      cd.innerHTML = T.texto || T.geral == null ? '' : `<div class="pp-geral">GERAL ${T.geral}</div><div class="pp-est" aria-hidden="true">${estrelasTxt(T.estrelas)}</div>`;
     }
     fichasEl.innerHTML = h;
     // as fichas são só desenho (a lista .pp-lista diz o mesmo ao leitor de tela); os discos da Visão tática recebem o foco: fora do
@@ -336,7 +337,7 @@ export function criarPrepartida(opc) {
     // a lista do leitor de tela
     const ul = raiz.querySelector('.pp-lista');
     const grupos = [['Goleiro', f => f.fila === 0], ['Defesa', f => f.fila === 1], ['Meio-campo', f => f.fila >= 2 && f.fila < 4], ['Ataque', f => f.fila >= 4]];
-    let li = `<li>${esc(T.nome)}: ${esc(T.texto ?? T.formacao)}${T.texto ? '' : `, ${esc(T.selo.nome)}, geral ${T.geral}`}.</li>`;
+    let li = `<li>${esc(T.nome)}: ${esc(T.texto ?? T.formacao)}${T.texto ? '' : `, ${esc(T.selo.nome)}${T.geral == null ? '' : `, geral ${T.geral}`}`}.</li>`;
     if (d.disputa) {
       const fila = d.disputa.fila[st.time], porId = new Map(T.fichas.map(f => [f.id, f]));
       li += `<li>Goleiro: ${esc(porId.get(fila.goleiro)?.nome ?? '')}.</li>`;
@@ -344,7 +345,7 @@ export function criarPrepartida(opc) {
     } else {
       for (const [nome, pred] of grupos) {
         const fs = T.fichas.filter(pred);
-        if (fs.length) li += `<li>${nome}: ${fs.map(f => `${esc(f.num)} ${esc(f.nome)}, nota ${f.nota}${f.voce ? ', você' : ''}`).join('; ')}.</li>`;
+        if (fs.length) li += `<li>${nome}: ${fs.map(f => `${esc(f.num)} ${esc(f.nome)}${f.nota == null ? '' : `, nota ${f.nota}`}${f.voce ? ', você' : ''}`).join('; ')}.</li>`;
       }
     }
     ul.innerHTML = li;
@@ -367,7 +368,8 @@ export function criarPrepartida(opc) {
     const foto = st.L.ficha.semRosto ? null : opc.fotoDe?.(f.id) ?? null;
     return `<div class="pp-ficha r-${f.raridade}${f.voce ? ' voce' : ''}" data-vaga="${esc(f.vaga)}" data-id="${f.id}" style="left:${r1(p.x)}px;top:${r1(p.y)}px;--i:${i}">`
       + `<div class="pp-cab">${st.L.ficha.semRosto ? '' : `<div class="pp-mold"><div class="pp-miolo">${svgBusto(cam)}${foto ? `<img class="pp-foto" alt="" decoding="async" src="${esc(foto)}">` : ''}</div>${ordem ? `<i class="pp-ordem">${ordem}º</i>` : ''}</div>`}`
-      + `<b class="pp-nota">${f.nota}</b></div>`
+      // (a nota escondida, PR 6: "?" no mesmo lugar — a ficha não muda de medida)
+      + `<b class="pp-nota${f.nota == null ? ' oculta' : ''}">${f.nota == null ? '?' : f.nota}</b></div>`
       + `<i class="pp-filete">${f.voce ? '<span>VOCÊ</span>' : ''}</i><span class="pp-nome">${esc(f.nome)}</span></div>`;
   }
 
