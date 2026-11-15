@@ -20,6 +20,8 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 | `sala/pedidos/<uid>` | pedido em nome de outra conta |
 | `lotes` | trocar ou apagar os jogadores depois do Começar |
 | `vendas/<i>`, `jogos/<j>/res` | gravar de novo um registro ou um resultado (grava uma vez) |
+| `jogos/<j>` (o campeonato) | a máquina andar para trás: **o jogo feito não muda**; o reservado só nasce do nada ou do prazo aberto (nunca de volta ao aberto: uma trava nova daria outro sorteio); o resultado só sobre o reservado e com a **mesma trava**; o reservado "pelo prazo" **antes de o prazo vencer** pela hora do servidor (`now`); o prazo maior que 2 min ou que volta a crescer; `ini`, `trava`, `inicio` e `ts` com hora que não seja a do servidor |
+| `sala/meta/camp`, `sala/meta/fimCamp` | o começo e o fim do campeonato com hora que não seja a do servidor |
 
 ## O que ele NÃO protege
 
@@ -32,6 +34,9 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 - **Lance em nome de outro técnico** (o líder do lance é um número; as regras não conseguem achar o técnico por ele).
   A conferência que cada aparelho faz do leilão continua acusando o resto (lance acima do máximo, saldo que sobe,
   venda sem dinheiro), e a sala congela com "A sala foi alterada fora das regras".
+- **No campeonato, o resultado inventado** e a escalação com jogadores de outro técnico: as regras não recalculam a
+  partida. Quem recalcula é cada aparelho (o simulado com a semente da sala e a trava do jogo), e a sala congela. Também
+  passa **apagar um jogo** (o `.validate` não vale para apagar): os aparelhos que já o tinham visto congelam a sala.
 
 ## Atenção: a conta vinculada em dois aparelhos
 
@@ -62,5 +67,7 @@ Este bloco não foi rodado num servidor do Firebase de verdade (os testes do Tot
 Na revisão do PR 2 ele passou por um avaliador das regras (a mesma semântica do `.validate`: só valores não nulos, no nó
 gravado, nos de dentro e nos de cima) ligado em cada gravação do leilão online dos testes: 6 673 gravações, nenhuma
 honesta recusada (só o batimento de uma aba velha logo antes de ela virar "outra aba", sem efeito, e o batimento que
-chegou depois de a sala ser encerrada, que deve mesmo ser recusado). Por isso ele é opcional, e o plano B do passo 2 é
-importante.
+chegou depois de a sala ser encerrada, que deve mesmo ser recusado). No PR 3 o avaliador virou parte do teste
+(`ferramentas/testar-leilao.mjs`, bloco KO, a função `avaliadorRegras`, que lê ESTE arquivo): o campeonato online de 2, 4
+e 8 aparelhos passa por ele em cada gravação (~2 900; nenhuma recusada) e as adulterações da máquina do jogo são
+recusadas. Por isso ele é opcional, e o plano B do passo 2 é importante.
