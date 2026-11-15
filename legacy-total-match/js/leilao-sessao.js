@@ -34,7 +34,10 @@
 
    O campeonato (§1.7; o núcleo puro é o leilao-camp.js): a vista (rodadas, tabela, chave, artilharia, o fim) é montada
    dos jogos GRAVADOS (ninguém recalcula partida para mostrar). Qualquer aparelho da sala age nos jogos da rodada da vez,
-   escalonado como no leilão: bot × bot (e, até o PR 5, pessoa × pessoa) é reservado e simulado ao abrir a rodada; o jogo
+   escalonado como no leilão: bot × bot (e pessoa × pessoa nas salas de regras 1 e 2) é reservado e simulado ao abrir a
+   rodada; o de pessoa × pessoa nas salas de regras 3 (o PAR, PR 5) tem o prazo de 2 min (correndo com uma das duas
+   presente) e o jogarPar (o Online 3D do par: o 1º toque reserva, o 2º entra; os W.O. e o simulado dos prazos pela
+   testemunha da hora; o resultado pelo gravar3d/woPar de qualquer um dos dois aparelhos — a ligação mora na tela); o jogo
    de uma pessoa contra um bot tem o prazo de 2 min para começar, que só corre com a pessoa presente (pausar/retomar pelo
    batimento dela; no treino ela está sempre presente: o relógio do treino é que para) e, vencido pela testemunha da hora,
    é simulado por qualquer um. Quem some sem ninguém ver (sozinha na sala, todos com o celular travado) não perde o prazo:
@@ -86,7 +89,9 @@
      O campeonato: simular(id?) (o meu jogo da rodada, sem id) · jogar3d(id?) (o "Jogar" contra um bot no 3D: a reserva) ·
      abriu3d(id, trava, pedido?) · gravar3d(id, trava, origem, dados) (o gancho gravar do tm3d.js; o resultado do 3D fica
      guardado no aparelho até ficar gravado: a caixa "leilao:3d:" + código) · desistir3d(id, trava) (aceitar o W.O. agora: o
-     meu 3D abriu e fechou sem resultado) · simularPendentes() (o dono; sem ele
+     meu 3D abriu e fechou sem resultado; no par, o meu W.O.) · jogarPar(id?) (o "Jogar" contra um amigo: reserva ou entra no
+     par) · par(id?) (o par reservado para a tela ligar o Online 3D) · woPar(id, trava, perdedor) (o W.O. de quem saiu) ·
+     simularPendentes() (o dono; sem ele
      há 5 min, qualquer técnico presente) · partida(id) (o jogo
      gravado com os dois times pelas escalações gravadas: o "Ver o jogo" no 2D)
      Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial; também o formato, a duracao3d e a

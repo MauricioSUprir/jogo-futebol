@@ -1482,6 +1482,81 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
   já volta depois de queda e de recarregar), não um laço solto na tela.
 
+**Durante o PR 5** (o que o código real pediu de diferente do plano; `js/online3d.js`, `js/tm3d.js`, `js/leilao.js`,
+`js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leilao-rede.js`, `js/leilao-tela.js`, as regras opcionais e, no GOLAÇO,
+`golaco/js/online-pagina.js` e `golaco/js/main.js`):
+- **Em resumo** (para o dono): nas salas novas, o jogo contra um amigo tem o **Jogar** no Seu jogo, para os dois. O 1º toque
+  chama o outro (só com ele na sala); com os dois, os aparelhos se ligam direto (o Online 3D, sem servidor nosso) e abre a tela
+  antes do jogo do 3D com **Pronto** e **Simular partida** (qualquer um escolhe: os dois saem e o jogo é simulado). Quem não
+  tocar em Jogar em 2 min, ou sair no meio do 3D, perde por **W.O.**; se a ligação não der (sem TURN, comum no 4G), o jogo é
+  **simulado**. Antes do toque, o prazo de 2 min de sempre (correndo com um dos dois na sala) e o Simular partida. O
+  resultado é gravado uma vez, por qualquer um dos dois aparelhos; nada vai ao ranking nem ao h2h. As salas criadas antes
+  (regras 1 e 2) seguem como eram: o jogo contra o amigo simulado ao abrir a rodada.
+- **`TM.online3d.confronto(o)`** (a "sessão de partida" do plano): o sinal passou a ser POR NÓ (`sinalRef(ref, papel, aoPede)`;
+  a sala do Online 3D usa `salas3d/{c}/rtc`, o par `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` novo) e o confronto junta a
+  ligação, o lobby técnico do canal ctrl (`ola`, os pings e o D0, o `time`), o pedido, o quadro e a porta. A sala do Online 3D
+  usa a MESMA função (ela só cuida do nó dela, do aceite, da escolha do time, do Pronto e do h2h; `testar-online3d` 24/24).
+  O que a assinatura do plano não tinha: `eu`/`outro` (o outro pode ser uma função: a sala aprende o convidado depois), `auto`
+  (o anfitrião manda o pedido sozinho com os dois times, o `ola` e o D0 — ou 3 s), `partida`/`online`/`titulo`/`origem` (por
+  cima do pedido: o mando neutro, a competição, o `empateContinua` do mata-mata e `online.simular`), `rodada0` (a 1ª oferta
+  do anfitrião é maior que a de antes: o anfitrião que recarregou no meio da ligação ainda liga), `aceitaOferta` e
+  `pedirReligar` (a sala pelo nó dela; o par pelo `rtc/{jogo}/pede`), `aoFase`, `aoSala`, `aoAbrir` e `aoResultado`. O
+  `jogarOnline` do `tm3d.js` passou a repassar o `abriu` e o `resultado` (o do apito) — a sala não usa.
+- **Quem é o anfitrião:** o técnico do lado 0 do jogo (`ab[0]`) — joga em casa no pedido, que é o lado 0 do resultado do 3D
+  (`resDo3d` sem conversão). Cada aparelho monta o SEU time (`time3d(timeDoTecnico(c, t, esc))`, as escalações GRAVADAS na
+  reserva) e manda pelo `time`, como na sala.
+- **A máquina do par** (`leilao-camp.js`; só com `c.par`, as salas de regras 3): `reservarPar` (o 1º Jogar: modo `'3d'`,
+  `par: true`, motivo `'pedido'`, a trava = o `inicio` = a hora do servidor e o lado de quem tocou já em `vem0`/`vem1`),
+  `entrarPar` (o 2º: o lado dele, uma vez), `naoVeio` (só um tocou e passaram 2 min do `inicio`: W.O. de quem não veio,
+  `woPor: 'naoVeio'`), `marcarAbriu` (o 1º 3D à vista, de qualquer lado, só com os dois), `naoAbriu` (com os dois: o 3D
+  que não abriu em 2 min desde o 2º toque OU que abriu e passou de 2 × duração × 1,3 + 8 min desde o `abriu` sem resultado →
+  o simulado; de quem é a culpa ninguém sabe), `woPar` (W.O. de quem SAIU, a qualquer hora com os dois; `woPor: 'saiu'`;
+  vale também para o "Aceitar o W.O. agora", que no par é o W.O. de quem aceita) e o `gravar` de sempre ('3d' só com os
+  dois; o 'simulado' também antes: qualquer um escolhe Simular). O `wo` e o `desistir` do jogo contra um bot recusam o par.
+  `proximaAcao`/`_acaoJogo`: o jogo de duas pessoas tem o prazo de 2 min (aberto) correndo com UMA delas presente (a pausa
+  pela mesma régua: 12 s depois do último bate da que foi vista por último; `_acaoPar`) e, vencido, o simulado; o par
+  reservado, `naoVeio` ou `naoAbriu` pelos prazos acima (pela testemunha da hora, qualquer aparelho). "Simular os pendentes"
+  pega também o jogo de duas pessoas com as duas fora.
+- **Diferente do plano** (§1.7 e §2.6 diziam "esperando o outro tocar em Jogar e, depois de 2 min, simulado"): o pedido do
+  PR 5 diz "um não aparece → W.O. de quem não veio no prazo"; ficou o W.O. — mas só DEPOIS de um dos dois tocar em Jogar, e o
+  Jogar só acende com o amigo na sala (com ele fora: "{nome} não está na sala agora: o Jogar volta quando ele voltar."). Antes
+  do toque, como sempre: o prazo de 2 min e o simulado. A alternativa (o simulado também depois do 1º toque) é trocar o
+  `naoVeio` pelo `naoAbriu` no `proximaAcao`.
+- **O resultado** (a tela, `leilao-tela.js`, o controlador `PAR` do módulo): o fim do 3D (`tm3d:fim`): com `online.wo`, o W.O.
+  de quem saiu (`woPar`); com `online.dessinc`, o simulado; senão o do 3D (`gravar3d('3d')`). O resultado do APITO (o 3D grava
+  `tm3d:resultado:<id>` antes da cena do pós-jogo) é gravado 1,5 s depois — no W.O. do meio o GOLAÇO também grava ali o placar
+  parcial e o `tm3d:fim` com o W.O. chega antes. `tm3d:sair` com abandono = o meu W.O.; com `motivo: 'simular'` (de um dos
+  dois), o erro do 3D aqui ou sem quadro = o simulado. A ligação que não dá (`falhou`) = o simulado. Os DOIS aparelhos gravam
+  (o primeiro fica; o outro recebe o gravado). O jogo decidido por outro caminho fecha o 3D desta página (`parDecidido`),
+  menos o feito '3d' com o 3D ainda no pós-jogo. Depois, o 2D do gravado (o do 3D na velocidade instantânea: `leilao-jogo
+  {rapido}`), ou, no W.O., o Campeonato com o aviso. O nó do sinal sai ao ligar (como na sala), no `onDisconnect` e no fim.
+  O par liga sozinho quando os dois tocaram e o 3D ainda não abriu (o `olhaPar` em toda mudança da sessão, só nas telas da
+  sala e com esta aba no comando); o par que já abriu não religa (recarregar no meio = o W.O. pelo outro).
+- **No GOLAÇO** (só DOM/página): com `online.simular` (nos testes `&simular=1`), as abas do online são Pronto · Simular partida ·
+  Visão tática (o Simular de dois toques, como o do TM); o bit **E_SIMULAR = 128** do byte 19 (o último livre) e a mensagem
+  `{tipo:'simular'}` pelo canal confiável; quem recebe qualquer um sai também; os dois com `tm3d:sair {motivo: 'simular'}` meio
+  segundo depois; a tela não começa o jogo. Sem `online.simular` (a sala do Online 3D), nada muda. Fecho 0; `hash-partida`
+  IGUAL; `hash-igual --ref origin/main` IGUAL (sem o `--ref`, a base padrão 980b0b0 é velha e reprova também na main).
+- **Regras 3** (`leilao.js REGRAS` 3, `REGRAS_ACEITAS` [1, 2, 3], `REGRAS_PAR` 3; a sessão `_comPar`): o aparelho do PR 4 só
+  olha as salas novas; este joga as de regras 1 (sem o 3D), 2 (o 3D contra um bot; o amigo simulado ao abrir a rodada) e 3.
+  A conferência (`conferirJogo`) conhece o par (o par só com `c.par`, o toque de quem reservou = o `inicio`, o `abriu` só com
+  os dois, os dois W.O. do par) e a sessão (a `volta`: os toques e o `abriu` só aparecem, uma vez cada). As regras
+  opcionais: o reservado → reservado do par só ganhando o toque do outro lado com `now` e o resto igual; o abriu e o feito
+  não mexem nos toques nem no `par` (`vem0`, `vem1`: `now` ou igual).
+- **Testes** (Node): `testar-leilao.mjs` PAR (a máquina, 11 adulterações acusadas, a vez em 9 estados, as regras e as salas
+  antigas) e o KO `--caso par` (3 aparelhos sobre o banco falso, regras 3, pontos corridos: o 3D gravado uma vez pelos dois,
+  o W.O. de quem não veio só depois de 2 min pela hora do servidor, o simulado do 3D que não abriu, o W.O. de quem saiu, o
+  Simular de um dos dois, o prazo sem ninguém tocar; a sala de regras 2 sem o par) — os casos de antes do KO seguem nas salas
+  de regras 2 (`salaPronta(..., regras = 2)`); o TD10 com as regras 3. Navegador: `testar-leilao-online.mjs --so par3d` (P1–P7,
+  3 páginas, o WebRTC DE VERDADE no loopback com o quadro de ensaio no modo online — `ensaio-3d.mjs`: a porta e o fim pelo
+  teste —; no CI, mais uma parte do `tm-testes.yml`); `golaco/tools/teste-prepartida-tela.mjs` O8 e `teste-online.mjs` O16.
+  Na base (94b6a3d4) o PAR e o KO par reprovam por exceção (sem `reservarPar` nem `_comPar`), o par3d no P2 (sem o Jogar
+  contra um amigo) e o O8 (sem a aba Simular no online).
+- **Fica para a outra frente (a Criar sala e o Saguão, que eu não mexi):** o bloco "Partidas em 3D" do online só aparece com
+  bots (o PR 4); com o par, a duração vale também numa sala só de pessoas (a da sala, padrão 4 min) — mostrar o bloco (só a
+  duração, sem a dificuldade) também sem bots; e o texto da Criar sala online "Contra um amigo, simulado quando a rodada
+  abre" está velho.
+
 ---
 
 ## 9. Visual pelas fotos (15/11)

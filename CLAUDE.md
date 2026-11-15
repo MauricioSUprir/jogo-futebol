@@ -160,7 +160,13 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   resultado é gravado antes de o 2D mostrar (já no apito final do 3D, antes da cena do pós-jogo); o 3D que fecha sem
   resultado vira W.O. depois do prazo (ou na hora, com o "Aceitar o W.O. agora"), o que nem abriu, o simulado; com
   "Sempre simular" ou sem WebGL 2, o simulado direto. Salas criadas antes do PR 4 (regras 1) seguem valendo, sem o Jogar.
-  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximos: PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
+  **PR 5 PRONTO** (branch `leilao-pr5`; a versão sobe no PR): VOCÊ CONTRA UM AMIGO EM 3D AO VIVO — no Seu jogo contra um amigo,
+  o "Jogar" para os dois (o 1º toque chama o outro, só com ele na sala); com os dois, os aparelhos se ligam direto (o Online 3D,
+  pela MESMA sessão de partida da sala do Online 3D: `TM.online3d.confronto`) e abre a tela antes do jogo do 3D com "Pronto" e
+  o "Simular partida" novo (qualquer um escolhe e os dois saem com o simulado). Quem não toca em Jogar em 2 min ou sai no meio
+  perde por W.O.; a ligação que não dá (sem TURN, comum no 4G) vira o simulado; o resultado é gravado uma vez, por qualquer um
+  dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 e 2) seguem com o jogo contra amigo simulado ao
+  abrir a rodada. Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximo: PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
   simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
@@ -1409,8 +1415,8 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   mando neutro; no mata-mata empatado os 91'–120' cortados no 1º gol — o gol de ouro sem mexer no motor — e os pênaltis
   sem os expulsos), a semente `"leilao:"+código+":"+jogo+":"+trava` e a MÁQUINA de cada jogo em `jogos/{id}` (aberto →
   reservado → feito, uma transação por passo; a trava = a hora do SERVIDOR gravada ao reservar; o prazo de 2 min do jogo
-  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, até o PR 5, pessoa × pessoa
-  simulados ao abrir a rodada; `proximaAcao`, `conferirJogo`; ids `r{rodada}j{k}` e `m{rodada}j{par}`). `js/engine.js`:
+  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, nas salas de regras 1 e 2, pessoa
+  × pessoa simulados ao abrir a rodada; `proximaAcao`, `conferirJogo`; ids `r{rodada}j{k}` e `m{rodada}j{par}`). `js/engine.js`:
   a opção `semLesao` (sem ela, o motor igual à main: o C7 confere com a `ferramentas/dados/motor-ref.json`; mudança de
   propósito no motor = `--gravar-motor` e dizer no PR). A sessão: o campeonato nasce numa transação (`meta.camp`), quem
   age é escalonado com a testemunha da hora, `simular(id?)` (grava e só então responde), `simularPendentes()` (o dono),
@@ -1465,8 +1471,23 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   "Sempre simular", recarregar no meio, o "Aceitar o W.O. agora", o apito, o X depois de abrir, a vigia; nada sobre nada;
   `--so3d`), o caso `tresd`
   do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
-  `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). Fica para os PRs 5–6: o par
-  no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
+  `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). **PR 5 (o par; PLANO §8 "Durante
+  o PR 5")**: `REGRAS` 3 (aceitas 1, 2 e 3; `REGRAS_PAR`, `_comPar`). `TM.online3d.confronto(o)` = a sessão de partida tirada do
+  `online3d.js` (o sinal POR NÓ — `sinalRef`; o par em `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` —, a ligação, o lobby
+  técnico, o pedido, o quadro e a porta; `auto`, `partida`/`online` por cima do pedido, `rodada0`, `aoAbrir`/`aoResultado`); a
+  sala do Online 3D usa a MESMA. A máquina do par (`leilao-camp.js`, só com `c.par`): `reservarPar` (o 1º Jogar; `par`,
+  `vem0`/`vem1`), `entrarPar` (o 2º), `naoVeio` (2 min sem o 2º toque: W.O. de quem não veio), `marcarAbriu` (com os dois),
+  `naoAbriu` (com os dois, sem abrir em 2 min ou sem resultado no prazo da partida: o simulado), `woPar` (quem saiu); o jogo de
+  duas pessoas antes do toque tem o prazo de 2 min correndo com UMA delas presente (`_acaoPar`). A sessão: `jogarPar`, `par(id)`,
+  `woPar`; o `simular` vale no par antes de abrir; o `desistir3d` no par = o meu W.O. A tela (`leilao-tela.js`, o controlador
+  `PAR`): o lado 0 do jogo é o anfitrião; o par liga sozinho com os dois no Jogar (`olhaPar`); o fim grava o do 3D (o do apito
+  1,5 s depois), o W.O. de quem saiu (`online.wo`), o simulado (dessincronia, `motivo: 'simular'`, a ligação que não dá); os
+  dois aparelhos gravam (fica o primeiro); o jogo decidido por outro caminho fecha o 3D; depois o 2D do gravado (`leilao-jogo
+  {rapido}`). GOLAÇO (só página; fecho 0, hashes iguais): com `online.simular` as abas do online são Pronto · Simular partida ·
+  Visão tática, o bit `E_SIMULAR` 128 no byte 19 + `{tipo:'simular'}` pelo canal confiável e os dois saem com `tm3d:sair
+  {motivo: 'simular'}`. Testes: `testar-leilao.mjs` PAR e KO `--caso par`; `testar-leilao-online.mjs --so par3d` (o WebRTC de
+  verdade no loopback, o `ensaio-3d.mjs` no modo online; no CI); `golaco` `teste-prepartida-tela` O8 e `teste-online` O16.
+  Fica para o PR 6: as notas escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
   tela a partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois); no teste online, o
   acontecimento que depende do sorteio do calendário se procura no servidor e o piloto segura o toque até ele (sem
   deadlock: o prazo simula o jogo se ele não vier).
