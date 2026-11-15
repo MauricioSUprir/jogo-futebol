@@ -1378,7 +1378,8 @@ KO):
   dos 2 min), duas abas (uma reserva) e a conferência (6 honestos aceitos, 11 adulterações acusadas, o `abriu` honesto aceito e
   o que some congelando). O C8 passou a reservar e a marcar o `abriu` antes do W.O. O arquivo inteiro: 18 de 18 blocos em ~58 s.
 - **Sem recuo e o time de 11 no 3D**: o `testar-3d.mjs` (a página de ensaio e o GOLAÇO de verdade, a edição pro) passou
-  inteiro, 69 itens em ~2 min, nenhum erro de página — sem o gancho os outros modos não mudam. O time de 11 sem banco foi
+  inteiro, 69 itens em ~2 min, nenhum erro de página — sem o gancho os outros modos não mudam; o `testar-penaltis.mjs` (14 ok)
+  e o `testar-livre.mjs` (16 ok) também (o `abre3d` deles ganhou só o `fns.abriu`, que eles não usam; o Viverde pulado, sem a senha). O time de 11 sem banco foi
   conferido com o GOLAÇO de verdade num script de fumaça do passo 1 (ainda não é um caso do `testar-3d`; fica para o passo 2):
   o Jogar de um treino abre o 3D com o pedido 11 + 11 (o mundo com 11 × 11), a duração da sala (3 min: 10 800 ticks por
   tempo), a dificuldade dela (Difícil) travada, o escudo desenhado do leilão, o `abriu` marcado, o "Simular o resto" até o
