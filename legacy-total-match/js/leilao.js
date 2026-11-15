@@ -23,11 +23,13 @@
   var TM = (global.TM = global.TM || {});
 
   /* ---------- constantes ---------- */
-  var REGRAS = 4;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
+  var REGRAS = 5;                 // versão das regras: só muda quando a regra muda (quem tem outra versão só olha). 2 = o PR 4
                                   // (o 3D contra um bot: o reservado no 3D ganha o abriu, o W.O. e o simulado do 3D que não abriu);
                                   // 3 = 20 lotes por técnico (15/11; eram 13); 4 = o PR 5 (o par: pessoa × pessoa no Online 3D,
-                                  // com o prazo, os toques vem0/vem1 e os W.O. dele)
-  var REGRAS_ACEITAS = [1, 2, 3, 4]; // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
+                                  // com o prazo, os toques vem0/vem1 e os W.O. dele); 5 = o PR 6 (o "Overall escondido": o
+                                  // cfg.overall e os robôs com a nota percebida — o aparelho de antes mostraria as notas e
+                                  // daria lances pela nota de verdade)
+  var REGRAS_ACEITAS = [1, 2, 3, 4, 5]; // as salas que este aparelho joga: as de regras 1 (criadas antes do PR 4) seguem valendo, SEM o
                                   // Jogar (nada de 3D nelas: o aparelho de antes, na mesma sala, não conhece o abriu nem o W.O.);
                                   // as de regras 1 e 2, com os 13 lotes por técnico de quando foram criadas (lotesPorTec); as de
                                   // regras 1–3 (antes do PR 5), com o jogo contra um amigo simulado ao abrir a rodada (o aparelho de
@@ -35,6 +37,24 @@
   var REGRAS_3D = 2;              // a 1ª versão com o Jogar no 3D
   var REGRAS_20 = 3;              // a 1ª versão com 20 lotes por técnico
   var REGRAS_PAR = 4;             // a 1ª versão com o par (o jogo contra um amigo no Online 3D)
+  var REGRAS_OCULTAS = 5;         // a 1ª versão com o "Overall escondido" (as de antes ficam à mostra, como foram criadas)
+  // as notas escondidas ("leilão no olho", PR 6; PLANO-LEILAO.md §1.6 e decisão 13): o robô dá lance pela NOTA PERCEBIDA (a nota
+  // ± PERCEBIDA, a mesma em todo aparelho: semente da sala + id do jogador) e as telas não mostram nada que entregue a nota até
+  // a revelação. REVELA_NOTAS: "campeonato" (a recomendada, aplicada: só no fim do campeonato; durante as partidas, inclusive no
+  // 3D, elas ficam escondidas) ou "partida" (a alternativa: no fim de cada partida aparecem as notas dos dois times dela —
+  // leilao-camp.js revelados; o 3D continua escondido enquanto o campeonato não acaba)
+  var PERCEBIDA = 3;
+  var REVELA_NOTAS = "campeonato";
+  /** A sala esconde as notas? (cfg.overall "escondido" numa sala de regras ≥ 5; as de antes, à mostra) */
+  function ocultasNaSala(s) {
+    return !!(s && s.meta && s.cfg && s.cfg.overall === "escondido" && typeof s.meta.regras === "number" && s.meta.regras >= REGRAS_OCULTAS);
+  }
+  /** A nota que os robôs "veem" com as notas escondidas: a nota ± PERCEBIDA (inteiro, uniforme), pela semente da sala e pelo id
+   *  do jogador — a mesma em todo aparelho e conferível por qualquer um (o testar-leilao NO refaz a conta). */
+  function notaPercebida(semente, id, overall) {
+    var r = TM.rng.make(TM.rng.hashStr("leilao:" + semente + ":percebida:" + id))();
+    return (overall || 0) + Math.floor(r * (2 * PERCEBIDA + 1)) - PERCEBIDA;
+  }
   function regrasAceitas(r) { return REGRAS_ACEITAS.indexOf(r) >= 0; }
   var SALDO = 100;                // R$ do jogo para cada técnico
   var VAGAS = 11;                 // o time: 11 em campo, sem reservas
@@ -197,14 +217,17 @@
   }
 
   /* ---------- o contexto (o que não muda durante o leilão) ---------- */
-  /** ctx a partir dos lotes gravados: { T, lotes, fora, semente, tempo (ms do relógio do lote) } */
+  /** ctx a partir dos lotes gravados: { T, lotes, fora, semente, tempo (ms do relógio do lote), notasOcultas (os robôs pela nota
+   *  percebida) } */
   function contexto(o) {
-    var T = o.T, lotes = o.lotes || [], fora = o.fora || [];
+    var T = o.T, lotes = o.lotes || [], fora = o.fora || [], oc = !!o.notasOcultas, sem0 = String(o.semente);
     var dur = TEMPOS.indexOf(o.tempo) >= 0 ? o.tempo : DUR;
     function mascara(l) { var m = 0; (l.grupos || [l.pos]).forEach(function (g) { m |= BIT[g] || 0; }); return m || BIT[l.pos]; }
-    var ovs = lotes.map(function (l) { return l.overall; }).sort(function (a, b) { return a - b; });
+    // a nota que os robôs usam (a de verdade, ou a percebida com as notas escondidas): o mercado, o p80 e a ordem por nota
+    var ov = lotes.map(function (l) { return oc ? notaPercebida(sem0, l.id, l.overall) : l.overall; });
+    var ovs = ov.slice().sort(function (a, b) { return a - b; });
     var ctx = {
-      T: T, lotes: lotes, fora: fora, semente: String(o.semente), L: lotes.length,
+      T: T, lotes: lotes, fora: fora, semente: sem0, L: lotes.length, notasOcultas: oc, ov: ov,
       fila: o.fila || ordem(lotes, String(o.semente), T),
       dur: dur, ext: Math.min(EXT, dur), durRep: DUR_REP, extRep: Math.min(EXT, DUR_REP), espera: ESPERA,
       mL: lotes.map(mascara), gL: lotes.map(function (l) { return IDX[l.pos]; }),
@@ -214,7 +237,7 @@
       _tm: null, _mk: null
     };
     // a posição de cada lote na ordem por nota (desempate pelo id): ordena o mercado sem comparar ids
-    var ord = lotes.map(function (_, i) { return i; }).sort(function (a, b) { return cmpNota(lotes[a], lotes[b]); });
+    var ord = lotes.map(function (_, i) { return i; }).sort(function (a, b) { return (ov[b] - ov[a]) || cmpId(lotes[a].id, lotes[b].id); });
     ctx.rank = []; ord.forEach(function (li, r) { ctx.rank[li] = r; });
     return ctx;
   }
@@ -824,9 +847,9 @@
       var val = {}, V = 0, sup = [0, 0, 0, 0], dem = {};
       for (var g4 = 0; g4 < 4; g4++) {
         var l = porG[g4]; sup[g4] = l.length;
-        var rep = l.length > D[g4] ? ctx.lotes[l[D[g4]]].overall : (l.length ? ctx.lotes[l[l.length - 1]].overall - 3 : 0);
+        var rep = l.length > D[g4] ? ctx.ov[l[D[g4]]] : (l.length ? ctx.ov[l[l.length - 1]] - 3 : 0);
         for (var x = 0; x < l.length; x++) {
-          var vv = Math.pow(Math.max(0, ctx.lotes[l[x]].overall - rep), 1.5);
+          var vv = Math.pow(Math.max(0, ctx.ov[l[x]] - rep), 1.5);
           val[l[x]] = vv;
           if (x < D[g4]) { V += vv; dem[l[x]] = 1; }
         }
@@ -841,7 +864,7 @@
     var c = cacheEstado(ctx, v), chave = t + "|" + bot.perfil + "|" + bot.agress + "|" + bot.formacao + "|" + sem;
     if (c.lim[chave] != null) return c.lim[chave];
     return (c.lim[chave] = (function () {
-      var max = maximo(v, t), i = v.i, g = ctx.gL[i], lote = ctx.lotes[i];
+      var max = maximo(v, t), i = v.i, g = ctx.gL[i];
       var tm = times(v, ctx)[t], cnt = comMais(tm.cnt, ctx.mL[i]);
       if (!cabeAlguma(cnt)) return 0;
       var mk = mercado(v, ctx);
@@ -859,7 +882,7 @@
       var naForma = VAGAS_FORM[bot.formacao] || ALVO, tem = v.cx[t][2 + g];
       if (naForma[g] - tem === 1 && mk.sup[g] <= ctx.T) nec *= 1.5;
       var prog = v.fase === "rep" ? 1 : (v.k + 1) / Math.max(1, ctx.fila.length);
-      var perf = bot.perfil === "estrelas" ? (lote.overall >= ctx.p80 ? 1.25 : 0.8)
+      var perf = bot.perfil === "estrelas" ? (ctx.ov[i] >= ctx.p80 ? 1.25 : 0.8)
         : bot.perfil === "paciente" ? (prog < 0.5 ? 0.85 : 1.15) : 1;
       var r = rngRapido(sem, "limite", v.seq, t, 0);
       var ruido = 0.9 + 0.2 * r();
@@ -898,7 +921,9 @@
   }
 
   TM.leilao = {
-    REGRAS: REGRAS, REGRAS_ACEITAS: REGRAS_ACEITAS, REGRAS_3D: REGRAS_3D, REGRAS_20: REGRAS_20, REGRAS_PAR: REGRAS_PAR, regrasAceitas: regrasAceitas, SALDO: SALDO, VAGAS: VAGAS,
+    REGRAS: REGRAS, REGRAS_ACEITAS: REGRAS_ACEITAS, REGRAS_3D: REGRAS_3D, REGRAS_20: REGRAS_20, REGRAS_PAR: REGRAS_PAR, REGRAS_OCULTAS: REGRAS_OCULTAS, regrasAceitas: regrasAceitas, SALDO: SALDO, VAGAS: VAGAS,
+    // as notas escondidas (PR 6)
+    PERCEBIDA: PERCEBIDA, REVELA_NOTAS: REVELA_NOTAS, ocultasNaSala: ocultasNaSala, notaPercebida: notaPercebida,
     LOTES_POR_TEC: LOTES_POR_TEC, LOTES_POR_TEC_ANTES: LOTES_POR_TEC_ANTES, lotesPorTec: lotesPorTec, FORA_POR_TEC: FORA_POR_TEC, TEC_MIN: TEC_MIN, TEC_MAX: TEC_MAX,
     DUR: DUR, EXT: EXT, ESPERA: ESPERA, DUR_REP: DUR_REP, TOQUE_MAX: TOQUE_MAX, TEMPOS: TEMPOS,
     GRUPOS: GRUPOS, FORMACOES: FORMACOES, VAGAS_FORM: VAGAS_FORM, PERFIS: PERFIS,

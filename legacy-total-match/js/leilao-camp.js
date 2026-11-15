@@ -479,6 +479,17 @@
     return out.sort(function (x, y) { return (y.soma - x.soma) || (x.t - y.t); });
   }
   function melhorTimeDe(c) { var s = somaNotas(c); return s.length ? s[0] : null; }
+  /** As notas que a tela pode mostrar numa sala com as notas escondidas (PR 6; leilao.js REVELA_NOTAS) a partir da vista do
+   *  campeonato (montar; null antes dele): { todas, t: [bool × T] }. "campeonato" (a recomendada): todas no fim do campeonato.
+   *  "partida" (a alternativa): também os dois times de cada jogo feito, a cada partida que acaba. */
+  function revelados(modo, vista, T) {
+    var t = [], fim = !!(vista && vista.fim);
+    for (var i = 0; i < T; i++) t.push(fim);
+    if (modo === "partida" && vista && !fim) (vista.rodadas || []).forEach(function (R) {
+      (R.jogos || []).forEach(function (g) { if (g.e === "feito") { if (g.a >= 0 && g.a < T) t[g.a] = true; if (g.b >= 0 && g.b < T) t[g.b] = true; } });
+    });
+    return { todas: fim || (T > 0 && t.every(Boolean)), t: t };
+  }
 
   /* ---------- o time do técnico e a simulação (§3.6) ---------- */
   function claro(cor) {
@@ -1044,7 +1055,7 @@
     resDo3d: resDo3d, res3dValido: res3dValido, escDaTela: escDaTela, completarMata: completarMata,
     contexto: contexto, formatoDe: formatoDe, rodadasDe: rodadasDe, jogosDe: jogosDe, duracaoEstimada: duracaoEstimada,
     estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
-    somaNotas: somaNotas, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
+    somaNotas: somaNotas, revelados: revelados, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
     resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoPar: prazoPar, PAUSAS_PAR: PAUSAS_PAR, prazoDe: prazoDe,
     abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo, desistir: desistir,
