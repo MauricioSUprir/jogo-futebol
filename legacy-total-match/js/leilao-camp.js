@@ -38,7 +38,8 @@
    'abertura' (bot × bot; pessoa × pessoa até o PR 5), 'dono' (Simular os pendentes) e 'pendentes' (o mesmo botão tocado por
    outro técnico, com o dono fora há mais de 5 min). O 3D reservado que abriu e passa de 2 × duração × 1,3 + 8 min (desde o
    `inicio`) sem resultado é W.O. de quem reservou (decisão 15); o que não chegou a abrir em 2 min é simulado (por qualquer
-   aparelho, com a semente).
+   aparelho, com a semente). Quem reservou pode aceitar o W.O. antes do prazo (o 3D fechou sem resultado: `desistir`; o feito
+   leva `desistiu: true`).
 
    O resultado gravado (`res`): o do motor nos 90' (score, events, stats, sentOff) e, no mata-mata empatado, `pror` { score,
    events (91' em diante, cortados no gol de ouro), ouro (o lado que fez o gol de ouro) } e `pen` { score, kicks: [{ side,
@@ -57,7 +58,7 @@
      resultadoDoJogo(c, id, j) (o simulado com a semente do jogo) · resDo3d(c, id, j, r3) (o resultado do 3D → o res) ·
      res3dValido(c, id, j) · escDaTela(c, j, titulares) (as escalações da tela do 3D, se mudaram)
      A máquina (cada uma devolve { ok: true, jogo } ou { ok: false, motivo }): abrir, pausar, retomar, reservar, marcarAbriu,
-     gravar, naoAbriu, wo
+     gravar, naoAbriu, wo, desistir
      proximaAcao(c, g, info) (o que fazer agora com um jogo da vista) · conferirJogo(c, g, j) (o motivo, se a sala foi alterada)
      canon(v) (o texto canônico, como o Firebase guarda) */
 (function (global) {
@@ -810,6 +811,20 @@
     return sim(feito(j, resultadoWO(lado), o.ts));
   }
 
+  /** Quem reservou o 3D desiste dele ANTES do prazo (o 3D abriu e fechou sem resultado: o app fechou, travou; a pessoa aceita o
+   *  W.O. agora em vez de esperar o prazo — PR 4, revisão): o mesmo W.O. de quem reservou, com `desistiu: true` (a conferência
+   *  aceita esse W.O. a qualquer hora depois do `abriu`). o: { trava, ts, por (o técnico que desiste: tem de ser quem reservou) } */
+  function desistir(j, o) {
+    if (!j || j.e !== "reservado") return nao(j ? j.e : "sem");
+    if (j.modo !== "3d" || j.trava !== o.trava) return nao("trava");
+    if (!numero(j.abriu)) return nao("naoAbriu");
+    if (o.por !== j.por) return nao("por");
+    var ab = comoLista(j.ab), lado = ab.indexOf(j.por);
+    if (lado < 0) return nao("por");
+    var n = feito(j, resultadoWO(lado), o.ts); n.desistiu = true;
+    return sim(n);
+  }
+
   /* ---------- quem age (§3.3: qualquer aparelho, escalonado pela sessão) ---------- */
   function tipoDe(c, t) { return (c.tipos && c.tipos[t]) === "pessoa" ? "pessoa" : "bot"; }
   /** O confronto: 'bots' (bot × bot), 'pessoaBot' ou 'pessoas'. */
@@ -876,9 +891,11 @@
     // o 3D: só pelo "Jogar" da pessoa do jogo (motivo 'pedido', quem reservou é um dos dois), com o `inicio`
     if (j.modo === "3d" && (j.motivo !== "pedido" || ab.indexOf(j.por) < 0 || !numero(j.inicio) || (j.abriu != null && !numero(j.abriu)))) return "forma";
     if (j.e !== "feito") return null;
-    // o W.O.: só do 3D que abriu, de quem reservou e gravado depois do prazo da partida (pela hora do servidor)
+    // o W.O.: só do 3D que abriu, de quem reservou e gravado depois do prazo da partida (pela hora do servidor) — ou, com o
+    // `desistiu`, quando quem reservou aceitou o W.O. antes do prazo (depois do `abriu`)
     if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por && numero(j.abriu) && numero(j.ts) && numero(j.inicio) &&
-      j.ts >= j.inicio + prazo3d(c.duracao3d) ? null : "wo";
+      (j.desistiu === true ? j.ts >= j.abriu : j.desistiu == null && j.ts >= j.inicio + prazo3d(c.duracao3d)) ? null : "wo";
+    if (j.desistiu != null) return "forma";
     if (j.modo === "3d") {
       if (j.fim === "3d") return res3dValido(c, g.id, j) ? null : "resultado";
       if (j.fim !== "simulado") return "forma";
@@ -912,7 +929,7 @@
     somaNotas: somaNotas, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
     resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoDe: prazoDe,
-    abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo,
+    abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo, desistir: desistir,
     confronto: confronto, proximaAcao: proximaAcao, conferirJogo: conferirJogo, canon: canon,
     // para os testes
     _turno: turno, _chaveInicial: chaveInicial, _espalha: espalha
