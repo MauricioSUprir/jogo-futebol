@@ -1616,3 +1616,59 @@ reprova com qualquer `.ut-card` na aba Leilão.
   no convidado; os cartões brancos e o resumo verde claro no claro), D5b (o Pronto pela barra), 3D0 (a etiqueta e as opções do 3D
   com bots) e o T3 com o nada sobre nada do dono e do convidado nos 8 tamanhos, 667 × 375 e 740 × 360, escuro e claro. Mudados
   de propósito: o T2b (o foco no título do cartão) e o T5 (espera o batimento a caminho antes do "Atualizando…").
+
+**Revisão dos passos 2 e 3 (15/11; três lentes: fidelidade às fotos, nada sobre nada/claro/acessibilidade e regressão):**
+- **Médios:**
+  - Os participantes no celular em pé: a pílula do estado à direita do nome, na mesma linha, como na foto `c0a68c56`. Antes
+    ela descia para baixo do nome abaixo de 340 px de coluna, e cada linha tinha 96–114 px; agora tem 61 px com nome curto
+    e 83 com nome de duas linhas.
+  - O Tirar do dono foi para trás do "Tirar alguém da sala", como o "Editar" de uma lista ("Concluir" volta). Ligado, cada
+    técnico mostra o Tirar de 44 px no lugar da pílula.
+  - O #número aparece só quando dois participantes têm o mesmo nome. A folha Participantes e o Tirar o dizem sempre.
+  - O deslizante ficou dentro da coluna: com 100% de largura mais a margem, o trilho passava 8 px.
+  - No celular deitado de 560 a 799 px, com as 4 pílulas, ficam 11 px entre os ícones e as pílulas. O alvo de 44 px das
+    pílulas subia 3 px por cima do tema e do som, e um toque ali trocava de aba.
+- **Leves:**
+  - O resumo do Saguão mais perto da foto (500 → 419 px em 390):
+    - as etiquetas dos jogadores, do tempo e do formato; os bots e o 3D só com bots;
+    - a liga fica na frase, e os técnicos em "N/M participantes";
+    - etiquetas de 13 px e 30 px de altura;
+    - "min" colado no número.
+  - Os formatos na ordem das fotos (Pontos corridos, Mata-mata, Pontos + mata-mata). O Mata-mata continua o padrão.
+  - A duração do formato numa linha só dela: o "·" ficava pendurado.
+  - O − e o + na ponta ficam apagados por `aria-disabled`, e o foco do teclado fica neles. Antes caía no BODY na Criar e no
+    1º rótulo do cartão no Saguão.
+  - O escudo ao lado do nome e o do "Escolher escudo" não entram mais no nome lido pelo leitor de tela (`aria-hidden`).
+  - O AGUARDANDO é lido como "Falta confirmar o Pronto" (`.lei-sr`, antes um `title`).
+  - Os botões da Criar e do Saguão na Inter: saíam na fonte do navegador.
+  - A barra do Saguão numa linha com "…", com o texto inteiro no `title`. O "Só você na sala" fica em duas linhas.
+  - A barra da Criar no PC (≥ 1024 px) mostra o resumo inteiro em até duas linhas, com 880 px de largura.
+  - O nome do pedido de entrada fica ao lado do escudo (base de 140 px).
+  - As pílulas menores de 381 a 400 px só valem para as 4 do online: o treino volta ao da 1ª parte.
+  - O campinho da formação: o círculo central menor (13%) e as vagas vazias sem transparência. A linha passava por dentro
+    dos meias do meio.
+  - O "Salvar o clube" só fica à vista quando há o que salvar.
+  - O "Escolher escudo" perdeu a seta.
+  - A dica "Jogar em 3D ou Simular" saiu do Formato e foi para as Partidas em 3D.
+  - A Criar termina num cartão verde: "Cada técnico entra com R$ 100." e a nota do dinheiro do jogo.
+- **Testes:**
+  - D6b: a pílula na linha do nome, sem #número, o "Tirar alguém da sala" com o Tirar e o Concluir, as etiquetas novas, a
+    liga na frase, a ordem, o deslizante na coluna e o Salvar escondido.
+  - D6d, novo: o dono muda tempo, formato, técnicos e bots pela tela. Confere que o Pronto do convidado zera, que o foco
+    fica no botão depois do Enter, que o deslizante só grava no change, que as Partidas em 3D e as etiquetas aparecem e
+    que a ponta segura o foco.
+  - T3: a pílula ao lado do nome nos 8 tamanhos e o nada sobre nada também com o Tirar ligado (60 medidas).
+  - T4: o Salvar escondido, à vista e escondido de novo.
+  - T6b: o alvo das pílulas a ≥ 2 px dos ícones em 7 tamanhos, com o deitado estreito.
+  - No `--tela`, o T2: a ordem, a duração numa linha, o foco na ponta, o deslizante na coluna e o resumo inteiro no PC
+    nas 40 telas.
+  - `testar-sobreposicao.mjs` passou a comparar só elementos da mesma camada fixa. A barra fixa da Criar dava 15 falsos
+    positivos; agora dá 0 em `leilao-criar` e em `leilao`.
+- **Ficam** (diferentes das fotos ou de propósito):
+  - O deslizante "Técnicos na sala" do Saguão continua com o mínimo móvel (pessoas + bots). O trilho cheio ou vazio depende
+    de quem está na sala.
+  - As setas do teclado não andam nos segmentados (cada opção é uma parada do Tab).
+  - O T4 do "Vendido" mede o círculo de 28 px do (i), não o alvo de 40 px. A faixa tem `pointer-events: none`.
+  - O título do resumo do Saguão ocupa duas linhas em 390 (a Inter é ~15% mais larga que a condensada da foto).
+  - Com bots, o resumo tem 6 etiquetas em 3 linhas (a foto tem 4 em 2).
+  - O dono vê o Tirar só depois de um toque a mais.
