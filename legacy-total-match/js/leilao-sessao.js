@@ -1010,7 +1010,8 @@
       // online
       rede: S._estadoRede(), conferindo: !!S.conferindo, outraAba: S.outraAba, apagada: S.apagada, oculta: S._oculta,
       pedido: S.pedido, souDono: !!(S.online && S.uidEu && meta.dono === S.uidEu), saguao: null,
-      versaoDiferente: !!(S.online && meta.versaoTM && meta.versaoTM !== versao()), edicao: meta.edicao || null
+      versaoDiferente: !!(S.online && meta.versaoTM && meta.versaoTM !== versao()), edicao: meta.edicao || null,
+      regrasSala: meta.regras != null ? meta.regras : null
     };
     ordem.forEach(function (uid, t) {
       var tc = (sala.tec && sala.tec[uid]) || {}, c = v ? v.cx[t] : [L.SALDO, L.VAGAS, 0, 0, 0, 0];
@@ -1018,6 +1019,7 @@
       var o = {
         t: t, uid: uid, nome: tc.nome || ("Técnico " + (t + 1)), bot: tc.papel === "bot", papel: tc.papel || "tecnico",
         clube: tc.clube || limpaClube(null), eu: t === S.eu, num: tc.num || null, pronto: tc.papel === "bot" || tc.papel === "dono" || !!tc.pronto,
+        formacao: tc.formacao || null,
         saldo: c[0], vagas: c[1], n: L.VAGAS - c[1], gk: c[2], df: c[3], mf: c[4], fw: c[5],
         max: v && ctx ? L.maximo(v, ctx, t) : 0, passou: false, lider: false, naoPode: null,
         saiu: !!tc.saiu, ausente: S.online && tc.papel !== "bot" && !!sala.meta && S._ausente(t, agora),
