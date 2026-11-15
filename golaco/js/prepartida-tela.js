@@ -404,6 +404,8 @@ export function criarPrepartida(opc) {
         if (espera3d) b.setAttribute('aria-disabled', 'true');
         else if (!(st.aguardando && a.id === 'pronto')) b.removeAttribute('aria-disabled');
       }
+      // (o Simular partida depois do Pronto, no online: desligado — o Pronto é final)
+      if (a.id === 'simular') { if (st.aguardando) b.setAttribute('aria-disabled', 'true'); else b.removeAttribute('aria-disabled'); }
       // (o Pronto esperando: aria-disabled, não disabled — o foco fica nele e o leitor de tela lê "Aguardando {nome}…")
       if (st.aguardando && a.id === 'pronto') {
         b.setAttribute('aria-disabled', 'true'); b.classList.add('aguardando');
@@ -534,8 +536,8 @@ export function criarPrepartida(opc) {
     if (!a || st.saindo) return;
     focarAba(i);
     if (a.id === 'visao') { proximaVista(); return; }
-    // o Pronto é final (sem cancelar): esperando o outro, nada
-    if (a.id === 'pronto' && st.aguardando) return;
+    // o Pronto é final (sem cancelar): esperando o outro, nada — nem o Simular partida do online (o par do Leilão)
+    if ((a.id === 'pronto' || a.id === 'simular') && st.aguardando) return;
     // (a aba que precisa do 3D, antes dele: nada — ela volta sozinha —, com o aviso à vista: item 106)
     if (a.espera3d && st.carregando) { avisoCarga(); return; }
     if (a.id === 'adversario') { trocarTime(st.time === st.meu ? 1 - st.meu : st.meu); return; }
@@ -818,7 +820,7 @@ export function criarPrepartida(opc) {
       }
     },
     /** Online: o "Pronto" vira "Aguardando {nome}…" (desabilitado). */
-    aguardando(nome) { st.aguardando = nome; marcarAbas(); viva(`Aguardando ${nome}`); },
+    aguardando(nome) { st.aguardando = nome; if (st.armadoId === 'simular') desarmar(); marcarAbas(); viva(`Aguardando ${nome}`); },
     /** Online: 60 s esperando o outro — o [<] "Sair da partida" ganha destaque (nada automático). */
     destacarCanto(v = true) {
       if (!!st.destaqueCanto === !!v) return;

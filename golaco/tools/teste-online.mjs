@@ -28,6 +28,8 @@
 //     depois dela (o quadro em que ela acaba sai sem passo); com a entrada do outro já chegada o aviso de espera sai no
 //     mesmo quadro (o `paradoDesde` só zera depois do passo);
 //  O16 (o par do Modo Leilão) o bit E_SIMULAR do "Simular partida" da tela antes do jogo: livre e sem mexer na fase.
+//  O17 (a revisão do PR 5 do Leilão) o motivo do W.O.: o abandono 'saiu' (nada depois do apito), a ligação fechada 'caiu', 90 s 'sumiu'
+//      (online-pagina.js woDe, puro) e os textos da queda no par (a partida simulada) e na sala (o W.O.)
 //   node tools/teste-online.mjs [--passos 3600]
 import { tabelaTexto } from './lib/medidas.mjs';
 import { criarRede } from './lib/rede-memoria.mjs';
@@ -380,6 +382,21 @@ for (const x of res) {
   const f0 = livre ? OP.faseDoEstado(OP.E_TELA | bit) : null, f1 = livre ? OP.faseDoEstado(OP.E_TELA | OP.E_PRONTO | bit | O.E_MENU) : null;
   linha('O16 o bit E_SIMULAR do par do Leilão: livre (fora dos bits do online.js, das fases e do E_CENA) e a fase da tela igual',
     `E_SIMULAR ${bit ?? '—'} ${livre ? 'livre' : 'NÃO livre'}; fase tela ${f0 ?? '—'}, pronto ${f1 ?? '—'}`, 'livre; 0 e 1', livre && f0 === 0 && f1 === 1);
+}
+
+// O17 (a revisão do PR 5 do Leilão, M3 e L1): o motivo do W.O. separado (online-pagina.js woDe, puro) — o abandono ("Sair da
+// partida") é 'saiu' e, depois do apito, nada (o placar de verdade vale); a ligação fechada é 'caiu' (antes, 'saiu' também: o par do
+// Leilão dava o W.O. a quem ficou numa queda de rede) e 90 s sem pacote, 'sumiu'; no par (quedaSimula) os textos da queda dizem que a
+// partida vai ser simulada; no Online 3D da sala, os de sempre (o W.O.)
+{
+  const OP = await imp('online-pagina.js');
+  const tem = typeof OP.woDe === 'function' && typeof OP.textosQueda === 'function';
+  const m = tem ? [OP.woDe('abandono'), OP.woDe('abandono', { fim: true }), OP.woDe('fechado'), OP.woDe('sumiu'), OP.woDe('outro')] : [];
+  const tPar = tem ? OP.textosQueda(true, 'Bia') : [], tSala = tem ? OP.textosQueda(false, 'Bia') : [];
+  linha('O17 o motivo do W.O. do online: abandono = saiu (depois do apito, nada); a ligação fechada = caiu; 90 s = sumiu; os textos da queda no par (simulada) e na sala (W.O.)',
+    tem ? `${m.map(x => x ?? 'nada').join(', ')}; par "${tPar.slice(0, 2).join(' ')}"; sala "${tSala.slice(0, 2).join(' ')}"` : 'sem woDe/textosQueda',
+    'saiu, nada, caiu, sumiu, nada; simulada; W.O.',
+    tem && m.join() === 'saiu,,caiu,sumiu,' && /simulada/.test(tPar[1]) && /simular/.test(tPar[2]) && /W\.O\./.test(tSala[1]) && /W\.O\./.test(tSala[2]) && /caiu/.test(tPar[0]));
 }
 
 console.log(tabelaTexto([['item', 'medido', 'meta', 'resultado'], ...linhas]));

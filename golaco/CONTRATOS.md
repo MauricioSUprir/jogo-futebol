@@ -4930,6 +4930,18 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   partida."), o Pronto passa a não fazer nada, a tela não começa o jogo, e meio segundo depois (o que está saindo sai)
   `sairTM({motivo: 'simular', titulares})` — o TM grava o simulado com a semente do jogo, UMA vez. Só página: fecho 0, hash
   igual (`teste-online` O16, `teste-prepartida-tela` O8: o outro sai só pelo bit, com a mensagem descartada).
+  A revisão do PR 5 do Leilão: o **Pronto é final também para o Simular** — depois do meu Pronto o meu Simular fica desligado
+  (`aria-disabled` na aba, nem arma; `simularOnlineTela(true)` volta sem agir), o do outro ainda vale (ele escolheu antes de ver o
+  meu Pronto); o pacote trata o E_SIMULAR ANTES da fase (`aoMensagem`); o aviso do outro que chega antes de a tela abrir fica
+  PENDENTE (`simularPendente`/`reavisarSimular`: só marca `simularRemoto` quando a página agiu — o `ao.simular` devolve true) e
+  vale no 1º quadro da tela (`teste-prepartida-tela` O8b: A pronto → A Simular + B Pronto juntos, 80 ms de latência; O8c: B entra
+  depois do Simular de A). **O motivo do W.O.** (`woDe`, puro): o abandono ("Sair da partida") = `'saiu'` — e nada depois do apito
+  (`ctx.fim`: o placar de verdade vale) —, a ligação fechada = `'caiu'` (antes também `'saiu'`) e 90 s sem pacote = `'sumiu'`; vai
+  ao TM no `online.wo.motivo`. A sala do Online 3D dá o W.O. em todos (como antes); o par do Leilão, só no `'saiu'` (a queda é o
+  simulado). Com `online.simular` (`quedaSimula`), os textos da queda dizem "A ligação com {nome} caiu. / A partida vai ser
+  simulada." e o botão dos 90 s, "Encerrar e simular a partida" (`textosQueda`). O resultado do W.O. gravado em
+  `localStorage["tm3d:resultado:<id>"]` leva o `online.wo` (o placar parcial não é o do apito: o par guarda o do apito). Só página:
+  fecho 0, hash igual (`teste-online` O17).
 - **Antes do 1º passo** (item 64; contrato "Tela antes do jogo (item 64)", parte Online): os dois veem a tela antes do jogo com
   "Pronto" · Visão tática; a fase de cada lado vai no byte 19 de todo pacote (bits da página `E_TELA`/`E_PRONTO`/`E_PREJOGO`; o
   `online.js` intocado) e os dois saem juntos para o pré-jogo quando os dois estão prontos; o 1º passo continua decidido pelo

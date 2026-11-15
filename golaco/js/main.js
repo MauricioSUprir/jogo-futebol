@@ -3866,12 +3866,19 @@ function simularOnline() { return ONLINE_TM ? !!PEDIDO_TM.online.simular : ONLIN
  * 'tm3d:sair' {motivo: 'simular'} — o TM grava o simulado com a semente, uma vez. A tela não começa o jogo (nem com os dois prontos).
  */
 function simularOnlineTela(meu) {
-  if (!PAG_ONLINE || !pp?.aberta || ppOnline.simular || PAG_ONLINE.encerrado || !simularOnline()) return;
+  if (!PAG_ONLINE || !pp?.aberta || PAG_ONLINE.encerrado || !simularOnline()) return false;
+  // (o Simular do outro que chega depois do meu: já está saindo — agiu)
+  if (ppOnline.simular) return true;
+  // (o Pronto é final: depois dele o MEU Simular fica desligado — a aba também, aria-disabled; o do outro ainda vale: ele escolheu
+  // antes de ver o meu Pronto. Sem isso, "A pronto → A Simular + B Pronto juntos" levava B ao jogo e A ao simulado — revisão do
+  // PR 5 do Leilão)
+  if (meu && ppOnline.pronto) return false;
   ppOnline.simular = meu ? 'eu' : 'outro';
   pp.aviso(meu ? 'Simulando a partida…' : `${PAG_ONLINE.nomeOutro} escolheu simular a partida.`, 4000);
   PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
   if (meu) PAG_ONLINE.enviarControle({ tipo: 'simular' });
   setTimeout(() => { pararCarga(); if (TM) sairTM({ motivo: 'simular', titulares: titularesTM() }); }, 500);
+  return true;
 }
 function acaoPrepartidaOnline(id) {
   if (!PAG_ONLINE || !pp?.aberta) return;
@@ -3946,6 +3953,8 @@ const PP_QPS = 30;
  * pacotes chegam), o pacote com a MINHA fase e a saída conjunta: eu pronto e o outro pronto (ou além da tela).
  */
 function quadroOnlineTela(agoraMs) {
+  // (o "Simular partida" do outro que chegou antes de a tela abrir: vale agora)
+  if (PAG_ONLINE.simularPendente) PAG_ONLINE.reavisarSimular();
   PAG_ONLINE.quadro(agoraMs, { antes: true });
   PAG_ONLINE.enviarPacote(agoraMs, bitsTelaOnline());
   if (!saidaOnlineTela() && ppOnline.pronto && !PAG_ONLINE.encerrado && agoraMs - ppOnline.desde >= 60000) pp.destacarCanto(true);
@@ -4360,12 +4369,20 @@ async function iniciar() {
     const on = ONLINE_TM ? PEDIDO_TM.online : null;
     PAG_ONLINE = MOD_PAG_ON.criarPaginaOnline({
       lado: LADO_ONLINE, D: on ? on.D0 : +params.get('D') || 4, nomes: on?.nomes ?? ['Lado 0', 'Lado 1'],
+      // (o par do Leilão: a ligação que cai é o simulado, não o W.O. — os textos do aviso)
+      quedaSimula: simularOnline(),
       transporte: ONLINE_TM ? 'porta' : 'bc', sala: on ? on.sala : params.get('online'),
       ao: {
         menuPausar: () => { if (PAG_ONLINE.pausar(performance.now())) hud.fecharMenu(); },
         // sair no meio = derrota (fair play no TM); o 'abandono' vai antes, para o outro ver o W.O. na hora
         menuSair: () => { hud.fecharMenu(); PAG_ONLINE.sair(); setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400); },
-        wo: (vencedor, motivo) => { if (TM) fimTM(resultadoAtualTM(), { online: { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 } }); },
+        // (o resultado do W.O. leva o online.wo também no que fica gravado em localStorage — o placar parcial não é o do apito: o
+        // par do Leilão guarda o do apito e não pode confundir os dois)
+        wo: (vencedor, motivo) => {
+          if (!TM) return;
+          const online = { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 }, r = resultadoAtualTM();
+          fimTM(r && typeof r === 'object' ? { ...r, online } : r, { online });
+        },
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
         // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
         fase: () => saidaOnlineTela(),
@@ -4768,7 +4785,7 @@ const api = {
       // (item 64: as fases — 0 tela, 1 pronto, 2 pré-jogo, 3 jogo; -1 = nenhum pacote do outro — e o abandono)
       fase: faseOnlineLocal(), faseRemota: PAG_ONLINE.faseRemota, encerrado: PAG_ONLINE.encerrado,
       // (o par do Leilão: o "Simular partida" — 'eu' | 'outro' | null — e o que o outro mandou)
-      simular: ppOnline.simular ?? null, simularRemoto: PAG_ONLINE.simularRemoto, comSimular: simularOnline(),
+      simular: ppOnline.simular ?? null, simularRemoto: PAG_ONLINE.simularRemoto, simularPendente: PAG_ONLINE.simularPendente, comSimular: simularOnline(),
       aviso: (() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; })(),
       pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
   },

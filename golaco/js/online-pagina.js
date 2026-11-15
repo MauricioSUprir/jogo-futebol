@@ -81,6 +81,23 @@ export function conexaoNoQuadro(c, pode) {
   return { estado: sp >= O.AGUARDANDO_MS ? 'aguardando' : sp >= O.INSTAVEL_MS ? 'instavel' : 'ok', paradoMs: 0, semPacoteMs: sp };
 }
 
+/**
+ * O W.O. que um acontecimento do outro dá (puro; a revisão do PR 5 do Leilão): o abandono — o "Sair da partida" dele — é 'saiu',
+ * só antes do apito (com ctx.fim o placar de verdade vale: nada); a ligação fechada é 'caiu' e 90 s sem pacote, 'sumiu'. O motivo
+ * vai ao TM no `online.wo`: o Online 3D da sala dá o W.O. em todos; o par do Leilão, só no 'saiu' (os outros, o simulado).
+ */
+export function woDe(evento, ctx = {}) {
+  if (evento === 'abandono') return ctx.fim ? null : 'saiu';
+  if (evento === 'fechado') return 'caiu';
+  if (evento === 'sumiu') return 'sumiu';
+  return null;
+}
+/** Os textos da ligação que fechou no meio (puro): [título, linha de baixo, botão do 90 s sem pacote]. quedaSimula = o par do Leilão. */
+export function textosQueda(quedaSimula, nomeOutro) {
+  return quedaSimula ? [`A ligação com ${nomeOutro} caiu.`, 'A partida vai ser simulada.', 'Encerrar e simular a partida']
+    : [`${nomeOutro} saiu da partida.`, 'Vitória por W.O.', 'Encerrar com vitória por W.O.'];
+}
+
 const CSS = `
 #online-aviso{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:60;min-width:min(86vw,360px);max-width:92vw;
   background:rgba(5,8,7,.92);color:#fff;border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:14px 18px;text-align:center;
@@ -142,17 +159,23 @@ export function criarPaginaOnline(opc) {
   }
   // a fase do outro: o maior valor recebido (-1 = nenhum pacote ainda)
   let faseRemota = -1;
-  // (o par do Leilão) o outro escolheu "Simular partida": uma vez, pelo bit do pacote ou pela mensagem de controle
-  let simularRemoto = false;
-  function avisaSimular() { if (simularRemoto) return; simularRemoto = true; ao.simular?.(); }
+  // (o par do Leilão) o outro escolheu "Simular partida": uma vez, pelo bit do pacote ou pela mensagem de controle. Marcado só
+  // quando a página AGIU (ao.simular devolve true): o aviso que chega antes de a tela abrir fica pendente e a página confere de
+  // novo (simularPendente/reavisarSimular, a cada quadro da tela) — revisão do PR 5 do Leilão
+  let simularRemoto = false, simularVisto = false;
+  function avisaSimular() { simularVisto = true; if (simularRemoto) return; if (ao.simular?.() === true) simularRemoto = true; }
+  // (o par do Leilão: a ligação que cai e os 90 s sem pacote são o SIMULADO no TM — o W.O. só pelo "Sair da partida" do outro,
+  // o abandono. Os textos dizem isso; o motivo vai separado: 'saiu' = o abandono, 'caiu' = a ligação fechada, 'sumiu' = 90 s)
+  const quedaSimula = !!opc.quedaSimula;
   function aoMensagem(d) {
     if (!d || typeof d !== 'object') return;
     if (d.t === 'j' && d.b instanceof ArrayBuffer) {
       // (a fase que subiu avisa na hora — a saída conjunta da tela não espera o próximo quadro, que com o 3D atrás é lento)
       if (O.receber(s, d.b, performance.now())) {
         const f = faseDoEstado(s.estadoRemoto), primeiro = faseRemota < 0;
-        if (f > faseRemota) { faseRemota = f; ao.fase?.(f); }
+        // (o Simular ANTES da fase: o pacote com os dois bits não leva a tela ao jogo — a saída conjunta confere o simular)
         if (s.estadoRemoto & E_SIMULAR) avisaSimular();
+        if (f > faseRemota) { faseRemota = f; ao.fase?.(f); }
         // (item 30) o 1º pacote do outro: as opções do anfitrião de novo (no BroadcastChannel dos testes a mandada ao criar se
         // perde quando a outra aba ainda não abriu o canal; a porta do TM guarda — repetir não faz mal)
         if (primeiro) mandarOpcoes();
@@ -250,7 +273,8 @@ export function criarPaginaOnline(opc) {
     for (const m of ctrlRecebidos.splice(0)) {
       if (m.tipo === 'pausa') pausaDele = { desde: agora };
       else if (m.tipo === 'retoma') pausaDele = null;
-      else if (m.tipo === 'abandono' && !encerrado) { encerrado = true; ao.wo?.(lado, 'saiu'); }
+      // (depois do apito, o placar de verdade vale: o abandono no pós-jogo não vira W.O. — revisão do PR 5 do Leilão, L1)
+      else if (m.tipo === 'abandono' && !encerrado && woDe('abandono', ctx)) { encerrado = true; ao.wo?.(lado, woDe('abandono', ctx)); }
     }
     if (pausa && pausa.volta == null && agora - pausa.desde >= PAUSA_MS) retomar(agora);
     if (pausa && pausa.volta != null && agora >= pausa.volta) { pausa = null; marcarMenu(); }
@@ -271,11 +295,13 @@ export function criarPaginaOnline(opc) {
     } else if (pausaDele) {
       mostrar('pausaDele', `Pausado por ${nomeOutro}`, `até ${mmss(PAUSA_MS - (agora - pausaDele.desde))}`);
     } else if (estadoLig.estado === 'fechado' && s.ultimoPacote != null) {
-      mostrar('fechado', `${nomeOutro} saiu da partida.`, 'Vitória por W.O.', [{ texto: 'Voltar ao Total Match', primario: true, fn: () => { encerrado = true; ao.wo?.(lado, 'saiu'); } }]);
+      // (a ligação fechou: o motivo 'caiu' — no Online 3D da sala é o W.O. de sempre; no par do Leilão, o simulado)
+      const tq = textosQueda(quedaSimula, nomeOutro);
+      mostrar('fechado', tq[0], tq[1], [{ texto: 'Voltar ao Total Match', primario: true, fn: () => { encerrado = true; ao.wo?.(lado, woDe('fechado')); } }]);
     } else if (c.estado === 'aguardando') {
       const semNada = Math.max(c.semPacoteMs, s.ultimoPacote == null ? c.paradoMs : 0);
       const botoes = semNada >= esperaWO ? [
-        { texto: 'Encerrar com vitória por W.O.', primario: true, fn: () => { encerrado = true; ao.wo?.(lado, 'sumiu'); } },
+        { texto: textosQueda(quedaSimula, nomeOutro)[2], primario: true, fn: () => { encerrado = true; ao.wo?.(lado, woDe('sumiu')); } },
         { texto: 'Esperar mais', fn: () => { esperaWO = semNada + 60000; avisoChave = ''; } },
       ] : [];
       // (o outro ainda na tela antes do jogo, no pré-jogo ou vendo uma cena, com os pacotes chegando: é isso que o aviso diz —
@@ -339,8 +365,11 @@ export function criarPaginaOnline(opc) {
     get pausasRestam() { return pausasRestam; },
     /** A fase do outro (-1 sem pacote; 0 tela, 1 pronto, 2 pré-jogo, 3 jogo) — a tela antes do jogo sai com ela ≥ 1. */
     get faseRemota() { return faseRemota; },
-    /** O outro escolheu "Simular partida" (o par do Leilão). */
+    /** O outro escolheu "Simular partida" (o par do Leilão) e esta página agiu. */
     get simularRemoto() { return simularRemoto; },
+    /** O "Simular partida" do outro chegou e a página ainda não agiu (a tela não estava aberta): a tela confere de novo. */
+    get simularPendente() { return simularVisto && !simularRemoto; },
+    reavisarSimular() { if (simularVisto && !simularRemoto) avisaSimular(); },
     get pausado() { return !!pausa; },
     get encerrado() { return encerrado; },
     get estadoLigacao() { return estadoLig; },
