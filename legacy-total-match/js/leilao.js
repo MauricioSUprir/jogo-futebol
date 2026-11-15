@@ -286,6 +286,103 @@
     return de;
   }
 
+  /* ---------- a escalação (§2.5): os 11 nas vagas da formação ---------- */
+  // índices globais (os de escal/{t}.tit): i < L = o lote i; L + j = o j-ésimo de `fora` (completou de graça)
+  function timeIdx(v0, ctx, t) {
+    var v = norm(v0, ctx), tm = times(v, ctx)[t];
+    if (!tm) return [];
+    return tm.lotes.concat(tm.fora.map(function (j) { return ctx.L + j; }));
+  }
+  function retratoDe(ctx, idx) { return idx < ctx.L ? ctx.lotes[idx] : ctx.fora[idx - ctx.L]; }
+  // as vagas da formação com as coordenadas do campinho (as do TM: TM.comp.FORMATIONS)
+  function slotsDe(formacao) { return (VAGAS_FORM[formacao] && TM.comp && TM.comp.FORMATIONS && TM.comp.FORMATIONS[formacao]) || null; }
+  var FORA_VAGA = 1000;   // a vaga não aceita nenhum dos grupos do jogador
+  // o custo do jogador na vaga: fora dos SEUS grupos não entra; dentro, a função (pos2) custa −1/−2 (specificPenalty)
+  function custoVaga(l, slot) {
+    if ((l.grupos || [l.pos]).indexOf(slot[0]) < 0) return FORA_VAGA;
+    if (!TM.comp || !TM.comp.specificPenalty) return 0;
+    // o retrato com os grupos gravados (o playerVersa lê o _versa): nada é recalculado nem escrito no retrato
+    var p = { id: l.id, pos: l.pos, pos2: l.pos2 || null, overall: l.overall, _versa: (l.grupos || [l.pos]).slice(1) };
+    return TM.comp.specificPenalty(p, slot) || 0;
+  }
+  // o emparelhamento de menor custo (método húngaro, n linhas ≤ m colunas, custos inteiros): a coluna de cada linha
+  function hungaro(a, n, m) {
+    var INF = 1e15, u = [], w = [], p = [], way = [], j;
+    for (j = 0; j <= Math.max(n, m); j++) { u[j] = 0; w[j] = 0; p[j] = 0; way[j] = 0; }
+    for (var i = 1; i <= n; i++) {
+      p[0] = i;
+      var j0 = 0, minv = [], usado = [];
+      for (j = 0; j <= m; j++) { minv[j] = INF; usado[j] = false; }
+      do {
+        usado[j0] = true;
+        var i0 = p[j0], delta = INF, j1 = 0;
+        for (j = 1; j <= m; j++) {
+          if (usado[j]) continue;
+          var cur = a[i0 - 1][j - 1] - u[i0] - w[j];
+          if (cur < minv[j]) { minv[j] = cur; way[j] = j0; }
+          if (minv[j] < delta) { delta = minv[j]; j1 = j; }
+        }
+        for (j = 0; j <= m; j++) { if (usado[j]) { u[p[j]] += delta; w[j] -= delta; } else minv[j] -= delta; }
+        j0 = j1;
+      } while (p[j0] !== 0);
+      do { var j2 = way[j0]; p[j0] = p[j2]; j0 = j2; } while (j0);
+    }
+    var col = []; for (var k = 0; k < n; k++) col.push(-1);
+    for (j = 1; j <= m; j++) if (p[j]) col[p[j] - 1] = j - 1;
+    return col;
+  }
+  /** Os jogadores (retratos, até 11) nas vagas da formação com o menor custo de função: { formacao, tit (o índice do
+   *  jogador em cada vaga, -1 = vaga vazia), pen (o −1/−2 de cada vaga) } ou null se não cabem. */
+  function escalacao(retratos, formacao) {
+    var slots = slotsDe(formacao);
+    if (!slots || retratos.length > slots.length) return null;
+    var n = retratos.length, a = retratos.map(function (l) { return slots.map(function (s) { return custoVaga(l, s); }); });
+    var col = n ? hungaro(a, n, slots.length) : [];
+    var tit = slots.map(function () { return -1; }), pen = slots.map(function () { return 0; });
+    for (var i = 0; i < n; i++) {
+      if (col[i] < 0 || a[i][col[i]] >= FORA_VAGA) return null;
+      tit[col[i]] = i; pen[col[i]] = a[i][col[i]];
+    }
+    return { formacao: formacao, tit: tit, pen: pen };
+  }
+  // a escalação gravada à mão (escal/{t}.tit, índices globais) ainda vale: os mesmos 11, cada um numa vaga dos seus grupos
+  function manualValida(tit, idx, formacao, ctx) {
+    var slots = slotsDe(formacao);
+    if (!slots || !Array.isArray(tit) || tit.length !== slots.length || idx.length !== slots.length) return null;
+    var visto = {}, pen = [];
+    for (var s = 0; s < tit.length; s++) {
+      var k = tit[s];
+      if (typeof k !== "number" || idx.indexOf(k) < 0 || visto[k]) return null;
+      visto[k] = 1;
+      var c = custoVaga(retratoDe(ctx, k), slots[s]);
+      if (c >= FORA_VAGA) return null;
+      pen.push(c);
+    }
+    return pen;
+  }
+  /** A escalação do técnico t: a gravada (escal/{t}: { formacao, tit }) se ainda vale; senão a automática (função pura
+   *  das compras: ninguém precisa gravar). A formação é a preferida se o time cabe nela; senão a que cabe e mais se
+   *  parece (aviso). { formacao, pref, aviso, tit (índice global em cada vaga, -1 = vazia), pen, manual, n }. */
+  function escalacaoDe(v0, ctx, t, escal, prefPadrao) {
+    var v = norm(v0, ctx), idx = timeIdx(v, ctx, t), rs = idx.map(function (k) { return retratoDe(ctx, k); });
+    var pref = (escal && VAGAS_FORM[escal.formacao]) ? escal.formacao : (VAGAS_FORM[prefPadrao] ? prefPadrao : "4-4-2");
+    var f = formacaoPara(pref, rs) || pref;
+    var penM = escal && escal.formacao === f ? manualValida(escal.tit, idx, f, ctx) : null;
+    if (penM) return { formacao: f, pref: pref, aviso: f !== pref, tit: escal.tit.slice(), pen: penM, manual: true, n: idx.length };
+    var e = escalacao(rs, f);
+    var tit = e ? e.tit.map(function (i) { return i < 0 ? -1 : idx[i]; }) : [];
+    return { formacao: f, pref: pref, aviso: f !== pref, tit: tit, pen: e ? e.pen : [], manual: false, n: idx.length };
+  }
+  /** Troca duas vagas (a escalação com os 11): a nova lista `tit` ou { erro } (incompleto, vaga, grupo). */
+  function trocarVagas(esc, ctx, a, b) {
+    var slots = slotsDe(esc.formacao);
+    if (!slots || esc.n !== slots.length) return { erro: "incompleto" };
+    if (!(a >= 0 && a < slots.length && b >= 0 && b < slots.length) || a === b) return { erro: "vaga" };
+    var tit = esc.tit.slice(), x = tit[a]; tit[a] = tit[b]; tit[b] = x;
+    if (custoVaga(retratoDe(ctx, tit[a]), slots[a]) >= FORA_VAGA || custoVaga(retratoDe(ctx, tit[b]), slots[b]) >= FORA_VAGA) return { erro: "grupo" };
+    return { tit: tit };
+  }
+
   /* ---------- o lote: quem pode ---------- */
   function vagas(v, t) { var c = v.cx[t]; return c ? c[1] : 0; }
   function maximo(v, t) { var c = v.cx[t]; return c && c[1] > 0 ? c[0] - (c[1] - 1) : 0; }
@@ -674,6 +771,9 @@
     // times e formações
     timeDe: timeDe, cabeEm: cabeEm, formacoesQueCabem: formacoesQueCabem, formacaoPara: formacaoPara, contaMascaras: contaMascaras,
     encaixe: encaixe, proximos: proximos, vendidoPorTec: vendidoPorTec,
+    // a escalação
+    timeIdx: timeIdx, retratoDe: retratoDe, slotsDe: slotsDe, custoVaga: custoVaga, escalacao: escalacao,
+    escalacaoDe: escalacaoDe, trocarVagas: trocarVagas, FORA_VAGA: FORA_VAGA, _hungaro: hungaro,
     cabeLote: function (v, ctx, t, i) { return cabeLote(norm(v, ctx), ctx, t, i == null ? v.i : i); },
     // conferência e robôs
     conferir: conferir, perfilRobo: perfilRobo, robo: robo, limiteRobo: limiteRobo, aplicarRobo: aplicarRobo

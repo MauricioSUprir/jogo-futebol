@@ -22,8 +22,10 @@
      guardar          false = não grava no aparelho (padrão: grava em TM.storage "leilao:sala:<código>", com o índice
                       "leilao:salas": o treino volta depois de recarregar a página)
      armazem          { ler(chave, padrao), gravar(chave, valor), apagar(chave) } (padrão TM.storage read/write/remove)
+   Também: apagar() (some com a sala e com a gravação; depois disso nada mais grava) e salvarAgora() (grava no aparelho
+   sem esperar: a página vai fechar).
    Os testes ainda têm: outroCliente(opc) (outro aparelho no MESMO banco, com a sua latência e a sua conexão), _cair(),
-   _voltar(), _arvore() e apagar() (some com a sala e com a gravação).
+   _voltar() e _arvore().
 
    firebase(codigo) — PR 2. A mesma interface sobre `leiloes/{código}` do Realtime Database do TM (TM.net._db):
      ler = once('value'); ouvir = on('value') (o off devolvido); transacao = ref.transaction(fn, fim, false) — SEM
@@ -96,6 +98,7 @@
     }
   }
   Banco.prototype.muda = function (ps, valor) {
+    if (this.apagado) return;            // a sala apagada não volta (nem por uma gravação que já estava a caminho)
     this.arv = poe(this.arv, ps, valor);
     var self = this;
     this.ouvintes.slice().forEach(function (o) { if (relacionados(o.ps, ps)) self.avisa(o); });
@@ -109,14 +112,14 @@
     try { o.fn(clone(v)); } catch (e) { if (global.console) console.error(e); }
   };
   Banco.prototype.marcaSujo = function () {
-    if (!this.armazem || this.sujo) return;
+    if (!this.armazem || this.sujo || this.apagado) return;
     this.sujo = true;
     var self = this;
     this.agendar(function () { self.salva(); }, 200);
   };
   Banco.prototype.salva = function () {
     this.sujo = false;
-    if (!this.armazem) return;
+    if (!this.armazem || this.apagado) return;
     try {
       this.armazem.gravar(CHAVE_SALA + this.codigo, this.arv);
       var ind = this.armazem.ler(CHAVE_INDICE, []) || [];
@@ -125,6 +128,7 @@
   };
   Banco.prototype.apaga = function () {
     this.arv = {};
+    this.apagado = true;
     var self = this;
     this.ouvintes.slice().forEach(function (o) { self.avisa(o); });
     if (!this.armazem) return;
@@ -198,6 +202,8 @@
         });
       },
       apagar: function () { banco.apaga(); },
+      // grava no aparelho agora (sem esperar os 200 ms): a página vai fechar ou esconder
+      salvarAgora: function () { banco.salva(); },
       // ----- só dos testes -----
       outroCliente: function (o) { return cliente(banco, o); },
       _cair: function () {
