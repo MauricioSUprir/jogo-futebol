@@ -14,7 +14,8 @@
                pedidos: { uid: { nome, num, auth, clube, formacao, versaoTM, edicao, ts, depois } } (online),
                recusados: { uid: true } (online),
                ordem: [uid × T] (o índice t de cada técnico; gravada no Começar) }
-     lotes   { l: [retrato × 13T], f: [retrato] (os de fora, para completar de graça), T, liga (online) }  gravados uma vez
+     lotes   { l: [retrato × lotesPorTec(regras)·T: 20T (menos nas ligas pequenas com 7 e 8), 13T nas salas de regras 1 e
+               2], f: [retrato] (os de fora, para completar de graça), T, liga (online) }  gravados uma vez
      vivo    o estado do leilão (leilao.js); SÓ por transação
      escal/{t}  { formacao, tit: [índice global × 11] (só a escalação feita à mão), pronto }; a automática é função pura
      vendas/{i} { t, v (o preço), s (o seq do lote) }: registro para a tela (a verdade é o vivo.d)
@@ -543,7 +544,9 @@
     if (!S.treino && S.online && s.meta.estado === "saguao") return;     // os lotes do saguão ainda podem mudar
     var ordem = S._ordem(), T = ordem.length;
     if (S.ctx && S.ctx.T === T) return;
-    if (lt.l.length !== L.LOTES_POR_TEC * T) return;                     // os lotes de outra lotação (ainda chegando)
+    // os lotes de outra lotação (ainda chegando): pelo T gravado com eles no Começar (a liga pequena tem menos lotes que
+    // lotesPorTec × T: leilao.js criarLotes); no treino, gravados com a sala, nunca passam disso
+    if (lt.T != null ? lt.T !== T : lt.l.length > L.lotesPorTec(s.meta.regras) * T) return;
     if (S.online) {
       // os lotes de outra liga ou de outra edição que a da sala, ou (no aparelho do dono) outros que os que ele gravou no
       // Começar (trocados entre as duas transações): a sala congela
@@ -2166,7 +2169,8 @@
     var mundo = (opc && opc.mundo) || (S._mundo && S._mundoEd === ed ? S._mundo : null) || TM.data.mundoBase();
     var lg = mundo.leaguesById && mundo.leaguesById[liga];
     if (!lg) return recusa("liga");
-    var lt = L.criarLotes(mundo, liga, T), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed }, meus = canon(dados);
+    // os lotes pelas regras da SALA (a de regras 1 e 2, criada antes, segue com 13T: o aparelho de antes, nela, conta 13T)
+    var lt = L.criarLotes(mundo, liga, T, { regras: s0.meta.regras }), dados = { l: lt.lotes, f: lt.fora, T: T, liga: liga, ed: ed }, meus = canon(dados);
     // os lotes que já estão lá só ficam se forem IGUAIS aos deste aparelho (gravados no saguão por outra conta: troca)
     return rede.transacao("lotes", function (cur) { return cur && canon(cur) === meus ? undefined : dados; }).then(function () {
       S._lotesMeus = meus;
@@ -2530,6 +2534,7 @@
       var v = a.vivo || {}, ordem = s.ordem || ordemPrevista(s), dono = s.tec && s.tec[s.meta.dono];
       out.push({
         codigo: c, treino: !!s.meta.treino, online: false, liga: s.cfg && s.cfg.liga, ligaNome: (s.cfg && s.cfg.ligaNome) || "", T: ordem.length,
+        lotes: a.lotes && a.lotes.l ? a.lotes.l.length : LE().lotesPorTec(s.meta.regras) * ordem.length,
         estado: s.meta.estado, fase: v.fase || null, k: num(v.k, -1), criada: num(s.meta.criada, 0),
         clube: dono ? dono.clube : null, regrasOk: LE().regrasAceitas(s.meta.regras), formato: formatoDe(s.cfg && s.cfg.formato)
       });

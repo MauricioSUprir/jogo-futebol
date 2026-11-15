@@ -2654,7 +2654,7 @@
   function textoEstado(x) {
     // (a sala online das Minhas salas guarda o estado, não o lote da vez)
     if (x.estado === "leilao" && x.online) return "Leilão em andamento";
-    if (x.estado === "leilao") return x.fase === "rep" ? "Repescagem" : x.k >= 0 ? "Jogador " + (x.k + 1) + " de " + (13 * x.T) : "Começando";
+    if (x.estado === "leilao") return x.fase === "rep" ? "Repescagem" : x.k >= 0 ? "Jogador " + (x.k + 1) + " de " + x.lotes : "Começando";
     if (x.estado === "escalacao") return "Escalação";
     if (x.estado === "camp") return "Campeonato";
     if (x.estado === "fim") return "Encerrada";
@@ -3100,11 +3100,8 @@
 
   /* ---------- Criar sala: o Treino e a sala online (leilao-criar; { online: true }) ---------- */
   function duracaoEstimada(T, tempoMs) {
-    // medido com os robôs (o leilão inteiro): ~0,9 × o relógio por lote quando todos passam rápido, ~relógio + 7 s quando
-    // ninguém passa (o relógio inteiro, a pausa e a repescagem); com 2 técnicos, metade embaixo
-    var n = L().LOTES_POR_TEC * T, s = tempoMs / 1000;
-    var lo = n * (T <= 2 ? 0.5 : 0.9) * s / 60, hi = n * (s + 7) / 60;
-    return { lo: Math.max(1, Math.round(lo)), hi: Math.max(2, Math.round(hi)), n: n };
+    // a mesma conta do leilao-camp.js (medida com os robôs; os lotes por técnico do leilao.js): { lo, hi, n (lotes) }
+    return LC().duracaoEstimada({ T: T, tempo: tempoMs }).leilao;
   }
   function ligas() { try { return TM.data.world().leagues.slice(); } catch (e) { return []; } }
   // o botão da liga (o mesmo nó; poe(idLiga, T, opc) refaz o que ele mostra): tocar abre a folha das ligas
