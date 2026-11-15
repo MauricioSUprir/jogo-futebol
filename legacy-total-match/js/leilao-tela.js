@@ -1805,6 +1805,12 @@
     X.fim = true;
     var aberto = !!(TM.tm3d && TM.tm3d.aberto && TM.tm3d.aberto());
     if (aberto) TM.tm3d.fechar();
+    // (o Simular partida desta página, com a ligação ainda a caminho: quem mostra o gravado é ele — só a ligação fecha)
+    if (VIEW.ocupado === "simular" && !aberto) {
+      fechaPar(X); if (PAR === X) PAR = null;
+      try { if (X.S.rede && X.S.rede.refBruta) X.S.rede.refBruta("rtc/" + X.id).remove(); } catch (e) {}
+      return;
+    }
     var res = jp && jp.e === "feito" && jp.trava === X.trava ? jp.res : null;
     var aviso = !res ? null : res.wo != null ? null : res.em3d ? null : aberto || X.C.fase === "ligando" ? "O jogo foi simulado." : null;
     mostraPar(X, Promise.resolve(res ? { ok: true, res: res, jogo: jp } : { ok: false, motivo: "jaFeito" }), aviso);
