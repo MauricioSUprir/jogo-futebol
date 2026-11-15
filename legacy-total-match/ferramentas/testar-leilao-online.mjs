@@ -788,18 +788,20 @@ async function casoDois() {
   await clicaSel(A, ".lei-fmt[data-fmt='misto']");
   const fmtD = await ate(A.p, () => { const b = document.querySelector(".lei-fmt[data-fmt='misto']"); return !!(b && b.getAttribute("aria-pressed") === "true"); }, null, 5000);
   // a Criar das fotos com a conta online: o passo com o deslizante (2 técnicos e nenhum bot), o formato marcado no cartão com o
-  // desenho, as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada (escuro e claro)
+  // desenho, as Partidas em 3D à vista sem bots (desde a revisão do PR 5: o 3D entre amigos) só com a duração, a barra fixa com o
+  // resumo e o Criar sala; nada sobre nada (escuro e claro)
   const criarD = await A.p.evaluate(() => {
     const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]'), dv = d => d ? [+d.min, +d.max, +d.value].join() : null;
     const fm = q(".lei-fmt[data-fmt='misto']"), sv = fm && fm.querySelector("svg.lei-fmt-svg");
     return { dT: dv(g("Técnicos na sala").querySelector(".lei-passo-desl")), dB: dv(g("Bots de treino").querySelector(".lei-passo-desl")), aviso: !!q(".lei-criar .lei-aviso-sala"),
       des: sv ? sv.getAttribute("data-desenho") : null, check: !!q(".lei-criar .lei-fmt-ok"), sem3d: q('.lei-criar [data-secao="3d"]').hidden,
+      dur3d: !!q('.lei-criar [data-secao="3d"] .lei-dur3d'), dif3d: !!q('.lei-criar [data-secao="3d"] .lei-dif3d'),
       fixa: getComputedStyle(q(".lei-criarbar")).position, resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
   });
   const nsCriar = await nadaSobreNada(A, "dois-criar", () => !!document.querySelector(".lei-criarbar"));
-  confere(`${ID}1b a Criar sala das fotos com a conta online: sem o aviso, 2 técnicos e nenhum bot no − e + com o deslizante (2–8 e 0–1), o Pontos + mata-mata marcado no cartão com o desenho (sem o check), as Partidas em 3D escondidas sem bots, a barra fixa com o resumo e o Criar sala; nada sobre nada nem atrás da barra (${nsCriar.medidas.length} telas)`,
-    !criarD.aviso && criarD.dT === "2,8,2" && criarD.dB === "0,1,0" && criarD.des === "tabela-chave" && !criarD.check && criarD.sem3d && criarD.fixa === "fixed"
-      && /\. Até 2 técnicos, pontos \+ mata-mata, 4-4-2, com a sala cheia, /.test(criarD.resumo) && criarD.bt === "Criar sala" && !nsCriar.ruins.length,
+  confere(`${ID}1b a Criar sala das fotos com a conta online: sem o aviso, 2 técnicos e nenhum bot no − e + com o deslizante (2–8 e 0–1), o Pontos + mata-mata marcado no cartão com o desenho (sem o check), as Partidas em 3D à vista sem bots só com a duração (o 3D entre amigos), a barra fixa com o resumo e o Criar sala; nada sobre nada nem atrás da barra (${nsCriar.medidas.length} telas)`,
+    !criarD.aviso && criarD.dT === "2,8,2" && criarD.dB === "0,1,0" && criarD.des === "tabela-chave" && !criarD.check && !criarD.sem3d && criarD.dur3d && !criarD.dif3d && criarD.fixa === "fixed"
+      && /\. Até 2 técnicos, pontos \+ mata-mata, 4-4-2, com a sala cheia, .*, 3D de 4 min por tempo$/.test(criarD.resumo) && criarD.bt === "Criar sala" && !nsCriar.ruins.length,
     { criarD, ruins: nsCriar.ruins.slice(0, 3) });
   await clicaSel(A, ".lei-comecar");
   await ate(A.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-conv-cod") && TM.leilaoSessao.atual(), null, 30000);
@@ -898,9 +900,10 @@ async function casoDois() {
      seu clube e a formação com o campinho, e a barra fixa embaixo com "1 de 2 prontos." em negrito e o botão de 56 px */
   await ate(B.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-sag-res"), null, 10000);
   const sA = await olhaSaguao(A), sB = await olhaSaguao(B), ligaD = (await ver(A)).liga.nome;
-  // (as etiquetas das fotos: sem a liga — está na frase — nem os técnicos — estão em "2/2 participantes" —; sem bots, quatro)
+  // (as etiquetas das fotos: sem a liga — está na frase — nem os técnicos — estão em "2/2 participantes" —; sem bots, o 3D só com a
+  // duração — o 3D entre amigos, revisão do PR 5)
   // (2 técnicos × os lotes por técnico desta versão: 40 desde os 20 por técnico, #645)
-  const etqD = ["Até " + (2 * await A.p.evaluate(() => TM.leilao.LOTES_POR_TEC)) + " jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
+  const etqD = ["Até " + (2 * await A.p.evaluate(() => TM.leilao.LOTES_POR_TEC)) + " jogadores", "10 s por jogador", "Pontos + mata-mata", "3D: 4 min", "Sem chat"];
   const lin = (ps, u) => ps.find(x => x.uid === u) || {};
   const verde = c => { const m = (c.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 && m[1] > m[0] + 40 && m[1] > m[2] + 20; };
   const partsOk = (ps, eu) => ps.length === 2 && lin(ps, "uidAna").papel === "Dono da sala" && lin(ps, "uidAna").estado === "Pronto" && lin(ps, "uidAna").estCls === "pronto"
@@ -927,7 +930,7 @@ async function casoDois() {
       && [sA, sB].every(x => x.res && x.res.tit === "Cada técnico entra com R$ 100." && JSON.stringify(x.res.etqs) === JSON.stringify(etqD) && (x.res.texto || "").includes(ligaD) && x.res.prontos === "1 de 2 prontos"
         && /Com a sala cheia/.test(x.res.dur || "") && verde(x.res.borda) && /linear-gradient/.test(x.res.fundoImg))
       && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.deslFora === 0 && salaA.fmts.join() === "pontos,mata,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
-      && salaA.dur3d == null && /zera os Pronto/.test(salaA.nota || "") && ["Liga", "Formato do campeonato", "Técnicos na sala", "Bots de treino", "Tempo de cada jogador"].every(r => salaA.rots.includes(r))
+      && salaA.dur3d === "4 min" && salaA.dif3d == null && /zera os Pronto/.test(salaA.nota || "") && ["Liga", "Formato do campeonato", "Técnicos na sala", "Bots de treino", "Tempo de cada jogador", "Partidas em 3D"].every(r => salaA.rots.includes(r))
       && !salaB.liga && salaB.fmtLista && salaB.soVer && salaB.fmts.join() === "pontos-,mata-,*misto-" && salaB.vagas == null && salaB.bots == null && salaB.tempo == null && /Só o dono/.test(salaB.nota || "")
       && clubeOk(salaA) && clubeOk(salaB)
       && sA.barra.fixa === "fixed" && sA.barra.embaixo && sA.barra.b === "1 de 2 prontos." && sA.barra.txt === "1 de 2 prontos. Falta confirmar: Bruno." && sA.barra.bt === "Começar o leilão" && sA.barra.btDes && sA.barra.btH >= 56 && sA.barra.btIc
@@ -1163,14 +1166,15 @@ async function casoDois() {
   confOk(`${ID}13b`, cod);
 
   /* D14 a escalação pela tela (o Pronto nas duas) e o campeonato MISTO com 2: a rodada de pontos e a Final de amigo contra
-     amigo simuladas ao abrir a rodada (até o PR 5); as duas páginas vão sozinhas ao Campeonato e veem os mesmos jogos, a
-     mesma tabela e o mesmo campeão, com os nós dos jogos iguais aos do servidor; cada jogo reservado e gravado uma vez */
+     amigo simuladas pelo prazo de 2 min (desde o PR 5, as regras 4: o par; ninguém toca em Jogar nem em Simular); as duas
+     páginas vão sozinhas ao Campeonato e veem os mesmos jogos, a mesma tabela e o mesmo campeão, com os nós dos jogos iguais aos
+     do servidor; cada jogo reservado e gravado uma vez */
   const naEsc = await ateNode(async () => (await rota(A)) === "leilao-escalacao" && (await rota(B)) === "leilao-escalacao", 20000);
   await ate(A.p, () => [...document.querySelectorAll(".lei-screen button")].some(b => /^Pronto/.test(b.textContent.trim()) && !b.disabled), null, 10000);
   await clica(A, "^Pronto$"); await clica(B, "^Pronto$");
   const camp = await ateNode(() => { const x = sala(cod); return x && (x.meta.estado === "camp" || x.meta.estado === "fim"); }, 30000);
   const naCamp = await ateNode(async () => (await rota(A)) === "leilao-camp" && (await rota(B)) === "leilao-camp", 20000);
-  const fimS = await ateNode(() => { const x = sala(cod); return x && x.meta.estado === "fim"; }, 60000);
+  const fimS = await ateNode(() => { const x = sala(cod); return x && x.meta.estado === "fim"; }, 150000);
   for (const ap of [A, B]) await ate(ap.p, () => !!document.querySelector(".lei-campeao") && !!document.querySelector(".lei-rodada .lei-jg-ver"), null, 15000);
   const ciD = await campIgual([A, B], cod), hD = confereHist(cod);
   const vistas = await Promise.all([A, B].map(ap => ap.p.evaluate(() => {
@@ -1180,8 +1184,8 @@ async function casoDois() {
       campeao: C.campeao, nome: C.campeao != null ? V.tecnicos[C.campeao].clube.nome : null, poster: (document.querySelector(".lei-campeao") || {}).innerText || "",
       id, linha: li ? li.querySelector(".lei-jg-pl").textContent : null, placar: g && g.placar ? g.placar.join(" × ") : null };
   })));
-  confere(`${ID}14 a escalação pela tela e o campeonato misto com 2: as duas vão sozinhas à Escalação e, com o Pronto, ao Campeonato; a rodada de pontos e a Final de amigo contra amigo simuladas ao abrir a rodada (${JSON.stringify(hD.conta)}); os mesmos jogos, a mesma tabela e o mesmo campeão nas duas e no servidor`,
-    naEsc && camp && naCamp && fimS && ciD.ok && ciD.info.n === 2 && hD.n === 2 && !hD.ruins.length && hD.conta.abertura === 2 &&
+  confere(`${ID}14 a escalação pela tela e o campeonato misto com 2: as duas vão sozinhas à Escalação e, com o Pronto, ao Campeonato; a rodada de pontos e a Final de amigo contra amigo simuladas pelo prazo de 2 min (o par: ${JSON.stringify(hD.conta)}); os mesmos jogos, a mesma tabela e o mesmo campeão nas duas e no servidor`,
+    naEsc && camp && naCamp && fimS && ciD.ok && ciD.info.n === 2 && hD.n === 2 && !hD.ruins.length && hD.conta.prazo === 2 &&
       vistas.every(v => v.estado === "fim" && v.formato === "misto" && v.fases === "liga,mata" && v.tabela === 2 && v.chave && v.nome && v.poster.indexOf(v.nome) >= 0 && v.linha === v.placar),
     { naEsc, camp, naCamp, fimS, ci: ciD.info, hist: hD, vistas });
   // o Ver o jogo dos dois jogos pela tela (a rodada de pontos pelo ‹): o resultado gravado no servidor no 2D, sem pausa
@@ -1901,8 +1905,9 @@ async function casoPar3d() {
       // (a revisão do PR 5: o Jogar com ≥ 44 px e, apagado, apagado de verdade — opacidade ≤ 0,5 e sem a sombra do botão principal)
       await ate(X.p, () => { const b = document.querySelector(".lei-jogar"); return !!(b && !b.disabled); }, null, real(120000));
       x.bt = await X.p.evaluate(() => {
+        // (sem a transição do .btn — all .15s: o estilo lido logo depois de apagar seria o do começo dela)
         const b = document.querySelector(".lei-jogar"), h = b.getBoundingClientRect().height, op0 = getComputedStyle(b).opacity;
-        b.disabled = true; const cs = getComputedStyle(b), r = { h, op0, op: +cs.opacity, sombra: cs.boxShadow }; b.disabled = false;
+        b.style.transition = "none"; b.disabled = true; const cs = getComputedStyle(b), r = { h, op0, op: +cs.opacity, sombra: cs.boxShadow }; b.disabled = false; b.style.transition = "";
         return r;
       });
       // (o chamado em outra aba da sala, M2: B na Escalação vê a faixa "{A} chamou você para o jogo em 3D" com o Jogar e o selo na aba
