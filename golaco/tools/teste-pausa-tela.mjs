@@ -46,9 +46,12 @@
 //       px fixos: 13–15)
 //   (as medidas com as transições e animações da pausa DESLIGADAS — o foco anda 6 px em 160 ms e a lista entra em cascata: o teste
 //   mede o estado final, não o meio do movimento; lição do relógio das animações sem GPU, "Tela limpa")
+//   P14 (o Modo Leilão do TM, PR 6: as notas escondidas; ?notasOcultas=1 = o partida.notasOcultas do pedido) no PC 1280×720 e no
+//       celular 844×390: a pausa (o 1º nível com o cartão do meu time, as Opções, o Modo de jogo e as Estatísticas) sem nenhuma nota
+//       ("nota N", "geral N", .pp-nota, .c-nota) e o cartão IGUAL ao sem o parâmetro (as mesmas fichas: a pausa não depende da nota)
 //   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
-//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online]
+//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|notas]
 // (--raiz: mede outra cópia do jogo — a base a5abaa4e tem de REPROVAR)
 import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -987,6 +990,50 @@ async function sessaoOnline() {
   finally { erros.push(...s.erros.map(x => `online: ${x}`)); await s.navegador.close(); }
 }
 
+// ------------------------------------------------------------------ sessão: as notas escondidas (o Modo Leilão do TM, PR 6; P14)
+async function sessaoNotas() {
+  const ruins = [], vistos = [];
+  for (const [w, h, toque] of [[PC[0], PC[1], false], [844, 390, true]]) {
+    const cartoes = {};
+    for (const oc of [true, false]) {
+      const s = await abrir({ largura: w, altura: h, dpr: toque ? 2 : 1, toque });
+      const pg = s.pagina;
+      try {
+        await pg.goto(`${srv.url}index.html?${Q}${toque ? '&toque=1&entalhe=1' : ''}${oc ? '&notasOcultas=1' : ''}`, { waitUntil: 'load' });
+        await pronta(pg);
+        await carregarPausa(pg);
+        await manual(pg);
+        const r = await pg.evaluate(async () => {
+          const g = window.__golaco, rx = /\b(nota|geral)\s*\d/i, out = { flag: g.notasOcultas, textos: [], el: 0 };
+          g.abrirMenu();
+          await new Promise(ok => setTimeout(ok, 250));
+          const olha = rot => { const m = document.getElementById('menu'); const t = m ? m.innerText : ''; if (rx.test(t)) out.textos.push(rot + ': ' + (t.match(rx) || [''])[0]); out.el += document.querySelectorAll('#menu .pp-nota, #menu .c-nota, #pausa-time .pp-nota').length; };
+          olha('1º nível');
+          const card = document.getElementById('pausa-time');
+          out.cartao = card ? [...card.querySelectorAll('.pt-ficha')].map(f => f.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : '';
+          for (const sel of ['#btn-opcoes', '#btn-modos', '#btn-estatisticas']) {
+            const b = document.querySelector(sel); if (!b || b.offsetParent === null) continue;
+            b.click(); await new Promise(ok => setTimeout(ok, 200)); olha(sel);
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); await new Promise(ok => setTimeout(ok, 150));
+          }
+          g.fecharMenu();
+          return out;
+        });
+        cartoes[oc] = r.cartao;
+        vistos.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${r.cartao.split(' | ').length} fichas, ${r.textos.length} textos com nota, ${r.el} peças de nota`);
+        if (r.textos.length || r.el) ruins.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${r.textos.concat(r.el ? [r.el + ' peças de nota'] : []).slice(0, 3).join('; ')}`);
+        if (r.flag !== oc) ruins.push(`${w}×${h}: __golaco.notasOcultas ${r.flag}`);
+        if (s.erros && s.erros.length) ruins.push(`${w}×${h}: ${s.erros.length} erros no console`);
+      } catch (e) {
+        ruins.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${e.message.slice(0, 120)}`);
+      } finally { await s.navegador.close(); }
+    }
+    if (!cartoes.true || cartoes.true !== cartoes.false) ruins.push(`${w}×${h}: o cartão muda com as notas escondidas (${String(cartoes.true).slice(0, 60)} × ${String(cartoes.false).slice(0, 60)})`);
+  }
+  meta('P14 as notas escondidas (o Modo Leilão do TM, PR 6; ?notasOcultas=1): a pausa (o 1º nível com o cartão, as Opções, o Modo de jogo e as Estatísticas) sem nota nenhuma e o cartão igual ao sem o parâmetro',
+    `${vistos.join(' · ')}${ruins.length ? ' — ' + ruins.slice(0, 4).join(' | ') : ''}`, 'nenhuma nota; o cartão igual', !ruins.length);
+}
+
 // ------------------------------------------------------------------ as sessões
 const t0 = Date.now();
 if (!SO || SO === 'cel') await sessaoCelular();
@@ -1004,6 +1051,7 @@ if (!SO || SO === 'tm') {
   await sessaoTM(PED_P, 'penaltis', ORDEM.tmPenaltis, [[844, 390], [568, 320]], { rot: 'Pênaltis' });
 }
 if (!SO || SO === 'online') await sessaoOnline();
+if (!SO || SO === 'notas') await sessaoNotas();
 await srv.fechar();
 
 // ------------------------------------------------------------------ as metas
