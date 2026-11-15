@@ -7,7 +7,8 @@
 
    A sala (os caminhos dentro de leiloes/{CÓDIGO}; no treino, a mesma árvore em memória, gravada no aparelho):
      sala    { meta: { dono, proto, regras, versaoTM, edicao, criada, estado, semente, atividade, treino, fimLeilao },
-               cfg: { liga, ligaNome, T, tempo (ms do relógio do lote), formato, overall, vagas e bots (online) },
+               cfg: { liga, ligaNome, T, tempo (ms do relógio do lote), formato, overall, duracao3d (min por tempo no 3D),
+                      dificuldade3d (a dos bots no 3D), vagas e bots (online) },
                tec: { uid: { nome, num, papel: 'dono'|'tecnico'|'bot', pronto, entrou, auth, saiu, clube: { nome, sigla, cor,
                       escudo ("forma|símbolo", o do Ultimate) }, formacao } },
                pedidos: { uid: { nome, num, auth, clube, formacao, versaoTM, edicao, ts, depois } } (online),
@@ -39,7 +40,11 @@
    é simulado por qualquer um. Quem some sem ninguém ver (sozinha na sala, todos com o celular travado) não perde o prazo:
    o bate dela diz que houve um buraco depois de o prazo começar e o prazo para no último bate antes dele e volta a correr
    (qualquer aparelho, o dela primeiro); a pessoa toca em "Simular partida" (simular): reservar com a trava do servidor → simular
-   com a semente e as escalações GRAVADAS → gravar → só então o resultado volta para a tela mostrar. O dono tem
+   com a semente e as escalações GRAVADAS → gravar → só então o resultado volta para a tela mostrar. Ou em "Jogar" (PR 4,
+   jogar3d): reservar no 3D (modo '3d', o `inicio` = a trava) → o 3D abre (abriu3d marca o `abriu` na 1ª tela do 3D) → no fim,
+   gravar3d('3d', r3) grava o resultado do 3D ANTES de mostrar; o "Simular partida" da tela do 3D, gravar3d('simulado', ...).
+   O 3D que abriu e não gravou no prazo (2 × duração × 1,3 + 8 min) vira W.O. de quem reservou; o que não abriu em 2 min, o
+   simulado — os dois por qualquer aparelho, pela testemunha da hora. O dono tem
    simularPendentes() (só os jogos que esperam por quem está AUSENTE; com o dono fora há mais de 5 min, qualquer técnico
    presente tem). A escalação mudada vale a partir do próximo jogo que não começou (a reserva grava a do momento).
    Quem saiu da sala ("Sair da sala") conta como bot nos jogos. Todo nó novo de jogos é conferido (leilao-camp.js
@@ -61,7 +66,8 @@
 
    API (TM.leilaoSessao):
      criarTreino(opc) → Promise(sessão)   opc: { liga, bots (1–7), formacao, tempo (s ou ms), formato ('mata' padrão,
-                                           'pontos', 'misto'), clube?, semente?, codigo?
+                                           'pontos', 'misto'), duracao3d (4 padrão), dificuldade3d ('normal' padrão),
+                                           clube?, semente?, codigo?
                                            e, só nos testes: relogio, agendar, cancelar, armazem, latencia, atraso }
      criarSala(opc) → Promise(sessão)     o online: { liga, ligaNome?, vagas (2–8, contando os bots), bots, tempo, formacao,
                                            formato, clube?, semente?, mundo? } — o código de 6 letras (sem I, O, 0 e 1) nasce por
@@ -77,10 +83,12 @@
    A sessão: ver() (tudo o que as telas mostram; no campeonato, ver().camp) · lance('+1'|'+5'|'+10'|'tudo'|número) ·
      passar() · mudarFormacao(f) · trocar(a, b) · prontoEscalacao(sim) · sair() · parar() · aoMudar(fn) · on(evento, fn) ·
      escalacao(t) · hora()
-     O campeonato: simular(id?) (o meu jogo da rodada, sem id) · simularPendentes() (o dono; sem ele há 5 min, qualquer
-     técnico presente) · partida(id) (o jogo
+     O campeonato: simular(id?) (o meu jogo da rodada, sem id) · jogar3d(id?) (o "Jogar" contra um bot no 3D: a reserva) ·
+     abriu3d(id, trava) · gravar3d(id, trava, origem, dados) (o gancho gravar do tm3d.js) · simularPendentes() (o dono; sem ele
+     há 5 min, qualquer técnico presente) · partida(id) (o jogo
      gravado com os dois times pelas escalações gravadas: o "Ver o jogo" no 2D)
-     Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial; também o formato) · pronto(sim) ·
+     Só no online: aceitar(uid) · recusar(uid) · tirar(uid) · configurar(parcial; também o formato, a duracao3d e a
+     dificuldade3d) · pronto(sim) ·
      meuClube(clube) · comecar() · passarClube(uidVelho, uidNovo) · encerrar() · assumir() · reconectar()
      Eventos: 'lote' {i, fase, k}, 'lance' {t, valor}, 'superado' {t, valor}, 'vendido' {i, t, preco}, 'semLance' {i},
      'formacao' {de, para}, 'fim', 'estado' {estado}, 'alterada' {motivo}; o campeonato: 'jogo' {id, a, b, placar, venc,
@@ -363,6 +371,9 @@
       case "naoEhSeu": return "Esse jogo não é seu";
       case "espera": return "Esse jogo ainda não abriu";
       case "jogando": return "Esse jogo já está sendo jogado";
+      case "jaFeito": return "Esse jogo já tem resultado";
+      case "contraAmigo": return "Contra um amigo, o jogo é simulado ao abrir a rodada";
+      case "naoGravou": return "Não deu para gravar o resultado: confira a conexão";
       case "semPendentes": return "Nenhum jogo esperando por quem não está aqui";
       case "fase": return "Agora não dá";
       default: return "Agora não dá";
@@ -715,6 +726,7 @@
     var c = S._camp;
     if (!c || c.T !== T || c.formato !== fmt || c.semente !== sem || c.codigo !== String(S.codigo)) c = S._camp = LC().contexto({ codigo: S.codigo, semente: sem, formato: fmt, T: T });
     c.ctx = S.ctx; c.vivo = S.vivo; c.inicio = num(s.meta.camp, 0); c.escal = S.escal || {};
+    c.duracao3d = LC().duracao3dDe(s.cfg && s.cfg.duracao3d); c.dificuldade3d = LC().dificuldade3dDe(s.cfg && s.cfg.dificuldade3d);
     c.clubes = []; c.nomes = []; c.tipos = []; c.prefs = [];
     ordem.forEach(function (uid, t) {
       var tc = (s.tec && s.tec[uid]) || {};
@@ -802,12 +814,14 @@
       // times e escalações): voltar o reservado ao aberto daria uma trava nova, outro sorteio (o "jogar de novo")
       var visto = S._feitoVisto[id];
       if (visto === "feito") return falha(id, "feito");
-      if (visto && visto.e === "reservado" && !(j.e === "feito" && j.trava === visto.trava && canon(j.esc) === visto.esc && canon(j.ab) === visto.ab && j.modo === visto.modo)) return falha(id, "volta");
+      // (o reservado no 3D só ganha o `abriu`, uma vez: o mesmo reservado com ele, ou o feito, e ele nunca some nem muda)
+      if (visto && visto.e === "reservado" && !((j.e === "feito" || j.e === "reservado") && j.trava === visto.trava && canon(j.esc) === visto.esc && canon(j.ab) === visto.ab && j.modo === visto.modo &&
+        (visto.abriu == null || j.abriu === visto.abriu))) return falha(id, "volta");
       var m = LC().conferirJogo(c, g, j);
       if (m) return falha(id, m);
       ok[id] = cj; S._jogoTxt[id] = tj;
       if (j.e === "feito") S._feitoVisto[id] = "feito";
-      else if (j.e === "reservado") S._feitoVisto[id] = { e: "reservado", trava: j.trava, esc: canon(j.esc), ab: canon(j.ab), modo: j.modo };
+      else if (j.e === "reservado") S._feitoVisto[id] = { e: "reservado", trava: j.trava, esc: canon(j.esc), ab: canon(j.ab), modo: j.modo, abriu: j.abriu != null ? j.abriu : null };
     }
   };
   // o meu jogo da rodada da vez (null: folga, eliminado ou o fim)
@@ -1220,8 +1234,9 @@
     var j = g.j;
     if (j && j.e === "reservado") {
       if (j.modo === "simulado") return { acao: "gravar", id: g.id, quando: agora };
+      // o 3D: o que abriu e passou do prazo da partida = W.O. de quem reservou; o que não abriu em 2 min = o simulado
       var pz = LC().prazoDe(j, c);
-      return pz == null ? null : { acao: "wo", id: g.id, quando: pz, prazo: pz };
+      return pz == null ? null : { acao: num(j.abriu, null) != null ? "wo" : "naoAbriu", id: g.id, quando: pz, prazo: pz };
     }
     if (LC().confronto(c, g) !== "pessoaBot") return { acao: "reservar", id: g.id, motivo: "abertura", quando: agora };
     var p = c.tipos[g.a] === "pessoa" ? g.a : g.b;
@@ -1426,6 +1441,14 @@
     }
     if (a.acao === "gravar") return S._gravarJogo(g.id);
     if (a.acao === "wo") return S._transJogo(g.id, function (cur) { return LC().wo(cur, { trava: cur && cur.trava, hora: hora, ts: TS }, c); });
+    if (a.acao === "naoAbriu") {
+      var memo = {};
+      return S._transJogo(g.id, function (cur) {
+        if (!cur || cur.e !== "reservado" || cur.modo !== "3d" || cur.abriu != null) return { ok: false, motivo: cur ? cur.e : "sem" };
+        var k = canon(cur), res = memo[k] || (memo[k] = LC().resultadoDoJogo(c, g.id, cur));
+        return LC().naoAbriu(cur, { trava: cur.trava, hora: hora, ts: TS, res: res, mata: LC().ehMata(g.id) }, c);
+      });
+    }
     return Promise.resolve({ feito: false, motivo: "nada" });
   };
 
@@ -1476,6 +1499,7 @@
       T: ctx ? ctx.T : ordem.length, liga: { id: cfg.liga || null, nome: cfg.ligaNome || "" }, cfg: cfg, fase: v ? v.fase : null,
       tecnicos: [], lote: null, botoes: null, proximos: [], vendas: [], ultimo: S.ultimo, meu: null, camp: null,
       formato: formatoDe(cfg.formato),
+      duracao3d: LC() ? LC().duracao3dDe(cfg.duracao3d) : 4, dificuldade3d: LC() ? LC().dificuldade3dDe(cfg.dificuldade3d) : "normal",
       fimEscalacao: meta.estado === "escalacao" ? num(meta.fimLeilao, agora) + ESCAL_MS : null,
       // online
       rede: S._estadoRede(), conferindo: !!S.conferindo, outraAba: S.outraAba, apagada: S.apagada, oculta: S._oculta,
@@ -1553,7 +1577,8 @@
    *  'aberto'|'reservado'|'feito', res e placar GRAVADOS), atual, rodada (a da vez), tabela (pontos), ligaFeita, fim, campeao,
    *  classificacao, artilharia, melhorTime ({ t, soma }), notas ([{ t, soma }] no fim), tipos, meuJogo ({ id, rodada, a, b,
    *  adversario, contraBot, mata, e, prazo: { fim, restante, parado, resta } | null, placar, res, venc, podeSimular,
-   *  motivo }), folga, eliminado, pendentes (quantos jogos da rodada da vez esperam por quem está ausente), pendLista
+   *  podeJogar (o "Jogar" no 3D), tresD ({ abriu, inicio, fim, restante, porMim, trava }: o 3D reservado), modo, fim3d
+   *  ('3d' | 'simulado': como o 3D acabou), motivo }), folga, eliminado, pendentes (quantos jogos da rodada da vez esperam por quem está ausente), pendLista
    *  ([{ id, a, b, t }]), podePendentes, pendQuem ('dono' | 'outro': o dono fora há mais de 5 min),
    *  inicio, fimCamp }. Nada aqui recalcula partida: tudo sai dos jogos gravados. */
   P._verCamp = function (agora) {
@@ -1564,9 +1589,15 @@
       var j = meu.j, pz = null, adv = meu.a === eu ? meu.b : meu.a;
       if (j && j.e === "aberto") pz = j.parado ? { parado: true, resta: j.resta, fim: null, restante: j.resta } : { parado: false, resta: j.resta, fim: j.ini + j.resta, restante: Math.max(0, j.ini + j.resta - agora) };
       var imp = S._impede(), pode = meu.aberta && meu.e !== "feito" && !(j && j.e === "reservado" && j.modo !== "simulado") && !imp && !S.soOlhar;
+      // o 3D reservado (o meu "Jogar", neste ou noutro aparelho): o prazo da partida (abriu) ou o de começar
+      var tresD = j && j.e === "reservado" && j.modo === "3d" ? { abriu: j.abriu != null, inicio: j.inicio, fim: LC().prazoDe(j, c), porMim: j.por === eu, trava: j.trava } : null;
+      if (tresD) tresD.restante = Math.max(0, tresD.fim - agora);
       mj = {
         id: meu.id, rodada: meu.rodada, a: meu.a, b: meu.b, adversario: adv, contraBot: c.tipos[adv] === "bot", mata: meu.mata, e: meu.e,
         prazo: pz, placar: meu.placar, res: meu.res, venc: meu.venc, podeSimular: !!pode,
+        // o "Jogar" (o 3D): o mesmo que o Simular, só contra um bot e sem nada reservado
+        podeJogar: !!pode && c.tipos[adv] === "bot" && !(j && j.e === "reservado"), tresD: tresD, modo: j && j.modo ? j.modo : null,
+        fim3d: j && j.e === "feito" ? j.fim || null : null,
         motivo: pode ? null : (S.soOlhar ? "fase" : imp || (meu.e === "feito" ? "campFim" : !meu.aberta ? "espera" : "jogando"))
       };
     }
@@ -1595,7 +1626,8 @@
   P.partida = function (id) {
     var S = this, c = S._campCtx(), V = c ? S._vista() : null, g = jogoDaVista(V, id);
     if (!g || g.e !== "feito" || !g.j) return null;
-    var ab = Array.isArray(g.j.ab) ? g.j.ab : [g.j.ab[0], g.j.ab[1]], esc = Array.isArray(g.j.esc) ? g.j.esc : [g.j.esc[0], g.j.esc[1]];
+    var e0 = g.j.escSim || g.j.esc;
+    var ab = Array.isArray(g.j.ab) ? g.j.ab : [g.j.ab[0], g.j.ab[1]], esc = Array.isArray(e0) ? e0 : [e0[0], e0[1]];
     var times = [LC().timeDoTecnico(c, ab[0], esc[0]), LC().timeDoTecnico(c, ab[1], esc[1])];
     // os dois clubes com o mesmo nome (o "Meu Clube" de quem não tem o Ultimate): o técnico junto do nome no 2D (só o que
     // se mostra: o resultado gravado e os textos dele não mudam)
@@ -1766,6 +1798,93 @@
       return S.rede.ler("jogos/" + g.id).then(function (j) { return respostaJogo(g, j); });
     }, function (e) { return { ok: false, estado: "recusado", motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
   };
+  /** "Jogar" (PR 4; PLANO-LEILAO.md §1.7 e §3.6): o meu jogo da rodada (ou o id, meu) contra um BOT no 3D. Reserva com a
+   *  trava do servidor no modo '3d' (o `inicio` = a trava; motivo 'pedido', por = eu) e as escalações de AGORA (as que o 3D
+   *  usa; o simulado do "Simular partida" da tela também). Responde com o que a tela precisa para abrir o 3D: Promise({ ok,
+   *  estado: 'aceito', id, trava, jogo (o reservado), times: [A, B] (pelas escalações gravadas), lado (o meu: 0|1), mata,
+   *  rodada, duracao3d, dificuldade3d }) ou a recusa ('jogando': já reservado — também noutro aparelho ou aba —, 'contraAmigo',
+   *  as do simular). Contra uma pessoa (até o PR 5) e bot × bot, nada: simulados ao abrir a rodada. */
+  P.jogar3d = function (id) {
+    var S = this, rede = S.rede;
+    if (S.parado) return recusa("parado");
+    if (S.soOlhar) return recusa("fase");
+    var imp = S._impede(); if (imp && imp !== "conferindo") return recusa(imp, imp === "conexao" ? { rede: S._estadoRede() } : null);
+    var c = S._campCtx(), V = S._vista(); if (!c || !V) return recusa("naoCamp");
+    if (V.fim) return recusa("campFim");
+    var g = id ? jogoDaVista(V, id) : S._meuJogo(V);
+    if (!g) return recusa("semJogo");
+    if (S.eu < 0 || (g.a !== S.eu && g.b !== S.eu)) return recusa("naoEhSeu");
+    if (!g.aberta || g.a == null || g.b == null) return recusa("espera");
+    if (g.e === "feito") return recusa("jaFeito");
+    var adv = g.a === S.eu ? g.b : g.a;
+    if (c.tipos[adv] !== "bot") return recusa("contraAmigo");
+    if (g.j && g.j.e === "reservado") return recusa("jogando");
+    var esc = [LC().escalacaoDoJogo(c, g.a), LC().escalacaoDoJogo(c, g.b)], eu = S.eu;
+    return S._transJogo(g.id, function (cur) {
+      return LC().reservar(cur, { ab: [g.a, g.b], esc: esc, modo: "3d", por: eu, motivo: "pedido", ts: rede.TS });
+    }).then(function (r) {
+      if (!r.feito || !r.valor || r.valor.e !== "reservado") {
+        // outro aparelho (ou o prazo) chegou antes: o jogo já está reservado ou feito
+        return { ok: false, estado: "recusado", motivo: r.motivo === "feito" ? "jaFeito" : "jogando" };
+      }
+      var j = r.valor, e2 = Array.isArray(j.esc) ? j.esc : [j.esc[0], j.esc[1]];
+      return {
+        ok: true, estado: "aceito", id: g.id, trava: j.trava, jogo: j, rodada: g.rodada, mata: g.mata,
+        times: [LC().timeDoTecnico(c, g.a, e2[0]), LC().timeDoTecnico(c, g.b, e2[1])], lado: g.a === eu ? 0 : 1,
+        duracao3d: c.duracao3d, dificuldade3d: c.dificuldade3d
+      };
+    }, function (e) { return { ok: false, estado: "recusado", motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
+  };
+  /** O 3D chegou a abrir (o recado tm3d:tela ou tm3d:pronto): marca o `abriu` no reservado (só no meu, com a mesma trava).
+   *  A partir daí, sem resultado no prazo da partida, é W.O.; sem a marca, em 2 min, o simulado. Promise({ feito }). */
+  P.abriu3d = function (id, trava) {
+    var S = this, rede = S.rede;
+    if (S.parado) return Promise.resolve({ feito: false, motivo: "parado" });
+    return S._transJogo(id, function (cur) { return LC().marcarAbriu(cur, { trava: trava, ts: rede.TS }); })
+      .then(null, function () { return { feito: false, motivo: "rede" }; });
+  };
+  /** O gancho gravar do tm3d.js: grava UMA vez sobre o meu 3D reservado (a mesma trava) e SÓ ENTÃO responde. origem '3d':
+   *  dados = o resultado do 3D (resDo3d: o gol de ouro e os pênaltis do mata-mata empatado com a semente); 'simulado': dados =
+   *  os titulares da tela do 3D (ou null) — o simulado com a semente e as escalações gravadas (as da tela, se mudaram: escSim).
+   *  Se não gravou (outro aparelho chegou antes: o W.O., o simulado do 3D que não abriu; a conexão caiu), responde com o que
+   *  ficou GRAVADO no servidor (lido do jogo), nunca com o que calculou aqui. Promise({ ok, res (o gravado), jogo, gravou })
+   *  ou { ok: false, motivo } (nada gravado). */
+  P.gravar3d = function (id, trava, origem, dados) {
+    var S = this, rede = S.rede, c = S._campCtx(), memo = {};
+    if (!c) return Promise.resolve({ ok: false, motivo: "naoCamp" });
+    var mata = LC().ehMata(id);
+    function tenta() {
+      return S._transJogo(id, function (cur) {
+        if (!cur || cur.e !== "reservado") return { ok: false, motivo: cur ? cur.e : "sem" };
+        if (cur.modo !== "3d" || cur.trava !== trava) return { ok: false, motivo: "trava" };
+        var k = canon(cur), m = memo[k];
+        if (!m) {
+          if (origem === "3d") m = { res: LC().resDo3d(c, id, cur, dados), fim: "3d" };
+          else {
+            var es = LC().escDaTela(c, cur, dados), jx = {};
+            Object.keys(cur).forEach(function (x) { jx[x] = cur[x]; });
+            if (es) jx.escSim = es;
+            m = { res: LC().resultadoDoJogo(c, id, jx), fim: "simulado", escSim: es };
+          }
+          memo[k] = m;
+        }
+        return LC().gravar(cur, { trava: trava, res: m.res, ts: rede.TS, mata: mata, fim: m.fim, escSim: m.escSim });
+      });
+    }
+    // o que ficou gravado no servidor (a resposta da transação ou o jogo lido de novo)
+    function gravado(r) {
+      if (r && r.valor && r.valor.e === "feito") return Promise.resolve(r.valor);
+      return S.rede.ler("jogos/" + id).then(function (j) { return j && j.e === "feito" ? j : null; }, function () { return null; });
+    }
+    function resposta(j, gravou) { return j ? { ok: true, res: j.res, jogo: j, gravou: !!gravou } : { ok: false, motivo: "naoGravou" }; }
+    return tenta().then(function (r) { return gravado(r).then(function (j) { return resposta(j, r.feito); }); }, function (e) {
+      // a conexão caiu no meio: espera a sala ficar em dia (até 30 s) e tenta de novo, uma vez
+      if (!S.online || !e || e.codigo !== "desconectado") return gravado(null).then(function (j) { return resposta(j, false); });
+      var espera = new Promise(function (ok) { var t = setTimeout(ok, 30000); S._quandoEmDia().then(function () { clearTimeout(t); ok(); }); });
+      return espera.then(tenta).then(function (r) { return gravado(r).then(function (j) { return resposta(j, r.feito); }); },
+        function () { return gravado(null).then(function (j) { return resposta(j, false); }); });
+    });
+  };
   /** "Simular os pendentes": reserva e simula os jogos da rodada da vez que esperam por quem está AUSENTE (_pendentes: o
    *  prazo parado ou o jogo nem aberto; nunca o de quem está aqui com o prazo correndo, nem o meu). É do dono (motivo
    *  'dono'); com o dono fora há mais de 5 min, de qualquer técnico presente (motivo 'pendentes'; a testemunha da hora
@@ -1832,7 +1951,8 @@
       return null;
     });
   };
-  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo, formato }. Zera os Pronto. */
+  /** O dono muda a configuração no saguão: { liga, ligaNome, vagas, bots, tempo, formato, duracao3d, dificuldade3d }. Zera
+   *  os Pronto. */
   P.configurar = function (parcial) {
     var S = this, L = LE(), m = S._naoPodeSala(true); if (m) return recusa(m);
     parcial = parcial || {};
@@ -1847,6 +1967,8 @@
       if (parcial.liga != null) { cfg.liga = String(parcial.liga); cfg.ligaNome = String(parcial.ligaNome || parcial.liga); }
       if (parcial.formato != null) cfg.formato = formatoDe(parcial.formato);
       else cfg.formato = formatoDe(cfg.formato);
+      cfg.duracao3d = LC().duracao3dDe(parcial.duracao3d != null ? parcial.duracao3d : cfg.duracao3d);
+      cfg.dificuldade3d = LC().dificuldade3dDe(parcial.dificuldade3d != null ? parcial.dificuldade3d : cfg.dificuldade3d);
       cfg.vagas = vagas; cfg.bots = nb; cfg.tempo = tempo;
       s.cfg = cfg;
       humanosDe(s).forEach(function (u) { if (s.tec[u].papel !== "dono") s.tec[u].pronto = false; });
@@ -2103,7 +2225,8 @@
       identidadesBots(semente, nb, [clube.cor], 1, false).forEach(function (b) { tec[b.uid] = { nome: b.nome, papel: b.papel, pronto: true, entrou: b.entrou, clube: b.clube, formacao: b.formacao }; });
       var sala = {
         meta: { dono: uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: edicao(), criada: TS, estado: "saguao", semente: semente, atividade: TS, treino: true },
-        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra" },
+        cfg: { liga: opc.liga, ligaNome: lg.name || opc.liga, T: T, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra",
+               duracao3d: LC().duracao3dDe(opc.duracao3d), dificuldade3d: LC().dificuldade3dDe(opc.dificuldade3d) },
         tec: tec
       };
       var esc = {}; esc["escal/0"] = { formacao: formacao };
@@ -2174,7 +2297,8 @@
         tec[id.uid] = { nome: id.nome, num: id.num || null, papel: "dono", pronto: true, auth: id.auth, entrou: 0, clube: clube, formacao: formacao };
         var sala = {
           meta: { dono: id.uid, proto: PROTO, regras: L.REGRAS, versaoTM: versao(), edicao: opcEdicao(opc), criada: TS, estado: "saguao", semente: semente, atividade: TS },
-          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra" },
+          cfg: { liga: opc.liga, ligaNome: String(ligaNome), vagas: vagas, bots: nb, tempo: tempo, formato: formatoDe(opc.formato), overall: "mostra",
+                 duracao3d: LC().duracao3dDe(opc.duracao3d), dificuldade3d: LC().dificuldade3dDe(opc.dificuldade3d) },
           tec: tec
         };
         refazBots(sala);

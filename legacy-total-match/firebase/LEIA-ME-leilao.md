@@ -20,7 +20,7 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
 | `sala/pedidos/<uid>` | pedido em nome de outra conta |
 | `lotes` | trocar ou apagar os jogadores depois do Começar |
 | `vendas/<i>`, `jogos/<j>/res` | gravar de novo um registro ou um resultado (grava uma vez) |
-| `jogos/<j>` (o campeonato) | a máquina andar para trás: **o jogo feito não muda**; o reservado só nasce do nada ou do prazo aberto (nunca de volta ao aberto: uma trava nova daria outro sorteio); o resultado só sobre o reservado e com a **mesma trava**; o reservado "pelo prazo" **antes de o prazo vencer** pela hora do servidor (`now`); o prazo maior que 2 min ou que volta a crescer; `ini`, `trava`, `inicio` e `ts` com hora que não seja a do servidor |
+| `jogos/<j>` (o campeonato) | a máquina andar para trás: **o jogo feito não muda**; o reservado só nasce do nada ou do prazo aberto (nunca de volta ao aberto: uma trava nova daria outro sorteio); o resultado só sobre o reservado e com a **mesma trava**; o reservado "pelo prazo" **antes de o prazo vencer** pela hora do servidor (`now`); o prazo maior que 2 min ou que volta a crescer; o 3D reservado (o "Jogar" contra um bot) só ganha o `abriu` uma vez, com a mesma trava, e nada mais muda nele; `ini`, `trava`, `inicio`, `abriu` e `ts` com hora que não seja a do servidor |
 | `sala/meta/camp`, `sala/meta/fimCamp` | o começo e o fim do campeonato com hora que não seja a do servidor |
 
 ## O que ele NÃO protege
@@ -35,7 +35,8 @@ O bloco só **acrescenta conferências** em `leiloes/<código>`. Ele não mexe n
   A conferência que cada aparelho faz do leilão continua acusando o resto (lance acima do máximo, saldo que sobe,
   venda sem dinheiro), e a sala congela com "A sala foi alterada fora das regras".
 - **No campeonato, o resultado inventado** e a escalação com jogadores de outro técnico: as regras não recalculam a
-  partida. Quem recalcula é cada aparelho (o simulado com a semente da sala e a trava do jogo), e a sala congela. Também
+  partida (o resultado do 3D nem os aparelhos recalculam: conferem só a forma, o lado e quem reservou; o W.O. do 3D antes
+  do prazo também passa pelas regras — os aparelhos acusam). Quem recalcula é cada aparelho (o simulado com a semente da sala e a trava do jogo), e a sala congela. Também
   passa **apagar um jogo** (o `.validate` não vale para apagar): os aparelhos que já o tinham visto congelam a sala.
 
 ## Atenção: a conta vinculada em dois aparelhos

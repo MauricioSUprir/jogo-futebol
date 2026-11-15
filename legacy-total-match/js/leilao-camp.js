@@ -876,7 +876,9 @@
     // o 3D: só pelo "Jogar" da pessoa do jogo (motivo 'pedido', quem reservou é um dos dois), com o `inicio`
     if (j.modo === "3d" && (j.motivo !== "pedido" || ab.indexOf(j.por) < 0 || !numero(j.inicio) || (j.abriu != null && !numero(j.abriu)))) return "forma";
     if (j.e !== "feito") return null;
-    if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por && numero(j.abriu) ? null : "wo";
+    // o W.O.: só do 3D que abriu, de quem reservou e gravado depois do prazo da partida (pela hora do servidor)
+    if (j.res.wo != null) return j.modo === "3d" && ab[j.res.wo] === j.por && numero(j.abriu) && numero(j.ts) && numero(j.inicio) &&
+      j.ts >= j.inicio + prazo3d(c.duracao3d) ? null : "wo";
     if (j.modo === "3d") {
       if (j.fim === "3d") return res3dValido(c, g.id, j) ? null : "resultado";
       if (j.fim !== "simulado") return "forma";
