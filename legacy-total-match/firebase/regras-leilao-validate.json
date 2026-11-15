@@ -12,7 +12,9 @@
             "regras": { ".validate": "newData.isNumber()" },
             "criada": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "atividade": { ".validate": "newData.val() === now || newData.val() === data.val()" },
-            "fimLeilao": { ".validate": "newData.val() === now || newData.val() === data.val()" }
+            "fimLeilao": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "camp": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "fimCamp": { ".validate": "newData.val() === now || newData.val() === data.val()" }
           },
           "tec": {
             "$uid": {
@@ -47,7 +49,10 @@
             "ts": { ".validate": "newData.val() === now" },
             "desde": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "sid": { ".validate": "newData.isString()" },
-            "n": { ".validate": "newData.isString()" }
+            "n": { ".validate": "newData.isString()" },
+            "ant": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            "cont": { ".validate": "newData.isNumber() && newData.val() <= now" },
+            "falta": { ".validate": "newData.isNumber() && newData.val() <= now" }
           }
         },
         "pres": {
@@ -58,6 +63,13 @@
         },
         "jogos": {
           "$j": {
+            ".validate": "newData.hasChildren(['e']) && (!data.exists() || data.child('e').val() !== 'feito') && (newData.child('e').val() !== 'aberto' || !data.exists() || data.child('e').val() === 'aberto') && (newData.child('e').val() !== 'reservado' || !data.exists() || data.child('e').val() === 'aberto') && (newData.child('e').val() !== 'feito' || (data.child('e').val() === 'reservado' && newData.child('trava').val() === data.child('trava').val())) && (newData.child('e').val() !== 'reservado' || newData.child('motivo').val() !== 'prazo' || (data.child('ini').exists() && now >= data.child('ini').val() + data.child('resta').val()))",
+            "e": { ".validate": "newData.isString() && newData.val().matches(/^(aberto|reservado|feito)$/)" },
+            "ini": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "resta": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 120000 && (!data.exists() || newData.val() <= data.val())" },
+            "trava": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "inicio": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+            "ts": { ".validate": "newData.val() === now || newData.val() === data.val()" },
             "res": { ".validate": "!data.exists()" }
           }
         }

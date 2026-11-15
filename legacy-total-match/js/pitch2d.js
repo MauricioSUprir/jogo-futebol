@@ -41,7 +41,8 @@
   }
 
   function pickColors(t, fallback) {
-    var c = (t.club && t.club.colors) || (t.nation && t.nation.colors) || null;
+    // (o time sem clube nem seleção — o do Ultimate e o do Modo Leilão — com as cores próprias em t.colors)
+    var c = (t.club && t.club.colors) || (t.nation && t.nation.colors) || t.colors || null;
     return { primary: (c && c.primary) || fallback, secondary: (c && c.secondary) || "#ffffff" };
   }
   // garante contraste entre as duas equipes
@@ -314,6 +315,11 @@
       // construção realista: troca de passes curta, às vezes progride, às vezes RECUA p/ defesa
       var team = poss === 0 ? teamA : teamB;
       var dir = poss === 0 ? 1 : -1;
+      // depois do chute (shootAt) a bola fica sem condutor até o próximo lance: o mais perto dela, do time com a posse
+      if (!carrier) {
+        var bd = 9; team.forEach(function (p) { var d = dist(p.x, p.y, ball.x, ball.y); if (d < bd) { bd = d; carrier = p; } });
+        if (!carrier) return;
+      }
       var cand = team.filter(function (p) { return p !== carrier; }); // inclui goleiro (recuo)
       var forward = [], sideways = [], back = [];
       cand.forEach(function (p) {
@@ -470,9 +476,12 @@
     }
 
     // ---------- loop de animação (suave, 60fps) ----------
-    var raf = null, lastT = 0, flowAcc = 0, tickN = 0;
+    var raf = null, lastT = 0, flowAcc = 0, tickN = 0, naTela = false;
     function frame(ts) {
       if (!running) return;
+      // a tela saiu (a pessoa foi para outra rota sem desligar o Campo 2D): o laço para em vez de rodar até recarregar
+      if (wrap.isConnected) naTela = true;
+      else if (naTela) { running = false; raf = null; return; }
       raf = global.requestAnimationFrame(frame);
       if (paused) { render(); return; }
       var step = 1;

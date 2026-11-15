@@ -618,7 +618,7 @@ parágrafo do `CLAUDE.md` atualizado.
 
 | Risco | Mitigação |
 |---|---|
-| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~1,0–1,1 MB por página (~9 MB no total; medido no PR 2 em Node e no navegador — a estimativa era ~2 MB e ~16 MB): dá ~1 100 leilões de 8 por mês. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
+| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~1,0–1,1 MB por página (~9 MB no total; medido no PR 2 em Node e no navegador — a estimativa era ~2 MB e ~16 MB): dá ~1 100 leilões de 8 por mês. O campeonato simulado (PR 3) soma pouco no mata-mata — a escalação e os 7 jogos do mata-mata com 8, ~28–30 KB por página no navegador (o leilão e o campeonato juntos: o maior 1,04–1,10 MB por página, 8,3–8,8 MB as 8, em duas rodadas) — e bem mais nos pontos corridos com 8 (56 jogos de ~3 KB baixados por todos, mais os batimentos: ~0,5 MB por aparelho, no Node com o mesmo banco falso): no pior caso ~1,6 MB por página e ~12,5 MB a sala de 8, ~800 salas assim por mês. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
 | **Trapaça** (a raiz aberta) | Transações com as regras; tudo deriva do `vivo` e de `jogos`; a conferência pelos aparelhos honestos; o `.validate` opcional (3.4). Entre amigos |
 | **Relógio** (hora errada, ajuste no meio, latência) | A testemunha da hora em toda decisão; o fim derivado; a tela nunca é a juíza; teste com ±5 s e com o pulo depois da calibração |
 | **Celular que dorme** (o iPhone para o JavaScript; o socket fica meio aberto; com a aba escondida o SDK pode esperar até 5 min para reconectar) | Wake Lock; a decisão pelo `bate`, não pelo `pres`; `goOffline/goOnline` ao voltar; qualquer aparelho age; ausente passa |
@@ -1031,3 +1031,292 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   - **Testes novos**: O7 (o vivo apagado, também ao recarregar; os lotes trocados no saguão; a edição trocada antes do
     Começar; o bate a caminho depois de encerrar) e O8 (a volta com o socket bom não reconecta e a sala de outro modo
     continua; com o socket preso, só sem outra sala aberta) no bloco O; o caso `telas` (um job a mais no CI do TM).
+
+**Durante o PR 3** (o que o código real pediu de diferente do plano):
+- **Em resumo** (o que o dono precisa saber; os detalhes nos quatro passos abaixo): todos os jogos SIMULADOS (o 3D contra
+  bot é do PR 4, você contra um amigo em 3D é do PR 5); o mata-mata é o padrão; o jogo de uma pessoa contra um bot tem o
+  "Simular partida" e o prazo de 2 min, que só corre com ela presente; **quem some não é simulado pelo prazo sozinho**: os
+  jogos dele esperam (o prazo parado) até ele voltar ou o dono tocar em "Simular os pendentes" (só online, 8 s depois de a
+  rodada abrir; com o dono fora há mais de 5 min, qualquer técnico presente — ver "A revisão do PR 3"); quem sai da sala conta como bot; a prorrogação do mata-mata vai até o 1º gol (gol de ouro) e depois os
+  pênaltis, sem os expulsos; o misto com 2 técnicos é um jogo de pontos e a final; o melhor time é a soma das notas dos 11;
+  o 2D do Ultimate passou a mostrar o escudo desenhado e as cores do clube. Os testes de navegador
+  online acharam e corrigiram dois defeitos: o 2D que não abria depois do "Simular partida" e, com o `.validate` publicado,
+  o aparelho que perdeu o clube preso em "Reconectando…".
+- **O núcleo e o motor** (o passo 1: `js/engine.js`, `js/leilao-camp.js`, o bloco C do `testar-leilao.mjs`):
+  - **O motor sorteia só com `Math.floor/max/min/round/random`** (nem o `abs` do §1.7; nada de `exp/log/pow/sin`) e não
+    percorre chaves de objeto; os dois `sort` (as substituições e os batedores dos pênaltis) têm comparador e o `sort` é
+    estável em todo navegador desde 2019 (com 11 e sem banco nem há substituição). As contas são em ponto flutuante IEEE (o
+    JS não funde operações): o mesmo resultado em todo aparelho, e o C5 confere num TM carregado do zero.
+  - **`semLesao`** pula o sorteio da lesão inteiro (`!opts.semLesao && Math.random() < …`): sem a opção, o motor é o de
+    antes — 960 casos (60 sementes × 8 conjuntos de opções × elencos de 11 e de 18) iguais aos da main, eventos inclusive.
+    O C7 compara com a `origin/main` quando o git a tem e SEMPRE com a referência gravada `ferramentas/dados/motor-ref.json`
+    (o CI faz o checkout raso, sem a `origin/main`); mudança de propósito no motor = `--gravar-motor` e dizer no PR.
+  - **O gol de ouro não mexe no motor**, que já aceita `startMinute/endMinute/startScore` (e o `excludeIds/yellowIds` do
+    `resimRest`): os 91'–120' com os expulsos dos 90' fora e os amarelos valendo, cortados no 1º gol (o lance do gol e um
+    "full" no mesmo minuto). A estatística é a dos 90' (a prorrogação guarda só o placar e os lances). Os pênaltis vão sem
+    os expulsos (a prorrogação do TM de hoje deixa o expulso bater). Em 1500 jogos de dois times do leilão: 33% vão à
+    prorrogação, 59% delas acabam no gol de ouro (em 85% desses a prorrogação do motor seguiria até os 120') e o resto nos
+    pênaltis.
+  - **O nó `jogos/{id}`** ganhou `ab` (os técnicos), `motivo` ('pedido' = a pessoa tocou em Simular, 'prazo', 'abertura',
+    'dono' = Simular os pendentes) e, no `aberto`, um relógio que para: `{ e: 'aberto', ini, resta, parado? }`. O "só corre
+    com alguém do jogo presente" é `pausar` (pela hora do último batimento dela, não pela de quem percebeu) e `retomar`. O
+    `aberto` só existe no jogo de uma pessoa contra um bot; bot × bot e, até o PR 5, pessoa × pessoa vão direto a
+    `reservado` ('abertura'). O reservado simulado qualquer aparelho completa (todos calculam o mesmo; a transação só grava
+    sobre o reservado com a MESMA trava). O 3D já tem o `inicio`, o prazo de 2 × duração × 1,3 + 8 min e o W.O. de quem
+    reservou nas funções puras; quem os usa é o PR 4.
+  - **Os ids** dizem a fase e o lugar: `r{rodada}j{k}` na fase de pontos e `m{rodada do mata-mata}j{par}` no mata-mata (o
+    par é o lugar na chave: `m2j0` = o vencedor de `m1j0` × o de `m1j1`). Nenhum nó de chaves 0..n (o Firebase devolveria
+    lista).
+  - **O resultado gravado** (`res`): o do motor nos 90' (`score`, `events`, `stats`; `sentOff` só se houver; sem
+    `injuries`) e, no mata-mata empatado, `pror` (`score`, `events`, `ouro`) e `pen` (`score`, `winner`, `kicks` sem o
+    objeto do jogador: `{ side, name, scored, id }`); `placar` (o que conta) e `v` (o vencedor; -1 = empate, só na fase de
+    pontos). ~2,6–3,2 KB por jogo: os 56 jogos dos pontos corridos com 8 técnicos somam ~170 KB, baixados por página. A
+    conferência recalcula o simulado e compara pelo texto canônico (`canon`: sem vazios, chaves em ordem, como o Firebase
+    guarda).
+  - **O mando alternado** pelo método do círculo: o mandante é quem está na posição ímpar (cada técnico desce uma posição por
+    rodada). Dentro de cada turno ninguém faz 3 jogos seguidos com o mesmo mando; |casa − fora| ≤ 1 no turno único e igual
+    no turno e returno. O returno espelha o turno NA MESMA ORDEM (ninguém joga contra o mesmo duas vezes seguidas): entre o
+    fim de um turno e o começo do outro pode haver 3 seguidos (o mando é neutro de qualquer jeito). Os técnicos entram nas
+    vagas do círculo pela semente.
+  - **As folgas do mata-mata** ficam nos pares espalhados pela chave (a inversão dos bits): duas folgas só se encontram na
+    2ª rodada quando falta jogo (5 técnicos: 3 folgas e 1 jogo).
+  - **O confronto direto é recursivo** (os empatados num grupo menor voltam ao confronto só entre si); o grupo que não
+    diminui vai ao sorteio (uma permutação dos técnicos pela semente da sala) e por fim ao técnico. Tudo pela ordem do
+    calendário: o C2 embaralha as chaves do objeto e a vista sai igual.
+  - **A classificação final** do mata-mata e do misto: até onde cada um chegou; dentro disso, a campanha nos jogos que fez
+    (mata-mata) ou a posição na fase de pontos (misto). **O misto com 2 técnicos** é um jogo de pontos e a final entre os
+    mesmos dois (a regra "até 4, os 2 primeiros"). **O melhor time** = a soma dos overall dos 11 do leilão (sem o −1/−2
+    da função).
+  - **O `.validate` opcional** já aceita o fluxo honesto dos jogos (só `jogos/$j/res` grava uma vez). As regras da hora
+    (`ini`, `trava`, `inicio` e `ts` iguais a `now`) e das transições (o feito não muda, o reservado só do aberto ou do nada,
+    o 'prazo' só com `now ≥ ini + resta`) ficam para o passo da sessão, conferidas com as gravações de verdade.
+  - **testar-leilao C** (~5 s; o arquivo inteiro ~52 s): C1 105 calendários, C2 600 tabelas contra a conta do teste (o
+    confronto direto decidiu 44 vezes, 1 recursivo, o sorteio 62) e 1800 com as chaves embaralhadas, C3/C6 280 chaves, C4
+    1500 jogos, C5 120 jogos iguais noutro aparelho, C7 o motor, C8 a máquina e o campeonato inteiro por 3 aparelhos ao
+    mesmo tempo na rede em memória (cada jogo reservado e gravado uma vez, o prazo parando e voltando, a mesma vista em
+    todos, as adulterações acusadas). Dez mutações reprovam: sem o corte do gol de ouro, sem o confronto direto, sem o
+    recursivo, gravar duas vezes, o motor sem o `semLesao`, o motor mudado sem a opção, pessoa × bot sem o prazo, a camisa
+    fora da vaga, sem o mando alternado e as folgas sem espalhar.
+- **A sessão** (o passo 2: `js/leilao-sessao.js`, as funções puras novas do `js/leilao-camp.js`, o bloco K e o KO do
+  `testar-leilao.mjs`, o `.validate` opcional):
+  - **O formato na sala** é `cfg.formato` = `'mata'` (o padrão), `'pontos'` ou `'misto'` (os nomes do núcleo;
+    `formatoDe` aceita "mataMata" e "pontosCorridos"). Vem da Criar (treino e online) e do `configurar` no saguão, que zera
+    os Pronto como as outras opções. `duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })` dá o leilão (a régua do
+    PR 1), o campeonato por rodada (simulado: 30 s a 2 min; 3D: 2 × duração + 4 a 2 × duração × 1,3 + 5 min; 8 técnicos
+    em pontos corridos com 3D: 2,8 a 3,6 h) e o total; `jogosDe(formato, T)` conta os jogos.
+  - **O campeonato nasce na transação do `camp`** (só do estado `escalacao`: dois aparelhos ao mesmo tempo = uma vez),
+    que grava `meta.camp` = a hora do servidor. O calendário e a chave NÃO são gravados: são função pura do formato, do T
+    e da semente (o §3.2); a transação congela o que eles leem. A sala passa a `fim` (`meta.fimCamp`) por outra transação,
+    quando a vista diz que todos os jogos estão feitos.
+  - **Quem age** nos jogos da rodada da vez: os mesmos candidatos do motor do leilão (`_programa`), escalonados (1,5 s × k)
+    e com a testemunha da hora em toda decisão por prazo. Cada aparelho começa por um jogo diferente (o seu lugar entre os
+    presentes): menos transações disputadas no mesmo nó. Bot × bot e pessoa × pessoa: reservados e simulados na abertura.
+    Pessoa × bot: `abrir` com a pessoa presente; a pausa marcada para 12 s depois do último batimento dela (a testemunha
+    confirma que ela sumiu; o prazo guarda o que restava desde esse batimento); `retomar` quando ela volta; vencido, o
+    `reservar` pelo prazo. **No treino a pessoa está sempre presente**: o relógio do treino é que para fora das telas da
+    sala e com a página escondida. Quem reserva grava na hora; o resultado é calculado DENTRO da transação a partir do nó
+    que o servidor tem (a trava e as escalações gravadas; com memória), e só grava sobre o reservado com a mesma trava.
+    No treino, uma ação do campeonato que não fez nada espera 50 ms (sem isso, um "cedo" de arredondamento do relógio
+    acelerado voltaria na hora); as do leilão continuam iguais à máquina pura.
+  - **"Quem some" segue o §1.4 e o §8 ("Recusado")**: os jogos dele ESPERAM (o prazo parado) até ele voltar ou o dono
+    tocar em "Simular os pendentes"; os outros jogos da rodada andam. **Quem sai da sala** ("Sair da sala", `tec.saiu`)
+    conta como bot nos jogos (`tipos`): contra um bot, simulado na abertura; contra uma pessoa, o prazo é o dela.
+  - **As ações da pessoa**: `simular(id?)` (o "Simular partida": reserva com a trava do servidor, motivo `'pedido'`, simula,
+    grava e SÓ ENTÃO responde com o nó feito; se outro aparelho chegou antes, responde com o resultado dele),
+    `simularPendentes()` (só o dono; motivo `'dono'`; o 3D em andamento fica), `partida(id)` (os dois times pelas
+    escalações GRAVADAS no jogo, para o "Ver o jogo" no 2D) e `ver().camp` (rodadas, tabela, chave, artilharia, o fim com
+    o campeão, a classificação, o melhor time e as somas; o "seu jogo" com o prazo, `podeSimular` e o motivo; folga,
+    eliminado, pendentes e `podePendentes`). Eventos `'jogo'` (gravado) e `'rodada'` (abriu; a 1ª ao chegar ao camp).
+  - **A escalação** mudada (formação ou troca à mão) vale no próximo jogo que não começou: a reserva grava a do momento
+    (K3: a F2 trocada com o jogo aberto vai nele; a F3, depois de ele começar, vai no próximo).
+  - **A conferência dos jogos** (decisão: o §3.3, "todo resultado simulado é recalculado"): cada nó novo ou mudado é
+    conferido UMA vez por aparelho (o `conferirJogo`: os times da vez, as escalações só com jogadores do técnico nos
+    grupos dele e o simulado RECALCULADO com a semente — de todo jogo simulado, não só bot × bot); a vista nunca
+    recalcula (lê o `res` gravado). Mais a máquina só para a frente: o feito não muda; o reservado só vira o feito dele
+    (a mesma trava, os mesmos times, escalações e modo; voltar ao aberto daria uma trava nova, o "jogar de novo"); um jogo
+    que some, o nó inteiro apagado e um id fora do calendário. Qualquer um congela a sala (`alterada = 'jogos'`,
+    `alteradaJogo = { id, motivo }`). O nó com o mesmo texto da última vez não passa de novo pelo texto canônico.
+  - **A limpeza** conta os passos dos jogos (e `meta.camp`/`fimCamp`) como atividade: a sala no campeonato com um jogo
+    gravado há 2 h e a meta de 25 h atrás fica (antes sumia); a do fim some 24 h depois (KO "limpeza").
+  - **Recarregar**: o treino volta pelo armazém com o relógio de onde parou (nunca antes da hora dos jogos); parado no
+    meio do prazo do jogo da pessoa, o campeonato inteiro sai igual ao de quem não recarregou (K2: os 18 jogos do misto
+    com 6, jogo a jogo). O online volta pela sala (KO "dois": quem fecha e abre de novo vê tudo gravado).
+  - **As telas** só ganharam o estado `fim` (as abas, a rota da sala, a caixa da Escalação) e as Minhas salas dizem
+    "Campeonato" e "Encerrada"; a aba Campeonato (que ainda diz "em breve") é o próximo passo. O O3 do Node aceita a sala
+    já no `fim` (só de pessoas, o campeonato anda sozinho em segundos).
+  - **O `.validate` opcional** ganhou `jogos/$j` (o feito não muda; o reservado só do nada ou do aberto; o feito só do
+    reservado com a mesma trava; o reservado pelo prazo só com `now ≥ ini + resta`; `resta` até 2 min e sem crescer; `ini`,
+    `trava`, `inicio`, `ts` = `now`) e `meta.camp`/`fimCamp` = `now`. O avaliador das regras (a semântica do `.validate`)
+    virou parte do KO (`avaliadorRegras`, lendo o próprio JSON): 2 945 gravações do campeonato online, nenhuma recusada;
+    10 adulterações recusadas. O LEIA-ME diz o que ainda passa (o resultado inventado, apagar um jogo: os aparelhos
+    congelam a sala).
+  - **Os bytes**: no campeonato de 8 em pontos corridos (56 jogos), ~500 KB baixados por aparelho no banco falso (os jogos,
+    os batimentos e as presenças).
+  - **testar-leilao K** (~5 s): K0 a duração e o formato; K1 15 treinos (1 pessoa e 1–7 bots, os 3 formatos) até o campeão,
+    219 jogos (37 pelo Simular, 32 pelo prazo); K2; K3; K4 cinco adulterações. **KO** (~10 s): dois, limpeza, quatro (±5 s,
+    o pulo de +60 s, quem some e volta, quem some de vez e o dono) e oito (quem sai). O arquivo inteiro: 17 blocos em ~67 s.
+    Sete mutações da sessão reprovam: sem os jogos na limpeza, sem a testemunha no prazo do jogo, sem pausar, sem a volta do
+    reservado, a escalação de quando a rodada abriu, retomar sem a pessoa e sem a conferência do resultado.
+- **As telas** (o passo 3: `js/leilao-tela.js`, o bloco LEILÃO do `css/styles.css`, `js/matchview.js`, `js/pitch2d.js`,
+  `js/ui.js`; v384):
+  - **O Formato** na Criar (treino e online) e no Saguão (o dono muda; zera os Pronto): 3 cartões com o ícone (`swords`,
+    `list`, `layers`), a frase e "N rodadas com T técnicos · ~X a Y min" (`TM.leilaoCamp.duracaoEstimada`, o simulado); o
+    resumo da Criar e o Saguão dizem a duração do leilão e a do campeonato. Os cartões ficam em coluna em todo tamanho (a
+    frase quebra dentro do botão; em 3 colunas não cabia em 620 px).
+  - **A aba Campeonato** lê só o `ver().camp`: o cabeçalho (o formato e "Rodada N de M · 1º turno"), **Seu jogo**
+    (`.next-match`: os dois escudos desenhados, o clube e o técnico; contra um bot o prazo "Simulado sozinho em M:SS" pela
+    hora da sala, "Prazo parado em M:SS" e o **Simular partida**; contra um amigo "simulado ao abrir a rodada" até o PR 5;
+    feito, o placar, "Vitória/Derrota (nos pênaltis, no gol de ouro)" e o Ver o jogo; folga e eliminado dizem isso), **a
+    rodada à mostra** (‹ › por todas, começando na da vez; cada jogo com o estado — "Simulado · pênaltis 4 × 3", "Simulado
+    · gol de ouro", "Esperando", "Simulando…", "Esperando a rodada", "A definir" — e o Ver o jogo; nada de "Jogando em 3D"
+    ainda), **a tabela** (pontos e misto; os classificados do misto marcados; V/E/D somem abaixo de 400 px para a tabela
+    não rolar de lado), **a chave** (mata-mata e a fase final do misto; as rodadas uma embaixo da outra, em 3 colunas no
+    PC com 3 rodadas; as folgas na própria rodada, o vencedor em verde) e **a artilharia** (os 5 primeiros, com empate na
+    posição). No PC e no celular deitado, duas colunas (Seu jogo e a rodada; a tabela, a chave e a artilharia).
+  - **Simular os pendentes** só no online e só 8 s depois de a rodada abrir (os jogos dos bots e os de amigo contra amigo
+    são simulados na abertura, escalonados: o botão piscava a cada rodada). No treino não aparece: o único jogo que espera
+    é o da própria pessoa, que tem o Simular partida.
+  - **O fim** (§1.8): o campeão no pôster do fim de jogo do TM (`md-poster fim`, escuro nos dois temas, como o de sempre)
+    com a coroa, o escudo desenhado, o técnico, a campanha ("Final: 2 × 1 contra X", "31 pontos em 14 jogos") e a pílula
+    "Você é o campeão" ou "Seu lugar: Nº"; a classificação final (até onde cada um foi: Campeão, Vice, Semifinal, Quartas
+    de final, "Fase de pontos · Nº", ou os pontos); o artilheiro (com quantos empataram) e o melhor time pela soma das
+    notas; Voltar e Criar outra sala. A rodada, a tabela, a chave e a artilharia continuam embaixo para consulta.
+  - **O "Ver o jogo"** é a rota `leilao-jogo` ({ id }): o `TM.matchview.play` com o resultado GRAVADO (cópia), `pauseSide`
+    null (sem o botão de pausa: o `resimRest` só é chamado pelo "Retomar" da pausa, que só existe com um lado; e sem o 3D: o
+    `tm3d.js` só entra com `pauseSide`), depois a `prorrogacao` com `golDeOuro` e os `pen-shootout` com os `kicks` gravados.
+    O "Simular partida" chama `simular()` e só abre o 2D com a resposta (o jogo já feito). A rota fica fora das rotas da sala:
+    no treino o relógio para enquanto a pessoa vê o jogo. O motor do 2D não sorteia nada no Ver o jogo (o teste conta as
+    chamadas do `TM.engine.simulate` que vêm do `matchview.js`: 0); as falas de ambiente do feed continuam com
+    `Math.random` (só texto, não mexem no resultado).
+  - **Fora do leilão** (§3.7): `TM.ui.escudoUT(t, cls)` desenha o escudo do Ultimate de um time sem clube nem seleção
+    (`{ forma, simb, cor }` do Ultimate ou `{ escudo: "forma|simb", cor, sigla }` do leilão) e é usado pelo `escudoDe` do
+    pôster, pelo `crestOf` do 2D e pelo dos pênaltis; o `pickColors` do Campo 2D e a cor do lance do gol leem `t.colors`
+    depois do clube e da seleção; a `prorrogacao` com `golDeOuro` diz "PRORROGAÇÃO · GOL DE OURO", "o 1º gol acaba o jogo"
+    e marca o gol (também o de pênalti). Sem `escudoUT`, `colors` e `golDeOuro`, nada muda — mas **o time do Ultimate (e os
+    adversários dele) já tinham `escudoUT` e `colors`**: no 2D do Ultimate passam a aparecer o escudo desenhado e as cores
+    do clube (antes, sem escudo e com o azul/vermelho de reserva). A rota `prorrogacao` passou a chamar o `E()` (o `el` do
+    módulo era preenchido só pelo `play`).
+  - **A região ao vivo** fala a rodada que abre ("Semifinal começou"), o fim do MEU jogo com o placar e o campeão; da
+    Escalação, quem já confirmou o Pronto vai sozinho ao Campeonato quando ele começa. O foco do teclado volta ao mesmo
+    botão quando a aba se refaz (o ‹ ›, o Simular, o Ver o jogo; o ‹ que apaga passa ao ›).
+  - **Ganchos de teste** (no topo do `leilao-tela.js`): `TM.leilaoTela.estado()` ganhou `prazo`, `rodadaVista` e `jogo`;
+    seletores estáveis `.lei-fmt[data-fmt]`, `.lei-simular`, `.lei-pend-bt`, `.lei-rodada[data-rodada]`,
+    `.lei-jogo[data-jogo][data-e]`, `.lei-jg-ver`, `.lei-ch-jogo[data-jogo]`, `.lei-campeao`, `.lei-class`, `.lei-dest`.
+  - **A partida comum no 2D não mudou**: o placar do `matchview` (clubes, seleção e um time sem nada), o cabeçalho do Campo
+    2D e a `prorrogacao` sem `golDeOuro` saem com o MESMO HTML na main (c6c39bd6) e no branch (conferido no navegador, com o
+    sorteio preso).
+  - **testar-leilao --tela** (58 itens em ~324 s; antes 38 em ~224 s): T2 o Formato na Criar; T8 o Pronto leva sozinho ao
+    Campeonato; T11 Seu jogo (o prazo andando pelo relógio da sala, os dois escudos), o tema claro, a Escalação que "vale a
+    partir do próximo jogo", o Simular partida que só abre o 2D com o jogo JÁ feito (o `TM.ui.go` vigiado), o 2D sem o botão
+    de pausa e sem sorteio vindo do `matchview.js` (o `TM.engine.simulate` vigiado pela pilha: a conferência da sessão também
+    simula, por outro caminho), o estado de cada jogo e o ‹ › com o foco; T12 o mata-mata de 4 até o campeão pela tela, o fim
+    (o pôster, a classificação na ordem da sessão, o artilheiro, o melhor time, Voltar e Criar outra sala) e a região ao vivo;
+    T13 Pontos corridos com 8, Pontos + mata-mata com 8 e Mata-mata com 6 até o campeão pela tela — 24 jogos vistos no 2D com
+    o placar dos 90' conferido contra o gravado, as prorrogações (o gol de ouro) e os pênaltis também — e nada sobre nada em
+    96 telas do Campeonato e do fim (8 tamanhos, escuro e claro; a tabela sem rolar de lado; só escudos desenhados). O
+    `testar-sobreposicao` nas rotas `leilao` e `leilao-criar`: 0 nos 7 tamanhos.
+  - **testar-leilao-online D14** deixou o "em breve": as duas páginas vão sozinhas ao Campeonato, a Final de amigo contra
+    amigo é simulada ao abrir a rodada (motivo `abertura`), o mesmo resultado e o mesmo campeão nas duas; D14b o Ver o jogo
+    com o placar gravado, sem pausa e com os escudos desenhados. O campeonato com o prazo vencido e o jogo reaberto no online
+    pela tela (o resto do §4.3) ficou para o passo 4 (abaixo).
+  - **Achados pelos testes**: o campeão não era falado para quem estava no Ver o jogo quando o campeonato acabou (agora, ao
+    voltar ao Campeonato, uma vez por sala); no teste, com o relógio do treino a ×40, os 60 s da escalação passavam antes de a
+    tela chegar a ela (o teste volta o relógio ao normal no fim do leilão).
+- **O teste online do campeonato e o CI** (o passo 4: `ferramentas/testar-leilao-online.mjs`, `ferramentas/lib/
+  regras-leilao.mjs`, `.github/workflows/tm-testes.yml`):
+  - **O campeonato entrou nos casos que já fazem o leilão** (do leilão até o campeão, com o banco falso em todas as páginas e
+    o relógio ×6), um formato em cada: `dois` o MISTO com 2 (a Criar sala com "Pontos + mata-mata"; a rodada de pontos e a
+    Final de amigo contra amigo simuladas ao abrir a rodada; D14, D14b), `quatro` os PONTOS CORRIDOS com 6 (as 4 páginas e
+    os 2 bots; 30 jogos) pela tela (Q7–Q15) e `oito` o MATA-MATA com 8 (O4–O8). O misto de verdade (com as semifinais) fica
+    com o Node (K1, KO quatro) e o `--tela` (T13: misto com 8): no online com 2 ele é o caso mínimo. O CI continua com um
+    job por caso (~1, 3 e 3 min; o `telas` ~15 s).
+  - **O que o servidor confere em todo caso**: a história de cada nó `jogos/{id}` (como o KO: uma reserva e um resultado,
+    o último, com a mesma trava, os mesmos times e as mesmas escalações; o reservado pelo prazo só com a hora do SERVIDOR
+    além do prazo e 2 min correndo) e as regras opcionais em CADA gravação das páginas (G3: o avaliador saiu do
+    `testar-leilao.mjs` para a `lib/regras-leilao.mjs`). Todas as páginas veem a mesma vista (rodadas, tabela, chave,
+    artilharia, campeão) e os nós dos jogos de cada uma são os do servidor (pelo texto canônico); ninguém congela a sala.
+  - **quatro, pela tela** (cada página tem um piloto no Node que toca em "Simular partida" quando a política deixa e passa
+    pelo 2D que abre): a escalação (P1 pelo Pronto, as outras pela API, logo no fim do leilão: os 60 s dela são 10 s de
+    verdade) e o dono que caiu no leilão volta pelo link `?leilao=` com o relógio −5 s (é da sala: volta, não pede); o
+    "Simular partida" em cada página (14 toques) abre o 2D só com o jogo gravado também na vista da página, o placar do 2D
+    = o do servidor, sem o botão de pausa, com os escudos desenhados e nenhum sorteio do `matchview.js`; o prazo de 2 min
+    com o relógio de P1 +5 s — a tela mostra o prazo pela hora do servidor (0,1 a 1,1 s de diferença em 66 amostras: o
+    arredondamento do M:SS) e o jogo é simulado pelo prazo ~0,2 s depois de vencer, com 120 s correndo; a página que CAI
+    no meio (P3, `banco.derrubar` com o prazo correndo contra um bot) — as outras seguem (os outros jogos da rodada saem),
+    o prazo dela para no servidor e ninguém reserva o jogo enquanto ela está fora; de volta, o prazo corre de novo e ela
+    simula pela tela; recarregar no meio (P2b volta pelo `?leilao=` à aba com a mesma vista; o jogo reaberto não joga de
+    novo: a história de cada jogo tem uma reserva só); o dono toca em "Simular os pendentes" pela tela com P3 escondida e o
+    prazo dela parado; nada sobre nada no meio (o dono, com a caixa dos pendentes) e no fim (a tabela e o pôster) em
+    360×740, 844×390 e 1280×800, escuro e claro, com a tabela sem rolar de lado e só escudos desenhados.
+  - **oito**: a escalação pela tela em duas páginas e pela API nas outras 6, o campeonato com todos prontos, a mesma
+    chave e o mesmo campeão nas 8 e no servidor (os 7 jogos pela abertura), o Ver o jogo (a Final nas duas, as semifinais na
+    1ª), nada sobre nada no fim do mata-mata e os **bytes**: a escalação e o mata-mata com 8 baixam ~28–30 KB por página; com
+    o leilão, o maior 1,04–1,10 MB por página e 8,3–8,8 MB as 8 em duas rodadas (§6; os pontos corridos com 8, ~0,5 MB por
+    aparelho no KO).
+  - **Achados e corrigidos**: (1) o "Simular partida" às vezes não abria o 2D (1 toque em 14 no 1º Q10): a resposta da
+    transação chegava antes do dado novo pelo ouvinte, a rota do 2D lia a vista, não achava o jogo feito e voltava ao
+    Campeonato — agora a tela espera o jogo gravado aparecer na vista (no máximo 8 s; `quandoNaVista`); (2) com o
+    `.validate` publicado, o batimento que está a caminho quando o dono passa o clube a outro aparelho é recusado (a conta
+    já não é da sala) e a sessão tomava a recusa por queda de conexão: o aparelho velho, que só olha, ficava em
+    "Reconectando…" — agora a recusa por permissão (e o ack que falta depois de a conta deixar a sala) não muda o estado da
+    conexão (caso `passar` do KO, com as regras VALENDO para o bate e a pres: reprova antes, passa depois). O G3 separa essa
+    recusa como esperada (o batimento ou a presença de uma conta que não está mais em `sala/tec`).
+  - **Medido** (local, Chromium 141, 4 CPUs): `dois` 20 de 20 em ~53 s; `quatro` 20 de 20 em ~153 s; `oito` 13 de 13 em ~171
+    s; `telas` + `dois` 29 de 29 em ~75 s; `oito` + `dois` 29 de 29 em ~226 s; `telas` + `quatro` 29 de 29 em ~165 s; o Node
+    inteiro 17 de 17 blocos em ~59 s. Cada caso rodou duas vezes inteiro e verde depois das correções (antes delas, o
+    `quatro` reprovou o Q10 — o 2D — numa rodada e o G3 — o batimento — noutra).
+  - **Lições**: o piloto pela tela que espera o ESTADO (o jogo aberto no servidor, a página parada na aba) e não um tempo
+    fixo aguenta o relógio ×6; o acontecimento que depende do sorteio do calendário (a queda, os pendentes) se procura no
+    servidor (o 1º jogo da pessoa contra um bot a partir da 2ª rodada, com o prazo correndo) e a política do piloto segura o
+    toque até ele acontecer — sem deadlock: se o acontecimento não vier, o prazo simula o jogo; a ação que abre uma tela a
+    partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois).
+
+**A revisão do PR 3** (três lentes: regras, telas e regressão; os scripts dos revisores sobre o banco falso viraram casos do
+KO):
+- **O prazo corria sem ninguém do jogo presente** (regras, médio): só parava se OUTRO aparelho visse a pessoa sumir e
+  gravasse o `pausar`; sozinha na sala (o outro técnico saiu ou nunca abriu) ou com todos de celular travado, o prazo
+  seguia e, na volta, o próprio aparelho simulava o jogo pelo prazo em 0,1–0,3 s. Agora o `bate/{uid}` leva a presença
+  contínua: `ant` (o bate anterior desta conta), `cont` (desde quando ela está sem buraco de mais de 12 s) e `falta` (o
+  último bate antes do buraco); o 1º bate depois de um buraco se reconhece pelo `ant` (`corridaDe`). Quem vê que a
+  presença da pessoa recomeçou DEPOIS de o prazo começar (o aparelho dela primeiro) grava o `pausar` no último bate antes
+  do buraco (só no mesmo trecho: o mesmo `ini`) e o prazo volta a correr; o reservar pelo prazo confere de novo depois da
+  testemunha (`_semBuraco`); o próprio aparelho com o bate velho (dormiu sem esconder a página) não decide pelo prazo até
+  o bate novo. O `.validate` opcional: `ant`/`cont`/`falta` números do passado. KO `sozinho` (antes: simulado 0,1 s
+  depois da volta com 5 s de presença; agora o prazo parou com 115 s e venceu 115 s depois da volta) e `dormem` (antes
+  0,2–0,3 s; agora o prazo inteiro depois da volta); toda reserva pelo prazo de todo caso do KO confere a presença da
+  pessoa pelos batimentos no servidor (≥ 119 s; 120,1 s no pior).
+- **O dono ausente travava o campeonato** (regras, médio): só ele tinha o "Simular os pendentes" e, 24 h depois, a
+  limpeza feita pelo aparelho de quem esperou apagava a sala. Agora, com o dono fora há mais de 5 min (pelo último bate
+  dele; quem saiu da sala está fora), qualquer técnico presente tem o botão (motivo `pendentes`, conferido pela testemunha
+  da hora) e a limpeza não apaga o campeonato em andamento com alguém na sala (o bate deste aparelho conta como atividade
+  no `camp`). KO `semdono` (antes: a rodada parada 3 h e a sala apagada em 25 h; agora o outro técnico simula depois de 5
+  min e o campeonato vai ao fim) e o 3º caso da `limpeza`. Decisão minha (o dono não foi consultado): 5 min.
+- **"Simular os pendentes" só nos jogos que esperam por quem NÃO está aqui** (telas, médio): contava e simulava todo jogo
+  sem resultado, também o do próprio dono e o de quem está presente com o prazo correndo. Agora só o jogo de uma pessoa
+  ausente contra um bot (o prazo parado ou o jogo nem aberto); a caixa lista os jogos e quem não está (KO `pendentes`;
+  a corrida do `dois` com o jogo de B esperando por ele e o dono 2 s atrasado; Q14 com o texto novo).
+- **Clubes com o mesmo nome** (telas, médio: o "Meu Clube" de quem não tem o Ultimate): a aba Campeonato põe o primeiro
+  nome do técnico (ou "você") junto do clube na rodada, na tabela, na chave e na artilharia (o clube encolhe com as
+  reticências, o técnico não) e o 2D junta o técnico ao nome quando os dois do jogo se chamam igual (só o que se mostra:
+  o resultado gravado e os textos dele não mudam). Q16 no `quatro`. O clube padrão continua "Meu Clube" e o Pronto não é
+  barrado por nome repetido.
+- **A fala do fim do meu jogo** diz os pênaltis, o gol de ouro e o W.O. (o `resultadoMeu`, como a tela; o evento `jogo`
+  leva o `res`).
+- **O Campo 2D** (telas; já na main, o leilão só expõe): depois do chute a bola fica sem condutor e o `flowStep` lia
+  `carrier.x` (um erro a cada passe cosmético) — agora o mais perto da bola, do time com a posse, vira o condutor; e o laço
+  do Campo 2D para quando a tela sai da página (rodava até recarregar, um a mais por jogo visto). O `--tela` liga o Campo 2D
+  nos 2 primeiros jogos animados de cada trecho (T11) e o "nenhum erro de página" pega o resto.
+- **O Q10** (1 toque em 14 sem o 2D numa rodada): os timers das páginas andam ×6 no teste e os 8 s do `quandoNaVista`
+  viram ~1,3 s de verdade; o jogo que chega depois do limite ainda abre o 2D se a pessoa continua no Campeonato (até 2
+  min).
+- **O T7 do `--tela`** (do PR 1; reprovava por sorteio também na main: de 6 a 90 amostras pelo caminho sorteado): basta
+  ≥ 3 amostras, nenhuma errada e um motivo de goleiro/posição/máximo/completo.
+- **Medido depois das correções** (local, Chromium 141): o Node inteiro 17 de 17 blocos em ~57 s (o KO com os casos novos
+  em ~10 s; 3654 gravações conferidas pelas regras opcionais, 0 recusas); `--tela` 57 de 57 em ~286 s (a base, com o
+  teste novo: 56 de 57, 6 erros de página do Campo 2D); `testar-leilao-online.mjs` 55 de 55 (o `quatro` repetido depois
+  de acertar o texto do Q14: 21 de 21; Q10 com 14 toques e 14 jogos no 2D; G3 4630 gravações sem recusa honesta; bytes
+  por página no mata-mata de 8: 30 KB); `testar-online3d.mjs` 24 ok (o Viverde pulado, sem a senha); os casos novos do
+  KO reprovam na base (sozinho, dormem, semdono, pendentes e o 3º da limpeza).
+- **Visto e não mudado**: assistir ao próprio jogo no 2D conta como presença (o prazo do jogo seguinte corre; no treino o
+  relógio para); a barra de velocidade do Campo 2D encosta nas bordas em 390 px (já na main); o "Simular os pendentes" do
+  dono não toca mais no jogo de quem está presente (era o que o teste `dois` tratava como pretendido).

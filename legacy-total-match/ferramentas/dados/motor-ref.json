@@ -1,0 +1,24 @@
+{
+  "sobre": "O motor (js/engine.js) SEM a opção semLesao: 960 partidas e disputas de pênaltis de times sintéticos (testar-leilao.mjs, bloco C7; o sha256 do JSON de cada resultado). Regravar só com mudança DE PROPÓSITO no motor: node ferramentas/testar-leilao.mjs --gravar-motor",
+  "de": "origin/main c6c39bd6",
+  "casos": 960,
+  "sha256": "bfbe485fcc28119098f70a0bcce13e01fc41b9797f353a399cefe2f0a1cde99f",
+  "porGrupo": {
+    "0|11": "1cb83d7d29684049",
+    "0|18": "089ba2f968958186",
+    "1|11": "a84fdc99c2d8a04a",
+    "1|18": "cd969f9fe1186579",
+    "2|11": "f4d37bea87c7fbb5",
+    "2|18": "da0aaa075d9b08b6",
+    "3|11": "7b74c879aa1eff16",
+    "3|18": "0d123d40e1e2ec56",
+    "4|11": "e13bc5a2b6cb9ce7",
+    "4|18": "3a78703225df991c",
+    "5|11": "ad71729ebf83b874",
+    "5|18": "59fce6e8d49eef7e",
+    "6|11": "04089706ba4b1545",
+    "6|18": "4c639666d2bfad50",
+    "7|11": "c0d8e1d9707937a3",
+    "7|18": "ef300ee76aad7156"
+  }
+}

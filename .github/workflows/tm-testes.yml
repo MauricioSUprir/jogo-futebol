@@ -2,12 +2,14 @@ name: Total Match — testes
 # Os testes do Total Match (legacy-total-match/) em todo PR que mexe nele: até o Modo Leilão um PR só do TM não tinha check
 # nenhum (o golaco-testes.yml só olha golaco/**). PLANO-LEILAO.md §4.4.
 #   node        o Node do leilão (testar-leilao.mjs: o núcleo puro, os robôs, a rede em memória, a firebase() sobre o banco
-#               falso e o leilão online pela sessão; ~40 s, sem navegador e sem rede) e o conferir-estilos.py (controle sem
-#               estilo no css/styles.css = visual padrão do navegador)
+#               falso, o leilão online pela sessão e o campeonato — C, K e KO —; ~60 s, sem navegador e sem rede) e o
+#               conferir-estilos.py (controle sem estilo no css/styles.css = visual padrão do navegador)
 #   navegador   (a partir do PR 2 do Leilão) os de navegador, em partes ao mesmo tempo, com o Playwright e o Chromium como no
-#               golaco-testes.yml: o treino num aparelho (testar-leilao.mjs --tela), o leilão online em várias páginas contra
-#               o banco falso (testar-leilao-online.mjs, um job por caso: telas, dois, quatro, oito) e o Online 3D com o quadro de
-#               ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado")
+#               golaco-testes.yml: o treino num aparelho até o campeão (testar-leilao.mjs --tela, ~6 min), o leilão online e o
+#               campeonato em várias páginas contra o banco falso (testar-leilao-online.mjs, um job por caso: telas ~15 s;
+#               dois ~1 min, o campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8
+#               e os bytes) e o Online 3D com o quadro de ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele
+#               sai como "pulado")
 #   tm-testes   o nome que o PR mostra: só passa se todos passaram
 # Nenhum teste fala com o Firebase de verdade. O deploy (deploy-pages.yml) não muda.
 on:
@@ -47,11 +49,11 @@ jobs:
             cmd: node ferramentas/testar-leilao.mjs --tela --prints "$RUNNER_TEMP/prints"
           - parte: leilão online, as telas
             cmd: node ferramentas/testar-leilao-online.mjs --so telas --prints "$RUNNER_TEMP/prints"
-          - parte: leilão online, 2 páginas
+          - parte: leilão online e o campeonato misto, 2 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so dois --prints "$RUNNER_TEMP/prints"
-          - parte: leilão online, 4 páginas
+          - parte: leilão online e os pontos corridos, 4 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so quatro --prints "$RUNNER_TEMP/prints"
-          - parte: leilão online, 8 páginas
+          - parte: leilão online e o mata-mata, 8 páginas
             cmd: node ferramentas/testar-leilao-online.mjs --so oito --prints "$RUNNER_TEMP/prints"
           - parte: Online 3D
             # o TM servido na raiz (como no GitHub Pages; o quadro do 3D é a página de ensaio, sem o /golaco/)
@@ -89,6 +91,6 @@ jobs:
     steps:
       - name: Todas as partes passaram
         run: |
-          echo "node: ${{ needs.node.result }} · navegador (5 partes): ${{ needs.navegador.result }}"
+          echo "node: ${{ needs.node.result }} · navegador (6 partes): ${{ needs.navegador.result }}"
           test "${{ needs.node.result }}" = success
           test "${{ needs.navegador.result }}" = success
