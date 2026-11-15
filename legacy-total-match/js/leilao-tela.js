@@ -718,7 +718,7 @@
   function anunciaLote(V) {
     var l = V && V.lote; if (!l || VIEW.anunciadoSeq === l.seq) return;
     VIEW.anunciadoSeq = l.seq;
-    anuncia(textoLote(l) + ": " + l.retrato.name + ", " + funcaoDe(l.retrato) + ", nota " + l.retrato.overall);
+    anuncia(textoLote(l) + ": " + l.retrato.name + ", " + funcaoDe(l.retrato) + (notasOcultas(V) ? "" : ", nota " + l.retrato.overall));
   }
   TM.ui.register("leilao-lote", function (screen) {
     var M = moldura(screen, "leilao-lote"); if (!M) return;
@@ -823,8 +823,17 @@
   }
 
   /* ---------- o jogador sem a carta: a foto (ou a silhueta), o selo da nota, o escudo, o nome e os chips ---------- */
-  // as notas escondidas (o "leilão no olho", PR 6): com elas, o selo mostra "?" e as notas do campinho e dos próximos somem
+  // as notas escondidas (o "leilão no olho", PR 6; a sessão diz V.notasOcultas e V.revelados): com elas, o selo mostra "?" e
+  // nada que entregue a nota aparece — o número, a média, a soma, o "−N" de fora da função, os atributos, a fala da região ao
+  // vivo — até a revelação (leilao.js REVELA_NOTAS: no fim do campeonato)
   function notasOcultas(V) { V = V || VIEW.V; return !!(V && V.notasOcultas); }
+  // a nota de um jogador do time t (t < 0 ou null: de ninguém, o lote e os próximos) está escondida agora? Com a revelação a
+  // cada partida (a alternativa do REVELA_NOTAS), o time que já jogou aparece antes dos outros
+  function notaOcultaDe(t, V) {
+    V = V || VIEW.V;
+    if (!notasOcultas(V)) return false;
+    return !(t != null && t >= 0 && V.revelados && V.revelados[t]);
+  }
   // a luminância relativa (WCAG) de uma cor "#rgb", "#rrggbb" ou "rgb(...)"; -1 se não der para ler
   function luzDe(c) {
     var m = String(c || "").trim(), v = null;
@@ -1019,7 +1028,7 @@
   // Sem a sessão (S null: a Criar sala), só a formação de opc.formacao com as vagas vazias; opc.rotulo troca o aria-label.
   function campinhoVagas(S, t, opc) {
     opc = typeof opc === "string" ? { cls: opc } : (opc || {});
-    var e = S ? S.escalacao(t) : { formacao: opc.formacao }, f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notasOcultas();
+    var e = S ? S.escalacao(t) : { formacao: opc.formacao }, f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notaOcultaDe(t);
     var linhas = {}, pos = [];
     slots.forEach(function (sl, s) { (linhas[sl[0]] = linhas[sl[0]] || []).push(s); });
     Object.keys(linhas).forEach(function (g) {
@@ -1038,14 +1047,15 @@
       var kids;
       if (r) {
         kids = [
-          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen ? el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }) : null]),
+          // (com as notas escondidas, o "−N" sai: a borda âmbar da foto ainda diz "fora da função", sem o número)
+          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen && !oc ? el("span", { class: "lei-pen", text: "−" + pen, title: "Fora da função: −" + pen }) : null]),
           el("span", { class: "lei-cv-nome", style: "max-width:" + nw + "cqw", text: u && u.shortNm ? u.shortNm(r.name) : r.name })
         ];
       } else kids = [el("span", { class: "lei-cv-bola vazia" }, [el("span", { class: "lei-cv-sig", text: GRUPO_CURTO[slot[0]] })])];
       var at = { class: "lei-cv-vaga" + (r ? " cheia" : "") + (r && pen ? " fora" : "") + (opc.sel === s ? " sel" : ""), style: "left:" + x + "%;top:" + pos[s].y + "%", data: { vaga: String(s) } };
       if (troca && r) {
         at.role = "button"; at.tabindex = "0";
-        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função (−" + pen + ")" : "") + (opc.sel === s ? ", marcado" : "");
+        at["aria-label"] = r.name + ", " + funcaoDe(r) + ", na vaga de " + GRUPO_NOME[slot[0]].toLowerCase() + (pen ? ", fora da função" + (oc ? "" : " (−" + pen + ")") : "") + (opc.sel === s ? ", marcado" : "");
       }
       var v = el("div", at, kids);
       if (troca && r) {
@@ -1257,7 +1267,7 @@
   function atualizaEscalacao(S, V) {
     var P = VIEW.partes; if (!P) return;
     var e = V.meu && V.meu.escalacao;
-    var chave = [V.estado, V.alterada, V.soOlhar, !!V.pedido, e ? e.formacao + ":" + e.tit.join(",") + ":" + e.n + ":" + e.aviso : "-", V.meu && V.meu.pronto, VIEW.selVaga].join("|");
+    var chave = [V.estado, V.alterada, V.soOlhar, !!V.pedido, e ? e.formacao + ":" + e.tit.join(",") + ":" + e.n + ":" + e.aviso : "-", V.meu && V.meu.pronto, VIEW.selVaga, notaOcultaDe(V.eu, V)].join("|");
     if (chave !== P.chave) { P.chave = chave; montaEscalacao(S, V); }
     tickEscalacao(S);
   }
@@ -1276,15 +1286,17 @@
     if (!V.meu) { c.appendChild(el("p", { class: "intro-text", text: "Você só está olhando esta sala." })); return; }
     var e = V.meu.escalacao, time = V.meu.time.map(function (x) { return x.retrato; }), cheio = e && e.n === L().VAGAS;
     var media = time.length ? Math.round(time.reduce(function (s, r) { return s + r.overall; }, 0) / time.length) : 0;
-    var pen = e ? e.pen.reduce(function (s, x) { return s + (x || 0); }, 0) : 0;
+    var pen = e ? e.pen.reduce(function (s, x) { return s + (x || 0); }, 0) : 0, oc = notaOcultaDe(V.eu, V);
+    // (com as notas escondidas: sem a média e, no lugar do "−N", quantos estão fora da função)
+    var nFora = e ? e.pen.filter(function (x) { return x > 0; }).length : 0;
     // a ordem no celular: o título, as formações, o campinho, a dica e o Pronto (no PC o campinho vai à esquerda: CSS)
     var b = c;
     b.appendChild(el("div", { class: "lei-esc-cab" }, [
       el("h2", { class: "lei-esc-tit", text: "Sua escalação" }),
       el("div", { class: "lei-esc-resumo" }, [
         el("span", { class: "lei-esc-n", text: (e ? e.n : 0) + "/" + L().VAGAS }),
-        time.length ? el("span", { text: "Média " + media }) : null,
-        pen ? el("span", { class: "lei-esc-pen", text: "−" + pen + " fora da função" }) : null
+        time.length && !oc ? el("span", { text: "Média " + media }) : null,
+        pen ? el("span", { class: "lei-esc-pen", text: oc ? nFora + " fora da função" : "−" + pen + " fora da função" }) : null
       ])
     ]));
     var cnt = L().contaMascaras(time);
@@ -1802,7 +1814,7 @@
       duracao: P0.duracao3d, sala: String(S.codigo) + ":" + P0.id, auto: true, titulo: titulo, origem: "leilao",
       rodada0: Math.floor(Date.now() / 1000) % 1000000000,
       // (o mando neutro e sem clássico, como todo jogo do leilão; o empate do mata-mata segue no gol de ouro e nos pênaltis, gravados)
-      partida: { neutro: true, estadio: null, classico: false, nomeClassico: null, competicao: titulo, empateContinua: !!P0.mata },
+      partida: { neutro: true, estadio: null, classico: false, nomeClassico: null, competicao: titulo, empateContinua: !!P0.mata, notasOcultas: !!V.notasOcultas || undefined },
       online: { simular: true },
       aoFase: function (f) {
         if (PAR !== X) return;
@@ -2145,11 +2157,50 @@
         el("span", { class: "lei-dest-s", text: mt ? "Soma das notas dos 11: " + mt.soma + (mt.t === V.eu ? " · o seu" : "") : "" })
       ])])
     ]));
+    // as notas escondidas (PR 6): reveladas aqui, no fim do campeonato — o time de cada técnico (o toque abre o campinho e as
+    // compras com as notas), a soma das notas e quem comprou melhor (a soma das notas dos 11 menos o que gastou no leilão)
+    if (V.overall === "escondido" && !V.notasOcultas) wrap.appendChild(revelacao(V, C));
     wrap.appendChild(el("div", { class: "lei-acoes lei-fim-acoes" }, [
       botao("Voltar", function () { TM.ui.go("leilao"); }, "btn", "chevron-left"),
       botao("Criar outra sala", function () { TM.ui.go("leilao-criar", V.online && !V.treino ? { online: true } : {}); }, "btn primary", "gavel")
     ]));
     return wrap;
+  }
+
+  // a revelação das notas no fim (sala com o Overall escondido): o destaque de quem comprou melhor e a lista dos técnicos pela
+  // conta dele (a soma das notas dos 11 e o gasto; o toque abre o time com as notas)
+  function comprasReveladas(V, C) {
+    return (C.notas || []).map(function (x) {
+      var y = V.tecnicos[x.t], gasto = y ? L().SALDO - y.saldo : 0;
+      return { t: x.t, soma: x.soma, gasto: gasto, conta: x.soma - gasto };
+    }).sort(function (a, b) { return (b.conta - a.conta) || (b.soma - a.soma) || (a.t - b.t); });
+  }
+  function revelacao(V, C) {
+    var lista = comprasReveladas(V, C), top = lista[0], cl = top ? clubeDe(V, top.t) : null;
+    var box = el("section", { class: "lei-revela", "aria-labelledby": "lei-revela-t" });
+    box.appendChild(el("div", { class: "lei-caixa lei-dest lei-dest-compra" }, [el("span", { class: "lei-dest-ic" }, [ic("gavel")]), el("div", { class: "lei-dest-txt" }, [
+      el("span", { class: "lei-rotulo", text: "Quem comprou melhor" }),
+      el("span", { class: "lei-dest-n", text: cl ? cl.nome : "" }),
+      el("span", { class: "lei-dest-s", text: top ? "Soma das notas " + top.soma + " por " + rs(top.gasto) + (top.t === V.eu ? " · o seu" : "") : "" })
+    ])]));
+    var ol = el("ol", { class: "lei-class lei-revela-lista" });
+    lista.forEach(function (x, i) {
+      var y = V.tecnicos[x.t];
+      var bt = el("button", { class: "lei-cl lei-revela-bt" + (x.t === V.eu ? " eu" : ""), type: "button",
+        "aria-label": "Ver o time de " + (y && y.eu ? "você" : y ? y.nome : "") + " com as notas: soma " + x.soma + ", gastou " + rs(x.gasto),
+        on: { click: function () { folhaVendas(x.t); } } }, [
+        el("span", { class: "lei-cl-p", text: (i + 1) + "º" }), escudo(y && y.clube, "pp"),
+        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: y ? (y.eu ? "Você" : y.nome) : "" })]),
+        el("span", { class: "lei-cl-x", text: "Soma " + x.soma + " · " + rs(x.gasto) })
+      ]);
+      ol.appendChild(el("li", {}, [bt]));
+    });
+    box.appendChild(el("div", { class: "lei-caixa lei-class-box" }, [
+      el("h3", { class: "lei-rotulo", id: "lei-revela-t", text: "As notas, reveladas" }),
+      el("p", { class: "lei-revela-dica", text: "Quem comprou melhor: a soma das notas dos 11 menos o que gastou. Toque num time para ver as notas." }),
+      ol
+    ]));
+    return box;
   }
 
   /* ---------- "Ver o jogo": o resultado GRAVADO no 2D, sem pausa (rota leilao-jogo) ----------
@@ -2226,7 +2277,8 @@
       // (o resultado mostrado é o GRAVADO, que o gancho devolve; este só existe para o tm3d.js abrir o 3D)
       result: { score: [0, 0], events: [], stats: null, sentOff: [], injuries: [] },
       pauseSide: J.lado === 1 ? 1 : 0, formation: A.formation, formationB: B.formation,
-      simOpts: { realism: 3, neutral: true, dificuldade3d: J.dificuldade3d, ajustesFixos3d: true, duracao3d: J.duracao3d },
+      // (as notas escondidas da sala também no 3D: a tela antes do jogo e o Editar time sem nota nem GERAL — tm3d.js partidaDe)
+      simOpts: { realism: 3, neutral: true, dificuldade3d: J.dificuldade3d, ajustesFixos3d: true, duracao3d: J.duracao3d, notasOcultas: !!V.notasOcultas },
       empateContinua: !!J.mata, title: titulo, onBack: volta,
       aoAbrir: function (tipo, pedido) { S.abriu3d(J.id, J.trava, pedido); },
       // o resultado do 3D já no apito (a cena do pós-jogo ainda no ar): grava sem mostrar nada — fechar o app ali não perde o 3D
@@ -2597,7 +2649,8 @@
     // bots, só a duração: o 3D entre amigos, o par do PR 5. A liga está na frase e os
     // técnicos na contagem "N/M participantes": repetidas aqui, o cartão ficava com o dobro da altura do das fotos)
     var etq = ["Até " + d.n + " jogadores", seg + " s por jogador", nomeFormato(V.formato), nb ? nb + (nb === 1 ? " bot" : " bots") : "",
-      nb ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : d3Sala(V, nb) != null ? "3D: " + V.duracao3d + " min" : "", "Sem chat"];
+      nb ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : d3Sala(V, nb) != null ? "3D: " + V.duracao3d + " min" : "",
+      V.overall === "escondido" ? "Overall escondido" : "", "Sem chat"];
     b.appendChild(el("ul", { class: "lei-etqs", "aria-label": "A sala" }, etq.filter(Boolean).map(function (t) { return el("li", { class: "lei-etq", text: t }); })));
     // (os números colados na unidade: "min." não fica sozinho na última linha)
     var faixa = function (a, z) { return a + "\u00a0a\u00a0" + z + "\u00a0min"; };
@@ -2648,6 +2701,12 @@
     b.appendChild(opcaoSag("Tempo de cada jogador", [segT]));
     // (o 3D: contra um bot e, desde o PR 5, contra um amigo — sem bots, só a duração; nas salas de antes do par, só com bots)
     if (d3 != null) b.appendChild(opcaoSag("Partidas em 3D", [seletor3d(V.duracao3d, V.dificuldade3d, function (m) { muda({ duracao3d: m }); }, function (dd) { muda({ dificuldade3d: dd }); }, { desliga: des, seg: true, semDif: !nb })]));
+    // (o Overall: só nas salas de regras ≥ 5; as de antes ficam à mostra, como foram criadas)
+    if (typeof V.regrasSala === "number" && V.regrasSala >= L().REGRAS_OCULTAS) {
+      var segOv = segOverall(V.overall, function (v) { muda({ overall: v }); });
+      if (des) [].forEach.call(segOv.querySelectorAll("button"), function (x) { x.disabled = true; });
+      b.appendChild(opcaoSag("Overall", [segOv, dicaSag(DICA_OVERALL)]));
+    }
     b.appendChild(el("p", { class: "lei-sag-nota", text: "Mudar uma opção da sala zera os Pronto de todos." }));
   }
   // o meu clube no saguão (o nome, a sigla e o "Escolher escudo"; Salvar grava) e a formação preferida (vale na hora), com o
@@ -2939,7 +2998,7 @@
         var t = V.tecnicos[x.t], r = x.retrato;
         lista.appendChild(el("li", { class: "lei-vend" + (t && t.eu ? " eu" : "") }, [
           el("span", { class: "lei-gr gr-" + r.pos, text: GRUPO_CURTO[r.pos] }),
-          el("span", { class: "lei-vend-j" }, [el("span", { class: "lei-vend-jn", text: r.name }), el("span", { class: "lei-vend-jo", text: "Nota " + r.overall + " · " + (t ? (t.eu ? "você" : t.nome) : "?") })]),
+          el("span", { class: "lei-vend-j" }, [el("span", { class: "lei-vend-jn", text: r.name }), el("span", { class: "lei-vend-jo", text: (notaOcultaDe(x.t, V) ? "" : "Nota " + r.overall + " · ") + (t ? (t.eu ? "você" : t.nome) : "?") })]),
           el("b", { class: "lei-vend-p", text: rs(x.preco) })
         ]));
       });
@@ -3292,6 +3351,11 @@
     g.poe(atual);
     return g;
   }
+  // o Overall da sala (PR 6): o segmentado À mostra · Escondido (Criar sala e Saguão)
+  var DICA_OVERALL = "Escondido: ninguém vê as notas no leilão nem no campeonato, nem os bots. Elas aparecem no fim do campeonato.";
+  function segOverall(atual, fn) {
+    return segmentado("Overall", "lei-overall", [{ v: "mostra", txt: "À mostra", foco: "overall-mostra" }, { v: "escondido", txt: "Escondido", foco: "overall-escondido" }], atual, fn);
+  }
   // refaz um pedaço da tela e devolve o foco ao botão de mesmo data-foco (o toque no teclado não perde o lugar)
   function refazComFoco(caixa, monta) {
     var a = doc.activeElement, foco = a && caixa.contains(a) && a.dataset ? a.dataset.foco : null;
@@ -3464,6 +3528,7 @@
       tempo: L().TEMPOS.indexOf(pref.tempo) >= 0 ? pref.tempo : L().DUR,
       formato: formatoId(pref.formato),
       duracao3d: LC() ? LC().duracao3dDe(pref.duracao3d) : 4, dificuldade3d: LC() ? LC().dificuldade3dDe(pref.dificuldade3d) : "normal",
+      overall: pref.overall === "escondido" ? "escondido" : "mostra",
       clube: SS().limpaClube(pref.clube || SS().clubeInicial())
     };
     // o 3D entra em todo jogo de uma pessoa: contra um bot (com a duração e a dificuldade) e, no online, contra um amigo (o par,
@@ -3531,6 +3596,11 @@
     }
     corpo.appendChild(secaoCriar("Tempo de cada jogador", "tempo", [segT, hintTempo]));
 
+    // o Overall (PR 6, o "leilão no olho"): à mostra (o padrão) ou escondido — ninguém vê as notas, nem os bots: elas aparecem no
+    // fim do campeonato
+    var segOv = segOverall(F.overall, function (v) { F.overall = v; segOv.poe(v); poeResumo(); });
+    corpo.appendChild(secaoCriar("Overall", "overall", [segOv, el("p", { class: "lei-cs-hint", text: DICA_OVERALL })]));
+
     // as partidas em 3D: a duração de cada tempo e a dificuldade dos bots (iguais para todos da sala, travadas no 3D; no online
     // sem bots, só a duração: o 3D contra um amigo, o par do PR 5)
     var caixa3d = el("div", { class: "lei-3d-caixa" });
@@ -3585,6 +3655,7 @@
         nomeFormato(F.formato).toLowerCase(), F.formacao,
         (online ? "com a sala cheia, " : "") + "leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato de " + dc.lo + " a " + dc.hi + " min"];
       if (d3() != null) partes.push("3D de " + F.duracao3d + " min por tempo" + (semDif() ? "" : " no " + difNome(F.dificuldade3d)));
+      if (F.overall === "escondido") partes.push("notas escondidas");
       var nomeLg = lg ? lg.name + "." : "", txt = partes.join(", ");
       TM.ui.clear(resumo);
       if (nomeLg) { resumo.appendChild(el("b", { text: nomeLg })); resumo.appendChild(doc.createTextNode(" ")); }
@@ -3636,11 +3707,11 @@
     bt.disabled = true; bt.setAttribute("aria-busy", "true");
     var rot = bt.querySelector("span:last-child"); if (rot) rot.textContent = "Preparando os lotes…";
     var clubeLimpo = SS().limpaClube(F.clube);
-    gravar("leilao:criar", { liga: F.liga, T: F.T, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, clube: clubeLimpo });
+    gravar("leilao:criar", { liga: F.liga, T: F.T, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, overall: F.overall, clube: clubeLimpo });
     // um quadro para o "Preparando…" aparecer antes da conta dos lotes (o mundo-base leva uma fração de segundo)
     setTimeout(function () {
       var mundo = null; try { mundo = TM.data.mundoBase(); } catch (e) { mundo = null; }
-      SS().criarTreino({ liga: F.liga, bots: F.T - 1, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, clube: clubeLimpo, mundo: mundo || undefined }).then(function () {
+      SS().criarTreino({ liga: F.liga, bots: F.T - 1, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, overall: F.overall, clube: clubeLimpo, mundo: mundo || undefined }).then(function () {
         VIEW.criando = false;
         TM.ui.go("leilao-lote");
       }, function (e) {
@@ -3663,10 +3734,10 @@
     VIEW.criando = true;
     bt.disabled = true; bt.setAttribute("aria-busy", "true"); rotuloBt(bt, "Criando a sala…");
     var clubeLimpo = SS().limpaClube(F.clube), lg = lgs.filter(function (l) { return l.id === F.liga; })[0];
-    gravar("leilao:criarOnline", { liga: F.liga, T: F.T, bots: F.bots, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, clube: clubeLimpo });
+    gravar("leilao:criarOnline", { liga: F.liga, T: F.T, bots: F.bots, formacao: F.formacao, tempo: F.tempo, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.dificuldade3d, overall: F.overall, clube: clubeLimpo });
     var prazo = setTimeout(function () { if (bt.isConnected) TM.ui.toast(semInternet() ? "Sem internet: confira a conexão." : "Servidor cheio, tente em alguns minutos.", "alerta"); }, AJUSTES.cheioMs);
     // (sem bots a dificuldade não está à vista: vai a padrão, nunca uma escondida)
-    SS().criarSala({ liga: F.liga, ligaNome: lg ? lg.name : F.liga, vagas: F.T, bots: F.bots, tempo: F.tempo, formacao: F.formacao, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.bots ? F.dificuldade3d : undefined, clube: clubeLimpo }).then(function () {
+    SS().criarSala({ liga: F.liga, ligaNome: lg ? lg.name : F.liga, vagas: F.T, bots: F.bots, tempo: F.tempo, formacao: F.formacao, formato: F.formato, duracao3d: F.duracao3d, dificuldade3d: F.bots ? F.dificuldade3d : undefined, overall: F.overall, clube: clubeLimpo }).then(function () {
       clearTimeout(prazo);
       VIEW.criando = false;
       VIEW.codigoVisivel = false;

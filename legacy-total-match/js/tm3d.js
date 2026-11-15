@@ -58,7 +58,8 @@
    olha o localStorage enquanto o quadro está aberto: a cena do pós-jogo e o "Voltar ao Total Match" vêm depois); o resultado
    fica com a guarda (localStorage["tm3d:guarda:<id>"]) até o modo o soltar (api.soltaResultado(id)) ou passar 1 h; o X e o
    "Simular a partida" da demora pedem o simulado (dados.doTM) mesmo que o 3D abra com a confirmação na tela. api.aberto() diz
-   se há um quadro do 3D aberto. Sem o gancho, nada muda. */
+   se há um quadro do 3D aberto. Sem o gancho, nada muda. simOpts.notasOcultas (o Modo Leilão com o Overall escondido, PR 6) vira
+   partida.notasOcultas: o 3D não mostra a nota de ninguém (a tela antes do jogo, o Editar time e a pausa). */
 (function (global) {
   "use strict";
   var TM = global.TM;
@@ -292,6 +293,9 @@
     var dif = so.dificuldade3d || so.difficulty || cfg.difficulty;
     r.dificuldade = NIV.indexOf(dif) >= 0 ? dif : "normal";
     if (so.ajustesFixos3d) r.ajustesFixos = true;
+    // as notas escondidas do Modo Leilão (PR 6): o 3D mostra os jogadores sem a nota, os números da carta e o GERAL (só a tela;
+    // sem o campo, nada muda)
+    if (so.notasOcultas) r.notasOcultas = true;
     return r;
   }
   /* time = time do motor do TM ({ id, name, short?, players, club?, nation?, colors?, kitVariant? }) */
