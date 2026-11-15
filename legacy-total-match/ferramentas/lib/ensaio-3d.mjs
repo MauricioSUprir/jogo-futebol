@@ -12,7 +12,11 @@
      fim         'tm3d:pronto' e, 250 ms depois, 'tm3d:fim' com o resultado montado do pedido: o placar de
                  localStorage["ensaio3d:placar"] ("2-1" se não houver; "casa-fora"), os gols da casa pelos jogadores 11, 10, …
                  do pedido (o tmId), os de fora pelos 11, 10, … do outro lado (o 1º de pênalti), um amarelo para o 6º de fora e as
-                 estatísticas. O mesmo resultado fica em localStorage["ensaio3d:resultado"] (o teste confere contra o gravado) */
+                 estatísticas. O mesmo resultado fica em localStorage["ensaio3d:resultado"] (o teste confere contra o gravado)
+     apito       'tm3d:pronto' e, 250 ms depois, o resultado do 'fim' gravado em localStorage["tm3d:resultado:<id>"] (como o golaco no
+                 apito final) SEM o 'tm3d:fim': o 3D fica aberto na cena do pós-jogo (a pessoa ainda não tocou em "Voltar ao TM")
+     tardio      nada até localStorage["ensaio3d:solta"] = "1" (o teste solta); aí só o 'tm3d:tela' (o 3D que abre DEPOIS de a
+                 pessoa tocar no X do TM: a confirmação "Voltar e simular" ainda na tela) */
 export const ROTA_ENSAIO_3D = /\/golaco\/ensaio-3d\.html(\?|$)/;
 export const PASTA_ENSAIO_3D = "golaco/ensaio-3d.html";
 
@@ -27,6 +31,10 @@ export const ENSAIO_3D = `<!doctype html><meta charset="utf-8"><title>ensaio</ti
     partida: pa ? { minutosPorTempo: pa.minutosPorTempo, dificuldade: pa.dificuldade, ajustesFixos: !!pa.ajustesFixos, neutro: pa.neutro, empateContinua: pa.empateContinua } : null,
     escudos: ped ? [ped.home, ped.away].map(function (t) { var i = t && t.identidade; return i ? { tipo: i.escudoTipo || null, svg: String(i.escudo || "").indexOf("data:image/svg") === 0 } : null; }) : null }));
   if (modo === "parado") return;
+  if (modo === "tardio") {
+    var iv = setInterval(function () { if (localStorage.getItem("ensaio3d:solta") === "1") { clearInterval(iv); parent.postMessage({ tipo: "tm3d:tela", id: id }, location.origin); } }, 100);
+    return;
+  }
   parent.postMessage({ tipo: "tm3d:pronto", id: id }, location.origin);
   if (modo === "aberto") return;
   function ps(lado) { var t = ped && (lado ? ped.away : ped.home); return t && t.players ? t.players : []; }
@@ -39,9 +47,10 @@ export const ENSAIO_3D = `<!doctype html><meta charset="utf-8"><title>ensaio</ti
       stats: { possession: [54, 46], shots: [pl[0] + 6, pl[1] + 4], onTarget: [pl[0] + 2, pl[1] + 1] } };
   }
   setTimeout(function () {
-    if (modo === "fim") {
+    if (modo === "fim" || modo === "apito") {
       var r = resultado();
       localStorage.setItem("ensaio3d:resultado", JSON.stringify(r));
+      if (modo === "apito") { localStorage.setItem("tm3d:resultado:" + id, JSON.stringify(r)); return; }
       parent.postMessage({ tipo: "tm3d:fim", id: id, resultado: r }, location.origin);
     } else if (modo === "sair") parent.postMessage({ tipo: "tm3d:sair", id: id }, location.origin);
     else {

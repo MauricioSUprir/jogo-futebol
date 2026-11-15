@@ -694,10 +694,13 @@
     var pedido = novoPedido({ teamA: cfg.teamA, teamB: cfg.teamB, formation: cfg.formation, formationB: cfg.formationB,
       userSide: cfg.pauseSide === 1 ? 1 : 0, controle: cfg.controle, title: cfg.title, simOpts: cfg.simOpts, empateContinua: cfg.empateContinua });
     if (typeof cfg.gravar === "function") {
-      // a guarda do resultado: o limpaSobras do próximo 3D não o apaga enquanto o modo não o soltar (soltaResultado)
-      try { localStorage.setItem("tm3d:guarda:" + pedido.id, String(Date.now())); } catch (e) {}
       abre3d(pedido, {
-        abriu: function (tipo) { if (cfg.aoAbrir) cfg.aoAbrir(tipo, pedido.id); },
+        // (com o 3D aberto, a guarda do resultado: o limpaSobras do próximo 3D não o apaga enquanto o modo não o soltar —
+        // soltaResultado; o 3D que nem abriu não tem resultado nem guarda)
+        abriu: function (tipo) {
+          try { localStorage.setItem("tm3d:guarda:" + pedido.id, String(Date.now())); } catch (e) {}
+          if (cfg.aoAbrir) cfg.aoAbrir(tipo, pedido.id);
+        },
         // o resultado já no apito (o 3D ainda no pós-jogo): o modo grava sem mostrar nada
         resultado: cfg.aoResultado ? function (r3) { cfg.aoResultado(r3); } : null,
         // o fim do 3D: grava ANTES de mostrar (fechar o app na reprodução não perde o 3D)
