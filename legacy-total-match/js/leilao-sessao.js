@@ -1827,13 +1827,31 @@
         // outro aparelho (ou o prazo) chegou antes: o jogo já está reservado ou feito
         return { ok: false, estado: "recusado", motivo: r.motivo === "feito" ? "jaFeito" : "jogando" };
       }
-      var j = r.valor, e2 = Array.isArray(j.esc) ? j.esc : [j.esc[0], j.esc[1]];
-      return {
-        ok: true, estado: "aceito", id: g.id, trava: j.trava, jogo: j, rodada: g.rodada, mata: g.mata,
-        times: [LC().timeDoTecnico(c, g.a, e2[0]), LC().timeDoTecnico(c, g.b, e2[1])], lado: g.a === eu ? 0 : 1,
-        duracao3d: c.duracao3d, dificuldade3d: c.dificuldade3d
-      };
+      // (a trava do SERVIDOR: o abriu3d e o gravar3d só gravam sobre o reservado com ela)
+      return S._reservaNoServidor(g.id, r.valor).then(function (j) {
+        var e2 = Array.isArray(j.esc) ? j.esc : [j.esc[0], j.esc[1]];
+        return {
+          ok: true, estado: "aceito", id: g.id, trava: j.trava, jogo: j, rodada: g.rodada, mata: g.mata,
+          times: [LC().timeDoTecnico(c, g.a, e2[0]), LC().timeDoTecnico(c, g.b, e2[1])], lado: g.a === eu ? 0 : 1,
+          duracao3d: c.duracao3d, dificuldade3d: c.dificuldade3d
+        };
+      });
     }, function (e) { return { ok: false, estado: "recusado", motivo: e && e.codigo === "desconectado" ? "conexao" : "rede" }; });
+  };
+  /** A reserva do 3D como o SERVIDOR a gravou. No online, o fim da transação traz a ESTIMATIVA local do TIMESTAMP (a trava
+   *  de verdade chega pelos ouvintes, como no SDK: o testar-leilao-online.mjs tresd achou o abriu e o resultado do 3D
+   *  recusados por "trava"): espera o nó reservado no 3D por esta pessoa chegar à vista (até 10 s; sem ele, o da
+   *  transação). No treino, o da transação já é o do servidor. */
+  P._reservaNoServidor = function (id, j0) {
+    var S = this;
+    function ja() { var j = S.jogos && S.jogos[id]; return j && j.e === "reservado" && j.modo === "3d" && j.por === j0.por ? j : null; }
+    if (!S.online) return Promise.resolve(j0);
+    var j1 = ja();
+    if (j1) return Promise.resolve(j1);
+    return new Promise(function (ok) {
+      var off = null, t = setTimeout(function () { if (off) off(); ok(ja() || j0); }, 10000);
+      off = S.aoMudar(function () { var x = ja(); if (!x) return; clearTimeout(t); if (off) off(); ok(x); });
+    });
   };
   /** O 3D chegou a abrir (o recado tm3d:tela ou tm3d:pronto): marca o `abriu` no reservado (só no meu, com a mesma trava).
    *  A partir daí, sem resultado no prazo da partida, é W.O.; sem a marca, em 2 min, o simulado. Promise({ feito }). */
