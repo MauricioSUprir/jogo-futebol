@@ -171,7 +171,8 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
   simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
   fora há mais de 5 min, qualquer técnico presente tem o botão — escolha minha); a
-  pergunta do plano grátis (Spark): um leilão de 8 técnicos (104 lotes) baixa ~1,0–1,1 MB por página (~9 MB no total) e o
+  pergunta do plano grátis (Spark): um leilão de 8 técnicos baixa ~1,0–1,1 MB por página com 104 lotes (~9 MB no total; com os
+  160 lotes de 15/11, ~2,1 MB por página e ~17 MB a sala) e o
   campeonato soma ~30 KB no mata-mata e ~0,5 MB nos pontos corridos com 8 (no pior caso ~12,5 MB a sala de 8).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
@@ -1334,9 +1335,12 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
 - **Modo Leilão** (dono, 14/11; plano `PLANO-LEILAO.md`, as decisões na §7, o que o código pediu de diferente na §8): "Leilão"
   (ícone `gavel`) em "Mais modos". **PR 1 (v382): o TREINO num aparelho** — você + 1 a 7 bots (nomes "Bot Arrojado",
   "Bot Paciente"…, clubes inventados, escudo desenhado do Ultimate, cores sem repetir), os jogadores da liga escolhida no
-  MUNDO-BASE (`TM.data.mundoBase()`: sem Editor, clube criado nem Viverde/`especial`), 13 lotes por técnico pela cota de
-  posição, R$ 100 cada (dinheiro do jogo), 10 s por lote (lance com menos de 8 s volta a 8 s), +1/+5/+10 sobre o valor
-  visto, Tudo de dois toques, outro valor, Passar, repescagem de 6 s e o completar de graça com os de fora; a escalação no
+  MUNDO-BASE (`TM.data.mundoBase()`: sem Editor, clube criado nem Viverde/`especial`), 20 lotes por técnico pela cota de
+  posição (dono, 15/11; eram 13: `LOTES_POR_TEC`; as salas de regras 1 e 2 seguem com 13, `lotesPorTec(regras)`; a cota não
+  come a reserva de `fora`, e a Suíça A e a Paraguai A públicas ficam com 135 e 120 lotes com 7 e 8 técnicos; os robôs
+  passam no lote abaixo do nível de reposição; PLANO-LEILAO.md §8 "Lotes por técnico (15/11)"), R$ 100 cada (dinheiro do
+  jogo), 10 s por lote (lance com menos de 8 s volta a 8 s), +1/+5/+10 sobre o valor visto, Tudo de dois toques, outro
+  valor, Passar, repescagem de 6 s e o completar de graça com os de fora; a escalação no
   campinho (só as formações em que o time cabe, troca de vagas, −1/−2); o Campeonato "em breve". Arquivos: `js/leilao.js`
   (PURO, `TM.leilao`: lotes, a máquina do lote, robôs, emparelhamento das 6 formações, escalação pelo húngaro e a
   conferência — também com o seq pulando, pelos limites da janela, e depois do fim, quando nada muda e o `f` é o completar

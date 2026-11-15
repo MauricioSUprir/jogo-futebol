@@ -149,14 +149,15 @@
   /** A duração estimada (em minutos) para a Criar sala mostrar. o: { T, tempo (ms do relógio do lote), formato, tresD?,
    *  duracao3d? (min por tempo; padrão 4) } → { leilao: { lo, hi, n (lotes) }, camp: { lo, hi, rodadas, jogos }, total: { lo,
    *  hi } }.
-   *   — o leilão: medido com os robôs no PR 1 (~0,9 × o relógio por lote quando todos passam rápido, metade com 2 técnicos;
-   *     o relógio + 7 s quando ninguém passa: o relógio inteiro, a pausa e a repescagem);
+   *   — o leilão: n = os lotes por técnico do leilao.js × T; medido com os robôs nos 1 000 leilões do testar-leilao L7 com 20
+   *     por técnico (15/11): ~0,75 × o relógio por lote quando todos passam rápido (2, 4 e 8 técnicos: 0,73, 0,79 e 0,77);
+   *     o relógio + 7 s quando ninguém passa (o relógio inteiro, a pausa e a repescagem);
    *   — o campeonato, por rodada: simulado, de ~30 s (quem joga toca em Simular e vê) aos 2 min do prazo; no 3D (PR 4),
    *     de 2 × a duração + 4 min (a partida e as telas) a 2 × a duração × 1,3 + 5 min. */
   function duracaoEstimada(o) {
     o = o || {};
-    var L = LE(), T = o.T || 0, n = (L ? L.LOTES_POR_TEC : 13) * T, s = (o.tempo > 0 ? o.tempo : (L ? L.DUR : 10000)) / 1000;
-    var lo = n * (T <= 2 ? 0.5 : 0.9) * s / 60, hi = n * (s + 7) / 60;
+    var L = LE(), T = o.T || 0, n = L.LOTES_POR_TEC * T, s = (o.tempo > 0 ? o.tempo : L.DUR) / 1000;
+    var lo = n * 0.75 * s / 60, hi = n * (s + 7) / 60;
     var fmt = formatoDe(o.formato), R = rodadasDe(fmt, T), dur = duracao3dDe(o.duracao3d);
     var clo = o.tresD ? R * (2 * dur + 4) : R * 0.5, chi = o.tresD ? R * (2 * dur * 1.3 + 5) : R * PRAZO / 60000;
     function par(a, b) { var x = Math.max(1, Math.round(a)); return { lo: x, hi: Math.max(x + 1, Math.round(b)) }; }

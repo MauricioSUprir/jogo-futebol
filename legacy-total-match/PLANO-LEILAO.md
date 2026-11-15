@@ -90,16 +90,24 @@ na v1), a 6 (quem some passa, sem piloto que gasta), a 7 (Jogar/Simular na tela 
 jogadores em todo aparelho, sem o Editor nem o clube criado ou o Viverde de uma carreira. Fica de fora clube ou jogador
 `especial`. (Se o `mundoBase` passar de 1 s no celular, a reserva é a Criar sala recusar a liga com edições.)
 
-**Quantos lotes:** 13 por técnico (T = técnicos, contando os bots): 52 com 4, 104 com 8, como nas fotos.
+**Quantos lotes:** 20 por técnico (T = técnicos, contando os bots): 40 com 2, 80 com 4, 160 com 8 (dono, 15/11: "para
+sobrar mais opção na hora de montar o time"; eram 13, como nas fotos: 52 com 4, 104 com 8). `LOTES_POR_TEC` no
+`leilao.js`; as salas criadas antes (regras 1 e 2) seguem com 13 (`lotesPorTec(regras)`; detalhes no §8, "Lotes por
+técnico (15/11)").
 
 **Por posição (cota)**, pela posição principal (`pos`), medida nas 30 ligas e nas duas edições (só pela nota, os 52
-melhores da Série B pro têm 0 goleiros):
+melhores da Série B pro têm 0 goleiros). Goleiros e atacantes na proporção das fotos (1,5 e 2,5 de cada 13 lotes), com
+n = lotes por técnico × T:
 
 | Goleiros | Defensores | Meias | Atacantes |
 |---|---|---|---|
-| ⌈1,5·T⌉ | (13T − GK − FW)/2, a sobra ímpar no DF | o restante | ⌈2,5·T⌉ |
+| ⌈3n/26⌉ (⌈30T/13⌉ com 20) | (n − GK − FW)/2, a sobra ímpar no DF | o restante | ⌈5n/26⌉ (⌈50T/13⌉ com 20) |
 
-Exemplo com 4: 6 GK, 18 DF, 18 MF e 10 FW = 52. Dentro do grupo, os melhores por `overall`, desempate pelo `id`.
+Exemplo com 4: 10 GK, 27 DF, 27 MF e 16 FW = 80 (com 13 por técnico: 6, 18, 18 e 10 = 52). Dentro do grupo, os
+melhores por `overall`, desempate pelo `id`. A cota nunca come a reserva de `fora` (1 GK, 5 DF, 5 MF e 4 FW por técnico:
+o máximo de cada grupo numa formação), para qualquer time completar os 11 de graça no fim, compre o que comprar; o que
+falta num grupo vai para os outros e, sem folga, a liga fica com menos lotes: só a Liga Suíça A e a Liga Paraguai A da
+edição pública (240 jogadores), com 135 lotes com 7 técnicos e 120 com 8.
 
 **Ordem:** sorteio pela semente da sala, em blocos de T com posições e faixas de nota variadas; o 1º goleiro nos
 primeiros 20% e nenhum no último bloco. A lista **"Próximos lotes"** (recolhível) mostra os 5 seguintes a todos.
@@ -179,7 +187,7 @@ de transferência, `placeholders.js`), `number`, `height`, `weight`. A altura n�
 
 - Mata-mata com T que não é potência de 2: a semente escolhe quem folga. Pontos corridos com T ímpar: uma folga por
   rodada (o `roundRobin` de hoje põe um time contra ele mesmo; o leilão tem o seu rodízio).
-- A Criar sala mostra a **duração estimada** do leilão (104 lotes ≈ 20–35 min) e do campeonato (8 técnicos em pontos
+- A Criar sala mostra a **duração estimada** do leilão (160 lotes ≈ 20–45 min) e do campeonato (8 técnicos em pontos
   corridos com 3D passam de 3 h).
 - **Sala fixa para todos:** realismo 3, mando neutro, a duração do 3D (padrão 4 min por tempo) e a dificuldade dos
   bots no 3D (padrão Normal, travada: `simOpts.dificuldade3d` + `ajustesFixos3d`).
@@ -439,6 +447,8 @@ lidera e valor + passo ≤ L, dá o lance; senão aborta"). Valores do zer2 e da
    menos de 0,6 s; acima de L, passa.
 7. **Fim de jogo:** com vagas ≥ lotes que cabem e restam, L sobe até o necessário, sempre ≤ o máximo legal.
 8. **Notas escondidas:** a nota percebida.
+9. **Abaixo do nível de reposição** (15/11, com os 20 lotes por técnico): na fase dos lotes, o lote fora dos D_p melhores
+   que restam no grupo → passa (fica para a repescagem e o fim de jogo).
 
 ### 3.6 Simulação e 3D
 
@@ -518,7 +528,7 @@ duas edições.
 
 | Bloco | O que prova |
 |---|---|
-| L1 lotes | Nas 30 ligas × 2 edições × T de 2 a 8: 13T lotes, cota por grupo, sem especial, sem repetidos, do mundo-base (com edições e clube criado no armazenamento falso, os lotes não mudam), a mesma semente dá os mesmos lotes |
+| L1 lotes | Nas 30 ligas × 2 edições × T de 2 a 8: 20T lotes (13T nas salas de regras 1 e 2), cota por grupo, a reserva de `fora`, sem especial, sem repetidos, do mundo-base (com edições e clube criado no armazenamento falso, os lotes não mudam), a mesma semente dá os mesmos lotes |
 | L2 ordem | Goleiros espalhados; a mesma semente dá a mesma ordem |
 | L3 lance | Mínimo R$ 1; máximo = s − (v − 1); Tudo; não cabe → recusado; completo → recusado; `seq` visto diferente → aborta (também na repescagem do mesmo lote); toque velho → aborta; valor ≤ atual → aborta; líder não passa |
 | L4 relógio | fim = max(abre + espera + dur, t + ext); lance depois do fim recusado; com 3 s faltando → 8 s |
@@ -1482,6 +1492,79 @@ consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leila
   junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
   já volta depois de queda e de recarregar), não um laço solto na tela.
 
+**Lotes por técnico (15/11)** (pedido do dono: 20 jogadores por técnico, contando os bots, "para sobrar mais opção na
+hora de montar o time"; eram 13: 2 técnicos 26 → 40, 4 técnicos 52 → 80, 8 técnicos 104 → 160):
+- **A constante e as cotas** (`leilao.js`): `LOTES_POR_TEC` 20 e as cotas na mesma proporção das fotos, escritas em função
+  dela (GK ⌈3n/26⌉, FW ⌈5n/26⌉, DF e MF o resto, n = lotes por técnico × T; com 13, as de antes exatamente):
+
+  | T | Lotes | GK | DF | MF | FW |
+  |---|---|---|---|---|---|
+  | 2 | 26 → 40 | 3 → 5 | 9 → 14 | 9 → 13 | 5 → 8 |
+  | 4 | 52 → 80 | 6 → 10 | 18 → 27 | 18 → 27 | 10 → 16 |
+  | 8 | 104 → 160 | 12 → 19 | 36 → 55 | 36 → 55 | 20 → 31 |
+
+- **As ligas que não fecham:** contadas as 30 ligas nas duas edições, só a Liga Suíça A e a Liga Paraguai A da edição
+  pública (240 jogadores cada: 24 GK, 84 DF, 84 MF, 48 FW) não têm gente para 160 lotes com 8 técnicos: sobravam 80
+  jogadores para 88 vagas, e com todos passando os 8 times terminavam com 10 (o L6 reprovou assim). Decisão (a mais simples e
+  segura): a cota nunca come a reserva de `fora`, que é o máximo de cada grupo numa formação (1 GK, 5 DF, 5 MF e 4 FW por
+  técnico): qualquer time completa os 11 de graça no fim, compre o que comprar. O que falta num grupo vai para os outros e,
+  sem folga, a liga fica com menos lotes: essas duas, com 7 técnicos, 135 lotes (eram 91) e, com 8, 120 (eram 104). Nas
+  outras 58, 20 por técnico em todo T, e `fora` com o máximo inteiro em todos os 420 casos (antes, abaixo do alvo em 2).
+  Limitar os técnicos da liga na Criar sala também resolvia, mas mexia na tela que a frente visual está refazendo. A
+  Criar sala ainda diz "Os 140/160 melhores" nesses dois casos (o número da conta, sem a liga); o chip "Jogador N de M"
+  usa os lotes da sala.
+- **As salas misturadas:** `REGRAS` 3 (as de 2, do PR 4, e as de 1 seguem aceitas: `REGRAS_ACEITAS` [1, 2, 3]). O aparelho
+  de antes só olha as salas novas (não entra: "atualize a página"); este aparelho joga as antigas com 13 por técnico
+  (`lotesPorTec(regras)`): o Começar grava os lotes pelas regras da SALA (`criarLotes(…, { regras })`, a conta de antes,
+  sem a reserva: o aparelho de antes, na mesma sala, monta o leilão com exatamente 13T lotes) e a carga confere a lotação
+  pelo `T` gravado com os lotes (a liga pequena tem menos que 20T). Sala em andamento: vale o que está gravado. O treino
+  guardado no aparelho antes da mudança reabre com os 13T dele e anda até o fim. A conferência e o `.validate` opcional
+  não amarravam o 13 (usam o tamanho dos lotes da sala).
+- **Os robôs** (§3.5, item 9): com 20 por técnico sobram 9 lotes por técnico, e o robô dava R$ 1 em tudo o que cabia
+  (o lote abaixo do nível de reposição vale ~R$ 1): enchia o time cedo de quem não valia nada e sobrava dinheiro. Agora, na
+  fase dos lotes, ele passa no lote fora dos D melhores que restam no grupo; na repescagem e no fim de jogo, como antes.
+  Nos 1 000 leilões só de robôs do L7 (as mesmas sementes; T de 2 a 8, as duas edições):
+
+  | | 13 por técnico (antes) | 20, os robôs de antes | 20, os robôs novos |
+  |---|---|---|---|
+  | Lotes (média) | 64 | 98 | 98 |
+  | Completam sem a reposição | 100% | 100% | 100% |
+  | Preço médio de uma compra | R$ 6,64 | R$ 4,72 | R$ 7,44 |
+  | Compras a R$ 1 | 43% | 71% | 28% |
+  | Lotes sem dono no fim | 15,4% | 45,0% | 45,0% |
+  | Sobra por técnico | R$ 25,9 (p90 48) | R$ 47,5 (p90 85) | R$ 16,9 (p90 37) |
+  | Gasto na 1ª metade da fila | 68% | 94% | 60% |
+  | Time completo aos (da fila) | 78% | 58% | 89% |
+  | Nota média do time | 74,6 | 73,7 | 74,8 |
+  | Quartil de cima mais caro | 100% | 100% | 100% |
+  | Lotes abertos (repescagem) | 54,4 (0,1) | 54,4 (0,0) | 100,1 (4,0) |
+  | Duração só de robôs | 9,1 min (p90 14,3) | 7,2 (p90 11,4) | 12,7 (p90 20,3) |
+
+  Por T (300 leilões cada, antes → depois): com 2, sobra R$ 36,5 → 25,6, preço R$ 5,77 → 6,76, 99,7% → 100% completos,
+  3,6 → 4,9 min; com 4, R$ 27,8 → 18,1, R$ 6,56 → 7,44, 7,5 → 10,5 min; com 8, R$ 25,1 → 15,9, R$ 6,81 → 7,64,
+  14,5 → 20,5 min. O robô novo nas salas de 13 por técnico: sobra R$ 25,9 → 17,0, nota 74,6 → 74,8, 99,8% completam
+  (meta ≥ 99%). Numa sala de regras 2 com um aparelho de antes e um novo, o robô decide pelo aparelho que roda a transação
+  (as duas contas são honestas para a conferência; nada congela).
+- **A duração estimada** (`leilao-camp.js duracaoEstimada`, agora a única: a tela usava uma cópia): ~0,75 × o relógio por
+  lote quando todos passam rápido (medido: 0,73 com 2, 0,79 com 4, 0,77 com 8; era 0,9, a metade com 2) e o relógio + 7 s
+  quando ninguém passa. Com 10 s: 2 técnicos 2–7 → 5–11 min, 4 técnicos 8–15 → 10–23, 8 técnicos 16–29 → 20–45. O pior
+  caso, uma pessoa que nunca toca em nada (nem Passar) com o resto de robôs, 100 leilões por T: 2 técnicos 6,9 → 11,3 min, 4
+  técnicos 15,4 → 24,7, 8 técnicos 29,8 → 48,0 (a repescagem dela, com os lotes que os robôs deixaram, 15 → 29, 19 → 47 e
+  27 → 82 lotes; quem toca em Passar fecha cada um na hora).
+- **Os bytes**: no Node (testar-leilao O3, por aparelho) 2 aparelhos 91 → 114 KB, 4 + 2 bots ~490 → ~915 KB, 8 técnicos
+  ~1,1 → ~2,2 MB; no navegador (`testar-leilao-online --so oito`, O3 e O8) o leilão de 8 com 160 lotes baixa 2,12 MB por
+  página (eram 1,0–1,1; teto do teste 3 MB) e 16,9 MB as 8; com o mata-mata, 2,15 MB e 17,1 MB (o `vivo` leva o `d` com um
+  caractere por lote e há ~1,5× mais lotes abertos). No plano grátis (Spark, 10 GB/mês): ~590 leilões de 8 por mês
+  (eram ~1 100).
+- **Testes**: L1 (20T nas 30 ligas × 2 edições × T 2–8, a conta das cotas feita no teste, a reserva de `fora` inteira, as
+  ligas com menos lotes, a sala de regras 2 com os mesmos lotes da conta de antes; na base reprova pelo número de lotes e
+  pelas cotas), L5 (a montagem do "pulado" com 10 goleiros), L6 (com 20 e sem a reserva, a Paraguai A pública com 8 e todos
+  passando reprovava), K0 (as durações novas), K3 (a liga em que o time de graça da pessoa cabe em 2+ formações), TD10
+  (regras 3), S (o treino de regras 2 reabre com 39 lotes e anda até o fim; "Minhas salas" com os lotes da sala), O1 (60
+  lotes com 3), O2 (o Começar de uma sala de regras 2 grava 26 com 2) e os totais do `--tela` e do online (40, 80, 120,
+  160). Rodados: `testar-leilao.mjs` 18/18 blocos (97 s; o L7 com os 1 000 leilões ~30 s), `--tela` 87/87 (519 s),
+  `testar-leilao-online.mjs --so telas,dois` 31/31 (95 s) e `--so oito` 13/13 (276 s), `conferir-estilos.py` 0.
+
 **Durante o PR 5** (o que o código real pediu de diferente do plano; `js/online3d.js`, `js/tm3d.js`, `js/leilao.js`,
 `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leilao-rede.js`, `js/leilao-tela.js`, as regras opcionais e, no GOLAÇO,
 `golaco/js/online-pagina.js` e `golaco/js/main.js`):
@@ -1632,3 +1715,120 @@ reprova com qualquer `.ut-card` na aba Leilão.
   na pausa, "Aguarde o próximo jogador · seu máximo R$ X"; o T5 mede o placeholder de verdade.
 - **Fica:** em 568 × 320 (o iPhone SE de 1ª geração deitado) o anel fica 30 px abaixo da barra até rolar (o topo de 44 px e
   as pílulas em 2 linhas); no 5-4-1 e no 3-5-2 em 360–390 os sobrenomes de 9–10 letras da linha de 5 ainda saem com "…".
+
+**Feito no passo 2 (a Criar sala, branch `leilao-visual-b`; o Saguão fica para o passo 3):**
+- `js/leilao-tela.js` (rota `leilao-criar`), pelas fotos `a8c8ed5a`, `79d4002b` e `a177cbb4`: seções soltas (`.lei-cs`, o título
+  `h2.lei-cs-tit` de 20 px, sem caixa): a **Liga** num cartão grande marcado com o "Trocar" (a folha das 30 ligas fica); o
+  **Formato** em 3 cartões com o desenho em SVG (`desenhoFormato`: a tabela, a chave, as duas; `seletorFormato(…, { ilustrado })`),
+  marcados pela borda e pelo fundo, sem o check, com "N rodadas com T técnicos · ~X a Y min" (a duração não quebra); os
+  **Técnicos na sala** (só no online) e os **Bots de treino** no − e + quadrados tonais com o número de 44 px e o deslizante
+  ligado (`passo(…, { deslizante })`; no treino só os bots, 1 a 7); o **Tempo de cada jogador** no segmentado das fotos (saiu do
+  "Mais opções", que acabou; a dica diz quanto dura o leilão); as **Partidas em 3D** no mesmo segmentado (`seletor3d(…, { seg })`,
+  só com bots); **Sua formação** no segmentado 3 × 2 com o campinho das vagas embaixo (`campinhoVagas(null, −1, { formacao })`: o
+  mesmo da aba Leilão, vazio, 62% da largura); **Seu clube** com o nome, a sigla e o "Escolher escudo" tonal com o escudo dentro
+  (`editorClube(…, { escolher })`, abre o seletor de hoje); e a nota do dinheiro do jogo. Embaixo a **barra fixa**
+  `.lei-criarbar`: o resumo numa linha com "…" ("**Liga Brasil A.** 4 técnicos, mata-mata, 4-4-2, leilão de cerca de …"; o
+  texto inteiro no `title`) e o "Começar o treino" / "Criar sala"; a página termina com o espaço da altura dela e o
+  scroll-padding (pelo `ResizeObserver`; ao sair, só desfaz o que ela pôs). Lado a lado a partir de 600 px de largura.
+- O Saguão continua igual: as peças novas são opções (`deslizante`, `ilustrado`, `seg`, `escolher`) e o CSS delas mora em
+  classes novas (`.lei-seg`, `.lei-formatos.ilu`, `.lei-passo.desl`, `.lei-esc-escolher`, `.lei-criar …`).
+- Testes: no `--tela` (T2) o treino com só os bots (1–7, o deslizante junto), os cartões do formato (o desenho certo, sem o
+  check, o marcado pela borda e pelo fundo e os outros iguais), a formação 3 × 2 com o campinho (as 11 vagas vazias com a
+  sigla, "0/11", o toque troca), o contraste ≥ 4,5:1 de todo texto nos dois temas, o claro, a Criar online sem a conta (os
+  técnicos 2–8, os bots 0 a T − 1 e presos quando os técnicos descem, o 3D só com bots) e, em 40 telas (treino e online, os 8
+  tamanhos e 667 × 375 e 740 × 360, escuro e claro), a barra fixa embaixo com o resumo numa linha, o último campo acima dela no
+  fim da rolagem, as seções sem caixa e a coluna ≤ 600 px; o "atrás da barra" do nada sobre nada vale também para ela. No
+  online, o D1b (a Criar com a conta: o deslizante 2–8 e 0–1, o cartão marcado, a barra e nada sobre nada nas 3 telas, escuro
+  e claro).
+
+**Feito no passo 3 (o Saguão, branch `leilao-visual-b`):**
+- `js/leilao-tela.js` (rota `leilao-saguao`), pelas fotos `c0a68c56`, `ec336399`, `16df9adb` e `5a8e090c`: o título "Prepare seu
+  clube." (30 px) com a frase do convite e "N/M participantes" com o ícone; o **código** numa caixa tracejada (`.lei-cod-caixa`:
+  "Código da sala", o código ou ••••••, o olho e o copiar como ícones de 44 px; o copiar copia só o código, o Copiar convite copia o
+  link; o QR continua com o olho); **Copiar convite** (verde cheio) e **Compartilhar** (tonal, só com `navigator.share`) lado a
+  lado; os **Pedidos de entrada** (só o dono, um cartão; "Quer entrar" em caixa alta, Aceitar e Recusar com 44 px; sem pedido,
+  "Nenhum pedido agora"); os **Participantes** num cartão com "N/M", cada um numa linha-cartão (`.lei-part.sag`): o escudo, o
+  nome (quebra em duas linhas em vez de cortar) com o VOCÊ, o papel em caixa alta com o #número e, à direita, o estado numa
+  pílula em caixa alta (PRONTO verde, AGUARDANDO no tom — o "Falta confirmar" de antes, no `title` —, BOT, AUSENTE, SAIU) e o
+  Tirar do dono num ícone de 44 px; na coluna estreita (o celular em pé; com o Tirar, até 360 px de coluna) a pílula e o Tirar
+  descem para baixo do nome, a lista inteira do mesmo jeito; o **resumo** num cartão de destaque verde do TM (`.lei-sag-res`:
+  "Cada técnico entra com R$ 100.", a frase, as etiquetas — a liga, até N técnicos, os bots ou "Só gente de verdade", até N
+  jogadores, o tempo, o formato, "3D: N min · Dificuldade" com bots e "Sem chat" —, a duração com a sala cheia e "X de N
+  prontos"); **Sala e clube** num cartão só (`.lei-sag-sala`): as opções da sala do dono (a liga no cartão da Criar com o Trocar,
+  o formato na lista das fotos — `seletorFormato(…, { lista })`, o trilho tonal com o escolhido em relevo —, técnicos e bots no
+  passo com o deslizante que grava ao SOLTAR — `passo(…, { soltar })`: a seção é refeita a cada mudança e o arraste perderia o
+  dedo —, o tempo e as Partidas em 3D nos segmentados; "Mudar uma opção da sala zera os Pronto de todos"); quem não é o dono só vê
+  o formato (`{ soVer }`, sem apagar) e "Só o dono muda as opções da sala"; depois de uma linha, o seu clube (o nome, a sigla, o
+  "Escolher escudo" da Criar e o Salvar) e a sua formação no segmentado 3 × 2 com o campinho das vagas; a **barra fixa** com
+  "**N de M prontos.** Falta confirmar: …" e o botão de 56 px (Pronto verde cheio; pronto, "Pronto. Toque para cancelar" tonal
+  com o check; o dono, "Começar o leilão"); a linha do motivo só com o que importa agora (a conexão, um erro, faltar gente).
+  Uma coluna de 560 px; duas (o convite e os participantes | o resumo e Sala e clube) no PC (até 1000 px) e no celular deitado a
+  partir de 800 px. Ficam: a tela do pedido esperando, o modo "depois do Começar" (o convite para quem trocou de aparelho, os
+  pedidos dele com o Passar o clube), as falas da região ao vivo, o foco que volta ao mesmo botão.
+- A moldura: as 4 pílulas do online numa linha até 400 px (em 390 o Campeonato quebrava); deitado de 560 a 799 px, numa linha só
+  delas embaixo da marca e dos ícones (quebravam no meio do topo).
+- Achado de passagem (já existia): a seção do seu clube refeita no meio de um Aceitar (a cor de quem entrou muda as cores
+  usadas) ficava apagada depois dele — a chave dela só olhava as ações "clube" e "forma"; agora qualquer ação a caminho.
+- Testes (`testar-leilao-online.mjs`): D1c (a caixa tracejada, o olho e o copiar de 44 px, o copiar só com o código, os dois
+  botões do convite lado a lado), D3b (o pedido no cartão e, recusado pela tela, "Nenhum pedido agora"), D6b (o Saguão do dono e
+  do convidado: o título, a contagem, o papel e o estado em caixa alta, o VOCÊ, o Tirar só do dono, as etiquetas do resumo,
+  Sala e clube do dono e só para ver, o seu clube aceso, a barra), D6e (o contraste ≥ 4,5:1 de todo texto nos dois temas, no dono e
+  no convidado; os cartões brancos e o resumo verde claro no claro), D5b (o Pronto pela barra), 3D0 (a etiqueta e as opções do 3D
+  com bots) e o T3 com o nada sobre nada do dono e do convidado nos 8 tamanhos, 667 × 375 e 740 × 360, escuro e claro. Mudados
+  de propósito: o T2b (o foco no título do cartão) e o T5 (espera o batimento a caminho antes do "Atualizando…").
+
+**Revisão dos passos 2 e 3 (15/11; três lentes: fidelidade às fotos, nada sobre nada/claro/acessibilidade e regressão):**
+- **Médios:**
+  - Os participantes no celular em pé: a pílula do estado à direita do nome, na mesma linha, como na foto `c0a68c56`. Antes
+    ela descia para baixo do nome abaixo de 340 px de coluna, e cada linha tinha 96–114 px; agora tem 61 px com nome curto
+    e 83 com nome de duas linhas.
+  - O Tirar do dono foi para trás do "Tirar alguém da sala", como o "Editar" de uma lista ("Concluir" volta). Ligado, cada
+    técnico mostra o Tirar de 44 px no lugar da pílula.
+  - O #número aparece só quando dois participantes têm o mesmo nome. A folha Participantes e o Tirar o dizem sempre.
+  - O deslizante ficou dentro da coluna: com 100% de largura mais a margem, o trilho passava 8 px.
+  - No celular deitado de 560 a 799 px, com as 4 pílulas, ficam 11 px entre os ícones e as pílulas. O alvo de 44 px das
+    pílulas subia 3 px por cima do tema e do som, e um toque ali trocava de aba.
+- **Leves:**
+  - O resumo do Saguão mais perto da foto (500 → 419 px em 390):
+    - as etiquetas dos jogadores, do tempo e do formato; os bots e o 3D só com bots;
+    - a liga fica na frase, e os técnicos em "N/M participantes";
+    - etiquetas de 13 px e 30 px de altura;
+    - "min" colado no número.
+  - Os formatos na ordem das fotos (Pontos corridos, Mata-mata, Pontos + mata-mata). O Mata-mata continua o padrão.
+  - A duração do formato numa linha só dela: o "·" ficava pendurado.
+  - O − e o + na ponta ficam apagados por `aria-disabled`, e o foco do teclado fica neles. Antes caía no BODY na Criar e no
+    1º rótulo do cartão no Saguão.
+  - O escudo ao lado do nome e o do "Escolher escudo" não entram mais no nome lido pelo leitor de tela (`aria-hidden`).
+  - O AGUARDANDO é lido como "Falta confirmar o Pronto" (`.lei-sr`, antes um `title`).
+  - Os botões da Criar e do Saguão na Inter: saíam na fonte do navegador.
+  - A barra do Saguão numa linha com "…", com o texto inteiro no `title`. O "Só você na sala" fica em duas linhas.
+  - A barra da Criar no PC (≥ 1024 px) mostra o resumo inteiro em até duas linhas, com 880 px de largura.
+  - O nome do pedido de entrada fica ao lado do escudo (base de 140 px).
+  - As pílulas menores de 381 a 400 px só valem para as 4 do online: o treino volta ao da 1ª parte.
+  - O campinho da formação: o círculo central menor (13%) e as vagas vazias sem transparência. A linha passava por dentro
+    dos meias do meio.
+  - O "Salvar o clube" só fica à vista quando há o que salvar.
+  - O "Escolher escudo" perdeu a seta.
+  - A dica "Jogar em 3D ou Simular" saiu do Formato e foi para as Partidas em 3D.
+  - A Criar termina num cartão verde: "Cada técnico entra com R$ 100." e a nota do dinheiro do jogo.
+- **Testes:**
+  - D6b: a pílula na linha do nome, sem #número, o "Tirar alguém da sala" com o Tirar e o Concluir, as etiquetas novas, a
+    liga na frase, a ordem, o deslizante na coluna e o Salvar escondido.
+  - D6d, novo: o dono muda tempo, formato, técnicos e bots pela tela. Confere que o Pronto do convidado zera, que o foco
+    fica no botão depois do Enter, que o deslizante só grava no change, que as Partidas em 3D e as etiquetas aparecem e
+    que a ponta segura o foco.
+  - T3: a pílula ao lado do nome nos 8 tamanhos e o nada sobre nada também com o Tirar ligado (60 medidas).
+  - T4: o Salvar escondido, à vista e escondido de novo.
+  - T6b: o alvo das pílulas a ≥ 2 px dos ícones em 7 tamanhos, com o deitado estreito.
+  - No `--tela`, o T2: a ordem, a duração numa linha, o foco na ponta, o deslizante na coluna e o resumo inteiro no PC
+    nas 40 telas.
+  - `testar-sobreposicao.mjs` passou a comparar só elementos da mesma camada fixa. A barra fixa da Criar dava 15 falsos
+    positivos; agora dá 0 em `leilao-criar` e em `leilao`.
+- **Ficam** (diferentes das fotos ou de propósito):
+  - O deslizante "Técnicos na sala" do Saguão continua com o mínimo móvel (pessoas + bots). O trilho cheio ou vazio depende
+    de quem está na sala.
+  - As setas do teclado não andam nos segmentados (cada opção é uma parada do Tab).
+  - O T4 do "Vendido" mede o círculo de 28 px do (i), não o alvo de 40 px. A faixa tem `pointer-events: none`.
+  - O título do resumo do Saguão ocupa duas linhas em 390 (a Inter é ~15% mais larga que a condensada da foto).
+  - Com bots, o resumo tem 6 etiquetas em 3 linhas (a foto tem 4 em 2).
+  - O dono vê o Tirar só depois de um toque a mais.

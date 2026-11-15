@@ -180,9 +180,33 @@ function rngT(s) { return TMs.public.rng.make(TMs.public.rng.hashStr(String(s)))
 /* ===================================================== L1 lotes ===================================================== */
 bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
   let casos = 0, falta = 0;
-  const curtos = [];
-  // o exemplo do plano: 4 técnicos = 6 GK, 18 DF, 18 MF e 10 FW
-  ok(jsonIgual(LE.cotas(4), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos: " + JSON.stringify(LE.cotas(4)));
+  const curtos = [], menos = [];
+  // 20 lotes por técnico (dono, 15/11; eram 13): 40 com 2, 80 com 4, 160 com 8. As cotas na proporção das fotos (1,5 GK e
+  // 2,5 FW de cada 13 lotes), feitas aqui sem o leilao.js: GK ⌈3n/26⌉, FW ⌈5n/26⌉, DF e MF dividem o resto (a sobra ímpar no
+  // DF), n = lotes por técnico × T
+  const POR = 20, MAXF = { GK: 1, DF: 5, MF: 5, FW: 4 };
+  const cotaEsp = (T, por) => { const n = por * T, gk = Math.ceil(n * 3 / 26), fw = Math.ceil(n * 5 / 26), r = n - gk - fw; return { GK: gk, DF: Math.ceil(r / 2), MF: Math.floor(r / 2), FW: fw }; };
+  ok(LE.LOTES_POR_TEC === POR && LE.lotesPorTec() === POR && LE.lotesPorTec(3) === POR && LE.lotesPorTec(2) === 13 && LE.lotesPorTec(1) === 13,
+    `20 lotes por técnico nas salas novas e 13 nas de regras 1 e 2: ${LE.LOTES_POR_TEC} · ${[1, 2, 3].map(r => LE.lotesPorTec(r)).join(", ")}`);
+  ok(jsonIgual(LE.cotas(2), { GK: 5, DF: 14, MF: 13, FW: 8 }) && jsonIgual(LE.cotas(4), { GK: 10, DF: 27, MF: 27, FW: 16 }) && jsonIgual(LE.cotas(8), { GK: 19, DF: 55, MF: 55, FW: 31 }),
+    "cotas de 2, 4 e 8 técnicos: " + [2, 4, 8].map(T => JSON.stringify(LE.cotas(T))).join(" · "));
+  // as salas de antes (regras 1 e 2): as cotas de 13 por técnico são as de antes (GK ⌈1,5T⌉, FW ⌈2,5T⌉): 4 técnicos = 6 GK,
+  // 18 DF, 18 MF e 10 FW
+  ok(jsonIgual(LE.cotas(4, 13), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos com 13: " + JSON.stringify(LE.cotas(4, 13)));
+  for (let T = 2; T <= 8; T++) {
+    const q = LE.cotas(T), q13 = LE.cotas(T, 13), gk = Math.ceil(1.5 * T), fw = Math.ceil(2.5 * T), df = Math.ceil((13 * T - gk - fw) / 2);
+    ok(q.GK + q.DF + q.MF + q.FW === POR * T && GR.every(g => q[g] >= T), `T${T}: as cotas somam ${q.GK + q.DF + q.MF + q.FW} (esperado ${POR * T}) ou um grupo com menos de 1 por técnico`);
+    ok(jsonIgual(q13, { GK: gk, DF: df, MF: 13 * T - gk - fw - df, FW: fw }), `T${T}: as cotas de 13 mudaram: ${JSON.stringify(q13)}`);
+  }
+  // a conta de antes (13 por técnico), feita aqui: os melhores de cada grupo pela cota, `fora` os melhores que sobram até
+  // o máximo do grupo numa formação por técnico
+  function lotesAntes(todos, T) {
+    const q = LE.cotas(T, 13), lotes = [], fora = [], usados = new Set();
+    for (const g of GR) todos.filter(p => p.pos === g).sort(cmpNota).slice(0, q[g]).forEach(p => { lotes.push(p.id); usados.add(p.id); });
+    const nf = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    todos.slice().sort(cmpNota).forEach(p => { if (!usados.has(p.id) && nf[p.pos] < MAXF[p.pos] * T) { nf[p.pos]++; fora.push(p.id); } });
+    return { lotes: lotes.sort(), fora };
+  }
   for (const ed of ["public", "pro"]) {
     const W = MUNDO[ed], L = TMs[ed].leilao;
     for (const liga of LIGAS) {
@@ -190,29 +214,40 @@ bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
       // todos os jogadores elegíveis da liga, para conferir "os melhores"
       const todos = [];
       lg.clubIds.forEach(cid => { const c = W.clubsById[cid]; if (c.custom || c.viverde || c.especial) return; c.playerIds.forEach(pid => { const p = W.playersById[pid]; if (p && !p.especial) todos.push(p); }); });
+      const naLiga = {}; GR.forEach(g => { naLiga[g] = todos.filter(p => p.pos === g).length; });
       for (let T = 2; T <= 8; T++) {
         casos++;
         const { lotes, fora } = L.criarLotes(W, liga, T), q = L.cotas(T), id = `${ed}/${liga}/T${T}`;
-        ok(lotes.length === 13 * T, `${id}: ${lotes.length} lotes (esperado ${13 * T})`);
-        // a fórmula do plano (§1.2), feita aqui sem o leilao.js: GK ⌈1,5T⌉, FW ⌈2,5T⌉, DF e MF dividem o resto (a sobra
-        // ímpar no DF)
-        const qGK = Math.ceil(1.5 * T), qFW = Math.ceil(2.5 * T), qDF = Math.ceil((13 * T - qGK - qFW) / 2);
-        const qEsp = { GK: qGK, DF: qDF, MF: 13 * T - qGK - qFW - qDF, FW: qFW };
+        const qEsp = cotaEsp(T, POR);
         ok(jsonIgual(q, qEsp), `${id}: cotas ${JSON.stringify(q)} (esperado ${JSON.stringify(qEsp)})`);
+        // a cota nunca come a reserva de `fora` (o máximo de cada grupo numa formação × T: qualquer time completa os 11 de graça,
+        // compre o que comprar); o que falta num grupo vai para os grupos com folga e, sem folga, a liga fica com menos lotes
+        const livre = {}, teto = {};
+        GR.forEach(g => { livre[g] = Math.max(0, naLiga[g] - MAXF[g] * T); teto[g] = Math.min(q[g], livre[g]); });
+        const faltou = GR.reduce((a, g) => a + q[g] - teto[g], 0), folga = GR.reduce((a, g) => a + livre[g] - teto[g], 0);
+        const esperado = GR.reduce((a, g) => a + teto[g], 0) + Math.min(faltou, folga);
+        ok(lotes.length === esperado && esperado <= POR * T, `${id}: ${lotes.length} lotes (esperado ${esperado})`);
+        if (esperado < POR * T) menos.push(`${id} ${esperado}`);
+        ok(lotes.length >= 13 * T, `${id}: ${lotes.length} lotes, menos que os ${13 * T} de antes`);
         for (const g of GR) {
           const n = lotes.filter(l => l.pos === g).length;
-          if (n !== q[g]) { falta++; ok(false, `${id}: ${n} ${g} (cota ${q[g]})`); }
+          if (n < teto[g] || n > livre[g]) { falta++; ok(false, `${id}: ${n} ${g} (a cota sem a reserva de fora: ${teto[g]}; livres ${livre[g]})`); }
+        }
+        // a sala de antes (regras 2): os mesmos lotes e os mesmos de fora da conta de antes, exatamente 13T
+        const de13 = L.criarLotes(W, liga, T, { regras: 2 }), ref = lotesAntes(todos, T);
+        ok(de13.lotes.length === 13 * T && jsonIgual(de13.lotes.map(l => l.id).sort(), ref.lotes) && jsonIgual(de13.fora.map(l => l.id), ref.fora), `${id}: os lotes da sala de regras 2 não são os de antes`);
+        for (const g of GR) {
           // os melhores do grupo: nenhum de fora dos lotes passa um do lote
           const noLote = new Set(lotes.map(l => l.id));
           const piorLote = lotes.filter(l => l.pos === g).sort(cmpNota).pop();
           const melhorFora = todos.filter(p => p.pos === g && !noLote.has(p.id)).sort(cmpNota)[0];
           if (piorLote && melhorFora) ok(cmpNota(piorLote, melhorFora) < 0, `${id}: ${g} ${melhorFora.id}(${melhorFora.overall}) fora e ${piorLote.id}(${piorLote.overall}) no lote`);
-          // fora: os melhores que sobraram, até o máximo do grupo numa formação por técnico (GK 1, DF 5, MF 5, FW 4);
-          // nunca abaixo do mínimo de uma formação (GK 1, DF 3, MF 2, FW 1) por técnico: todos completam de graça
-          const nf = fora.filter(l => l.pos === g).length, alvo = { GK: 1, DF: 5, MF: 5, FW: 4 }[g] * T, minimo = { GK: 1, DF: 3, MF: 2, FW: 1 }[g] * T;
+          // fora: os melhores que sobraram, até o máximo do grupo numa formação por técnico (GK 1, DF 5, MF 5, FW 4) — com a
+          // reserva, sempre ele inteiro: todos completam de graça, comprem o que comprarem
+          const nf = fora.filter(l => l.pos === g).length, alvo = MAXF[g] * T;
           const sobra = todos.filter(p => p.pos === g && !noLote.has(p.id)).length;
           ok(nf === Math.min(alvo, sobra), `${id}: fora com ${nf} ${g} (alvo ${alvo}, sobram ${sobra})`);
-          ok(nf >= minimo, `${id}: fora com ${nf} ${g}, abaixo do mínimo ${minimo}`);
+          ok(nf === alvo, `${id}: fora com ${nf} ${g}, abaixo do máximo de uma formação × T (${alvo})`);
           if (nf < alvo) curtos.push(`${id} ${g} ${nf}/${alvo}`);
         }
         const ids = lotes.concat(fora).map(l => l.id);
@@ -250,7 +285,7 @@ bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
     }
     ok(TMe.data.world() === carreira, `${ed}: o mundoBase mexeu no cache da carreira`);
   }
-  nota(`${casos} casos (30 ligas × 2 edições × T 2–8)${falta ? ", " + falta + " cotas faltando" : ""}; fora abaixo do alvo em ${curtos.length} (${curtos.join(", ")})`);
+  nota(`${casos} casos (30 ligas × 2 edições × T 2–8, ${POR} por técnico)${falta ? ", " + falta + " cotas faltando" : ""}; menos lotes (a reserva de fora) em ${menos.length} (${menos.join(", ")}); fora abaixo do alvo em ${curtos.length}${curtos.length ? " (" + curtos.join(", ") + ")" : ""}`);
 });
 
 /* ===================================================== L2 ordem ===================================================== */
@@ -460,7 +495,10 @@ bloco("L5", "fechar: vendido, sem lance, todos passaram, pulado, idempotente", (
   // ninguém pode: o lote é pulado (nem vai para a repescagem)
   let vp = JSON.parse(JSON.stringify(v0));
   for (let t = 0; t < 4; t++) vp = comCompras(ctx, vp, t, [gksDeFora[t]], 2);
-  const gkRestante = ctx.lotes.map((l, i) => l.pos === "GK" && !gksDeFora.slice(0, 4).includes(i) ? i : -1).filter(i => i >= 0)[0];
+  // um goleiro que sobrou com um lote livre antes dele e um que não é goleiro depois (com 20 por técnico há 10 goleiros: o
+  // primeiro que sobrou pode vir colado a outro)
+  const gkRestante = ctx.lotes.map((l, i) => l.pos === "GK" && !gksDeFora.slice(0, 4).includes(i) ? i : -1).filter(i => i >= 0)
+    .find(i => { const k = ctx.fila.indexOf(i); return k > 0 && k + 1 < ctx.fila.length && vp.d[ctx.fila[k - 1]] === "-" && ctx.lotes[ctx.fila[k + 1]].pos !== "GK"; });
   const kg = ctx.fila.indexOf(gkRestante);
   vp.k = kg - 1; vp.i = ctx.fila[kg - 1];
   if (vp.d[vp.i] !== "-") { ok(false, "montagem do pulado"); return; }
@@ -755,7 +793,7 @@ async function testeSessao() {
       await V.anda(() => !!A.vivoN);
       let w = A.ver();
       ok(w.lote && w.lote.pausa && w.botoes["+1"].motivo === "pausa" && !w.botoes.passar.pode, "na pausa entre lotes, os botões desligados: " + JSON.stringify(w.botoes && w.botoes["+1"]));
-      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 39 && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 39 com o retrato, 10 s e os 5 próximos");
+      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 3 * Lx.LOTES_POR_TEC && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 60 (3 técnicos × 20) com o retrato, 10 s e os 5 próximos: " + (w.lote && w.lote.total));
       await ate(V, w.lote.liberado + 10, A);
       w = A.ver();
       ok(w.botoes["+1"].pode && w.botoes["+1"].alvo === 1 && w.botoes["+5"].alvo === 5 && w.botoes["+10"].alvo === 10 && w.botoes.tudo.alvo === 90 && w.botoes.outro.min === 1 && w.botoes.outro.max === 90 && w.botoes.passar.pode, "os alvos sobre o valor visto (0) e o Tudo R$ 90: " + JSON.stringify(w.botoes));
@@ -870,6 +908,24 @@ async function testeSessao() {
       const seqB = B.vivoN.seq; await V.anda(null, 40);
       ok(B.alterada && alt.length === 1 && B.vivoN.seq === seqB && !B.ver().botoes["+1"].pode, "o vivo adulterado congela: " + B.alterada);
       B.parar();
+      // o treino de antes (regras 2, gravado no aparelho pela versão de 13 lotes por técnico): reabre com os 13T lotes dele,
+      // as Minhas salas contam "de 39" e ele anda até o fim com os 11 de cada um
+      {
+        const R0 = await V.espera(SS.criarTreino(Object.assign({ liga: "es", bots: 2, semente: "S-r2", codigo: "SXRGR2" }, base)));
+        await V.anda(() => !!R0.vivoN); R0.parar(); await V.anda(null, 30);
+        const g2 = JSON.parse(arm.g["leilao:sala:SXRGR2"]), lt13 = Lx.criarLotes(mundo, "es", 3, { regras: 2 });
+        const ctx13 = Lx.contexto({ T: 3, lotes: lt13.lotes, fora: lt13.fora, semente: g2.sala.meta.semente, tempo: g2.sala.cfg.tempo });
+        g2.sala.meta.regras = 2; g2.lotes = { l: lt13.lotes, f: lt13.fora }; g2.vivo = Lx.inicial(ctx13, g2.vivo.abre); delete g2.vendas;
+        arm.g["leilao:sala:SXRGR2"] = JSON.stringify(g2);
+        const x2 = SS.salas({ armazem: arm }).find(x => x.codigo === "SXRGR2");
+        const R2 = await V.espera(SS.abrir("SXRGR2", base));
+        ok(R2.ctx && R2.ctx.L === 39 && !R2.soOlhar && x2 && x2.lotes === 39 && x2.regrasOk, "o treino de regras 2 reabre com os 39 lotes dele: " + JSON.stringify({ L: R2.ctx && R2.ctx.L, so: R2.soOlhar, lotes: x2 && x2.lotes }));
+        await V.anda(() => R2.vivoN && R2.vivoN.fase === "fim");
+        const onze = [0, 1, 2].every(t => Lx.timeDe(R2.vivoN, R2.ctx, t).length === 11);
+        ok(R2.vivoN && R2.vivoN.fase === "fim" && onze && !R2.alterada, "o treino de regras 2 anda até o fim com os 11 de cada um: " + JSON.stringify({ fase: R2.vivoN && R2.vivoN.fase, onze, alt: R2.alterada }));
+        R2.parar(); await V.anda(null, 30);
+        R2.rede.apagar && R2.rede.apagar();
+      }
       // Minhas salas: até 3 treinos guardados (o 4º tira o mais antigo)
       for (const c of ["SXBBBB", "SXCCCC", "SXDDDD"]) { const X = await V.espera(SS.criarTreino(Object.assign({ liga: "de", bots: 1, semente: c, codigo: c }, base))); await V.anda(null, 5); X.parar(); V.hora += 1000; }
       await V.anda(null, 30);
@@ -1805,7 +1861,7 @@ async function testeOnline() {
     await anda(() => SA.vivoN && SB.vivoN && SA.ctx && SB.ctx, 30_000);
     s = sala(cod);
     ok([c1, c2].filter(x => x.ok).length === 1 && s.meta.estado === "leilao" && s.ordem.join() === "a,b,bot1" && s.cfg.T === 3, "dois Começar ao mesmo tempo = 1: " + JSON.stringify([c1, c2]));
-    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 39 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 39 && SB.ctx.L === 39, "os lotes para 3 técnicos");
+    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 60 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 60 && SB.ctx.L === 60, "os lotes para 3 técnicos (20 por técnico): " + SA.ctx.L);
     ok(SA.vivoN.seq === 1 && iniciais.length === 1 && JSON.stringify(SA.vivo) === JSON.stringify(SB.vivo), "um vivo inicial só, o mesmo nos dois aparelhos");
     paraIni();
     ok((await rejeita(SS.entrar(cod, aparelho("f").opc()))) === null && sala(cod).pedidos.f && sala(cod).pedidos.f.depois, "depois do Começar, o pedido fica (para passar o clube)");
@@ -1837,6 +1893,16 @@ async function testeOnline() {
     SU.parar(); await passa(200);
     const SU2 = await U.abrir(SX.codigo);
     ok(SU2.eu === 1 && !SU2.soOlhar && SU2.ver().versaoDiferente, "outra versão do TM: quem é da sala volta (com o aviso)");
+    // a sala de antes (regras 2: o aparelho da versão de 13 lotes por técnico, nela, conta 13): o Começar deste aparelho grava
+    // 13T lotes, e os dois montam o leilão com eles
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, 2);
+    await passa(300);
+    await espera(SU2.pronto(true)); await passa(300);
+    const rR2 = await espera(SX.comecar());
+    await anda(() => SX.ctx && SU2.ctx && SX.vivoN && SU2.vivoN, 30_000);
+    const lR2 = banco.ler(`leiloes/${SX.codigo}/lotes`);
+    ok(rR2.ok && lR2 && lR2.l.length === 26 && SX.ctx && SX.ctx.L === 26 && SU2.ctx && SU2.ctx.L === 26 && !SX.alterada && !SU2.alterada,
+      "a sala de regras 2 começa com 13 lotes por técnico (26 com 2): " + JSON.stringify({ r: rR2, n: lR2 && lR2.l.length, a: SX.ctx && SX.ctx.L, b: SU2.ctx && SU2.ctx.L }));
     [SP, SW, SX, SU2].forEach(x => x.parar());
     nota_("O2", "pro sem chave recusa, pro com chave e pública trocam sozinhos, regras de outra versão, versão do TM só avisa");
   }
@@ -2838,8 +2904,8 @@ async function testeCampSessao() {
     /* ---- K0 a duração estimada e o formato ---- */
     {
       const d = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata" }), d8 = LC.duracaoEstimada({ T: 8, tempo: 10000, formato: "pontos", tresD: true, duracao3d: 4 });
-      ok(d.leilao.n === 52 && d.leilao.lo === 8 && d.leilao.hi === 15 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
-      ok(d8.leilao.n === 104 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
+      ok(d.leilao.n === 80 && d.leilao.lo === 10 && d.leilao.hi === 23 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
+      ok(d8.leilao.n === 160 && d8.leilao.lo === 20 && d8.leilao.hi === 45 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
       for (let T = 2; T <= 8; T++) for (const f of LC.FORMATOS) {
         const e = LC.duracaoEstimada({ T, tempo: 15000, formato: f });
         ok(e.camp.rodadas === LC.rodadasDe(f, T) && e.camp.lo >= 1 && e.camp.hi > e.camp.lo && e.leilao.hi > e.leilao.lo, `K0 ${f} T${T}: ${JSON.stringify(e)}`);
@@ -2949,12 +3015,20 @@ async function testeCampSessao() {
 
     /* ---- K3 a escalação mudada vale a partir do próximo jogo que não começou ---- */
     {
-      const V = relogioVirtual(), arm = armazemFalso(), cod = "K3ESCA";
-      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
-      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "br", bots: 3, semente: "K3", codigo: cod, formato: "pontos", tempo: 10 }, base)));
-      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
-      const time = Lx.timeDe(A.vivoN, A.ctx, 0), cabem = Lx.formacoesQueCabem(Lx.contaMascaras(time));
-      ok(cabem.length >= 2, "K3: o time da pessoa cabe em menos de 2 formações: " + cabem);
+      // a 1ª liga em que o time de graça da pessoa (ela não dá lance) cabe em 2+ formações: o completar dá os melhores de fora
+      // e um time de 11 costuma caber numa só (com 20 por técnico, o da br só cabe no 3-4-3)
+      let V = null, A = null, cabem = [];
+      const cod = "K3ESCA";
+      for (const liga of ["br", "en", "es", "de", "fr", "pt", "it", "nl", "ar", "us"]) {
+        V = relogioVirtual();
+        const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: armazemFalso(), semAtual: true, mundo };
+        A = await V.espera(SS.criarTreino(Object.assign({ liga, bots: 3, semente: "K3", codigo: cod, formato: "pontos", tempo: 10 }, base)));
+        await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+        cabem = Lx.formacoesQueCabem(Lx.contaMascaras(Lx.timeDe(A.vivoN, A.ctx, 0)));
+        if (cabem.length >= 2) break;
+        A.parar();
+      }
+      ok(cabem.length >= 2, "K3: o time da pessoa cabe em menos de 2 formações em todas as ligas tentadas: " + cabem);
       // F1 no saguão da escalação, F2 com o 1º jogo aberto, F3 (= F1, outra que a F2) depois de ele começar
       const [F1, F2] = cabem, F3 = F1;
       await V.espera(A.mudarFormacao(F1));
@@ -3271,7 +3345,7 @@ async function testeCamp3d() {
     {
       const { V, A } = await treino("TD10RG");
       const Lx = TMx.leilao;
-      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras e o Jogar na sala nova");
+      ok(Lx.REGRAS === 4 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(5) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 4 (o par; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
       A.sala.meta.regras = 1; A._jogosVer++;
       const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
       ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
@@ -3452,7 +3526,7 @@ async function testeCamp3d() {
     A.retomar();
     const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
     ok(A.sala.meta.regras === 4 && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
-    // (as salas de regras 3 — a outra frente, os lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
+    // (as salas de regras 3 — os 20 lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
     const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
     ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));
     A.parar();
@@ -4229,9 +4303,9 @@ async function testeTela() {
     });
     const larg = document.documentElement.clientWidth;
     const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
-    // no fim da rolagem, o último da página termina acima da barra fixa
+    // no fim da rolagem, o último da página termina acima da barra fixa (a de lance ou a da Criar sala)
     let atras = null;
-    const barra = document.querySelector(".lei-lance:not([hidden])");
+    const barra = document.querySelector(".lei-lance:not([hidden]), .lei-criarbar");
     if (barra) {
       const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
       const topo = barra.getBoundingClientRect().top;
@@ -4346,7 +4420,8 @@ async function testeTela() {
   async function treinoAte(p, T, formato, antes, fatorCamp = 20) {
     await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
     await espera(400);
-    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]');
+    // (no treino, só os bots: T técnicos = você + T − 1 bots)
+    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um bot"]'), mais = document.querySelector('[aria-label="Mais um bot"]');
       for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
     await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
     if (antes) await antes(p);
@@ -4475,8 +4550,8 @@ async function testeTela() {
     }, 1);
     const V0 = await ver(p);
     const ruinsCriar = nadaSobre.filter(x => /^criar3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
-    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D: 3 min por tempo, Difícil' e a sala guarda os dois",
-      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D: 3 min por tempo, Difícil/.test(criar.resumo)
+    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D de 3 min por tempo no Difícil' e a sala guarda os dois",
+      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D de 3 min por tempo no Difícil$/.test(criar.resumo)
       && tc.T === 6 && tc.formato === "pontos" && V0.duracao3d === 3 && V0.dificuldade3d === "dificil", { criar, tc, d3: [V0.duracao3d, V0.dificuldade3d] });
     confere(`T14 nada sobre nada na Criar sala com as Partidas em 3D (${nadaSobre.filter(x => /^criar3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruinsCriar.length, ruinsCriar.slice(0, 4));
 
@@ -4677,32 +4752,181 @@ async function testeTela() {
     await clica(p, "^Treinar contra bots$");
     await espera(400);
     confere("T2 'Treinar contra bots' abre a Criar sala", await p.evaluate(() => TM.ui.current()) === "leilao-criar");
-    await nadaSobreNada(p, "criar");
-    // os técnicos 2–8 (contando os bots)
-    const passo = await p.evaluate(async () => {
-      const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]'), n = () => +document.querySelector(".lei-passo-n").textContent;
-      for (let i = 0; i < 10; i++) menos.click();
-      const min = n(), menosOff = menos.disabled;
-      for (let i = 0; i < 10; i++) mais.click();
-      const max = n(), maisOff = mais.disabled, hint = document.querySelector(".lei-criar-lt .setting-hint").textContent;
-      for (let i = 0; i < 4; i++) menos.click();
-      return { min, menosOff, max, maisOff, hint, agora: n(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    // a Criar sala pelas fotos (15/11): em cada tamanho, a barra fixa embaixo (o resumo numa linha e o botão de ≥ 44 px), no fim
+    // da rolagem o último campo acima dela, as seções soltas (sem caixa) com o título de 19–20 px e a coluna com ≤ 600 px
+    const medeCriar = p => p.evaluate(async () => {
+      const bar = document.querySelector(".lei-criarbar"), rb = () => bar.getBoundingClientRect(), res = document.querySelector(".lei-criar-resumo"), bt = document.querySelector(".lei-criarbar .lei-comecar");
+      const fixa = getComputedStyle(bar).position === "fixed", embaixo = Math.abs(rb().bottom - innerHeight) <= 1 && rb().top < innerHeight - 40;
+      // (numa linha com "…" até 1023 px; no PC em até duas, e inteiro: com uma linha de 324 px só cabia a liga e os técnicos)
+      const pc = innerWidth >= 1024 && innerHeight > 520;
+      const linha = res.getBoundingClientRect().height <= parseFloat(getComputedStyle(res).lineHeight) * (pc ? 2.3 : 1.3) && (!pc || res.scrollHeight <= res.clientHeight + 1);
+      const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
+      await new Promise(r => requestAnimationFrame(() => r()));
+      const ultimo = Math.max(...[...document.querySelectorAll(".lei-criar-corpo > .lei-cs:not([hidden]), .lei-criar-res")].map(e => Math.round(e.getBoundingClientRect().bottom)));
+      const topoBarra = Math.round(rb().top);
+      scrollTo(0, y0);
+      const secs = [...document.querySelectorAll(".lei-criar .lei-cs")].filter(s => !s.hidden);
+      const caixa = secs.filter(s => { const c = getComputedStyle(s); return parseFloat(c.borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor); }).length;
+      const tit = secs.map(s => parseFloat(getComputedStyle(s.querySelector(".lei-cs-tit")).fontSize));
+      // (o deslizante dentro da coluna: a ponta do trilho alinhada com a dos outros controles; com a margem e 100% passava 8 px)
+      const desl = [...document.querySelectorAll(".lei-criar .lei-passo-desl")].filter(d => d.offsetParent !== null)
+        .map(d => Math.round((d.getBoundingClientRect().right - d.closest(".lei-passo").getBoundingClientRect().right) * 10) / 10);
+      return { fixa, embaixo, linha, btH: Math.round(bt.getBoundingClientRect().height), ultimo, topoBarra, larg: Math.round(document.querySelector(".lei-criar-corpo").getBoundingClientRect().width),
+        secs: secs.length, caixa, tit: [Math.min(...tit), Math.max(...tit)], desl, deslFora: desl.filter(x => x > 0.5).length };
     });
-    confere("T2 técnicos de 2 a 8 (os botões param nas pontas), 'Você e 7 bots', a duração estimada; volta a 4 (3 bots)",
-      passo.min === 2 && passo.menosOff && passo.max === 8 && passo.maisOff && /Você e 7 bots/.test(passo.hint) && passo.agora === 4 && /cerca de \d+ a \d+ min/.test(passo.resumo), passo);
-    // o Formato: 3 cartões, o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y min"; o toque troca e o resumo diz
+    const nadaSobreCriar = async (rotulo) => {
+      await nadaSobreNadaTemas(p, rotulo, medeCriar);
+      await nadaSobreNada(p, rotulo + "-deitado", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("light"));
+      await nadaSobreNada(p, rotulo + "-deitado-claro", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("dark"));
+    };
+    await nadaSobreCriar("criar");
+    // os bots do treino (1 a 7; você e eles = 2 a 8 técnicos; sem o "Técnicos na sala"): o − e o + param nas pontas, o
+    // deslizante vai junto e também muda o número
+    const passo = await p.evaluate(async () => {
+      const g = r => document.querySelector('[aria-label="' + r + '"]'), menos = g("Menos um bot"), mais = g("Mais um bot"), n = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const desl = g("Bots de treino").querySelector(".lei-passo-desl"), dv = () => [+desl.min, +desl.max, +desl.value].join(), dica = () => document.querySelector('[data-secao="bots"] .lei-cs-hint').textContent;
+      // (na ponta, o − e o + apagados por aria-disabled: o foco do teclado fica neles; o Enter ali não muda nada)
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      const tec = !!g("Técnicos na sala");
+      for (let i = 0; i < 10; i++) menos.click();
+      const min = n(), menosOff = off(menos), dMin = dv();
+      for (let i = 0; i < 10; i++) mais.click();
+      const max = n(), maisOff = off(mais), dMax = dv(), hint = dica();
+      mais.focus(); mais.click(); const focoPonta = document.activeElement === mais && n() === max;
+      desl.value = "2"; desl.dispatchEvent(new Event("input", { bubbles: true }));
+      const peloDesl = n(), hint2 = dica(), valorTxt = desl.getAttribute("aria-valuetext");
+      for (let i = 0; i < 1; i++) mais.click();
+      return { tec, min, menosOff, dMin, max, maisOff, dMax, hint, focoPonta, peloDesl, hint2, valorTxt, agora: n(), dAgora: dv(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    confere("T2 no treino só os bots (sem 'Técnicos na sala'): de 1 a 7 (o − e o + param nas pontas, apagados sem perder o foco do teclado, o deslizante de 1 a 7 vai junto), 'Você e 7 bots', o deslizante também muda ('2 bots', 'Você e 2 bots'); volta a 3 (4 técnicos) e o resumo com a duração",
+      !passo.tec && passo.min === 1 && passo.menosOff && passo.dMin === "1,7,1" && passo.max === 7 && passo.maisOff && passo.focoPonta && passo.dMax === "1,7,7" && /Você e 7 bots/.test(passo.hint)
+      && passo.peloDesl === 2 && /Você e 2 bots/.test(passo.hint2) && passo.valorTxt === "2 bots" && passo.agora === 3 && passo.dAgora === "1,7,3" && /^Liga .+\. 4 técnicos, /.test(passo.resumo) && /leilão de cerca de \d+ a \d+ min/.test(passo.resumo), passo);
+    // o Formato: 3 cartões com o desenho (a chave, a tabela, as duas), o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y
+    // min"; o marcado pela borda e pelo fundo (sem o check); o toque troca e o resumo diz
     const fmt = await p.evaluate(async () => {
       const cards = () => [...document.querySelectorAll(".lei-criar .lei-fmt")];
-      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent });
-      const a = ler();
-      const out = { a, passos: [] };
+      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), ordem: cards().map(b => b.dataset.fmt).join(),
+        linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent,
+        // (a duração numa linha só dela, inteira: nenhum "·" pendurado no começo ou no fim de uma linha)
+        pendura: cards().filter(b => { const du = b.querySelector(".lei-fmt-s .lei-fmt-dur"); return !du || !/^~\d+ a \d+ min$/.test(du.textContent) || getComputedStyle(du).display !== "block" || getComputedStyle(du).whiteSpace !== "nowrap" || du.getBoundingClientRect().height > 24; }).length,
+        cards: cards().map(b => { const c = getComputedStyle(b), sv = b.querySelector("svg.lei-fmt-svg");
+          return { f: b.dataset.fmt, on: b.getAttribute("aria-pressed") === "true", borda: c.borderTopColor, fundo: c.backgroundColor, anel: c.boxShadow !== "none", des: sv && sv.getAttribute("data-desenho"),
+            formas: sv ? sv.querySelectorAll("rect, path, circle").length : 0, largDes: sv ? Math.round(sv.getBBox().width) : 0, cor: sv && getComputedStyle(sv).color, check: !!b.querySelector(".lei-fmt-ok, .lei-fmt-ic, svg.tm-ic") }; }) });
+      const out = { a: ler(), passos: [] };
       for (const f of ["pontos", "misto", "mata"]) { document.querySelector('.lei-criar .lei-fmt[data-fmt="' + f + '"]').click(); await new Promise(r => setTimeout(r, 60)); out.passos.push(ler()); }
       return out;
     });
     const linhaOk = (l, n) => new RegExp("^" + n + " rodadas com 4 técnicos · ~\\d+ a \\d+ min$").test(l);
-    confere("T2 o Formato na Criar: Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato, as Partidas em 3D (PR 4: 4 min, Normal) e a duração do campeonato",
-      fmt.a.on.join() === "mata" && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4) && /Mata-mata · 3D: 4 min por tempo, Normal · leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min/.test(fmt.a.resumo)
-      && fmt.passos[0].on.join() === "pontos" && /Pontos corridos/.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /Pontos \+ mata-mata/.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
+    const DES = { mata: "chave", pontos: "tabela", misto: "tabela-chave" };
+    // um marcado só, com a borda, o fundo e o desenho de cor própria; os outros iguais entre si; nenhum check
+    const marcaOk = x => { const on = x.cards.filter(c => c.on), off = x.cards.filter(c => !c.on);
+      return x.cards.length === 3 && on.length === 1 && x.cards.every(c => c.des === DES[c.f] && c.formas >= 2 && c.largDes >= 60 && !c.check) && on[0].anel
+        && off.every(c => c.borda === off[0].borda && c.fundo === off[0].fundo && c.cor === off[0].cor && c.borda !== on[0].borda && c.fundo !== on[0].fundo && c.cor !== on[0].cor); };
+    confere("T2 o Formato na Criar: 3 cartões com o desenho (a chave, a tabela, as duas) e sem o check, o marcado pela borda e pelo fundo (os outros iguais); na ordem das fotos — Pontos corridos, Mata-mata (padrão) e Pontos + mata-mata — com 'N rodadas com 4 técnicos · ~X a Y min' (6, 2 e 4; a duração numa linha só dela); o toque troca e o resumo diz o formato, a duração e as Partidas em 3D (4 min, Normal)",
+      fmt.a.on.join() === "mata" && fmt.a.ordem === "pontos,mata,misto" && !fmt.a.pendura && marcaOk(fmt.a) && fmt.passos.every(marcaOk) && linhaOk(fmt.a.linhas[0], 6) && linhaOk(fmt.a.linhas[1], 2) && linhaOk(fmt.a.linhas[2], 4)
+      && /, mata-mata, 4-4-2, leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min, 3D de 4 min por tempo no Normal$/.test(fmt.a.resumo)
+      && fmt.passos[0].on.join() === "pontos" && /, pontos corridos, /.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /, pontos \+ mata-mata, /.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
+    // a formação no segmentado 3 × 2 e o campinho das vagas embaixo
+    const formaCr = await p.evaluate(async () => {
+      const seg = document.querySelector(".lei-criar .lei-forma-seg"), bts = [...seg.querySelectorAll(".lei-forma-bt")], rs = bts.map(b => b.getBoundingClientRect());
+      const tops = [...new Set(rs.map(r => Math.round(r.top)))], lefts = [...new Set(rs.map(r => Math.round(r.left)))];
+      const campo = () => document.querySelector(".lei-criar .lei-cs-campo .lei-cv");
+      const conta = () => { const o = {}; campo().querySelectorAll(".lei-cv-vaga").forEach(v => { const s = v.querySelector(".lei-cv-sig"), k = s ? s.textContent : "?"; o[k] = (o[k] || 0) + 1; }); return o; };
+      const ler = () => ({ ativo: seg.querySelector(".active .lei-forma-f").textContent, pressed: bts.filter(b => b.getAttribute("aria-pressed") === "true").length, vagas: campo().querySelectorAll(".lei-cv-vaga").length,
+        vazias: campo().querySelectorAll(".lei-cv-bola.vazia").length, conta: conta(), n: campo().querySelector(".lei-cv-n").textContent, f: campo().querySelector(".lei-cv-forma").textContent,
+        embaixo: campo().getBoundingClientRect().top >= seg.getBoundingClientRect().bottom, rot: campo().getAttribute("aria-label") });
+      const a = ler();
+      bts.find(b => b.textContent.startsWith("4-3-3")).click(); await new Promise(r => setTimeout(r, 60));
+      const b = ler();
+      bts.find(b => b.textContent.startsWith("4-4-2")).click(); await new Promise(r => setTimeout(r, 60));
+      return { n: bts.length, linhas: tops.length, cols: lefts.length, porLinha: tops.map(t => rs.filter(r => Math.round(r.top) === t).length).join(), subs: bts.map(b => (b.querySelector(".lei-forma-n") || {}).textContent || ""), a, b, fim: ler().ativo };
+    });
+    confere("T2 'Sua formação' no segmentado 3 × 2 ('5-4-1 Retranca', '4-2-4 Tudo ou nada') com o campinho das vagas embaixo: 11 vagas vazias com a sigla (4-4-2: GOL 1, DEF 4, MEI 4, ATA 2), '0/11' e a formação; o toque troca (4-3-3: MEI 3, ATA 3)",
+      formaCr.n === 6 && formaCr.linhas === 2 && formaCr.cols === 3 && formaCr.porLinha === "3,3" && formaCr.subs[4] === "Retranca" && formaCr.subs[5] === "Tudo ou nada"
+      && formaCr.a.ativo === "4-4-2" && formaCr.a.pressed === 1 && formaCr.a.vagas === 11 && formaCr.a.vazias === 11 && formaCr.a.conta.GOL === 1 && formaCr.a.conta.DEF === 4 && formaCr.a.conta.MEI === 4 && formaCr.a.conta.ATA === 2
+      && formaCr.a.n === "0/11" && formaCr.a.f === "4-4-2" && formaCr.a.embaixo && /4-4-2/.test(formaCr.a.rot)
+      && formaCr.b.ativo === "4-3-3" && formaCr.b.pressed === 1 && formaCr.b.conta.MEI === 3 && formaCr.b.conta.ATA === 3 && formaCr.b.f === "4-3-3" && formaCr.b.n === "0/11" && formaCr.fim === "4-4-2", formaCr);
+    // o contraste dos textos da Criar (≥ 4,5:1) nos dois temas, cada um sobre o fundo de verdade (as camadas até a 1ª opaca)
+    const contrasteCriar = () => p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+      const fundo = e => { const pilha = []; for (let a = e; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) pilha.push(c); if (c[3] >= 1) break; }
+        let f = pilha.length && pilha[pilha.length - 1][3] >= 1 ? pilha.pop() : rgba(getComputedStyle(document.body).backgroundColor);
+        while (pilha.length) f = sobre(pilha.pop(), f); return f; };
+      const op = e => { let o = 1; for (let a = e; a; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+      const texto = (e, f) => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e); return cr(sobre(c, f), f); };
+      const out = {};
+      const min = (k, sel) => { const xs = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null && e.textContent.trim()); if (xs.length) out[k] = Math.min(...xs.map(x => texto(x, fundo(x)))); };
+      min("titulo", ".lei-criar .lei-cs-tit"); min("dica", ".lei-criar .lei-cs-hint"); min("ligaN", ".lei-criar .lei-liga-n"); min("ligaS", ".lei-criar .lei-liga-s"); min("trocar", ".lei-criar .lei-liga-trocar");
+      min("fmtNome", ".lei-criar .lei-fmt-n"); min("fmtFrase", ".lei-criar .lei-fmt-f"); min("fmtLinha", ".lei-criar .lei-fmt-s"); min("passoN", ".lei-criar .lei-passo-n");
+      min("segOn", ".lei-criar .lei-seg .seg-btn.active .lei-seg-t"); min("segOff", ".lei-criar .lei-seg .seg-btn:not(.active) .lei-seg-t"); min("segSub", ".lei-criar .lei-seg-s"); min("rot3d", ".lei-criar .lei-3d-rot");
+      min("escolher", ".lei-criar .lei-esc-escolher-t"); min("nota", ".lei-criar .lei-criar-nota"); min("resTit", ".lei-criar .lei-criar-res-tit"); min("resumo", ".lei-criar-resumo"); min("resumoLiga", ".lei-criar-resumo b");
+      // o botão principal: o texto sobre as duas pontas do degradê
+      const bt = document.querySelector(".lei-criarbar .lei-comecar"), st = (getComputedStyle(bt).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba), tb = bt.querySelector("span:last-child");
+      if (st.length) out.comecar = Math.min(...st.map(c => texto(tb, sobre(c, fundo(bt.parentElement)))));
+      return out;
+    });
+    const ccEscuro = await contrasteCriar();
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await espera(250);
+    const ccClaro = await contrasteCriar();
+    const claroCriar = await p.evaluate(() => {
+      const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      const verde = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return m[1] > m[0] + 40 && m[1] > m[2] + 20; };
+      const cs = s => getComputedStyle(document.querySelector(s));
+      return { tit: lum(cs(".lei-criar .lei-cs-tit").color), fmtOff: lum(cs(".lei-criar .lei-fmt:not(.on)").backgroundColor), fmtOn: lum(cs(".lei-criar .lei-fmt.on").backgroundColor), bordaOn: verde(cs(".lei-criar .lei-fmt.on").borderTopColor),
+        segOn: lum(cs(".lei-criar .lei-seg .seg-btn.active").backgroundColor), barra: lum(cs(".lei-criarbar").backgroundColor), resumo: lum(cs(".lei-criar-resumo b").color),
+        grama: (cs(".lei-criar .lei-cv").backgroundImage.match(/rgba?\([^)]+\)/g) || []).every(verde) };
+    });
+    await print(p, "2-criar-claro");
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+    confere("T2 contraste ≥ 4,5:1 na Criar sala nos dois temas: títulos, dicas, a liga e o Trocar, os cartões do formato (o marcado e os outros), o número do passo, os segmentados (a escolhida e as outras), o Escolher escudo, a nota, o resumo e o botão da barra",
+      [ccEscuro, ccClaro].every(o => Object.keys(o).length >= 18 && Object.values(o).every(x => x >= 4.5)), { escuro: ccEscuro, claro: ccClaro });
+    confere("T2 tema claro da Criar sala: o texto escuro, o cartão do formato branco e o marcado num verde claro com a borda verde, a escolhida do segmentado branca, a barra clara e o campinho verde",
+      claroCriar.tit < 0.3 && claroCriar.fmtOff > 0.95 && claroCriar.fmtOn > 0.85 && claroCriar.fmtOn < claroCriar.fmtOff && claroCriar.bordaOn && claroCriar.segOn > 0.95 && claroCriar.barra > 0.9 && claroCriar.resumo < 0.3 && claroCriar.grama, claroCriar);
+    // a Criar da sala online (sem a conta online: a tela abre com o aviso): os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o
+    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D só com bots
+    await p.evaluate(() => TM.ui.go("leilao-criar", { online: true }));
+    await espera(400);
+    const onl = await p.evaluate(async () => {
+      const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]');
+      const nT = () => +g("Técnicos na sala").querySelector(".lei-passo-n").textContent, nB = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
+      const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
+      const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      for (let i = 0; i < 10; i++) g("Menos um bot").click();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d();
+      for (let i = 0; i < 10; i++) g("Menos um técnico").click();
+      const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
+      for (let i = 0; i < 10; i++) g("Mais um técnico").click();
+      const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
+      for (let i = 0; i < 10; i++) g("Mais um bot").click();
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), dB7 = dv(dB);
+      anda(dT, 3);
+      const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
+      // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
+      anda(dT, 4); anda(dB, 0);
+      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(),
+        resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
+    });
+    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D só com bots e 'Criar sala' na barra",
+      onl.aviso && onl.b0 === 0 && onl.menosBOff && onl.sem3d && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
+      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && onl.sem3dFim
+      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
+    await nadaSobreCriar("criar-online");
+    const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
+    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
+      criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora),
+      criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora)).slice(0, 4));
+    // de volta à Criar do treino (o padrão: 4 técnicos, o Mata-mata)
+    await p.evaluate(() => TM.ui.go("leilao-criar"));
+    await espera(400);
     // a liga pela folha; a formação 4-3-3; o clube
     await p.click(".lei-liga-bt");
     await espera(300);
@@ -4721,8 +4945,8 @@ async function testeTela() {
     await clica(p, "Começar o treino");
     const abriu = await ate(p, () => TM.ui.current() === "leilao-lote" && !!document.querySelector(".lei-relogio"));
     let V = await ver(p);
-    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 52 lotes, a liga e o clube escolhidos",
-      abriu && V && V.T === 4 && V.lote && V.lote.total === 52 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
+    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 80 lotes (20 por técnico), a liga e o clube escolhidos",
+      abriu && V && V.T === 4 && V.lote && V.lote.total === 80 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
       && V.tecnicos.filter(t => t.bot).every(t => /^Bot /.test(t.nome)), V && { T: V.T, liga: V.liga, clube: V.tecnicos[V.eu] && V.tecnicos[V.eu].clube });
     await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
 
@@ -4881,7 +5105,7 @@ async function testeTela() {
       fotos.length === 8 && fotos.every(x => x.cartas === 0 && !x.noCartao.length && /^Nota \d+$/.test(x.nota || "")), fotos.map(x => ({ t: x.t, c: x.cartas, falta: x.noCartao, nota: x.nota })));
     confere("T4 o topo só de ícones (6, sem texto à vista, com aria-label e title, ≥ 44 × 44) e as abas em pílula sem ícone (só o check da feita), nos 8 tamanhos",
       fotos.every(x => x.sb.n === 6 && !x.sb.comTexto && !x.sb.semRotulo && x.sb.min >= 44 && !x.abasIc), fotos.map(x => ({ t: x.t, sb: x.sb, abasIc: x.abasIc })));
-    confere("T4 as pílulas mais leves que o chip 'Jogador N de 52' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
+    confere("T4 as pílulas mais leves que o chip 'Jogador N de 80' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
       fotos.every(x => x.abaH < x.chipH && x.abaH >= 24 && x.abaAlvo), fotos.map(x => ({ t: x.t, aba: x.abaH, chip: x.chipH, alvo: x.abaAlvo })));
     confere("T4 o campinho do seu clube sempre à vista: as 11 vagas da formação, as compras nelas e 'n/11' (8 tamanhos)",
       fotos.every(x => x.vagas === 11 && x.cheias === x.meus && x.meus > 0 && x.conta === x.meus + "/11" && x.campinho > 200), fotos.map(x => ({ t: x.t, v: x.vagas, cheias: x.cheias, meus: x.meus, conta: x.conta, w: x.campinho })));
@@ -4906,7 +5130,8 @@ async function testeTela() {
     await espera(150);
     const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"), S = TM.leilaoSessao.atual(), V = S.ver(), u = V.ultimo;
       const toca = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0; };
-      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-bt, .lei-lote-card .lei-nome")];
+      // (do (i), o círculo à vista: o botão tem 6 px de alvo transparente em volta, e a faixa não pega toque)
+      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-ic, .lei-lote-card .lei-nome")];
       return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled),
         quem: e && (e.querySelector(".lei-vendido-quem") || {}).textContent, vendidoEra: u && S.ctx.lotes[u.i] && S.ctx.lotes[u.i].name, novo: V.lote && V.lote.retrato.name,
         cobre: e ? chips.filter(c => toca(e, c)).map(c => c.textContent.slice(0, 16)) : [], msg: document.querySelector(".lei-lance-msg").textContent,
@@ -5096,7 +5321,7 @@ async function testeTela() {
     const depoisR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo, n: document.querySelector(".lei-lote-n").textContent }; });
     confere("T6 recarregar no meio: 'Minhas salas' lista o treino; 'Continuar' volta ao mesmo lote com o tempo que faltava (±1,5 s)",
       !minhas.atual && minhas.salas.includes(antesR.codigo) && depoisR.codigo === antesR.codigo && depoisR.seq === antesR.seq && depoisR.i === antesR.i && depoisR.saldo === antesR.saldo
-      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 52", { minhas, antesR, depoisR });
+      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 80", { minhas, antesR, depoisR });
 
     /* T7 o resto do leilão (o relógio acelerado; quem decide é a pessoa de teste pela tela) */
     await p.evaluate(() => TM.leilaoSessao.acelerar(10));
@@ -5141,7 +5366,7 @@ async function testeTela() {
     confere("T7 o leilão vai até o fim pela tela; sempre que o +1 apaga, a linha de cima diz o motivo (com o de goleiro/posição/máximo/completo entre eles)",
       V.estado !== "leilao" && n7 >= 3 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
     const an = await p.evaluate(() => TM.leilaoTela.anuncios());
-    confere("T7 a região ao vivo falou o lote ('Jogador N de 52: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 52: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
+    confere("T7 a região ao vivo falou o lote ('Jogador N de 80: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 80: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
     // o que ficou de fato na #lei-vivo: o "Vendido para X por R$ Y" fica escrito (antes, o lote novo o trocava no mesmo quadro) e
     // nenhuma fala sai antes de 1 s
     const vivo = await p.evaluate(() => { const v = window.__vivo || [], falas = [];
