@@ -38,7 +38,7 @@
              na aba Campeonato e no fim
      oito    (O1–O8) 8 páginas, 160 lotes: o mesmo vivo, compras e caixas em todas e no servidor; os BYTES baixados do
              banco por página; depois o MATA-MATA com 8 (a escalação pela tela em duas, pela API nas outras; os jogos de
-             amigo contra amigo simulados ao abrir a rodada), a mesma chave e o mesmo campeão nas 8 e no servidor, o Ver o
+             amigo contra amigo simulados pelo prazo do par), a mesma chave e o mesmo campeão nas 8 e no servidor, o Ver o
              jogo no 2D, nada sobre nada no fim e os bytes do campeonato somados aos do leilão
      G0 a guarda pega (um pedido e um WebSocket de prova a *.firebaseio.com são barrados e contados) · G1 nenhuma página
      falou com o Firebase de verdade · G2 nenhum erro no console nem na página · G3 as regras opcionais não recusariam
@@ -1509,19 +1509,20 @@ async function casoOito() {
   confere(`${ID}3 os bytes baixados do banco por página no leilão de 8 com 160 lotes: ${kb.map(x => x.toFixed(0)).join(" · ")} KB (o maior ${(max / 1024).toFixed(2)} MB; ${(tot / 1024).toFixed(1)} MB no total; teto 3 MB por página)`,
     acabou && max > 50 && max < 3 * 1024, { kb });
 
-  /* ---------- o campeonato MATA-MATA com 8 (todos pessoas: os jogos de amigo contra amigo simulados ao abrir a rodada) ---------- */
+  /* ---------- o campeonato MATA-MATA com 8 (todos pessoas; regras 4, PR 5: ninguém toca em Jogar, então cada jogo de amigo contra
+     amigo é simulado pelo prazo de 2 min do par, e não mais ao abrir a rodada) ---------- */
   /* O4 todos prontos: o campeonato começa e as duas da tela vão sozinhas ao Campeonato */
   const campO = await ateNode(() => { const x = sala(cod); return !!(x && (x.meta.estado === "camp" || x.meta.estado === "fim")); }, real(70000) + 20000, 200);
   const foramO = await ateNode(async () => (await rota(aps[0])) === "leilao-camp" && (await rota(aps[1])) === "leilao-camp", 20000);
   confere(`${ID}4 a escalação: as duas primeiras confirmam pela tela (as outras 6 pela API) e o campeonato começa com todos prontos; as duas vão sozinhas ao Campeonato`,
     escTela.length === 2 && escTela.every(Boolean) && campO && foramO, { escTela, campO, foramO });
-  /* O5 até o campeão: a mesma chave e o mesmo campeão nas 8 e no servidor; cada jogo uma vez, ao abrir a rodada */
+  /* O5 até o campeão: a mesma chave e o mesmo campeão nas 8 e no servidor; cada jogo uma vez, pelo prazo do par */
   const fimO = await ateNode(() => { const x = sala(cod); return !!(x && x.meta.estado === "fim"); }, real(600000), 300);
   const b2 = aps.map(ap => banco.bytes(ap.p).desce);
   const ciO = await campIgual(aps, cod), hO = confereHist(cod);
   const nomes = await aps[0].p.evaluate(() => TM.leilaoSessao.atual().ver().camp.rodadas.map(R => R.nome + ":" + R.jogos.length).join(", "));
-  confere(`${ID}5 o mata-mata com 8 até o campeão (${nomes}): todos os jogos de amigo contra amigo simulados ao abrir a rodada, cada um reservado e gravado uma vez no servidor; a mesma chave e o mesmo campeão nas 8 páginas, com os nós dos jogos iguais aos do servidor`,
-    fimO && ciO.ok && ciO.info.n === 7 && hO.n === 7 && !hO.ruins.length && hO.conta.abertura === 7 && nomes === "Quartas de final:4, Semifinal:2, Final:1", { ci: ciO.info, hist: hO, nomes });
+  confere(`${ID}5 o mata-mata com 8 até o campeão (${nomes}): todos os jogos de amigo contra amigo simulados pelo prazo do par (ninguém tocou em Jogar), cada um gravado uma vez no servidor; a mesma chave e o mesmo campeão nas 8 páginas, com os nós dos jogos iguais aos do servidor`,
+    fimO && ciO.ok && ciO.info.n === 7 && hO.n === 7 && !hO.ruins.length && hO.conta.prazo === 7 && !hO.conta.abertura && nomes === "Quartas de final:4, Semifinal:2, Final:1", { ci: ciO.info, hist: hO, nomes });
   /* O6 o Ver o jogo pela tela: a Final nas duas e as semifinais na 1ª */
   for (const ap of aps.slice(0, 2)) await vigiaCamp(ap);
   const visO = novoVis(), calO = (await calendario(aps[0])).cal;
