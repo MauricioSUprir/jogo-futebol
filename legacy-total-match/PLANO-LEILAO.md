@@ -1088,3 +1088,63 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     todos, as adulterações acusadas). Dez mutações reprovam: sem o corte do gol de ouro, sem o confronto direto, sem o
     recursivo, gravar duas vezes, o motor sem o `semLesao`, o motor mudado sem a opção, pessoa × bot sem o prazo, a camisa
     fora da vaga, sem o mando alternado e as folgas sem espalhar.
+- **A sessão** (o passo 2: `js/leilao-sessao.js`, as funções puras novas do `js/leilao-camp.js`, o bloco K e o KO do
+  `testar-leilao.mjs`, o `.validate` opcional):
+  - **O formato na sala** é `cfg.formato` = `'mata'` (o padrão), `'pontos'` ou `'misto'` (os nomes do núcleo;
+    `formatoDe` aceita "mataMata" e "pontosCorridos"). Vem da Criar (treino e online) e do `configurar` no saguão, que zera
+    os Pronto como as outras opções. `duracaoEstimada({ T, tempo, formato, tresD?, duracao3d? })` dá o leilão (a régua do
+    PR 1), o campeonato por rodada (simulado: 30 s a 2 min; 3D: 2 × duração + 4 a 2 × duração × 1,3 + 5 min; 8 técnicos
+    em pontos corridos com 3D: 2,8 a 3,6 h) e o total; `jogosDe(formato, T)` conta os jogos.
+  - **O campeonato nasce na transação do `camp`** (só do estado `escalacao`: dois aparelhos ao mesmo tempo = uma vez),
+    que grava `meta.camp` = a hora do servidor. O calendário e a chave NÃO são gravados: são função pura do formato, do T
+    e da semente (o §3.2); a transação congela o que eles leem. A sala passa a `fim` (`meta.fimCamp`) por outra transação,
+    quando a vista diz que todos os jogos estão feitos.
+  - **Quem age** nos jogos da rodada da vez: os mesmos candidatos do motor do leilão (`_programa`), escalonados (1,5 s × k)
+    e com a testemunha da hora em toda decisão por prazo. Cada aparelho começa por um jogo diferente (o seu lugar entre os
+    presentes): menos transações disputadas no mesmo nó. Bot × bot e pessoa × pessoa: reservados e simulados na abertura.
+    Pessoa × bot: `abrir` com a pessoa presente; a pausa marcada para 12 s depois do último batimento dela (a testemunha
+    confirma que ela sumiu; o prazo guarda o que restava desde esse batimento); `retomar` quando ela volta; vencido, o
+    `reservar` pelo prazo. **No treino a pessoa está sempre presente**: o relógio do treino é que para fora das telas da
+    sala e com a página escondida. Quem reserva grava na hora; o resultado é calculado DENTRO da transação a partir do nó
+    que o servidor tem (a trava e as escalações gravadas; com memória), e só grava sobre o reservado com a mesma trava.
+    No treino, uma ação do campeonato que não fez nada espera 50 ms (sem isso, um "cedo" de arredondamento do relógio
+    acelerado voltaria na hora); as do leilão continuam iguais à máquina pura.
+  - **"Quem some" segue o §1.4 e o §8 ("Recusado")**: os jogos dele ESPERAM (o prazo parado) até ele voltar ou o dono
+    tocar em "Simular os pendentes"; os outros jogos da rodada andam. **Quem sai da sala** ("Sair da sala", `tec.saiu`)
+    conta como bot nos jogos (`tipos`): contra um bot, simulado na abertura; contra uma pessoa, o prazo é o dela.
+  - **As ações da pessoa**: `simular(id?)` (o "Simular partida": reserva com a trava do servidor, motivo `'pedido'`, simula,
+    grava e SÓ ENTÃO responde com o nó feito; se outro aparelho chegou antes, responde com o resultado dele),
+    `simularPendentes()` (só o dono; motivo `'dono'`; o 3D em andamento fica), `partida(id)` (os dois times pelas
+    escalações GRAVADAS no jogo, para o "Ver o jogo" no 2D) e `ver().camp` (rodadas, tabela, chave, artilharia, o fim com
+    o campeão, a classificação, o melhor time e as somas; o "seu jogo" com o prazo, `podeSimular` e o motivo; folga,
+    eliminado, pendentes e `podePendentes`). Eventos `'jogo'` (gravado) e `'rodada'` (abriu; a 1ª ao chegar ao camp).
+  - **A escalação** mudada (formação ou troca à mão) vale no próximo jogo que não começou: a reserva grava a do momento
+    (K3: a F2 trocada com o jogo aberto vai nele; a F3, depois de ele começar, vai no próximo).
+  - **A conferência dos jogos** (decisão: o §3.3, "todo resultado simulado é recalculado"): cada nó novo ou mudado é
+    conferido UMA vez por aparelho (o `conferirJogo`: os times da vez, as escalações só com jogadores do técnico nos
+    grupos dele e o simulado RECALCULADO com a semente — de todo jogo simulado, não só bot × bot); a vista nunca
+    recalcula (lê o `res` gravado). Mais a máquina só para a frente: o feito não muda; o reservado só vira o feito dele
+    (a mesma trava, os mesmos times, escalações e modo; voltar ao aberto daria uma trava nova, o "jogar de novo"); um jogo
+    que some, o nó inteiro apagado e um id fora do calendário. Qualquer um congela a sala (`alterada = 'jogos'`,
+    `alteradaJogo = { id, motivo }`). O nó com o mesmo texto da última vez não passa de novo pelo texto canônico.
+  - **A limpeza** conta os passos dos jogos (e `meta.camp`/`fimCamp`) como atividade: a sala no campeonato com um jogo
+    gravado há 2 h e a meta de 25 h atrás fica (antes sumia); a do fim some 24 h depois (KO "limpeza").
+  - **Recarregar**: o treino volta pelo armazém com o relógio de onde parou (nunca antes da hora dos jogos); parado no
+    meio do prazo do jogo da pessoa, o campeonato inteiro sai igual ao de quem não recarregou (K2: os 22 jogos do misto
+    com 6, jogo a jogo). O online volta pela sala (KO "dois": quem fecha e abre de novo vê tudo gravado).
+  - **As telas** só ganharam o estado `fim` (as abas, a rota da sala, a caixa da Escalação) e as Minhas salas dizem
+    "Campeonato" e "Encerrada"; a aba Campeonato (que ainda diz "em breve") é o próximo passo. O O3 do Node aceita a sala
+    já no `fim` (só de pessoas, o campeonato anda sozinho em segundos).
+  - **O `.validate` opcional** ganhou `jogos/$j` (o feito não muda; o reservado só do nada ou do aberto; o feito só do
+    reservado com a mesma trava; o reservado pelo prazo só com `now ≥ ini + resta`; `resta` até 2 min e sem crescer; `ini`,
+    `trava`, `inicio`, `ts` = `now`) e `meta.camp`/`fimCamp` = `now`. O avaliador das regras (a semântica do `.validate`)
+    virou parte do KO (`avaliadorRegras`, lendo o próprio JSON): 2 945 gravações do campeonato online, nenhuma recusada;
+    11 adulterações recusadas. O LEIA-ME diz o que ainda passa (o resultado inventado, apagar um jogo: os aparelhos
+    congelam a sala).
+  - **Os bytes**: no campeonato de 8 em pontos corridos (56 jogos), ~500 KB baixados por aparelho no banco falso (os jogos,
+    os batimentos e as presenças).
+  - **testar-leilao K** (~5 s): K0 a duração e o formato; K1 15 treinos (1 pessoa e 1–7 bots, os 3 formatos) até o campeão,
+    219 jogos (37 pelo Simular, 32 pelo prazo); K2; K3; K4 cinco adulterações. **KO** (~10 s): dois, limpeza, quatro (±5 s,
+    o pulo de +60 s, quem some e volta, quem some de vez e o dono) e oito (quem sai). O arquivo inteiro: 17 blocos em ~67 s.
+    Sete mutações da sessão reprovam: sem os jogos na limpeza, sem a testemunha no prazo do jogo, sem pausar, sem a volta do
+    reservado, a escalação de quando a rodada abriu, retomar sem a pessoa e sem a conferência do resultado.
