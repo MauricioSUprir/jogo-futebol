@@ -38,7 +38,9 @@
      trocar(a, b) · prontoEscalacao(sim) · sair() · parar() · aoMudar(fn) · on(evento, fn) · escalacao(t) · hora()
      Eventos: 'lote' {i, fase, k}, 'lance' {t, valor}, 'superado' {t, valor}, 'vendido' {i, t, preco}, 'semLance' {i},
      'formacao' {de, para}, 'fim', 'estado' {estado}, 'alterada' {motivo}
-   Ganchos de teste: acelerar(fator) e pular(ms) (o relógio do treino), pausar()/retomar(). */
+   Ganchos de teste: acelerar(fator) e pular(ms) (o relógio do treino), pausar()/retomar().
+   O relógio do treino também para com segurar(motivo, sim): a página escondida ("pagina") e a pessoa fora das telas da
+   sala ("tela", pela leilao-tela.js); anda de novo quando ninguém segura. */
 (function (global) {
   "use strict";
   var TM = (global.TM = global.TM || {});
@@ -225,6 +227,15 @@
     C.r0 = C.base(); C.pausado = false; this._programa(); this._notificar();
   };
   P.pausado = function () { return !!(this._relogio && this._relogio.pausado); };
+  // quem segura o relógio do treino: a página escondida ("pagina") e as telas fora da sala ("tela": a pessoa foi ao menu
+  // no meio do treino). Anda só quando ninguém segura; pausar()/retomar() continuam os ganchos diretos dos testes.
+  P.segurar = function (motivo, sim) {
+    var S = this;
+    if (!S._relogio) return;
+    S._seguros = S._seguros || {};
+    if (sim) S._seguros[motivo] = 1; else delete S._seguros[motivo];
+    if (Object.keys(S._seguros).length) S.pausar(); else S.retomar();
+  };
   // a hora do treino vai para a gravação (a volta depois de recarregar começa dela)
   P.guardarHora = function (ja) {
     if (!this._relogio || this.parado) return;
@@ -642,12 +653,12 @@
   P._ligaVisibilidade = function () {
     var S = this, doc = global.document;
     if (!S._relogio || !doc || !doc.addEventListener || !global.addEventListener) return;
-    function vis() { if (doc.hidden) S.pausar(); else S.retomar(); }
+    function vis() { S.segurar("pagina", !!doc.hidden); }
     function sai() { S.guardarHora(true); }
     doc.addEventListener("visibilitychange", vis);
     global.addEventListener("pagehide", sai);
     S._tiraVisibilidade = function () { doc.removeEventListener("visibilitychange", vis); global.removeEventListener("pagehide", sai); };
-    if (doc.hidden) S.pausar();
+    if (doc.hidden) S.segurar("pagina", true);
   };
 
   /* ================= criar e abrir ================= */
@@ -762,6 +773,8 @@
   TM.leilaoSessao = {
     PROTO: PROTO, ESCAL_MS: ESCAL_MS, MAX_TREINOS: MAX_TREINOS, NOMES_BOT: NOMES_BOT, CLUBES_BOT: CLUBES_BOT,
     criarTreino: criarTreino, abrir: abrir, salas: salas, textoMotivo: textoMotivo, limpaClube: limpaClube,
+    /** O clube com que a pessoa começa (o do Ultimate, se houver; senão "Meu Clube"): a Criar sala mostra e deixa mudar. */
+    clubeInicial: function () { return clubeDoUltimate() || limpaClube(CLUBE_PADRAO); },
     atual: function () { return _atual; },
     /** Gancho de teste: o relógio dos treinos (o atual e os próximos) anda `fator` vezes mais rápido. */
     acelerar: function (fator) { FATOR = fator > 0 ? fator : 1; if (_atual) _atual.acelerar(FATOR); }
