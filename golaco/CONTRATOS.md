@@ -3111,6 +3111,18 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   `timesDoPedido` e o hash iguais com e sem fotos); o golaco lê pelo lado + `tmId` (`js/tm-fotos.js`, contrato "Comemoração do
   gol"). No online, a foto do time montado num aparelho pro aparece se o pedido do anfitrião for pro (como os rostos reais).
 
+- **As notas escondidas do Modo Leilão (PR 6 do leilão do TM, 15/11)**: campo OPCIONAL `partida.notasOcultas` (true) no pedido — o
+  `tm3d.js partidaDe` só o põe com `simOpts.notasOcultas` (o jogo contra um bot de uma sala com o "Overall escondido"; no par do
+  Online 3D, o `partida` do `confronto`). A página lê com `ajustes-partida.js notasOcultasDoPedido(pedido)` (puro, fora do fecho:
+  só `=== true`; no online, o pedido do anfitrião) — `?notasOcultas=1|0` por cima, nos testes — e `__golaco.notasOcultas`. SÓ A
+  TELA muda: a tela antes do jogo (`prepartida.js dadosDaPartida(m, {notasOcultas})`: as fichas com `nota: null` e a raridade
+  neutra `'n'` — grafite, `css/prepartida.css .r-n` —, o time com `geral`/`estrelas` null: o canto sem o GERAL, a ficha com "?" no
+  lugar da nota, a lista do leitor de tela sem nota nem geral) e o Editar time (`criarEditorTime({notasOcultas})`: as cartas com
+  "?", sem a nota do time, as estrelas e as linhas ATA/MEI/DEF, sem o "muito fora", o painel e a comparação sem nota e sem os
+  números da carta). A pausa não mostra nota. O `elenco.js notaExibida` NÃO muda (é do fecho do hash). Sem o campo, nada muda; o
+  `tm-times.js` não o lê (os times e o hash iguais com e sem ele). Testes: `teste-ponte-tm` P15, `teste-prepartida-tela` E27,
+  `teste-editor-tela` 17, `teste-pausa-tela` P14 (`--so notas`) e o `testar-3d.mjs` seção 8 do TM (o GOLAÇO de verdade).
+
 - **A tela no lugar da janela "Jogar em 3D / Simular" (item 124, 05/11; PR #620)**. Pedido do dono (com o print da tela antes
   do jogo): "essa tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular; quando clica em jogar, já entra essa tela,
   e é em todos os modos". As escolhas E1–E5 abaixo são as recomendadas (FILA "Depende do dono" 24: o dono pode trocar). Só a
