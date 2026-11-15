@@ -53,6 +53,16 @@ export const ENSAIO_3D = `<!doctype html><meta charset="utf-8"><title>ensaio</ti
 })();
 </script>`;
 
+// o script de cada página do TM (addInitScript(ligaEnsaio3d, PASTA_ENSAIO_3D); o quadro do 3D fica de fora): o quadro do 3D vira a
+// página de ensaio (também depois de recarregar) e, sem WebGL 2 no Chromium do teste, a sonda do tm3d.js recebe um contexto de
+// mentira (o TM daria o 3D por ausente; o teste não desenha nada em 3D) — só quando o real falta
+export function ligaEnsaio3d(PASTA) {
+  if (window !== window.top) return;
+  const gc = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (t) { const c = gc.apply(this, arguments); return c || (t === "webgl2" ? {} : c); };
+  const iv = setInterval(() => { if (window.TM && TM.tm3d) { TM.tm3d.PASTA = PASTA; clearInterval(iv); } }, 10);
+}
+
 // a rota no contexto do Playwright (todas as páginas e quadros dele)
 export function servirEnsaio3d(cx) {
   return cx.route(ROTA_ENSAIO_3D, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ENSAIO_3D }));

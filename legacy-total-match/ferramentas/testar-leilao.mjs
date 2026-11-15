@@ -53,7 +53,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import crypto from "node:crypto";
 import { execSync } from "node:child_process";
 import { avaliadorRegras } from "./lib/regras-leilao.mjs";
-import { PASTA_ENSAIO_3D, servirEnsaio3d } from "./lib/ensaio-3d.mjs";
+import { PASTA_ENSAIO_3D, servirEnsaio3d, ligaEnsaio3d } from "./lib/ensaio-3d.mjs";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -4075,16 +4075,9 @@ async function testeTela() {
   async function t14() {
     const { cx, p } = await aparelho(390, 844, true);
     await servirEnsaio3d(cx);
-    // o quadro do 3D vira a página de ensaio (também depois de recarregar); sem WebGL 2 no Chromium do teste, o TM o daria por
-    // ausente: o teste não desenha nada em 3D, então a sonda do tm3d.js recebe um contexto de mentira só quando o real falta
-    const ligaEnsaio = PASTA => {
-      if (window !== window.top) return;
-      const gc = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (t) { const c = gc.apply(this, arguments); return c || (t === "webgl2" ? {} : c); };
-      const iv = setInterval(() => { if (window.TM && TM.tm3d) { TM.tm3d.PASTA = PASTA; clearInterval(iv); } }, 10);
-    };
-    await cx.addInitScript(ligaEnsaio, PASTA_ENSAIO_3D);
-    await p.evaluate(ligaEnsaio, PASTA_ENSAIO_3D);
+    // o quadro do 3D vira a página de ensaio, também depois de recarregar (e a sonda do WebGL 2: ligaEnsaio3d)
+    await cx.addInitScript(ligaEnsaio3d, PASTA_ENSAIO_3D);
+    await p.evaluate(ligaEnsaio3d, PASTA_ENSAIO_3D);
     // o que a página vê: cada gravar3d (a hora em que respondeu e o que ficou gravado), a 1ª vez que o placar do 2D aparece (a
     // rota, o placar, o botão de pausa), o quadro do 3D e os sorteios do 2D (o resimRest da pausa: têm de ser 0)
     const vigia3d = () => p.evaluate(() => {
@@ -4347,8 +4340,8 @@ async function testeTela() {
       return out;
     });
     const linhaOk = (l, n) => new RegExp("^" + n + " rodadas com 4 técnicos · ~\\d+ a \\d+ min$").test(l);
-    confere("T2 o Formato na Criar: Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato e a duração do campeonato",
-      fmt.a.on.join() === "mata" && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4) && /Mata-mata · leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min/.test(fmt.a.resumo)
+    confere("T2 o Formato na Criar: Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato, as Partidas em 3D (PR 4: 4 min, Normal) e a duração do campeonato",
+      fmt.a.on.join() === "mata" && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4) && /Mata-mata · 3D: 4 min por tempo, Normal · leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min/.test(fmt.a.resumo)
       && fmt.passos[0].on.join() === "pontos" && /Pontos corridos/.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /Pontos \+ mata-mata/.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
     // a liga pela folha; a formação 4-3-3; o clube
     await p.click(".lei-liga-bt");
