@@ -90,6 +90,10 @@
 //   O5  B na tela enquanto A espera (padrão 10 s; --espera 100 = os 100 s da especificação): nenhum W.O. oferecido
 //   O6  sem Personalizar no online (nem o Y, nem o toque no campinho); "Sair da partida" só no 2º toque → o outro recebe o abandono
 //   O7  20% dos pacotes do jogo descartados de propósito: a saída conjunta em ≤ 1 s
+//   O8  (o par do Modo Leilão: &simular=1, o pedido com online.simular) as abas [pronto, simular, visao]; o Simular só no 2º toque;
+//       A escolhe Simular e B sai também SÓ pelo bit E_SIMULAR do pacote (a mensagem de controle {tipo:'simular'} descartada de
+//       propósito), com o aviso "{A} escolheu simular a partida."; nenhum passo nos dois, o Pronto depois não começa nada; sem
+//       &simular=1 a aba não existe (o E1)
 //   node tools/teste-prepartida-tela.mjs [--raiz <pasta golaco>] [--so pc,cel,telas,modos,pad,tm,ajustes,online,fotos,cedo,carga] [--casos a,c,…] [--espera <s>]
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -1085,9 +1089,17 @@ if (faz('online')) {
     }
     return false;
   }
-  /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável). */
-  async function abrirPar(extra, perda = 0) {
+  /** Um par de abas na mesma sala; perda = a fração dos pacotes do JOGO descartados ao sair (o canal de controle é confiável);
+   *  semCtrlSimular = descarta a mensagem de controle {tipo:'simular'} (o O8: o outro sai só pelo bit do pacote). */
+  async function abrirPar(extra, perda = 0, semCtrlSimular = false) {
     const ctx = await abrir({ largura: 960, altura: 540, dpr: 1 });
+    if (semCtrlSimular) await ctx.contexto.addInitScript(() => {
+      const orig = BroadcastChannel.prototype.postMessage;
+      BroadcastChannel.prototype.postMessage = function (m) {
+        if (m && m.t === 'c' && m.m && m.m.tipo === 'simular') { window.__ctrlSimularDescartado = (window.__ctrlSimularDescartado || 0) + 1; return undefined; }
+        return orig.call(this, m);
+      };
+    });
     if (perda) await ctx.contexto.addInitScript(f => {
       let k = 0x2545f491, perdidos = 0, total = 0;
       const orig = BroadcastChannel.prototype.postMessage;
@@ -1291,6 +1303,41 @@ if (faz('online')) {
           '≤ 1000 ms; ~20%; sim', sai.ms != null && sai.ms <= 1000 && andou && perda.every(x => x && x.perdidos > 0));
       } else meta('O7 a saída conjunta com 20% de perda', 'sem a tela', 'a tela nos dois lados', false);
       meta('S7 0 erros no console (online, par 3)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
+    } finally { await ctx.navegador.close(); }
+  }
+
+  // ---- par 4: O8 o "Simular partida" do par do Modo Leilão (&simular=1), com a mensagem de controle descartada (só o bit)
+  {
+    const { ctx, A, B, erros } = await abrirPar('&prejogo=0&simular=1', 0, true);
+    try {
+      const sim = p => p.evaluate(() => { const o = window.__golaco.online; return o ? { simular: o.simular, remoto: o.simularRemoto, com: o.comSimular, n: o.n, fase: o.fase } : null; });
+      let a = await on(A), b = await on(B);
+      if (a?.aberta && b?.aberta) {
+        const abas = [a.pp.abas.join(), b.pp.abas.join()];
+        // (os toques pelo DOM, como o do Simular do TM: com duas abas sem GPU a ~1 quadro por segundo, o clique do Playwright
+        // esperava quadros estáveis; o armado é esperado pelo estado da tela, não por um tempo fixo)
+        const toca = () => A.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="simular"]').click());
+        await toca();
+        await A.waitForFunction(() => window.__golaco.prepartida.estado.armado === 'simular', null, { timeout: 10000 }).catch(() => {});
+        const um = await sim(A), umB = await sim(B), arm = (await on(A)).pp.armado;
+        await toca();
+        const t0 = Date.now();
+        const saiu = await B.waitForFunction(() => window.__golaco.online.simular === 'outro', null, { timeout: 10000 }).then(() => Date.now() - t0, () => null);
+        await espera(1500);
+        // (depois de simular, o Pronto não começa nada: os dois na tela, nenhum passo)
+        await B.evaluate(() => document.querySelector('#prepartida [data-pp="aba"][data-aba="pronto"]').click()).catch(() => {});
+        await espera(2000);
+        const fa = await sim(A), fb = await sim(B), aa = await on(A), bb = await on(B);
+        const descartado = await A.evaluate(() => window.__ctrlSimularDescartado || 0);
+        const avisoB = await B.evaluate(() => [...document.querySelectorAll('#prepartida [aria-live], #prepartida .pp-aviso, #prepartida [role="status"]')].map(e => e.textContent).join(' | '));
+        meta('O8 o par do Leilão (&simular=1): [pronto, simular, visao]; o Simular só no 2º toque; A escolhe e B sai SÓ pelo bit do pacote (o controle descartado), com o aviso; nenhum passo e o Pronto depois não começa nada',
+          `abas ${abas.join(' e ')}; 1º toque: A ${um.simular ?? 'nada'} (armado ${arm}), B ${umB.simular ?? 'nada'}; 2º: B saiu em ${saiu} ms (o controle descartado ${descartado}×); aviso de B "${avisoB.slice(0, 80)}"; depois: A ${fa.simular}/${fa.n} passos/fase ${fa.fase}, B ${fb.simular}/${fb.n} passos/fase ${fb.fase}, telas ${aa.aberta}/${bb.aberta}`,
+          'pronto,simular,visao nos dois; nada e armado; B sai; 0 passos; as telas abertas',
+          abas.every(x => x === 'pronto,simular,visao') && !um.simular && arm === 'simular' && !umB.simular && saiu != null && descartado >= 1
+          && fa.simular === 'eu' && fb.simular === 'outro' && fb.remoto === true && fa.n === 0 && fb.n === 0 && fa.fase === 0 && fb.fase === 0
+          && aa.aberta && bb.aberta && /escolheu simular a partida/.test(avisoB));
+      } else meta('O8 o Simular partida do par do Leilão', 'sem a tela', 'a tela nos dois lados', false);
+      meta('S8 0 erros no console (online, par 4)', erros.length ? erros.slice(0, 3).join(' | ') : '0', '0', erros.length === 0);
     } finally { await ctx.navegador.close(); }
   }
 }

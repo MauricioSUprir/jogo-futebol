@@ -3509,7 +3509,9 @@ function abasDoModo(modo) {
     case 'rae': return [J, V, S];
     case 'livre': return [{ ...J, texto: 'Jogar' }, { id: 'jogadores', texto: 'Jogadores', icone: 'jogadores', espera3d: true }, { id: 'camera', texto: 'Câmera', icone: 'camera', espera3d: true }];
     case 'penaltis': return [{ ...J, texto: 'Bater pênaltis' }, { id: 'adversario', texto: 'Cobradores do adversário', icone: 'lista' }];
-    case 'online': return [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, V];
+    // (o par do Modo Leilão: o "Simular partida" ao lado do "Pronto" — qualquer um escolhe e os dois saem; o Online 3D da sala, sem)
+    case 'online': return simularOnline() ? [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, S, V]
+      : [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, V];
     default: return [J, V, P];
   }
 }
@@ -3820,7 +3822,7 @@ function acaoPrepartida(id) {
     // "Simular o resto" da pausa, com a partida já começada, continua pelo motor 3D. A tela fica (o mundo parado no tick 0) até o
     // TM fechar o quadro: fechada aqui, o jogo andava e aparecia nesse meio-tempo. Vão junto os titulares que a tela mostra (os do
     // Personalizar; revisão A2): o TM simula com eles
-    case 'simular': simularNoTM(); break;
+    case 'simular': if (mundo.online) simularOnlineTela(true); else simularNoTM(); break;
     case 'canto':
       // (antes do 3D a carga para: o TM fecha o quadro — item 106)
       pararCarga();
@@ -3855,11 +3857,26 @@ function abrirMenuDaTela(abrir) {
  * (o [<] armado) = o Sair da pausa de hoje: conta como derrota, o outro recebe o W.O.
  */
 // (ppOnline mora no topo do arquivo, com as outras da tela)
-const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0);
+const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0) | (ppOnline.simular ? MOD_PAG_ON.E_SIMULAR : 0);
+/** O online com o "Simular partida" na tela antes do jogo: o pedido do par do Modo Leilão (online.simular); nos testes, &simular=1. */
+function simularOnline() { return ONLINE_TM ? !!PEDIDO_TM.online.simular : ONLINE_BC && PARAMS0.get('simular') === '1'; }
+/**
+ * O "Simular partida" do online (o par do Leilão): meu = eu escolhi (o 2º toque da aba); senão o outro escolheu (o bit E_SIMULAR ou a
+ * mensagem). Os dois saem: o pacote com o bit e a mensagem vão já; meio segundo depois (o que está saindo sai) o 3D fecha com
+ * 'tm3d:sair' {motivo: 'simular'} — o TM grava o simulado com a semente, uma vez. A tela não começa o jogo (nem com os dois prontos).
+ */
+function simularOnlineTela(meu) {
+  if (!PAG_ONLINE || !pp?.aberta || ppOnline.simular || PAG_ONLINE.encerrado || !simularOnline()) return;
+  ppOnline.simular = meu ? 'eu' : 'outro';
+  pp.aviso(meu ? 'Simulando a partida…' : `${PAG_ONLINE.nomeOutro} escolheu simular a partida.`, 4000);
+  PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+  if (meu) PAG_ONLINE.enviarControle({ tipo: 'simular' });
+  setTimeout(() => { pararCarga(); if (TM) sairTM({ motivo: 'simular', titulares: titularesTM() }); }, 500);
+}
 function acaoPrepartidaOnline(id) {
   if (!PAG_ONLINE || !pp?.aberta) return;
   if (id === 'pronto') {
-    if (ppOnline.pronto || PAG_ONLINE.encerrado) return;
+    if (ppOnline.pronto || ppOnline.simular || PAG_ONLINE.encerrado) return;
     ppOnline = { pronto: true, desde: performance.now() };
     pp.aguardando(PAG_ONLINE.nomeOutro);
     // (o toque no Pronto é o gesto: a tela cheia deitada do Android já aqui — a saída depois não é um gesto)
@@ -3939,7 +3956,7 @@ function quadroOnlineTela(agoraMs) {
  * Chromium sem GPU, e esperar por ele dava 0,9 s de um lado ao outro (no evento, 12–19 ms).
  */
 function saidaOnlineTela() {
-  if (!pp?.aberta || !ppOnline.pronto || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
+  if (!pp?.aberta || !ppOnline.pronto || ppOnline.simular || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
   // (o pacote com o meu Pronto sai antes: o outro sai pela mesma regra)
   PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
   jogarPrepartida();
@@ -4352,6 +4369,8 @@ async function iniciar() {
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
         // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
         fase: () => saidaOnlineTela(),
+        // (o par do Leilão) o outro escolheu "Simular partida": eu saio também
+        simular: () => simularOnlineTela(false),
         // (item 30, só no convidado) as opções do anfitrião chegaram: a cena de substituição dele vale aqui também
         opcoes: m => {
           const v = MOD_PAG_ON.substOnline(LADO_ONLINE, substLigada, m.subst);
@@ -4748,6 +4767,8 @@ const api = {
       conexao: MOD_ON.estadoConexao(s, performance.now()).estado, pausado: PAG_ONLINE.pausado, pausasRestam: PAG_ONLINE.pausasRestam,
       // (item 64: as fases — 0 tela, 1 pronto, 2 pré-jogo, 3 jogo; -1 = nenhum pacote do outro — e o abandono)
       fase: faseOnlineLocal(), faseRemota: PAG_ONLINE.faseRemota, encerrado: PAG_ONLINE.encerrado,
+      // (o par do Leilão: o "Simular partida" — 'eu' | 'outro' | null — e o que o outro mandou)
+      simular: ppOnline.simular ?? null, simularRemoto: PAG_ONLINE.simularRemoto, comSimular: simularOnline(),
       aviso: (() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; })(),
       pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
   },

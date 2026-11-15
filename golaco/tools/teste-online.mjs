@@ -26,7 +26,8 @@
 //  O15 (item 30, revisão) o fim da espera pela cena do outro sem piscar e a marca só com a cena andando
 //     (online-pagina.js marcaCena e conexaoNoQuadro, puras): a marca E_CENA vale do quadro da cena até o 1º passo rodado
 //     depois dela (o quadro em que ela acaba sai sem passo); com a entrada do outro já chegada o aviso de espera sai no
-//     mesmo quadro (o `paradoDesde` só zera depois do passo).
+//     mesmo quadro (o `paradoDesde` só zera depois do passo);
+//  O16 (o par do Modo Leilão) o bit E_SIMULAR do "Simular partida" da tela antes do jogo: livre e sem mexer na fase.
 //   node tools/teste-online.mjs [--passos 3600]
 import { tabelaTexto } from './lib/medidas.mjs';
 import { criarRede } from './lib/rede-memoria.mjs';
@@ -367,6 +368,18 @@ for (const x of res) {
   linha('O15 a marca E_CENA até o 1º passo depois da cena; com a entrada do outro já chegada a espera acaba no mesmo quadro (sem piscar "ainda não voltou ao jogo")',
     `marca ${errM.length ? `errada (${errM.join(', ')})` : 'certa nos 10 quadros'}; espera ${errC.length ? `errada (${errC.join(', ')})` : 'certa nos 6 casos + o fim'}`,
     '0 errados', !errM.length && !errC.length);
+}
+
+// O16 (o par do Modo Leilão, PR 5 do Leilão): o bit E_SIMULAR ("Simular partida" na tela antes do jogo) é livre — não se confunde com
+// os bits do online.js, com as fases da tela nem com o E_CENA — e não muda a fase (tela 0, pronto 1)
+{
+  const OP = await imp('online-pagina.js');
+  const bit = OP.E_SIMULAR;
+  const outros = O.E_30QPS | O.E_MENU | O.E_ESCONDIDA | OP.E_TELA | OP.E_PRONTO | OP.E_PREJOGO | OP.E_CENA;
+  const livre = Number.isInteger(bit) && bit > 0 && bit < 256 && (bit & (bit - 1)) === 0 && !(bit & outros);
+  const f0 = livre ? OP.faseDoEstado(OP.E_TELA | bit) : null, f1 = livre ? OP.faseDoEstado(OP.E_TELA | OP.E_PRONTO | bit | O.E_MENU) : null;
+  linha('O16 o bit E_SIMULAR do par do Leilão: livre (fora dos bits do online.js, das fases e do E_CENA) e a fase da tela igual',
+    `E_SIMULAR ${bit ?? '—'} ${livre ? 'livre' : 'NÃO livre'}; fase tela ${f0 ?? '—'}, pronto ${f1 ?? '—'}`, 'livre; 0 e 1', livre && f0 === 0 && f1 === 1);
 }
 
 console.log(tabelaTexto([['item', 'medido', 'meta', 'resultado'], ...linhas]));

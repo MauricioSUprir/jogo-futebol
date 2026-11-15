@@ -18,6 +18,11 @@ export const E_TELA = 8, E_PRONTO = 16, E_PREJOGO = 32;
 // o outro, parado esperando, diz "{nome} ainda está vendo a cena." em vez de "A conexão parou" (os pacotes chegam: a conexão
 // não parou). Só texto: a fase continua a do jogo (faseDoEstado não o lê) e o online.js não o lê.
 export const E_CENA = 64;
+// O par do Modo Leilão (PR 5 do Leilão; o pedido traz online.simular): E_SIMULAR = este lado escolheu "Simular partida" na tela antes
+// do jogo. Quem recebe sai também (ao.simular), e os dois voltam ao TM com 'tm3d:sair' {motivo: 'simular'} — o TM grava o simulado
+// com a semente, uma vez. Também vai pelo canal de controle ({tipo: 'simular'}, confiável); o bit cobre a mensagem perdida. Só a
+// página lê (faseDoEstado e o online.js não).
+export const E_SIMULAR = 128;
 /** A fase (0 tela, 1 pronto, 2 pré-jogo, 3 jogo) pelo byte de estado de um pacote. */
 export function faseDoEstado(e) {
   if (e & E_PREJOGO) return 2;
@@ -110,7 +115,8 @@ const mmss = ms => { const s = seg(ms); return `${Math.floor(s / 60)}:${String(s
 /**
  * opc: {lado, D, nomes: [anfitrião, convidado], transporte: 'porta' | 'bc', sala, opcoes (só o anfitrião: o que ele decide pelos
  * dois — {subst}; item 30), ao: {sair(motivo), wo(vencedor, motivo), dessinc(info), fase(f) — a fase do outro subiu, opcoes(m)
- * — as do anfitrião chegaram (só no convidado)}}. Devolve a página do online (s = a sessão).
+ * — as do anfitrião chegaram (só no convidado), simular() — o outro escolheu "Simular partida" (o par do Leilão; uma vez)}}.
+ * Devolve a página do online (s = a sessão).
  */
 export function criarPaginaOnline(opc) {
   const lado = opc.lado === 1 ? 1 : 0;
@@ -130,10 +136,15 @@ export function criarPaginaOnline(opc) {
     else if (m.tipo === 'hash') O.receberHash(s, m.n, m.h);
     // (item 30) as opções do anfitrião: na hora, só no convidado (o anfitrião manda; repetidas, quem recebe só copia)
     else if (m.tipo === 'opcoes') { if (lado === 1) ao.opcoes?.(m); }
+    // (o par do Leilão) o outro escolheu "Simular partida": eu saio também
+    else if (m.tipo === 'simular') avisaSimular();
     else ctrlRecebidos.push(m);
   }
   // a fase do outro: o maior valor recebido (-1 = nenhum pacote ainda)
   let faseRemota = -1;
+  // (o par do Leilão) o outro escolheu "Simular partida": uma vez, pelo bit do pacote ou pela mensagem de controle
+  let simularRemoto = false;
+  function avisaSimular() { if (simularRemoto) return; simularRemoto = true; ao.simular?.(); }
   function aoMensagem(d) {
     if (!d || typeof d !== 'object') return;
     if (d.t === 'j' && d.b instanceof ArrayBuffer) {
@@ -141,6 +152,7 @@ export function criarPaginaOnline(opc) {
       if (O.receber(s, d.b, performance.now())) {
         const f = faseDoEstado(s.estadoRemoto), primeiro = faseRemota < 0;
         if (f > faseRemota) { faseRemota = f; ao.fase?.(f); }
+        if (s.estadoRemoto & E_SIMULAR) avisaSimular();
         // (item 30) o 1º pacote do outro: as opções do anfitrião de novo (no BroadcastChannel dos testes a mandada ao criar se
         // perde quando a outra aba ainda não abriu o canal; a porta do TM guarda — repetir não faz mal)
         if (primeiro) mandarOpcoes();
@@ -327,6 +339,8 @@ export function criarPaginaOnline(opc) {
     get pausasRestam() { return pausasRestam; },
     /** A fase do outro (-1 sem pacote; 0 tela, 1 pronto, 2 pré-jogo, 3 jogo) — a tela antes do jogo sai com ela ≥ 1. */
     get faseRemota() { return faseRemota; },
+    /** O outro escolheu "Simular partida" (o par do Leilão). */
+    get simularRemoto() { return simularRemoto; },
     get pausado() { return !!pausa; },
     get encerrado() { return encerrado; },
     get estadoLigacao() { return estadoLig; },
