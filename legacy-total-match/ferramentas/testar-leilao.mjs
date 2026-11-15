@@ -7,11 +7,15 @@
      R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas)
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
    Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v]
-   (--tela, o navegador, vem no passo das telas.) Nenhum teste usa o Firebase. */
+   --tela: o navegador num aparelho (§4.2; o Chromium do Playwright, o TM servido daqui, o relógio do treino acelerado pelo
+   gancho da sessão): "Mais modos" com 13 atalhos, o treino inteiro com 3 bots (os botões, os apagados com o motivo, o Tudo
+   de dois toques, passar, outro valor), recarregar no meio, a escalação, nada sobre nada nos 8 tamanhos, a barra de lance à
+   vista com o relógio rodando, o tema claro e nenhum erro no console. Uso: node ferramentas/testar-leilao.mjs --tela
+   [--prints <pasta>] (o campeonato entra no PR 3). Nenhum teste usa o Firebase: o SDK do gstatic é trocado por um vazio. */
 import fs from "node:fs";
 import vm from "node:vm";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -19,6 +23,7 @@ const opt = (n, p) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] 
 const SO = opt("--so", null) ? opt("--so").split(",").map(s => s.trim().toUpperCase()) : null;
 const N_LEILOES = +opt("--leiloes", 1000);
 const VERBOSO = args.includes("-v");
+if (args.includes("--tela")) process.exit(await testeTela());
 const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/ultimate.js", "js/leilao.js", "js/leilao-rede.js", "js/leilao-sessao.js"];
 
 /* ---------- o carregador: um mundo por edição, com um TM.storage falso ---------- */
@@ -1098,3 +1103,418 @@ await testeSessao();
 await testeRede();
 console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + (SO && !SO.includes("R") ? 0 : 1) - falhas} de ${resultados.length + (SO && !SO.includes("R") ? 0 : 1)} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
 process.exit(falhas ? 1 : 0);
+
+/* ================= --tela: o navegador num aparelho (PLANO-LEILAO.md §4.2) =================
+   O TM servido desta pasta (o servidor e o Playwright do golaco/tools/lib/navegador.mjs), o SDK do Firebase trocado por um
+   vazio (o treino não usa a rede), o relógio do treino acelerado por TM.leilaoSessao.acelerar. Uma linha por item. */
+async function testeTela() {
+  const t0 = performance.now();
+  const WT = path.resolve(RAIZ, "..");
+  const { servidor, playwright } = await import(pathToFileURL(path.join(WT, "golaco/tools/lib/navegador.mjs")).href);
+  const PASTA = opt("--prints", "/tmp/testar-leilao-tela");
+  fs.mkdirSync(PASTA, { recursive: true });
+  const srv = await servidor(0, RAIZ);
+  const { chromium } = playwright();
+  // com a barra de rolagem do PC (o headless esconde por padrão): a grade de 7 + 6 é medida com ela
+  const nav = await chromium.launch({ headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });
+  const TAMANHOS = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080]];
+  const errosPagina = [], oks = [], falhasT = [];
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  function confere(nome, cond, info) {
+    (cond ? oks : falhasT).push(nome + (!cond && info != null ? " — " + JSON.stringify(info).slice(0, 1200) : ""));
+    console.log((cond ? "ok       " : "REPROVOU ") + nome + (cond && VERBOSO && info != null ? " — " + JSON.stringify(info).slice(0, 400) : ""));
+    if (!cond && info != null) console.log("         · " + JSON.stringify(info).slice(0, 1200));
+  }
+  async function aparelho(w, h, mob) {
+    const cx = await nav.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, isMobile: !!mob, hasTouch: !!mob, serviceWorkers: "block" });
+    await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await cx.addInitScript(() => { try { localStorage.setItem("totalmatch:__edition", "public"); } catch (e) {} });
+    const p = await cx.newPage();
+    p.on("pageerror", e => errosPagina.push(String(e).slice(0, 300)));
+    p.on("console", m => { if (m.type() === "error" && !/Failed to load resource|net::ERR/.test(m.text())) errosPagina.push("console: " + m.text().slice(0, 300)); });
+    await p.goto(srv.url + "index.html", { waitUntil: "load" });
+    await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+    await p.evaluate(() => TM.ui.go("modes"));
+    await espera(300);
+    return { cx, p };
+  }
+  async function ate(p, fn, arg, ms = 20000) { try { await p.waitForFunction(fn, arg, { timeout: ms, polling: 40 }); return true; } catch (e) { return false; } }
+  const ver = p => p.evaluate(() => { const S = TM.leilaoSessao.atual(); return S ? S.ver() : null; });
+  const print = (p, nome) => p.screenshot({ path: path.join(PASTA, nome + ".png") }).catch(() => {});
+  const clica = (p, rx, sel = "button") => p.evaluate(([rx, sel]) => {
+    const x = [...document.querySelectorAll(sel)].find(e => new RegExp(rx).test(e.textContent.trim()) && e.offsetParent !== null);
+    if (x) x.click(); return !!x;
+  }, [rx, sel]);
+  // nada sobre nada: o critério do testar-online3d.mjs (sobreposicao), com a barra de lance (fixa) numa camada própria — o
+  // que rola por baixo dela não "encosta" nela; no fim da rolagem, nada fica atrás dela (o espaço do fim da página)
+  const sobreposicao = p => p.evaluate(() => {
+    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa";
+    const visivel = e => {
+      const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
+      const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
+      let a = e.parentElement; while (a) { const c2 = getComputedStyle(a); if (c2.display === "none" || c2.visibility === "hidden" || +c2.opacity < 0.05) return false; a = a.parentElement; }
+      return true;
+    };
+    const camada = e => { let a = e; while (a && a !== document.body) { if (getComputedStyle(a).position === "fixed") return a; a = a.parentElement; } return null; };
+    const els = [...document.querySelectorAll(sel)].filter(visivel);
+    const nome = e => (e.className && typeof e.className === "string" ? "." + e.className.trim().split(/\s+/).slice(0, 2).join(".") : e.tagName) + (e.textContent ? ' "' + e.textContent.trim().slice(0, 18) + '"' : "");
+    const pares = [];
+    for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+      const X = els[i], Y = els[j];
+      if (X.contains(Y) || Y.contains(X) || camada(X) !== camada(Y)) continue;
+      const a = X.getBoundingClientRect(), bb = Y.getBoundingClientRect();
+      const ix = Math.min(a.right, bb.right) - Math.max(a.left, bb.left), iy = Math.min(a.bottom, bb.bottom) - Math.max(a.top, bb.top);
+      if (ix > 1 && iy > 1) pares.push(nome(X) + " X " + nome(Y));
+    }
+    const larg = document.documentElement.clientWidth;
+    const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
+    // no fim da rolagem, o último da página termina acima da barra fixa
+    let atras = null;
+    const barra = document.querySelector(".lei-lance:not([hidden])");
+    if (barra) {
+      const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
+      const topo = barra.getBoundingClientRect().top;
+      const baixo = els.filter(e => !camada(e)).map(e => e.getBoundingClientRect().bottom);
+      const fundo = Math.max(...baixo);
+      if (fundo > topo + 1) atras = Math.round(fundo - topo);
+      scrollTo(0, y0);
+    }
+    return { n: els.length, sobre: pares, fora, rolaLado: document.documentElement.scrollWidth > larg + 1, atras };
+  });
+  const nadaSobre = [];
+  async function nadaSobreNada(p, rotulo, extra) {
+    for (const [w, h] of TAMANHOS) {
+      await p.setViewportSize({ width: w, height: h });
+      await espera(320);
+      await p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); scrollTo(0, 0); });
+      const s = await sobreposicao(p);
+      const r = { tela: rotulo + " " + w + "x" + h, n: s.n, sobre: s.sobre.slice(0, 4), fora: s.fora.slice(0, 4), rolaLado: s.rolaLado, atras: s.atras };
+      if (extra) Object.assign(r, await extra(p, w, h));
+      nadaSobre.push(r);
+      await print(p, `nada-${rotulo}-${w}x${h}`);
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    await espera(250);
+  }
+  const textoMotivos = await (async () => { const { p } = await aparelho(390, 844, true); const m = await p.evaluate(() => ["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim"].map(k => [k, TM.leilaoSessao.textoMotivo(k, { max: 0 })])); await p.context().close(); return m; })();
+
+  try {
+    /* T1 "Mais modos": 13 atalhos, 7 + 6 no PC (com a barra de rolagem) e no tablet, 3·4 + 1 no celular */
+    const pc = await aparelho(1280, 800, false);
+    const grade = [];
+    for (const [w, h] of [[1280, 800], [1440, 900], [1920, 1080], [820, 1180], [790, 800]]) {
+      await pc.p.setViewportSize({ width: w, height: h });
+      await pc.p.evaluate(() => TM.ui.go("modes"));
+      await espera(300);
+      grade.push(await pc.p.evaluate(w => {
+        const bs = [...document.querySelectorAll(".vit-mais-b")].filter(b => b.offsetParent !== null);
+        const tops = [...new Set(bs.map(b => Math.round(b.getBoundingClientRect().top)))].sort((a, b) => a - b);
+        const quebra = bs.filter(b => b.lastElementChild && b.lastElementChild.getBoundingClientRect().height > 22).map(b => b.textContent.trim());
+        return { tela: w, barra: innerWidth - document.documentElement.clientWidth, n: bs.length, linhas: tops.map(t => bs.filter(b => Math.round(b.getBoundingClientRect().top) === t).length).join("+"), quebra,
+          emoji: bs.some(b => /\p{Extended_Pictographic}/u.test(b.textContent)) };
+      }, w));
+    }
+    await pc.cx.close();
+    const cel = await aparelho(360, 740, true);
+    const gCel = await cel.p.evaluate(() => {
+      const bs = [...document.querySelectorAll(".vit-mais-b")].filter(b => b.offsetParent !== null), rs = bs.map(b => b.getBoundingClientRect());
+      const tops = [...new Set(rs.map(r => Math.round(r.top)))].sort((a, b) => a - b), ult = rs.filter(r => Math.round(r.top) === tops[tops.length - 1]);
+      const larg = Math.max(...rs.map(r => r.right)) - Math.min(...rs.map(r => r.left));
+      const lei = bs.find(b => b.textContent.trim() === "Leilão");
+      return { n: bs.length, linhas: tops.map(t => rs.filter(r => Math.round(r.top) === t).length).join("+"), ultima: ult.length === 1 ? Math.round(ult[0].width / larg * 100) : null,
+        quebra: bs.filter(b => b.lastElementChild && b.lastElementChild.getBoundingClientRect().height > 22).map(b => b.textContent.trim()),
+        leilao: lei ? { icone: !!lei.querySelector("svg.tm-ic"), emoji: /\p{Extended_Pictographic}/u.test(lei.textContent) } : null };
+    });
+    confere("T1 'Mais modos' com 13 atalhos: 7 + 6 no PC com a barra de rolagem (1280, 1440, 1920, 790) e no tablet (820), sem nome quebrado nem emoji",
+      grade.every(g => g.n === 13 && g.linhas === "7+6" && !g.quebra.length && !g.emoji) && grade.some(g => g.barra >= 12), grade);
+    confere("T1 no celular 3 + 3 + 3 + 3 + 1 (o 13º na linha inteira); 'Leilão' com o ícone (gavel) e sem emoji",
+      gCel.n === 13 && gCel.linhas === "3+3+3+3+1" && gCel.ultima >= 95 && !gCel.quebra.length && gCel.leilao && gCel.leilao.icone && !gCel.leilao.emoji, gCel);
+    await cel.cx.close();
+
+    /* T2 a Entrada e o Criar (o treino) */
+    const { p } = await aparelho(390, 844, true);
+    const html = await (await fetch(srv.url + "index.html")).text();
+    confere("T2 a região ao vivo no HTML inicial (#lei-vivo, role=status, aria-live=polite) e os 4 arquivos do leilão no index.html",
+      /<div id="lei-vivo"[^>]*role="status"[^>]*aria-live="polite"/.test(html) && ["leilao.js", "leilao-rede.js", "leilao-sessao.js", "leilao-tela.js"].every(f => html.includes("js/" + f + "?v=")));
+    await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(b => b.textContent.trim() === "Leilão").click());
+    await espera(400);
+    const entrada = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
+      off: [...document.querySelectorAll(".lei-online button")].map(b => b.disabled) }));
+    confere("T2 o atalho abre a Entrada: Treinar contra bots, o online 'Em breve' com os botões desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Em breve/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
+    await nadaSobreNada(p, "entrada");
+    await clica(p, "^Treinar contra bots$");
+    await espera(400);
+    confere("T2 'Treinar contra bots' abre a Criar sala", await p.evaluate(() => TM.ui.current()) === "leilao-criar");
+    await nadaSobreNada(p, "criar");
+    // os técnicos 2–8 (contando os bots)
+    const passo = await p.evaluate(async () => {
+      const menos = document.querySelector('[aria-label="Menos um técnico"]'), mais = document.querySelector('[aria-label="Mais um técnico"]'), n = () => +document.querySelector(".lei-passo-n").textContent;
+      for (let i = 0; i < 10; i++) menos.click();
+      const min = n(), menosOff = menos.disabled;
+      for (let i = 0; i < 10; i++) mais.click();
+      const max = n(), maisOff = mais.disabled, hint = document.querySelector(".lei-criar-lt .setting-hint").textContent;
+      for (let i = 0; i < 4; i++) menos.click();
+      return { min, menosOff, max, maisOff, hint, agora: n(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    confere("T2 técnicos de 2 a 8 (os botões param nas pontas), 'Você e 7 bots', a duração estimada; volta a 4 (3 bots)",
+      passo.min === 2 && passo.menosOff && passo.max === 8 && passo.maisOff && /Você e 7 bots/.test(passo.hint) && passo.agora === 4 && /cerca de \d+ a \d+ min/.test(passo.resumo), passo);
+    // a liga pela folha; a formação 4-3-3; o clube
+    await p.click(".lei-liga-bt");
+    await espera(300);
+    const ligaEscolhida = await p.evaluate(() => { const b = [...document.querySelectorAll(".lei-folha .lei-liga")][1]; const n = b.querySelector(".lei-liga-n").textContent; b.click(); return n; });
+    await espera(250);
+    await p.evaluate(() => [...document.querySelectorAll(".lei-criar .lei-forma-bt")].find(b => /4-3-3/.test(b.textContent)).click());
+    await p.click(".lei-esc-abre");
+    await espera(150);
+    await p.fill(".lei-criar .lei-campo:not(.lei-campo-sigla)", "Clube Teste");
+    const corEscolhida = await p.evaluate(() => { const c = [...document.querySelectorAll(".lei-cor")][2]; c.click(); return c.style.background; });
+    await espera(150);
+    const criar = await p.evaluate(() => ({ liga: document.querySelector(".lei-liga-bt .lei-liga-n").textContent, sigla: document.querySelector(".lei-campo-sigla").value,
+      forma: document.querySelector(".lei-criar .lei-forma-bt.active").textContent, folhas: document.querySelectorAll(".lei-folha").length }));
+    confere("T2 a liga pela folha, a formação, o nome e a sigla do clube (CT) e a cor", criar.liga === ligaEscolhida && criar.sigla === "CT" && /4-3-3/.test(criar.forma) && criar.folhas === 0 && !!corEscolhida, criar);
+    await print(p, "2-criar");
+    await clica(p, "Começar o treino");
+    const abriu = await ate(p, () => TM.ui.current() === "leilao-lote" && !!document.querySelector(".lei-relogio"));
+    let V = await ver(p);
+    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 52 lotes, a liga e o clube escolhidos",
+      abriu && V && V.T === 4 && V.lote && V.lote.total === 52 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
+      && V.tecnicos.filter(t => t.bot).every(t => /^Bot /.test(t.nome)), V && { T: V.T, liga: V.liga, clube: V.tecnicos[V.eu] && V.tecnicos[V.eu].clube });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+
+    /* T3 o leilão: os botões, os apagados com o motivo, o Tudo de dois toques, passar, outro valor */
+    const pausa = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { pausa: V.lote.pausa, dis: [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => b.disabled), msg: document.querySelector(".lei-lance-msg").textContent }; });
+    confere("T3 na pausa entre os lotes os botões ficam apagados com o motivo ('Aguarde o próximo jogador')", !pausa.pausa || (pausa.dis.every(Boolean) && /Aguarde/.test(pausa.msg)), pausa);
+    const abertoMeu = () => ate(p, () => { const S = TM.leilaoSessao.atual(); if (!S) return false; const V = S.ver(); const b = document.querySelector('.lei-lb-passo[data-tipo="+1"]');
+      return V.lote && !V.lote.pausa && !V.lote.fechando && V.lote.fim - S.hora() > 3000 && V.botoes["+1"].pode && V.lote.lider !== V.eu && b && !b.disabled; }, null, 60000);
+    const proximoLote = async () => { const s = (await ver(p)).lote.seq; await ate(p, s => { const V = TM.leilaoSessao.atual().ver(); return V.lote && V.lote.seq !== s; }, s, 60000); };
+    // +1
+    await abertoMeu();
+    let antes = await ver(p);
+    await p.click('.lei-lb-passo[data-tipo="+1"]');
+    await espera(250);
+    let depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent, dis: document.querySelector('.lei-lb-passo[data-tipo="+1"]').disabled }));
+    const lidera = depois.V.lote.seq === antes.lote.seq && depois.V.lote.lider === depois.V.eu;
+    confere("T3 '+1' sobre o valor visto: 'Lance de R$ X: você lidera' (ou 'Alguém chegou antes'); liderando, o +1 apaga com 'Você lidera'",
+      (lidera && depois.V.lote.valor >= antes.lote.valor + 1 && depois.msg === "Lance de R$ " + depois.V.lote.valor + ": você lidera" && depois.dis && depois.V.botoes["+1"].motivo === "lider") || (!lidera && /chegou antes|já fechou/.test(depois.msg)),
+      { antes: antes.lote.valor, depois: depois.V.lote.valor, msg: depois.msg });
+    await espera(2700);
+    const msgLider = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { lider: V.lote && V.lote.lider === V.eu, msg: document.querySelector(".lei-lance-msg").textContent }; });
+    if (msgLider.lider) confere("T3 passado o retorno, a linha de cima mostra o motivo do +1 apagado ('Você lidera')", /Você lidera/.test(msgLider.msg), msgLider);
+    // Passar (num lote em que não lidero)
+    await proximoLote(); await abertoMeu();
+    await p.click(".lei-lb-passar");
+    await espera(250);
+    depois = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { passou: V.tecnicos[V.eu].passou, msg: document.querySelector(".lei-lance-msg").textContent, passarOff: document.querySelector(".lei-lb-passar").disabled, umOff: document.querySelector('.lei-lb-passo[data-tipo="+1"]').disabled, motivo: V.botoes && V.botoes["+1"].motivo, seq: V.lote && V.lote.seq }; });
+    confere("T3 'Passar': 'Você passou neste jogador', e o Passar e o +1 apagam (motivo 'passou')", (depois.passou && /passou/.test(depois.msg) && depois.passarOff && depois.umOff && depois.motivo === "passou") || /já fechou/.test(depois.msg), depois);
+    // outro valor: acima do máximo (recusado na tela) e um valor bom
+    await proximoLote(); await abertoMeu();
+    antes = await ver(p);
+    await p.fill(".lei-valor", String(antes.botoes.outro.max + 5));
+    await p.click(".lei-lb-dar");
+    await espera(200);
+    const msgMax = await p.evaluate(() => document.querySelector(".lei-lance-msg").textContent);
+    const alvoOutro = Math.min(antes.botoes.outro.max, (await ver(p)).lote.valor + 3);
+    await p.fill(".lei-valor", String(alvoOutro));
+    await p.press(".lei-valor", "Enter");
+    await espera(250);
+    depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent, campo: document.querySelector(".lei-valor").value }));
+    confere("T3 'Outro valor': acima do máximo fica na tela ('Acima do seu máximo R$ X'); um valor bom (Enter) vira lance e o campo esvazia",
+      /Acima do seu máximo R\$ \d+/.test(msgMax) && ((depois.V.lote.lider === depois.V.eu && depois.V.lote.valor === alvoOutro && depois.campo === "") || /chegou antes|já fechou|tem de passar/.test(depois.msg)), { msgMax, alvoOutro, valor: depois.V.lote.valor, msg: depois.msg });
+    // Tudo: o 1º toque vira "Confirmar R$ X" (nada sai), o 2º dá o lance do máximo
+    await proximoLote(); await abertoMeu();
+    antes = await ver(p);
+    await p.click(".lei-lb-tudo");
+    await espera(120);
+    const conf = await p.evaluate(() => { const b = document.querySelector(".lei-lb-tudo"), V = TM.leilaoSessao.atual().ver(); return { txt: b.textContent, cls: b.className, lider: V.lote.lider, valor: V.lote.valor, msg: document.querySelector(".lei-lance-msg").textContent, aria: b.getAttribute("aria-label") }; });
+    await p.click(".lei-lb-tudo");
+    await espera(250);
+    depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent }));
+    confere("T3 'Tudo' de dois toques: o 1º vira 'Confirmar R$ X' por 2 s sem dar lance; o 2º dá o lance do máximo",
+      /Confirmar/.test(conf.txt) && /confirma/.test(conf.cls) && conf.lider !== antes.eu && /confirmar R\$ \d+/i.test(conf.msg) && /Confirmar o lance de R\$ \d+/.test(conf.aria)
+      // com o lance do máximo, ninguém cobre: o lote fecha logo (a venda para mim pelo máximo) ou ainda está aberto comigo na frente
+      && ((depois.msg === "Lance de R$ " + antes.botoes.tudo.alvo + ": você lidera" && ((depois.V.lote && depois.V.lote.seq === antes.lote.seq && depois.V.lote.lider === depois.V.eu && depois.V.lote.valor === antes.botoes.tudo.alvo)
+        || (depois.V.ultimo && depois.V.ultimo.tipo === "vendido" && depois.V.ultimo.t === depois.V.eu && depois.V.ultimo.preco === antes.botoes.tudo.alvo)))
+        || /chegou antes|já fechou/.test(depois.msg)), { conf, ultimo: depois.V.ultimo, alvo: antes.botoes.tudo.alvo, msg: depois.msg });
+    // os 2 s do Tudo passam e o botão volta
+    const tudoVolta = await p.evaluate(async () => { const b = document.querySelector(".lei-lb-tudo"); b.click(); const a = /Confirmar/.test(b.textContent); await new Promise(r => setTimeout(r, 2300)); return { a, b: /Confirmar/.test(b.textContent) }; });
+    confere("T3 sem o 2º toque, o 'Confirmar' volta a 'Tudo' depois de 2 s", !tudoVolta.b, tudoVolta);
+
+    /* T4 nada sobre nada e a barra de lance à vista com o relógio rodando, nos 8 tamanhos (num lote aberto e lento) */
+    await proximoLote();
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.15));
+    await ate(p, () => { const V = TM.leilaoSessao.atual().ver(); return V.lote && !V.lote.pausa; }, null, 30000);
+    await nadaSobreNada(p, "lote", async (p, w, h) => p.evaluate(async () => {
+      const barra = document.querySelector(".lei-lance").getBoundingClientRect(), rel = document.querySelector(".lei-relogio").getBoundingClientRect();
+      const arco = document.querySelector(".lei-rel-arco"), d0 = arco.style.strokeDashoffset;
+      await new Promise(r => setTimeout(r, 450));
+      const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => Math.round(b.getBoundingClientRect().height));
+      return { barraVisivel: barra.top >= 0 && barra.bottom <= innerHeight + 1 && barra.height > 40, relVisivel: rel.top >= 0 && rel.bottom <= barra.top + 0.5,
+        roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1) };
+    }));
+    const ruins = nadaSobre.filter(x => x.sobre.length || x.fora.length || x.rolaLado || x.atras);
+    confere(`T4 nada sobre nada: Entrada, Criar e Leilão nos 8 tamanhos (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
+    const lotes = nadaSobre.filter(x => /^lote/.test(x.tela));
+    confere("T4 a barra de lance à vista com o relógio rodando nos 8 tamanhos (também 844×390 e 360×740), o relógio acima dela, linha 1 com ≥ 48 px",
+      lotes.length === 8 && lotes.every(x => x.barraVisivel && x.relVisivel && x.roda && x.l1min >= 48), lotes.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, roda: x.roda, h: x.l1min })));
+    // "Vendido para X por R$ Y" (ou "Sem lance") na pausa entre os lotes
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1.5));
+    const sAntes = (await ver(p)).lote.seq;
+    await ate(p, s => { const V = TM.leilaoSessao.atual().ver(); return V.lote && V.lote.seq !== s; }, sAntes, 30000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.2));
+    await espera(150);
+    const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"); return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled) }; });
+    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') por cima da carta nova, com os botões apagados", vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes, vendido);
+    await print(p, "4-vendido");
+    // tema claro
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await espera(300);
+    const claro = await p.evaluate(() => {
+      const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      const cs = s => getComputedStyle(document.querySelector(s));
+      return { barra: lum(cs(".lei-lance").backgroundColor), meu: lum(cs(".lei-meu").backgroundColor), texto: lum(cs(".lei-meu-clube").color),
+        abaOn: cs(".lei-aba.on").backgroundImage !== "none", tudo: cs(".lei-lb-tudo").backgroundImage !== "none", sb: lum(cs(".lei-sb").backgroundColor) };
+    });
+    const sClaro = await sobreposicao(p);
+    await print(p, "4-claro");
+    confere("T4 tema claro: barra, caixas e botões claros, texto escuro, a aba ativa e o Tudo em verde; nada sobre nada",
+      claro.barra > 0.9 && claro.meu > 0.9 && claro.sb > 0.9 && claro.texto < 0.3 && claro.abaOn && claro.tudo && !sClaro.sobre.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3) });
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+
+    /* T5 a barra da sessão: Como funciona, Participantes e Vendas (folhas), e o relógio parado fora da sala */
+    const folhas = [];
+    for (const [rot, tit] of [["Como funciona", "Como funciona"], ["Participantes", "Participantes"], ["Vendas", "Vendas"]]) {
+      await p.click(`.lei-sb[aria-label="${rot}"]`);
+      await espera(250);
+      const s = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, txt: f.innerText.replace(/\s+/g, " ").slice(0, 3000), foco: document.activeElement && document.activeElement.className } : null; });
+      await p.keyboard.press("Escape");
+      await espera(150);
+      folhas.push({ rot, ok: !!s && s.tit === tit && !(await p.evaluate(() => !!document.querySelector(".lei-folha"))), s });
+    }
+    confere("T5 Como funciona, Participantes e Vendas abrem como folhas (foco no Fechar) e fecham com Esc", folhas.every(f => f.ok) && /R\$ 100/.test(folhas[0].s.txt) && /Bot /.test(folhas[1].s.txt) && /Vendidos/i.test(folhas[2].s.txt), folhas);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(2));
+    await p.click(".lei-cab .tb-back");
+    await espera(400);
+    const fora = await p.evaluate(async () => { const S = TM.leilaoSessao.atual(), h0 = S.hora(); await new Promise(r => setTimeout(r, 600)); return { rota: TM.ui.current(), parado: S.pausado(), andou: S.hora() - h0, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " ") }; });
+    confere("T5 voltar à Entrada no meio do treino para o relógio ('Leilão em andamento' com 'Voltar à sala')", fora.rota === "leilao" && fora.parado && fora.andou === 0 && /Leilão em andamento/i.test(fora.txt) && /Voltar à sala/.test(fora.txt), fora);
+    await clica(p, "^Voltar à sala$");
+    await espera(400);
+    const volta = await p.evaluate(async () => { const S = TM.leilaoSessao.atual(), h0 = S.hora(); await new Promise(r => setTimeout(r, 300)); return { rota: TM.ui.current(), parado: S.pausado(), andou: S.hora() - h0 }; });
+    confere("T5 'Voltar à sala' volta à aba Leilão com o relógio andando", volta.rota === "leilao-lote" && !volta.parado && volta.andou > 0, volta);
+
+    /* T6 recarregar no meio volta ao mesmo lote, com o tempo que faltava */
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await ate(p, () => { const S = TM.leilaoSessao.atual(), V = S.ver(); return V.lote && !V.lote.pausa && V.lote.fim - S.hora() > 4000; }, null, 30000);
+    const antesR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo }; });
+    await p.reload({ waitUntil: "load" });
+    await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+    await p.evaluate(() => TM.ui.go("leilao"));
+    await espera(300);
+    const minhas = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().map(x => x.codigo), txt: (document.querySelector(".lei-salas") || {}).innerText }));
+    await clica(p, "^Continuar$");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 20000);
+    const depoisR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo, n: document.querySelector(".lei-lote-n").textContent }; });
+    confere("T6 recarregar no meio: 'Minhas salas' lista o treino; 'Continuar' volta ao mesmo lote com o tempo que faltava (±1,5 s)",
+      !minhas.atual && minhas.salas.includes(antesR.codigo) && depoisR.codigo === antesR.codigo && depoisR.seq === antesR.seq && depoisR.i === antesR.i && depoisR.saldo === antesR.saldo
+      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 52", { minhas, antesR, depoisR });
+
+    /* T7 o resto do leilão (o relógio acelerado; quem decide é a pessoa de teste pela tela) */
+    await p.evaluate(() => TM.leilaoSessao.acelerar(10));
+    const amostras = { motivos: {}, ruins: [] };
+    const t7 = Date.now();
+    while (Date.now() - t7 < 240000) {
+      const r = await p.evaluate(async () => {
+        const S = TM.leilaoSessao.atual(); if (!S) return { fim: true };
+        let V = S.ver();
+        if (V.estado !== "leilao") { TM.leilaoSessao.acelerar(0.1); return { fim: true, estado: V.estado }; }
+        if (!V.lote || V.lote.pausa || V.lote.fechando) return {};
+        const msg = document.querySelector(".lei-lance-msg"), b1 = document.querySelector('.lei-lb-passo[data-tipo="+1"]'), pas = document.querySelector(".lei-lb-passar");
+        const out = {};
+        // o +1 apagado: a linha de cima diz o motivo (quando não há retorno de toque na tela); amostra só com o estado parado
+        // por dois quadros (a tela se refaz no quadro seguinte ao do estado novo)
+        if (V.botoes && !V.botoes["+1"].pode) {
+          const m1 = V.botoes["+1"].motivo, k1 = V.lote.seq + ":" + V.lote.n;
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const V2 = S.ver();
+          if (V2.estado === "leilao" && V2.lote && !V2.lote.pausa && !V2.lote.fechando && V2.botoes && !V2.botoes["+1"].pode && V2.botoes["+1"].motivo === m1 && V2.lote.seq + ":" + V2.lote.n === k1
+            && b1.disabled && !/lidera:|chegou antes|passou neste|já fechou|Lance de|formação passou|confirmar/.test(msg.textContent)) out.amostra = [m1, msg.textContent];
+          V = V2;
+          if (!V.botoes) return out;
+        }
+        const eu = V.tecnicos[V.eu];
+        if (V.botoes && V.botoes["+1"].pode && !b1.disabled && eu.vagas > 0 && V.botoes["+1"].alvo <= Math.max(1, Math.floor(eu.saldo / eu.vagas))) b1.click();
+        else if (V.botoes && V.botoes.passar.pode && !pas.disabled && Math.random() < 0.7) pas.click();
+        return out;
+      });
+      if (r.fim) break;
+      if (r.amostra) {
+        amostras.motivos[r.amostra[0]] = (amostras.motivos[r.amostra[0]] || 0) + 1;
+        const esperado = (textoMotivos.find(x => x[0] === r.amostra[0]) || [])[1];
+        if (!esperado || (r.amostra[0] === "max" ? !/^Acima do seu máximo R\$ \d+$/.test(r.amostra[1]) : r.amostra[1] !== esperado)) amostras.ruins.push(r.amostra);
+      }
+      await espera(70);
+    }
+    V = await ver(p);
+    const n7 = Object.values(amostras.motivos).reduce((s, x) => s + x, 0);
+    confere("T7 o leilão vai até o fim pela tela; sempre que o +1 apaga, a linha de cima diz o motivo (com o de goleiro/posição/máximo/completo entre eles)",
+      V.estado !== "leilao" && n7 > 10 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
+    const an = await p.evaluate(() => TM.leilaoTela.anuncios());
+    confere("T7 a região ao vivo falou o lote ('Jogador N de 52: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 52: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
+
+    /* T8 a escalação (a aba abre sozinha no fim do leilão) */
+    const foiEsc = await ate(p, () => TM.ui.current() === "leilao-escalacao", null, 15000);
+    await espera(300);
+    V = await ver(p);
+    const esc = await p.evaluate(() => ({ cartas: document.querySelectorAll(".lei-pitch-esc .ut-card:not(.empty)").length, vagas: document.querySelectorAll('.lei-pitch-esc .lei-vaga[role="button"]').length,
+      n: document.querySelector(".lei-esc-n").textContent, prazo: (document.querySelector(".lei-esc-prazo") || {}).textContent }));
+    confere("T8 no fim do leilão a aba Escalação abre sozinha: 11/11, o campinho com as 11 cartas tocáveis e o prazo",
+      foiEsc && V.estado === "escalacao" && V.meu.escalacao.n === 11 && esc.cartas === 11 && esc.vagas === 11 && esc.n === "11/11" && /A escalação fecha em \d:\d\d/.test(esc.prazo || ""), { foiEsc, estado: V.estado, esc });
+    await nadaSobreNada(p, "escalacao");
+    const ruinsEsc = nadaSobre.filter(x => /^escalacao/.test(x.tela) && (x.sobre.length || x.fora.length || x.rolaLado));
+    confere("T8 nada sobre nada na Escalação nos 8 tamanhos", !ruinsEsc.length, ruinsEsc.slice(0, 4));
+    // trocar duas vagas do mesmo grupo
+    const par = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), e = V.meu.escalacao, sl = TM.leilao.slotsDe(e.formacao);
+      for (let i = 0; i < sl.length; i++) for (let j = i + 1; j < sl.length; j++) if (sl[i][0] === sl[j][0] && sl[i][0] !== "GK") return { i, j, ti: e.tit[i], tj: e.tit[j] }; return null; });
+    await p.click(`.lei-pitch-esc .lei-vaga[data-vaga="${par.i}"]`);
+    await espera(150);
+    const marcada = await p.evaluate(i => !!document.querySelector(`.lei-pitch-esc .lei-vaga.sel[data-vaga="${i}"]`), par.i);
+    await p.click(`.lei-pitch-esc .lei-vaga[data-vaga="${par.j}"]`);
+    await espera(300);
+    V = await ver(p);
+    confere("T8 tocar em dois troca as vagas (a 1ª fica marcada); vale a escalação à mão", marcada && V.meu.escalacao.manual && V.meu.escalacao.tit[par.i] === par.tj && V.meu.escalacao.tit[par.j] === par.ti, { par, marcada, tit: V.meu.escalacao.tit });
+    // a formação (só as que cabem)
+    const forma = await p.evaluate(() => { const bs = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")]; const alvo = bs.find(b => !b.disabled && !b.classList.contains("active"));
+      const off = bs.filter(b => b.disabled).map(b => b.title); if (alvo) alvo.click(); return { alvo: alvo && alvo.querySelector(".lei-forma-f").textContent, off }; });
+    await espera(300);
+    V = await ver(p);
+    confere("T8 a formação troca para uma em que o time cabe (as que não cabem ficam apagadas com o motivo)",
+      // (o time pode caber numa formação só: então todas as outras estão apagadas com o motivo)
+      (forma.alvo ? V.meu.escalacao.formacao === forma.alvo : forma.off.length === 5) && forma.off.every(t => /não cabe/.test(t)), { forma, agora: V.meu.escalacao.formacao });
+    await print(p, "8-escalacao");
+    // Pronto → o campeonato (em breve)
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.leilaoSessao.atual().ver().estado === "camp", null, 15000);
+    await p.click('.lei-aba[data-rota="leilao-camp"]');
+    await espera(300);
+    const camp = await p.evaluate(() => ({ rota: TM.ui.current(), estado: TM.leilaoSessao.atual().ver().estado, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
+      feitas: [...document.querySelectorAll(".lei-aba.feita")].map(b => b.dataset.rota) }));
+    confere("T8 'Pronto' leva ao campeonato: a aba Campeonato diz 'Campeonato em breve'; Leilão e Escalação com o check",
+      camp.rota === "leilao-camp" && camp.estado === "camp" && /Campeonato em breve/i.test(camp.txt) && camp.feitas.join() === "leilao-lote,leilao-escalacao", camp);
+    await print(p, "8-campeonato");
+
+    /* T9 Sair da sala (com confirmação) apaga o treino deste aparelho */
+    await p.click(".lei-sb.sair");
+    await espera(250);
+    await p.evaluate(() => { const b = [...document.querySelectorAll(".sheet-overlay .sheet-item")].find(x => x.textContent.trim() === "Sair da sala"); if (b) b.click(); });
+    await ate(p, () => TM.ui.current() === "leilao", null, 10000);
+    const saiu = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().length }));
+    confere("T9 'Sair da sala' pede confirmação, volta à Entrada e apaga o treino", !saiu.atual && saiu.salas === 0, saiu);
+  } catch (e) {
+    confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
+  } finally {
+    await nav.close().catch(() => {});
+    await srv.fechar();
+  }
+  confere("nenhum erro de página nem no console", !errosPagina.length, errosPagina.slice(0, 6));
+  console.log(`${falhasT.length ? "REPROVOU" : "PASSOU"}: ${oks.length} de ${oks.length + falhasT.length} itens da tela em ${((performance.now() - t0) / 1000).toFixed(1)} s (prints em ${PASTA})`);
+  return falhasT.length ? 1 : 0;
+}
