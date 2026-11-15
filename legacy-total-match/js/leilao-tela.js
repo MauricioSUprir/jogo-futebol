@@ -265,7 +265,7 @@
   function desligaTela() {
     try { doc.documentElement.style.scrollPaddingBottom = ""; } catch (e) {}
     VIEW.desliga.forEach(function (f) { try { f(); } catch (e) {} });
-    VIEW.desliga = []; VIEW.tick = null; VIEW.partes = null; VIEW.abas = null; VIEW.avisoSala = null;
+    VIEW.desliga = []; VIEW.tick = null; VIEW.partes = null; VIEW.abas = null; VIEW.avisoSala = null; VIEW.poeTema = null;
   }
   function entrarNaSala(screen, rota, S) {
     desligaTela();
@@ -302,6 +302,8 @@
     try { if (VIEW.tick) VIEW.tick(sessao()); } catch (e) { if (global.console) console.error(e); }
     // a faixa da conexão muda também sem aviso da sessão ("Reconectando…" vira "Servidor cheio…" com o tempo)
     if (VIEW.V && VIEW.V.online) poeAvisoSala(VIEW.V);
+    // o ícone do tema segue o tema do TM (trocado também fora deste botão)
+    if (VIEW.poeTema) VIEW.poeTema();
     if (VIEW.msgAte && agoraReal() > VIEW.msgAte) { VIEW.msgAte = 0; VIEW.msg = null; atualizaBarra(VIEW.V); atualizaBarraSag(VIEW.V); }
     if (VIEW.conf.ate && agoraReal() > VIEW.conf.ate) { VIEW.conf = { ate: 0, seq: -1, valor: 0 }; atualizaBarra(VIEW.V); }
     VIEW.raf = global.requestAnimationFrame(laco);
@@ -337,7 +339,8 @@
       Som.toca("superado"); vibra(90);
       anuncia("Você foi superado: " + rs(e.valor));
       var P = VIEW.partes;
-      if (P && P.placar) { P.placar.classList.remove("lampejo"); void P.placar.offsetWidth; P.placar.classList.add("lampejo"); }
+      var x = P && (P.card || P.placar);
+      if (x) { x.classList.remove("lampejo"); void x.offsetWidth; x.classList.add("lampejo"); }
     });
     S.on("vendido", function (e) {
       if (!naSala()) return;
@@ -418,10 +421,16 @@
     if (!S) { semSala(screen); return null; }
     entrarNaSala(screen, rota, S);
     var V = VIEW.V = S.ver();
-    var voltar = el("button", { class: "tb-back", type: "button", "aria-label": "Voltar ao início do Leilão", title: "Voltar", on: { click: function () { TM.ui.go("leilao"); } } }, [ic("chevron-left")]);
+    // o topo das fotos (PLANO-LEILAO.md §9): a marca que volta ao início à esquerda e os ícones da sala à direita; o título e a
+    // liga ficam para o leitor de tela (e no topo da folha Como funciona)
+    var voltar = el("button", { class: "tb-back lei-marca", type: "button", "aria-label": "Voltar ao início do Leilão", title: "Voltar ao início do Leilão",
+      on: { click: function () { TM.ui.go("leilao"); } } }, [
+      el("span", { class: "lei-marca-seta" }, [ic("chevron-left")]),
+      el("img", { class: "lei-marca-logo", src: (global.TM_LOGO || "assets/logo.png"), alt: "" })
+    ]);
     var cab = el("div", { class: "lei-cab" }, [
-      el("div", { class: "lei-topo" }, [voltar, el("div", { class: "lei-tit" }, [el("h1", { text: "Leilão" }), el("span", { class: "lei-tit-sub", text: subtitulo(V) })])]),
-      barraSessao(S),
+      el("h1", { class: "lei-sr", text: "Leilão — " + subtitulo(V) }),
+      el("div", { class: "lei-topo" }, [voltar, barraSessao(S)]),
       abasEl(V, rota)
     ]);
     screen.appendChild(cab);
@@ -482,9 +491,10 @@
       var on = a.rota === rota, feita = abaFeita(V, a.rota);
       var b = el("button", { class: "lei-aba" + (on ? " on" : "") + (feita ? " feita" : ""), type: "button", data: { rota: a.rota, feita: feita ? "1" : "" },
         on: { click: function () { if (!on) TM.ui.go(a.rota); } } }, [
-        el("span", { class: "lei-aba-ic" }, [ic(feita ? "circle-check" : a.icone)]), el("span", { class: "lei-aba-lb", text: a.nome })
+        el("span", { class: "lei-aba-ic", "aria-hidden": "true" }, feita ? [ic("check")] : []), el("span", { class: "lei-aba-lb", text: a.nome })
       ]);
       if (on) b.setAttribute("aria-current", "page");
+      if (feita) b.setAttribute("aria-label", a.nome + ", concluído");
       nav.appendChild(b);
     });
     VIEW.abas = nav;
@@ -499,33 +509,54 @@
       b.dataset.feita = feita ? "1" : "";
       b.classList.toggle("feita", feita);
       var a = ABAS.filter(function (x) { return x.rota === b.dataset.rota; })[0], i = b.querySelector(".lei-aba-ic");
-      TM.ui.clear(i); i.appendChild(ic(feita ? "circle-check" : a.icone));
+      TM.ui.clear(i); if (feita) i.appendChild(ic("check"));
+      if (feita) b.setAttribute("aria-label", a.nome + ", concluído"); else b.removeAttribute("aria-label");
     });
   }
+  // os ícones da sala (a ordem das fotos): o tema, o som, as vendas (o histórico), como funciona, os participantes e sair.
+  // Sem texto à vista: o rótulo vai no aria-label e no title (a dica no PC); os rótulos de antes ficam (os testes clicam por eles)
   function barraSessao(S) {
-    function bt(icone, curto, longo, fn, cls) {
-      return el("button", { class: "lei-sb" + (cls ? " " + cls : ""), type: "button", "aria-label": longo, title: longo, on: { click: fn } }, [
-        el("span", { class: "lei-sb-ic" }, [ic(icone)]),
-        el("span", { class: "lei-sb-lb" }, [el("span", { class: "lei-curto", text: curto }), el("span", { class: "lei-longo", text: longo })])
+    function bt(icone, rotulo, fn, cls) {
+      return el("button", { class: "lei-sb" + (cls ? " " + cls : ""), type: "button", "aria-label": rotulo, title: rotulo, on: { click: fn } }, [
+        el("span", { class: "lei-sb-ic", "aria-hidden": "true" }, [ic(icone)])
       ]);
     }
-    var som = bt(Som.ligado() ? "volume-2" : "volume-x", "Som", "Som", function () {
+    function poeIc(b, n) { var i = b.querySelector(".lei-sb-ic"); TM.ui.clear(i); i.appendChild(ic(n)); }
+    // o tema é o do TM inteiro (como na Config): grava e aplica; o ícone mostra o tema para onde o toque leva
+    var tema = bt("sun", "Mudar para o tema claro", function () {
+      var novo = claro() ? "dark" : "light";
+      try { var s = TM.storage.settings(); s.theme = novo; TM.storage.saveSettings(s); } catch (e) {}
+      TM.ui.applyTheme(novo);
+      poeTema();
+    }, "tema");
+    function poeTema() {
+      var c = claro(), r = c ? "Mudar para o tema escuro" : "Mudar para o tema claro";
+      if (tema.dataset.claro === (c ? "1" : "0")) return;
+      tema.dataset.claro = c ? "1" : "0";
+      tema.setAttribute("aria-label", r); tema.title = r;
+      poeIc(tema, c ? "moon" : "sun");
+    }
+    poeTema();
+    VIEW.poeTema = poeTema;
+    var som = bt(Som.ligado() ? "volume-2" : "volume-x", "Som", function () {
       Som.alterna(); Som.destrava();
-      var lig = Som.ligado(), i = som.querySelector(".lei-sb-ic");
+      var lig = Som.ligado();
       som.setAttribute("aria-pressed", lig ? "true" : "false");
       som.title = lig ? "Som ligado" : "Som desligado";
-      TM.ui.clear(i); i.appendChild(ic(lig ? "volume-2" : "volume-x"));
-    });
+      poeIc(som, lig ? "volume-2" : "volume-x");
+    }, "som");
     som.setAttribute("aria-pressed", Som.ligado() ? "true" : "false");
     som.title = Som.ligado() ? "Som ligado" : "Som desligado";
     return el("div", { class: "lei-sessao", role: "toolbar", "aria-label": "Sala" }, [
-      bt("log-out", "Sair", "Sair da sala", function () { confirmaSair(S); }, "sair"),
+      tema,
       som,
-      bt("info", "Regras", "Como funciona", function () { folhaComoFunciona(); }),
-      bt("users", "Técnicos", "Participantes", function () { folhaParticipantes(); }),
-      bt("receipt", "Vendas", "Vendas", function () { folhaVendas(-1); })
+      bt("history", "Vendas", function () { folhaVendas(-1); }),
+      bt("book-open", "Como funciona", function () { folhaComoFunciona(); }),
+      bt("users", "Participantes", function () { folhaParticipantes(); }),
+      bt("log-out", "Sair da sala", function () { confirmaSair(S); }, "sair")
     ]);
   }
+  function claro() { return doc.body.classList.contains("theme-light"); }
   function textoSair(S) {
     if (S.treino) return ["Sair da sala?", "O treino acaba e é apagado deste aparelho.", "Sair da sala"];
     var V = S.ver();
@@ -626,6 +657,7 @@
   }
   TM.ui.register("leilao-lote", function (screen) {
     var M = moldura(screen, "leilao-lote"); if (!M) return;
+    screen.classList.add("lei-tela-lote");
     M.corpo.classList.add("lei-corpo-lote");
     VIEW.partes = { corpo: M.corpo, modo: null, seq: null };
     VIEW.partes.bar = barraLance(screen);
@@ -640,7 +672,6 @@
       if (V.lote.seq !== P.seq) { P.seq = V.lote.seq; trocaLote(S, V); }
       atualizaPlacar(V);
       atualizaMeu(V);
-      atualizaTecnicos(V);
       atualizaTime(S, V);
     }
     atualizaBarra(V);
@@ -648,7 +679,8 @@
   function montaCorpoLote(S, V) {
     var P = VIEW.partes, c = P.corpo;
     TM.ui.clear(c);
-    ["cab", "palco", "cartaBox", "vendido", "placar", "relogio", "arco", "num", "lider", "valor", "hist", "info", "meu", "tec", "time", "prox", "espaco"].forEach(function (k) { P[k] = null; });
+    ["cab", "card", "topo", "vendido", "placar", "relogio", "arco", "num", "lider", "valor", "hist", "meu", "campo", "prox", "espaco"].forEach(function (k) { P[k] = null; });
+    P.placarChave = null; P.vendidoChave = null; P.relChave = null; P.timeChave = null;
     if (P.modo === "espera" || P.modo === "parada") {
       c.appendChild(el("div", { class: "lei-caixa lei-espera" }, [el("p", { class: "intro-text", text: P.modo === "parada" ? "O leilão parou." : V.fase === "fim" ? "Fechando o leilão…" : "Preparando o primeiro jogador…" })]));
       return;
@@ -663,9 +695,12 @@
       return;
     }
     if (P.modo === "fim") { montaFimLeilao(S, V); return; }
+    // a tela das fotos (PLANO-LEILAO.md §9): o chip "Jogador N de 52"; UM cartão com a foto (a nota e o escudo por cima), o
+    // nome, a função e o clube, os chips e o (i), o relógio com quem lidera e os lances de antes; o seu clube solto na página
+    // com o campinho das vagas; os Próximos lotes recolhidos no fim. A carta do Ultimate não entra aqui (o dono, 15/11).
     var a = el("div", { class: "lei-col-a" }), b = el("div", { class: "lei-col-b" });
     P.cab = el("div", { class: "lei-lote-cab" });
-    P.cartaBox = el("div", { class: "lei-carta-box" });
+    P.topo = el("div", { class: "lei-lc-topo" });
     P.vendido = el("div", { class: "lei-vendido", hidden: "hidden" });
     var svg = doc.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 100 100"); svg.setAttribute("aria-hidden", "true");
@@ -677,25 +712,21 @@
     P.relogio = el("div", { class: "lei-relogio", role: "timer", "aria-label": "Tempo do lote" }, [svg, P.num]);
     P.lider = el("div", { class: "lei-lider" });
     P.valor = el("div", { class: "lei-valor-atual" });
+    P.placar = el("div", { class: "lei-placar" }, [P.relogio, el("div", { class: "lei-placar-dir" }, [P.lider, P.valor])]);
     P.hist = el("ol", { class: "lei-hist", "aria-label": "Últimos lances" });
-    P.placar = el("div", { class: "lei-placar" }, [P.relogio, P.lider, P.valor, P.hist]);
-    P.palco = el("div", { class: "lei-palco" }, [P.cartaBox, P.placar, P.vendido]);
-    P.info = el("div", { class: "lei-info" });
-    a.appendChild(P.cab); a.appendChild(P.palco); a.appendChild(P.info);
+    P.card = el("section", { class: "lei-lote-card", "aria-label": "Jogador em leilão" }, [P.topo, P.placar, P.hist, P.vendido]);
+    a.appendChild(P.cab); a.appendChild(P.card);
     P.meu = montaMeu(V);
-    b.appendChild(P.meu);
-    P.time = bloco("time", "Seu time", "shirt");
-    P.tec = bloco("tecnicos", "Técnicos", "users");
+    P.campo = el("div", { class: "lei-meu-campo" });
     P.prox = bloco("proximos", "Próximos lotes", "list");
-    b.appendChild(P.time.raiz); b.appendChild(P.tec.raiz); b.appendChild(P.prox.raiz);
-    P.tecLinhas = null; P.timeChave = null;
+    b.appendChild(P.meu); b.appendChild(P.campo); b.appendChild(P.prox.raiz);
     c.appendChild(a); c.appendChild(b);
     P.espaco = el("div", { class: "lei-espaco", "aria-hidden": "true" });
     c.appendChild(P.espaco);
   }
   // um bloco recolhível (o estado fica entre as telas; no PC começa aberto)
   function bloco(chave, titulo, icone) {
-    var pc = false; try { pc = global.matchMedia("(min-width: 760px) and (min-height: 521px)").matches; } catch (e) {}
+    var pc = false; try { pc = global.matchMedia("(min-width: 1024px) and (min-height: 600px)").matches; } catch (e) {}
     if (VIEW.abertos[chave] == null || VIEW.abertos["_" + chave] !== pc) { VIEW.abertos[chave] = pc; VIEW.abertos["_" + chave] = pc; }
     var corpo = el("div", { class: "lei-bloco-corpo", id: "lei-bloco-" + chave });
     var info = el("span", { class: "lei-bloco-info" });
@@ -711,33 +742,72 @@
     poe();
     return { raiz: raiz, corpo: corpo, info: info };
   }
+
+  /* ---------- o jogador sem a carta: a foto (ou a silhueta), o selo da nota, o escudo, o nome e os chips ---------- */
+  // as notas escondidas (o "leilão no olho", PR 6): com elas, o selo mostra "?" e as notas do campinho e dos próximos somem
+  function notasOcultas(V) { V = V || VIEW.V; return !!(V && V.notasOcultas); }
+  function corClube(cl) { try { return (cl && TM.img.kitColor && TM.img.kitColor(cl)) || null; } catch (e) { return null; } }
+  // a silhueta da carta (cabeça e ombros; a do Ultimate, pelo TM.ut._i), em branco sobre a cor do clube
+  function silhuetaEl() {
+    var u = UT();
+    if (u && u.silhueta) { var s = u.silhueta(); s.setAttribute("class", "lei-sil"); return s; }
+    return el("span", { class: "lei-sil" });
+  }
+  // a foto redonda: a real na edição pro (TM.img.playerPhotoUrl); sem ela, a silhueta na cor do clube (nunca as iniciais)
+  function fotoJogador(r, cls) {
+    var cl = clube(r.clubId), p = dadosCarta(r).p, foto = false;
+    try { foto = !!(TM.img.playerPhotoUrl && TM.img.playerPhotoUrl(p)); } catch (e) { foto = false; }
+    var box = el("span", { class: "lei-foto" + (cls ? " " + cls : "") + (foto ? "" : " sil"), "aria-hidden": "true" });
+    if (foto) { try { var im = TM.img.playerImg(p, "lei-foto-img"); im.alt = ""; box.appendChild(im); } catch (e) { foto = false; } }
+    if (!foto) {
+      box.classList.add("sil");
+      var cor = corClube(cl); if (cor) box.style.backgroundColor = cor;
+      box.appendChild(silhuetaEl());
+    }
+    return box;
+  }
+  function seloNota(r) {
+    var oc = notasOcultas();
+    return el("span", { class: "lei-nota" + (oc ? " oculta" : ""), role: "img", "aria-label": oc ? "Nota escondida" : "Nota " + r.overall }, [
+      el("b", { text: oc ? "?" : String(r.overall), "aria-hidden": "true" }), el("small", { text: "NOTA", "aria-hidden": "true" })
+    ]);
+  }
+  // a foto com o selo da nota encostado à esquerda e o escudo do clube num círculo sobre o canto de cima à direita
+  function fotoBox(r) {
+    var cl = clube(r.clubId);
+    return el("div", { class: "lei-foto-box" }, [
+      fotoJogador(r),
+      seloNota(r),
+      cl ? el("span", { class: "lei-foto-esc", "aria-hidden": "true" }, [TM.img.clubImg(cl, "lei-foto-esc-img")]) : null
+    ]);
+  }
+  // o nome (até 2 linhas), "função, clube" e os chips: bandeira e país, os grupos (a principal primeiro), a altura e o (i)
+  function infoJogador(r, comFicha) {
+    var cl = clube(r.clubId), na = nacao(r.nationId);
+    var chips = [
+      na ? el("span", { class: "lei-chip lei-chip-pais" }, [TM.img.flagImg(na, "lei-bandeira"), el("span", { text: na.name })]) : null
+    ].concat(gruposDe(r).map(function (g) { return el("span", { class: "lei-chip lei-chip-gr", title: GRUPO_NOME[g], text: GRUPO_CURTO[g] }); }));
+    if (r.height > 0) chips.push(el("span", { class: "lei-chip", text: r.height + " cm" }));
+    if (comFicha) chips.push(el("button", { class: "lei-ficha-bt", type: "button", "aria-label": "Ficha de " + r.name, title: "Ficha de " + r.name, on: { click: function () { folhaFicha(r); } } }, [el("span", { class: "lei-ficha-ic" }, [ic("info")])]));
+    return el("div", { class: "lei-lc-info" }, [
+      el("h3", { class: "lei-nome", text: r.name }),
+      el("p", { class: "lei-funcao", text: funcaoDe(r) + (cl ? ", " + cl.name : "") }),
+      el("div", { class: "lei-chips" }, chips)
+    ]);
+  }
   function trocaLote(S, V) {
     var P = VIEW.partes, l = V.lote, r = l.retrato;
     VIEW.conf = { ate: 0, seq: -1, valor: 0 };
     if (P.bar && P.bar.valor && doc.activeElement !== P.bar.valor) P.bar.valor.value = "";
     TM.ui.clear(P.cab);
-    P.cab.appendChild(el("h2", { class: "lei-lote-n", text: textoLote(l) }));
-    P.cab.appendChild(el("span", { class: "lei-lote-t", text: V.T + " técnicos · " + rs(L().SALDO) + " cada" }));
-    TM.ui.clear(P.cartaBox);
-    P.cartaBox.appendChild(cartaEl(r, "big"));
+    // o chip "Jogador N de 52" (na repescagem, a palavra em destaque)
+    P.cab.appendChild(l.fase === "rep"
+      ? el("h2", { class: "lei-lote-n rep" }, [el("span", { class: "lei-lote-rep", text: "Repescagem" }), " " + l.ordem + " de " + l.total])
+      : el("h2", { class: "lei-lote-n", text: textoLote(l) }));
+    TM.ui.clear(P.topo);
+    P.topo.appendChild(fotoBox(r));
+    P.topo.appendChild(infoJogador(r, true));
     anunciaLote(V);
-    // o nome, a função, o clube, o país e os grupos (onde ele cabe no time)
-    TM.ui.clear(P.info);
-    var cl = clube(r.clubId), na = nacao(r.nationId);
-    P.info.appendChild(el("div", { class: "lei-info-l1" }, [
-      el("h3", { class: "lei-nome", text: r.name }),
-      el("button", { class: "lei-ficha-bt", type: "button", "aria-label": "Ficha de " + r.name, on: { click: function () { folhaFicha(r); } } }, [ic("info"), el("span", { text: "Ficha" })])
-    ]));
-    P.info.appendChild(el("div", { class: "lei-info-l2" }, [
-      el("span", { class: "lei-funcao", text: funcaoDe(r) }),
-      cl ? el("span", { class: "lei-sep", text: "·" }) : null,
-      cl ? el("span", { class: "lei-clube" }, [TM.img.clubImg(cl, "lei-mini-esc"), el("span", { text: cl.name })]) : null
-    ]));
-    P.info.appendChild(el("div", { class: "lei-info-l3" }, [
-      na ? el("span", { class: "lei-pais" }, [TM.img.flagImg(na, "lei-bandeira"), el("span", { text: na.name })]) : null,
-      el("span", { class: "lei-grupos", title: "Joga de " + gruposDe(r).map(function (g) { return GRUPO_NOME[g].toLowerCase(); }).join(" e ") },
-        gruposDe(r).map(function (g) { return el("span", { class: "lei-gr gr-" + g, text: GRUPO_CURTO[g] }); }))
-    ]));
     atualizaProximos(V);
   }
   function atualizaPlacar(V) {
@@ -748,20 +818,18 @@
       P.placarChave = chave;
       TM.ui.clear(P.lider);
       if (lid) {
-        P.lider.appendChild(escudo(lid.clube, "pp"));
         // o nome encolhe; o "lidera" fica sempre à vista
         if (lid.eu) P.lider.appendChild(el("span", { class: "lei-lider-nome", text: "Você lidera" }));
         else { P.lider.appendChild(el("span", { class: "lei-lider-nome", text: lid.nome })); P.lider.appendChild(el("span", { class: "lei-lider-v", text: "lidera" })); }
-        P.lider.classList.toggle("eu", !!lid.eu);
-      } else {
-        P.lider.appendChild(el("span", { class: "lei-lider-nome", text: "Sem lance" }));
-        P.lider.classList.remove("eu");
-      }
+      } else P.lider.appendChild(el("span", { class: "lei-lider-nome", text: "Sem lance" }));
+      P.lider.classList.toggle("eu", !!(lid && lid.eu));
       P.valor.textContent = lid ? rs(l.valor) : "R$ 1";
       P.valor.classList.toggle("vazio", !lid);
+      P.valor.classList.toggle("eu", !!(lid && lid.eu));
       P.valor.setAttribute("aria-label", lid ? "Valor atual " + rs(l.valor) : "Lance mínimo R$ 1");
+      // os lances de antes (o da frente já está grande em cima): até 3, os mais velhos mais apagados
       TM.ui.clear(P.hist);
-      (l.h || []).slice().reverse().forEach(function (x) {
+      (l.h || []).slice(0, -1).reverse().slice(0, 3).forEach(function (x) {
         var t = V.tecnicos[x[0]];
         P.hist.appendChild(el("li", { class: t && t.eu ? "eu" : "" }, [el("span", { class: "lei-hist-n", text: t ? (t.eu ? "Você" : t.nome) : "?" }), el("b", { text: rs(x[1]) })]));
       });
@@ -782,32 +850,36 @@
       }
     }
   }
+  // o seu clube solto na página (as fotos): escudo, nome, VOCÊ e o saldo; a barra do orçamento; "R$ X para N vagas" e a média
   function montaMeu(V) {
     var P = VIEW.partes, t = V.tecnicos[V.eu] || {};
     P.meuSaldo = el("span", { class: "lei-meu-saldo" });
     P.meuBarra = el("i");
-    P.meuLinha = el("div", { class: "lei-meu-linha" });
-    P.meuMax = el("div", { class: "lei-meu-max" });
-    P.meuGr = el("div", { class: "lei-meu-gr" });
-    return el("div", { class: "lei-meu lei-caixa" }, [
+    P.meuLinha = el("span", { class: "lei-meu-linha" });
+    P.meuMedia = el("span", { class: "lei-meu-media" });
+    return el("div", { class: "lei-meu" }, [
       el("div", { class: "lei-meu-l1" }, [
         escudo(t.clube, "p"),
         el("div", { class: "lei-meu-nome" }, [el("span", { class: "lei-meu-clube", text: (t.clube && t.clube.nome) || "Meu Clube" }), el("span", { class: "lei-voce", text: "VOCÊ" })]),
         P.meuSaldo
       ]),
       el("div", { class: "lei-meu-barra", "aria-hidden": "true" }, [P.meuBarra]),
-      P.meuLinha, el("div", { class: "lei-meu-l3" }, [P.meuGr, P.meuMax])
+      el("div", { class: "lei-meu-l3" }, [P.meuLinha, P.meuMedia])
     ]);
   }
   function atualizaMeu(V) {
     var P = VIEW.partes, t = V.tecnicos[V.eu]; if (!t || !P.meuSaldo) return;
     P.meuSaldo.textContent = rs(t.saldo);
     P.meuBarra.style.width = Math.max(0, Math.min(100, Math.round(100 * t.saldo / L().SALDO))) + "%";
-    P.meuLinha.textContent = t.vagas > 0
-      ? rs(t.saldo) + " para " + t.vagas + (t.vagas === 1 ? " vaga" : " vagas") + " · média de " + rs(Math.floor(t.saldo / t.vagas)) + " por vaga"
-      : "Time completo: " + rs(t.saldo) + " sobrando (não vale no campeonato)";
-    P.meuMax.textContent = t.vagas > 0 ? "Máximo agora " + rs(t.max) : "";
-    P.meuGr.textContent = "GOL " + t.gk + " · DEF " + t.df + " · MEI " + t.mf + " · ATA " + t.fw;
+    TM.ui.clear(P.meuLinha);
+    if (t.vagas > 0) {
+      P.meuLinha.appendChild(el("b", { text: rs(t.saldo) }));
+      P.meuLinha.appendChild(doc.createTextNode(" para " + t.vagas + (t.vagas === 1 ? " vaga" : " vagas")));
+      P.meuMedia.textContent = "média de " + rs(Math.floor(t.saldo / t.vagas)) + " por vaga";
+    } else {
+      P.meuLinha.appendChild(el("b", { text: "Time completo" }));
+      P.meuMedia.textContent = rs(t.saldo) + " sobrando (não vale no campeonato)";
+    }
   }
   function estadoTec(t) {
     if (t.lider) return ["lidera", "Lidera"];
@@ -818,53 +890,54 @@
     if (t.naoPode === "max") return ["nao", "Sem saldo"];
     return ["", ""];
   }
-  function atualizaTecnicos(V) {
-    var P = VIEW.partes; if (!P.tec) return;
-    P.tec.info.textContent = V.T + " na sala";
-    if (!P.tecLinhas || P.tecLinhas.length !== V.tecnicos.length) {
-      TM.ui.clear(P.tec.corpo);
-      P.tecLinhas = V.tecnicos.map(function (t) {
-        var linha = { saldo: el("b", { class: "lei-tec-saldo" }), n: el("span", { class: "lei-tec-n" }), est: el("span", { class: "lei-tec-est" }) };
-        linha.bt = el("button", { class: "lei-tec" + (t.eu ? " eu" : ""), type: "button", "aria-label": "Ver o time de " + (t.eu ? "você" : t.nome), on: { click: function () { folhaVendas(t.t); } } }, [
-          escudo(t.clube, "p"),
-          el("span", { class: "lei-tec-nome" }, [el("span", { class: "lei-tec-quem", text: t.eu ? "Você" : t.nome }), el("span", { class: "lei-tec-clube", text: t.clube.nome })]),
-          el("span", { class: "lei-tec-dir" }, [linha.saldo, linha.n]), linha.est
-        ]);
-        P.tec.corpo.appendChild(linha.bt);
-        return linha;
-      });
-    }
-    V.tecnicos.forEach(function (t, i) {
-      var x = P.tecLinhas[i], e = estadoTec(t);
-      x.saldo.textContent = rs(t.saldo);
-      x.n.textContent = t.n + "/" + L().VAGAS;
-      x.est.textContent = e[1];
-      x.est.className = "lei-tec-est" + (e[0] ? " " + e[0] : "");
-      x.bt.classList.toggle("lidera", !!t.lider);
-    });
-  }
   function atualizaProximos(V) {
     var P = VIEW.partes; if (!P.prox) return;
     TM.ui.clear(P.prox.corpo);
     P.prox.info.textContent = V.proximos.length ? String(V.proximos.length) : "";
     if (!V.proximos.length) { P.prox.corpo.appendChild(el("p", { class: "lei-vazio", text: "Nenhum lote depois deste." })); return; }
+    var oc = notasOcultas(V);
     V.proximos.forEach(function (x) {
       var r = x.retrato, cl = clube(r.clubId);
       P.prox.corpo.appendChild(el("button", { class: "lei-prox", type: "button", "aria-label": "Ficha de " + r.name, on: { click: function () { folhaFicha(r); } } }, [
         el("span", { class: "lei-gr gr-" + r.pos, text: GRUPO_CURTO[r.pos] }),
         el("span", { class: "lei-prox-nome" }, [el("span", { class: "lei-prox-n", text: r.name }), el("span", { class: "lei-prox-c", text: funcaoDe(r) + (cl ? " · " + cl.name : "") })]),
-        el("b", { class: "lei-prox-ov", text: String(r.overall) })
+        oc ? null : el("b", { class: "lei-prox-ov", text: String(r.overall) })
       ]));
     });
   }
   function atualizaTime(S, V) {
-    var P = VIEW.partes; if (!P.time || !V.meu) return;
-    var e = V.meu.escalacao, chave = e ? e.formacao + ":" + e.tit.join(",") : "-";
-    P.time.info.textContent = (V.meu.time.length) + "/" + L().VAGAS + (e ? " · " + e.formacao : "");
+    var P = VIEW.partes; if (!P.campo || !V.meu) return;
+    var e = V.meu.escalacao, chave = (e ? e.formacao + ":" + e.tit.join(",") + ":" + (e.pen || []).join(",") : "-") + ":" + notasOcultas(V);
     if (chave === P.timeChave) return;
     P.timeChave = chave;
-    TM.ui.clear(P.time.corpo);
-    P.time.corpo.appendChild(campinho(S, V.eu, { cls: "lei-pitch-lote" }));
+    TM.ui.clear(P.campo);
+    P.campo.appendChild(campinhoVagas(S, V.eu));
+  }
+
+  /* ---------- o campinho das vagas (as fotos: verde, as vagas em círculo) ---------- */
+  // Só para ver (role="img"): a vaga vazia com a sigla; a preenchida com a foto (ou a silhueta na cor do clube), o sobrenome,
+  // o "−N" de fora da função e a nota pequena; nos cantos de baixo a formação e "n/11". Serve à aba Leilão e à folha Vendas.
+  function campinhoVagas(S, t, cls) {
+    var e = S.escalacao(t), f = (e && e.formacao) || "4-4-2", slots = L().slotsDe(f) || [], u = UT(), oc = notasOcultas();
+    var n = 0, vagas = [];
+    slots.forEach(function (slot, s) {
+      var k = e && e.tit ? e.tit[s] : -1, r = k >= 0 && S.ctx ? L().retratoDe(S.ctx, k) : null, pen = (e && e.pen && e.pen[s]) || 0;
+      if (r) n++;
+      var kids;
+      if (r) {
+        kids = [
+          el("span", { class: "lei-cv-bola" }, [fotoJogador(r, "lei-cv-foto"), oc ? null : el("span", { class: "lei-cv-ov", text: String(r.overall) }), pen ? el("span", { class: "lei-pen", text: "−" + pen }) : null]),
+          el("span", { class: "lei-cv-nome", text: u && u.shortNm ? u.shortNm(r.name) : r.name })
+        ];
+      } else kids = [el("span", { class: "lei-cv-bola vazia" }, [el("span", { class: "lei-cv-sig", text: GRUPO_CURTO[slot[0]] })])];
+      vagas.push(el("div", { class: "lei-cv-vaga" + (r ? " cheia" : "") + (r && pen ? " fora" : ""), style: "left:" + slot[1] + "%;top:" + slot[2] + "%", data: { vaga: String(s) } }, kids));
+    });
+    var campo = el("div", { class: "lei-cv" + (cls ? " " + cls : ""), role: "img", "aria-label": (t === (VIEW.V && VIEW.V.eu) ? "Seu time" : "Time") + " na " + f + ": " + n + " de " + slots.length },
+      [el("span", { class: "lei-cv-linhas", "aria-hidden": "true" }, [el("i", { class: "c" }), el("i", { class: "m" }), el("i", { class: "a1" }), el("i", { class: "a2" })])].concat(vagas).concat([
+        el("span", { class: "lei-cv-forma", "aria-hidden": "true", text: f }),
+        el("span", { class: "lei-cv-n", "aria-hidden": "true", text: n + "/" + slots.length })
+      ]));
+    return campo;
   }
   function montaFimLeilao(S, V) {
     var P = VIEW.partes, c = P.corpo, t = V.tecnicos[V.eu];
@@ -895,7 +968,7 @@
     var k = seg + ":" + est;
     if (k !== P.relChave) {
       P.relChave = k;
-      P.num.textContent = String(seg);
+      P.num.textContent = seg < 10 ? "0" + seg : String(seg);   // "06", como nas fotos (a fala do leitor de tela não muda)
       var alerta = est === "aberto" && seg <= 3;
       P.relogio.classList.toggle("alerta", alerta);
       P.relogio.classList.toggle("espera", est === "pausa");
@@ -930,11 +1003,12 @@
     screen.appendChild(B.raiz);
     return B;
   }
+  // o valor fica à vista só no Tudo ("Tudo R$ 90"); no +1, +5 e +10 ele vai para o aria-label e para o title (as fotos)
   function poeBotao(b, pode, valorTxt, rotuloAria) {
     b.disabled = !pode;
     var v = b.querySelector(".lei-lb-v");
     if (v && v.textContent !== valorTxt) v.textContent = valorTxt;
-    if (rotuloAria) b.setAttribute("aria-label", rotuloAria);
+    if (rotuloAria) { b.setAttribute("aria-label", rotuloAria); if (b.title !== rotuloAria) b.title = rotuloAria; }
   }
   function atualizaBarra(V) {
     var P = VIEW.partes, B = P && P.bar; if (!B || !V) return;
@@ -959,7 +1033,9 @@
     var o = b.outro, podeOutro = o.pode && !ocup;
     B.dar.disabled = !podeOutro;
     B.valor.disabled = !(o.pode || o.motivo === "pausa");
-    B.valor.placeholder = o.pode || o.motivo === "pausa" ? "Até " + rs(o.max) : "Outro valor";
+    // "Outro valor" sempre (as fotos); o máximo vai no rótulo do campo e na linha de cima ("Seu máximo neste jogador")
+    var rotV = o.pode || o.motivo === "pausa" ? "Outro valor, em reais, até " + rs(o.max) : "Outro valor, em reais";
+    if (B.valor.getAttribute("aria-label") !== rotV) B.valor.setAttribute("aria-label", rotV);
     B.passar.disabled = !(b.passar.pode && !ocup);
     // a linha de cima: o lance que caiu no meio da conexão ("Conferindo…" até a rede ficar em dia); o retorno do último
     // toque por 2,5 s; senão o motivo de o +1 estar apagado; senão o máximo
@@ -2182,6 +2258,7 @@
   function folhaComoFunciona() {
     var S = sessao(), V = S ? S.ver() : null, seg = V && V.cfg && V.cfg.tempo ? Math.round(V.cfg.tempo / 1000) : Math.round(L().DUR / 1000);
     folha("Como funciona", function (c) {
+      if (V) c.appendChild(el("p", { class: "lei-regras-sala", text: subtitulo(V) + " · " + V.T + " técnicos · " + rs(L().SALDO) + " cada" }));
       var itens = [
         "Cada técnico entra com " + rs(L().SALDO) + " (dinheiro do jogo, nada de verdade) e monta um time de " + L().VAGAS + ".",
         "Vão a leilão os melhores jogadores da liga, por posição: tem goleiro para todo mundo.",
@@ -2225,7 +2302,17 @@
           if (!podeAgir(V) || VIEW.ocupado) x.disabled = true;
           acoes.push(x);
         }
-        c.appendChild(linhaPart(V, t, acoes, comSaldo));
+        var linha = linhaPart(V, t, acoes, comSaldo);
+        if (S.ctx && V.estado !== "saguao" && !V.pedido && !acoes.length) {
+          var abre = function () { folhaVendas(t.t); };
+          linha.classList.add("abre");
+          linha.setAttribute("role", "button"); linha.setAttribute("tabindex", "0");
+          linha.setAttribute("aria-label", "Ver o time de " + (t.eu ? "você" : t.nome));
+          linha.dataset.foco = "ver-" + t.t;
+          linha.addEventListener("click", abre);
+          linha.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); abre(); } });
+        }
+        c.appendChild(linha);
       });
       // depois do Começar, o dono passa o clube de quem trocou de aparelho (os pedidos que chegaram depois)
       if (V.online && V.souDono && V.estado !== "saguao" && (V.pedidosDepois || []).length) {
@@ -2257,7 +2344,7 @@
       var ts = V.tecnicos[sel];
       if (ts) {
         c.appendChild(el("h3", { class: "lei-folha-sub", text: (ts.eu ? "Seu time" : "Time de " + ts.nome) + " · " + (S.escalacao(sel) || {}).formacao }));
-        c.appendChild(el("div", { class: "lei-vend-campo" }, [campinho(S, sel, { cls: "lei-pitch-folha" })]));
+        c.appendChild(el("div", { class: "lei-vend-campo" }, [campinhoVagas(S, sel, "lei-cv-folha")]));
         var falta = [];
         var e = S.escalacao(sel), slots = e ? L().slotsDe(e.formacao) : [];
         ["GK", "DF", "MF", "FW"].forEach(function (g) {
@@ -2281,19 +2368,24 @@
       c.appendChild(lista);
     }, { cls: "lei-folha-larga" });
   }
+  // a ficha (o (i) do cartão e os Próximos lotes), também sem a carta: o cabeçalho do cartão, os 6 atributos em números e a lista
   function folhaFicha(r) {
     folha(r.name, function (c) {
-      var cl = clube(r.clubId), na = nacao(r.nationId);
-      c.appendChild(el("div", { class: "lei-ficha" }, [
-        el("div", { class: "lei-ficha-carta" }, [cartaEl(r, "big")]),
-        el("dl", { class: "lei-ficha-dl" }, [
-          el("dt", { text: "Função" }), el("dd", { text: funcaoDe(r) }),
-          el("dt", { text: "Joga de" }), el("dd", { text: gruposDe(r).map(function (g) { return GRUPO_NOME[g]; }).join(", ") }),
-          el("dt", { text: "Nota" }), el("dd", { text: String(r.overall) }),
-          cl ? el("dt", { text: "Clube" }) : null, cl ? el("dd", { text: cl.name }) : null,
-          na ? el("dt", { text: "País" }) : null, na ? el("dd", { text: na.name }) : null,
-          r.number ? el("dt", { text: "Camisa" }) : null, r.number ? el("dd", { text: String(r.number) }) : null
-        ])
+      var cl = clube(r.clubId), na = nacao(r.nationId), oc = notasOcultas(), u = UT();
+      var st = !oc && u && u.statsOf ? u.statsOf(dadosCarta(r)) : null;
+      c.appendChild(el("div", { class: "lei-ficha-cab" }, [fotoBox(r), infoJogador(r, false)]));
+      if (st) c.appendChild(el("ul", { class: "lei-ficha-at", "aria-label": "Atributos" }, st.map(function (x) {
+        return el("li", { class: "lei-ficha-a" }, [el("b", { text: String(x.v) }), el("span", { text: x.l })]);
+      })));
+      c.appendChild(el("dl", { class: "lei-ficha-dl" }, [
+        el("dt", { text: "Função" }), el("dd", { text: funcaoDe(r) }),
+        el("dt", { text: "Joga de" }), el("dd", { text: gruposDe(r).map(function (g) { return GRUPO_NOME[g]; }).join(", ") }),
+        oc ? null : el("dt", { text: "Nota" }), oc ? null : el("dd", { text: String(r.overall) }),
+        cl ? el("dt", { text: "Clube" }) : null, cl ? el("dd", { text: cl.name }) : null,
+        na ? el("dt", { text: "País" }) : null, na ? el("dd", { text: na.name }) : null,
+        r.number ? el("dt", { text: "Camisa" }) : null, r.number ? el("dd", { text: String(r.number) }) : null,
+        r.height > 0 ? el("dt", { text: "Altura" }) : null, r.height > 0 ? el("dd", { text: r.height + " cm" }) : null,
+        r.weight > 0 ? el("dt", { text: "Peso" }) : null, r.weight > 0 ? el("dd", { text: r.weight + " kg" }) : null
       ]));
     });
   }

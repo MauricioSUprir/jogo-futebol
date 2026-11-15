@@ -6753,58 +6753,103 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-esc.g { font-size: 58px; }
 .lei-esc-txt { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1.12em; border-radius: 6px; background: var(--fill); font-size: 12px; font-weight: 800; }
 
-/* ---------- a moldura da sala: topo, barra da sessão e abas ---------- */
-.lei-cab { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 12px; }
-.lei-topo { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.lei-tit { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
-.lei-tit h1 { font-size: 19px; font-weight: 800; letter-spacing: .3px; line-height: 1.15; }
-.lei-tit-sub { font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.lei-sessao { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
-.lei-sb { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 48px; padding: 6px 2px;
-  border-radius: 12px; border: 1px solid var(--line); background: var(--black-soft); color: var(--text); font: inherit; font-size: 11px; font-weight: 600; cursor: pointer; }
-.lei-sb:hover { border-color: rgba(34,197,94,.55); }
-.lei-sb-ic { display: inline-flex; color: var(--gold); }
-.lei-sb-ic .tm-ic { width: 18px; height: 18px; }
-.lei-sb.sair .lei-sb-ic { color: var(--erro); }
-.lei-sb[aria-pressed="false"] .lei-sb-ic { color: var(--text-dim); }
-.lei-sb-lb { white-space: nowrap; }
-.lei-longo { display: none; }
-.lei-abas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
-.lei-aba { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-width: 0; min-height: 50px; padding: 6px 4px;
-  border-radius: 12px; border: 1px solid var(--line); background: var(--black-soft); color: var(--text-dim); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
-.lei-aba:hover { border-color: rgba(34,197,94,.55); color: var(--text); }
+/* ---------- a moldura da sala (PLANO-LEILAO.md §9, as fotos de 14/11): o topo só de ícones e as abas em pílula ----------
+   À esquerda a marca (volta ao início do Leilão), à direita os 6 ícones da sala (44 × 44, sem texto: o rótulo no aria-label
+   e no title); embaixo uma linha. As abas são pílulas centralizadas (a ativa cheia, a feita com o check). O título e a liga
+   ficam só para o leitor de tela (.lei-sr). */
+.lei-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lei-screen.lei-na-sala { padding-left: 16px; padding-right: 16px; }
+/* os tons dos chips, das pílulas e do Dar lance (o verde do TM bem claro; no escuro, um véu verde) */
+.lei-screen, .lei-folha, .lei-lance { --lei-tom: rgba(34,197,94,.10); --lei-tom-tx: var(--text); --lei-cheio: var(--green); }
+.lei-cab { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.lei-topo { display: flex; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.lei-marca.tb-back { flex: 0 0 auto; width: auto; height: 44px; min-width: 44px; padding: 0 2px 0 0; gap: 0; border: 0; border-radius: 12px; background: transparent; color: var(--text-dim); cursor: pointer; }
+.lei-marca.tb-back .tm-ic { width: 16px; height: 16px; }
+.lei-marca-seta { display: inline-flex; }
+.lei-marca-logo { width: 30px; height: 30px; display: block; border-radius: 8px; background: #0b110e; object-fit: cover; }
+.lei-marca.tb-back:hover { color: var(--gold); }
+.lei-marca:focus-visible, .lei-sb:focus-visible, .lei-aba:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lei-sessao { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.lei-sb { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
+.lei-sb:hover { background: var(--fill); color: var(--text); }
+.lei-sb-ic { display: inline-flex; }
+.lei-sb-ic .tm-ic { width: 22px; height: 22px; }
+.lei-sb.sair { color: var(--erro); }
+.lei-sb[aria-pressed="false"] { opacity: .7; }
+.lei-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.lei-aba { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0;
+  background: var(--lei-tom); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.lei-aba:hover { color: var(--text); }
 .lei-aba-ic { display: inline-flex; }
-.lei-aba-ic .tm-ic { width: 18px; height: 18px; }
-.lei-aba-lb { white-space: nowrap; }
-.lei-aba.on { background: linear-gradient(180deg, #1c9e4d, #12803d); border-color: rgba(74,222,128,.45); color: #fff; box-shadow: 0 6px 18px rgba(34,197,94,.22); }
+.lei-aba-ic:empty { display: none; }
+.lei-aba-ic .tm-ic { width: 14px; height: 14px; stroke-width: 2.6; }
+.lei-aba.feita:not(.on) { color: var(--text); }
 .lei-aba.feita:not(.on) .lei-aba-ic { color: var(--gold); }
-.lei-aviso-sala { width: 100%; max-width: 620px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 12px; border-radius: 12px;
+.lei-aba.on { background: var(--lei-cheio); color: #fff; }
+.lei-aviso-sala { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 12px; border-radius: 12px;
   border: 1px solid rgba(240,82,82,.45); background: rgba(240,82,82,.10); color: var(--text); font-size: 13px; font-weight: 600; }
 .lei-aviso-ic { display: inline-flex; color: var(--erro); }
-.lei-corpo { width: 100%; max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
+.lei-corpo { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
 .lei-col-a, .lei-col-b { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-@media (min-width: 600px) {
-  .lei-curto { display: none; }
-  .lei-longo { display: inline; }
-  .lei-aba { flex-direction: row; gap: 8px; font-size: 13px; min-height: 46px; }
+.lei-regras-sala { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+/* o celular em pé: a linha do topo de ponta a ponta, como nas fotos; até 380 px as pílulas apertam (as 4 do online cabem em 360) */
+@media (max-width: 599px) {
+  .lei-topo { margin: 0 -16px; padding: 0 16px 4px; }
+}
+@media (max-width: 380px) {
+  .lei-abas { gap: 4px; }
+  .lei-aba { padding: 0 10px; font-size: 12px; }
 }
 
-/* ---------- a aba Leilão ---------- */
-.lei-lote-cab { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
-.lei-lote-n { font-size: 18px; font-weight: 900; letter-spacing: .2px; }
-.lei-lote-t { font-size: 12px; color: var(--text-dim); }
-.lei-palco { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: stretch; }
-.lei-carta-box { display: flex; align-items: center; justify-content: center; }
-.lei-carta-box .ut-card, .lei-ficha-carta .ut-card { cursor: default; }
-.lei-carta-box .ut-card:active, .lei-ficha-carta .ut-card:active { transform: none; }
-.lei-placar { display: flex; flex-direction: column; align-items: center; gap: 7px; min-width: 0; padding: 10px 8px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
-.lei-placar.lampejo { animation: leiLampejo .7s ease-out; }
+/* ---------- a aba Leilão (as fotos de 14/11; PLANO-LEILAO.md §9) ----------
+   O chip "Jogador N de 52"; UM cartão: a foto redonda (a silhueta na pública) com o selo da nota à esquerda e o escudo no canto,
+   o nome, "função, clube", os chips e o (i); o anel do relógio com quem lidera e o valor grande; os lances de antes. Depois o
+   seu clube solto na página, a barra do orçamento e o campinho verde com as vagas. A carta do Ultimate não entra aqui. */
+.lei-lote-cab { display: flex; justify-content: center; margin-top: 4px; }
+.lei-lote-n { display: inline-flex; align-items: center; min-height: 34px; padding: 0 18px; border-radius: 12px; background: var(--lei-tom); color: var(--lei-tom-tx);
+  font-size: 16px; font-weight: 800; letter-spacing: .1px; font-variant-numeric: tabular-nums; }
+.lei-lote-rep { color: var(--alerta); margin-right: 1px; }
+.lei-lote-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--panel); }
+.lei-lote-card.lampejo { animation: leiLampejo .7s ease-out; }
 @keyframes leiLampejo { 0% { border-color: var(--erro); box-shadow: 0 0 0 0 rgba(240,82,82,.65); } 100% { box-shadow: 0 0 0 14px rgba(240,82,82,0); } }
-.lei-relogio { position: relative; width: 92px; height: 92px; flex: 0 0 auto; }
+.lei-lc-topo { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: start; min-height: 104px; }
+.lei-foto-box { position: relative; justify-self: center; width: 100px; height: 100px; }
+.lei-foto { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--lei-tom); }
+.lei-foto-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
+.lei-foto.sil { background-color: var(--gold-dark); }
+.lei-sil { display: block; width: 74%; height: auto; color: #fff; opacity: .85; }
+.lei-foto-box .lei-nota { position: absolute; left: -14px; top: 22px; }
+.lei-nota { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 44px; height: 46px; border-radius: 10px;
+  background: var(--gold); color: var(--black); line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); }
+.lei-nota b { font-size: 19px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-nota small { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.lei-foto-esc { position: absolute; right: -12px; top: -12px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 2px 8px rgba(0,0,0,.22); }
+.lei-foto-esc-img { width: 24px; height: 24px; object-fit: contain; display: block; }
+.lei-lc-info { min-width: 0; display: flex; flex-direction: column; }
+.lei-nome { font-size: 22px; font-weight: 800; line-height: 1.12; letter-spacing: -.2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.lei-funcao { margin-top: 4px; font-size: 14px; line-height: 1.3; color: var(--text-dim); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lei-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; min-width: 0; }
+.lei-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 26px; padding: 0 9px; border-radius: 7px; background: var(--lei-tom); color: var(--lei-tom-tx);
+  font-size: 13px; font-weight: 700; white-space: nowrap; }
+.lei-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lei-bandeira { width: 18px; height: 13px; flex: 0 0 auto; object-fit: cover; border-radius: 2px; }
+/* o (i): um círculo de 28 px à vista dentro de um alvo de 40 × 40 (a margem negativa não abre a linha) */
+.lei-ficha-bt { flex: 0 0 auto; width: 40px; height: 40px; margin: -7px -6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
+.lei-ficha-ic { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2); }
+.lei-ficha-ic .tm-ic { width: 15px; height: 15px; color: inherit; }
+.lei-ficha-bt:hover { color: var(--gold); }
+.lei-ficha-bt:hover .lei-ficha-ic { border-color: var(--gold); }
+.lei-ficha-bt:focus-visible { outline: none; }
+.lei-ficha-bt:focus-visible .lei-ficha-ic { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lei-placar { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: center; min-width: 0; }
+.lei-relogio { position: relative; justify-self: center; width: 64px; height: 64px; flex: 0 0 auto; }
 .lei-relogio svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
-.lei-rel-fundo { fill: none; stroke: var(--line-2); stroke-width: 8; }
-.lei-rel-arco { fill: none; stroke: var(--gold); stroke-width: 8; stroke-linecap: round; transition: stroke .2s ease; }
-.lei-rel-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 30px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-rel-fundo { fill: none; stroke: var(--line-2); stroke-width: 7; }
+.lei-rel-arco { fill: none; stroke: var(--gold); stroke-width: 7; stroke-linecap: round; transition: stroke .2s ease; }
+.lei-rel-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .lei-relogio.espera .lei-rel-num { color: var(--text-dim); }
 .lei-relogio.espera .lei-rel-arco { stroke: var(--text-dim); }
 .lei-relogio.alerta .lei-rel-arco { stroke: var(--erro); }
@@ -6812,51 +6857,65 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 @media (prefers-reduced-motion: no-preference) {
   .lei-relogio.alerta { animation: leiPulsa 1s ease-in-out infinite; }
 }
-@media (prefers-reduced-motion: reduce) { .lei-placar.lampejo { animation: none; border-color: var(--erro); } }
+@media (prefers-reduced-motion: reduce) { .lei-lote-card.lampejo { animation: none; border-color: var(--erro); } }
 @keyframes leiPulsa { 50% { transform: scale(1.05); } }
-.lei-lider { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; max-width: 100%; font-size: 12.5px; font-weight: 700; }
-.lei-lider.eu { color: var(--gold); }
+.lei-placar-dir { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lei-lider { display: flex; align-items: baseline; gap: 5px; min-width: 0; max-width: 100%; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+.lei-lider.eu { color: var(--gold); font-weight: 700; }
 .lei-lider-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-lider-v { flex: 0 0 auto; white-space: nowrap; }
-.lei-valor-atual { font-size: 26px; font-weight: 900; color: var(--gold); line-height: 1; font-variant-numeric: tabular-nums; }
-.lei-valor-atual.vazio { color: var(--text-dim); font-size: 20px; }
-.lei-hist { list-style: none; width: 100%; display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--text-dim); }
-.lei-hist li { display: flex; justify-content: space-between; gap: 6px; min-width: 0; }
+.lei-valor-atual { font-size: 40px; font-weight: 900; line-height: 1; letter-spacing: -.5px; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lei-valor-atual.eu { color: var(--gold); }
+.lei-valor-atual.vazio { color: var(--text-dim); }
+/* os lances de antes: até 3 linhas de 22 px, a altura guardada (o que chega não empurra o resto da página) */
+.lei-hist { list-style: none; min-height: 66px; display: flex; flex-direction: column; font-size: 14.5px; color: var(--text-dim); }
+.lei-hist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 22px; min-width: 0; }
+.lei-hist li:nth-child(2) { opacity: .75; }
+.lei-hist li:nth-child(3) { opacity: .55; }
 .lei-hist li.eu { color: var(--gold); }
 .lei-hist-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.lei-hist b { font-variant-numeric: tabular-nums; }
-.lei-vendido { position: absolute; left: 6px; right: 6px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; align-items: center; justify-content: center; gap: 10px;
+.lei-hist b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.lei-vendido { position: absolute; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; align-items: center; justify-content: center; gap: 10px;
   padding: 12px 14px; border-radius: 14px; background: rgba(5,8,7,.94); border: 1px solid rgba(34,197,94,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5);
   font-size: 15px; font-weight: 800; text-align: center; pointer-events: none; }
-.lei-info { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.lei-info-l1 { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.lei-nome { font-size: 17px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lei-ficha-bt { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 5px; min-height: 34px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--line-2);
-  background: var(--black-soft); color: var(--text); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
-.lei-ficha-bt .tm-ic { width: 15px; height: 15px; color: var(--gold); }
-.lei-info-l2, .lei-info-l3 { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; font-size: 13px; color: var(--text-dim); min-width: 0; }
-.lei-funcao { color: var(--text); font-weight: 600; }
-.lei-clube, .lei-pais { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
-.lei-mini-esc { width: 18px; height: 18px; object-fit: contain; }
-.lei-bandeira { width: 20px; height: 14px; object-fit: cover; border-radius: 2px; }
-.lei-grupos { display: inline-flex; gap: 4px; }
-.lei-gr { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; padding: 2px 6px; border-radius: 6px; font-size: 10.5px; font-weight: 800; letter-spacing: .04em;
-  background: rgba(34,197,94,.14); color: var(--gold); }
-.lei-gr.gr-GK { background: rgba(245,184,61,.16); color: #f5b83d; }
-.lei-gr.gr-DF { background: rgba(94,184,255,.15); color: #5eb8ff; }
-.lei-gr.gr-FW { background: rgba(240,82,82,.14); color: #f87171; }
-.lei-meu { display: flex; flex-direction: column; gap: 8px; }
-.lei-meu-l1 { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.lei-meu-nome { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
-.lei-meu-clube { font-weight: 800; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
-.lei-voce { flex: 0 0 auto; padding: 2px 7px; border-radius: 6px; background: var(--gold); color: var(--black); font-size: 10px; font-weight: 900; letter-spacing: .08em; }
-.lei-meu-saldo { font-size: 22px; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
-.lei-meu-barra { height: 6px; border-radius: 4px; background: var(--fill); border: 1px solid var(--line); overflow: hidden; }
-.lei-meu-barra i { display: block; height: 100%; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); transition: width .3s ease; }
-.lei-meu-linha { font-size: 13px; font-weight: 600; }
-.lei-meu-l3 { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 12px; color: var(--text-dim); }
-.lei-bloco { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); overflow: hidden; }
-.lei-bloco-bt { width: 100%; display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 10px 12px; border: 0; background: transparent; color: var(--text); font: inherit;
+/* o seu clube, solto na página */
+.lei-meu { display: flex; flex-direction: column; margin-top: 12px; min-width: 0; }
+.lei-meu-l1 { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 32px; }
+.lei-meu-nome { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.lei-meu-clube { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.lei-meu .lei-voce { flex: 0 0 auto; padding: 0; background: none; color: var(--text-dim); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.lei-meu-saldo { flex: 0 0 auto; font-size: 18px; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
+.lei-meu-barra { height: 6px; margin-top: 12px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.lei-meu-barra i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); transition: width .3s ease; }
+.lei-meu-l3 { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; margin-top: 8px; font-size: 14px; }
+.lei-meu-linha b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.lei-meu-media { color: var(--text-dim); }
+/* o campinho das vagas (verde nos dois temas, como nas fotos): as vagas pela formação, em círculo de 10% da largura */
+.lei-meu-campo { margin-top: 4px; }
+.lei-cv { position: relative; width: 100%; aspect-ratio: .9; border-radius: 16px; overflow: hidden; container-type: inline-size;
+  background: repeating-linear-gradient(180deg, #1c8a47 0 10%, #187d40 10% 20%); }
+.lei-cv-linhas { position: absolute; inset: 4.5% 5%; border: 1.5px solid rgba(255,255,255,.32); border-radius: 2px; pointer-events: none; }
+.lei-cv-linhas i { position: absolute; display: block; border: 1.5px solid rgba(255,255,255,.32); }
+.lei-cv-linhas .m { left: 0; right: 0; top: 50%; border-width: 1.5px 0 0; }
+.lei-cv-linhas .c { left: 50%; top: 50%; width: 22%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
+.lei-cv-linhas .a1 { left: 30%; right: 30%; top: -1.5px; height: 12%; border-top-width: 0; }
+.lei-cv-linhas .a2 { left: 30%; right: 30%; bottom: -1.5px; height: 12%; border-bottom-width: 0; }
+.lei-cv-vaga { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%, -5cqw); }
+.lei-cv-bola { position: relative; width: 10cqw; height: 10cqw; min-width: 30px; min-height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.lei-cv-bola.vazia { background: rgba(255,255,255,.14); border: 1.5px solid rgba(255,255,255,.45); }
+.lei-cv-sig { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: rgba(255,255,255,.92); }
+.lei-cv-foto { border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.lei-cv-nome { max-width: 15.5cqw; font-size: 11px; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-cv-ov { position: absolute; left: -8px; top: -5px; min-width: 18px; height: 16px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;
+  background: #fff; color: #0c5f2e; font-size: 11px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.lei-cv .lei-pen { right: -10px; top: -6px; }
+.lei-cv-forma, .lei-cv-n { position: absolute; bottom: 1%; font-size: 12px; font-weight: 700; color: rgba(255,255,255,.78); font-variant-numeric: tabular-nums; }
+.lei-cv-forma { left: 6%; }
+.lei-cv-n { right: 6%; }
+.lei-cv-folha { max-width: 380px; margin: 0 auto; }
+/* os Próximos lotes: uma linha recolhível no fim (sem caixa, só a linha de cima) */
+.lei-bloco { width: 100%; border-top: 1px solid var(--line); margin-top: 6px; }
+.lei-bloco-bt { width: 100%; display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 10px 2px; border: 0; background: transparent; color: var(--text); font: inherit;
   font-size: 14px; font-weight: 700; cursor: pointer; text-align: left; }
 .lei-bloco-ic, .lei-bloco-seta { display: inline-flex; color: var(--gold); }
 .lei-bloco-ic .tm-ic { width: 17px; height: 17px; }
@@ -6865,23 +6924,24 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-bloco-info { font-size: 12px; font-weight: 600; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .lei-bloco.aberto .lei-bloco-seta, .lei-bloco-bt.aberto .lei-bloco-seta { transform: rotate(180deg); }
 /* 2 px entre o botão do bloco e o 1º item (dois clicáveis nunca encostam) */
-.lei-bloco-corpo { padding: 2px 10px 10px; display: flex; flex-direction: column; gap: 6px; }
+.lei-bloco-corpo { padding: 2px 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.lei-gr { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  background: rgba(34,197,94,.14); color: var(--gold); }
+.lei-gr.gr-GK { background: rgba(245,184,61,.16); color: #f5b83d; }
+.lei-gr.gr-DF { background: rgba(94,184,255,.15); color: #5eb8ff; }
+.lei-gr.gr-FW { background: rgba(240,82,82,.14); color: #f87171; }
 .lei-tec, .lei-part { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--black-soft); color: var(--text); font: inherit; text-align: left; }
-.lei-tec { cursor: pointer; }
-.lei-tec:hover { border-color: rgba(34,197,94,.5); }
+.lei-tec, .lei-part.abre { cursor: pointer; }
+.lei-tec:hover, .lei-part.abre:hover { border-color: rgba(34,197,94,.5); }
+.lei-part.abre:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .lei-tec.eu, .lei-part.eu { border-color: rgba(34,197,94,.45); }
-.lei-tec.lidera { box-shadow: inset 3px 0 0 var(--gold); }
 .lei-tec-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
 .lei-tec-quem { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-tec-clube { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-tec-dir { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 0 0 auto; }
 .lei-tec-saldo { font-size: 13.5px; font-variant-numeric: tabular-nums; }
 .lei-tec-n { font-size: 11px; color: var(--text-dim); }
-.lei-tec-est { flex: 0 0 74px; text-align: center; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; color: var(--text-dim); }
-.lei-tec-est.lidera { color: var(--gold); }
-.lei-tec-est.passou, .lei-tec-est.nao { color: var(--text-dim); opacity: .8; }
-.lei-tec-est.completo { color: var(--info); }
 .lei-prox { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
   background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .lei-prox:hover { border-color: rgba(34,197,94,.5); }
@@ -6893,40 +6953,43 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-espera { text-align: center; padding: 26px 14px; }
 .lei-fim-tecs { display: flex; flex-direction: column; gap: 6px; }
 
-/* ---------- a barra de lance ---------- */
-.lei-lance { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 8px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+/* ---------- a barra de lance (fixa embaixo; as fotos: +1 +5 +10 cheios e o Tudo com o valor ao lado; Outro valor · Dar lance · Passar) ---------- */
+.lei-lance { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
   background: rgba(5,8,7,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid rgba(34,197,94,.22); box-shadow: 0 -10px 24px rgba(0,0,0,.35); }
-.lei-lance-in { max-width: 620px; margin: 0 auto; display: grid; gap: 6px; }
-.lei-lance-msg { min-height: 17px; font-size: 12.5px; line-height: 17px; font-weight: 600; color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-lance-in { max-width: 560px; margin: 0 auto; display: grid; gap: 6px; }
+.lei-lance-msg { min-height: 16px; font-size: 12.5px; line-height: 16px; font-weight: 600; color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lei-lance-msg.ok { color: var(--ok); }
 .lei-lance-msg.alerta { color: var(--alerta); }
 .lei-lance-msg.erro { color: var(--erro); }
-.lei-l1 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.5fr; gap: 6px; }
+.lei-l1 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.7fr; gap: 6px; }
 .lei-l2 { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
 .lei-lb { min-width: 0; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 6px; border-radius: 12px;
-  border: 1px solid var(--line-2); background: var(--panel); color: var(--text); font: inherit; cursor: pointer; transition: transform .1s ease, opacity .15s ease; }
+  border: 0; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; transition: transform .1s ease, opacity .15s ease; }
 .lei-lb:active:not(:disabled) { transform: scale(.96); }
-.lei-lb-t { font-size: 17px; font-weight: 900; line-height: 1.1; white-space: nowrap; }
-.lei-lb-v { font-size: 11px; font-weight: 600; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lei-lb-t { font-size: 20px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.lei-lb-v { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .lei-lb:disabled { opacity: .36; cursor: not-allowed; }
-.lei-lb-tudo, .lei-lb-dar { background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: var(--black); border: none; }
-.lei-lb-tudo .lei-lb-v { color: rgba(0,0,0,.66); }
+.lei-lb-passo { background: var(--lei-cheio); color: #fff; }
+.lei-lb-passo .lei-lb-v { display: none; }
+.lei-lb-tudo { flex-direction: row; gap: 8px; background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: var(--black); }
+.lei-lb-tudo .lei-lb-v { opacity: .75; }
 .lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); color: #1b1203; box-shadow: 0 0 0 2px rgba(245,184,61,.45); }
-.lei-l2 .lei-lb { min-height: 46px; padding: 0 16px; }
-.lei-l2 .lei-lb-t { font-size: 14px; font-weight: 800; }
-.lei-valor { min-width: 0; min-height: 46px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text);
-  font: inherit; font-size: 15px; font-weight: 700; text-align: center; }
+.lei-l2 .lei-lb { min-height: 46px; padding: 0 18px; }
+.lei-l2 .lei-lb-t { font-size: 15px; font-weight: 800; }
+.lei-lb-dar { background: var(--lei-tom); color: var(--gold); }
+.lei-l2 .lei-lb-passar { min-width: 64px; padding: 0 14px; background: transparent; color: var(--text-dim); }
+.lei-lb-passar:hover:not(:disabled) { color: var(--text); }
+.lei-valor { min-width: 0; min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text);
+  font: inherit; font-size: 16px; font-weight: 700; text-align: left; }
 .lei-valor:focus { outline: none; border-color: var(--gold); }
 .lei-valor:disabled { opacity: .45; }
-.lei-valor::placeholder { color: var(--text-dim); font-weight: 600; font-size: 13px; }
+.lei-valor::placeholder { color: var(--text-dim); font-weight: 500; font-size: 16px; }
 
 /* ---------- campinho (o do Ultimate) ---------- */
 /* o campinho do leilão tem sempre a proporção do celular (.62: o goleiro não encosta nos zagueiros na 5-4-1 nem na 3-5-2) e a
    carta pela largura dele (cqw), em qualquer tela */
 .lei-pitch { container-type: inline-size; aspect-ratio: .62; max-width: 360px; margin: 0 auto; }
 .lei-pitch .ut-card.mini { --w: clamp(32px, 14cqw, 60px); }
-.lei-pitch-lote { max-width: 300px; }
-.lei-pitch-folha { max-width: 300px; }
 .lei-vaga.sel .ut-card { outline: 3px solid var(--gold); outline-offset: 2px; }
 .lei-vaga[role="button"] { cursor: pointer; border-radius: 6px; }
 .lei-vaga[role="button"]:focus-visible { outline: 2px solid var(--gold-light); outline-offset: 3px; }
@@ -7210,9 +7273,13 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-vend-jn { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-vend-jo { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lei-vend-p { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--gold); }
-.lei-ficha { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; justify-content: center; }
-.lei-ficha-carta { flex: 0 0 auto; }
-.lei-ficha-dl { flex: 1 1 200px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; font-size: 13.5px; }
+/* a ficha sem a carta: o cabeçalho do cartão do lote, os 6 atributos em números e a lista */
+.lei-ficha-cab { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: start; padding: 14px 0 4px; }
+.lei-ficha-at { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lei-ficha-a { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 6px; border-radius: 12px; background: var(--lei-tom); }
+.lei-ficha-a b { font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-ficha-a span { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text-dim); }
+.lei-ficha-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; font-size: 13.5px; margin-top: 4px; }
 .lei-ficha-dl dt { color: var(--text-dim); font-weight: 600; }
 .lei-ficha-dl dd { font-weight: 700; }
 
@@ -7338,23 +7405,13 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-corpo-camp > .lei-cartao { grid-column: 1 / -1; }
 }
 
-/* ---------- PC e tablet: duas colunas (à esquerda a carta e o relógio; à direita meu clube, o campinho e os técnicos) ---------- */
+/* ---------- tablet e PC (as outras abas em duas colunas a partir de 760 px; a aba Leilão, de 600 a 1023 px, numa coluna de 560) ---------- */
 @media (min-width: 760px) and (min-height: 521px) {
   .lei-cab, .lei-aviso-sala { max-width: 1040px; }
-  .lei-cab { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "topo sessao" "abas abas"; align-items: center; }
-  .lei-topo { grid-area: topo; }
-  .lei-sessao { grid-area: sessao; grid-template-columns: repeat(5, auto); }
-  .lei-sb { flex-direction: row; gap: 7px; padding: 0 12px; min-height: 40px; font-size: 12.5px; }
-  .lei-abas { grid-area: abas; }
-  .lei-corpo-lote { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lei-tela-lote .lei-cab, .lei-tela-lote .lei-aviso-sala { max-width: 560px; }
   .lei-corpo-esc { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); column-gap: 24px; row-gap: 12px; align-items: start; }
   .lei-corpo-esc > * { grid-column: 2; }
   .lei-corpo-esc > .lei-esc-campo { grid-column: 1; grid-row: 1 / span 7; }
-  .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
-  .lei-carta-box .ut-card.big { --w: 176px; }
-  .lei-relogio { width: 112px; height: 112px; }
-  .lei-rel-num { font-size: 36px; }
-  .lei-lance-in { max-width: 760px; }
   .lei-pitch-esc { max-width: 440px; }
   .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   /* na Escalação a coluna da direita é estreita até ~1100 px: 3 por linha, como no celular */
@@ -7362,52 +7419,88 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-corpo-camp { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   .lei-corpo-camp > .lei-cartao { grid-column: 1 / -1; max-width: 720px; justify-self: center; }
   .lei-chave.tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
+  /* a aba Leilão no tablet: a coluna do celular, um pouco maior */
+  .lei-foto-box { width: 112px; height: 112px; }
+  .lei-lc-topo, .lei-placar { grid-template-columns: 120px minmax(0, 1fr); }
+  .lei-nome { font-size: 24px; }
+  .lei-valor-atual { font-size: 44px; }
 }
 @media (min-width: 1100px) and (min-height: 521px) {
   .lei-corpo-esc .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
-/* celular deitado (pouca altura): o topo numa linha só, a carta compacta e a barra de lance numa linha, à vista com o relógio */
+/* o topo numa linha (o celular deitado e o PC): a marca, as pílulas no meio e os ícones */
+@media (max-height: 520px) and (min-width: 560px), (min-width: 1024px) and (min-height: 600px) {
+  .lei-na-sala .lei-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  .lei-na-sala .lei-topo { display: contents; }
+  .lei-na-sala .lei-marca { grid-column: 1; grid-row: 1; }
+  .lei-na-sala .lei-abas { grid-column: 2; grid-row: 1; }
+  .lei-na-sala .lei-sessao { grid-column: 3; grid-row: 1; }
+}
+/* PC (≥ 1024 × 600): a aba Leilão em 2 colunas de no máximo 1000 px (o cartão à esquerda; o seu clube e o campinho à direita) */
+@media (min-width: 1024px) and (min-height: 600px) {
+  .lei-tela-lote .lei-cab, .lei-tela-lote .lei-aviso-sala, .lei-corpo-lote { max-width: 1000px; }
+  .lei-corpo-lote { display: grid; grid-template-columns: minmax(0, 540fr) minmax(0, 420fr); column-gap: 28px; align-items: start; }
+  .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
+  .lei-col-b .lei-meu { margin-top: 4px; }
+  .lei-foto-box { width: 120px; height: 120px; }
+  .lei-lc-topo, .lei-placar { grid-template-columns: 128px minmax(0, 1fr); }
+  .lei-nome { font-size: 26px; }
+  .lei-relogio { width: 76px; height: 76px; }
+  .lei-rel-num { font-size: 30px; }
+  .lei-valor-atual { font-size: 48px; }
+}
+/* celular deitado (pouca altura): o cartão deitado (a foto, o nome e os chips | o anel, quem lidera e o valor; os lances numa
+   linha) à esquerda, com o anel à vista; o seu clube e o campinho à direita; a barra de lance numa linha */
 @media (max-height: 520px) and (min-width: 560px) {
   .lei-screen { padding-top: 8px; }
-  .lei-na-sala .lei-cab { max-width: 900px; flex-direction: row; align-items: center; gap: 8px; margin-bottom: 8px; }
-  .lei-na-sala .lei-tit { display: none; }
-  .lei-na-sala .lei-topo { flex: 0 0 auto; }
-  .lei-na-sala .lei-abas { order: 1; flex: 1 1 auto; }
-  .lei-na-sala .lei-sessao { order: 2; flex: 0 0 auto; grid-template-columns: repeat(5, 40px); gap: 5px; }
-  .lei-na-sala .lei-sb { min-height: 40px; padding: 0; }
-  .lei-na-sala .lei-sb-lb { display: none; }
-  .lei-na-sala .lei-aba { flex-direction: row; min-height: 40px; gap: 6px; padding: 0 6px; }
+  .lei-na-sala .lei-cab { max-width: 900px; margin-bottom: 8px; }
   .lei-aviso-sala, .lei-corpo { max-width: 900px; }
-  .lei-lote-n { font-size: 16px; }
-  .lei-palco { grid-template-columns: auto minmax(0, 1fr); }
-  .lei-carta-box .ut-card.big { --w: 100px; }
-  .lei-placar { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 12px; padding: 8px; }
-  .lei-relogio { width: 80px; height: 80px; }
-  .lei-rel-num { font-size: 26px; }
-  .lei-hist { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 2px 12px; }
-  .lei-hist li { gap: 4px; }
-  .lei-lance { padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .lei-corpo-lote { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
+  .lei-corpo-lote .lei-col-a { gap: 8px; }
+  .lei-lote-cab { justify-content: flex-start; margin-top: 0; }
+  .lei-lote-n { min-height: 26px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+  .lei-lote-card { display: grid; grid-template-columns: minmax(0, 1fr) 150px; grid-template-areas: "topo placar" "hist hist"; gap: 8px 12px; padding: 12px; }
+  .lei-lc-topo { grid-area: topo; grid-template-columns: 84px minmax(0, 1fr); column-gap: 12px; min-height: 76px; }
+  .lei-foto-box { width: 76px; height: 76px; }
+  .lei-foto-box .lei-nota { left: -10px; top: 14px; width: 38px; height: 40px; }
+  .lei-nota b { font-size: 16px; }
+  .lei-foto-esc { width: 32px; height: 32px; right: -8px; top: -8px; }
+  .lei-foto-esc-img { width: 20px; height: 20px; }
+  .lei-nome { font-size: 19px; }
+  .lei-funcao { font-size: 13px; margin-top: 2px; }
+  .lei-chips { margin-top: 6px; }
+  .lei-placar { grid-area: placar; grid-template-columns: minmax(0, 1fr); justify-items: center; row-gap: 6px; text-align: center; }
+  .lei-placar-dir { align-items: center; max-width: 100%; }
+  .lei-relogio { width: 60px; height: 60px; }
+  .lei-rel-num { font-size: 24px; }
+  .lei-lider { font-size: 13px; }
+  .lei-valor-atual { font-size: 30px; }
+  .lei-hist { grid-area: hist; min-height: 22px; flex-direction: row; flex-wrap: wrap; column-gap: 16px; font-size: 13px; }
+  .lei-hist li { gap: 6px; }
+  .lei-lance { padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
   .lei-lance-in { max-width: 900px; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); gap: 4px 8px; }
-  .lei-lance-msg { grid-column: 1 / -1; min-height: 16px; line-height: 16px; font-size: 12px; }
+  .lei-lance-msg { grid-column: 1 / -1; }
   .lei-lb { min-height: 48px; }
-  .lei-l2 .lei-lb, .lei-valor { min-height: 44px; }
+  .lei-l2 .lei-lb, .lei-valor { min-height: 46px; }
 }
 
 /* ---------- tema claro ---------- */
 body.theme-light .lei-lance { background: rgba(255,255,255,.97); border-top-color: rgba(0,0,0,.08); box-shadow: 0 -8px 20px rgba(0,0,0,.08); }
 body.theme-light .lei-vendido { background: rgba(255,255,255,.97); color: var(--text); box-shadow: 0 10px 26px rgba(0,0,0,.14); }
-body.theme-light .lei-sb, body.theme-light .lei-aba, body.theme-light .lei-tec, body.theme-light .lei-part, body.theme-light .lei-prox,
+body.theme-light .lei-tec, body.theme-light .lei-part, body.theme-light .lei-prox,
 body.theme-light .lei-liga-bt, body.theme-light .lei-liga, body.theme-light .lei-passo-bt, body.theme-light .lei-forma-esc, body.theme-light .lei-simb,
-body.theme-light .lei-valor, body.theme-light .lei-campo, body.theme-light .lei-ficha-bt, body.theme-light .lei-sala-x, body.theme-light .lei-fmt,
+body.theme-light .lei-valor, body.theme-light .lei-campo, body.theme-light .lei-sala-x, body.theme-light .lei-fmt,
 body.theme-light .lei-rod-bt, body.theme-light .lei-jogo, body.theme-light .lei-ch-jogo { background: #ffffff; }
-body.theme-light .lei-aba.on { background: linear-gradient(180deg, #1c9e4d, #12803d); color: #fff; }
-body.theme-light .lei-lb { background: #ffffff; }
-body.theme-light .lei-lb-tudo, body.theme-light .lei-lb-dar { background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: #ffffff; }
-body.theme-light .lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); }
-body.theme-light .lei-lb-tudo .lei-lb-v { color: rgba(255,255,255,.85); }
+/* os tons do leilão no claro (perto das fotos): o tom verde-acinzentado e o verde cheio escuro */
+body.theme-light .lei-screen, body.theme-light .lei-folha, body.theme-light .lei-lance { --lei-tom: var(--black-soft); --lei-cheio: var(--gold); }
+body.theme-light .lei-lote-card, body.theme-light .lei-foto-esc { background: #ffffff; }
+body.theme-light .lei-nota { color: #ffffff; }
+body.theme-light .lei-lote-rep { color: #92400e; }
+body.theme-light .lei-lb-tudo { color: #ffffff; }
 body.theme-light .lei-lb-tudo.confirma { color: #1b1203; }
-body.theme-light .lei-lb-tudo.confirma .lei-lb-v { color: rgba(0,0,0,.66); }
 body.theme-light .lei-voce { color: #ffffff; }
+body.theme-light .lei-meu .lei-voce { color: var(--text-dim); }
 /* os textos de estado sobre o branco: tons escuros (contraste ≥ 4,5:1; o --ok/--alerta do escuro dá 2,3 e 1,8) */
 body.theme-light .lei-lance-msg.ok { color: #0f7a3a; }
 body.theme-light .lei-lance-msg.alerta, body.theme-light .lei-esc-pen { color: #92400e; }
