@@ -1,12 +1,15 @@
 /* ================= TOTAL MATCH — Modo Leilão: as telas ================= */
 /* Plano: PLANO-LEILAO.md §2 (as telas, a barra da sessão, a carta, o campinho), §2.1 (a Entrada), §2.2 (a Criar sala),
    §2.3 (o Saguão), §2.4 (a aba Leilão: a barra de lance, o relógio, o retorno do lance, a acessibilidade, a tela acesa),
-   §2.5 (a Escalação) e §3.8 (o atalho e o link). As telas só LEEM a sessão (TM.leilaoSessao: `ver()`) e chamam as ações
-   dela; nenhuma regra mora aqui.
+   §2.5 (a Escalação), §2.6 (o Campeonato), §1.8 (o fim) e §3.8 (o atalho e o link). As telas só LEEM a sessão
+   (TM.leilaoSessao: `ver()`, no campeonato `ver().camp`) e chamam as ações dela; nenhuma regra mora aqui.
    Rotas: leilao (Entrada: Criar sala, Entrar com código, Treinar contra bots, Minhas salas), leilao-criar (o Treino;
-   com { online: true }, a sala online), leilao-saguao (a aba Saguão, só no online: o convite, os pedidos, os
-   participantes, a configuração, o meu clube e o Pronto/Começar), leilao-lote (a aba Leilão), leilao-escalacao e
-   leilao-camp (o campeonato é o PR 3: "em breve").
+   com { online: true }, a sala online; o Formato do campeonato e a duração estimada), leilao-saguao (a aba Saguão, só no
+   online: o convite, os pedidos, os participantes, a configuração com o Formato, o meu clube e o Pronto/Começar),
+   leilao-lote (a aba Leilão), leilao-escalacao, leilao-camp (o Campeonato: Seu jogo com o Simular partida, Simular os
+   pendentes do dono, a rodada, a tabela, a chave, a artilharia e o fim) e leilao-jogo ({ id }: o "Ver o jogo", o
+   resultado GRAVADO no 2D do TM.matchview sem pausa — pauseSide null —, a prorrogação com o gol de ouro e os pênaltis
+   gravados; fora das rotas da sala: no treino o relógio para enquanto a pessoa vê o jogo).
    No treino, sair das telas da sala (ir ao menu) SEGURA o relógio (sessão.segurar("tela")), como a página escondida: a
    pessoa não perde lotes. No online o relógio é o do servidor: sair das telas não segura nada (a sessão continua batendo
    enquanto a página está à vista). A região ao vivo do leitor de tela é a #lei-vivo do index.html (uma só, no HTML
@@ -17,7 +20,8 @@
      TM.leilaoTela.anuncios()       o que foi para a região ao vivo (as últimas 40 falas)
      TM.leilaoTela.convite(usar)    o código do link ?leilao= ainda não usado (usar = true o dá por usado)
      TM.leilaoTela.estado()         { rota, aviso (o texto da faixa da sala: rede, regras, outra aba), codigoVisivel,
-                                     barra (o texto da barra do saguão) }
+                                     barra (o texto da barra do saguão), prazo (no Campeonato, o texto do prazo do meu
+                                     jogo contra um bot; null sem ele), rodadaVista (a rodada à mostra; null = a da vez) }
      TM.leilaoTela.ajustes          { cheioMs (sem conexão por mais que isso, com a internet do aparelho ligada: "Servidor
                                      cheio, tente em alguns minutos"; padrão 15 s), contaMs (a conta que não fica pronta:
                                      padrão 9 s) } — os testes encurtam
@@ -25,7 +29,10 @@
    que é de mentira). Seletores estáveis para os testes: .lei-online (o cartão da Entrada), .lei-entrar-cod (o campo do
    código), .lei-conv-cod (o código, •••••• até o olho .lei-olho), .lei-pedido (um pedido, com Aceitar e Recusar),
    .lei-part[data-uid] (um participante), .lei-sagbar (a barra fixa do saguão: .lei-sagbar-txt e o botão
-   .lei-sagbar-bt), .lei-aviso-sala (a faixa da sala). */
+   .lei-sagbar-bt), .lei-aviso-sala (a faixa da sala); o Formato: .lei-fmt[data-fmt] (aria-pressed); o Campeonato:
+   .lei-seujogo (o Seu jogo; .lei-simular = o Simular partida), .lei-pend-bt (Simular os pendentes), .lei-rodada[data-rodada]
+   (a rodada à mostra; .lei-rod-bt = ‹ ›), .lei-jogo[data-jogo][data-e] (um jogo com o estado; .lei-jg-ver = Ver o jogo),
+   .lei-tabela, .lei-chave (.lei-ch-jogo[data-jogo]), .lei-art, e no fim .lei-campeao, .lei-class e .lei-dest. */
 (function (global) {
   "use strict";
   var TM = (global.TM = global.TM || {});
@@ -74,7 +81,8 @@
     codigoVisivel: false,                 // o código da sala aparece só com o olho (quem compartilha a tela não mostra)
     sag: null,                            // o saguão já falado (quem entrou, quem ficou pronto) e o meu Pronto visto
     meuClube: null,                       // o Meu clube sendo editado no saguão: { base (o gravado), F (a cópia), sujo }
-    esperaConta: false, ocupado: null     // a Entrada esperando a conta; a ação do saguão a caminho
+    esperaConta: false, ocupado: null,    // a Entrada esperando a conta; a ação do saguão (ou do campeonato) a caminho
+    campSel: null                         // a rodada à mostra no Campeonato (null = a da vez)
   };
 
   function funcaoDe(r) { return (r && (FUNCAO[r.pos2] || GRUPO_NOME[r.pos])) || ""; }
@@ -316,7 +324,7 @@
   function ligarSessao(S) {
     if (VIEW.sessaoLigada === S) return;
     VIEW.sessaoLigada = S;
-    VIEW.codigoVisivel = false; VIEW.sag = null; VIEW.redeVista = "ok"; VIEW.offDesde = 0;
+    VIEW.codigoVisivel = false; VIEW.sag = null; VIEW.redeVista = "ok"; VIEW.offDesde = 0; VIEW.campSel = null;
     function nomeTec(t) { var V = S.ver(), x = V.tecnicos[t]; return x ? (x.eu ? "você" : x.nome) : ""; }
     S.on("lote", function () { if (naSala()) anunciaLote(S.ver()); });
     S.on("lance", function (e) {
@@ -343,6 +351,16 @@
     S.on("estado", function (e) {
       // o leilão acabou: da aba Leilão vai sozinho para a Escalação (depois do "Vendido…")
       if (e.estado === "escalacao") setTimeout(function () { if (sessao() === S && TM.ui.current() === "leilao-lote") TM.ui.go("leilao-escalacao"); }, 1800);
+      // o campeonato começou: da Escalação vai sozinho para o Campeonato (quem já tinha confirmado o Pronto)
+      if (e.estado === "camp") {
+        if (naSala()) anuncia("O campeonato começou");
+        setTimeout(function () { if (sessao() === S && TM.ui.current() === "leilao-escalacao" && S.ver().meu && S.ver().meu.pronto) TM.ui.go("leilao-camp"); }, 900);
+      }
+      if (e.estado === "fim" && naSala()) {
+        var Vf = S.ver(), Cf = Vf.camp;
+        Som.toca("fim");
+        anuncia("O campeonato acabou" + (Cf && Cf.campeao != null ? ": campeão " + nomeClube(Vf, Cf.campeao) : ""));
+      }
       // o dono começou: do Saguão vai sozinho para a aba Leilão
       if (e.estado === "leilao" && S.online) {
         if (naSala()) anuncia("O leilão começou");
@@ -350,6 +368,13 @@
       }
     });
     S.on("alterada", function () { if (naSala()) TM.ui.toast("A sala foi alterada fora das regras: o leilão parou.", "erro"); });
+    // o campeonato: a rodada que abriu, o fim de jogo de quem joga e o fim do campeonato (a região ao vivo; som curto)
+    S.on("rodada", function (e) { if (naSala()) { Som.toca("tique"); anuncia((e.nome || "Rodada " + e.n) + " começou"); } });
+    S.on("jogo", function (e) {
+      if (!naSala() || !e.eu) return;
+      var V = S.ver(), venci = e.venc === V.eu;
+      anuncia("Fim de jogo: " + nomeClube(V, e.a) + " " + e.placar[0] + " × " + e.placar[1] + " " + nomeClube(V, e.b) + (e.venc == null ? "" : venci ? ". Vitória" : ". Derrota"));
+    });
     if (!S.online) return;
     // a sala online: o pedido aceito ou recusado, tirado, o clube passado, a sala encerrada, outra aba, a conexão
     function sai(txt) {
@@ -1150,34 +1175,461 @@
     if (P.prazo.textContent !== txt) P.prazo.textContent = txt;
   }
 
-  /* ---------- a aba Campeonato (PR 3) ---------- */
+  /* ---------- a aba Campeonato (PLANO-LEILAO.md §1.7, §1.8 e §2.6) ----------
+     Tudo sai do ver().camp, que a sessão monta dos jogos GRAVADOS (nada aqui recalcula partida): "Seu jogo" (os escudos, o
+     prazo pela hora do servidor, Simular partida; contra amigo, simulado ao abrir a rodada até o PR 5), "Simular os
+     pendentes" (o dono, online), a rodada (‹ › por todas, cada jogo com o estado e o Ver o jogo), a tabela (pontos e misto),
+     a chave (mata-mata e a fase final do misto), a artilharia e, no fim, o campeão, a classificação, o artilheiro e o melhor
+     time. "Ver o jogo" e o "Simular partida" mostram o resultado GRAVADO no 2D sem pausa (rota leilao-jogo). */
   TM.ui.register("leilao-camp", function (screen) {
     var M = moldura(screen, "leilao-camp"); if (!M) return;
     M.corpo.classList.add("lei-corpo-camp");
-    VIEW.partes = { corpo: M.corpo, chave: null };
-    VIEW.tick = null;
+    VIEW.partes = { corpo: M.corpo, chave: null, prazo: null, pendQuando: 0 };
+    VIEW.tick = tickCamp;
     atualizaCamp(M.S, M.V);
   });
+  function clubeDe(V, t) { var x = t != null ? V.tecnicos[t] : null; return x ? x.clube : null; }
+  function nomeClube(V, t) { var c = clubeDe(V, t); return c ? c.nome : "A definir"; }
+  function quemTec(V, t) { var x = V.tecnicos[t]; return !x ? "" : x.eu ? "Você" : x.nome; }
+  function placarDe(g) { return g.placar ? g.placar[0] + " × " + g.placar[1] : "×"; }
+  // o que veio depois dos 90' (o texto curto): "pênaltis 4 × 3", "gol de ouro", "W.O."
+  function extraDe(g) {
+    var r = g.res; if (!r) return "";
+    if (r.wo != null) return "W.O.";
+    if (r.pen && r.pen.score) return "pênaltis " + r.pen.score[0] + " × " + r.pen.score[1];
+    if (r.pror && r.pror.ouro != null) return "gol de ouro";
+    return "";
+  }
+  function resultadoMeu(V, g) {
+    var eu = V.eu, lado = g.a === eu ? 0 : 1, r = g.res || {};
+    if (r.wo != null) return r.wo === lado ? "Derrota por W.O." : "Vitória por W.O.";
+    var x = r.pen && r.pen.score ? " nos pênaltis (" + r.pen.score[lado] + " × " + r.pen.score[1 - lado] + ")" : r.pror && r.pror.ouro != null ? " no gol de ouro" : "";
+    if (g.venc === eu) return "Vitória" + x;
+    if (g.venc != null) return "Derrota" + x;
+    return "Empate";
+  }
+  // o título da rodada ("Rodada 3 de 14"; no mata-mata o nome: "Semifinal") e a linha de baixo (a fase e o estado)
+  function tituloRodada(C, R) { return R.fase === "liga" ? R.nome + " de " + C.rodadas.length : R.nome; }
+  function faseRodada(C, R, i) {
+    if (R.fase === "liga") return C.formato === "pontos" ? (R.turno === 2 ? "2º turno" : "1º turno") : "fase de pontos";
+    return "rodada " + (i + 1) + " de " + C.rodadas.length;
+  }
+  function subRodada(C, R, i) { return faseRodada(C, R, i) + " · " + (R.feita ? "encerrada" : R.aberta ? "em andamento" : "ainda não abriu"); }
+  function chaveCamp(V) {
+    var C = V.camp;
+    if (!C) return [V.estado, !!V.pedido, V.formato].join("|");
+    var js = C.rodadas.map(function (R) {
+      return R.jogos.map(function (g) { return g.id + ":" + g.e + ":" + (g.placar ? g.placar.join("-") : "") + ":" + g.a + ":" + g.b + ":" + extraDe(g); }).join(",") + "/" + R.folgas.join(",") + "/" + R.aberta;
+    }).join("|");
+    var mj = C.meuJogo;
+    return JSON.stringify([V.estado, !!V.alterada, !!V.soOlhar, V.rede === "ok", js, C.atual, C.fim, mj && [mj.id, mj.e, mj.podeSimular, mj.motivo, mj.prazo ? mj.prazo.parado : null, mj.contraBot],
+      C.folga, C.eliminado, C.pendentes, C.podePendentes, VIEW.campSel, VIEW.ocupado, pendVisivel(V),
+      V.tecnicos.map(function (t) { return [t.clube.nome, t.clube.cor, t.clube.escudo, t.clube.sigla, t.nome, t.saiu, t.ausente]; })]);
+  }
+  // "Simular os pendentes" (o dono, online): só depois de a rodada estar aberta há 8 s (os jogos dos bots e os de amigo
+  // contra amigo são simulados na abertura, escalonados: o botão não pisca a cada rodada)
+  var PEND_ESPERA = 8000;
+  function pendVisivel(V) {
+    var C = V.camp;
+    if (!C || !V.online || V.treino || !C.podePendentes || !C.rodada) return false;
+    return V.agora - (C.rodada.abre || 0) >= PEND_ESPERA;
+  }
   function atualizaCamp(S, V) {
     var P = VIEW.partes; if (!P) return;
-    var chave = V.estado + "|" + !!V.pedido;
-    if (P.chave === chave) return;
-    P.chave = chave;
-    TM.ui.clear(P.corpo);
-    P.corpo.appendChild(el("div", { class: "next-match lei-cartao lei-embreve" }, [
-      el("span", { class: "lei-embreve-ic" }, [ic("trophy")]),
-      el("div", { class: "nm-label", text: "Campeonato em breve" }),
-      el("p", { class: "intro-text", text: V.estado === "camp" || V.estado === "fim"
-        ? "Seu time está pronto. O campeonato (mata-mata, pontos corridos ou os dois), com Jogar ou Simular em cada jogo, chega numa próxima atualização."
-        : "Primeiro o leilão e a escalação. O campeonato (mata-mata, pontos corridos ou os dois) chega numa próxima atualização." }),
-      el("div", { class: "lei-acoes" }, V.estado === "saguao" || V.pedido ? [
-        botao("Ir ao saguão", function () { TM.ui.go("leilao-saguao"); }, "btn primary", "door-open")
-      ] : [
-        botao("Ver a escalação", function () { TM.ui.go("leilao-escalacao"); }, "btn", "shirt"),
-        V.estado === "leilao" ? botao("Voltar ao leilão", function () { TM.ui.go("leilao-lote"); }, "btn primary", "gavel") : null
-      ])
-    ]));
+    var chave = chaveCamp(V);
+    if (chave !== P.chave) { P.chave = chave; montaCamp(S, V); }
+    tickCamp(S);
   }
+  function montaCamp(S, V) {
+    var P = VIEW.partes, c = P.corpo, C = V.camp;
+    // o foco do teclado volta ao mesmo botão depois de refazer (o ‹ › da rodada, o Simular, o Ver o jogo)
+    var ae = doc.activeElement, foco = ae && c.contains(ae) && ae.dataset ? ae.dataset.foco || null : null;
+    TM.ui.clear(c);
+    P.prazo = null; P.pendQuando = 0;
+    montaCampCorpo(S, V, C, c);
+    if (foco) {
+      var alvo = c.querySelector('[data-foco="' + foco + '"]');
+      if ((!alvo || alvo.disabled) && /^rod-/.test(foco)) alvo = c.querySelector('[data-foco="' + (foco === "rod-ant" ? "rod-prox" : "rod-ant") + '"]');
+      if (alvo && !alvo.disabled) { try { alvo.focus({ preventScroll: true }); } catch (e) {} }
+    }
+  }
+  function montaCampCorpo(S, V, C, c) {
+    var P = VIEW.partes;
+    if (!C) {
+      var antesSaguao = V.estado === "saguao" || !!V.pedido;
+      c.appendChild(el("div", { class: "next-match lei-cartao lei-embreve" }, [
+        el("span", { class: "lei-embreve-ic" }, [ic("trophy")]),
+        el("div", { class: "nm-label", text: "O campeonato vem depois do leilão" }),
+        el("p", { class: "intro-text", text: nomeFormato(V.formato) + ": " + fraseFormato(V.formato, V.T || 4).replace(/^./, function (x) { return x.toLowerCase(); }) +
+          " Primeiro o leilão e a escalação; depois os jogos, simulados, e todos veem o mesmo resultado." }),
+        el("div", { class: "lei-acoes" }, antesSaguao ? [
+          botao("Ir ao saguão", function () { TM.ui.go("leilao-saguao"); }, "btn primary", "door-open")
+        ] : [
+          botao("Ver a escalação", function () { TM.ui.go("leilao-escalacao"); }, "btn", "shirt"),
+          V.estado === "leilao" ? botao("Voltar ao leilão", function () { TM.ui.go("leilao-lote"); }, "btn primary", "gavel") : null
+        ])
+      ]));
+      return;
+    }
+    var A = el("div", { class: "lei-camp-a" }), B = el("div", { class: "lei-camp-b" });
+    if (C.fim) A.appendChild(fimCamp(S, V, C));
+    else {
+      A.appendChild(cabCamp(V, C));
+      A.appendChild(seuJogo(S, V, C));
+      if (pendVisivel(V)) A.appendChild(caixaPendentes(S, V, C));
+      else if (V.online && !V.treino && C.podePendentes && C.rodada) P.pendQuando = (C.rodada.abre || 0) + PEND_ESPERA;
+    }
+    A.appendChild(caixaRodada(V, C));
+    if (C.tabela) B.appendChild(caixaTabela(V, C));
+    if (C.formato !== "pontos") B.appendChild(caixaChave(V, C));
+    B.appendChild(caixaArtilharia(V, C));
+    c.appendChild(A); c.appendChild(B);
+  }
+  function cabCamp(V, C) {
+    var R = C.rodada;
+    return el("div", { class: "lei-camp-cab" }, [
+      el("h2", { class: "lei-camp-tit", text: nomeFormato(C.formato) }),
+      el("span", { class: "lei-camp-sub", text: R ? tituloRodada(C, R) + " · " + faseRodada(C, R, C.atual) : "" })
+    ]);
+  }
+  // um time grande ("Seu jogo"): o escudo, o clube e o técnico
+  function timeGrande(V, t) {
+    var x = t != null ? V.tecnicos[t] : null;
+    return el("div", { class: "lei-sj-time" + (x && x.eu ? " eu" : "") }, [
+      x ? escudo(x.clube, "") : el("span", { class: "lei-esc lei-esc-txt", text: "?" }),
+      el("span", { class: "lei-sj-clube", text: x ? x.clube.nome : "A definir" }),
+      el("span", { class: "lei-sj-tec", text: !x ? "" : x.eu ? "Você" : x.nome + (!x.bot && x.saiu ? " (saiu da sala)" : "") })
+    ]);
+  }
+  function seuJogo(S, V, C) {
+    var P = VIEW.partes, mj = C.meuJogo, R = C.rodada;
+    var box = el("div", { class: "next-match lei-cartao lei-seujogo" });
+    if (!mj) {
+      box.classList.add("vazio");
+      box.appendChild(el("div", { class: "nm-label", text: R ? R.nome : "Campeonato" }));
+      box.appendChild(el("p", { class: "intro-text lei-sj-sem", text: C.folga ? "Você folga nesta rodada. Os outros jogos estão abaixo."
+        : C.eliminado ? "Você foi eliminado. O campeonato segue: acompanhe abaixo." : V.eu < 0 ? "Você só está olhando esta sala." : "Sem jogo seu nesta rodada." }));
+      return box;
+    }
+    var g = null;
+    C.rodadas.forEach(function (Rx) { Rx.jogos.forEach(function (x) { if (x.id === mj.id) g = x; }); });
+    var feito = mj.e === "feito";
+    box.appendChild(el("div", { class: "nm-label", text: "Seu jogo · " + (R ? R.nome : "") }));
+    var meio = feito ? [el("span", { class: "lei-sj-placar", text: placarDe(mj) }), g && extraDe(g) ? el("span", { class: "lei-sj-extra", text: extraDe(g) }) : null]
+      : [el("span", { class: "lei-sj-x", text: "×" })];
+    box.appendChild(el("div", { class: "lei-sj-times" }, [timeGrande(V, mj.a), el("div", { class: "lei-sj-meio" }, meio), timeGrande(V, mj.b)]));
+    var est = el("p", { class: "lei-sj-estado" }), acoes = el("div", { class: "lei-acoes" });
+    if (feito) {
+      est.textContent = g ? resultadoMeu(V, g) : "Fim de jogo";
+      est.classList.add(g && g.venc === V.eu ? "v" : g && g.venc != null ? "d" : "e");
+      box.appendChild(est);
+      if (R && !R.feita) box.appendChild(el("p", { class: "lei-sj-nota", text: "A próxima rodada abre quando os outros jogos desta acabarem." }));
+      if (g && g.res && g.res.wo == null) { var bv = botao("Ver o jogo", function () { verJogo(mj.id); }, "btn primary", "play"); bv.dataset.foco = "sj-ver"; acoes.appendChild(bv); }
+    } else if (mj.e === "reservado") {
+      est.textContent = "Simulando…";
+      box.appendChild(est);
+    } else if (!mj.contraBot) {
+      // contra um amigo, até o PR 5 (o Online 3D do par): simulado ao abrir a rodada
+      est.textContent = "Contra um amigo: o jogo é simulado ao abrir a rodada.";
+      box.appendChild(est);
+    } else {
+      P.prazo = est;
+      box.appendChild(est);
+      var ocupado = VIEW.ocupado === "simular";
+      var bt = botao(ocupado ? "Simulando…" : "Simular partida", function () { simularMeu(S, bt); }, "btn primary", "fast-forward");
+      bt.disabled = !mj.podeSimular || ocupado || !!VIEW.ocupado;
+      bt.dataset.foco = "sj-simular"; bt.classList.add("lei-simular");
+      if (ocupado) bt.setAttribute("aria-busy", "true");
+      acoes.appendChild(bt);
+      if (!mj.podeSimular && mj.motivo && mj.motivo !== "conferindo") box.appendChild(el("p", { class: "lei-sj-motivo", text: SS().textoMotivo(mj.motivo, { rede: V.rede }) }));
+    }
+    if (acoes.childNodes.length) box.appendChild(acoes);
+    return box;
+  }
+  // o prazo do meu jogo contra um bot (a hora do servidor; no treino, o relógio da sala)
+  function textoPrazo(mj, agora) {
+    var pz = mj && mj.prazo;
+    if (!pz) return "Toque em Simular partida. Sem o toque, ele é simulado sozinho em 2 min.";
+    function mmss(ms) { var s = Math.ceil(Math.max(0, ms) / 1000); return Math.floor(s / 60) + ":" + ("0" + (s % 60)).slice(-2); }
+    if (pz.parado) return "Prazo parado em " + mmss(pz.resta) + ": volta a correr com você na sala.";
+    var rest = pz.fim - agora;
+    return rest > 0 ? "Simulado sozinho em " + mmss(rest) + " se você não tocar em Simular." : "O prazo acabou: simulando…";
+  }
+  function tickCamp(S) {
+    var P = VIEW.partes, V = VIEW.V;
+    if (!P || !V || !V.camp) return;
+    if (P.pendQuando && S.hora() >= P.pendQuando) { P.pendQuando = 0; atualiza(); return; }
+    if (!P.prazo) return;
+    var txt = textoPrazo(V.camp.meuJogo, S.hora());
+    if (P.prazo.textContent !== txt) P.prazo.textContent = txt;
+  }
+  function simularMeu(S, bt) {
+    if (VIEW.ocupado) return;
+    VIEW.ocupado = "simular";
+    if (bt) { bt.disabled = true; bt.setAttribute("aria-busy", "true"); var r0 = bt.querySelector("span:last-child"); if (r0) r0.textContent = "Simulando…"; }
+    S.simular().then(function (r) {
+      VIEW.ocupado = null;
+      if (!r || !r.ok) { TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro"); atualiza(); return; }
+      // gravado: só então o 2D (sem pausa) mostra o que ficou gravado
+      if (sessao() === S && TM.ui.current() === "leilao-camp") verJogo(r.id);
+      else atualiza();
+    }, function (e) {
+      VIEW.ocupado = null;
+      if (global.console) console.error(e);
+      TM.ui.toast("Não deu para simular: tente de novo.", "erro");
+      atualiza();
+    });
+  }
+  function caixaPendentes(S, V, C) {
+    var oc = VIEW.ocupado === "pendentes";
+    var bt = botao(oc ? "Simulando…" : "Simular os pendentes", function () {
+      if (VIEW.ocupado) return;
+      VIEW.ocupado = "pendentes"; atualiza();
+      S.simularPendentes().then(function (r) {
+        VIEW.ocupado = null;
+        if (!r || !r.ok) TM.ui.toast(SS().textoMotivo(r && r.motivo, r || {}), "erro");
+        else { TM.ui.toast(r.n === 1 ? "1 jogo simulado." : r.n + " jogos simulados.", "ok"); anuncia(r.n === 1 ? "1 jogo simulado" : r.n + " jogos simulados"); }
+        atualiza();
+      }, function () { VIEW.ocupado = null; TM.ui.toast("Falha na conexão: tente de novo", "erro"); atualiza(); });
+    }, "btn", "fast-forward");
+    bt.disabled = !!VIEW.ocupado || !podeAgir(V);
+    bt.dataset.foco = "pendentes"; bt.classList.add("lei-pend-bt");
+    return el("div", { class: "lei-caixa lei-pend" }, [
+      el("div", { class: "lei-pend-txt" }, [
+        el("span", { class: "lei-pend-t", text: C.pendentes === 1 ? "1 jogo sem resultado nesta rodada" : C.pendentes + " jogos sem resultado nesta rodada" }),
+        el("span", { class: "lei-pend-s", text: "Você é o dono da sala: simule os jogos de quem não está aqui para a rodada andar." })
+      ]),
+      bt
+    ]);
+  }
+  // a rodada à mostra (‹ › por todas; começa na da vez): cada jogo com o placar, o estado e o Ver o jogo
+  function caixaRodada(V, C) {
+    var n = C.rodadas.length, i = VIEW.campSel != null ? VIEW.campSel : (C.atual >= 0 ? C.atual : n - 1);
+    i = Math.max(0, Math.min(n - 1, i));
+    var R = C.rodadas[i];
+    function vai(k) { VIEW.campSel = Math.max(0, Math.min(n - 1, k)); atualiza(); }
+    var ant = el("button", { class: "lei-rod-bt", type: "button", "aria-label": "Rodada anterior", title: "Rodada anterior", data: { foco: "rod-ant" }, on: { click: function () { vai(i - 1); } } }, [ic("chevron-left")]);
+    var prox = el("button", { class: "lei-rod-bt", type: "button", "aria-label": "Próxima rodada", title: "Próxima rodada", data: { foco: "rod-prox" }, on: { click: function () { vai(i + 1); } } }, [ic("chevron-right")]);
+    ant.disabled = i <= 0; prox.disabled = i >= n - 1;
+    var box = el("div", { class: "lei-caixa lei-rodada", data: { rodada: String(R.n) } }, [
+      el("div", { class: "lei-rod-cab" }, [ant, el("div", { class: "lei-rod-tit", "aria-live": "polite" }, [
+        el("span", { class: "lei-rod-n", text: tituloRodada(C, R) }), el("span", { class: "lei-rod-s", text: subRodada(C, R, i) })
+      ]), prox])
+    ]);
+    var ul = el("ul", { class: "lei-jogos" });
+    R.jogos.forEach(function (g) { ul.appendChild(linhaJogo(V, C, g, R)); });
+    box.appendChild(ul);
+    if (R.folgas.length) box.appendChild(el("p", { class: "lei-rod-folga", text: "Folga: " + R.folgas.map(function (t) { return nomeClube(V, t); }).join(", ") }));
+    if (C.atual >= 0 && i !== C.atual) { var bv = botao("Ir à rodada da vez", function () { VIEW.campSel = null; atualiza(); }, "btn small", "calendar"); bv.dataset.foco = "rod-vez"; box.appendChild(el("div", { class: "lei-acoes" }, [bv])); }
+    return box;
+  }
+  function estadoJogo(g) {
+    if (g.a == null || g.b == null) return ["def", "A definir"];
+    if (g.e === "feito") { var x = extraDe(g); return ["feito", x === "W.O." ? "W.O." : "Simulado" + (x ? " · " + x : "")]; }
+    if (g.e === "reservado") return ["anda", "Simulando…"];
+    if (!g.aberta) return ["fechado", "Esperando a rodada"];
+    return ["espera", "Esperando"];
+  }
+  function timeLinha(V, t, lado) {
+    var x = t != null ? V.tecnicos[t] : null;
+    return el("span", { class: "lei-jg-t " + lado + (x && x.eu ? " eu" : ""), title: x ? x.clube.nome + " · " + (x.eu ? "você" : x.nome) : "A definir" }, [
+      x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" }),
+      el("span", { class: "lei-jg-nome", text: x ? x.clube.nome : "A definir" })
+    ]);
+  }
+  function linhaJogo(V, C, g, R) {
+    var meu = V.eu >= 0 && (g.a === V.eu || g.b === V.eu), est = estadoJogo(g);
+    var li = el("li", { class: "lei-jogo" + (meu ? " meu" : ""), data: { jogo: g.id, e: g.e } }, [
+      el("div", { class: "lei-jg-lin" }, [timeLinha(V, g.a, "a"), el("span", { class: "lei-jg-pl" + (g.e === "feito" ? " feito" : ""), text: placarDe(g) }), timeLinha(V, g.b, "b")])
+    ]);
+    var pe = el("div", { class: "lei-jg-pe" }, [el("span", { class: "lei-jg-est " + est[0], text: est[1] })]);
+    if (g.e === "feito" && g.res && g.res.wo == null) {
+      pe.appendChild(el("button", { class: "lei-jg-ver", type: "button", data: { foco: "ver-" + g.id }, "aria-label": "Ver o jogo " + nomeClube(V, g.a) + " " + placarDe(g) + " " + nomeClube(V, g.b),
+        on: { click: function () { verJogo(g.id); } } }, [el("span", { class: "lei-bt-ic" }, [ic("play")]), el("span", { text: "Ver o jogo" })]));
+    }
+    li.appendChild(pe);
+    return li;
+  }
+  // a tabela da fase de pontos (pontos corridos e o misto): # · Clube · J · V · E · D · SG · Pts
+  function caixaTabela(V, C) {
+    var misto = C.formato === "misto", nClass = C.T <= 4 ? 2 : 4;
+    var box = el("div", { class: "lei-caixa lei-tab-box" }, [el("div", { class: "lei-rotulo", text: misto ? "Fase de pontos" : "Classificação" })]);
+    var cab = [["#", "Posição"], ["Clube", null], ["J", "Jogos"], ["V", "Vitórias"], ["E", "Empates"], ["D", "Derrotas"], ["SG", "Saldo de gols"], ["Pts", "Pontos"]];
+    var thead = el("thead", {}, [el("tr", {}, cab.map(function (x, k) {
+      var th = el("th", { scope: "col", class: "c" + k + (k >= 3 && k <= 5 ? " ved" : ""), text: x[0] });
+      if (x[1]) th.setAttribute("title", x[1]);
+      if (x[1] && x[1] !== x[0]) th.setAttribute("aria-label", x[1]);
+      return th;
+    }))]);
+    var tbody = el("tbody");
+    C.tabela.forEach(function (r) {
+      var x = V.tecnicos[r.t], eu = r.t === V.eu, cls = (eu ? "eu" : "") + (misto && r.pos <= nClass ? " classif" : "");
+      tbody.appendChild(el("tr", { class: cls.trim() }, [
+        el("td", { class: "c0", text: String(r.pos) }),
+        el("td", { class: "c1" }, [el("span", { class: "lei-tab-clube", title: x ? x.clube.nome + " · " + (x.eu ? "você" : x.nome) : "" }, [escudo(x && x.clube, "pp"), el("span", { class: "lei-tab-n", text: x ? x.clube.nome : "" })])]),
+        el("td", { class: "c2", text: String(r.j) }), el("td", { class: "c3 ved", text: String(r.v) }), el("td", { class: "c4 ved", text: String(r.e) }), el("td", { class: "c5 ved", text: String(r.d) }),
+        el("td", { class: "c6", text: (r.sg > 0 ? "+" : "") + r.sg }), el("td", { class: "c7", text: String(r.pts) })
+      ]));
+    });
+    box.appendChild(el("div", { class: "lei-tab-rola" }, [el("table", { class: "lei-tabela" }, [thead, tbody])]));
+    box.appendChild(el("p", { class: "lei-tab-nota", text: misto ? (nClass === 2 ? "Os 2 primeiros fazem a final." : "Os 4 primeiros vão às semifinais: 1º × 4º e 2º × 3º.") + " Desempate: pontos, saldo, gols pró, confronto direto e sorteio."
+      : "Desempate: pontos, saldo, gols pró, confronto direto e sorteio." }));
+    return box;
+  }
+  // a chave do mata-mata (no misto, a fase final): cada rodada com os jogos e as folgas; o vencedor em destaque
+  function caixaChave(V, C) {
+    var mata = C.rodadas.filter(function (R) { return R.fase === "mata"; });
+    var box = el("div", { class: "lei-caixa lei-chave-box" }, [el("div", { class: "lei-rotulo", text: C.formato === "misto" ? "Mata-mata" : "Chave" })]);
+    if (C.formato === "misto" && !C.ligaFeita) box.appendChild(el("p", { class: "lei-tab-nota", text: "Os classificados entram quando a fase de pontos acabar." }));
+    var grade = el("div", { class: "lei-chave" + (mata.length >= 3 ? " tres" : "") });
+    mata.forEach(function (R) {
+      var col = el("div", { class: "lei-ch-col" }, [el("div", { class: "lei-ch-tit", text: R.nome })]);
+      R.jogos.forEach(function (g) {
+        var pen = g.res && g.res.pen && g.res.pen.score;
+        function lado(t, k) {
+          var x = t != null ? V.tecnicos[t] : null, venc = g.e === "feito" && g.venc === t && t != null;
+          return el("div", { class: "lei-ch-l" + (venc ? " venc" : "") + (x && x.eu ? " eu" : "") + (g.e === "feito" && !venc ? " perdeu" : "") }, [
+            x ? escudo(x.clube, "pp") : el("span", { class: "lei-esc pp lei-esc-txt", text: "?" }),
+            el("span", { class: "lei-ch-n", text: x ? x.clube.nome : "A definir" }),
+            el("span", { class: "lei-ch-g", text: g.e === "feito" && g.placar ? String(g.placar[k]) + (pen ? " (" + pen[k] + ")" : "") : "" })
+          ]);
+        }
+        col.appendChild(el("div", { class: "lei-ch-jogo", data: { jogo: g.id } }, [lado(g.a, 0), lado(g.b, 1)]));
+      });
+      R.folgas.forEach(function (t) {
+        var x = V.tecnicos[t];
+        col.appendChild(el("div", { class: "lei-ch-jogo folga" }, [el("div", { class: "lei-ch-l" + (x && x.eu ? " eu" : "") }, [
+          escudo(x && x.clube, "pp"), el("span", { class: "lei-ch-n", text: x ? x.clube.nome : "" }), el("span", { class: "lei-ch-g folga", text: "folga" })
+        ])]));
+      });
+      grade.appendChild(col);
+    });
+    box.appendChild(grade);
+    return box;
+  }
+  function caixaArtilharia(V, C) {
+    var box = el("div", { class: "lei-caixa lei-art-box" }, [el("div", { class: "lei-rotulo", text: "Artilharia" })]);
+    var lista = (C.artilharia || []).slice(0, 5);
+    if (!lista.length) { box.appendChild(el("p", { class: "lei-vazio", text: "Ninguém marcou ainda." })); return box; }
+    var ol = el("ol", { class: "lei-art" }), pos = 0, ant = -1;
+    lista.forEach(function (x, k) {
+      if (x.gols !== ant) { pos = k + 1; ant = x.gols; }
+      var cl = clubeDe(V, x.t);
+      ol.appendChild(el("li", { class: "lei-art-l" + (x.t === V.eu ? " eu" : "") }, [
+        el("span", { class: "lei-art-p", text: pos + "º" }), escudo(cl, "pp"),
+        el("span", { class: "lei-art-txt" }, [el("span", { class: "lei-art-n", text: x.nome }), el("span", { class: "lei-art-s", text: cl ? cl.nome : "" })]),
+        el("span", { class: "lei-art-g", text: x.gols + (x.gols === 1 ? " gol" : " gols") })
+      ]));
+    });
+    box.appendChild(ol);
+    return box;
+  }
+  /* o fim (§1.8): o campeão em destaque (o pôster do fim de jogo do TM com o escudo desenhado), a classificação final, o
+     artilheiro, o melhor time pela soma das notas, "Voltar" e "Criar outra sala" */
+  function campanha(V, C, t) {
+    if (C.formato === "pontos") {
+      var r = (C.tabela || []).filter(function (x) { return x.t === t; })[0];
+      return r ? r.pts + " pontos em " + r.j + " jogos · " + r.v + (r.v === 1 ? " vitória" : " vitórias") : "";
+    }
+    var fin = null;
+    C.rodadas.forEach(function (R) { if (R.fase === "mata") R.jogos.forEach(function (g) { if (g.a === t || g.b === t) fin = g; }); });
+    if (!fin || !fin.placar) return "";
+    var lado = fin.a === t ? 0 : 1, adv = lado ? fin.a : fin.b, x = extraDe(fin);
+    var s = "Final: " + fin.placar[lado] + " × " + fin.placar[1 - lado] + " contra " + nomeClube(V, adv);
+    if (fin.res && fin.res.pen && fin.res.pen.score) s += " (pênaltis " + fin.res.pen.score[lado] + " × " + fin.res.pen.score[1 - lado] + ")";
+    else if (x === "gol de ouro") s += " no gol de ouro";
+    return s;
+  }
+  // até onde cada um foi (mata-mata e misto): Campeão, Vice, a rodada em que caiu ou a fase de pontos; nos pontos, os pontos
+  function alcanceDe(V, C, t, i) {
+    if (C.formato === "pontos") { var r = (C.tabela || []).filter(function (x) { return x.t === t; })[0]; return r ? r.pts + (r.pts === 1 ? " ponto" : " pontos") : ""; }
+    if (i === 0) return "Campeão";
+    var caiu = null;
+    C.rodadas.forEach(function (R) { if (R.fase === "mata") R.jogos.forEach(function (g) { if ((g.a === t || g.b === t) && g.e === "feito" && g.venc !== t) caiu = R; }); });
+    if (caiu) return caiu.nome === "Final" ? "Vice" : caiu.nome;
+    if (C.formato === "misto") { var p = (C.tabela || []).filter(function (x) { return x.t === t; })[0]; return p ? "Fase de pontos · " + p.pos + "º" : "Fase de pontos"; }
+    return "";
+  }
+  function fimCamp(S, V, C) {
+    var wrap = el("div", { class: "lei-fim" }), t = C.campeao, x = V.tecnicos[t], eu = t === V.eu;
+    var meuLugar = V.eu >= 0 ? C.classificacao.indexOf(V.eu) + 1 : 0;
+    var pill = eu ? ["v", "Você é o campeão"] : meuLugar ? ["e", "Seu lugar: " + meuLugar + "º"] : ["e", "Campeão"];
+    wrap.appendChild(el("div", { class: "md-poster fim lei-campeao res-v", role: "group", "aria-label": "Campeão: " + (x ? x.clube.nome : "") }, [
+      el("span", { class: "mdp-foto mdp-neutro" }), el("span", { class: "mdp-tinta" }), el("span", { class: "mdp-veu" }), el("span", { class: "mdp-faixas" }),
+      el("div", { class: "mdp-topo" }, [el("span", { class: "mdp-sobre", text: "Campeão" }), el("span", { class: "mdp-data", text: nomeFormato(C.formato) + " · " + ((V.liga && V.liga.nome) || "Leilão") })]),
+      el("div", { class: "lei-cp-centro" }, [
+        el("span", { class: "lei-cp-coroa" }, [ic("crown")]),
+        escudo(x && x.clube, "g"),
+        el("span", { class: "mdp-nome lei-cp-nome", text: x ? x.clube.nome : "" }),
+        el("span", { class: "lei-cp-tec", text: x ? (x.eu ? "Você" : x.nome) : "" }),
+        el("span", { class: "lei-cp-camp", text: campanha(V, C, t) })
+      ]),
+      el("div", { class: "mdp-res " + pill[0], text: pill[1] })
+    ]));
+    // a classificação final
+    var ol = el("ol", { class: "lei-class" });
+    C.classificacao.forEach(function (tt, i) {
+      var y = V.tecnicos[tt];
+      ol.appendChild(el("li", { class: "lei-cl" + (tt === V.eu ? " eu" : "") + (i === 0 ? " campeao" : "") }, [
+        el("span", { class: "lei-cl-p", text: (i + 1) + "º" }), escudo(y && y.clube, "pp"),
+        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: y ? (y.eu ? "Você" : y.nome) : "" })]),
+        el("span", { class: "lei-cl-x", text: alcanceDe(V, C, tt, i) })
+      ]));
+    });
+    wrap.appendChild(el("div", { class: "lei-caixa lei-class-box" }, [el("div", { class: "lei-rotulo", text: "Classificação final" }), ol]));
+    // o artilheiro e o melhor time pela soma das notas
+    var art = (C.artilharia || [])[0], mt = C.melhorTime, clArt = art ? clubeDe(V, art.t) : null, clMt = mt ? clubeDe(V, mt.t) : null;
+    var empArt = art ? C.artilharia.filter(function (y) { return y.gols === art.gols; }).length - 1 : 0;
+    wrap.appendChild(el("div", { class: "lei-destaques" }, [
+      el("div", { class: "lei-caixa lei-dest" }, [el("span", { class: "lei-dest-ic" }, [ic("target")]), el("div", { class: "lei-dest-txt" }, [
+        el("span", { class: "lei-rotulo", text: "Artilheiro" }),
+        el("span", { class: "lei-dest-n", text: art ? art.nome : "Ninguém marcou" }),
+        el("span", { class: "lei-dest-s", text: art ? art.gols + (art.gols === 1 ? " gol" : " gols") + " · " + (clArt ? clArt.nome : "") + (empArt ? " (empatado com " + empArt + (empArt === 1 ? " outro)" : " outros)") : "") : "" })
+      ])]),
+      el("div", { class: "lei-caixa lei-dest" }, [el("span", { class: "lei-dest-ic" }, [ic("award")]), el("div", { class: "lei-dest-txt" }, [
+        el("span", { class: "lei-rotulo", text: "Melhor time pela soma das notas" }),
+        el("span", { class: "lei-dest-n", text: clMt ? clMt.nome : "" }),
+        el("span", { class: "lei-dest-s", text: mt ? "Soma das notas dos 11: " + mt.soma + (mt.t === V.eu ? " · o seu" : "") : "" })
+      ])])
+    ]));
+    wrap.appendChild(el("div", { class: "lei-acoes lei-fim-acoes" }, [
+      botao("Voltar", function () { TM.ui.go("leilao"); }, "btn", "chevron-left"),
+      botao("Criar outra sala", function () { TM.ui.go("leilao-criar", V.online && !V.treino ? { online: true } : {}); }, "btn primary", "gavel")
+    ]));
+    return wrap;
+  }
+
+  /* ---------- "Ver o jogo": o resultado GRAVADO no 2D, sem pausa (rota leilao-jogo) ----------
+     O TM.matchview.play com pauseSide null: sem o botão de pausa (a pausa sortearia o resto de novo: resimRest) e sem o 3D
+     (o tm3d.js só entra com um lado do jogador). Depois dos 90', a prorrogação com o gol de ouro e os pênaltis, também os
+     gravados. Fora das rotas da sala: no treino o relógio para enquanto a pessoa vê o jogo. */
+  function verJogo(id) { TM.ui.go("leilao-jogo", { id: id }); }
+  function copiaRes(x) { return x == null ? null : JSON.parse(JSON.stringify(x)); }
+  TM.ui.register("leilao-jogo", function (screen, params) {
+    var S = sessao(), J = S && params && params.id && S.partida ? S.partida(params.id) : null;
+    if (!J || !J.res || !TM.matchview || J.res.wo != null) { TM.ui.go(S ? "leilao-camp" : "leilao"); return; }
+    screen.classList.add("lei-jogo-tela");
+    var res = copiaRes(J.res), A = J.times[0], B = J.times[1], V = S.ver(), C = V.camp, R = null;
+    if (C) C.rodadas.forEach(function (Rx) { if (Rx.n === J.rodada) R = Rx; });
+    var titulo = (R ? R.nome : "Campeonato") + " · Leilão";
+    function volta() { TM.ui.go("leilao-camp"); }
+    TM.matchview.play(screen, {
+      teamA: A, teamB: B,
+      result: { score: (res.score || [0, 0]).slice(), events: res.events || [], stats: res.stats || null, sentOff: res.sentOff || [], injuries: [] },
+      pauseSide: null, simOpts: { realism: 3, neutral: true }, formation: A.formation, formationB: B.formation,
+      title: titulo, onBack: volta,
+      onDone: function () {
+        if (!res.pror) { volta(); return; }
+        TM.ui.go("prorrogacao", {
+          a: A.name, b: B.name, de: (res.score || [0, 0]).slice(), para: (res.pror.score || res.placar).slice(), ev: res.pror.events || [], golDeOuro: true, pen: !!res.pen, title: titulo,
+          onDone: function () {
+            if (!res.pen) { volta(); return; }
+            TM.ui.go("pen-shootout", { teamA: A, teamB: B, shoot: res.pen, title: "Pênaltis · " + titulo, onDone: volta });
+          }
+        });
+      }
+    });
+  });
 
   /* ---------- o Saguão (aba Saguão, só no online) ---------- */
   // a pessoa pode agir na sala agora (a conexão em dia, esta aba no comando, as regras iguais, a sala inteira)
@@ -2334,7 +2786,9 @@
       return {
         rota: (function () { try { return TM.ui.current(); } catch (e) { return null; } })(),
         aviso: a && !a.hidden ? a.textContent : null, codigoVisivel: VIEW.codigoVisivel,
-        barra: sb && !sb.raiz.hidden ? sb.txt.textContent : null
+        barra: sb && !sb.raiz.hidden ? sb.txt.textContent : null,
+        // o Campeonato: o texto do prazo do meu jogo (null sem ele) e a rodada à mostra (null = a da vez)
+        prazo: P && P.prazo ? P.prazo.textContent : null, rodadaVista: VIEW.campSel
       };
     },
     /** Gancho de teste: os prazos da tela (cheioMs, contaMs). */
