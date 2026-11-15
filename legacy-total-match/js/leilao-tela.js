@@ -27,7 +27,7 @@
   var ROTAS_SALA = { "leilao-lote": 1, "leilao-escalacao": 1, "leilao-camp": 1 };
   var GRUPO_CURTO = { GK: "GOL", DF: "DEF", MF: "MEI", FW: "ATA" };
   var GRUPO_NOME = { GK: "Goleiro", DF: "Defensor", MF: "Meio-campo", FW: "Atacante" };
-  var GRUPO_PLURAL = { GK: "goleiro", DF: "defesa", MF: "meio-campo", FW: "ataque" };
+  var GRUPO_FALTA = { GK: " goleiro", DF: " na defesa", MF: " no meio-campo", FW: " no ataque" };
   var FUNCAO = {
     GOL: "Goleiro", ZAG: "Zagueiro", LD: "Lateral direito", LE: "Lateral esquerdo", VOL: "Volante", MC: "Meio-campista",
     MEI: "Meia", MD: "Meia direita", ME: "Meia esquerda", PD: "Ponta direita", PE: "Ponta esquerda", CA: "Centroavante",
@@ -1021,9 +1021,9 @@
         var e = S.escalacao(sel), slots = e ? L().slotsDe(e.formacao) : [];
         ["GK", "DF", "MF", "FW"].forEach(function (g) {
           var n = 0; slots.forEach(function (sl, i) { if (sl[0] === g && e.tit[i] < 0) n++; });
-          if (n) falta.push(n + " de " + GRUPO_PLURAL[g]);
+          if (n) falta.push(n + GRUPO_FALTA[g]);
         });
-        c.appendChild(el("p", { class: "lei-vend-falta", text: falta.length ? "Faltam " + falta.join(", ") + " (na " + e.formacao + ")." : "Time completo." }));
+        c.appendChild(el("p", { class: "lei-vend-falta", text: falta.length ? "Faltam: " + falta.join(", ") + " (na " + e.formacao + ")." : "Time completo." }));
       }
       var vs = V.vendas.slice().reverse();
       c.appendChild(el("h3", { class: "lei-folha-sub", text: "Vendidos (" + vs.length + ")" }));
