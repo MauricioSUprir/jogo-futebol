@@ -490,6 +490,20 @@
     });
     return { todas: fim || (T > 0 && t.every(Boolean)), t: t };
   }
+  /** Quem comprou melhor (a revelação no fim, PR 6): a nota de cada compra contra a nota que o PREÇO pagava no leilão da sala
+   *  (a reta dos mínimos quadrados de nota × preço sobre todas as vendas; com um preço só, a média). vendas = [{ t, preco, nota }].
+   *  Devolve [{ t, compras, gasto, acima (a soma das diferenças, com uma casa) }] × T, de quem levou mais nota do que pagou para
+   *  quem levou menos (empate: mais compras, depois o técnico). Quem não comprou nada fica com 0. */
+  function compraram(vendas, T) {
+    var vs = (vendas || []).filter(function (x) { return x && x.t >= 0 && x.t < T; }), n = vs.length, mp = 0, mn = 0, sxy = 0, sxx = 0;
+    vs.forEach(function (x) { mp += x.preco / n; mn += x.nota / n; });
+    vs.forEach(function (x) { sxy += (x.preco - mp) * (x.nota - mn); sxx += (x.preco - mp) * (x.preco - mp); });
+    var b = sxx > 1e-9 ? sxy / sxx : 0, a = mn - b * mp, out = [];
+    for (var t = 0; t < T; t++) out.push({ t: t, compras: 0, gasto: 0, acima: 0 });
+    vs.forEach(function (x) { var o = out[x.t]; o.compras++; o.gasto += x.preco; o.acima += x.nota - (a + b * x.preco); });
+    out.forEach(function (o) { o.acima = Math.round(o.acima * 10) / 10; });
+    return out.sort(function (x, y) { return (y.acima - x.acima) || (y.compras - x.compras) || (x.t - y.t); });
+  }
 
   /* ---------- o time do técnico e a simulação (§3.6) ---------- */
   function claro(cor) {
@@ -1055,7 +1069,7 @@
     resDo3d: resDo3d, res3dValido: res3dValido, escDaTela: escDaTela, completarMata: completarMata,
     contexto: contexto, formatoDe: formatoDe, rodadasDe: rodadasDe, jogosDe: jogosDe, duracaoEstimada: duracaoEstimada,
     estrutura: estrutura, montar: montar, tabela: tabela, artilharia: artilharia,
-    somaNotas: somaNotas, revelados: revelados, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
+    somaNotas: somaNotas, revelados: revelados, compraram: compraram, ehMata: ehMata, vencedorDe: vencedorDe, resValido: resValido,
     timeDoTecnico: timeDoTecnico, escalacaoDoJogo: escalacaoDoJogo, simularJogo: simularJogo, sementeJogo: sementeJogo,
     resultadoDoJogo: resultadoDoJogo, resultadoWO: resultadoWO, prazo3d: prazo3d, prazoPar: prazoPar, PAUSAS_PAR: PAUSAS_PAR, prazoDe: prazoDe,
     abrir: abrir, pausar: pausar, retomar: retomar, reservar: reservar, marcarAbriu: marcarAbriu, gravar: gravar, naoAbriu: naoAbriu, wo: wo, desistir: desistir,

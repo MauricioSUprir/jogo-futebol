@@ -1317,7 +1317,7 @@
     // o campinho (tocar em dois troca as vagas: só com os 11)
     var campo = campinhoVagas(S, V.eu, { cls: "lei-cv-esc", sel: VIEW.selVaga, troca: cheio && !V.soOlhar && !V.alterada ? tocaVaga : null });
     b.appendChild(el("div", { class: "lei-esc-campo" }, [campo]));
-    var dica = cheio ? "Toque em dois jogadores para trocar de lugar. Cada um só entra numa vaga da posição dele; −1 e −2 marcam quem está fora da função."
+    var dica = cheio ? "Toque em dois jogadores para trocar de lugar. Cada um só entra numa vaga da posição dele; " + (oc ? "a borda laranja marca quem está fora da função." : "−1 e −2 marcam quem está fora da função.")
       : V.estado === "leilao" ? "Durante o leilão, a formação é a sua preferência: se uma compra não couber nela, ela muda sozinha. A troca de lugar abre com os 11."
       : "Escale depois de completar os 11.";
     b.appendChild(el("p", { class: "lei-esc-dica", text: dica }));
@@ -2158,7 +2158,7 @@
       ])])
     ]));
     // as notas escondidas (PR 6): reveladas aqui, no fim do campeonato — o time de cada técnico (o toque abre o campinho e as
-    // compras com as notas), a soma das notas e quem comprou melhor (a soma das notas dos 11 menos o que gastou no leilão)
+    // compras com as notas), a soma das notas e quem comprou melhor (quem levou mais nota do que o preço pagava)
     if (V.overall === "escondido" && !V.notasOcultas) wrap.appendChild(revelacao(V, C));
     wrap.appendChild(el("div", { class: "lei-acoes lei-fim-acoes" }, [
       botao("Voltar", function () { TM.ui.go("leilao"); }, "btn", "chevron-left"),
@@ -2167,37 +2167,35 @@
     return wrap;
   }
 
-  // a revelação das notas no fim (sala com o Overall escondido): o destaque de quem comprou melhor e a lista dos técnicos pela
-  // conta dele (a soma das notas dos 11 e o gasto; o toque abre o time com as notas)
-  function comprasReveladas(V, C) {
-    return (C.notas || []).map(function (x) {
-      var y = V.tecnicos[x.t], gasto = y ? L().SALDO - y.saldo : 0;
-      return { t: x.t, soma: x.soma, gasto: gasto, conta: x.soma - gasto };
-    }).sort(function (a, b) { return (b.conta - a.conta) || (b.soma - a.soma) || (a.t - b.t); });
-  }
+  // a revelação das notas no fim (sala com o Overall escondido): o destaque de quem comprou melhor (quem levou mais nota do que
+  // o preço pagava no leilão da sala: leilao-camp.js compraram) e a lista dos técnicos por essa conta, com a soma das notas dos
+  // 11 (o toque abre o time com as notas)
+  function sinal(x) { var r = Math.round(x); return r > 0 ? "+" + r : r < 0 ? "−" + (-r) : "0"; }
   function revelacao(V, C) {
-    var lista = comprasReveladas(V, C), top = lista[0], cl = top ? clubeDe(V, top.t) : null;
+    var soma = {}; (C.notas || []).forEach(function (x) { soma[x.t] = x.soma; });
+    var lista = LC().compraram(V.vendas.map(function (x) { return { t: x.t, preco: x.preco, nota: x.retrato.overall }; }), V.T);
+    var top = lista[0] && lista[0].compras ? lista[0] : null, cl = top ? clubeDe(V, top.t) : null;
     var box = el("section", { class: "lei-revela", "aria-labelledby": "lei-revela-t" });
-    box.appendChild(el("div", { class: "lei-caixa lei-dest lei-dest-compra" }, [el("span", { class: "lei-dest-ic" }, [ic("gavel")]), el("div", { class: "lei-dest-txt" }, [
+    if (top) box.appendChild(el("div", { class: "lei-caixa lei-dest lei-dest-compra" }, [el("span", { class: "lei-dest-ic" }, [ic("gavel")]), el("div", { class: "lei-dest-txt" }, [
       el("span", { class: "lei-rotulo", text: "Quem comprou melhor" }),
       el("span", { class: "lei-dest-n", text: cl ? cl.nome : "" }),
-      el("span", { class: "lei-dest-s", text: top ? "Soma das notas " + top.soma + " por " + rs(top.gasto) + (top.t === V.eu ? " · o seu" : "") : "" })
+      el("span", { class: "lei-dest-s", text: sinal(top.acima) + " de nota acima do preço em " + top.compras + (top.compras === 1 ? " compra" : " compras") + (top.t === V.eu ? " · o seu" : "") })
     ])]));
     var ol = el("ol", { class: "lei-class lei-revela-lista" });
     lista.forEach(function (x, i) {
       var y = V.tecnicos[x.t];
       var bt = el("button", { class: "lei-cl lei-revela-bt" + (x.t === V.eu ? " eu" : ""), type: "button",
-        "aria-label": "Ver o time de " + (y && y.eu ? "você" : y ? y.nome : "") + " com as notas: soma " + x.soma + ", gastou " + rs(x.gasto),
+        "aria-label": "Ver o time de " + (y && y.eu ? "você" : y ? y.nome : "") + " com as notas: soma " + (soma[x.t] || 0) + "; " + sinal(x.acima) + " de nota acima do preço em " + x.compras + (x.compras === 1 ? " compra" : " compras"),
         on: { click: function () { folhaVendas(x.t); } } }, [
         el("span", { class: "lei-cl-p", text: (i + 1) + "º" }), escudo(y && y.clube, "pp"),
-        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: y ? (y.eu ? "Você" : y.nome) : "" })]),
-        el("span", { class: "lei-cl-x", text: "Soma " + x.soma + " · " + rs(x.gasto) })
+        el("span", { class: "lei-cl-txt" }, [el("span", { class: "lei-cl-n", text: y ? y.clube.nome : "" }), el("span", { class: "lei-cl-s", text: (y ? (y.eu ? "Você" : y.nome) : "") + " · soma " + (soma[x.t] || 0) })]),
+        el("span", { class: "lei-cl-x", text: sinal(x.acima) })
       ]);
       ol.appendChild(el("li", {}, [bt]));
     });
     box.appendChild(el("div", { class: "lei-caixa lei-class-box" }, [
       el("h3", { class: "lei-rotulo", id: "lei-revela-t", text: "As notas, reveladas" }),
-      el("p", { class: "lei-revela-dica", text: "Quem comprou melhor: a soma das notas dos 11 menos o que gastou. Toque num time para ver as notas." }),
+      el("p", { class: "lei-revela-dica", text: "Cada compra contra a nota que o preço pagava no leilão: quem levou mais nota do que pagou comprou melhor. Toque num time para ver as notas." }),
       ol
     ]));
     return box;
