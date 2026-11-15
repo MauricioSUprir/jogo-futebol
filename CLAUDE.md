@@ -1375,6 +1375,17 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   sem perguntar ao servidor) — ouvir antes; `set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo; o
   teste do online com o relógio acelerado separa o que é estrito (fechar cedo) do que tem o caminho da mensagem (o lance
   tarde); a tela que só aparece num estado (o aviso de outra versão depois do Começar) só se acha pelo fluxo de verdade.
+  **Revisão do PR 2** (PLANO §8, "A revisão do PR 2"): o vivo apagado congela (não recomeça o leilão); o Começar usa a
+  edição DA SALA e só mantém lotes IGUAIS aos do mundo-base; quem vê a sala sumir apaga de novo pelo mesmo socket
+  (`rede.varrer()`: o bate a caminho não recria a sala); o `goOffline()/goOnline()` só com o socket PRESO e nenhuma outra
+  sala online do TM aberta (ele vale para o TM inteiro: o servidor rodava o `onDisconnect` da sala do Online 3D e dos
+  outros modos — regressão achada); o `.validate` opcional com regras nos PAIS (apagar antes não desfaz mais as recusas);
+  a conta vinculada em dois aparelhos com o bloco publicado fica sem remédio dentro da sala (PENDENTE). Telas: o nome
+  antes do número, os botões do pedido pela largura da coluna, o Salvar do clube pelo `limpaClube`, o foco depois de
+  Aceitar, "Sala parada", "Atualizando a sala…". Testes O7, O8 e o caso `telas` (T1–T8; um job a mais no CI). Lições:
+  mexer na conexão global do SDK (goOffline) derruba as salas dos outros modos pelo `onDisconnect`; o `.validate` não
+  vale para `null` — a regra que protege um nó de ser apagado mora no PAI; o Firebase devolve as chaves em outra ordem
+  (comparar pelo mesmo canal, nunca o texto cru); o botão que fica apagado durante a ação perde o foco para o BODY.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

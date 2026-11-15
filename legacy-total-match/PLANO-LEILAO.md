@@ -871,7 +871,8 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   - **ausente = sem bate fresco por 12 s** (o número do §3.3; o §1.4 dizia 10 s) ou "Sair da sala" (`tec.saiu`);
   - **os bots da sala online** ficam sempre DEPOIS das pessoas na ordem e são refeitos a cada mudança (o perfil pelo
     índice final, cores que nenhuma pessoa usa); a lotação conta pessoas + bots ≤ vagas; **o dono conta como pronto**;
-  - **o Começar** grava os lotes por transação (aborta se já estão com os mesmos T e liga) e só então a da sala, que
+  - **o Começar** grava os lotes por transação (só mantém os que já estão lá se forem IGUAIS aos deste aparelho; desde a
+    revisão, abaixo) e só então a da sala, que
     confere a lotação contra o T dos lotes; **o pedido depois do Começar fica** (`depois: true`) para o passar o clube, e
     aceitar recusa; **tirar** põe em `recusados` (não pede de novo);
   - **a edição** troca antes da transação do pedido (como o Ultimate): se o pedido falhar, a edição fica trocada.
@@ -899,7 +900,8 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   ~1,06 MB; o §6 estimava ~2 MB. Um leilão de 8 baixa ~8,5 MB no total.
 - **O `.validate` opcional** (`firebase/regras-leilao-validate.json` + `LEIA-ME-leilao.md`) ficou sem a regra do autor do
   lance: o líder é um número e as regras não o convertem em chave (uma regra que dá erro nega a gravação e pararia o
-  leilão de quem publicar). Com o bloco publicado, a conta vinculada aberta em outro aparelho precisa do passar o clube.
+  leilão de quem publicar). Com o bloco publicado, a conta vinculada aberta em outro aparelho fica sem gravar (ver a
+  revisão, abaixo: o "passar o clube" não serve para a mesma conta).
 - **O `?leilao=`**: o `app.js` vai à Entrada com o código; a Entrada guarda o convite uma vez por carga da página
   (`TM.leilaoTela.convite()`), para a tela do online entrar sozinha.
 - **testar-leilao O** (~8 s; o arquivo inteiro ~35 s, sem `--rapido` no CI): dez mutações da sessão reprovam (sem a
@@ -980,3 +982,52 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     de navegador ao mesmo tempo (o `--tela`, os três casos do online e o `testar-online3d` com o TM servido na raiz), com o
     Playwright 1.56.1 como o `golaco-testes.yml`; o check `tm-testes` (o job final) só passa com todos. O workflow também
     roda quando muda o `golaco/tools/lib/navegador.mjs` (os testes do TM usam o servidor e o Playwright dele).
+- **A revisão do PR 2** (três lentes: a sincronia, as telas e o resto do TM; cada achado conferido no código e com o
+  teste que reprova antes e passa depois):
+  - **O vivo apagado** (uma gravação de qualquer conta logada) fazia os aparelhos honestos refazerem o vivo inicial: o
+    leilão recomeçava do lote 1, sem acusar nada. Agora o vivo que já existiu e some (ou que falta com vendas gravadas,
+    também ao recarregar, e fora do estado `leilao`) congela a sala; antes de congelar, a sessão lê a `sala` (com a sala
+    inteira apagada, o evento do vivo pode chegar antes do da sala).
+  - **Os lotes do Começar** saíam da edição EM USO (a tela de início troca a edição sem recarregar e a sessão continua
+    viva): a Season Update ia para uma sala pública. O Começar volta à edição da sala (como o `entrar()`; a pro só com a
+    chave) e o "Voltar à sala" da sessão de agora também. Os lotes levam a edição (`ed`) e a liga; diferentes da sala,
+    congela.
+  - **Os lotes trocados no saguão** (mesmo T e liga) eram mantidos pelo Começar. Agora ele compara o CONTEÚDO (o texto
+    canônico, como o Firebase guarda) e regrava os do mundo-base; no aparelho do dono, lotes diferentes dos que ele gravou
+    congelam (a janela entre as duas transações). Os outros aparelhos NÃO refazem os lotes pelo próprio mundo-base: custaria
+    o `generateWorld` (~0,2 s em Node, mais no celular) bem na hora em que o leilão começa, e um aparelho com outra versão
+    do TM acusaria uma sala honesta; fica no nível "entre amigos" do §3.4.
+  - **O bate a caminho** quando a sala é encerrada recriava `leiloes/{código}/bate/{uid}` para sempre. Quem vê a sala
+    sumir apaga a sala de novo pelo mesmo socket (`rede.varrer()`; o socket é ordenado: vai depois de tudo o que o aparelho
+    ainda tinha a caminho, e apagar não recria nada).
+  - **A volta da página escondida derrubava o TM inteiro** (regressão nos outros modos): o `goOffline()/goOnline()` vale
+    para a conexão toda, e o servidor rodava o `onDisconnect` da sala do Online 3D do anfitrião, da saída do convidado e das
+    salas do Online e da Competição em grupo (quem cria a sala do 3D e vai ao WhatsApp mandar o código fica > 5 s fora).
+    Agora a volta só fica "Atualizando…" até o ack do próximo bate; o `reconectar()` só vem com o socket PRESO (o bate sem
+    ack em 3 s depois da volta, a conexão de pé) e nenhuma outra sala online do TM aberta (`TM.online3d.estado().fase`, a
+    fila do aleatório `TM.net._mmA`; as salas do `online.js`/`groupcomp.js` não expõem estado: com o socket preso elas já
+    estão sem conexão). Diferente do §3.3, que mandava reconectar em toda volta.
+  - **O `.validate` opcional**: as recusas de uma gravação só caíam apagando antes (o `.validate` não vale para `null`).
+    Regras nos PAIS, que valem quando um filho some e o pai continua: em `leiloes/$c` o `vivo`, os `lotes` depois do
+    Começar e a `sala` não se apagam sozinhos; `sala` exige `meta`, `cfg` e `tec`; `meta` exige o dono, o estado, as regras
+    e a criação; `tec/$uid` não perde a conta sozinho. Conferido com um avaliador das regras ligado em cada gravação do
+    bloco O (6 673 gravações): nenhuma honesta recusada além do bate da aba velha (sem efeito) e do bate que chega depois
+    de a sala ser encerrada (que deve ser recusado). Ainda passam em duas ou três gravações o registro da venda e o técnico
+    inteiro (o LEIA-ME diz).
+  - **A conta vinculada em dois aparelhos com o bloco publicado**: o "passar o clube" que o LEIA-ME e este plano
+    prometiam não existe para a mesma conta (o 2º aparelho entra direto como o mesmo técnico, sem pedido, e o
+    `passarClube` exige outra conta). O LEIA-ME foi corrigido ("jogue no aparelho em que entrou"); trocar só a conta de
+    autenticação de um técnico (o pedido com o `auth` novo quando o servidor recusa o bate, o dono aceita e a regra do
+    `tec/$uid/auth` deixa) fica PENDENTE, para quando o dono publicar o bloco.
+  - **As telas** (o caso `telas` novo no `testar-leilao-online.mjs`, T1–T8, com nomes de 16 letras, o máximo do TM.net):
+    o número do perfil e o "VOCÊ" nunca encolhiam e o nome sumia ("M." no pedido em 820×1180 e 844×390): agora o nome tem
+    a prioridade e o resto desce; os botões do pedido descem pela largura da COLUNA (container query; no PC a coluna do
+    saguão tem ~380 px); o "lidera" do placar fica sempre à vista; o Salvar do clube nunca apagava (o Firebase devolve as
+    chaves em outra ordem: compara pelo `limpaClube`); pelo teclado, depois de Aceitar ou Recusar, o foco ia ao BODY (agora
+    ao próximo pedido ou ao rótulo da seção, também com os botões apagados durante a ação); a sala congelada aparecia "em
+    andamento" na Entrada e nas Minhas salas (agora "Sala parada"/"Parada"); a linha das Minhas salas começa pelo estado e
+    quebra em duas no celular; com a conexão de pé e a sala atrasada, a barra diz "Atualizando a sala…"/"Reconectando…"
+    (dizia "Sem conexão").
+  - **Testes novos**: O7 (o vivo apagado, também ao recarregar; os lotes trocados no saguão; a edição trocada antes do
+    Começar; o bate a caminho depois de encerrar) e O8 (a volta com o socket bom não reconecta e a sala de outro modo
+    continua; com o socket preso, só sem outra sala aberta) no bloco O; o caso `telas` (um job a mais no CI do TM).

@@ -9,8 +9,9 @@
      bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, o onDisconnect ·
      O o leilão ONLINE: as sessões (criarSala, entrar, abrir) pela firebase() sobre o banco falso em 2, 4 e 8 "aparelhos"
      (a sala por transação, as recusas, o leilão inteiro igual em todos, o relógio ±5 s, o que pula e o que dorme, quem cai,
-     quem some, o ack perdido, o lance velho, recarregar, outra aba, a presença, passar o clube, a limpeza); o servidor falso
-     confere cada gravação do vivo: nenhum lote fecha antes do fim, nenhum lance entra depois
+     quem some, o ack perdido, o lance velho, recarregar, outra aba, a presença, passar o clube, a limpeza, a sala mexida —
+     o vivo apagado, os lotes trocados, a edição trocada — e a volta da página sem derrubar a conexão do TM); o servidor
+     falso confere cada gravação do vivo: nenhum lote fecha antes do fim, nenhum lance entra depois
    Uma linha por bloco; o código de saída é 1 se algum reprovar.
    Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v] [--rapido] [--caso O1,O4,quatro]
    (--rapido: o leilão online de 8 até a metade e sem o da queda; --caso: só esses pedaços do O; LEILAO_DEPURA=1 mostra
@@ -1559,7 +1560,9 @@ async function testeFirebase() {
    Começar), as recusas (código, sala cheia, recusado, edição, regras, fair play), o leilão inteiro com os mesmos vivo,
    compras e caixas em todos, a corrida de lances, o relógio ±5 s e o pulo depois da calibração (o servidor confere que
    ninguém fecha cedo e nenhum lance entra depois do fim), quem cai, quem some, o ack perdido, o lance velho na
-   repescagem, recarregar, a sala adulterada, passar o clube, outra aba, a presença, a limpeza e as Minhas salas.
+   repescagem, recarregar, a sala adulterada, passar o clube, outra aba, a presença, a limpeza e as Minhas salas; O7 a sala
+   mexida fora das regras (o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho
+   depois de encerrar) e O8 a volta da página escondida sem derrubar a conexão do TM inteiro (as salas dos outros modos).
    Nenhum Firebase de verdade. --rapido: só os leilões de 2 e 4 aparelhos inteiros (o de 8 corta na metade). */
 async function testeOnline() {
   if (SO && !SO.includes("O")) return;
