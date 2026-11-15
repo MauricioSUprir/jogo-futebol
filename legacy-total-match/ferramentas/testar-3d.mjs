@@ -36,6 +36,9 @@
    (revisão do item 106: o "≥ 1 s antes" media a lentidão do 3D); nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
    do tm3d:pronto fecha com tm3d:sair "simular", sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some da vista ≤ 0,5 s
    depois do 2º toque (o remove() do quadro, o desmonte do WebGL, depois) e o TM simula o result de sempre.
+   Modo Leilão (PR 4; seção 7): o Jogar do jogo contra um bot de um treino abre o GOLAÇO com o time do leilão — 11 SEM banco
+   (o pedido 11 + 11 e o mundo 11 × 11) —, a duração e a dificuldade da sala travadas e os escudos desenhados; o "Simular o resto"
+   grava o feito '3d' antes de o 2D mostrar o placar, sem pausa. A página de ensaio da seção 6 mora em ferramentas/lib/ensaio-3d.mjs.
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
