@@ -25,7 +25,8 @@
              inteiro pelos botões nas duas páginas; dois lances no mesmo instante (um vence, o outro vê "Alguém chegou
              antes"); o ack perdido ("Conferindo…" e o resultado certo); o lance velho guardado (recusado); recarregar no
              meio (pelo ?leilao= e pelas Minhas salas, depois do deploy: versaoTM diferente, quem é da sala volta); o fim
-             igual nas duas e no servidor; a escalação pela tela e o campeonato "em breve"
+             igual nas duas e no servidor; a escalação pela tela e o campeonato (o jogo de amigo contra amigo simulado ao
+             abrir a rodada, o mesmo resultado e o mesmo campeão nas duas, o Ver o jogo no 2D sem pausa)
      quatro  (Q1–Q6) 4 páginas + 2 bots: os relógios +5 s e −5 s, o pulo de +60 s depois da calibração, um técnico que
              some (a página escondida: ausente, passa sozinho, não gasta, volta), passar o clube (a conta nova pelo código,
              o dono pela tela), a 1ª página cai no meio (as outras seguem, os bots também), o mesmo fim em todas
@@ -645,14 +646,34 @@ async function casoDois() {
   confere(`${ID}13 o fim igual nas duas páginas e no servidor: as compras, os caixas (100 − as vendas registradas) e os 11 de cada um`, acabou && fim.ok, fim.info);
   confOk(`${ID}13b`, cod);
 
-  /* D14 a escalação pela tela (o Pronto nas duas) e o campeonato "em breve" */
+  /* D14 a escalação pela tela (o Pronto nas duas) e o campeonato: com 2 técnicos, a Final de amigo contra amigo é simulada
+     ao abrir a rodada (até o PR 5); as duas páginas vão sozinhas ao Campeonato e veem o mesmo resultado e o mesmo campeão;
+     o Ver o jogo toca o placar GRAVADO no 2D, sem pausa */
   const naEsc = await ateNode(async () => (await rota(A)) === "leilao-escalacao" && (await rota(B)) === "leilao-escalacao", 20000);
   await ate(A.p, () => [...document.querySelectorAll(".lei-screen button")].some(b => /^Pronto/.test(b.textContent.trim()) && !b.disabled), null, 10000);
   await clica(A, "^Pronto$"); await clica(B, "^Pronto$");
-  const camp = await ateNode(() => { const x = sala(cod); return x && x.meta.estado === "camp"; }, 30000);
-  await A.p.evaluate(() => TM.ui.go("leilao-camp"));
-  const emBreve = await ate(A.p, () => /em breve/i.test((document.querySelector(".screen.is-active") || document.body).innerText), null, 8000);
-  confere(`${ID}14 a escalação pela tela: as duas páginas vão sozinhas à Escalação, o Pronto nas duas leva ao campeonato ("em breve" até o PR 3)`, naEsc && camp && emBreve, { naEsc, camp, emBreve });
+  const camp = await ateNode(() => { const x = sala(cod); return x && (x.meta.estado === "camp" || x.meta.estado === "fim"); }, 30000);
+  const naCamp = await ateNode(async () => (await rota(A)) === "leilao-camp" && (await rota(B)) === "leilao-camp", 20000);
+  const fimS = await ateNode(() => { const x = sala(cod); return x && x.meta.estado === "fim"; }, 60000);
+  for (const ap of [A, B]) await ate(ap.p, () => !!document.querySelector(".lei-campeao") && !!document.querySelector(".lei-rodada .lei-jg-ver"), null, 15000);
+  const vistas = await Promise.all([A, B].map(ap => ap.p.evaluate(() => {
+    const V = TM.leilaoSessao.atual().ver(), C = V.camp, g = C && C.rodadas[0].jogos[0];
+    return { estado: V.estado, campeao: C && C.campeao, nome: C && C.campeao != null ? V.tecnicos[C.campeao].clube.nome : null, placar: g && g.placar && g.placar.join("-"), motivo: g && g.j && g.j.motivo,
+      poster: (document.querySelector(".lei-campeao") || {}).innerText || "", linha: (document.querySelector(".lei-rodada .lei-jogo .lei-jg-pl") || {}).textContent };
+  })));
+  const mesmo = vistas[0].campeao === vistas[1].campeao && vistas[0].placar === vistas[1].placar && vistas[0].linha === vistas[1].linha && vistas[0].campeao != null;
+  confere(`${ID}14 a escalação pela tela e o campeonato: as duas vão sozinhas à Escalação e, com o Pronto, ao Campeonato; a Final de amigo contra amigo simulada ao abrir a rodada; o mesmo resultado e o mesmo campeão nas duas`,
+    naEsc && camp && naCamp && fimS && mesmo && vistas.every(v => v.estado === "fim" && v.motivo === "abertura" && v.poster.indexOf(v.nome) >= 0 && v.linha === v.placar.replace("-", " × ")), { naEsc, camp, naCamp, fimS, vistas });
+  // o Ver o jogo (o 2D instantâneo: o placar dos 90' à mostra) sem o botão de pausa e com o placar gravado
+  const v2d = await A.p.evaluate(async () => {
+    TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { matchSpeed: "instantaneo" }));
+    const id = TM.leilaoSessao.atual().ver().camp.rodadas[0].jogos[0].id, J = TM.leilaoSessao.atual().partida(id);
+    document.querySelector(".lei-rodada .lei-jg-ver").click();
+    await new Promise(r => setTimeout(r, 600));
+    return { rota: TM.ui.current(), placar: (document.querySelector(".live-score") || {}).textContent, gravado: J.res.score.join(" - "),
+      pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)), crest: document.querySelectorAll(".bc-crest.utx-escudo").length };
+  });
+  confere(`${ID}14b o Ver o jogo: o resultado gravado no 2D, sem pausa e com os escudos desenhados`, v2d.rota === "leilao-jogo" && v2d.placar === v2d.gravado && !v2d.pausa && v2d.crest === 2, v2d);
   for (const ap of [A, B, Cc, E]) await ap.cx.close().catch(() => {});
 }
 
