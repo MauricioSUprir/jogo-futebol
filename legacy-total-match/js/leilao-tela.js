@@ -547,7 +547,20 @@
   function continuar(x, bt) {
     if (typeof x === "string") x = { codigo: x };
     var S = sessao(), codigo = x.codigo;
-    if (S && S.codigo === codigo) { TM.ui.go(rotaDoEstado(S.ver())); return; }
+    if (S && S.codigo === codigo) {
+      // a sessão de agora continua viva com a edição trocada na tela de início: volta à edição da sala (os lotes e as
+      // cartas são dela)
+      var V0 = S.ver(), ed0 = V0.edicao === "pro" ? "pro" : "public";
+      if (S.online) {
+        try {
+          if (ed0 !== TM.storage.edition()) {
+            if (ed0 === "pro" && !TM.storage.suUnlocked()) { TM.ui.toast(SS().textoMotivo("edicao"), "erro"); return; }
+            TM.storage.switchEdition(ed0);
+          }
+        } catch (e) {}
+      }
+      TM.ui.go(rotaDoEstado(V0)); return;
+    }
     if (x.online) {
       var c = contaEstado();
       if (c !== "pronta") {

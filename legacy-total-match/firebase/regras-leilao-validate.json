@@ -2,8 +2,11 @@
   "rules": {
     "leiloes": {
       "$c": {
+        ".validate": "(!data.child('vivo').exists() || newData.child('vivo').exists()) && (!data.child('lotes').exists() || newData.child('lotes').exists() || data.child('sala/meta/estado').val() === 'saguao') && (!data.child('sala').exists() || newData.child('sala').exists())",
         "sala": {
+          ".validate": "newData.hasChildren(['meta', 'cfg', 'tec'])",
           "meta": {
+            ".validate": "newData.hasChildren(['dono', 'estado', 'regras', 'criada'])",
             "dono": { ".validate": "!data.exists() || newData.val() === data.val()" },
             "estado": { ".validate": "newData.isString() && newData.val().matches(/^(saguao|leilao|escalacao|camp|fim)$/)" },
             "regras": { ".validate": "newData.isNumber()" },
@@ -13,6 +16,7 @@
           },
           "tec": {
             "$uid": {
+              ".validate": "!data.child('auth').exists() || newData.child('auth').exists()",
               "auth": { ".validate": "newData.val() === data.val() || (!data.exists() && (newData.val() === auth.uid || newData.val() === root.child('leiloes').child($c).child('sala/pedidos').child($uid).child('auth').val()))" }
             }
           },
