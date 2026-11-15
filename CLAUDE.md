@@ -138,6 +138,19 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   tipográfico do 3D (ver "Sistema tipográfico" abaixo), a pausa com o campinho ~1,5× maior no PC e as outras telas; (126) "a foto
   com o nome tem que ser mais embaixo e menor, no canto inferior" — o cartão do autor embaixo à DIREITA (no celular, logo acima
   do "Pular"), ~4× menor no PC e ~2× no celular.
+- **Modo Leilão (dono, 14/11)**: "consegue criar um modo de leilão? com os jogadores da liga escolhida?". Respostas dele:
+  com AMIGOS ONLINE; depois do leilão, "leilão e mata a mata, nas configurações pré jogo eles escolhem ou jogar ou simular"
+  (a tela antes do jogo do 3D); lances de cada um em +1, +5, +10 ou Tudo, todos começam com R$ 100 (dinheiro do jogo);
+  "pode começar agora". Regras: sala SÓ PRIVADA (código/convite, o dono aceita quem entra), sem chat, sem estranhos; as
+  fotos que ele mandou (site de terceiros) dão só a mecânica — NÃO copiar o nome, a arte nem o visual do site de
+  referência; a cara é a do TM (verde e preto, Inter, ícones `TM.ic`, sem emoji, modo claro, "nada sobre nada"); nada de
+  Pix, doação nem Total Coins; testes nunca com o Firebase de verdade; modo novo em "Mais modos". Branch `claude/leilao`
+  (o item 45 do golaco segue pausado em outro branch); plano em `legacy-total-match/PLANO-LEILAO.md` (6 PRs, ~111 h; as
+  decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 PRONTO** (PR
+  #640, rascunho; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação; a aba Campeonato diz "em breve".
+  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximos: PR 2 com os amigos online (a sala privada, o saguão, o
+  `firebase()`), PR 3 o campeonato (os 3 formatos, simulado), PR 4 o 3D contra bot, PR 5 o 3D contra amigo, PR 6 as notas
+  escondidas. A avisar ao dono: no máximo 3 treinos guardados no aparelho (o 4º tira o mais antigo).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -1296,6 +1309,32 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   **Online 3D** (`js/online3d.js`, `jogarOnline`; dono, 16/10): sala privada por código/link (`?online3d=`), o anfitrião
   aceita ou recusa, cada um escolhe o SEU time, o anfitrião monta o pedido `modo: "online"`, só o anfitrião grava h2h e
   ranking, sair no meio = W.O. (fair play). Teste `ferramentas/testar-online3d.mjs [--golaco]`.
+- **Modo Leilão** (dono, 14/11; plano `PLANO-LEILAO.md`, as decisões na §7, o que o código pediu de diferente na §8): "Leilão"
+  (ícone `gavel`) em "Mais modos". **PR 1 (v382): o TREINO num aparelho** — você + 1 a 7 bots (nomes "Bot Arrojado",
+  "Bot Paciente"…, clubes inventados, escudo desenhado do Ultimate, cores sem repetir), os jogadores da liga escolhida no
+  MUNDO-BASE (`TM.data.mundoBase()`: sem Editor, clube criado nem Viverde/`especial`), 13 lotes por técnico pela cota de
+  posição, R$ 100 cada (dinheiro do jogo), 10 s por lote (lance com menos de 8 s volta a 8 s), +1/+5/+10 sobre o valor
+  visto, Tudo de dois toques, outro valor, Passar, repescagem de 6 s e o completar de graça com os de fora; a escalação no
+  campinho (só as formações em que o time cabe, troca de vagas, −1/−2); o Campeonato "em breve". Arquivos: `js/leilao.js`
+  (PURO, `TM.leilao`: lotes, a máquina do lote, robôs, emparelhamento das 6 formações, escalação pelo húngaro e a
+  conferência — também com o seq pulando, pelos limites da janela, e depois do fim, quando nada muda e o `f` é o completar
+  refeito), `js/leilao-rede.js` (o transporte, `TM.leilaoRede`: `memoria()` com gravação no localStorage; o `firebase()` do
+  PR 2 segue a mesma interface), `js/leilao-sessao.js` (`TM.leilaoSessao`, sem DOM: relógios, robôs e transações
+  idempotentes; `ver()` para as telas; o relógio do treino PARA com a página escondida ou com a pessoa fora das telas da
+  sala, `segurar`; recarregar volta ao mesmo lote), `js/leilao-tela.js` (rotas `leilao`, `leilao-criar`, `leilao-lote`,
+  `leilao-escalacao`, `leilao-camp`; a barra de lance PRÓPRIA, fixa embaixo e à vista também em 844×390; a região ao vivo
+  `#lei-vivo` no `index.html`; Wake Lock; sons curtos), o bloco LEILÃO do `css/styles.css` (tema claro incluído) e
+  `TM.rng.hashStr/comSemente`. "Mais modos" com 13 atalhos: 7 + 6 a partir de 790 px (medido com a barra de rolagem do PC),
+  5 + 5 + 3 de 760 a 789 e 3 + 3 + 3 + 3 + 1 no celular (mexeu na grade? `testar-online3d`, `testar-livre` e
+  `testar-penaltis` conferem). Ícones novos só pelo `EXTRA` do `ferramentas/gerar-icones.py` (a `semEmoji` mora no MODELO
+  do gerador: regenerar não a apaga). Testes: `ferramentas/testar-leilao.mjs` (Node, L1–L10 + R + S, ~30 s; no CI pelo
+  `.github/workflows/tm-testes.yml`, com o `conferir-estilos.py`) e `testar-leilao.mjs --tela` (navegador, 38 itens: a
+  grade, o treino inteiro pela tela, recarregar no meio, nada sobre nada nos 8 tamanhos — por cima, ENCOSTADO (< 2 px entre
+  clicáveis) ou texto saindo do botão — com a barra fixa numa camada própria e os blocos abertos, o tema claro com contraste
+  ≥ 4,5:1, as folhas modais (tela inerte, Tab preso), o foco nunca atrás da barra (scroll-padding), o que fica escrito na
+  `#lei-vivo` (falas juntas, ≥ 1 s cada); ~3 min, fora do CI até o PR 2). Lições: teste de regra confere contra a conta
+  feita no próprio teste (as cotas, o completar), nunca contra a função testada; a região ao vivo trocada no mesmo quadro
+  cala a fala anterior. Próximos PRs: 2 online, 3 campeonato, 4 e 5 o 3D, 6 notas escondidas.
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.

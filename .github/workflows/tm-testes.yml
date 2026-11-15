@@ -1,0 +1,29 @@
+name: Total Match — testes
+# Os testes do Total Match (legacy-total-match/) em todo PR que mexe nele: até aqui um PR só do TM não tinha check nenhum
+# (o golaco-testes.yml só olha golaco/**). Modo Leilão, PR 1 (legacy-total-match/PLANO-LEILAO.md §4.4): o Node do leilão
+# (testar-leilao.mjs: o núcleo puro, os robôs, a rede em memória e a sessão; ~30 s, sem navegador e sem rede) e o
+# conferir-estilos.py (controle sem estilo no css/styles.css = visual padrão do navegador). A partir do PR 2 entram também
+# os de navegador (Playwright, como no golaco-testes.yml). O deploy (deploy-pages.yml) não muda.
+on:
+  pull_request:
+    paths:
+      - 'legacy-total-match/**'
+      - '.github/workflows/tm-testes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tm-testes:
+    name: tm-testes
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Modo Leilão em Node (testar-leilao.mjs)
+        working-directory: legacy-total-match
+        run: node ferramentas/testar-leilao.mjs
+      - name: Controles sem estilo (conferir-estilos.py)
+        working-directory: legacy-total-match
+        run: python3 ferramentas/conferir-estilos.py

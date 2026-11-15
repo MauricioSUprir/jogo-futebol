@@ -21,6 +21,7 @@
     "club-sponsors": ["mesa", "Clube"],
     "quick": ["bola", "Jogar"], "penaltis3d": ["bola", "Jogar"], "livre3d": ["estadio", "Treino"], "compmode": ["trofeu", "Jogar"], "compmode-list": ["trofeu", "Jogar"],
     "online": ["gamer", "Online"], "online3d": ["gamer", "Online"], "copa": ["chave", "Online"], "groupcomp": ["estadio", "Online"],
+    "leilao": ["mesa", "Leilão"],
     "dream": ["cartas", "Modo"], "draft": ["cartas", "Modo"], "arena": ["moedas", "Total Coins"],
     "coins": ["moedas", "Total Coins"], "saves": ["tunel", "Modo"], "competicoes": ["trofeu", "Informações"],
     "editor": ["mesa", "Modo"], "rae": ["tunel", "Carreira"], "ut-store": ["moedas", "Total Ultimate"],

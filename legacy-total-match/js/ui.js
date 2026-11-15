@@ -869,6 +869,7 @@
     var MAIS = [
       { ic: "🥅", nome: "Pênaltis 3D", rota: "penaltis3d" }, { ic: "🏋️", nome: "Modo Livre 3D", rota: "livre3d" },
       { icone: "wifi", nome: "Online 3D", rota: "online3d" },   // ícone direto (Lucide), sem emoji
+      { icone: "gavel", nome: "Leilão", rota: "leilao" },       // Modo Leilão (js/leilao-tela.js)
       { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
       { ic: "🪙", nome: "Arena", rota: "arena" },      { ic: "🏟️", nome: "Grupo", rota: "groupcomp" },
       { ic: "✏️", nome: "Editor", rota: "editor" },    { ic: "💾", nome: "Carreiras", rota: "saves" },

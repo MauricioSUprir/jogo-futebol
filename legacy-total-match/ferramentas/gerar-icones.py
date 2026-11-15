@@ -119,7 +119,9 @@ for v in MAPA.values():
 for a, b in APELIDOS.items():
     if a in usados: usados.add(b)
 EXTRA = ["chevron-left", "chevron-right", "chevron-down", "x", "check", "menu", "ellipsis", "bell", "settings", "user", "message-circle", "house", "users", "clipboard-list", "arrow-left-right", "telescope", "globe", "log-out", "plus", "minus", "search", "sliders-horizontal", "arrow-up-down", "list", "grid-2x2", "store", "layers", "chart-line", "activity",
-         "message-circle", "house", "users", "clipboard-list", "arrow-left-right", "telescope", "globe"]
+         "message-circle", "house", "users", "clipboard-list", "arrow-left-right", "telescope", "globe",
+         # Modo Leilão (PLANO-LEILAO.md §3.8): o martelo do atalho e da sala, o olho que esconde o código, copiar e compartilhar
+         "gavel", "eye-off", "copy", "share-2"]
 usados.update(EXTRA)
 
 
@@ -232,6 +234,13 @@ MODELO = r'''/* ================= TOTAL MATCH — ícones da interface =========
     return MAPA[base] || null;
   }
   function temEmoji(v) { RE.lastIndex = 0; return RE.test(v); }
+  // o texto sem os emoji (o mesmo critério do SO_TIRA: © ® ™ ‼ ⁉ ★ ☆ ficam), sem espaço sobrando: para o que sai do TM — o título
+  // da partida no 3D (tm3d.js), que o conversor não alcança (outra página)
+  function semEmoji(v) {
+    if (typeof v !== "string" || !v) return v;
+    RE.lastIndex = 0;
+    return v.replace(RE, function (e) { return TEXTO[chave(e)] ? e : ""; }).replace(/\s{2,}/g, " ").trim();
+  }
 
   /* ---------- onde trocar, onde só tirar, onde deixar ---------- */
   // conteúdo escrito por alguém: o emoji fica
@@ -355,7 +364,7 @@ MODELO = r'''/* ================= TOTAL MATCH — ícones da interface =========
   else liga();
 
   TM.ic = ic;
-  TM.icones = { tem: function (n) { return !!ICONES[n]; }, doEmoji: achaIcone, converte: trataNo };
+  TM.icones = { tem: function (n) { return !!ICONES[n]; }, doEmoji: achaIcone, converte: trataNo, semEmoji: semEmoji };
 })(window);
 '''
 
