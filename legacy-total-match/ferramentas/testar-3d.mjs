@@ -781,6 +781,8 @@ if (fr) {
     S.gravar3d = function () { const a = arguments; return g3.apply(S, a).then(r => { W.gravados.push({ t: performance.now(), origem: a[2], e: r && r.jogo ? r.jogo.e : null }); return r; }); };
     new MutationObserver(() => { const sc = document.querySelector(".screen.is-active .live-score"); if (sc && !W.vista) W.vista = { t: performance.now(), rota: TM.ui.current(), pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)) }; })
       .observe(document.body, { subtree: true, childList: true });
+    // (a hora do tm3d:fim — o "Voltar ao Total Match" do 3D: o resultado já tem de estar gravado desde o apito)
+    addEventListener("message", e => { if (e.data && e.data.tipo === "tm3d:fim" && W.fim == null) W.fim = performance.now(); });
     const id = window.__leiId = S.ver().camp.meuJogo.id, b = document.querySelector(".lei-jogar");
     if (b) b.click();
     return id;
@@ -805,9 +807,9 @@ if (fr) {
   confere("Leilão (PR 4): o Jogar abre o GOLAÇO com o time de 11 sem banco — o pedido 11 + 11 e o mundo 11 × 11 —, 3 min por tempo (10 800 ticks) e Difícil travados, mando neutro, o empate que continua no mata-mata, os escudos desenhados; o 3D aberto marca o abriu",
     esc && podeJ && !!ped && ped.n.join() === "11,11" && ped.jogadores.join() === "11,11" && ped.ticks === 10800 && ped.dif === "dificil" && ped.partida.minutosPorTempo === 3 && ped.partida.dificuldade === "dificil"
     && ped.partida.ajustesFixos === true && ped.partida.neutro === true && ped.partida.empateContinua === true && ped.escudos.every(t => t === "ultimate") && abriu, { esc, podeJ, ped, abriu });
-  confere("Leilão (PR 4): \"Simular o resto\" → tm3d:fim → o resultado do 3D gravado (feito '3d', o placar do 3D) ANTES de o 2D mostrar o placar, sem o botão de pausa; a sala confere (não congela)",
+  confere("Leilão (PR 4): \"Simular o resto\" → o apito → o resultado do 3D gravado JÁ NO APITO (antes do tm3d:fim do \"Voltar ao Total Match\"; feito '3d', o placar do 3D) e antes de o 2D mostrar o placar, sem o botão de pausa; a sala confere (não congela)",
     !!r && feito && !!g && g.fim === "3d" && g.em3d && g.score[0] === r.res.homeGoals && g.score[1] === r.res.awayGoals && !g.alterada
-    && W.gravados.length === 1 && W.gravados[0].origem === "3d" && W.gravados[0].e === "feito" && W.gravados[0].t <= W.vista.t && !W.vista.pausa, { feito, g, res3d: r && { h: r.res.homeGoals, a: r.res.awayGoals }, W });
+    && W.gravados.length >= 1 && W.gravados.every(x => x.origem === "3d" && x.e === "feito") && W.fim != null && W.gravados[0].t < W.fim && W.gravados[0].t <= W.vista.t && !W.vista.pausa, { feito, g, res3d: r && { h: r.res.homeGoals, a: r.res.awayGoals }, W });
   await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
 }
 
