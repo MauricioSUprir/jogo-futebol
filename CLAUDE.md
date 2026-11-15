@@ -149,13 +149,18 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 ENTREGUE**
   (#640; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação. **PR 2 ENTREGUE** (#641; TM v383): COM
   OS AMIGOS ONLINE — a sala privada por código ou link (o dono aceita cada pedido), o Saguão e o leilão ao vivo no
-  Firebase do TM (`leiloes/{CÓDIGO}`). **PR 3 PRONTO** (branch `claude/leilao`; TM v384): O CAMPEONATO, no treino e
+  Firebase do TM (`leiloes/{CÓDIGO}`). **PR 3 ENTREGUE** (#642; TM v384): O CAMPEONATO, no treino e
   online, com os jogos SIMULADOS — Mata-mata (o padrão; gol de ouro e pênaltis), Pontos corridos (turno e returno,
   3/1/0) e Pontos + mata-mata (até 4 técnicos, a final; de 5 a 8, as semifinais), escolhido na Criar sala ou no Saguão
   com a duração estimada; o "Simular partida" do seu jogo contra um bot (o prazo de 2 min, que só corre com você na
   sala), o "Ver o jogo" no 2D sem pausa, "Simular os pendentes" do dono, a tabela, a chave, a artilharia e o fim (o
-  campeão, a classificação, o artilheiro e o melhor time). Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão").
-  Próximos: PR 4 o 3D contra bot, PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
+  campeão, a classificação, o artilheiro e o melhor time). **PR 4 PRONTO** (branch `claude/leilao`; TM v385): OS SEUS
+  JOGOS CONTRA OS BOTS EM 3D — o "Jogar" do Seu jogo abre a tela antes do jogo do 3D (Jogar partida ou Simular partida),
+  com a duração e a dificuldade da SALA (escolhidas na Criar sala ou no Saguão; padrão 4 min e Normal) travadas; o
+  resultado é gravado antes de o 2D mostrar (já no apito final do 3D, antes da cena do pós-jogo); o 3D que fecha sem
+  resultado vira W.O. depois do prazo (ou na hora, com o "Aceitar o W.O. agora"), o que nem abriu, o simulado; com
+  "Sempre simular" ou sem WebGL 2, o simulado direto. Salas criadas antes do PR 4 (regras 1) seguem valendo, sem o Jogar.
+  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). Próximos: PR 5 o 3D contra amigo, PR 6 as notas escondidas. A avisar ao dono: no máximo 3 treinos
   guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
   (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
   simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
@@ -1437,10 +1442,31 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   apagava o campeonato, o "Simular os pendentes" que pegava jogos de quem estava presente, os clubes de mesmo nome (o
   técnico junto do clube na aba e no 2D), a fala com os pênaltis, o Campo 2D (o condutor nulo depois do chute e o laço que
   não parava fora da tela; `pitch2d.js`, já na main) e o T7 instável do `--tela`; KO `sozinho`, `dormem`, `semdono`,
-  `pendentes` e Q16 no `quatro`. Fica para os PRs 4–6: o "Jogar em 3D"
-  contra bot (o gancho `gravar` no `tm3d.js`, `duracao3d`, o W.O. do 3D sem resultado — as funções puras já existem:
-  `prazo3d`, `wo`), o par no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas
-  escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
+  `pendentes` e Q16 no `quatro`. **PR 4 (v385; PLANO §8 "Durante o PR 4")**: SÓ o jogo de uma pessoa contra um BOT
+  ganha o 3D (pessoa × pessoa e bot × bot seguem simulados). O "Jogar" reserva no modo `'3d'` (a trava = o `inicio`,
+  pela hora do servidor; no online, a trava lida do nó que chega pelos ouvintes — `_reservaNoServidor`: o fim da
+  transação traz a estimativa do TIMESTAMP) e abre a rota `leilao-jogar` (fora das rotas da sala: o relógio do treino
+  para) com o gancho `cfg.gravar(origem, dados)`/`cfg.aoAbrir` do `tm3d.js` (sem ele, nada muda nos outros modos): o
+  `abriu` na 1ª tela do 3D; o fim do 3D grava ANTES do 2D (`resDo3d`; o empate do mata-mata com o gol de ouro e os
+  pênaltis simulados com a semente); o "Simular partida" da tela e o 3D que nem abriu gravam o simulado; o 2D mostra só o
+  gravado, sem pausa. Prazos: sem o `abriu`, 2 min → o simulado (`naoAbriu`); com ele, 2 × duração × 1,3 + 8 min → o W.O.
+  de quem reservou (`wo`), por qualquer aparelho. A conferência aceita o 3D pela forma (`res3dValido`). A sala:
+  `duracao3d` (3–10, padrão 4) e `dificuldade3d` (padrão Normal) na Criar e no Saguão ("Partidas em 3D"; zera os Pronto).
+  Revisão do PR 4 (PLANO §8, "A revisão do PR 4"): `REGRAS` 2 (o aparelho de antes só olha as salas novas; as de regras 1
+  seguem valendo, sem o Jogar: `regrasAceitas`, `_com3d`); o resultado do 3D gravado no APITO (o `tm3d.js` olha o
+  `localStorage["tm3d:resultado:<id>"]` com o quadro aberto: `cfg.aoResultado`; a guarda `tm3d:guarda:<id>` contra o
+  `limpaSobras`); a caixa `leilao:3d:<código>` no aparelho (o abriu, o pedido e o resultado do 3D) com que o MOTOR insiste no
+  abriu e no resultado até o jogo ser decidido (`gravar3d`/`abriu` no `_acaoJogo`); a reserva sem resposta lê o nó do
+  servidor; o X e a demora do TM pedem o simulado (`dados.doTM`); a vigia da `leilao-jogar` fecha o 3D se o jogo é decidido
+  por outro caminho; "Aceitar o W.O. agora" (`desistir`, `desistiu: true`) e "Simular agora" (o 3D que nem abriu); a
+  conferência e o `.validate` com o `por`, o `motivo` e o `inicio` iguais no abriu.
+  Testes: TD (Node; TD10–TD14 da revisão), `--tela` T14 (o treino com 6 pela página de ensaio do 3D,
+  `ferramentas/lib/ensaio-3d.mjs` — modos `apito` e `tardio` da revisão: o fim do 3D, o Simular da tela, o 3D fechado = W.O.,
+  "Sempre simular", recarregar no meio, o "Aceitar o W.O. agora", o apito, o X depois de abrir, a vigia; nada sobre nada;
+  `--so3d`), o caso `tresd`
+  do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
+  `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). Fica para os PRs 5–6: o par
+  no Online 3D e o "Simular partida" na tela antes do jogo do online (GOLAÇO), as notas escondidas. Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
   tela a partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois); no teste online, o
   acontecimento que depende do sorteio do calendário se procura no servidor e o piloto segura o toque até ele (sem
   deadlock: o prazo simula o jogo se ele não vier).

@@ -541,7 +541,7 @@ Com o `golaco/tools/lib/navegador.mjs` (`abrir`, `rotearCdn`) e o relógio acele
 - Nada sobre nada nas telas nos 8 tamanhos da seção 2 (a `sobreposicao` do `testar-online3d.mjs:282-316`), a barra de
   lance à vista com o relógio rodando (também em 844×390), modo claro, a região ao vivo no HTML inicial.
 - PR 4: o jogo contra bot pela página de ensaio do 3D; o 3D fechado no meio = W.O.; o "Simular partida" grava antes de
-  mostrar e o 2D vem sem pausa.
+  mostrar e o 2D vem sem pausa. (Feito: o T14, §8 "Durante o PR 4".)
 
 ### 4.3 Navegador com o banco falso: `ferramentas/testar-leilao-online.mjs` (PR 2–5)
 
@@ -559,7 +559,9 @@ mudam, ninguém fecha cedo); o 1º aparelho cai (os outros continuam, os bots ta
 volta); o lance com o ack perdido ("Conferindo…" e o resultado certo); a repescagem com um lance velho guardado (é
 recusado); recarregar no meio; recusas (edição, `regras` diferentes, sala cheia, código errado, recusado) e o deploy no
 meio (quem é da sala volta); o pedido aceito e o recusado; passar o clube; o convite `?leilao=`; o campeonato (o mesmo
-resultado e a mesma tabela em todas as páginas, o prazo vencido, o jogo reaberto que não joga de novo); PR 5: o par no
+resultado e a mesma tabela em todas as páginas, o prazo vencido, o jogo reaberto que não joga de novo); PR 4 (o caso
+`tresd`): o jogo contra um bot pelo ensaio do 3D com a outra página vendo o mesmo resultado gravado, e o W.O. gravado por
+outra página quando o 3D fecha sem resultado; PR 5: o par no
 Online 3D pela página de ensaio (e com `--golaco` o 3D de verdade), a ligação que falha e vira simulado; os bytes
 baixados por página.
 
@@ -1320,6 +1322,165 @@ KO):
 - **Visto e não mudado**: assistir ao próprio jogo no 2D conta como presença (o prazo do jogo seguinte corre; no treino o
   relógio para); a barra de velocidade do Campo 2D encosta nas bordas em 390 px (já na main); o "Simular os pendentes" do
   dono não toca mais no jogo de quem está presente (era o que o teste `dois` tratava como pretendido).
+
+**Durante o PR 4** (o que o código real pediu de diferente do plano; o passo 1, o código: `js/tm3d.js`, `js/leilao-camp.js`,
+`js/leilao-sessao.js`, `js/leilao-tela.js`, o bloco LEILÃO do `css/styles.css`, as regras opcionais e o bloco TD; v385):
+- **O gancho no `tm3d.js`** é `cfg.gravar(origem, dados)` → Promise(o resultado GRAVADO no formato do motor, ou null) mais
+  `cfg.aoAbrir(tipo)` (a 1ª `tm3d:tela` ou `tm3d:pronto`, pelo `fns.abriu` novo do `abre3d`). Com ele: o fim do 3D chama
+  `gravar('3d', r3)` ANTES de qualquer reprodução (o `aplicaResultado` não roda: a conversão é do leilão); o "Simular partida"
+  da tela, `gravar('simulado', titulares)`; o 3D que nem chegou a abrir (o X "Voltar e simular", o "Simular a partida" da
+  demora, o `tm3d:sair` com erro, o pedido sem espaço), `gravar('simulado', null)`; o 3D aberto e fechado sem resultado não
+  grava nada (`cfg.onBack`: o W.O. vem pelo prazo). O 2D mostra só o que voltou gravado, sempre com `pauseSide: null` (o do 3D
+  na velocidade instantânea, como sem o gancho); nada gravado = `cfg.onBack` (o leilão avisa). "Sempre simular" e sem WebGL 2
+  com o gancho também passam pelo `gravar('simulado', null)`. Sem o gancho, nada muda (o `testar-3d` abaixo).
+- **Diferente do §3.6**: o `result` que o leilão passa ao `TM.matchview.play` é um marcador (0 × 0 sem lances), não o
+  simulado com a semente — o simulado só existe DENTRO da transação que grava (calcular antes seria jogo fora e daria o
+  resultado à tela antes da escolha). E o `tm3d.js` ganhou dois consertos que o leilão precisava: o escudo do leilão
+  (`{ escudo: "forma|simb" }`) ia ao 3D como o clássico com a estrela (o `identidade` só lia o `{ forma, simb }` do Ultimate;
+  agora pelo `escudoCfg`, como o `TM.ui.escudoUT` do 2D) e o `partidaDe` lê `simOpts.duracao3d` antes da Config.
+- **A máquina** (`leilao-camp.js`): o "Jogar" reserva no modo `'3d'` (motivo `'pedido'`, `por` = a pessoa, `inicio` = a
+  trava, as escalações de agora); `marcarAbriu` grava o `abriu` (a hora do servidor) uma vez, com a mesma trava. O
+  `prazoDe` do 3D reservado: sem o `abriu`, `inicio` + 2 min (o prazo de começar) → `naoAbriu` (o simulado com a semente,
+  `fim: 'simulado'`, por qualquer aparelho e pela testemunha); com o `abriu`, `inicio` + 2 × duração × 1,3 + 8 min → `wo` (o
+  W.O. de quem reservou; sem o `abriu` o `wo` recusa). O `gravar` do 3D exige o `fim` (`'3d'` com o `res.em3d`, ou
+  `'simulado'`) e guarda o `escSim` (as escalações da tela, só quando mudaram — sem reservas no leilão o conjunto dos 11 nunca
+  muda: na prática nunca é gravado, e o simulado usa as da reserva).
+- **O resultado do 3D** (`resDo3d`): como o `aplicaResultado` (o autor pelo `tmId` — o id do retrato —, o gol contra sem
+  autor, os cartões e o expulso, o intervalo e o fim, as estatísticas do 3D), com o placar = os gols da lista (os que o
+  placar do 3D tiver a mais entram sem autor no 90') e `em3d: true`; no mata-mata empatado, o gol de ouro e os pênaltis
+  simulados com a semente do jogo (`completarMata`, tirado do `simularJogo`: o simulado ficou igual — C e K verdes).
+- **A conferência**: o resultado do 3D só pela forma (`res3dValido`: os lances só dos tipos do 3D e nos 90', os gols =
+  o placar, os autores e os cartões de jogadores do time certo, as estatísticas; o gol de ouro e os pênaltis
+  RECALCULADOS); o reservado no 3D só com o motivo `'pedido'` e `por` = um dos dois; o W.O. só do 3D que abriu, de quem
+  reservou e gravado com o `ts` ≥ `inicio` + o prazo da partida; o simulado do 3D recalculado (com o `escSim`, se houver).
+  A sessão aceita o reservado → o reservado com o `abriu` (uma vez); o `abriu` que some ou muda congela a sala (`volta`: tirar
+  o `abriu` trocaria o W.O. pelo simulado). As regras opcionais (`firebase/regras-leilao-validate.json`) aceitam o reservado →
+  reservado no 3D só ganhando o `abriu` = `now` com a mesma trava; o W.O. antes do prazo passa por elas (os aparelhos acusam).
+- **A sessão**: `jogar3d(id?)` (só o meu jogo contra um bot, nada reservado; a outra aba do mesmo técnico recebe `jogando`),
+  `abriu3d(id, trava)`, `gravar3d(id, trava, origem, dados)` (grava UMA vez sobre o meu 3D reservado e responde com o que ficou
+  GRAVADO — da transação ou lido do jogo —; com a conexão caindo no meio, espera a sala em dia até 30 s e tenta de novo uma
+  vez); o `_acaoJogo` agenda o `wo` ou o `naoAbriu` pelo `abriu`; `ver().camp.meuJogo` ganhou `podeJogar`, `tresD` ({ abriu,
+  inicio, fim, restante, porMim, trava }), `modo` e `fim3d`; `ver()` ganhou `duracao3d` e `dificuldade3d`; o `partida(id)` usa
+  o `escSim`. A sala: `cfg.duracao3d` (3, 4, 5, 6, 8 ou 10; padrão 4) e `cfg.dificuldade3d` (padrão `'normal'`) no
+  `criarTreino`, no `criarSala` e no `configurar` (o dono no saguão; zera os Pronto como o resto).
+- **As telas**: no Seu jogo contra um bot, **Jogar** (o 3D; `.lei-jogar`) e, ao lado, o **Simular partida** de hoje
+  (`.lei-simular`, agora secundário); com "Sempre simular" ou sem WebGL 2 o Jogar é o Simular. O meu 3D reservado (noutro
+  aparelho ou aba, ou o 3D que fechou sem resultado) mostra "Abrindo o 3D · M:SS para abrir." ou "Jogando em 3D · M:SS de
+  prazo para o resultado." com a nota do simulado/W.O.; a rodada diz "Jogando em 3D" e "Jogado em 3D". A rota `leilao-jogar`
+  (fora das rotas da sala: no treino o relógio para durante o 3D). A Criar sala e o Saguão (o dono) ganharam **Partidas em
+  3D** (a duração de cada tempo, 3 + 3 botões; a dificuldade dos bots, 4); o Saguão mostra a etiqueta "3D: N min · Normal"
+  a todos; a duração estimada do campeonato vai de tudo simulado até o 3D com a duração da sala quando há jogo de uma pessoa
+  contra um bot (o treino, ou o online com bots).
+- **testar-leilao TD** (Node, ~1 s): o resultado do 3D convertido (a vitória com gol, pênalti e gol contra, os cartões e o
+  expulso, as estatísticas; 40 empates no mata-mata — 21 no gol de ouro, 19 nos pênaltis — iguais noutro "aparelho" e
+  diferentes com outra trava; o empate nos pontos), a máquina (o `abriu` e o gravar uma vez, o `naoAbriu` só depois de 2 min
+  e só sem o `abriu`), a duração e a dificuldade na sala e no `ver()`, o `gravar('3d')` pela sessão uma vez só (o 2º e o
+  `'simulado'` depois devolvem o gravado; outro aparelho confere e vê o mesmo campeão), o Simular da tela do 3D, o W.O. pelo
+  relógio do servidor (o reservado 2 s antes do prazo, o W.O. depois), o 3D que não abriu = o simulado (o reservado 1 s antes
+  dos 2 min), duas abas (uma reserva) e a conferência (6 honestos aceitos, 11 adulterações acusadas, o `abriu` honesto aceito e
+  o que some congelando). O C8 passou a reservar e a marcar o `abriu` antes do W.O. O arquivo inteiro: 18 de 18 blocos em ~58 s.
+- **Sem recuo e o time de 11 no 3D**: o `testar-3d.mjs` (a página de ensaio e o GOLAÇO de verdade, a edição pro) passou
+  inteiro, 69 itens em ~2 min, nenhum erro de página — sem o gancho os outros modos não mudam; o `testar-penaltis.mjs` (14 ok)
+  e o `testar-livre.mjs` (16 ok) também (o `abre3d` deles ganhou só o `fns.abriu`, que eles não usam; o Viverde pulado, sem a senha). O time de 11 sem banco foi
+  conferido com o GOLAÇO de verdade num script de fumaça do passo 1 (ainda não é um caso do `testar-3d`; fica para o passo 2):
+  o Jogar de um treino abre o 3D com o pedido 11 + 11 (o mundo com 11 × 11), a duração da sala (3 min: 10 800 ticks por
+  tempo), a dificuldade dela (Difícil) travada, o escudo desenhado do leilão, o `abriu` marcado, o "Simular o resto" até o
+  `tm3d:fim` e o feito `'3d'` gravado e conferido, sem erro de página (duas rodadas). O `golaco/` não mudou.
+- **Para o passo 2** (os testes de navegador): o `--tela` (o jogo contra bot pela página de ensaio: o 3D fechado no meio =
+  W.O., o "Simular partida" da tela do 3D grava antes de mostrar e o 2D vem sem pausa; nada sobre nada do Jogar e das
+  Partidas em 3D nos 8 tamanhos, escuro e claro), o `testar-leilao-online.mjs` com o 3D no banco falso e o caso do pedido
+  de 11 no `testar-3d`. As regras opcionais não conferem o prazo do W.O. (os aparelhos conferem).
+- **O passo 2** (os testes de navegador, o CI e a documentação):
+  - **A página de ensaio do 3D** saiu do `testar-3d.mjs` para `ferramentas/lib/ensaio-3d.mjs` (os modos de antes iguais —
+    `simular`, `erro`, `parado` — e os novos: `fim`, o resultado montado do pedido com o placar de
+    `localStorage["ensaio3d:placar"]`; `simularTit`, o "Simular partida" com os titulares; `sair`, o 3D aberto e fechado sem
+    resultado; `aberto`, só o `tm3d:pronto`) e `ligaEnsaio3d` (o `TM.tm3d.PASTA` de cada página e, sem WebGL 2 no Chromium,
+    um contexto de mentira para a sonda do `tm3d.js`, só quando o real falta).
+  - **`--tela` T14** (15 itens, ~52 s; sozinho com `--tela --so3d`): um treino de Pontos corridos com 4 (os 6 jogos meus
+    contra os bots) com as Partidas em 3D escolhidas na Criar (3 min, Difícil; nada sobre nada da Criar nos 8 tamanhos, escuro
+    e claro): o pedido 11 + 11 sem banco, a duração e a dificuldade travadas, mando neutro, os escudos desenhados e o
+    `abriu`; o fim do 3D gravado ANTES do 2D (feito `'3d'`, os autores do 3D) e o 2D sem pausa e sem sorteio; o "Simular
+    partida" da tela do 3D (o simulado gravado antes de mostrar, sem `escSim` com os mesmos 11); o 3D aberto e fechado sem
+    resultado (nada gravado, "Jogando em 3D · M:SS de prazo", nada sobre nada do Seu jogo em 3D, o W.O. contra mim só
+    depois do prazo); "Sempre simular" (o Jogar simula sem o quadro); recarregar no meio do 3D aberto (volta com a mesma
+    trava e o W.O. depois do prazo) e com o 3D que nem abriu ("Abrindo o 3D" e o simulado em 2 min). O T2 passou a conferir
+    o resumo da Criar com "3D: 4 min por tempo, Normal" (o passo 1 o pôs lá). O `treinoAteCamp` virou `treinoAte(p, T,
+    formato, antes, fatorCamp)` (o T13 igual).
+  - **`testar-leilao-online.mjs`, o caso `tresd`** (9 itens, ~3 min; no CI junto do `telas`): 2 páginas + 1 bot, Pontos
+    corridos, 3 min: A joga o seu jogo pelo Jogar até o fim do 3D (os nós `reservado → reservado (abriu) → feito`, todos
+    gravados pela página de A; o feito `'3d'`), B vê o MESMO nó, "Jogado em 3D" e o 2D do Ver o jogo sem pausa; B abre o 3D
+    (o `abriu` gravado por B) e fecha o app: depois do prazo do 3D (15,8 min do servidor = ~158 s com o fator 6), o W.O.
+    contra B gravado pela página de A (o uid de quem grava cada nó `jogos/{id}`, pelo `banco.negar`); B volta pelo link e
+    vê o mesmo. O G3 (as regras opcionais em cada gravação) passou com o `abriu` e o W.O.
+  - **O que o `tresd` achou**: no online o `jogar3d` devolvia a trava do FIM DA TRANSAÇÃO, que traz a estimativa local do
+    TIMESTAMP (como o SDK; a trava de verdade chega pelos ouvintes): o `abriu3d` e o `gravar3d` recusavam por "trava", o
+    3D aberto virava o simulado em 2 min e o resultado do 3D se perdia. Conserto: `_reservaNoServidor` espera o nó
+    reservado no 3D por mim chegar à vista (o dado do servidor; até 10 s) e devolve a trava dele. No treino nada muda.
+  - **`testar-3d.mjs` seção 7** (o GOLAÇO de verdade; 2 itens): um treino de mata-mata com 1 bot pela sessão; o Jogar abre
+    o 3D com o pedido 11 + 11 e o MUNDO 11 × 11 (o time de 11 sem banco não quebra o 3D: o `golaco/` não mudou), 10 800
+    ticks por tempo (3 min) e Difícil, `ajustesFixos`, neutro, `empateContinua`, os escudos desenhados e o `abriu`; o
+    "Simular o resto" leva ao `tm3d:fim` e o feito `'3d'` fica gravado antes de o 2D mostrar o placar, sem pausa. O
+    arquivo inteiro: 71 de 71 na pro e 70 de 70 com `--publica`, nenhum erro de página (uma 1ª rodada da pro teve 1 falha
+    que não é do leilão: o Estrelato com 7 fotos prontas para a meta ≥ 9, que depende do adversário que a carreira nova
+    sorteia; na 2ª passou).
+  - **CI**: o `--so telas,tresd` no job das telas do online (nenhum job a mais); o `--tela` ~7 min com o T14. O
+    `testar-3d.mjs` continua fora do CI (o GOLAÇO de verdade, à mão).
+
+**A revisão do PR 4** (três lentes: regras e determinismo, telas e produto, regressão; os achados conferidos no código e os
+consertos; `js/leilao.js`, `js/leilao-camp.js`, `js/leilao-sessao.js`, `js/leilao-tela.js`, `js/tm3d.js`, as regras opcionais):
+- **Grave — o resultado do 3D só chegava no "Voltar ao Total Match"** (confirmado: o golaco grava
+  `localStorage["tm3d:resultado:<id>"]` no apito e só manda o `tm3d:fim` no botão da faixa do fim, depois da cena do
+  pós-jogo e dos melhores momentos; fechar o app ali dava W.O. de quem jogou a partida inteira). Conserto: com o gancho, o
+  `abre3d` olha esse localStorage enquanto o quadro está aberto e chama `cfg.aoResultado(r3)` (o leilão grava já ali, sem
+  mostrar; o `tm3d:fim` depois devolve o gravado); a GUARDA `tm3d:guarda:<id>` (posta quando o 3D abre; o
+  `limpaSobras` e o `termina` não apagam o resultado guardado; ela vence em 1 h); a CAIXA do aparelho
+  (`leilao:3d:<código>` = { id, trava, abriu, pedido, r3 }): o resultado do 3D fica nela ANTES de gravar e o MOTOR grava o
+  guardado (a ação `gravar3d` do `_acaoJogo`, também lendo o `tm3d:resultado:<pedido>` depois de recarregar) até o jogo ser
+  decidido; decidido, a caixa e a guarda saem (`_confere3d`, `_larga3d` → `TM.tm3d.soltaResultado`). Com o GOLAÇO de
+  verdade (`testar-3d` seção 7) o gravar sai 1,7 s antes do `tm3d:fim` no "Simular o resto".
+- **Grave — o X confirmado depois de o 3D abrir dava W.O.** (confirmado: o `tm3d:tela` tirava o X mas não a confirmação, e o
+  `termina('sair')` sem motivo com o `abriu` não gravava nada). Conserto: o X e o "Simular a partida" da demora mandam
+  `dados.doTM` ('x' | 'demora'); com o gancho, eles gravam o simulado também com o `abriu` (é o que a confirmação promete;
+  os outros modos ignoram o campo).
+- **Médio — versões misturadas na sala** (confirmado nas duas lentes: o PR mudou a máquina de `jogos/` sem subir o
+  `REGRAS`). Conserto: `REGRAS` 2; o aparelho de antes (v384) só olha as salas novas (o `regras !== 1` dele); este aceita
+  as de regras 1 e 2 (`REGRAS_ACEITAS`, `regrasAceitas`) e, nas de regras 1 (criadas antes do PR 4, com um v384 dentro),
+  não tem o Jogar (`_com3d`: `podeJogar` falso, `com3d: false`, o botão some, `jogar3d` → 'sem3d') e congela com um nó do
+  3D nelas ('forma') — o treino salvo antes do deploy segue, só com o Simular. (Escolhida a alternativa que não tranca as
+  salas em andamento; trancar seria só subir o número.)
+- **Médio — o abriu tentado uma vez só e a reserva pela estimativa** (confirmado). Conserto: o `abriu3d(id, trava, pedido)`
+  guarda o `abriu` na caixa e, se a transação falha, o motor insiste (a ação `abriu`) até ele ficar gravado ou o jogo ser
+  decidido; o `_reservaNoServidor` sem o nó em 10 s LÊ o nó do servidor (`rede.ler`) e, sem ele, o 3D não abre
+  ('reservaSemServidor': sem o abriu, o simulado em 2 min).
+- **Médio — o 3D aberto num jogo já decidido** (confirmado). Conserto: a vigia da rota `leilao-jogar` (`S.aoMudar` com o
+  quadro aberto, `TM.tm3d.aberto()`): o jogo que deixa de ser o reservado com a trava (e não é o MEU feito `'3d'`, que sai
+  no apito com o 3D no pós-jogo) fecha o quadro (`TM.tm3d.fechar`) com o aviso e leva ao 2D do gravado (o W.O., ao
+  Campeonato).
+- **Médio — o gravar3d que desistia perdia o 3D** (confirmado). Conserto: a caixa acima (o resultado guardado antes; o
+  motor insiste a cada volta e ao reabrir a sala) e uma gravação por vez para o mesmo 3D (`_grav3d`: o apito, o `tm3d:fim`
+  e o motor usam a mesma promessa). O Seu jogo diz "Gravando o resultado do 3D…" com o resultado no aparelho.
+- **Médio — preso de 16 a 34 min sem saída** (confirmado; a decisão 15 fica). Conserto: no Seu jogo, para quem reservou e
+  sem o 3D aberto nesta página, "Aceitar o W.O. agora" (o 3D abriu; com a confirmação; `desistir3d` → `desistir`: o W.O. de
+  quem reservou com `desistiu: true`, que a conferência aceita a qualquer hora depois do `abriu` e só de quem reservou) e
+  "Simular agora" (o 3D que nem abriu: o `gravar3d('simulado')` de sempre). Vale no treino e no online. O "Simular os
+  pendentes" do dono continua sem o 3D reservado (quem está jogando não perde o jogo para outro).
+- **Médio — "Como funciona" sem o Jogar nem o W.O.** e o texto do Campeonato antes dele: reescritos.
+- **Leves**: o reservado → reservado (abriu) agora exige o mesmo `por`, `motivo` e `inicio` (a conferência e o `.validate`);
+  "W.O." na chave e no pôster do fim ("Final: vitória/derrota por W.O. contra X"); a etiqueta "3D" do Saguão e o bloco
+  "Partidas em 3D" (Saguão do dono e Criar sala online) só com bots; a fala "W.O.." sem o ponto repetido.
+- **Testes**: TD10 (as regras 2 e a sala de regras 1), TD11 (aceitar o W.O.), TD12 (o `por` trocado no abriu congela), TD13
+  (o gravar que falha e o app fechado depois do apito: gravado pelo motor antes do prazo), TD14 (o abriu que falha); o T14
+  com 6 técnicos e os jogos 7 (o apito: gravado com o 3D aberto; recarregar não perde nada e nada sobra), 8 (o X depois de
+  o 3D abrir = o simulado) e 9 (a vigia), o "Aceitar o W.O. agora" (jogos 3 e 5) e o "Simular agora" (jogo 6); a página de
+  ensaio com os modos `apito` e `tardio`. Na base (bc628213) o T14 reprova os jogos 3, 5, 6 e 7 (o 7 fica reservado e o
+  8 nem começa) e o TD, no TD10. Rodados: `testar-leilao.mjs` 18/18 blocos (65 s), `--tela` 76/76 (324 s),
+  `testar-leilao-online.mjs --so telas,tresd,dois` 34/34, `testar-3d` 71/71 (pro) e 70/70 (`--publica`),
+  `testar-online3d` 24/24, `conferir-estilos.py` 0.
+- **Lições**: mudança na máquina de um nó compartilhado sobe o `REGRAS` (e decide o que fazer com as salas em andamento:
+  aceitar as velhas sem a peça nova); o que o 3D grava no apito é a verdade do jogo — esperar o botão do fim é perder a
+  partida quando o app fecha; uma confirmação aberta pode sobreviver ao estado que a criou: o que ela promete tem de ir
+  junto como pedido explícito; o que precisa chegar ao servidor fica no aparelho até chegar, e quem insiste é o motor (que
+  já volta depois de queda e de recarregar), não um laço solto na tela.
 
 ---
 
