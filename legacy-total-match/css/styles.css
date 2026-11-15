@@ -7479,7 +7479,10 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
   .lei-corpo-lote .lei-col-a { gap: 8px; }
   .lei-lote-cab { justify-content: flex-start; margin-top: 0; }
-  .lei-lote-n { min-height: 26px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+  .lei-lote-n { min-height: 28px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+  /* as pílulas um pouco menores que o chip também deitado (o alvo de toque continua com 44 px) */
+  .lei-aba { min-height: 26px; font-size: 12.5px; }
+  .lei-aba::after { top: -9px; bottom: -9px; }
   .lei-lote-card { display: grid; grid-template-columns: minmax(0, 1fr) 150px; grid-template-areas: "topo placar" "hist hist"; gap: 8px 12px; padding: 12px; }
   .lei-lc-topo { grid-area: topo; grid-template-columns: 84px minmax(0, 1fr); column-gap: 12px; min-height: 76px; }
   .lei-foto-box { width: 76px; height: 76px; }
