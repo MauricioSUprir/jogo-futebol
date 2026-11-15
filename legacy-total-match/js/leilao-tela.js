@@ -670,6 +670,7 @@
     TM.ui.clear(c);
     ["cab", "card", "topo", "vendido", "placar", "relogio", "arco", "num", "lider", "valor", "hist", "meu", "campo", "prox", "espaco"].forEach(function (k) { P[k] = null; });
     P.placarChave = null; P.vendidoChave = null; P.relChave = null; P.timeChave = null;
+    if (P.mqOff) P.mqOff();
     if (P.modo === "espera" || P.modo === "parada") {
       c.appendChild(el("div", { class: "lei-caixa lei-espera" }, [el("p", { class: "intro-text", text: P.modo === "parada" ? "O leilão parou." : V.fase === "fim" ? "Fechando o leilão…" : "Preparando o primeiro jogador…" })]));
       return;
@@ -703,19 +704,32 @@
     P.valor = el("div", { class: "lei-valor-atual" });
     P.placar = el("div", { class: "lei-placar" }, [P.relogio, el("div", { class: "lei-placar-dir" }, [P.lider, P.valor])]);
     P.hist = el("ol", { class: "lei-hist", "aria-label": "Últimos lances" });
-    P.card = el("section", { class: "lei-lote-card", "aria-label": "Jogador em leilão" }, [P.topo, P.placar, P.hist, P.vendido]);
+    P.placar.appendChild(P.vendido);
+    P.card = el("section", { class: "lei-lote-card", "aria-label": "Jogador em leilão" }, [P.topo, P.placar, P.hist]);
     a.appendChild(P.cab); a.appendChild(P.card);
     P.meu = montaMeu(V);
     P.campo = el("div", { class: "lei-meu-campo" });
     P.prox = bloco("proximos", "Próximos lotes", "list");
     b.appendChild(P.meu); b.appendChild(P.campo); b.appendChild(P.prox.raiz);
+    // no PC (2 colunas) os Próximos lotes vão para baixo do cartão, à esquerda (a coluna do cartão acabava cedo e sobrava um
+    // vazio embaixo); no celular ficam no fim da página
+    var mq = null; try { mq = global.matchMedia(PC_LOTE); } catch (e2) { mq = null; }
+    var poeProx = function () { var alvo = mq && mq.matches ? a : b; if (P.prox && P.prox.raiz.parentNode !== alvo) alvo.appendChild(P.prox.raiz); };
+    poeProx();
+    if (mq && mq.addEventListener) {
+      mq.addEventListener("change", poeProx);
+      P.mqOff = function () { mq.removeEventListener("change", poeProx); P.mqOff = null; };
+      VIEW.desliga.push(P.mqOff);
+    }
     c.appendChild(a); c.appendChild(b);
     P.espaco = el("div", { class: "lei-espaco", "aria-hidden": "true" });
     c.appendChild(P.espaco);
   }
+  // o PC da aba Leilão (as 2 colunas do CSS)
+  var PC_LOTE = "(min-width: 1024px) and (min-height: 600px)";
   // um bloco recolhível (o estado fica entre as telas; no PC começa aberto)
   function bloco(chave, titulo, icone) {
-    var pc = false; try { pc = global.matchMedia("(min-width: 1024px) and (min-height: 600px)").matches; } catch (e) {}
+    var pc = false; try { pc = global.matchMedia(PC_LOTE).matches; } catch (e) {}
     if (VIEW.abertos[chave] == null || VIEW.abertos["_" + chave] !== pc) { VIEW.abertos[chave] = pc; VIEW.abertos["_" + chave] = pc; }
     var corpo = el("div", { class: "lei-bloco-corpo", id: "lei-bloco-" + chave });
     var info = el("span", { class: "lei-bloco-info" });
@@ -735,6 +749,16 @@
   /* ---------- o jogador sem a carta: a foto (ou a silhueta), o selo da nota, o escudo, o nome e os chips ---------- */
   // as notas escondidas (o "leilão no olho", PR 6): com elas, o selo mostra "?" e as notas do campinho e dos próximos somem
   function notasOcultas(V) { V = V || VIEW.V; return !!(V && V.notasOcultas); }
+  // a luminância relativa (WCAG) de uma cor "#rgb", "#rrggbb" ou "rgb(...)"; -1 se não der para ler
+  function luzDe(c) {
+    var m = String(c || "").trim(), v = null;
+    if (/^#[0-9a-f]{3}$/i.test(m)) v = [1, 2, 3].map(function (i) { return parseInt(m.charAt(i) + m.charAt(i), 16); });
+    else if (/^#[0-9a-f]{6}/i.test(m)) v = [1, 3, 5].map(function (i) { return parseInt(m.substr(i, 2), 16); });
+    else { var r = m.match(/rgba?\(([^)]+)\)/i); if (r) v = r[1].split(",").slice(0, 3).map(function (x) { return parseFloat(x); }); }
+    if (!v || v.some(isNaN)) return -1;
+    var lin = v.map(function (x) { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); });
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
+  }
   function corClube(cl) { try { return (cl && TM.img.kitColor && TM.img.kitColor(cl)) || null; } catch (e) { return null; } }
   // a silhueta da carta (cabeça e ombros; a do Ultimate, pelo TM.ut._i), em branco sobre a cor do clube
   function silhuetaEl() {
@@ -751,6 +775,9 @@
     if (!foto) {
       box.classList.add("sil");
       var cor = corClube(cl); if (cor) box.style.backgroundColor = cor;
+      // a silhueta escura sobre a cor clara do clube (amarela, branca, azul-claro: a branca sumia nela, 1,4:1); a branca fica
+      // com ≥ 3:1 até a luminância 0,3 e a escura com ≥ 3,9:1 dali para cima
+      if (cor && luzDe(cor) > 0.3) box.classList.add("clara");
       box.appendChild(silhuetaEl());
     }
     return box;
@@ -816,7 +843,7 @@
       P.valor.classList.toggle("vazio", !lid);
       P.valor.classList.toggle("eu", !!(lid && lid.eu));
       P.valor.setAttribute("aria-label", lid ? "Valor atual " + rs(l.valor) : "Lance mínimo R$ 1");
-      // os lances de antes (o da frente já está grande em cima): até 3, os mais velhos mais apagados
+      // os lances de antes (o da frente já está grande em cima): até 3, os mais velhos mais leves; sem nenhum, a lista some
       TM.ui.clear(P.hist);
       (l.h || []).slice(0, -1).reverse().slice(0, 3).forEach(function (x) {
         var t = V.tecnicos[x[0]];
@@ -831,6 +858,9 @@
       if (P.vendidoChave !== k) {
         P.vendidoChave = k;
         TM.ui.clear(P.vendido);
+        // o nome do vendido em cima (o cartão já mostra o próximo jogador: sem ele, a venda parecia ser do novo)
+        var S1 = sessao(), rv = S1 && S1.ctx && S1.ctx.lotes ? S1.ctx.lotes[u.i] : null;
+        if (rv) P.vendido.appendChild(el("span", { class: "lei-vendido-quem", text: rv.name }));
         if (u.tipo === "vendido") {
           var t = V.tecnicos[u.t];
           if (t) P.vendido.appendChild(escudo(t.clube, "pp"));

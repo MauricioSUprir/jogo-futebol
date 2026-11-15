@@ -6783,9 +6783,12 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-ficha-bt:hover { color: var(--gold); }
   .lei-ficha-bt:hover .lei-ficha-ic { border-color: var(--gold); }
 }
-.lei-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
-.lei-aba { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 36px; padding: 0 14px; border-radius: 999px; border: 0;
+/* as pílulas mais leves que o chip "Jogador N de 52" (as fotos): 30 px à vista e o alvo de toque de 44 px pelo ::after (a folga
+   de 14 px entre as linhas, se quebrarem, guarda o alvo de cada uma) */
+.lei-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 6px; }
+.lei-aba { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; padding: 0 13px; border-radius: 999px; border: 0;
   background: var(--lei-tom); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.lei-aba::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
 .lei-aba-ic { display: inline-flex; }
 .lei-aba-ic:empty { display: none; }
 .lei-aba-ic .tm-ic { width: 14px; height: 14px; stroke-width: 2.6; }
@@ -6803,8 +6806,13 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-topo { margin: 0 -16px; padding: 0 16px 4px; }
 }
 @media (max-width: 380px) {
-  .lei-abas { gap: 4px; }
+  .lei-abas { gap: 14px 4px; }
   .lei-aba { padding: 0 10px; font-size: 12px; }
+  /* o nome do seu clube com 16 letras inteiro em 360 (as regras do seu clube vêm depois: por isso o .lei-meu na frente) */
+  .lei-meu .lei-meu-l1 { gap: 8px; }
+  .lei-meu .lei-meu-clube { font-size: 15px; }
+  .lei-meu .lei-meu-nome { gap: 6px; }
+  .lei-meu .lei-meu-nome .lei-voce { letter-spacing: .06em; }
 }
 
 /* ---------- a aba Leilão (as fotos de 14/11; PLANO-LEILAO.md §9) ----------
@@ -6812,8 +6820,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
    o nome, "função, clube", os chips e o (i); o anel do relógio com quem lidera e o valor grande; os lances de antes. Depois o
    seu clube solto na página, a barra do orçamento e o campinho verde com as vagas. A carta do Ultimate não entra aqui. */
 .lei-lote-cab { display: flex; justify-content: center; margin-top: 4px; }
-.lei-lote-n { display: inline-flex; align-items: center; min-height: 34px; padding: 0 18px; border-radius: 12px; background: var(--lei-tom); color: var(--lei-tom-tx);
-  font-size: 16px; font-weight: 800; letter-spacing: .1px; font-variant-numeric: tabular-nums; }
+.lei-lote-n { display: inline-flex; align-items: center; min-height: 32px; padding: 0 16px; border-radius: 12px; background: var(--lei-tom); color: var(--lei-tom-tx);
+  font-size: 15px; font-weight: 800; letter-spacing: .1px; font-variant-numeric: tabular-nums; }
 .lei-lote-rep { color: var(--alerta); margin-right: 1px; }
 .lei-lote-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--panel); }
 .lei-lote-card.lampejo { animation: leiLampejo .7s ease-out; }
@@ -6823,7 +6831,11 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-foto { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--lei-tom); }
 .lei-foto-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
 .lei-foto.sil { background-color: var(--gold-dark); }
+/* o círculo da silhueta com a borda (a cor do clube preta sumia no cartão escuro) e a silhueta escura na cor clara (amarela,
+   branca: a branca ficava a 1,4:1) */
+.lei-foto-box .lei-foto.sil { box-shadow: inset 0 0 0 1.5px var(--line-2); }
 .lei-sil { display: block; width: 74%; height: auto; color: #fff; opacity: .85; }
+.lei-foto.sil.clara .lei-sil { color: #0b110e; opacity: .6; }
 .lei-foto-box .lei-nota { position: absolute; left: -14px; top: 22px; }
 .lei-nota { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 44px; height: 46px; border-radius: 10px;
   background: var(--gold); color: var(--black); line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); }
@@ -6870,8 +6882,9 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-valor-atual { font-size: 40px; font-weight: 900; line-height: 1; letter-spacing: -.5px; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .lei-valor-atual.eu { color: var(--gold); }
 .lei-valor-atual.vazio { color: var(--text-dim); }
-/* os lances de antes: até 3 linhas de 22 px, a altura guardada (o que chega não empurra o resto da página) */
-.lei-hist { list-style: none; min-height: 66px; display: flex; flex-direction: column; font-size: 14.5px; color: var(--text-dim); }
+/* os lances de antes: até 3 linhas de 22 px; sem nenhum, a lista some (a faixa vazia deixava o cartão com cara de inacabado) */
+.lei-hist:empty { display: none; }
+.lei-hist { list-style: none; display: flex; flex-direction: column; font-size: 14.5px; color: var(--text-dim); }
 .lei-hist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 22px; min-width: 0; }
 /* os mais velhos mais leves pelo peso e pelo tamanho (sem apagar: apagados, ficavam abaixo de 4,5:1) */
 .lei-hist li:nth-child(n+2) { font-size: 13.5px; }
@@ -6879,9 +6892,12 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-hist li.eu { color: var(--gold); }
 .lei-hist-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 .lei-hist b { font-weight: 600; font-variant-numeric: tabular-nums; }
-.lei-vendido { position: absolute; left: 12px; right: 12px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 12px 14px; border-radius: 14px; background: rgba(5,8,7,.94); border: 1px solid rgba(34,197,94,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5);
+/* "Vendido para X por R$ Y" na pausa: sobre a linha do relógio (não sobre os chips do jogador novo), com o nome do vendido */
+.lei-placar { position: relative; }
+.lei-vendido { position: absolute; left: -6px; right: -6px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px;
+  padding: 8px 12px; border-radius: 14px; background: rgba(5,8,7,.94); border: 1px solid rgba(34,197,94,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5);
   font-size: 15px; font-weight: 800; text-align: center; pointer-events: none; }
+.lei-vendido-quem { flex: 1 1 100%; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* o seu clube, solto na página */
 .lei-meu { display: flex; flex-direction: column; margin-top: 12px; min-width: 0; }
 .lei-meu-l1 { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 32px; }
@@ -7302,11 +7318,6 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-aviso-bt { flex: 0 0 auto; }
 .lei-aviso-entrada { max-width: none; margin-bottom: 0; border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.08); }
 .lei-aviso-entrada .lei-aviso-ic { color: var(--gold); }
-.lei-abas.quatro { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-@media (max-width: 420px) {
-  .lei-abas.quatro { gap: 5px; }
-  .lei-abas.quatro .lei-aba { font-size: 11px; padding: 6px 2px; }
-}
 /* a Entrada: entrar com o código (ou o link colado) */
 .lei-entrar { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; text-align: left; }
 .lei-entrar-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
@@ -7492,6 +7503,24 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
   .lei-lance-msg { grid-column: 1 / -1; }
   .lei-lb { min-height: 48px; }
   .lei-l2 .lei-lb, .lei-valor { min-height: 46px; }
+}
+/* o celular deitado mais estreito (de 560 a 799 px: o iPhone SE e o 8 deitados): uma coluna só (o cartão de ponta a ponta; o
+   seu clube e o campinho embaixo), o placar numa linha (o anel ao lado de quem lidera e do valor) e a linha de baixo da barra
+   mais justa ("Outro valor" inteiro); abaixo de 700 px a barra em duas linhas, como em pé (o Tudo e o campo não cabiam lado a lado) */
+@media (max-height: 520px) and (min-width: 560px) and (max-width: 799px) {
+  .lei-corpo-lote { grid-template-columns: minmax(0, 1fr); }
+  .lei-corpo-lote .lei-col-b { width: 100%; max-width: 420px; margin: 0 auto; }
+  .lei-lote-card { grid-template-columns: minmax(0, 1fr) 210px; }
+  .lei-placar { grid-template-columns: 60px minmax(0, 1fr); justify-items: start; column-gap: 10px; text-align: left; }
+  .lei-placar-dir { align-items: flex-start; }
+  .lei-l2 .lei-lb { padding: 0 12px; }
+  .lei-l2 .lei-lb-passar { min-width: 0; padding: 0 10px; }
+  .lei-valor { padding: 0 10px; }
+}
+@media (max-height: 520px) and (min-width: 560px) and (max-width: 699px) {
+  .lei-lance-in { grid-template-columns: minmax(0, 1fr); }
+  .lei-lb { min-height: 44px; }
+  .lei-l2 .lei-lb, .lei-valor { min-height: 44px; }
 }
 
 /* ---------- tema claro ---------- */
