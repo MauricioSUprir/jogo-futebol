@@ -67,6 +67,13 @@
 //      hora; com a aba escondida (o requestAnimationFrame que não vem), o relógio tira o quadro em ~1 s. Na versão sem
 //      TM.tm3d._abre3d REPROVA.
 //
+//  P15 (o Modo Leilão do TM, PR 6: as notas escondidas no pedido; js/ajustes-partida.js notasOcultasDoPedido, fora do fecho):
+//      partida.notasOcultas true → true; false, ausente, 'true' (texto), sem `partida` e nulo → false; o online (o pedido do
+//      anfitrião) → true nos dois lados. O tm3d.js do TM (partidaDe) põe partida.notasOcultas SÓ com simOpts.notasOcultas (sem ele,
+//      o campo não existe). O campo não chega à simulação: timesDoPedido com e sem ele iguais (JSON) e a partida com o mesmo hash.
+//      A tela (prepartida.js dadosDaPartida com notasOcultas): as fichas com nota null e a raridade 'n', o time sem o geral e sem as
+//      estrelas; sem ele, as notas de sempre. Na versão sem notasOcultasDoPedido REPROVA.
+//
 //   node tools/teste-ponte-tm.mjs [--js <pasta>] [--tm <pasta do TM>] [--min 0.5] [--base <pasta js>]   (minutos por tempo: P3 com --min, P4 com
 //      2×, P5-A com 4×)
 import path from 'node:path';
@@ -908,6 +915,69 @@ if (typeof SU.melhorEmCampo === 'function') {
     }
     reg('P14 o tm3d:tela (item 106): esconde o aviso e o X, cancela a demora de 30 s e não entrega a porta; o tm3d:sair tira a tela da vista JÁ (no fns.sair ela já está fora) e o remove() vem depois — também com a aba escondida (sem o quadro seguinte, pelo relógio); sem o tm3d:tela o tm3d:pronto continua; o abre3d tira o velho na hora',
       ruins.join('; ') || 'os 7 casos certos', 'os 7 casos certos', ruins.length === 0);
+  }
+}
+
+// ------------------------------------------------------------------ P15 as notas escondidas do Modo Leilão do TM (PR 6)
+{
+  let AJ = null, PP = null;
+  try { AJ = await imp('ajustes-partida.js'); } catch (_) { AJ = null; }
+  try { PP = await imp('prepartida.js'); } catch (_) { PP = null; }
+  if (!AJ || typeof AJ.notasOcultasDoPedido !== 'function') {
+    reg('P15 as notas escondidas no pedido (o Modo Leilão do TM, PR 6)', 'sem ajustes-partida.js notasOcultasDoPedido', 'existe', false);
+  } else {
+    const ruins = [];
+    const comP = (ped, partida) => ({ ...ped, partida: { ...ped.partida, ...partida } });
+    const online = { ...comP(PED_A, { notasOcultas: true }), modo: 'online' };
+    const casos = [
+      ['true', comP(PED_A, { notasOcultas: true }), true], ['false', comP(PED_A, { notasOcultas: false }), false], ['ausente', PED_A, false],
+      ['"true"', comP(PED_A, { notasOcultas: 'true' }), false], ['sem partida', { v: 2 }, false], ['nulo', null, false],
+      ['online anfitrião', online, true], ['online convidado', JSON.parse(JSON.stringify(online)), true],
+    ];
+    casos.forEach(([n, ped, quer]) => { if (AJ.notasOcultasDoPedido(ped) !== quer) ruins.push(`${n} → ${AJ.notasOcultasDoPedido(ped)}`); });
+    // o tm3d.js do TM: partidaDe põe o campo só com simOpts.notasOcultas
+    {
+      const vm = await import('node:vm');
+      const fs = await import('node:fs');
+      const TMJS = path.join(path.resolve(arg('--tm', path.join(JS, '../../legacy-total-match'))), 'js/tm3d.js');
+      let pd = null;
+      try {
+        const ctx = { TM: { ui: { el() { return null; } }, storage: { settings: () => ({}) } }, console };
+        ctx.window = ctx;
+        vm.createContext(ctx);
+        vm.runInContext(fs.readFileSync(TMJS, 'utf8'), ctx, { filename: TMJS });
+        pd = ctx.TM.tm3d && ctx.TM.tm3d._partidaDe;
+      } catch (_) { pd = null; }
+      if (!pd) ruins.push('o tm3d.js sem TM.tm3d._partidaDe');
+      else {
+        const com = pd({ simOpts: { neutral: true, notasOcultas: true } }, {}, {}), sem = pd({ simOpts: { neutral: true } }, {}, {}), falso = pd({ simOpts: { notasOcultas: false } }, {}, {});
+        if (com.notasOcultas !== true) ruins.push('tm3d partidaDe com simOpts.notasOcultas → ' + com.notasOcultas);
+        if ('notasOcultas' in sem || 'notasOcultas' in falso) ruins.push('tm3d partidaDe sem simOpts.notasOcultas com o campo');
+      }
+    }
+    // a simulação não vê o campo: os times do pedido iguais e a partida com o mesmo hash
+    const pedO = comP(PED_A, { notasOcultas: true });
+    const T0 = TT.timesDoPedido(PED_A), T1 = TT.timesDoPedido(pedO);
+    if (JSON.stringify(T0) !== JSON.stringify(T1)) ruins.push('timesDoPedido muda com partida.notasOcultas');
+    registrar(T0); registrar(T1);
+    const opc = T => ({ semente: 5, elencos: TT.ELENCOS_TM, times: T.times, humano: T.humano, trava: T.trava });
+    const m0 = P.criarPartida(opc(T0)), m1 = P.criarPartida(opc(T1));
+    let difHash = 0;
+    for (let k = 0; k < 600; k++) { P.passoPartida(m0, P.entradaDemoPartida(m0)); P.passoPartida(m1, P.entradaDemoPartida(m1)); if (k % 300 === 299 && SIM.hashMundo(m0) !== SIM.hashMundo(m1)) difHash++; }
+    if (difHash) ruins.push(`a partida com o pedido escondido diverge (${difHash} hashes)`);
+    // a tela (prepartida.js dadosDaPartida): sem nota, sem a cor da raridade, sem o geral e as estrelas
+    if (!PP || typeof PP.dadosDaPartida !== 'function') ruins.push('sem prepartida.js dadosDaPartida');
+    else {
+      const m = P.criarPartida(opc(T1));
+      const dO = PP.dadosDaPartida(m, { notasOcultas: true }), dM = PP.dadosDaPartida(m, {});
+      const fO = dO.times.flatMap(t => t.fichas), fM = dM.times.flatMap(t => t.fichas);
+      if (fO.length < 22 || fO.some(f => f.nota !== null || f.raridade !== 'n')) ruins.push('as fichas escondidas com nota ou raridade: ' + JSON.stringify(fO.slice(0, 2)));
+      if (dO.times.some(t => t.geral !== null || t.estrelas !== null)) ruins.push('o time escondido com o geral/estrelas: ' + JSON.stringify(dO.times.map(t => [t.geral, t.estrelas])));
+      if (fM.some(f => !(f.nota > 0) || !/^[bsgl]$/.test(f.raridade)) || dM.times.some(t => !(t.geral > 0) || !(t.estrelas > 0))) ruins.push('sem o campo, as notas sumiram');
+      if (JSON.stringify(fO.map(f => [f.vaga, f.id, f.nome])) !== JSON.stringify(fM.map(f => [f.vaga, f.id, f.nome]))) ruins.push('as fichas mudam além da nota');
+    }
+    reg('P15 notasOcultasDoPedido: true só com partida.notasOcultas === true (o online nos dois lados); o tm3d.js põe o campo só com simOpts.notasOcultas; a simulação igual (times e hash); a tela sem nota, raridade, geral e estrelas',
+      ruins.join('; ') || `os ${casos.length} casos certos, o tm3d, a simulação igual e a tela`, `os ${casos.length} casos certos, o tm3d, a simulação igual e a tela`, ruins.length === 0);
   }
 }
 

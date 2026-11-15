@@ -781,5 +781,6 @@
   api.soltaResultado = soltaResultado;
   api._gravaPedido = gravaPedido;   // (testes: golaco/tools/teste-ponte-tm.mjs P11)
   api._abre3d = abre3d;             // (testes: golaco/tools/teste-ponte-tm.mjs P14 — o recado tm3d:tela e o quadro que some já)
+  api._partidaDe = partidaDe;       // (testes: golaco/tools/teste-ponte-tm.mjs P15 — as notas escondidas do Modo Leilão no pedido)
   TM.tm3d = api;
 })(window);
