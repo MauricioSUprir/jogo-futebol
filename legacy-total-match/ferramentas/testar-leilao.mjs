@@ -4836,7 +4836,8 @@ async function testeTela() {
     await espera(150);
     const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"), S = TM.leilaoSessao.atual(), V = S.ver(), u = V.ultimo;
       const toca = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0; };
-      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-bt, .lei-lote-card .lei-nome")];
+      // (do (i), o círculo à vista: o botão tem 6 px de alvo transparente em volta, e a faixa não pega toque)
+      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-ic, .lei-lote-card .lei-nome")];
       return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled),
         quem: e && (e.querySelector(".lei-vendido-quem") || {}).textContent, vendidoEra: u && S.ctx.lotes[u.i] && S.ctx.lotes[u.i].name, novo: V.lote && V.lote.retrato.name,
         cobre: e ? chips.filter(c => toca(e, c)).map(c => c.textContent.slice(0, 16)) : [], msg: document.querySelector(".lei-lance-msg").textContent,
