@@ -618,7 +618,7 @@ parágrafo do `CLAUDE.md` atualizado.
 
 | Risco | Mitigação |
 |---|---|
-| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~2 MB por página (~16 MB no total): dá ~600 leilões por mês. Medir os bytes no PR 2. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
+| **Plano grátis do Firebase (Spark):** 100 conexões simultâneas no TM INTEIRO (uma por aba que abriu algo online) e 10 GB/mês baixados | Um leilão de 8 com 104 lotes baixa ~1,0–1,1 MB por página (~9 MB no total; medido no PR 2 em Node e no navegador — a estimativa era ~2 MB e ~16 MB): dá ~1 100 leilões de 8 por mês. Sem conexão: "Servidor cheio, tente em alguns minutos". **Perguntar ao dono** se o projeto está no Spark |
 | **Trapaça** (a raiz aberta) | Transações com as regras; tudo deriva do `vivo` e de `jogos`; a conferência pelos aparelhos honestos; o `.validate` opcional (3.4). Entre amigos |
 | **Relógio** (hora errada, ajuste no meio, latência) | A testemunha da hora em toda decisão; o fim derivado; a tela nunca é a juíza; teste com ±5 s e com o pulo depois da calibração |
 | **Celular que dorme** (o iPhone para o JavaScript; o socket fica meio aberto; com a aba escondida o SDK pode esperar até 5 min para reconectar) | Wake Lock; a decisão pelo `bate`, não pelo `pres`; `goOffline/goOnline` ao voltar; qualquer aparelho age; ausente passa |
@@ -948,3 +948,35 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     recusado, tirado, outra aba e Usar aqui, o Pronto zerado pela configuração, a queda (Reconectando… → Servidor cheio →
     de volta), o "Conferindo…" do ack perdido, a sala alterada e as regras mais novas; nada sobre nada (nem encostado, nem
     texto fora do botão, nem atrás da barra fixa) nos 8 tamanhos, no escuro e no claro, e nenhum erro de página.
+- **O teste de navegador do online** (`ferramentas/testar-leilao-online.mjs`, o §4.3; o passo 4 do PR 2):
+  - **Como é:** cada página do Chromium é um aparelho com o seu armazenamento; o SDK do gstatic é o falso, ligado ao banco
+    falso (o mesmo `js/net.js` do TM por cima: login anônimo, nome, número); o servidor e as páginas no MESMO relógio
+    acelerado (×6: Date, `performance.now` e os timers da página; cada página com o seu desvio e, no meio, o pulo
+    `window.__relogioPula(ms)`, que entrou no `relogioAcelerado`); o servidor falso confere CADA gravação do vivo, como o
+    bloco O do Node. As pessoas jogam por um piloto na página (decide como um robô com o perfil do seu índice e age pelos
+    BOTÕES de verdade — +1, +5, +10, Tudo de dois toques, Outro valor + Dar lance, Passar — ou pela API da sessão). Os
+    endereços do Firebase de verdade são bloqueados e contados, e uma prova (um pedido e um WebSocket a `*.firebaseio.com`)
+    mostra que a guarda pega (G0).
+  - **Os casos** (`--so dois,quatro,oito`): D1–D14 a sala inteira pela tela (criar, o código atrás do olho, o QR, Copiar
+    convite e Compartilhar, o pedido pelo link e o aceite, o pedido pelo código e a recusa, as recusas — código curto, que
+    não existe, sala cheia, Season Update sem a chave, regras de outra versão —, Pronto e Começar, a corrida de dois +1, o
+    ack perdido, o lance velho, recarregar pelo `?leilao=` e pelas Minhas salas depois do deploy, o leilão até o fim pelos
+    botões e a escalação até o "em breve"); Q1–Q6 4 páginas + 2 bots (os relógios +5 s e −5 s, o pulo de +60 s depois da
+    calibração, quem some, passar o clube pela tela, a 1ª página que cai na metade e os bots que seguem); O1–O3 8 páginas
+    (104 lotes) e os bytes; G0–G2. ~1, 2 e 3 min; no CI um job por caso.
+  - **O que mudou do §4.3:** "quem some" é a página ESCONDIDA (`document.hidden` e o `visibilitychange`, o celular
+    bloqueado), não a queda: a queda é a 1ª página que fecha (Q5). O "lance depois do fim" tem tolerância de 1,5 s de jogo
+    (~0,25 s de verdade: o caminho da mensagem e a fila da página com o relógio ×6; um relógio de aparelho errado em
+    segundos passa disso), e o "nenhum lote fecha antes do fim" continua estrito (a testemunha). Nas rodadas, o pior atraso
+    foi 0 ms. O campeonato e o par do Online 3D da lista do §4.3 ficam para os PRs 3 e 5; o 3D aqui é só o
+    `testar-online3d.mjs` de sempre, agora no CI (sem a senha, o caso do Viverde sai como "pulado").
+  - **Achado:** quem voltava à sala DEPOIS do Começar com outra versão do TM (o deploy no meio) não via o aviso: o saguão
+    "depois do Começar" saía antes da nota. Agora a nota vem também nele (D11 reprovava antes).
+  - **O Voltar** de uma sala online nas Minhas salas, com a conta ainda entrando, pede para tentar de novo em instantes
+    (não entra sozinho quando a conta fica pronta): o teste espera a conta. Fica assim (a tela redesenha com a conta pronta).
+  - **Os bytes no navegador** (O3): ~1,0–1,1 MB por página no leilão de 8 com 104 lotes (8 a 9 MB no total), o mesmo do
+    Node; o §6 foi atualizado.
+  - **CI** (`.github/workflows/tm-testes.yml`): o job `node` (o `testar-leilao.mjs` e o `conferir-estilos.py`) e cinco jobs
+    de navegador ao mesmo tempo (o `--tela`, os três casos do online e o `testar-online3d` com o TM servido na raiz), com o
+    Playwright 1.56.1 como o `golaco-testes.yml`; o check `tm-testes` (o job final) só passa com todos. O workflow também
+    roda quando muda o `golaco/tools/lib/navegador.mjs` (os testes do TM usam o servidor e o Playwright dele).
