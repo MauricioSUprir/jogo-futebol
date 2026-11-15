@@ -7202,8 +7202,6 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-regras-curtas li { color: var(--text-dim); font-size: 13px; }
 
 /* ---------- Criar sala (o Treino) ---------- */
-.lei-criar-corpo { gap: 12px; }
-.lei-criar-bloco { gap: 10px; }
 .lei-liga-bt, .lei-liga { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line-2);
   background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .lei-liga-bt:hover, .lei-liga:hover { border-color: rgba(34,197,94,.55); }
@@ -7224,15 +7222,6 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-passo-bt:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
 .lei-passo-bt:disabled { opacity: .35; cursor: not-allowed; }
 .lei-passo-n { min-width: 26px; text-align: center; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
-.lei-criar-forma { display: grid; grid-template-columns: minmax(0, 1fr) 96px; gap: 12px; align-items: center; }
-.lei-mini-campo { position: relative; width: 96px; aspect-ratio: .7; border-radius: 10px; background: #09090d; border: 2px solid rgba(34,197,94,.5); overflow: hidden; }
-.lei-mini-campo::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid rgba(34,197,94,.4); }
-.lei-mini-vaga { position: absolute; transform: translate(-50%, -50%); width: 17px; height: 17px; border-radius: 50%; background: rgba(34,197,94,.85); color: #04240f;
-  font-size: 0; }
-.lei-mini-vaga.gr-GK { background: #f5b83d; }
-.lei-mini-vaga.gr-DF { background: #5eb8ff; }
-.lei-mini-vaga.gr-FW { background: #f87171; }
-.lei-mini-n { position: absolute; left: 4px; top: 3px; font-size: 10px; font-weight: 800; color: rgba(255,255,255,.75); }
 .lei-criar-clube { display: flex; align-items: center; gap: 12px; }
 .lei-criar-esc { display: inline-flex; flex: 0 0 auto; }
 .lei-criar-campos { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 8px; }
@@ -7240,7 +7229,7 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-campo:focus { outline: none; border-color: var(--gold); }
 .lei-campo-sigla { text-transform: uppercase; text-align: center; letter-spacing: .08em; font-weight: 800; }
 .lei-esc-abre { border: 1px solid var(--line); border-radius: 12px; }
-.lei-criar-escudo, .lei-mais-op { display: flex; flex-direction: column; gap: 8px; }
+.lei-criar-escudo { display: flex; flex-direction: column; gap: 8px; }
 .lei-cores, .lei-formas-esc, .lei-simbs { display: flex; flex-wrap: wrap; gap: 8px; }
 .lei-cor { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line-2); cursor: pointer; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
 .lei-cor.on { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(34,197,94,.35), inset 0 0 0 2px rgba(0,0,0,.25); }
@@ -7266,11 +7255,113 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-fmt-ok { display: inline-flex; color: var(--gold); }
 .lei-fmt-ok .tm-ic { width: 20px; height: 20px; }
 .lei-sag-dur { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); }
-.lei-rodape { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; padding: 6px 0 10px; text-align: center; }
-.lei-criar-resumo { font-size: 13px; font-weight: 600; color: var(--text-dim); }
 .lei-comecar { width: 100%; max-width: 360px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .lei-comecar[aria-busy="true"] { opacity: .7; cursor: progress; }
-.lei-criar-nota { font-size: 11.5px; color: var(--text-dim); }
+
+/* ---------- a Criar sala pelas fotos de 14/11 (PLANO-LEILAO.md §9; js/leilao-tela.js, rota leilao-criar) ----------
+   Seções soltas com o título grande fora de caixa (.lei-cs), cartões de opção (a liga, os formatos com o desenho), o passo
+   com o deslizante, o segmentado das fotos (um trilho tonal, a escolhida em relevo) e a barra FIXA embaixo com o resumo numa
+   linha e o botão principal; a página termina com um espaço da altura dela (.lei-espaco). As cores são as do TM. */
+.lei-criar .lei-criar-corpo { max-width: 560px; gap: 30px; padding-top: 4px; }
+.lei-cs { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.lei-cs-tit { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; color: var(--text); }
+.lei-cs-hint { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+.lei-criar .lei-aviso-sala { margin-bottom: 0; }
+/* a liga escolhida: o cartão grande marcado, com o Trocar */
+.lei-criar .lei-liga-bt { min-height: 84px; padding: 14px 16px; gap: 14px; border-radius: 16px; border: 1px solid var(--gold); background: rgba(34,197,94,.14);
+  box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(34,197,94,.14); }
+.lei-criar .lei-liga-bt .lei-liga-logo { width: 44px; height: 44px; }
+.lei-criar .lei-liga-bt .lei-liga-txt { gap: 4px; }
+.lei-criar .lei-liga-bt .lei-liga-n { font-size: 20px; line-height: 1.2; white-space: normal; }
+.lei-criar .lei-liga-bt .lei-liga-s { font-size: 14px; line-height: 1.4; text-wrap: balance; }
+.lei-criar .lei-liga-bt .lei-liga-trocar { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; background: var(--panel);
+  border: 1px solid var(--line-2); font-size: 14px; font-weight: 800; }
+@media (max-width: 400px) {
+  .lei-criar .lei-liga-bt { padding: 14px; gap: 12px; }
+  .lei-criar .lei-liga-bt .lei-liga-logo { width: 36px; height: 36px; }
+  .lei-criar .lei-liga-bt .lei-liga-trocar { padding: 0 12px; }
+}
+/* os 3 cartões do formato com o desenho: o escolhido pela borda verde (com o anel) e pelo fundo */
+.lei-formatos.ilu { gap: 12px; }
+.lei-formatos.ilu .lei-fmt { grid-template-columns: 96px minmax(0, 1fr); gap: 16px; min-height: 0; padding: 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--panel); }
+.lei-formatos.ilu .lei-fmt.on { border-color: var(--gold); background: rgba(34,197,94,.14); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(34,197,94,.14); }
+.lei-fmt-des { display: flex; align-items: center; justify-content: center; }
+.lei-fmt-svg { display: block; width: 96px; height: 64px; color: var(--text-dim); }
+.lei-fmt.on .lei-fmt-svg { color: var(--gold); }
+.lei-fmt-svg .tr { fill: currentColor; opacity: .25; }
+.lei-fmt-svg .ch, .lei-fmt-svg .pt { fill: currentColor; }
+.lei-fmt-svg .ln { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lei-formatos.ilu .lei-fmt-txt { gap: 4px; }
+.lei-formatos.ilu .lei-fmt-n { font-size: 17px; line-height: 1.25; }
+.lei-formatos.ilu .lei-fmt-f { font-size: 14px; line-height: 1.4; }
+.lei-formatos.ilu .lei-fmt-s { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--text); }
+.lei-fmt-dur { white-space: nowrap; }
+@media (max-width: 379px) {
+  .lei-formatos.ilu .lei-fmt { grid-template-columns: 80px minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .lei-fmt-svg { width: 80px; height: 54px; }
+}
+/* o passo com o deslizante (as fotos): − e + quadrados tonais, o número grande em verde, o deslizante ligado a ele */
+.lei-passo.desl { display: grid; grid-template-columns: 46px minmax(52px, auto) 46px minmax(0, 1fr); align-items: center; gap: 8px; width: 100%; }
+.lei-passo.desl .lei-passo-bt { width: 46px; height: 46px; border: 0; border-radius: 12px; background: var(--lei-tom); color: var(--text); }
+.lei-passo.desl .lei-passo-bt .tm-ic { width: 20px; height: 20px; }
+.lei-passo.desl .lei-passo-n { min-width: 52px; font-size: 44px; line-height: 1; color: var(--gold); }
+.lei-passo-desl { -webkit-appearance: none; appearance: none; width: 100%; min-width: 0; height: 44px; margin: 0 0 0 8px; padding: 0; background: transparent; cursor: pointer; --p: 0%; }
+.lei-passo-desl::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) 0 var(--p), var(--line-2) var(--p) 100%); }
+.lei-passo-desl::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line-2); }
+.lei-passo-desl::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--gold); }
+.lei-passo-desl::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 30px; height: 30px; margin-top: -12px; border-radius: 50%; background: #ffffff;
+  border: 1px solid rgba(0,0,0,.2); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.lei-passo-desl::-moz-range-thumb { width: 30px; height: 30px; border-radius: 50%; background: #ffffff; border: 1px solid rgba(0,0,0,.2); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.lei-passo-desl:disabled { opacity: .4; cursor: not-allowed; }
+.lei-passo-desl:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 10px; }
+/* o segmentado das fotos: o trilho tonal, a escolhida em relevo com o texto verde (no claro, branca com sombra) */
+.lei-seg { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--lei-tom); }
+.lei-seg .seg-btn { min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px;
+  border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-dim); font: inherit; font-size: 15px; font-weight: 700; line-height: 1.2; text-align: center; }
+.lei-seg .seg-btn.active { background: #1b2a21; border-color: rgba(34,197,94,.45); color: var(--gold); }
+.lei-seg .seg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.lei-seg .seg-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lei-seg-t { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-seg-s { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; }
+@media (hover: hover) { .lei-seg .seg-btn:not(.active):not(:disabled):hover { color: var(--text); } }
+.lei-seg.lei-forma-seg { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lei-seg.lei-forma-seg .seg-btn { min-height: 54px; }
+.lei-seg.lei-dur3d, .lei-seg.lei-dif3d { grid-auto-flow: row; gap: 4px; }
+.lei-3d-op.seg { gap: 8px; }
+.lei-3d-op.seg .lei-3d-rot { font-size: 14px; font-weight: 600; }
+.lei-3d-op.seg .lei-3d-rot + .lei-seg { margin-bottom: 8px; }
+/* o campinho das vagas da formação (o mesmo da aba Leilão), à esquerda, com 62% da largura */
+.lei-cs-campo { width: 62%; max-width: 250px; }
+/* o seu clube: o nome e a sigla, e o "Escolher escudo" tonal com o escudo dentro (abre o seletor) */
+.lei-editor-clube.escolher { gap: 12px; }
+.lei-editor-clube.escolher .lei-criar-campos { grid-template-columns: minmax(0, 1fr) 84px; }
+.lei-criar .lei-campo { min-height: 48px; font-size: 16px; }
+.lei-esc-escolher { align-self: flex-start; max-width: 100%; display: inline-flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 16px 4px 12px; border: 0;
+  border-radius: 14px; background: var(--lei-tom); color: var(--text); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; text-align: left; }
+.lei-esc-escolher .lei-criar-esc { display: inline-flex; flex: 0 0 auto; }
+.lei-esc-escolher-t { min-width: 0; }
+.lei-esc-escolher.aberto .lei-bloco-seta { transform: rotate(180deg); }
+.lei-esc-escolher:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lei-criar .lei-criar-nota { margin: -10px 0 0; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+/* a barra fixa: o resumo numa linha (com "…") e o botão principal; no celular em pé um embaixo do outro, do tablet para cima
+   (e no celular deitado) lado a lado */
+.lei-criarbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(5,8,7,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid rgba(34,197,94,.22); box-shadow: 0 -10px 24px rgba(0,0,0,.35); }
+.lei-criarbar-in { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+.lei-criar-resumo { min-width: 0; margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-dim); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-criar-resumo b { font-weight: 800; color: var(--text); }
+.lei-criarbar .lei-comecar { width: 100%; max-width: none; min-height: 56px; padding: 0 20px; border-radius: 14px; font-size: 17px; font-weight: 800; letter-spacing: .01em; }
+.lei-criarbar .lei-comecar .tm-ic { width: 20px; height: 20px; }
+@media (min-width: 600px) {
+  .lei-criarbar-in { flex-direction: row; align-items: center; gap: 16px; }
+  .lei-criar-resumo { flex: 1 1 auto; }
+  .lei-criarbar .lei-comecar { flex: 0 0 auto; width: auto; min-width: 220px; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  .lei-criarbar { padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .lei-criarbar .lei-comecar { min-height: 46px; }
+  .lei-criar .lei-criar-corpo { gap: 24px; }
+}
 
 /* ---------- as folhas (Como funciona, Participantes, Vendas, a ficha, a liga) ---------- */
 .lei-folha { position: fixed; inset: 0; z-index: 130; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.66); opacity: 0; transition: opacity .18s ease; }
@@ -7550,6 +7641,14 @@ body.theme-light .lei-rod-bt, body.theme-light .lei-jogo, body.theme-light .lei-
 /* os tons do leilão no claro (perto das fotos): o tom verde-acinzentado e o verde cheio escuro */
 body.theme-light .lei-screen, body.theme-light .lei-folha, body.theme-light .lei-lance { --lei-tom: var(--black-soft); --lei-cheio: var(--gold); }
 body.theme-light .lei-lote-card, body.theme-light .lei-foto-esc { background: #ffffff; }
+/* a Criar sala no claro (as fotos): o escolhido num verde bem claro (o texto apagado com 4,7:1), o segmentado com a escolhida
+   branca em relevo e o texto das outras mais escuro que o --text-dim (sobre o tom: 4,4 → 5,9:1), a barra branca */
+body.theme-light .lei-criar .lei-liga-bt, body.theme-light .lei-formatos.ilu .lei-fmt.on { background: #e8f2ea; box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(15,122,58,.12); }
+body.theme-light .lei-formatos.ilu .lei-fmt { background: #ffffff; }
+body.theme-light .lei-criar .lei-liga-bt .lei-liga-trocar { background: #ffffff; }
+body.theme-light .lei-seg .seg-btn { color: #4a5c50; }
+body.theme-light .lei-seg .seg-btn.active { background: #ffffff; border-color: transparent; color: var(--gold); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+body.theme-light .lei-criarbar { background: rgba(255,255,255,.97); border-top-color: rgba(0,0,0,.08); box-shadow: 0 -8px 20px rgba(0,0,0,.08); }
 body.theme-light .lei-nota { color: #ffffff; }
 /* o texto da pílula inativa um pouco mais escuro que o --text-dim (sobre o tom: 4,4 → 5,8:1) */
 body.theme-light .lei-aba:not(.on):not(.feita) { color: #4a5c50; }
