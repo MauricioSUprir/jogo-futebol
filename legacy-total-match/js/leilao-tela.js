@@ -2282,10 +2282,14 @@
     b.appendChild(el("h2", { class: "lei-sag-res-tit", id: "lei-sag-res-t", text: "Cada técnico entra com " + rs(L().SALDO).replace(" ", "\u00a0") + "." }));
     b.appendChild(el("p", { class: "lei-sag-resumo", text: "Dinheiro do jogo para comprar os " + L().VAGAS + " do time no leilão dos melhores da " + (lg || "liga") +
       ". O que sobrar no bolso não vale nada no campeonato." }));
-    var etq = [lg, "Até " + vagas + " técnicos", nb ? nb + (nb === 1 ? " bot" : " bots") : "Só gente de verdade", "Até " + d.n + " jogadores", seg + " s por jogador",
-      nomeFormato(V.formato), nb ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : "", "Sem chat"];
+    // (as etiquetas das fotos: os jogadores, o tempo e o formato; os bots e o 3D só quando há bots. A liga está na frase e os
+    // técnicos na contagem "N/M participantes": repetidas aqui, o cartão ficava com o dobro da altura do das fotos)
+    var etq = ["Até " + d.n + " jogadores", seg + " s por jogador", nomeFormato(V.formato), nb ? nb + (nb === 1 ? " bot" : " bots") : "",
+      nb ? "3D: " + V.duracao3d + " min · " + difNome(V.dificuldade3d) : "", "Sem chat"];
     b.appendChild(el("ul", { class: "lei-etqs", "aria-label": "A sala" }, etq.filter(Boolean).map(function (t) { return el("li", { class: "lei-etq", text: t }); })));
-    b.appendChild(el("p", { class: "lei-sag-dur", text: "Com a sala cheia: leilão de cerca de " + d.lo + " a " + d.hi + " min e campeonato (" + nomeFormato(V.formato).toLowerCase() + ") de " + dc.lo + " a " + dc.hi + " min." }));
+    // (os números colados na unidade: "min." não fica sozinho na última linha)
+    var faixa = function (a, z) { return a + "\u00a0a\u00a0" + z + "\u00a0min"; };
+    b.appendChild(el("p", { class: "lei-sag-dur", text: "Com a sala cheia, o leilão leva de " + faixa(d.lo, d.hi) + " e o campeonato, de " + faixa(dc.lo, dc.hi) + "." }));
     b.appendChild(el("p", { class: "lei-sag-prontos", text: sg.prontos + " de " + sg.total + (sg.total === 1 ? " pronto" : " prontos") }));
     if (V.versaoDiferente) b.appendChild(el("p", { class: "lei-sag-nota", text: "A sala foi criada noutra versão do Total Match: se algo parecer diferente, atualize a página." }));
   }
@@ -2345,10 +2349,13 @@
       acaoSala(S, "clube", function () { return S.meuClube(SS().limpaClube(M.F)); }, function () { M.sujo = false; M.base = null; TM.ui.toast("Clube salvo.", "ok"); anuncia("Clube salvo"); });
     }, "btn primary lei-salvar", "save");
     salvar.dataset.foco = "salvar-clube";
-    function poeSalvar() { M.sujo = JSON.stringify(SS().limpaClube(M.F)) !== base; salvar.disabled = des || !M.sujo; }
+    // (o Salvar só aparece com o que salvar — o nome, a sigla ou o escudo mudados — ou salvando: sempre à vista e apagado,
+    // parecia quebrado; as fotos só têm o "Escolher escudo")
+    var linhaSalvar = el("div", { class: "lei-salvar-l" }, [salvar]);
+    function poeSalvar() { M.sujo = JSON.stringify(SS().limpaClube(M.F)) !== base; salvar.disabled = des || !M.sujo; linhaSalvar.hidden = !M.sujo && VIEW.ocupado !== "clube"; }
     var ed = editorClube(M.F, poeSalvar, { id: "sag", usadas: usadas, desliga: des, aberto: M.aberto, aoAbrir: function (ab) { M.aberto = ab; }, escolher: true });
     poeSalvar();
-    b.appendChild(opcaoSag("Seu clube", [ed, el("div", { class: "lei-salvar-l" }, [salvar])]));
+    b.appendChild(opcaoSag("Seu clube", [ed, linhaSalvar]));
     var f = t.formacao || "4-4-2";
     var segF = segmentado("Sua formação", "lei-forma-seg", L().FORMACOES.map(function (fm) {
       return { v: fm, txt: fm, sub: FORMA_NOME[fm], cls: "lei-forma-bt", tcls: "lei-forma-f", scls: "lei-forma-n", foco: "forma-" + fm };
@@ -2380,9 +2387,13 @@
     var resto = sg.faltam.length ? "Falta confirmar: " + sg.faltam.join(", ") + "." : "Todos prontos.";
     var chave = so ? "so" : cont + "|" + resto;
     if (B.chave !== chave) {
+      // (numa linha com "…", como nas fotos e na Criar; o texto inteiro no title e no aria-describedby do botão. O "Só você" em
+      // duas: é a única frase que diz o que fazer)
       B.chave = chave; TM.ui.clear(B.txt);
+      B.txt.classList.toggle("dois", so);
       if (so) B.txt.textContent = "Só você na sala: mande o convite ou ponha bots.";
       else { B.txt.appendChild(el("b", { text: cont })); B.txt.appendChild(doc.createTextNode(" " + resto)); }
+      B.txt.title = B.txt.textContent;
     }
     var ag = podeAgir(V), eu = V.tecnicos[V.eu], ocup = VIEW.ocupado, rot, icone, cls, pode, motivo = "";
     if (V.souDono) {
@@ -2927,9 +2938,12 @@
       desl.setAttribute("aria-valuetext", opc.valor ? opc.valor(v) : String(v));
       desl.style.setProperty("--p", (st.max > st.min ? Math.round((v - st.min) / (st.max - st.min) * 1000) / 10 : 0) + "%");
     }
+    // (na ponta, o − ou o + fica apagado com aria-disabled e o toque não faz nada: com disabled, o foco do teclado de quem
+    // apertou até a ponta caía no BODY — na Criar — ou no 1º rótulo do cartão — no Saguão, refeito)
+    function trava(b, ponta) { b.disabled = st.desliga; if (ponta && !st.desliga) b.setAttribute("aria-disabled", "true"); else b.removeAttribute("aria-disabled"); }
     raiz.poe = function (v, min, max, desliga) {
       st.v = v; st.min = min; st.max = max; st.desliga = !!desliga;
-      menos.disabled = st.desliga || v <= min; mais.disabled = st.desliga || v >= max;
+      trava(menos, v <= min); trava(mais, v >= max);
       if (desl) {
         // (o min e o max antes do valor: o navegador prende o valor no intervalo de antes)
         desl.min = String(min); desl.max = String(max); desl.value = String(v);
@@ -3050,9 +3064,11 @@
     return s;
   }
   // a mesma linha, com a duração ("~1 a 31 min") sem quebrar no meio
+  // (a duração numa linha só dela, embaixo de "N rodadas com T técnicos": na mesma linha, no celular o "·" ficava pendurado no fim
+  // da 1ª linha ou no começo da 2ª; o " · " continua para o leitor de tela)
   function linhaFormatoEl(f, T, tempo, d3) {
     var t = linhaFormato(f, T, tempo, d3), i = t.lastIndexOf(" · ");
-    return el("span", { class: "lei-fmt-s" }, i < 0 ? [t] : [t.slice(0, i) + " · ", el("span", { class: "lei-fmt-dur", text: t.slice(i + 3) })]);
+    return el("span", { class: "lei-fmt-s" }, i < 0 ? [t] : [t.slice(0, i), el("span", { class: "lei-sr", text: " · " }), el("span", { class: "lei-fmt-dur", text: t.slice(i + 3) })]);
   }
   function seletorFormato(atual, T, tempo, fn, opc) {
     // (opc.d3: a duração do 3D da sala, para a duração estimada; null = tudo simulado; opc.ilustrado: os cartões das fotos
@@ -3063,7 +3079,8 @@
     atual = formatoId(atual);
     var g = el("div", { class: "lei-formatos" + (opc.ilustrado ? " ilu" : "") + (opc.lista ? " lista" : "") + (opc.soVer ? " so-ver" : ""), role: "group", "aria-label": "Formato do campeonato" });
     var limpo = opc.ilustrado || opc.lista;
-    FORMATOS.forEach(function (x) {
+    // (nos cartões e na lista das fotos, a ordem delas: Pontos corridos, Mata-mata, Pontos + mata-mata; o Mata-mata segue o padrão)
+    (limpo ? ["pontos", "mata", "misto"].map(function (id) { return FORMATOS.filter(function (x) { return x.id === id; })[0]; }) : FORMATOS).forEach(function (x) {
       var on = x.id === atual;
       var b = el("button", { class: "lei-fmt" + (on ? " on" : ""), type: "button", "aria-pressed": on ? "true" : "false", data: { foco: "fmt-" + x.id, fmt: x.id },
         on: { click: function () { if (!on && !opc.desliga && !opc.soVer) fn(x.id); } } }, [
@@ -3160,9 +3177,9 @@
         caixaFmt.appendChild(seletorFormato(F.formato, F.T, F.tempo, function (f) { F.formato = f; poeFmt(); poeResumo(); }, { d3: d3(), ilustrado: true }));
       });
     }
-    corpo.appendChild(secaoCriar("Formato", "formato", [caixaFmt,
-      el("p", { class: "lei-cs-hint", text: online ? "O seu jogo contra um bot: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min). Contra um amigo, simulado quando a rodada abre."
-        : "O seu jogo: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min). Os dos bots, simulados na hora." })]));
+    // (como nas fotos, o Formato só com os cartões: o que acontece com o seu jogo — Jogar em 3D ou Simular — foi para a dica das
+    // Partidas em 3D)
+    corpo.appendChild(secaoCriar("Formato", "formato", [caixaFmt]));
 
     // os técnicos (no online, as vagas da sala, contando os bots) e os bots de treino: o − e o + com o deslizante (no treino,
     // só os bots: você e mais 1 a 7)
@@ -3193,7 +3210,7 @@
     var hintTempo = el("p", { class: "lei-cs-hint" });
     function poeTempoHint() {
       var d = duracaoEstimada(F.T, F.tempo);
-      hintTempo.textContent = "O relógio de cada lance. O leilão leva cerca de " + d.lo + " a " + d.hi + " min" + (online ? " com a sala cheia." : ".");
+      hintTempo.textContent = "O relógio de cada lance. O leilão leva cerca de " + d.lo + "\u00a0a\u00a0" + d.hi + "\u00a0min" + (online ? " com a sala cheia." : ".");
     }
     corpo.appendChild(secaoCriar("Tempo de cada jogador", "tempo", [segT, hintTempo]));
 
@@ -3206,7 +3223,9 @@
           function (d) { F.dificuldade3d = d; poe3d(); poeResumo(); }, { seg: true }));
       });
     }
-    var sec3d = secaoCriar("Partidas em 3D", "3d", [caixa3d, el("p", { class: "lei-cs-hint", text: "Valem para todos da sala e ficam travadas no 3D." })]);
+    var sec3d = secaoCriar("Partidas em 3D", "3d", [caixa3d, el("p", { class: "lei-cs-hint", text: online
+      ? "Valem para todos da sala e ficam travadas no 3D. O seu jogo contra um bot: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min); contra um amigo, simulado quando a rodada abre."
+      : "Valem para todos da sala e ficam travadas no 3D. O seu jogo: Jogar (em 3D) ou Simular (sem o toque, simulado em 2 min); os dos bots, simulados na hora." })]);
     corpo.appendChild(sec3d);
 
     // a formação (a preferência durante o leilão): o segmentado 3 × 2 e o campinho das vagas embaixo
@@ -3223,9 +3242,13 @@
 
     // o seu clube: o nome, a sigla e o escudo desenhado (começa com o do seu Ultimate, se houver)
     corpo.appendChild(secaoCriar("Seu clube", "clube", [editorClube(F.clube, null, { id: "criar", escolher: true })]));
-    corpo.appendChild(el("p", { class: "lei-criar-nota", text: online
-      ? "Sala privada: só entra quem tiver o convite e for aceito por você. Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade; não conta no ranking."
-      : "Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade." }));
+    // (o fim da página no cartão de destaque verde, como na foto: o dinheiro de cada técnico e a nota do dinheiro do jogo)
+    corpo.appendChild(el("div", { class: "lei-criar-res" }, [
+      el("p", { class: "lei-criar-res-tit", text: "Cada técnico entra com " + rs(L().SALDO).replace(" ", "\u00a0") + "." }),
+      el("p", { class: "lei-criar-nota", text: online
+        ? "Sala privada: só entra quem tiver o convite e for aceito por você. Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade; não conta no ranking."
+        : "Dinheiro do jogo: nada de Total Coins nem de dinheiro de verdade." })
+    ]));
     // a página termina com um espaço da altura da barra fixa (no fim da rolagem nada fica atrás dela)
     var espaco = el("div", { class: "lei-espaco", "aria-hidden": "true" });
     corpo.appendChild(espaco);

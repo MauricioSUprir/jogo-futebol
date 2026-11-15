@@ -483,7 +483,7 @@ const olhaSaguao = ap => ap.p.evaluate(() => {
     convite: bts.map(b => ({ t: tx(b), top: Math.round(r(b).t), l: r(b).l, r: r(b).r, h: r(b).h, primario: b.classList.contains("primary") })),
     pedTit: tx(q(".lei-pedidos .lei-sag-ctit")), peds, partTit: tx(q(".lei-parts .lei-sag-ctit")), partN: tx(q(".lei-parts .lei-sag-cn [aria-hidden]")), parts,
     gerir: gerir ? { t: tx(gerir), h: r(gerir).h, pressed: gerir.getAttribute("aria-pressed") } : null,
-    res: res ? { tit: tx(res.querySelector(".lei-sag-res-tit")), etqs: [...res.querySelectorAll(".lei-etq")].map(tx), prontos: tx(res.querySelector(".lei-sag-prontos")),
+    res: res ? { tit: tx(res.querySelector(".lei-sag-res-tit")), texto: tx(res.querySelector(".lei-sag-resumo")), etqs: [...res.querySelectorAll(".lei-etq")].map(tx), prontos: tx(res.querySelector(".lei-sag-prontos")),
       dur: tx(res.querySelector(".lei-sag-dur")), borda: getComputedStyle(res).borderTopColor, fundoImg: getComputedStyle(res).backgroundImage, fundo: getComputedStyle(res).backgroundColor } : null,
     sala: sala ? { tit: tx(sala.querySelector(".lei-sag-ctit")), rots: [...sala.querySelectorAll(".lei-sag-rot")].map(tx), liga: !!sala.querySelector(".lei-liga-bt"),
       fmts: [...sala.querySelectorAll(".lei-fmt")].map(b => (b.getAttribute("aria-pressed") === "true" ? "*" : "") + b.dataset.fmt + (b.disabled ? "-" : "")),
@@ -491,7 +491,7 @@ const olhaSaguao = ap => ap.p.evaluate(() => {
       tempo: segOn(".lei-tempos"), dur3d: segOn(".lei-dur3d"), dif3d: segOn(".lei-dif3d"), nota: tx(sala.querySelector(".lei-sag-cfg .lei-sag-nota")),
       deslFora: [...sala.querySelectorAll(".lei-passo-desl")].filter(d => r(d).r > r(d.closest(".lei-passo")).r + 0.5).length,
       campos: [...sala.querySelectorAll(".lei-sag-clube .lei-campo")].map(i => parseFloat(getComputedStyle(i).fontSize)), escolher: tx(sala.querySelector(".lei-esc-escolher-t")),
-      salvar: !!sala.querySelector(".lei-salvar"), forma: segOn(".lei-forma-seg"), formas: sala.querySelectorAll(".lei-forma-seg .seg-btn").length,
+      salvar: !!sala.querySelector(".lei-salvar") && !vis(sala.querySelector(".lei-salvar")), forma: segOn(".lei-forma-seg"), formas: sala.querySelectorAll(".lei-forma-seg .seg-btn").length,
       apagados: [...sala.querySelectorAll(".lei-sag-clube .lei-campo, .lei-sag-clube .lei-esc-escolher, .lei-forma-seg .seg-btn")].filter(x => x.disabled).length,
       vagasCampo: sala.querySelectorAll(".lei-sag-clube .lei-cv .lei-cv-vaga").length } : null,
     barra: bar ? { fixa: getComputedStyle(bar).position, embaixo: Math.abs(bb.b - innerHeight) <= 1, txt: tx(q(".lei-sagbar-txt")), b: tx(q(".lei-sagbar-txt b")),
@@ -891,7 +891,8 @@ async function casoDois() {
      seu clube e a formação com o campinho, e a barra fixa embaixo com "1 de 2 prontos." em negrito e o botão de 56 px */
   await ate(B.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-sag-res"), null, 10000);
   const sA = await olhaSaguao(A), sB = await olhaSaguao(B), ligaD = (await ver(A)).liga.nome;
-  const etqD = [ligaD, "Até 2 técnicos", "Só gente de verdade", "Até 26 jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
+  // (as etiquetas das fotos: sem a liga — está na frase — nem os técnicos — estão em "2/2 participantes" —; sem bots, quatro)
+  const etqD = ["Até 26 jogadores", "10 s por jogador", "Pontos + mata-mata", "Sem chat"];
   const lin = (ps, u) => ps.find(x => x.uid === u) || {};
   const verde = c => { const m = (c.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 && m[1] > m[0] + 40 && m[1] > m[2] + 20; };
   const partsOk = (ps, eu) => ps.length === 2 && lin(ps, "uidAna").papel === "Dono da sala" && lin(ps, "uidAna").estado === "Pronto" && lin(ps, "uidAna").estCls === "pronto"
@@ -915,11 +916,11 @@ async function casoDois() {
       && !!sA.gerir && sA.gerir.t === "Tirar alguém da sala" && sA.gerir.pressed === "false" && sA.gerir.h >= 44 && !sB.gerir
       && !!tirarA && tirarA.w >= 44 && tirarA.h >= 44 && !tirarA.texto && /^Tirar Bruno/.test(tirarA.rot || "") && lin(sAg.parts, "uidBruno").estado == null && !lin(sAg.parts, "uidAna").tirar
       && lin(sAg.parts, "uidAna").estado === "Pronto" && sAg.gerir && sAg.gerir.t === "Concluir" && sAg.gerir.pressed === "true" && voltou
-      && [sA, sB].every(x => x.res && x.res.tit === "Cada técnico entra com R$ 100." && JSON.stringify(x.res.etqs) === JSON.stringify(etqD) && x.res.prontos === "1 de 2 prontos"
+      && [sA, sB].every(x => x.res && x.res.tit === "Cada técnico entra com R$ 100." && JSON.stringify(x.res.etqs) === JSON.stringify(etqD) && (x.res.texto || "").includes(ligaD) && x.res.prontos === "1 de 2 prontos"
         && /Com a sala cheia/.test(x.res.dur || "") && verde(x.res.borda) && /linear-gradient/.test(x.res.fundoImg))
-      && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.deslFora === 0 && salaA.fmts.join() === "mata,pontos,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
+      && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.deslFora === 0 && salaA.fmts.join() === "pontos,mata,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
       && salaA.dur3d == null && /zera os Pronto/.test(salaA.nota || "") && ["Liga", "Formato do campeonato", "Técnicos na sala", "Bots de treino", "Tempo de cada jogador"].every(r => salaA.rots.includes(r))
-      && !salaB.liga && salaB.fmtLista && salaB.soVer && salaB.fmts.join() === "mata-,pontos-,*misto-" && salaB.vagas == null && salaB.bots == null && salaB.tempo == null && /Só o dono/.test(salaB.nota || "")
+      && !salaB.liga && salaB.fmtLista && salaB.soVer && salaB.fmts.join() === "pontos-,mata-,*misto-" && salaB.vagas == null && salaB.bots == null && salaB.tempo == null && /Só o dono/.test(salaB.nota || "")
       && clubeOk(salaA) && clubeOk(salaB)
       && sA.barra.fixa === "fixed" && sA.barra.embaixo && sA.barra.b === "1 de 2 prontos." && sA.barra.txt === "1 de 2 prontos. Falta confirmar: Bruno." && sA.barra.bt === "Começar o leilão" && sA.barra.btDes && sA.barra.btH >= 56 && sA.barra.btIc
       && sB.barra.fixa === "fixed" && sB.barra.embaixo && sB.barra.bt === "Pronto" && /primary/.test(sB.barra.btCls) && !sB.barra.btDes && sB.barra.btH >= 56,
@@ -959,6 +960,62 @@ async function casoDois() {
   });
   confere(`${ID}6c o selo VOCÊ da sua linha no Saguão é a pílula verde no escuro e no claro (≥ 4,5:1)`,
     !!voce.escuro && !!voce.claro && voce.escuro.txt === "VOCÊ" && [voce.escuro, voce.claro].every(x => x.fundo >= 1 && x.cr >= 4.5), voce);
+
+  /* D6d o dono muda as opções da sala PELA TELA (antes só a API mudava nos testes): o tempo pelo teclado (Enter; o foco fica no mesmo
+     botão depois da seção refeita) zera o Pronto do convidado e a etiqueta dele acompanha; o formato pela lista; mais um técnico e
+     um bot pelo deslizante (o input só mostra o número, o change grava) fazem aparecer as Partidas em 3D e as etiquetas do 3D no
+     convidado; na ponta, o + apagado segura o foco do teclado e o Enter não muda nada. No fim, a sala volta ao que era */
+  const cfgA = () => A.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { tempo: V.cfg.tempo, formato: V.formato, vagas: V.saguao.vagas, bots: V.saguao.bots, prontos: V.saguao.prontos }; });
+  const prontoB = () => B.p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return !!V.tecnicos[V.eu].pronto; });
+  const focoA = () => A.p.evaluate(() => { const a = document.activeElement; return a && a.dataset ? a.dataset.foco || a.tagName : null; });
+  const etqB = () => B.p.evaluate(() => [...document.querySelectorAll(".lei-sag-res .lei-etq")].map(e => e.textContent));
+  const d6d = {};
+  await clicaSel(B, ".lei-sagbar-bt");
+  d6d.pronto0 = await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 15000) && await prontoB();
+  await A.p.focus('.lei-sag-cfg [data-foco="tempo-15000"]');
+  await A.p.keyboard.press("Enter");
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().cfg.tempo === 15000, null, 10000);
+  await ate(B.p, () => { const V = TM.leilaoSessao.atual().ver(); return !V.tecnicos[V.eu].pronto; }, null, 10000);
+  await ate(B.p, () => [...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => e.textContent === "15 s por jogador"), null, 10000);
+  await espera(400);
+  Object.assign(d6d, { tempo: (await cfgA()).tempo, prontoB1: await prontoB(), focoTempo: await focoA(), etq1: await etqB(),
+    barraB1: await B.p.evaluate(() => document.querySelector(".lei-sagbar-bt").className) });
+  await clicaSel(A, '.lei-sag-cfg .lei-fmt[data-fmt="pontos"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().formato === "pontos", null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Mais um técnico"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.vagas === 3 && !!document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl:not(:disabled)'), null, 10000);
+  await espera(300);
+  await A.p.evaluate(() => { const d = document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl'); d.value = "1"; d.dispatchEvent(new Event("input", { bubbles: true })); });
+  await espera(400);
+  d6d.durante = { n: await A.p.evaluate(() => document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-n').textContent), bots: (await cfgA()).bots };
+  await A.p.evaluate(() => document.querySelector('.lei-sag-cfg [aria-label="Bots de treino"] .lei-passo-desl').dispatchEvent(new Event("change", { bubbles: true })));
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.bots === 1, null, 10000);
+  await ate(B.p, () => [...document.querySelectorAll(".lei-sag-res .lei-etq")].some(e => /^3D: /.test(e.textContent)), null, 10000);
+  await espera(400);
+  Object.assign(d6d, { c3: await cfgA(), rots3: await A.p.evaluate(() => [...document.querySelectorAll(".lei-sag-cfg .lei-sag-rot")].map(e => e.textContent)), etq3: await etqB() });
+  // (na ponta: 3 técnicos com 2 pessoas = 1 bot no máximo)
+  await A.p.focus('.lei-sag-cfg [aria-label="Mais um bot"]');
+  await A.p.keyboard.press("Enter");
+  await espera(600);
+  Object.assign(d6d, { ponta: await A.p.evaluate(() => { const b = document.querySelector('.lei-sag-cfg [aria-label="Mais um bot"]'); return [b.getAttribute("aria-disabled"), b.disabled, document.activeElement === b].join(); }), botsPonta: (await cfgA()).bots });
+  // a sala de volta: sem bots, 2 técnicos, Pontos + mata-mata e 10 s
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Menos um bot"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.bots === 0 && !!document.querySelector('.lei-sag-cfg [aria-label="Menos um técnico"]:not([aria-disabled="true"]):not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [aria-label="Menos um técnico"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().saguao.vagas === 2 && !!document.querySelector('.lei-sag-cfg .lei-fmt[data-fmt="misto"]:not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg .lei-fmt[data-fmt="misto"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().formato === "misto" && !!document.querySelector('.lei-sag-cfg [data-foco="tempo-10000"]:not(:disabled)'), null, 10000);
+  await clicaSel(A, '.lei-sag-cfg [data-foco="tempo-10000"]');
+  await ate(A.p, () => TM.leilaoSessao.atual().ver().cfg.tempo === 10000, null, 10000);
+  await ate(B.p, () => !!document.querySelector(".lei-sagbar-bt:not(:disabled)"), null, 10000);
+  await espera(400);
+  d6d.fim = await cfgA();
+  confere(`${ID}6d o dono muda as opções da sala pela tela: o tempo pelo teclado (o foco fica no botão) zera o Pronto do convidado e a etiqueta dele acompanha; o formato pela lista; mais um técnico e um bot pelo deslizante (o input só mostra, o change grava) com as Partidas em 3D e "1 bot" e "3D: …" no convidado; na ponta o + apagado segura o foco e o Enter não muda nada; a sala volta ao que era`,
+    d6d.pronto0 && d6d.tempo === 15000 && !d6d.prontoB1 && d6d.focoTempo === "tempo-15000" && d6d.etq1.includes("15 s por jogador") && /primary/.test(d6d.barraB1)
+      && d6d.durante.n === "1" && d6d.durante.bots === 0 && d6d.c3.formato === "pontos" && d6d.c3.vagas === 3 && d6d.c3.bots === 1 && d6d.rots3.includes("Partidas em 3D")
+      && d6d.etq3.includes("1 bot") && d6d.etq3.some(e => /^3D: \d+ min · /.test(e)) && d6d.etq3.includes("Pontos corridos")
+      && d6d.ponta === "true,false,true" && d6d.botsPonta === 1
+      && d6d.fim.tempo === 10000 && d6d.fim.formato === "misto" && d6d.fim.vagas === 2 && d6d.fim.bots === 0, d6d);
 
   /* D5 o Pronto e o Começar pela tela */
   await clicaSel(B, ".lei-sagbar-bt");
@@ -1558,15 +1615,17 @@ async function casoTelas() {
   const temSalvar = await ate(G2.p, () => !!document.querySelector(".lei-salvar"), null, 20000);
   if (!temSalvar) confere(`${ID}4 o Salvar do clube aparece no saguão do convidado`, false, await G2.p.evaluate(() => ({ rota: TM.ui.current(), txt: document.body.innerText.slice(0, 300) })));
   await espera(300);
-  const s0 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  // (o Salvar só à vista com o que salvar: escondido e apagado ao abrir, à vista e aceso com a sigla mudada, escondido de novo salvo)
+  const estSalvar = () => G2.p.evaluate(() => { const b = document.querySelector(".lei-salvar"); return { des: b.disabled, vis: b.offsetParent !== null }; });
+  const s0 = await estSalvar();
   await G2.p.evaluate(() => { const i = document.querySelector(".lei-campo-sigla"); i.value = "BCX"; i.dispatchEvent(new Event("input", { bubbles: true })); });
-  const s1 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
+  const s1 = await estSalvar();
   await G2.p.evaluate(() => document.querySelector(".lei-salvar").click());
   const salvo = await ateNode(() => { const s = sala(cod); return !!(s && s.tec.uidTb && s.tec.uidTb.clube.sigla === "BCX"); }, 20000);
   await ate(G2.p, () => document.querySelector(".lei-salvar") && document.querySelector(".lei-salvar").disabled, null, 10000);
-  const s2 = await G2.p.evaluate(() => document.querySelector(".lei-salvar").disabled);
-  confere(`${ID}4 o Salvar do clube: apagado ao abrir, aceso depois de mudar a sigla e apagado de novo depois de salvo (antes ficava sempre aceso)`,
-    s0 === true && s1 === false && salvo && s2 === true, { s0, s1, salvo, s2 });
+  const s2 = await estSalvar();
+  confere(`${ID}4 o Salvar do clube: apagado e escondido ao abrir, à vista e aceso depois de mudar a sigla e escondido de novo depois de salvo (antes ficava sempre aceso; depois, sempre à vista e apagado)`,
+    s0.des && !s0.vis && !s1.des && s1.vis && salvo && s2.des && !s2.vis, { s0, s1, salvo, s2 });
 
   /* T5 a barra do saguão com a sala "Atualizando…" (a volta da página, o ack a caminho): o motivo é "Atualizando a sala…" */
   // (sem um batimento a caminho: a resposta dele devolvia "ok" no meio dos 300 ms e a faixa escondida ainda tinha o texto; o

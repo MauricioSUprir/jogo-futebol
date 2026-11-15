@@ -4475,10 +4475,12 @@ async function testeTela() {
     const medeCriar = p => p.evaluate(async () => {
       const bar = document.querySelector(".lei-criarbar"), rb = () => bar.getBoundingClientRect(), res = document.querySelector(".lei-criar-resumo"), bt = document.querySelector(".lei-criarbar .lei-comecar");
       const fixa = getComputedStyle(bar).position === "fixed", embaixo = Math.abs(rb().bottom - innerHeight) <= 1 && rb().top < innerHeight - 40;
-      const linha = res.getBoundingClientRect().height <= parseFloat(getComputedStyle(res).lineHeight) * 1.3;
+      // (numa linha com "…" até 1023 px; no PC em até duas, e inteiro: com uma linha de 324 px só cabia a liga e os técnicos)
+      const pc = innerWidth >= 1024 && innerHeight > 520;
+      const linha = res.getBoundingClientRect().height <= parseFloat(getComputedStyle(res).lineHeight) * (pc ? 2.3 : 1.3) && (!pc || res.scrollHeight <= res.clientHeight + 1);
       const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
       await new Promise(r => requestAnimationFrame(() => r()));
-      const ultimo = Math.max(...[...document.querySelectorAll(".lei-criar-corpo > .lei-cs:not([hidden]), .lei-criar-nota")].map(e => Math.round(e.getBoundingClientRect().bottom)));
+      const ultimo = Math.max(...[...document.querySelectorAll(".lei-criar-corpo > .lei-cs:not([hidden]), .lei-criar-res")].map(e => Math.round(e.getBoundingClientRect().bottom)));
       const topoBarra = Math.round(rb().top);
       scrollTo(0, y0);
       const secs = [...document.querySelectorAll(".lei-criar .lei-cs")].filter(s => !s.hidden);
@@ -4503,24 +4505,30 @@ async function testeTela() {
     const passo = await p.evaluate(async () => {
       const g = r => document.querySelector('[aria-label="' + r + '"]'), menos = g("Menos um bot"), mais = g("Mais um bot"), n = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
       const desl = g("Bots de treino").querySelector(".lei-passo-desl"), dv = () => [+desl.min, +desl.max, +desl.value].join(), dica = () => document.querySelector('[data-secao="bots"] .lei-cs-hint').textContent;
+      // (na ponta, o − e o + apagados por aria-disabled: o foco do teclado fica neles; o Enter ali não muda nada)
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
       const tec = !!g("Técnicos na sala");
       for (let i = 0; i < 10; i++) menos.click();
-      const min = n(), menosOff = menos.disabled, dMin = dv();
+      const min = n(), menosOff = off(menos), dMin = dv();
       for (let i = 0; i < 10; i++) mais.click();
-      const max = n(), maisOff = mais.disabled, dMax = dv(), hint = dica();
+      const max = n(), maisOff = off(mais), dMax = dv(), hint = dica();
+      mais.focus(); mais.click(); const focoPonta = document.activeElement === mais && n() === max;
       desl.value = "2"; desl.dispatchEvent(new Event("input", { bubbles: true }));
       const peloDesl = n(), hint2 = dica(), valorTxt = desl.getAttribute("aria-valuetext");
       for (let i = 0; i < 1; i++) mais.click();
-      return { tec, min, menosOff, dMin, max, maisOff, dMax, hint, peloDesl, hint2, valorTxt, agora: n(), dAgora: dv(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+      return { tec, min, menosOff, dMin, max, maisOff, dMax, hint, focoPonta, peloDesl, hint2, valorTxt, agora: n(), dAgora: dv(), resumo: document.querySelector(".lei-criar-resumo").textContent };
     });
-    confere("T2 no treino só os bots (sem 'Técnicos na sala'): de 1 a 7 (o − e o + param nas pontas, o deslizante de 1 a 7 vai junto), 'Você e 7 bots', o deslizante também muda ('2 bots', 'Você e 2 bots'); volta a 3 (4 técnicos) e o resumo com a duração",
-      !passo.tec && passo.min === 1 && passo.menosOff && passo.dMin === "1,7,1" && passo.max === 7 && passo.maisOff && passo.dMax === "1,7,7" && /Você e 7 bots/.test(passo.hint)
+    confere("T2 no treino só os bots (sem 'Técnicos na sala'): de 1 a 7 (o − e o + param nas pontas, apagados sem perder o foco do teclado, o deslizante de 1 a 7 vai junto), 'Você e 7 bots', o deslizante também muda ('2 bots', 'Você e 2 bots'); volta a 3 (4 técnicos) e o resumo com a duração",
+      !passo.tec && passo.min === 1 && passo.menosOff && passo.dMin === "1,7,1" && passo.max === 7 && passo.maisOff && passo.focoPonta && passo.dMax === "1,7,7" && /Você e 7 bots/.test(passo.hint)
       && passo.peloDesl === 2 && /Você e 2 bots/.test(passo.hint2) && passo.valorTxt === "2 bots" && passo.agora === 3 && passo.dAgora === "1,7,3" && /^Liga .+\. 4 técnicos, /.test(passo.resumo) && /leilão de cerca de \d+ a \d+ min/.test(passo.resumo), passo);
     // o Formato: 3 cartões com o desenho (a chave, a tabela, as duas), o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y
     // min"; o marcado pela borda e pelo fundo (sem o check); o toque troca e o resumo diz
     const fmt = await p.evaluate(async () => {
       const cards = () => [...document.querySelectorAll(".lei-criar .lei-fmt")];
-      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent,
+      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), ordem: cards().map(b => b.dataset.fmt).join(),
+        linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent,
+        // (a duração numa linha só dela, inteira: nenhum "·" pendurado no começo ou no fim de uma linha)
+        pendura: cards().filter(b => { const du = b.querySelector(".lei-fmt-s .lei-fmt-dur"); return !du || !/^~\d+ a \d+ min$/.test(du.textContent) || getComputedStyle(du).display !== "block" || getComputedStyle(du).whiteSpace !== "nowrap" || du.getBoundingClientRect().height > 24; }).length,
         cards: cards().map(b => { const c = getComputedStyle(b), sv = b.querySelector("svg.lei-fmt-svg");
           return { f: b.dataset.fmt, on: b.getAttribute("aria-pressed") === "true", borda: c.borderTopColor, fundo: c.backgroundColor, anel: c.boxShadow !== "none", des: sv && sv.getAttribute("data-desenho"),
             formas: sv ? sv.querySelectorAll("rect, path, circle").length : 0, largDes: sv ? Math.round(sv.getBBox().width) : 0, cor: sv && getComputedStyle(sv).color, check: !!b.querySelector(".lei-fmt-ok, .lei-fmt-ic, svg.tm-ic") }; }) });
@@ -4534,8 +4542,8 @@ async function testeTela() {
     const marcaOk = x => { const on = x.cards.filter(c => c.on), off = x.cards.filter(c => !c.on);
       return x.cards.length === 3 && on.length === 1 && x.cards.every(c => c.des === DES[c.f] && c.formas >= 2 && c.largDes >= 60 && !c.check) && on[0].anel
         && off.every(c => c.borda === off[0].borda && c.fundo === off[0].fundo && c.cor === off[0].cor && c.borda !== on[0].borda && c.fundo !== on[0].fundo && c.cor !== on[0].cor); };
-    confere("T2 o Formato na Criar: 3 cartões com o desenho (a chave, a tabela, as duas) e sem o check, o marcado pela borda e pelo fundo (os outros iguais); Mata-mata (padrão), Pontos corridos e Pontos + mata-mata com 'N rodadas com 4 técnicos · ~X a Y min' (2, 6 e 4); o toque troca e o resumo diz o formato, a duração e as Partidas em 3D (4 min, Normal)",
-      fmt.a.on.join() === "mata" && marcaOk(fmt.a) && fmt.passos.every(marcaOk) && linhaOk(fmt.a.linhas[0], 2) && linhaOk(fmt.a.linhas[1], 6) && linhaOk(fmt.a.linhas[2], 4)
+    confere("T2 o Formato na Criar: 3 cartões com o desenho (a chave, a tabela, as duas) e sem o check, o marcado pela borda e pelo fundo (os outros iguais); na ordem das fotos — Pontos corridos, Mata-mata (padrão) e Pontos + mata-mata — com 'N rodadas com 4 técnicos · ~X a Y min' (6, 2 e 4; a duração numa linha só dela); o toque troca e o resumo diz o formato, a duração e as Partidas em 3D (4 min, Normal)",
+      fmt.a.on.join() === "mata" && fmt.a.ordem === "pontos,mata,misto" && !fmt.a.pendura && marcaOk(fmt.a) && fmt.passos.every(marcaOk) && linhaOk(fmt.a.linhas[0], 6) && linhaOk(fmt.a.linhas[1], 2) && linhaOk(fmt.a.linhas[2], 4)
       && /, mata-mata, 4-4-2, leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min, 3D de 4 min por tempo no Normal$/.test(fmt.a.resumo)
       && fmt.passos[0].on.join() === "pontos" && /, pontos corridos, /.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /, pontos \+ mata-mata, /.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
     // a formação no segmentado 3 × 2 e o campinho das vagas embaixo
@@ -4575,7 +4583,7 @@ async function testeTela() {
       min("titulo", ".lei-criar .lei-cs-tit"); min("dica", ".lei-criar .lei-cs-hint"); min("ligaN", ".lei-criar .lei-liga-n"); min("ligaS", ".lei-criar .lei-liga-s"); min("trocar", ".lei-criar .lei-liga-trocar");
       min("fmtNome", ".lei-criar .lei-fmt-n"); min("fmtFrase", ".lei-criar .lei-fmt-f"); min("fmtLinha", ".lei-criar .lei-fmt-s"); min("passoN", ".lei-criar .lei-passo-n");
       min("segOn", ".lei-criar .lei-seg .seg-btn.active .lei-seg-t"); min("segOff", ".lei-criar .lei-seg .seg-btn:not(.active) .lei-seg-t"); min("segSub", ".lei-criar .lei-seg-s"); min("rot3d", ".lei-criar .lei-3d-rot");
-      min("escolher", ".lei-criar .lei-esc-escolher-t"); min("nota", ".lei-criar .lei-criar-nota"); min("resumo", ".lei-criar-resumo"); min("resumoLiga", ".lei-criar-resumo b");
+      min("escolher", ".lei-criar .lei-esc-escolher-t"); min("nota", ".lei-criar .lei-criar-nota"); min("resTit", ".lei-criar .lei-criar-res-tit"); min("resumo", ".lei-criar-resumo"); min("resumoLiga", ".lei-criar-resumo b");
       // o botão principal: o texto sobre as duas pontas do degradê
       const bt = document.querySelector(".lei-criarbar .lei-comecar"), st = (getComputedStyle(bt).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba), tb = bt.querySelector("span:last-child");
       if (st.length) out.comecar = Math.min(...st.map(c => texto(tb, sobre(c, fundo(bt.parentElement)))));
@@ -4609,14 +4617,15 @@ async function testeTela() {
       const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
       const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
       const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
       for (let i = 0; i < 10; i++) g("Menos um bot").click();
-      const b0 = nB(), menosBOff = g("Menos um bot").disabled, sem3d = !vis3d();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d();
       for (let i = 0; i < 10; i++) g("Menos um técnico").click();
-      const t2 = nT(), menosTOff = g("Menos um técnico").disabled, dT2 = dv(dT), dB2 = dv(dB);
+      const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
       for (let i = 0; i < 10; i++) g("Mais um técnico").click();
-      const t8 = nT(), maisTOff = g("Mais um técnico").disabled, dT8 = dv(dT);
+      const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
       for (let i = 0; i < 10; i++) g("Mais um bot").click();
-      const b7 = nB(), maisBOff = g("Mais um bot").disabled, com3d = vis3d(), dB7 = dv(dB);
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), dB7 = dv(dB);
       anda(dT, 3);
       const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
       // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
@@ -4630,7 +4639,7 @@ async function testeTela() {
       && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
     await nadaSobreCriar("criar-online");
     const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
-    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha, o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
+    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
       criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora),
       criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora)).slice(0, 4));
     // de volta à Criar do treino (o padrão: 4 técnicos, o Mata-mata)
