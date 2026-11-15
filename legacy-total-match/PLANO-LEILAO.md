@@ -1130,7 +1130,7 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
   - **A limpeza** conta os passos dos jogos (e `meta.camp`/`fimCamp`) como atividade: a sala no campeonato com um jogo
     gravado há 2 h e a meta de 25 h atrás fica (antes sumia); a do fim some 24 h depois (KO "limpeza").
   - **Recarregar**: o treino volta pelo armazém com o relógio de onde parou (nunca antes da hora dos jogos); parado no
-    meio do prazo do jogo da pessoa, o campeonato inteiro sai igual ao de quem não recarregou (K2: os 22 jogos do misto
+    meio do prazo do jogo da pessoa, o campeonato inteiro sai igual ao de quem não recarregou (K2: os 18 jogos do misto
     com 6, jogo a jogo). O online volta pela sala (KO "dois": quem fecha e abre de novo vê tudo gravado).
   - **As telas** só ganharam o estado `fim` (as abas, a rota da sala, a caixa da Escalação) e as Minhas salas dizem
     "Campeonato" e "Encerrada"; a aba Campeonato (que ainda diz "em breve") é o próximo passo. O O3 do Node aceita a sala
@@ -1139,7 +1139,7 @@ Cada ponto foi conferido no código (e41aa791) e, na sincronia, no código-fonte
     reservado com a mesma trava; o reservado pelo prazo só com `now ≥ ini + resta`; `resta` até 2 min e sem crescer; `ini`,
     `trava`, `inicio`, `ts` = `now`) e `meta.camp`/`fimCamp` = `now`. O avaliador das regras (a semântica do `.validate`)
     virou parte do KO (`avaliadorRegras`, lendo o próprio JSON): 2 945 gravações do campeonato online, nenhuma recusada;
-    11 adulterações recusadas. O LEIA-ME diz o que ainda passa (o resultado inventado, apagar um jogo: os aparelhos
+    10 adulterações recusadas. O LEIA-ME diz o que ainda passa (o resultado inventado, apagar um jogo: os aparelhos
     congelam a sala).
   - **Os bytes**: no campeonato de 8 em pontos corridos (56 jogos), ~500 KB baixados por aparelho no banco falso (os jogos,
     os batimentos e as presenças).
