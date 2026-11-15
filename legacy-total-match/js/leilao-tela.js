@@ -21,7 +21,8 @@
      TM.leilaoTela.convite(usar)    o código do link ?leilao= ainda não usado (usar = true o dá por usado)
      TM.leilaoTela.estado()         { rota, aviso (o texto da faixa da sala: rede, regras, outra aba), codigoVisivel,
                                      barra (o texto da barra do saguão), prazo (no Campeonato, o texto do prazo do meu
-                                     jogo contra um bot; null sem ele), rodadaVista (a rodada à mostra; null = a da vez) }
+                                     jogo contra um bot; null sem ele), rodadaVista (a rodada à mostra; null = a da vez),
+                                     jogo (o id do último jogo aberto no "Ver o jogo") }
      TM.leilaoTela.ajustes          { cheioMs (sem conexão por mais que isso, com a internet do aparelho ligada: "Servidor
                                      cheio, tente em alguns minutos"; padrão 15 s), contaMs (a conta que não fica pronta:
                                      padrão 9 s) } — os testes encurtam
@@ -1612,6 +1613,7 @@
     var res = copiaRes(J.res), A = J.times[0], B = J.times[1], V = S.ver(), C = V.camp, R = null;
     if (C) C.rodadas.forEach(function (Rx) { if (Rx.n === J.rodada) R = Rx; });
     var titulo = (R ? R.nome : "Campeonato") + " · Leilão";
+    VIEW.jogoVisto = J.id;
     function volta() { TM.ui.go("leilao-camp"); }
     TM.matchview.play(screen, {
       teamA: A, teamB: B,
@@ -2273,7 +2275,7 @@
       // a sala congelada pela conferência não está "em andamento": quem volta vê que ela parou antes de entrar
       var est = V.alterada ? "alterada fora das regras" : V.pedido ? (V.pedido.depois ? "esperando o dono passar o clube" : "esperando o dono aceitar") : V.lote ? textoLote(V.lote) : textoEstado({ estado: V.estado, fase: V.fase, k: -1, T: V.T });
       corpo.appendChild(el("div", { class: "next-match lei-cartao lei-andamento" + (V.alterada ? " parada" : "") }, [
-        el("div", { class: "nm-label", text: V.alterada ? "Sala parada" : V.pedido ? "Pedido de entrada" : "Leilão em andamento" }),
+        el("div", { class: "nm-label", text: V.alterada ? "Sala parada" : V.pedido ? "Pedido de entrada" : V.estado === "camp" ? "Campeonato em andamento" : V.estado === "fim" ? "Campeonato encerrado" : "Leilão em andamento" }),
         el("div", { class: "lei-sala-linha" }, [escudo((tEu || {}).clube, "p"), el("div", { class: "lei-sala-txt" }, [
           el("span", { class: "lei-sala-t", text: subtitulo(V) }),
           el("span", { class: "lei-sala-s", text: est + " · " + V.T + " técnicos" + (S.pausado && S.pausado() ? " · parado" : "") })
@@ -2788,7 +2790,9 @@
         aviso: a && !a.hidden ? a.textContent : null, codigoVisivel: VIEW.codigoVisivel,
         barra: sb && !sb.raiz.hidden ? sb.txt.textContent : null,
         // o Campeonato: o texto do prazo do meu jogo (null sem ele) e a rodada à mostra (null = a da vez)
-        prazo: P && P.prazo ? P.prazo.textContent : null, rodadaVista: VIEW.campSel
+        prazo: P && P.prazo ? P.prazo.textContent : null, rodadaVista: VIEW.campSel,
+        // o "Ver o jogo": o id do jogo à mostra no 2D (a rota leilao-jogo e as telas da prorrogação e dos pênaltis dele)
+        jogo: VIEW.jogoVisto || null
       };
     },
     /** Gancho de teste: os prazos da tela (cheioMs, contaMs). */
