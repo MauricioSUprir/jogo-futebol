@@ -66,7 +66,8 @@
 //       celular (844×390 com toque), o meu time e o adversário: as 11 fichas com "?" e a raridade neutra (r-n), o canto sem o GERAL
 //       nem as estrelas, a lista do leitor de tela sem "nota N" nem "geral N", a régua da tela (MEDIR) sem problema e as fichas no
 //       mesmo lugar que sem o parâmetro; sem ele, as notas de sempre (números e as raridades b/s/g/l). Na base reprova (as notas à
-//       mostra com o parâmetro)
+//       mostra com o parâmetro). E27b (revisão do PR 6): o pedido do TM com partida.notasOcultas e o ?notasOcultas=0 no endereço
+//       continua escondido (o parâmetro só liga); na versão de antes da revisão reprova (o "=0" passava por cima do pedido)
 //   E26 (item 106, a TELA CEDO: a tela à vista enquanto o 3D monta; a sonda — addInitScript — marca a tela à vista, o quadro do
 //       navegador em que ela fica à vista e em que a cena 3D nasce, e o __golaco.pronto, e faz os gestos "antes do pronto" DENTRO da
 //       página; na base a tela só aparece com o 3D pronto e tudo reprova; --casos a,c,d,h,hp,i,j,k,l roda só esses blocos):
@@ -1053,6 +1054,18 @@ if (faz('ajustes')) {
         } finally { await navegador.close(); }
       }
       if (lugares.meutrue !== lugares.meufalse || lugares.advtrue !== lugares.advfalse) { ok = false; out.push(`${w}×${h}: as fichas mudaram de lugar com as notas escondidas`); }
+    }
+    // E27b (revisão do PR 6) o parâmetro só LIGA: o pedido do TM que manda esconder (partida.notasOcultas) vale também com o
+    // ?notasOcultas=0 no endereço (antes, o "=0" passava por cima do pedido e mostrava as notas da sala escondida)
+    {
+      const ped = { ...PED_A, id: 'tOcultasPP', partida: { ...PED_A.partida, notasOcultas: true } };
+      const { navegador, pagina: pg } = await abrirPagina({ w: 844, h: 390, toque: true, q: `${Q}&prepartida=1&tm=${ped.id}&notasOcultas=0`, pedido: ped });
+      try {
+        await quadros(pg, 3);
+        const r = await pg.evaluate(() => ({ flag: window.__golaco.notasOcultas, notas: [...new Set([...document.querySelectorAll('#prepartida .pp-ficha .pp-nota')].map(x => x.textContent))] }));
+        out.push(`E27b o pedido escondido com ?notasOcultas=0: flag ${r.flag}, notas ${r.notas.slice(0, 3).join('/')}`);
+        if (!(r.flag === true && r.notas.join() === '?')) ok = false;
+      } finally { await navegador.close(); }
     }
     meta('E27 as notas escondidas (o Modo Leilão do TM, PR 6; ?notasOcultas=1): as fichas com "?" e a raridade neutra, sem o GERAL e sem nota na lista, a tela sem problema e as fichas no mesmo lugar; sem o parâmetro, as notas de sempre',
       out.join(' · '), 'escondidas: ?, r-n, sem geral nem nota; sem: os números', ok);

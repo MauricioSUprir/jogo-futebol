@@ -325,10 +325,11 @@ const DIF_PARAM = nivelValido(params.get('dif'));
 const CLASSICO_PARAM = params.get('classico') === '1' ? true : params.get('classico') === '0' ? false : null;
 const CLASSICO_PAG = CLASSICO_PARAM ?? (TM ? classicoDoPedido(PEDIDO_TM) : false);
 // As notas escondidas (o Modo Leilão do TM com o "Overall escondido", PR 6 do leilão): a tela antes do jogo e o Editar time sem a
-// nota, os números da carta e o GERAL (a pausa não mostra nota). De onde vem: ?notasOcultas=1|0 (testes; por cima do pedido) > o
-// pedido do TM (partida.notasOcultas) > à mostra. Só a TELA: a simulação, o hash e o resultado não mudam.
-const NOTAS_PARAM = params.get('notasOcultas') === '1' ? true : params.get('notasOcultas') === '0' ? false : null;
-const NOTAS_OCULTAS = NOTAS_PARAM ?? (TM ? notasOcultasDoPedido(PEDIDO_TM) : false);
+// nota, os números da carta e o GERAL (a pausa não mostra nota). De onde vem: o pedido do TM (partida.notasOcultas) OU o
+// ?notasOcultas=1 (testes). O parâmetro só LIGA: nada no endereço desliga o que o pedido manda esconder (com o "=0" por cima
+// do pedido, quem abrisse o quadro do 3D com o endereço mexido via as notas de uma sala escondida). Só a TELA: a simulação, o
+// hash e o resultado não mudam.
+const NOTAS_OCULTAS = params.get('notasOcultas') === '1' || (TM ? notasOcultasDoPedido(PEDIDO_TM) : false);
 const ajustes = {
   minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
     : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
