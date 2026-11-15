@@ -1580,3 +1580,39 @@ reprova com qualquer `.ut-card` na aba Leilão.
   fim da rolagem, as seções sem caixa e a coluna ≤ 600 px; o "atrás da barra" do nada sobre nada vale também para ela. No
   online, o D1b (a Criar com a conta: o deslizante 2–8 e 0–1, o cartão marcado, a barra e nada sobre nada nas 3 telas, escuro
   e claro).
+
+**Feito no passo 3 (o Saguão, branch `leilao-visual-b`):**
+- `js/leilao-tela.js` (rota `leilao-saguao`), pelas fotos `c0a68c56`, `ec336399`, `16df9adb` e `5a8e090c`: o título "Prepare seu
+  clube." (30 px) com a frase do convite e "N/M participantes" com o ícone; o **código** numa caixa tracejada (`.lei-cod-caixa`:
+  "Código da sala", o código ou ••••••, o olho e o copiar como ícones de 44 px; o copiar copia só o código, o Copiar convite copia o
+  link; o QR continua com o olho); **Copiar convite** (verde cheio) e **Compartilhar** (tonal, só com `navigator.share`) lado a
+  lado; os **Pedidos de entrada** (só o dono, um cartão; "Quer entrar" em caixa alta, Aceitar e Recusar com 44 px; sem pedido,
+  "Nenhum pedido agora"); os **Participantes** num cartão com "N/M", cada um numa linha-cartão (`.lei-part.sag`): o escudo, o
+  nome (quebra em duas linhas em vez de cortar) com o VOCÊ, o papel em caixa alta com o #número e, à direita, o estado numa
+  pílula em caixa alta (PRONTO verde, AGUARDANDO no tom — o "Falta confirmar" de antes, no `title` —, BOT, AUSENTE, SAIU) e o
+  Tirar do dono num ícone de 44 px; na coluna estreita (o celular em pé; com o Tirar, até 360 px de coluna) a pílula e o Tirar
+  descem para baixo do nome, a lista inteira do mesmo jeito; o **resumo** num cartão de destaque verde do TM (`.lei-sag-res`:
+  "Cada técnico entra com R$ 100.", a frase, as etiquetas — a liga, até N técnicos, os bots ou "Só gente de verdade", até N
+  jogadores, o tempo, o formato, "3D: N min · Dificuldade" com bots e "Sem chat" —, a duração com a sala cheia e "X de N
+  prontos"); **Sala e clube** num cartão só (`.lei-sag-sala`): as opções da sala do dono (a liga no cartão da Criar com o Trocar,
+  o formato na lista das fotos — `seletorFormato(…, { lista })`, o trilho tonal com o escolhido em relevo —, técnicos e bots no
+  passo com o deslizante que grava ao SOLTAR — `passo(…, { soltar })`: a seção é refeita a cada mudança e o arraste perderia o
+  dedo —, o tempo e as Partidas em 3D nos segmentados; "Mudar uma opção da sala zera os Pronto de todos"); quem não é o dono só vê
+  o formato (`{ soVer }`, sem apagar) e "Só o dono muda as opções da sala"; depois de uma linha, o seu clube (o nome, a sigla, o
+  "Escolher escudo" da Criar e o Salvar) e a sua formação no segmentado 3 × 2 com o campinho das vagas; a **barra fixa** com
+  "**N de M prontos.** Falta confirmar: …" e o botão de 56 px (Pronto verde cheio; pronto, "Pronto. Toque para cancelar" tonal
+  com o check; o dono, "Começar o leilão"); a linha do motivo só com o que importa agora (a conexão, um erro, faltar gente).
+  Uma coluna de 560 px; duas (o convite e os participantes | o resumo e Sala e clube) no PC (até 1000 px) e no celular deitado a
+  partir de 800 px. Ficam: a tela do pedido esperando, o modo "depois do Começar" (o convite para quem trocou de aparelho, os
+  pedidos dele com o Passar o clube), as falas da região ao vivo, o foco que volta ao mesmo botão.
+- A moldura: as 4 pílulas do online numa linha até 400 px (em 390 o Campeonato quebrava); deitado de 560 a 799 px, numa linha só
+  delas embaixo da marca e dos ícones (quebravam no meio do topo).
+- Achado de passagem (já existia): a seção do seu clube refeita no meio de um Aceitar (a cor de quem entrou muda as cores
+  usadas) ficava apagada depois dele — a chave dela só olhava as ações "clube" e "forma"; agora qualquer ação a caminho.
+- Testes (`testar-leilao-online.mjs`): D1c (a caixa tracejada, o olho e o copiar de 44 px, o copiar só com o código, os dois
+  botões do convite lado a lado), D3b (o pedido no cartão e, recusado pela tela, "Nenhum pedido agora"), D6b (o Saguão do dono e
+  do convidado: o título, a contagem, o papel e o estado em caixa alta, o VOCÊ, o Tirar só do dono, as etiquetas do resumo,
+  Sala e clube do dono e só para ver, o seu clube aceso, a barra), D6e (o contraste ≥ 4,5:1 de todo texto nos dois temas, no dono e
+  no convidado; os cartões brancos e o resumo verde claro no claro), D5b (o Pronto pela barra), 3D0 (a etiqueta e as opções do 3D
+  com bots) e o T3 com o nada sobre nada do dono e do convidado nos 8 tamanhos, 667 × 375 e 740 × 360, escuro e claro. Mudados
+  de propósito: o T2b (o foco no título do cartão) e o T5 (espera o batimento a caminho antes do "Atualizando…").
