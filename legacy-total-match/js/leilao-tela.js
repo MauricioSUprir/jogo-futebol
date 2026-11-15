@@ -160,10 +160,13 @@
       p: { id: r.id, name: r.name, clubId: r.clubId, homeClubId: r.homeClubId, pos: r.pos, pos2: r.pos2, overall: ov, nationId: r.nationId, number: r.number }
     };
   }
-  function escudo(cl, cls) {
-    var u = UT(); cl = cl || {};
-    if (u && u.escudoEl && u.escudoCfg) return u.escudoEl(u.escudoCfg({ escudo: cl.escudo }), cl.cor || "#22c55e", cl.sigla || "", "lei-esc" + (cls ? " " + cls : ""));
-    return el("span", { class: "lei-esc lei-esc-txt" + (cls ? " " + cls : ""), text: cl.sigla || "" });
+  // (deco: o escudo ao lado do nome é enfeite; a sigla desenhada nele não entra no nome lido pelo leitor de tela)
+  function escudo(cl, cls, deco) {
+    var u = UT(), e; cl = cl || {};
+    if (u && u.escudoEl && u.escudoCfg) e = u.escudoEl(u.escudoCfg({ escudo: cl.escudo }), cl.cor || "#22c55e", cl.sigla || "", "lei-esc" + (cls ? " " + cls : ""));
+    else e = el("span", { class: "lei-esc lei-esc-txt" + (cls ? " " + cls : ""), text: cl.sigla || "" });
+    if (deco) e.setAttribute("aria-hidden", "true");
+    return e;
   }
 
   /* ---------- som (Web Audio, liberado no 1º toque) e vibração ---------- */
@@ -2039,7 +2042,7 @@
         // um Aceitar — a cor de quem entrou muda as usadas — ficava apagada depois dele)
         secao(P, "sClube", JSON.stringify([eu && SS().limpaClube(eu.clube), eu && eu.formacao, usadas, ag, !!oc]), function (b) { poeMeuClube(b, S, V, usadas); });
       } else secao(P, "sPedidos", JSON.stringify([V.souDono, V.pedidosDepois, V.tecnicos.map(function (t) { return [t.uid, t.nome, t.papel, t.saiu, t.ausente]; }), ag, oc]), function (b) { poePedidosDepois(b, S, V); });
-      secao(P, "sPart", JSON.stringify([modo, V.estado, V.souDono, ag, oc, sg && sg.vagas, V.tecnicos.map(function (t) {
+      secao(P, "sPart", JSON.stringify([modo, V.estado, V.souDono, ag, oc, sg && sg.vagas, VIEW.gerir === V.codigo, V.tecnicos.map(function (t) {
         return [t.uid, t.nome, t.num, t.papel, t.pronto, t.ausente, t.saiu, t.clube, t.eu, seloDe(V, t)[1]];
       })]), function (b) { poeParticipantes(b, S, V, modo); });
     }
@@ -2170,7 +2173,7 @@
       if (!ag || sg.lotada) aceitar.disabled = true;
       if (!ag) recusar.disabled = true;
       lista.appendChild(el("div", { class: "lei-pedido", data: { uid: p.uid } }, [
-        escudo(p.clube, "p"),
+        escudo(p.clube, "p", true),
         el("span", { class: "lei-tec-nome" }, [
           el("span", { class: "lei-tec-quem" }, [el("span", { class: "lei-part-n", text: p.nome })]),
           el("span", { class: "lei-part-papel" }, [el("span", { class: "lei-part-pp", text: "Quer entrar" }), p.num ? el("span", { class: "lei-num", text: "#" + p.num }) : null])
@@ -2220,27 +2223,37 @@
     var s = seloDe(V, t);
     return s[0] === "falta" ? ["falta", "Aguardando", "Falta confirmar o Pronto"] : s;
   }
-  // uma linha de participante no Saguão (as fotos): o escudo, o nome (o VOCÊ junto), o papel em caixa alta com o #número
-  // embaixo e, à direita, o estado na pílula e o Tirar do dono
+  // uma linha de participante no Saguão (as fotos): o escudo, o nome (o VOCÊ junto), o papel em caixa alta embaixo e, à direita,
+  // o estado na pílula (para o leitor de tela, o "Falta confirmar o Pronto" de antes no lugar do "Aguardando"); com o "Tirar
+  // alguém da sala" do dono ligado, o Tirar no lugar da pílula. O #número só quando outro participante tem o mesmo nome (as
+  // fotos não o têm; a folha Participantes e o Tirar o dizem sempre)
   function linhaSag(V, t, acoes) {
-    var s = seloSag(V, t);
+    var s = seloSag(V, t), chave = function (x) { return String(x || "").trim().toLowerCase(); };
+    var homonimo = t.num && !t.bot && V.tecnicos.some(function (o) { return o !== t && chave(o.nome) === chave(t.nome); });
+    var selo = s[1] && !(acoes && acoes.length) ? el("span", { class: "lei-selo lei-estado " + s[0] }, s[2]
+      ? [el("span", { "aria-hidden": "true", text: s[1] }), el("span", { class: "lei-sr", text: s[2] })] : [el("span", { text: s[1] })]) : null;
     return el("div", { class: "lei-part sag" + (t.eu ? " eu" : "") + (t.ausente && !t.eu ? " longe" : ""), data: { uid: t.uid } }, [
-      escudo(t.clube, "p"),
+      escudo(t.clube, "p", true),
       el("span", { class: "lei-tec-nome" }, [
         el("span", { class: "lei-tec-quem" }, [el("span", { class: "lei-part-n", text: t.nome }), t.eu ? el("span", { class: "lei-voce", text: "VOCÊ" }) : null]),
-        el("span", { class: "lei-part-papel" }, [el("span", { class: "lei-part-pp", text: papelDe(t) }), t.num && !t.bot ? el("span", { class: "lei-num", text: "#" + t.num }) : null])
+        el("span", { class: "lei-part-papel" }, [el("span", { class: "lei-part-pp", text: papelDe(t) }), homonimo ? el("span", { class: "lei-num", text: "#" + t.num }) : null])
       ]),
-      el("span", { class: "lei-part-dir" }, [s[1] ? el("span", s[2] ? { class: "lei-selo lei-estado " + s[0], text: s[1], title: s[2] } : { class: "lei-selo lei-estado " + s[0], text: s[1] }) : null].concat(acoes || []))
+      el("span", { class: "lei-part-dir" }, [selo].concat(acoes || []))
     ]);
   }
   function poeParticipantes(b, S, V, modo) {
     var sg = V.saguao, ag = podeAgir(V) && !VIEW.ocupado;
     var n = V.tecnicos.length, sag = modo === "saguao" && sg;
     b.appendChild(cabCartao("lei-sag-part-t", "Participantes", sag ? n + "/" + sg.vagas : String(n), sag ? n + " de " + sg.vagas : null));
-    var lista = el("div", { class: "lei-sag-lista" + (modo === "saguao" && V.souDono && V.tecnicos.some(function (t) { return !t.bot && t.papel === "tecnico"; }) ? " com-acao" : "") });
+    // o Tirar do dono fica atrás do "Tirar alguém da sala" (como o "Editar" de uma lista): a lista à vista é a das fotos, com a
+    // pílula do estado à direita na mesma linha do nome; ligado, cada técnico mostra o Tirar no lugar da pílula
+    var podeTirar = modo === "saguao" && V.souDono && V.tecnicos.some(function (t) { return !t.bot && t.papel === "tecnico"; });
+    if (!podeTirar && VIEW.gerir === V.codigo) VIEW.gerir = null;
+    var gerir = podeTirar && VIEW.gerir === V.codigo;
+    var lista = el("div", { class: "lei-sag-lista" + (gerir ? " gerir" : ""), id: "lei-sag-lista" });
     V.tecnicos.forEach(function (t) {
       var acoes = [];
-      if (modo === "saguao" && V.souDono && !t.bot && t.papel === "tecnico") {
+      if (gerir && !t.bot && t.papel === "tecnico") {
         var x = el("button", { class: "lei-part-tirar", type: "button", "aria-label": "Tirar " + comNum(t.nome, t.num) + " da sala", title: "Tirar da sala",
           data: { foco: "tirar-" + t.uid }, on: { click: function () {
             TM.ui.confirm("Tirar " + t.nome + " da sala?", comNum(t.nome, t.num) + " sai do saguão e não pode pedir de novo nesta sala.", "Tirar da sala", function () {
@@ -2254,6 +2267,11 @@
     });
     b.appendChild(lista);
     if (sag && sg.vagas > n) b.appendChild(el("p", { class: "lei-vazio", text: (sg.vagas - n) + (sg.vagas - n === 1 ? " vaga livre" : " vagas livres") + ": mande o convite." }));
+    if (podeTirar) {
+      var g = botao(gerir ? "Concluir" : "Tirar alguém da sala", function () { VIEW.gerir = gerir ? null : V.codigo; atualiza(); }, "btn lei-bt-tom lei-gerir", gerir ? "check" : "ban");
+      g.dataset.foco = "gerir"; g.setAttribute("aria-pressed", gerir ? "true" : "false"); g.setAttribute("aria-controls", "lei-sag-lista");
+      b.appendChild(g);
+    }
   }
   // o resumo num cartão de destaque verde (as fotos; sem o amarelo do site): o dinheiro, a frase, as etiquetas da sala, a
   // duração com a sala cheia e "X de N prontos"
@@ -2829,12 +2847,12 @@
     var abreEsc = el("button", { class: (opc.escolher ? "lei-esc-escolher" : "lei-bloco-bt") + " lei-esc-abre", type: "button", "aria-controls": idEd, "aria-expanded": "false", data: { foco: "clube-esc" }, on: { click: function () {
       var ab = editor.hidden; editor.hidden = !ab; abreEsc.setAttribute("aria-expanded", ab ? "true" : "false"); abreEsc.classList.toggle("aberto", ab);
       if (opc.aoAbrir) opc.aoAbrir(ab);
-    } } }, opc.escolher ? [prevEsc, el("span", { class: "lei-esc-escolher-t", text: "Escolher escudo" }), el("span", { class: "lei-bloco-seta" }, [ic("chevron-down")])]
+    } } }, opc.escolher ? [prevEsc, el("span", { class: "lei-esc-escolher-t", text: "Escolher escudo" })]
       : [el("span", { class: "lei-bloco-ic" }, [ic("palette")]), el("span", { class: "lei-bloco-tit", text: "Mudar o escudo" }), el("span", { class: "lei-bloco-seta" }, [ic("chevron-down")])]);
     editor.hidden = !opc.aberto;
     if (opc.aberto) { abreEsc.setAttribute("aria-expanded", "true"); abreEsc.classList.add("aberto"); }
     function poeEsc(tudo) {
-      TM.ui.clear(prevEsc); prevEsc.appendChild(escudo(F, opc.escolher ? "p" : "g"));
+      TM.ui.clear(prevEsc); prevEsc.appendChild(escudo(F, opc.escolher ? "p" : "g", !!opc.escolher));
       if (!tudo) return;
       inNome.value = F.nome; inSigla.value = F.sigla;
       TM.ui.clear(editor);

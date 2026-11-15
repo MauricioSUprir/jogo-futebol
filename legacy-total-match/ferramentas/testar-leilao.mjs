@@ -4484,8 +4484,11 @@ async function testeTela() {
       const secs = [...document.querySelectorAll(".lei-criar .lei-cs")].filter(s => !s.hidden);
       const caixa = secs.filter(s => { const c = getComputedStyle(s); return parseFloat(c.borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor); }).length;
       const tit = secs.map(s => parseFloat(getComputedStyle(s.querySelector(".lei-cs-tit")).fontSize));
+      // (o deslizante dentro da coluna: a ponta do trilho alinhada com a dos outros controles; com a margem e 100% passava 8 px)
+      const desl = [...document.querySelectorAll(".lei-criar .lei-passo-desl")].filter(d => d.offsetParent !== null)
+        .map(d => Math.round((d.getBoundingClientRect().right - d.closest(".lei-passo").getBoundingClientRect().right) * 10) / 10);
       return { fixa, embaixo, linha, btH: Math.round(bt.getBoundingClientRect().height), ultimo, topoBarra, larg: Math.round(document.querySelector(".lei-criar-corpo").getBoundingClientRect().width),
-        secs: secs.length, caixa, tit: [Math.min(...tit), Math.max(...tit)] };
+        secs: secs.length, caixa, tit: [Math.min(...tit), Math.max(...tit)], desl, deslFora: desl.filter(x => x > 0.5).length };
     });
     const nadaSobreCriar = async (rotulo) => {
       await nadaSobreNadaTemas(p, rotulo, medeCriar);
@@ -4627,9 +4630,9 @@ async function testeTela() {
       && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de/.test(onl.resumo) && onl.bt === "Criar sala", onl);
     await nadaSobreCriar("criar-online");
     const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
-    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha, o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px e a coluna com ≤ 600 px`,
-      criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20),
-      criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20)).slice(0, 4));
+    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha, o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
+      criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora),
+      criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora)).slice(0, 4));
     // de volta à Criar do treino (o padrão: 4 técnicos, o Mata-mata)
     await p.evaluate(() => TM.ui.go("leilao-criar"));
     await espera(400);

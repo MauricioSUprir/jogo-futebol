@@ -6807,12 +6807,15 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 @media (max-width: 599px) {
   .lei-topo { margin: 0 -16px; padding: 0 16px 4px; }
 }
-/* (as 4 pílulas do online numa linha até 400 px: com 13 px somavam ~359 px e quebravam em 390, com o Campeonato embaixo) */
+/* (as 4 pílulas do online numa linha até 400 px: com 13 px somavam ~359 px e quebravam em 390, com o Campeonato embaixo; as 3 do
+   treino ficam como estavam até 380 px) */
 @media (max-width: 400px) {
-  .lei-abas { gap: 14px 4px; }
-  .lei-aba { padding: 0 10px; font-size: 12px; }
+  .lei-abas:has(.lei-aba:nth-child(4)) { gap: 14px 4px; }
+  .lei-abas:has(.lei-aba:nth-child(4)) .lei-aba { padding: 0 10px; font-size: 12px; }
 }
 @media (max-width: 380px) {
+  .lei-abas { gap: 14px 4px; }
+  .lei-aba { padding: 0 10px; font-size: 12px; }
   /* o nome do seu clube com 16 letras inteiro em 360 (as regras do seu clube vêm depois: por isso o .lei-meu na frente) */
   .lei-meu .lei-meu-l1 { gap: 8px; }
   .lei-meu .lei-meu-clube { font-size: 15px; }
@@ -7307,7 +7310,8 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-passo.desl .lei-passo-bt { width: 46px; height: 46px; border: 0; border-radius: 12px; background: var(--lei-tom); color: var(--text); }
 .lei-passo.desl .lei-passo-bt .tm-ic { width: 20px; height: 20px; }
 .lei-passo.desl .lei-passo-n { min-width: 52px; font-size: 44px; line-height: 1; color: var(--gold); }
-.lei-passo-desl { -webkit-appearance: none; appearance: none; width: 100%; min-width: 0; height: 44px; margin: 0 0 0 8px; padding: 0; background: transparent; cursor: pointer; --p: 0%; }
+/* (8 px a mais de folga depois do +, descontados da largura: com 100% e a margem o trilho passava 8 px da coluna) */
+.lei-passo-desl { -webkit-appearance: none; appearance: none; width: calc(100% - 8px); min-width: 0; height: 44px; margin: 0 0 0 8px; padding: 0; background: transparent; cursor: pointer; --p: 0%; }
 .lei-passo-desl::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) 0 var(--p), var(--line-2) var(--p) 100%); }
 .lei-passo-desl::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line-2); }
 .lei-passo-desl::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--gold); }
@@ -7486,34 +7490,35 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .lei-sag-lista { display: flex; flex-direction: column; gap: 10px; }
 .lei-sag-card .lei-vazio { margin: 0; padding: 0; font-size: 14px; line-height: 1.45; }
 /* cada participante (e cada pedido) num cartão: o escudo, o nome (o VOCÊ junto), o papel em caixa alta e, à direita, o estado na
-   pílula. O nome quebra em duas linhas em vez de cortar; com o Tirar do dono numa coluna estreita (o celular), a pílula e o
-   Tirar descem para a linha de baixo, embaixo do nome */
+   pílula, na mesma linha do nome (as fotos; o nome quebra em duas linhas em vez de cortar). O Tirar do dono só aparece com o
+   "Tirar alguém da sala" ligado, no lugar da pílula */
 .lei-sag-lista { container-type: inline-size; }
 .lei-part.sag, .lei-pedido { width: 100%; min-height: 64px; padding: 10px 12px 10px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: transparent; }
-.lei-part.sag { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "esc nome dir"; align-items: center; gap: 8px 12px; }
+.lei-part.sag { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "esc nome dir"; align-items: center; gap: 6px 12px; min-height: 60px; padding-right: 10px; }
 .lei-pedido { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .lei-part.sag > .lei-esc { grid-area: esc; }
 .lei-part.sag > .lei-tec-nome { grid-area: nome; min-width: 0; }
 .lei-part.sag > .lei-part-dir { grid-area: dir; margin-left: 0; }
-/* (a lista inteira do mesmo jeito: abaixo de 340 px de coluna — o celular em pé — e, com o Tirar do dono, abaixo de 360) */
-@container (max-width: 339px) {
+/* (só numa coluna estreita demais para o nome — abaixo de 260 px, o texto grande do sistema — a pílula desce para baixo dele) */
+@container (max-width: 259px) {
   .lei-part.sag { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "esc nome" "esc dir"; }
-  .lei-part.sag > .lei-part-dir { justify-content: space-between; }
-}
-@container (max-width: 359px) {
-  .lei-sag-lista.com-acao .lei-part.sag { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "esc nome" "esc dir"; }
-  .lei-sag-lista.com-acao .lei-part.sag > .lei-part-dir { justify-content: space-between; }
+  .lei-part.sag > .lei-part-dir { justify-content: flex-start; }
 }
 .lei-part.sag.eu { border-color: rgba(34,197,94,.5); }
 .lei-part.sag > .lei-esc, .lei-pedido > .lei-esc { flex: 0 0 auto; font-size: 32px; }
-.lei-pedido > .lei-tec-nome { flex: 1 1 auto; min-width: 0; }
+/* (o nome do pedido ao lado do escudo, com a base de 140 px: com "auto" um nome largo descia inteiro e o escudo ficava sozinho) */
+.lei-pedido > .lei-tec-nome { flex: 1 1 140px; min-width: 0; }
 .lei-part.sag .lei-part-n, .lei-pedido .lei-part-n { font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--text); white-space: normal; overflow: visible; overflow-wrap: break-word; }
 .lei-part.sag .lei-voce { font-size: 11px; }
 .lei-part-papel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; margin-top: 2px; }
-.lei-part-pp { font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--text-dim); }
+.lei-part-pp { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
 .lei-part-papel .lei-num { font-size: 12px; }
 .lei-part.sag .lei-part-dir { gap: 8px; }
-.lei-part.sag .lei-selo { padding: 6px 9px; border: 0; border-radius: 8px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; line-height: 1.2; }
+.lei-part.sag .lei-selo { padding: 5px 8px; border: 0; border-radius: 7px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
+/* o "Tirar alguém da sala" do dono (e o "Concluir"), embaixo da lista */
+.btn.lei-gerir { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px;
+  font-family: inherit; font-size: 14px; font-weight: 700; }
+.lei-gerir .tm-ic { width: 16px; height: 16px; }
 .lei-part.sag .lei-selo.pronto, .lei-part.sag .lei-selo.lidera { background: rgba(34,197,94,.16); color: var(--gold); }
 .lei-part.sag .lei-selo.falta, .lei-part.sag .lei-selo.bot { background: var(--lei-tom); color: var(--text-dim); }
 .lei-part-tirar { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 12px;
@@ -7726,7 +7731,9 @@ body.theme-light .lei-sj-3d { color: #92400e; }
    mais justa ("Outro valor" inteiro); abaixo de 700 px a barra em duas linhas, como em pé (o Tudo e o campo não cabiam lado a lado) */
 @media (max-height: 520px) and (min-width: 560px) and (max-width: 799px) {
   /* (as 4 pílulas do online não cabem entre a marca e os ícones: numa linha só delas, embaixo, em vez de quebrar no meio) */
-  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) { row-gap: 6px; }
+  /* (11 px entre os ícones e as pílulas: o alvo de toque delas, 9 px acima pelo ::after, fica a 2 px dos ícones; com 6 px ele
+     subia 3 px por cima da borda de baixo do tema e do som) */
+  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) { row-gap: 11px; }
   .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) .lei-abas { grid-column: 1 / -1; grid-row: 2; padding-bottom: 2px; }
   .lei-corpo-lote { grid-template-columns: minmax(0, 1fr); }
   .lei-corpo-lote .lei-col-b { width: 100%; max-width: 420px; margin: 0 auto; }

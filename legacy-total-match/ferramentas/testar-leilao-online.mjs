@@ -460,9 +460,15 @@ const olhaSaguao = ap => ap.p.evaluate(() => {
   const parts = qs(".lei-corpo-sag .lei-part.sag").map(p => {
     const est = p.querySelector(".lei-estado"), pp = p.querySelector(".lei-part-pp"), tirar = p.querySelector(".lei-part-tirar");
     return { uid: p.dataset.uid, nome: tx(p.querySelector(".lei-part-n")), papel: tx(pp), papelMaius: maius(pp), voce: !!p.querySelector(".lei-voce"),
-      estado: tx(est), estCls: est ? [...est.classList].filter(c => /^(pronto|falta|bot|ausente|saiu)$/.test(c))[0] || "" : "", estMaius: maius(est), estTitulo: est ? est.title : "",
-      estDentro: !!est && dentro(est, p), tirar: tirar ? { rot: tirar.getAttribute("aria-label"), w: r(tirar).w, h: r(tirar).h, texto: tirar.innerText.trim() } : null };
+      // (o texto à vista da pílula; o "Falta confirmar o Pronto" é o do leitor de tela, no lugar do "Aguardando")
+      estado: est ? tx(est.querySelector("[aria-hidden]") || est) : null, estSr: est ? tx(est.querySelector(".lei-sr")) : null,
+      estCls: est ? [...est.classList].filter(c => /^(pronto|falta|bot|ausente|saiu)$/.test(c))[0] || "" : "", estMaius: maius(est),
+      // (a pílula na mesma linha do nome, à direita dele: as fotos)
+      estDentro: !!est && dentro(est, p), estLado: !!est && r(est).l >= r(p.querySelector(".lei-part-n")).r - 1 && r(est).t < r(p.querySelector(".lei-part-n")).b,
+      num: !!p.querySelector(".lei-part-papel .lei-num"),
+      tirar: tirar ? { rot: tirar.getAttribute("aria-label"), w: r(tirar).w, h: r(tirar).h, texto: tirar.innerText.trim() } : null };
   });
+  const gerir = q(".lei-parts .lei-gerir");
   const peds = qs(".lei-corpo-sag .lei-pedido").map(p => ({ uid: p.dataset.uid, nome: tx(p.querySelector(".lei-part-n")), papel: tx(p.querySelector(".lei-part-pp")), papelMaius: maius(p.querySelector(".lei-part-pp")),
     bts: [...p.querySelectorAll(".lei-pedido-bts .btn")].map(b => ({ t: tx(b), h: r(b).h, primario: b.classList.contains("primary"), des: b.disabled })) }));
   const res = q(".lei-sag-res"), sala = q(".lei-sag-sala"), bar = q(".lei-sagbar"), bt = q(".lei-sagbar-bt");
@@ -476,12 +482,14 @@ const olhaSaguao = ap => ap.p.evaluate(() => {
       copia: copia ? [r(copia).w, r(copia).h, copia.innerText.trim(), copia.getAttribute("aria-label"), dentro(copia, cx)] : null } : null,
     convite: bts.map(b => ({ t: tx(b), top: Math.round(r(b).t), l: r(b).l, r: r(b).r, h: r(b).h, primario: b.classList.contains("primary") })),
     pedTit: tx(q(".lei-pedidos .lei-sag-ctit")), peds, partTit: tx(q(".lei-parts .lei-sag-ctit")), partN: tx(q(".lei-parts .lei-sag-cn [aria-hidden]")), parts,
+    gerir: gerir ? { t: tx(gerir), h: r(gerir).h, pressed: gerir.getAttribute("aria-pressed") } : null,
     res: res ? { tit: tx(res.querySelector(".lei-sag-res-tit")), etqs: [...res.querySelectorAll(".lei-etq")].map(tx), prontos: tx(res.querySelector(".lei-sag-prontos")),
       dur: tx(res.querySelector(".lei-sag-dur")), borda: getComputedStyle(res).borderTopColor, fundoImg: getComputedStyle(res).backgroundImage, fundo: getComputedStyle(res).backgroundColor } : null,
     sala: sala ? { tit: tx(sala.querySelector(".lei-sag-ctit")), rots: [...sala.querySelectorAll(".lei-sag-rot")].map(tx), liga: !!sala.querySelector(".lei-liga-bt"),
       fmts: [...sala.querySelectorAll(".lei-fmt")].map(b => (b.getAttribute("aria-pressed") === "true" ? "*" : "") + b.dataset.fmt + (b.disabled ? "-" : "")),
       fmtLista: !!sala.querySelector(".lei-formatos.lista"), soVer: !!sala.querySelector(".lei-formatos.so-ver"), vagas: passo("Técnicos na sala"), bots: passo("Bots de treino"),
       tempo: segOn(".lei-tempos"), dur3d: segOn(".lei-dur3d"), dif3d: segOn(".lei-dif3d"), nota: tx(sala.querySelector(".lei-sag-cfg .lei-sag-nota")),
+      deslFora: [...sala.querySelectorAll(".lei-passo-desl")].filter(d => r(d).r > r(d.closest(".lei-passo")).r + 0.5).length,
       campos: [...sala.querySelectorAll(".lei-sag-clube .lei-campo")].map(i => parseFloat(getComputedStyle(i).fontSize)), escolher: tx(sala.querySelector(".lei-esc-escolher-t")),
       salvar: !!sala.querySelector(".lei-salvar"), forma: segOn(".lei-forma-seg"), formas: sala.querySelectorAll(".lei-forma-seg .seg-btn").length,
       apagados: [...sala.querySelectorAll(".lei-sag-clube .lei-campo, .lei-sag-clube .lei-esc-escolher, .lei-forma-seg .seg-btn")].filter(x => x.disabled).length,
@@ -877,7 +885,8 @@ async function casoDois() {
 
   /* D6b o Saguão pelas fotos (PLANO-LEILAO.md §9), no dono (390×844) e no convidado (1280×800): o título grande, "2/2
      participantes", cada participante com o papel e o estado em caixa alta (PRONTO verde, AGUARDANDO no tom; o VOCÊ só na sua
-     linha; o Tirar do dono num ícone de 44 px só nas linhas dos técnicos e só para ele), o resumo verde com as etiquetas certas e
+     linha; a pílula à direita do nome, na mesma linha; o Tirar do dono num ícone de 44 px, só nas linhas dos técnicos e só para ele,
+     atrás do "Tirar alguém da sala"), o resumo verde com as etiquetas certas e
      "1 de 2 prontos", Sala e clube (o dono muda a liga, o formato, os técnicos, os bots e o tempo; o convidado só vê o formato), o
      seu clube e a formação com o campinho, e a barra fixa embaixo com "1 de 2 prontos." em negrito e o botão de 56 px */
   await ate(B.p, () => TM.ui.current() === "leilao-saguao" && !!document.querySelector(".lei-sag-res"), null, 10000);
@@ -886,27 +895,36 @@ async function casoDois() {
   const lin = (ps, u) => ps.find(x => x.uid === u) || {};
   const verde = c => { const m = (c.match(/[\d.]+/g) || []).map(Number); return m.length >= 3 && m[1] > m[0] + 40 && m[1] > m[2] + 20; };
   const partsOk = (ps, eu) => ps.length === 2 && lin(ps, "uidAna").papel === "Dono da sala" && lin(ps, "uidAna").estado === "Pronto" && lin(ps, "uidAna").estCls === "pronto"
-    && lin(ps, "uidBruno").papel === "Técnico" && lin(ps, "uidBruno").estado === "Aguardando" && lin(ps, "uidBruno").estCls === "falta" && /Falta confirmar/.test(lin(ps, "uidBruno").estTitulo)
-    && ps.every(x => x.papelMaius && x.estMaius && x.estDentro) && ps.filter(x => x.voce).map(x => x.uid).join() === eu;
-  const tirarA = lin(sA.parts, "uidBruno").tirar;
+    && lin(ps, "uidBruno").papel === "Técnico" && lin(ps, "uidBruno").estado === "Aguardando" && lin(ps, "uidBruno").estCls === "falta" && /Falta confirmar/.test(lin(ps, "uidBruno").estSr)
+    && ps.every(x => x.papelMaius && x.estMaius && x.estDentro && x.estLado && !x.num && !x.tirar) && ps.filter(x => x.voce).map(x => x.uid).join() === eu;
+  // o Tirar do dono atrás do "Tirar alguém da sala" (como o "Editar" de uma lista): ligado, o Tirar de 44 px no lugar da pílula, só nas
+  // linhas dos técnicos; o "Concluir" volta à lista das fotos
+  await A.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(A.p, () => !!document.querySelector(".lei-part-tirar"), null, 5000);
+  const sAg = await olhaSaguao(A), tirarA = lin(sAg.parts, "uidBruno").tirar;
+  await A.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  const voltou = await ate(A.p, () => !document.querySelector(".lei-part-tirar") && document.querySelector(".lei-parts .lei-gerir").getAttribute("aria-pressed") === "false", null, 5000);
   const salaA = sA.sala || {}, salaB = sB.sala || {};
   // (o seu clube aceso: depois do Aceitar do dono a seção ficava apagada — refeita no meio da ação, a cor de quem entrou muda as
   // cores usadas — e não voltava)
   const clubeOk = x => x.campos.length === 2 && x.campos.every(f => f >= 16) && x.escolher === "Escolher escudo" && x.salvar && x.forma === "4-4-2" && x.formas === 6 && x.vagasCampo === 11 && x.apagados === 0
     && x.rots.includes("Seu clube") && x.rots.includes("Sua formação") && x.tit === "Sala e clube";
-  confere(`${ID}6b o Saguão pelas fotos (o dono em 390×844 e o convidado em 1280×800): o título grande e "2/2 participantes"; o papel e o estado em caixa alta (PRONTO, AGUARDANDO), o VOCÊ só na sua linha e o Tirar do dono num ícone de 44 px; o resumo verde com as etiquetas da sala e "1 de 2 prontos"; Sala e clube (o dono muda, o convidado só vê o formato) com o seu clube e a formação; a barra fixa com o botão de 56 px`,
+  confere(`${ID}6b o Saguão pelas fotos (o dono em 390×844 e o convidado em 1280×800): o título grande e "2/2 participantes"; o papel e o estado em caixa alta (PRONTO, AGUARDANDO) com a pílula na linha do nome, o VOCÊ só na sua linha e o Tirar do dono num ícone de 44 px atrás do "Tirar alguém da sala"; o resumo verde com as etiquetas da sala e "1 de 2 prontos"; Sala e clube (o dono muda, o convidado só vê o formato) com o seu clube e a formação; a barra fixa com o botão de 56 px`,
     [sA, sB].every(x => x.tit === "Prepare seu clube." && x.titPx >= 28 && !!x.frase && x.conta === "2/2 participantes" && x.partTit === "Participantes" && x.partN === "2/2")
       && partsOk(sA.parts, "uidAna") && partsOk(sB.parts, "uidBruno")
-      && !!tirarA && tirarA.w >= 44 && tirarA.h >= 44 && !tirarA.texto && /^Tirar Bruno/.test(tirarA.rot || "") && !lin(sA.parts, "uidAna").tirar && sB.parts.every(x => !x.tirar)
+      && !!sA.gerir && sA.gerir.t === "Tirar alguém da sala" && sA.gerir.pressed === "false" && sA.gerir.h >= 44 && !sB.gerir
+      && !!tirarA && tirarA.w >= 44 && tirarA.h >= 44 && !tirarA.texto && /^Tirar Bruno/.test(tirarA.rot || "") && lin(sAg.parts, "uidBruno").estado == null && !lin(sAg.parts, "uidAna").tirar
+      && lin(sAg.parts, "uidAna").estado === "Pronto" && sAg.gerir && sAg.gerir.t === "Concluir" && sAg.gerir.pressed === "true" && voltou
       && [sA, sB].every(x => x.res && x.res.tit === "Cada técnico entra com R$ 100." && JSON.stringify(x.res.etqs) === JSON.stringify(etqD) && x.res.prontos === "1 de 2 prontos"
         && /Com a sala cheia/.test(x.res.dur || "") && verde(x.res.borda) && /linear-gradient/.test(x.res.fundoImg))
-      && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.fmts.join() === "mata,pontos,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
+      && salaA.liga && salaA.fmtLista && !salaA.soVer && salaA.deslFora === 0 && salaA.fmts.join() === "mata,pontos,*misto" && salaA.vagas === "2,8,2,0" && salaA.bots === "0,0,0,1" && salaA.tempo === "10 s"
       && salaA.dur3d == null && /zera os Pronto/.test(salaA.nota || "") && ["Liga", "Formato do campeonato", "Técnicos na sala", "Bots de treino", "Tempo de cada jogador"].every(r => salaA.rots.includes(r))
       && !salaB.liga && salaB.fmtLista && salaB.soVer && salaB.fmts.join() === "mata-,pontos-,*misto-" && salaB.vagas == null && salaB.bots == null && salaB.tempo == null && /Só o dono/.test(salaB.nota || "")
       && clubeOk(salaA) && clubeOk(salaB)
       && sA.barra.fixa === "fixed" && sA.barra.embaixo && sA.barra.b === "1 de 2 prontos." && sA.barra.txt === "1 de 2 prontos. Falta confirmar: Bruno." && sA.barra.bt === "Começar o leilão" && sA.barra.btDes && sA.barra.btH >= 56 && sA.barra.btIc
       && sB.barra.fixa === "fixed" && sB.barra.embaixo && sB.barra.bt === "Pronto" && /primary/.test(sB.barra.btCls) && !sB.barra.btDes && sB.barra.btH >= 56,
-    { apagados: [salaA.apagados, salaB.apagados], sA: Object.assign({}, sA, { cod: undefined, convite: undefined }), sB: { parts: sB.parts, res: sB.res, sala: sB.sala, barra: sB.barra, conta: sB.conta } });
+    { apagados: [salaA.apagados, salaB.apagados], sA: Object.assign({}, sA, { cod: undefined, convite: undefined }), sAg: { parts: sAg.parts, gerir: sAg.gerir }, voltou,
+      sB: { parts: sB.parts, res: sB.res, sala: sB.sala, barra: sB.barra, conta: sB.conta } });
   // o contraste de todo texto do Saguão (≥ 4,5:1) no escuro e no claro, no dono e no convidado; no claro, os cartões brancos e o
   // resumo num verde bem claro
   const crsD = [];
@@ -1515,11 +1533,25 @@ async function casoTelas() {
   await ate(Dn.p, () => TM.leilaoSessao.atual().ver().saguao.prontos === 2, null, 20000);
   await ate(G1.p, () => document.querySelectorAll(".lei-part").length === 3, null, 20000);
   const c3 = (await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-part .lei-part-n"))).concat(await emTamanhos(G1, OITO, () => cortes(G1, ".lei-part .lei-part-n")));
+  // (a pílula do estado à direita do nome, na mesma linha, em todos os tamanhos: as fotos; antes, no celular em pé, ela descia)
+  const ladoRuim = ap => ap.p.evaluate(() => [...document.querySelectorAll(".lei-corpo-sag .lei-part.sag")].filter(p => {
+    const e = p.querySelector(".lei-estado"), n = p.querySelector(".lei-part-n"); if (!e || !n) return false;
+    const a = e.getBoundingClientRect(), b = n.getBoundingClientRect(); return !(a.left >= b.right - 1 && a.top < b.bottom);
+  }).map(p => ({ uid: p.dataset.uid })));
+  const lado3 = (await emTamanhos(Dn, OITO, () => ladoRuim(Dn))).concat(await emTamanhos(G1, OITO, () => ladoRuim(G1)));
   const nsT = await nadaSobreNada(Dn, "telas-saguao-dono", () => !!document.querySelector(".lei-sagbar"), DEZ);
   const nsTc = await nadaSobreNada(G1, "telas-saguao-convidado", () => !!document.querySelector(".lei-sagbar"), DEZ);
-  confere(`${ID}3 os participantes com nomes de 16 letras: o nome inteiro nos 8 tamanhos (o dono e o convidado pronto) e nada sobre nada nem atrás da barra no Saguão do dono e do convidado (${nsT.medidas.length + nsTc.medidas.length} medidas: os 8 tamanhos, 667×375 e 740×360, escuro e claro)`,
-    !c3.length && !nsT.ruins.length && !nsTc.ruins.length && nsT.medidas.length === 20 && nsTc.medidas.length === 20 && nsT.medidas.concat(nsTc.medidas).every(m => m.barra),
-    { cortes: c3.slice(0, 6), ruins: nsT.ruins.concat(nsTc.ruins).slice(0, 4) });
+  // o dono com o "Tirar alguém da sala" ligado: o Tirar de 44 px no lugar da pílula, o nome inteiro e nada sobre nada
+  await Dn.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(Dn.p, () => !!document.querySelector(".lei-part-tirar"), null, 5000);
+  const c3g = await emTamanhos(Dn, OITO, () => cortes(Dn, ".lei-part .lei-part-n"));
+  const nsTg = await nadaSobreNada(Dn, "telas-saguao-dono-tirar", () => !!document.querySelector(".lei-part-tirar"), DEZ);
+  await Dn.p.evaluate(() => document.querySelector(".lei-parts .lei-gerir").click());
+  await ate(Dn.p, () => !document.querySelector(".lei-part-tirar"), null, 5000);
+  confere(`${ID}3 os participantes com nomes de 16 letras: o nome inteiro nos 8 tamanhos (o dono, o dono com o "Tirar alguém da sala" e o convidado pronto), a pílula do estado à direita do nome na mesma linha, e nada sobre nada nem atrás da barra no Saguão do dono (também com o Tirar) e do convidado (${nsT.medidas.length + nsTc.medidas.length + nsTg.medidas.length} medidas: os 8 tamanhos, 667×375 e 740×360, escuro e claro)`,
+    !c3.length && !c3g.length && !lado3.length && !nsT.ruins.length && !nsTc.ruins.length && !nsTg.ruins.length && nsT.medidas.length === 20 && nsTc.medidas.length === 20 && nsTg.medidas.length === 20
+      && nsT.medidas.concat(nsTc.medidas, nsTg.medidas).every(m => m.barra),
+    { cortes: c3.concat(c3g).slice(0, 6), lado: lado3.slice(0, 6), ruins: nsT.ruins.concat(nsTc.ruins, nsTg.ruins).slice(0, 4) });
 
   /* T4 o Salvar do clube: apagado ao abrir o saguão, aceso depois de mudar a sigla, apagado de novo depois de salvo */
   await G2.p.evaluate(() => TM.ui.go("leilao-saguao"));
@@ -1575,9 +1607,21 @@ async function casoTelas() {
       cartas: document.querySelectorAll(".lei-corpo-lote .ut-card").length, sbTexto: [...document.querySelectorAll(".lei-cab .lei-sb")].filter(b => b.innerText.trim()).length };
   });
   const nsL = await nadaSobreNada(Dn, "telas-lote", () => !!document.querySelector(".lei-lote-card"));
-  confere(`${ID}6b a aba Leilão do online pelas fotos: as 4 pílulas numa linha em 360×740 (o Saguão com o check), o topo só de ícones, sem a carta e nada sobre nada (3 tamanhos, escuro e claro)`,
-    p6b.abas.join() === "Saguão,Leilão,Escalação,Campeonato" && p6b.linhas === 1 && p6b.feita.join() === "Saguão, concluído" && !p6b.cartas && !p6b.sbTexto && !nsL.ruins.length,
-    { p6b, ruins: nsL.ruins.slice(0, 3) });
+  // o alvo de toque das pílulas (o ::after de 44 px) a ≥ 2 px dos ícones do topo, e o toque na borda de baixo de cada ícone cai nele
+  // (no celular deitado estreito, com as 4 pílulas numa linha só delas, o alvo subia 3 px por cima do tema e do som e um toque ali
+  // trocava de aba; o nada sobre nada não vê o ::after)
+  const alvoAbas = await emTamanhos(Dn, [[360, 740], [390, 844], [667, 375], [740, 360], [600, 400], [799, 380], [844, 390]], () => Dn.p.evaluate(() => {
+    const sbs = [...document.querySelectorAll(".lei-cab .lei-sb")].map(e => e.getBoundingClientRect()), ruins = [];
+    [...document.querySelectorAll(".lei-abas .lei-aba")].forEach(e => {
+      const r = e.getBoundingClientRect(), a = getComputedStyle(e, "::after"), t = r.top - Math.max(0, -parseFloat(a.top) || 0), b = r.bottom + Math.max(0, -parseFloat(a.bottom) || 0);
+      sbs.forEach((s, j) => { const ix = Math.min(r.right, s.right) - Math.max(r.left, s.left), iy = Math.min(b, s.bottom + 2) - Math.max(t, s.top - 2); if (ix > 0 && iy > 0) ruins.push(e.textContent.trim() + " × ícone " + j + " (" + iy.toFixed(1) + " px)"); });
+    });
+    sbs.forEach((s, j) => { const x = document.elementFromPoint(s.left + s.width / 2, s.bottom - 1); if (!x || !x.closest(".lei-sb")) ruins.push("o toque na borda de baixo do ícone " + j + " cai em " + (x ? (x.closest(".lei-aba") ? "pílula " + x.closest(".lei-aba").textContent.trim() : x.className) : "nada")); });
+    return ruins.map(m => ({ m }));
+  }));
+  confere(`${ID}6b a aba Leilão do online pelas fotos: as 4 pílulas numa linha em 360×740 (o Saguão com o check), o topo só de ícones, sem a carta, o alvo de toque das pílulas a ≥ 2 px dos ícones (7 tamanhos, com o deitado estreito) e nada sobre nada (3 tamanhos, escuro e claro)`,
+    p6b.abas.join() === "Saguão,Leilão,Escalação,Campeonato" && p6b.linhas === 1 && p6b.feita.join() === "Saguão, concluído" && !p6b.cartas && !p6b.sbTexto && !alvoAbas.length && !nsL.ruins.length,
+    { p6b, alvoAbas: alvoAbas.slice(0, 6), ruins: nsL.ruins.slice(0, 3) });
 
   /* T7–T8 a sala congelada (o vivo mexido no servidor): "Sala parada" na Entrada e "Parada" nas Minhas salas */
   const vv = vivoServ(cod); vv.cx[0][0] += 50; REGRAS.adulteradas.add(cod); banco.gravar("leiloes/" + cod + "/vivo", vv);
