@@ -19,16 +19,16 @@
              "Atualizando a sala…" na barra, o "lidera" do placar à vista e a sala congelada "parada" na Entrada e nas
              Minhas salas
      dois    (D1–D14) a sala pela tela: criar sala (o formato Pontos + mata-mata), o código escondido com o olho e o QR,
-             Copiar convite, Compartilhar só com navigator.share; o pedido pelo link ?leilao= e aceitar; o pedido pelo código e recusar (não pede de
-             novo); as recusas na tela (código errado, sala cheia, edição, regras diferentes); Pronto e Começar; nada sobre
-             nada no Saguão (dono e convidado) e no Leilão em 360×740, 844×390 e 1280×800, no escuro e no claro; o leilão
-             inteiro pelos botões nas duas páginas; dois lances no mesmo instante (um vence, o outro vê "Alguém chegou
-             antes"); o ack perdido ("Conferindo…" e o resultado certo); o lance velho guardado (recusado); recarregar no
-             meio (pelo ?leilao= e pelas Minhas salas, depois do deploy: versaoTM diferente, quem é da sala volta); o fim
-             igual nas duas e no servidor; a escalação pela tela e o campeonato misto com 2 (a fase de pontos e a Final de
-             amigo contra amigo simuladas ao abrir a rodada, a mesma tabela e o mesmo campeão nas duas, o Ver o jogo no 2D
-             sem pausa)
-     quatro  (Q1–Q16) 4 páginas + 2 bots: os relógios +5 s e −5 s, o pulo de +60 s depois da calibração, um técnico que
+             Copiar convite, Compartilhar só com navigator.share; o pedido pelo link ?leilao= e aceitar; o pedido pelo
+             código e recusar (não pede de novo); as recusas na tela (código errado, sala cheia, edição, regras
+             diferentes); Pronto e Começar; nada sobre nada no Saguão (dono e convidado) e no Leilão em 360×740, 844×390
+             e 1280×800, no escuro e no claro; o leilão inteiro pelos botões nas duas páginas; dois lances no mesmo
+             instante (um vence, o outro vê "Alguém chegou antes"); o ack perdido ("Conferindo…" e o resultado certo); o
+             lance velho guardado (recusado); recarregar no meio (pelo ?leilao= e pelas Minhas salas, depois do deploy:
+             versaoTM diferente, quem é da sala volta); o fim igual nas duas e no servidor; a escalação pela tela e o
+             campeonato misto com 2 (a fase de pontos e a Final de amigo contra amigo simuladas ao abrir a rodada, a
+             mesma tabela e o mesmo campeão nas duas, o Ver o jogo no 2D sem pausa)
+     quatro  (Q1–Q15) 4 páginas + 2 bots: os relógios +5 s e −5 s, o pulo de +60 s depois da calibração, um técnico que
              some (a página escondida: ausente, passa sozinho, não gasta, volta), passar o clube (a conta nova pelo código,
              o dono pela tela), a 1ª página cai no meio (as outras seguem, os bots também), o mesmo fim em todas; depois
              o campeonato de PONTOS CORRIDOS com 6 pela tela: a escalação, o dono que volta pelo link, o Simular partida de
@@ -42,7 +42,7 @@
              jogo no 2D, nada sobre nada no fim e os bytes do campeonato somados aos do leilão
      G0 a guarda pega (um pedido e um WebSocket de prova a *.firebaseio.com são barrados e contados) · G1 nenhuma página
      falou com o Firebase de verdade · G2 nenhum erro no console nem na página · G3 as regras opcionais não recusariam
-     nenhuma gravação das páginas
+     nenhuma gravação honesta das páginas
    Em todo caso o servidor guarda a história de cada nó jogos/{id} (como o bloco KO do testar-leilao.mjs): cada jogo
    reservado e gravado UMA vez, com a mesma trava; o reservado pelo prazo só com a hora do SERVIDOR além do prazo e 2 min
    correndo. E as regras opcionais (o .validate do LEIA-ME-leilao.md, ferramentas/lib/regras-leilao.mjs) conferem cada
