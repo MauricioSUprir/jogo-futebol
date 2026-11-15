@@ -7496,6 +7496,8 @@ body.theme-light .lei-rod-bt, body.theme-light .lei-jogo, body.theme-light .lei-
 body.theme-light .lei-screen, body.theme-light .lei-folha, body.theme-light .lei-lance { --lei-tom: var(--black-soft); --lei-cheio: var(--gold); }
 body.theme-light .lei-lote-card, body.theme-light .lei-foto-esc { background: #ffffff; }
 body.theme-light .lei-nota { color: #ffffff; }
+/* o texto da pílula inativa um pouco mais escuro que o --text-dim (sobre o tom: 4,4 → 5,8:1) */
+body.theme-light .lei-aba:not(.on):not(.feita) { color: #4a5c50; }
 body.theme-light .lei-lote-rep { color: #92400e; }
 body.theme-light .lei-lb-tudo { color: #ffffff; }
 body.theme-light .lei-lb-tudo.confirma { color: #1b1203; }

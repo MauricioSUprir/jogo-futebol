@@ -3645,7 +3645,7 @@ async function testeTela() {
   // nada sobre nada: o critério do testar-online3d.mjs (sobreposicao), com a barra de lance (fixa) numa camada própria — o
   // que rola por baixo dela não "encosta" nela; no fim da rolagem, nada fica atrás dela (o espaço do fim da página)
   const sobreposicao = p => p.evaluate(() => {
-    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l";
+    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga";
     const visivel = e => {
       const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
       const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
@@ -3955,23 +3955,60 @@ async function testeTela() {
     await proximoLote();
     await p.evaluate(() => TM.leilaoSessao.acelerar(0.15));
     await ate(p, () => { const V = TM.leilaoSessao.atual().ver(); return V.lote && !V.lote.pausa; }, null, 30000);
-    await nadaSobreNada(p, "lote", async (p, w, h) => p.evaluate(async () => {
+    // (a tela das fotos, PLANO-LEILAO.md §9: medida em cada tamanho junto com o nada sobre nada; lotePelasFotos abaixo)
+    const lotePelasFotos = () => {
+      const r = e => e && e.getBoundingClientRect();
+      const card = document.querySelector(".lei-corpo-lote .lei-lote-card");
+      const dentro = s => { const x = card && card.querySelector(s); return !!x && x.offsetParent !== null; };
+      const sbs = [...document.querySelectorAll(".lei-cab .lei-sb")];
+      const abas = [...document.querySelectorAll(".lei-abas .lei-aba")];
+      const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => b.querySelector(".lei-lb-t").textContent.trim());
+      const v = document.querySelector(".lei-l2 .lei-valor"), cv = document.querySelector(".lei-corpo-lote .lei-cv"), V = TM.leilaoSessao.atual().ver();
+      const larg = Math.max(...[".lei-cab", ".lei-corpo-lote", ".lei-aviso-sala:not([hidden])"].map(s => { const x = document.querySelector(s); return x ? r(x).width : 0; }));
+      return {
+        // nenhuma carta do Ultimate na aba (nem a assinatura TOTAL MATCH dela)
+        cartas: document.querySelectorAll(".lei-corpo-lote .ut-card, .lei-corpo-lote .utc-tier").length,
+        // a foto, a nota, o nome, os chips, o relógio, quem lidera e o valor no MESMO cartão
+        noCartao: [".lei-foto", ".lei-nota", ".lei-nome", ".lei-chips .lei-chip", ".lei-ficha-bt", ".lei-relogio", ".lei-lider", ".lei-valor-atual", ".lei-hist"].filter(s => !dentro(s)),
+        nota: (card && card.querySelector(".lei-nota") || {}).getAttribute ? card.querySelector(".lei-nota").getAttribute("aria-label") : null,
+        // o topo: 6 ícones sem texto à vista, com aria-label e title, ≥ 44 × 44
+        sb: { n: sbs.length, comTexto: sbs.filter(b => b.innerText.trim()).length, semRotulo: sbs.filter(b => !b.getAttribute("aria-label") || !b.title).length,
+          min: Math.round(Math.min(...sbs.map(b => Math.min(r(b).width, r(b).height)))) },
+        // as abas em pílula: sem ícone, menos o check da feita
+        abasIc: abas.filter(b => b.querySelector("svg") && !b.classList.contains("feita")).length,
+        // o campinho do seu clube: as 11 vagas da formação, as compras nelas, "n/11"
+        vagas: cv ? cv.querySelectorAll(".lei-cv-vaga").length : 0, cheias: cv ? cv.querySelectorAll(".lei-cv-vaga.cheia").length : -1, meus: V.tecnicos[V.eu].n,
+        conta: cv ? cv.querySelector(".lei-cv-n").textContent : null, campinho: cv ? Math.round(r(cv).width) : 0,
+        // a barra: +1 +5 +10 Tudo; Outro valor (≥ 16 px) · Dar lance · Passar
+        l1, l2: [v && v.placeholder, v && parseFloat(getComputedStyle(v).fontSize), (document.querySelector(".lei-l2 .lei-lb-dar") || {}).textContent, (document.querySelector(".lei-l2 .lei-lb-passar") || {}).textContent],
+        larg: Math.round(larg)
+      };
+    };
+    await nadaSobreNada(p, "lote", async (p, w, h) => p.evaluate(async lotePelasFotos => {
       const barra = document.querySelector(".lei-lance").getBoundingClientRect(), rel = document.querySelector(".lei-relogio").getBoundingClientRect();
       const arco = document.querySelector(".lei-rel-arco"), d0 = arco.style.strokeDashoffset;
       await new Promise(r => setTimeout(r, 450));
       const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => Math.round(b.getBoundingClientRect().height));
       return { barraVisivel: barra.top >= 0 && barra.bottom <= innerHeight + 1 && barra.height > 40, relVisivel: rel.top >= 0 && rel.bottom <= barra.top + 0.5,
-        roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1) };
-    }));
+        roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1), fotos: (0, eval)("(" + lotePelasFotos + ")")() };
+    }, lotePelasFotos.toString()));
+    // os Próximos lotes abertos (a única linha recolhível que ficou na aba): nada sobre nada também com a lista à vista
     await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="false"]').forEach(b => b.click()));
     await espera(200);
-    await nadaSobreNada(p, "lote-blocos", async p => p.evaluate(() => {
-      const pt = document.querySelector(".lei-bloco .lei-pitch"), r = pt && pt.getBoundingClientRect();
-      return { blocos: document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').length, campinho: r ? Math.round(r.width) : 0, cartas: document.querySelectorAll(".lei-bloco .lei-pitch .ut-card").length };
-    }));
+    await nadaSobreNada(p, "lote-blocos", async p => p.evaluate(() => ({ blocos: document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').length, prox: document.querySelectorAll(".lei-bloco .lei-prox").length })));
     const blocos = nadaSobre.filter(x => /^lote-blocos/.test(x.tela));
-    confere("T4 com os blocos abertos (Seu time, Técnicos, Próximos lotes): o campinho do lote medido nos 8 tamanhos", blocos.length === 8 && blocos.every(x => x.blocos === 3 && x.campinho > 100 && x.cartas === 11), blocos.map(x => ({ t: x.tela, b: x.blocos, c: x.campinho, n: x.cartas })));
+    confere("T4 com os Próximos lotes abertos (a linha recolhível do fim) nos 8 tamanhos", blocos.length === 8 && blocos.every(x => x.blocos === 1 && x.prox > 0), blocos.map(x => ({ t: x.tela, b: x.blocos, n: x.prox })));
     await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').forEach(b => b.click()));
+    const fotos = nadaSobre.filter(x => /^lote /.test(x.tela)).map(x => Object.assign({ t: x.tela }, x.fotos));
+    confere("T4 a tela do lote pelas fotos, sem a carta: nenhuma .ut-card na aba; a foto, a nota, o nome, os chips, o (i), o relógio, quem lidera, o valor e os lances no mesmo cartão (8 tamanhos)",
+      fotos.length === 8 && fotos.every(x => x.cartas === 0 && !x.noCartao.length && /^Nota \d+$/.test(x.nota || "")), fotos.map(x => ({ t: x.t, c: x.cartas, falta: x.noCartao, nota: x.nota })));
+    confere("T4 o topo só de ícones (6, sem texto à vista, com aria-label e title, ≥ 44 × 44) e as abas em pílula sem ícone (só o check da feita), nos 8 tamanhos",
+      fotos.every(x => x.sb.n === 6 && !x.sb.comTexto && !x.sb.semRotulo && x.sb.min >= 44 && !x.abasIc), fotos.map(x => ({ t: x.t, sb: x.sb, abasIc: x.abasIc })));
+    confere("T4 o campinho do seu clube sempre à vista: as 11 vagas da formação, as compras nelas e 'n/11' (8 tamanhos)",
+      fotos.every(x => x.vagas === 11 && x.cheias === x.meus && x.meus > 0 && x.conta === x.meus + "/11" && x.campinho > 200), fotos.map(x => ({ t: x.t, v: x.vagas, cheias: x.cheias, meus: x.meus, conta: x.conta, w: x.campinho })));
+    confere("T4 a barra de lance das fotos: +1, +5, +10 e Tudo; 'Outro valor' (≥ 16 px: o iPhone não dá zoom), Dar lance e Passar (8 tamanhos)",
+      fotos.every(x => x.l1.join() === "+1,+5,+10,Tudo" && x.l2[0] === "Outro valor" && x.l2[1] >= 16 && /^Dar lance$/.test(x.l2[2]) && /^Passar$/.test(x.l2[3])), fotos.map(x => ({ t: x.t, l1: x.l1, l2: x.l2 })));
+    confere("T4 nada de ponta a ponta no PC: o topo e a aba Leilão com no máximo 1000 px nos 8 tamanhos", fotos.every(x => x.larg > 0 && x.larg <= 1000), fotos.map(x => ({ t: x.t, l: x.larg })));
     const ruins = nadaSobre.filter(x => x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.atras);
     confere(`T4 nada sobre nada (nem encostado, nem texto fora do botão): Entrada, Criar e Leilão (blocos fechados e abertos) nos 8 tamanhos (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
     const lotes = nadaSobre.filter(x => /^lote /.test(x.tela));
@@ -3984,7 +4021,7 @@ async function testeTela() {
     await p.evaluate(() => TM.leilaoSessao.acelerar(0.2));
     await espera(150);
     const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"); return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled) }; });
-    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') por cima da carta nova, com os botões apagados", vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes, vendido);
+    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') por cima do cartão do jogador novo, com os botões apagados", vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes, vendido);
     await print(p, "4-vendido");
     // tema claro
     await p.evaluate(() => TM.ui.applyTheme("light"));
@@ -3992,8 +4029,10 @@ async function testeTela() {
     const claro = await p.evaluate(() => {
       const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
       const cs = s => getComputedStyle(document.querySelector(s));
-      return { barra: lum(cs(".lei-lance").backgroundColor), meu: lum(cs(".lei-meu").backgroundColor), texto: lum(cs(".lei-meu-clube").color),
-        abaOn: cs(".lei-aba.on").backgroundImage !== "none", tudo: cs(".lei-lb-tudo").backgroundImage !== "none", sb: lum(cs(".lei-sb").backgroundColor) };
+      const verde = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return m[1] > m[0] + 40 && m[1] > m[2] + 20 && (m[3] == null || m[3] > 0.9); };
+      return { barra: lum(cs(".lei-lance").backgroundColor), cartao: lum(cs(".lei-lote-card").backgroundColor), texto: lum(cs(".lei-meu-clube").color),
+        abaOn: verde(cs(".lei-aba.on").backgroundColor) && lum(cs(".lei-aba.on").backgroundColor) < 0.5, passo: verde(cs(".lei-lb-passo").backgroundColor),
+        tudo: cs(".lei-lb-tudo").backgroundImage !== "none", sb: lum(cs(".lei-sb").color), nome: lum(cs(".lei-nome").color) };
     });
     const contraste = await p.evaluate(() => {
       const rgb = c => c.match(/[\d.]+/g).map(Number);
@@ -4006,13 +4045,16 @@ async function testeTela() {
       m.className = cls0;
       const pen = document.createElement("span"); pen.className = "lei-esc-pen"; document.querySelector(".lei-corpo").appendChild(pen);
       out.pen = Math.round(cr(getComputedStyle(pen).color, fundo) * 100) / 100; pen.remove();
+      // os tons das fotos: o texto dos chips, da pílula inativa e da ativa (branco no verde cheio) sobre o próprio fundo
+      const par = s => { const e = document.querySelector(s), c = getComputedStyle(e); return Math.round(cr(c.color, c.backgroundColor) * 100) / 100; };
+      out.chip = par(".lei-lote-card .lei-chip"); out.abaOff = par(".lei-aba:not(.on)"); out.abaOn = par(".lei-aba.on");
       return out;
     });
-    confere("T4 tema claro: o retorno e o motivo da barra (ok, alerta, erro) e o '−N fora da função' com contraste ≥ 4,5:1", Object.values(contraste).every(x => x >= 4.5), contraste);
+    confere("T4 tema claro: o retorno e o motivo da barra (ok, alerta, erro), o '−N fora da função', os chips e as pílulas com contraste ≥ 4,5:1", Object.values(contraste).every(x => x >= 4.5), contraste);
     const sClaro = await sobreposicao(p);
     await print(p, "4-claro");
-    confere("T4 tema claro: barra, caixas e botões claros, texto escuro, a aba ativa e o Tudo em verde; nada sobre nada",
-      claro.barra > 0.9 && claro.meu > 0.9 && claro.sb > 0.9 && claro.texto < 0.3 && claro.abaOn && claro.tudo && !sClaro.sobre.length && !sClaro.encostam.length && !sClaro.saem.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3), encostam: sClaro.encostam.slice(0, 3), saem: sClaro.saem.slice(0, 3) });
+    confere("T4 tema claro: a barra e o cartão do lote claros, o texto e os ícones do topo escuros, a pílula ativa e o +1 em verde cheio e o Tudo em verde; nada sobre nada",
+      claro.barra > 0.9 && claro.cartao > 0.9 && claro.sb < 0.5 && claro.texto < 0.3 && claro.nome < 0.3 && claro.abaOn && claro.passo && claro.tudo && !sClaro.sobre.length && !sClaro.encostam.length && !sClaro.saem.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3), encostam: sClaro.encostam.slice(0, 3), saem: sClaro.saem.slice(0, 3) });
     await p.evaluate(() => TM.ui.applyTheme("dark"));
 
     /* T5 a barra da sessão: Como funciona, Participantes e Vendas (folhas), e o relógio parado fora da sala */
