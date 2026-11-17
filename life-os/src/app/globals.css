@@ -1,0 +1,141 @@
+@import "tailwindcss";
+
+/* Identidade do LIFE OS: preto profundo, azul-elétrico, violeta, branco e detalhes holográficos. */
+@theme {
+  --color-fundo: #080b12;
+  --color-fundo-2: #0b1020;
+  --color-painel: #0e1424;
+  --color-painel-2: #141c30;
+  --color-borda: rgb(148 163 184 / 0.14);
+  --color-borda-forte: rgb(148 163 184 / 0.28);
+  --color-texto: #f8fafc;
+  --color-suave: #94a3b8;
+  --color-apagado: #64748b;
+  --color-eletrico: #2563eb;
+  --color-eletrico-claro: #60a5fa;
+  --color-violeta: #7c3aed;
+  --color-violeta-claro: #a78bfa;
+  --color-ciano: #22d3ee;
+  --color-ok: #34d399;
+  --color-alerta: #fbbf24;
+  --color-perigo: #f43f5e;
+
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Space Grotesk Variable", "Inter Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --animate-entrar: entrar 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-brilho: brilho 6s linear infinite;
+}
+
+@keyframes entrar {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes brilho {
+  to { background-position: 200% 0; }
+}
+
+html {
+  color-scheme: dark;
+  background: var(--color-fundo);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-fundo);
+  color: var(--color-texto);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100dvh;
+}
+
+/* Fundo com brilho azul/violeta e uma grade bem fraca (o "painel de controle"). */
+.fundo-holo {
+  background-color: var(--color-fundo);
+  background-image:
+    radial-gradient(60rem 40rem at -10% -20%, rgb(37 99 235 / 0.16), transparent 60%),
+    radial-gradient(50rem 40rem at 110% 10%, rgb(124 58 237 / 0.12), transparent 60%),
+    linear-gradient(rgb(148 163 184 / 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(148 163 184 / 0.035) 1px, transparent 1px);
+  background-size: auto, auto, 32px 32px, 32px 32px;
+  background-attachment: fixed;
+}
+
+@layer components {
+  .painel {
+    background: linear-gradient(180deg, rgb(20 28 48 / 0.78), rgb(14 20 36 / 0.78));
+    border: 1px solid var(--color-borda);
+    border-radius: 1.25rem;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.04), 0 10px 30px -18px rgb(0 0 0 / 0.8);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+  }
+
+  /* Borda holográfica (azul → violeta → ciano) só no contorno. */
+  .holo {
+    position: relative;
+  }
+  .holo::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1px;
+    border-radius: inherit;
+    background: linear-gradient(120deg, rgb(37 99 235 / 0.7), rgb(124 58 237 / 0.55), rgb(34 211 238 / 0.55), rgb(37 99 235 / 0.7));
+    background-size: 200% 100%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .texto-holo {
+    background: linear-gradient(90deg, #f8fafc, #93c5fd 35%, #c4b5fd 65%, #f8fafc);
+    background-size: 200% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .rotulo {
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-suave);
+    font-weight: 600;
+  }
+
+  .numero {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-eletrico-claro);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(3 6 12 / 0.72);
+  backdrop-filter: blur(4px);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.seta-select {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 14px;
+}

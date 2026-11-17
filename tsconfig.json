@@ -19,5 +19,5 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "legacy-total-match"]
+  "exclude": ["node_modules", "legacy-total-match", "life-os"]
 }

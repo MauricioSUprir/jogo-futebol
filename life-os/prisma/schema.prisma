@@ -1,0 +1,214 @@
+// LIFE OS — banco de dados (Fase 1: fundação).
+// Datas de "dia" (água, hábitos, tarefas) são @db.Date na data LOCAL do usuário (fuso em User.timezone).
+// Horários (eventos, registros) são timestamptz em UTC.
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ───────────────────────── Conta, sessões e segurança ─────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  displayName  String
+  passwordHash String
+  timezone     String   @default("America/Sao_Paulo")
+  // Janela do dia usada pelo planejamento automático da agenda.
+  dayStart     String   @default("07:00")
+  dayEnd       String   @default("22:00")
+  // Preferências do painel (ordem e cartões escondidos).
+  prefs        Json     @default("{}")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Autenticação em dois fatores (TOTP). O segredo fica cifrado (AES-256-GCM).
+  totpSecretEnc String?
+  totpEnabled   Boolean @default(false)
+  // Último passo de 30 s aceito: impede usar o mesmo código duas vezes.
+  totpLastStep  Int?
+
+  sessions      Session[]
+  recoveryCodes RecoveryCode[]
+  accessLogs    AccessLog[]
+  waterSettings WaterSettings?
+  waterEntries  WaterEntry[]
+  waterDays     WaterDay[]
+  habits        Habit[]
+  events        CalendarEvent[]
+  tasks         Task[]
+}
+
+model Session {
+  // SHA-256 do token do cookie: o banco nunca guarda o token em si.
+  id         String   @id
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  expiresAt  DateTime
+  // Senha certa, falta o código do autenticador.
+  mfaPending Boolean  @default(false)
+  userAgent  String?
+  ip         String?
+
+  @@index([userId])
+}
+
+model RecoveryCode {
+  id       String    @id @default(cuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String
+  usedAt   DateTime?
+
+  @@index([userId])
+}
+
+model LoginAttempt {
+  id       String   @id @default(cuid())
+  username String
+  ip       String?
+  // "senha" ou "codigo"
+  kind     String   @default("senha")
+  success  Boolean
+  at       DateTime @default(now())
+
+  @@index([username, at])
+  @@index([ip, at])
+}
+
+model AccessLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  event     String
+  detail    String?
+  ip        String?
+  userAgent String?
+  at        DateTime @default(now())
+
+  @@index([userId, at])
+}
+
+// ───────────────────────── Hydro Track ─────────────────────────
+
+model WaterSettings {
+  userId       String @id
+  user         User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goalMl       Int    @default(2000)
+  glassMl      Int    @default(250)
+  bottleMl     Int    @default(500)
+  quickAmounts Int[]  @default([200, 300])
+}
+
+model WaterEntry {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day      DateTime @db.Date
+  at       DateTime @default(now())
+  amountMl Int
+  // agua | cha | suco | leite | cafe | isotonico | refrigerante | outro
+  beverage String   @default("agua")
+  // copo | garrafa | rapido | personalizado
+  kind     String   @default("copo")
+
+  @@index([userId, day])
+}
+
+// Meta "congelada" do dia (mudar a meta não reescreve o histórico) e marcação de dia de treino.
+model WaterDay {
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         DateTime @db.Date
+  goalMl      Int
+  trainingDay Boolean  @default(false)
+
+  @@id([userId, day])
+}
+
+// ───────────────────────── Hábitos ─────────────────────────
+
+model Habit {
+  id           String     @id @default(cuid())
+  userId       String
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  icon         String     @default("check")
+  color        String     @default("azul")
+  // diario | dias (dias da semana) | semanal (X vezes por semana)
+  frequency    String     @default("diario")
+  // Dias da semana: bit 0 = domingo … bit 6 = sábado.
+  weekdays     Int        @default(127)
+  timesPerWeek Int        @default(3)
+  targetPerDay Int        @default(1)
+  // "agua": conclui sozinho quando a meta de água do dia é batida.
+  source       String?
+  archived     Boolean    @default(false)
+  position     Int        @default(0)
+  startDay     DateTime   @db.Date
+  createdAt    DateTime   @default(now())
+  logs         HabitLog[]
+
+  @@index([userId, archived])
+}
+
+model HabitLog {
+  habitId   String
+  habit     Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  count     Int      @default(0)
+  // Dia de descanso planejado: não conta como falta e não quebra a sequência.
+  skipped   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@id([habitId, day])
+}
+
+// ───────────────────────── Agenda ─────────────────────────
+
+model CalendarEvent {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  // prova | trabalho | consulta | treino | partida | evento | aniversario | compromisso | aula | meta | lembrete | outro
+  category        String    @default("compromisso")
+  allDay          Boolean   @default(false)
+  // Dia inteiro: start = meia-noite UTC da data (só a data importa).
+  start           DateTime
+  end             DateTime?
+  location        String?
+  notes           String?
+  // nenhuma | diaria | semanal | mensal | anual
+  recurrence      String    @default("nenhuma")
+  recurrenceUntil DateTime? @db.Date
+  createdAt       DateTime  @default(now())
+
+  @@index([userId, start])
+}
+
+model Task {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title          String
+  durationMin    Int       @default(30)
+  // 1 = alta, 2 = média, 3 = baixa
+  priority       Int       @default(2)
+  dueDay         DateTime? @db.Date
+  scheduledStart DateTime?
+  done           Boolean   @default(false)
+  doneAt         DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, done])
+}
