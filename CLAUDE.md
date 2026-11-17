@@ -1563,7 +1563,7 @@ computador, tablet); identidade preto `#080B12`, azul-elétrico `#2563EB`, viole
 detalhes holográficos. O plano dele pode ser de um adolescente (fala em adolescência e "passar direto"): **nada de
 diagnóstico, dieta restritiva, contagem obsessiva de calorias nem incentivo a excesso de exercício**; metas são dele e
 ajustáveis (não recomendação médica); sequências só motivacionais (perder um dia não pune).
-- **Fase 1 (Fundação) ENTREGUE** (branch `claude/ecstatic-turing-p8t9ma`): Central de Comando, Hydro Track, Habit Tracker,
+- **Fase 1 (Fundação) ENTREGUE** (PR #649): Central de Comando, Hydro Track, Habit Tracker,
   Life Calendar (planejamento automático + modo foco), Registrar (botão central), segurança (conta única por
   `LIFEOS_SETUP_TOKEN`, scrypt, sessões revogáveis no banco, TOTP + códigos de recuperação, limite de tentativas,
   registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário. **Próximas (esperam o dono):**
