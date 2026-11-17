@@ -1,0 +1,67 @@
+name: LIFE OS — testes
+# O LIFE OS (life-os/) em todo PR que mexe nele: tipos, testes de unidade (vitest), build de produção
+# (standalone) e o teste de ponta a ponta no Chromium contra um PostgreSQL de verdade (tests/e2e/fluxo.mjs).
+# Não publica nada: o LIFE OS roda no servidor do dono (Docker Compose), não no GitHub Pages.
+on:
+  pull_request:
+    paths:
+      - 'life-os/**'
+      - '.github/workflows/life-os-testes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  life-os:
+    name: life-os
+    # Ubuntu 24.04 fixo, como os outros testes no navegador do repositório (Playwright 1.56).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_PASSWORD: teste
+          POSTGRES_DB: lifeos_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    defaults:
+      run:
+        working-directory: life-os
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:teste@127.0.0.1:5432/lifeos_e2e
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: life-os/package-lock.json
+      - name: Dependências
+        run: npm ci --no-audit --no-fund
+      - name: Tipos (TypeScript)
+        run: npm run typecheck
+      - name: Testes de unidade (vitest)
+        run: npm test
+      - name: Build de produção (standalone)
+        run: npm run build
+      - name: Playwright (Chromium)
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Ponta a ponta (conta, água, hábitos, agenda, 2 etapas, exportação, celular, limite)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: node tests/e2e/fluxo.mjs
+      - name: Capturas do teste
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: life-os-e2e
+          path: life-os/tests/e2e/saida
+          if-no-files-found: ignore
+          retention-days: 7

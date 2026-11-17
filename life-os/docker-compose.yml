@@ -1,0 +1,70 @@
+# LIFE OS — servidor completo: app + PostgreSQL + backup diário.
+# 1) cp .env.exemplo .env   e preencha POSTGRES_PASSWORD, LIFEOS_ENCRYPTION_KEY e LIFEOS_SETUP_TOKEN
+# 2) docker compose up -d --build
+# 3) publique com HTTPS (Tailscale Serve ou Caddy — ver README) e abra /configurar
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: lifeos
+      POSTGRES_USER: lifeos
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+    volumes:
+      - dados:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lifeos -d lifeos"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    # Sem "ports": o banco não fica exposto nem na rede de casa, só para o app.
+
+  migrar:
+    build: { context: ., target: migrador }
+    environment:
+      DATABASE_URL: postgresql://lifeos:${POSTGRES_PASSWORD}@db:5432/lifeos
+    depends_on:
+      db: { condition: service_healthy }
+    restart: "no"
+
+  app:
+    build: { context: ., target: app }
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://lifeos:${POSTGRES_PASSWORD}@db:5432/lifeos
+      LIFEOS_ENCRYPTION_KEY: ${LIFEOS_ENCRYPTION_KEY:?defina LIFEOS_ENCRYPTION_KEY no .env}
+      LIFEOS_SETUP_TOKEN: ${LIFEOS_SETUP_TOKEN:?defina LIFEOS_SETUP_TOKEN no .env}
+      LIFEOS_TRUST_PROXY: ${LIFEOS_TRUST_PROXY:-1}
+      LIFEOS_COOKIE_SECURE: ${LIFEOS_COOKIE_SECURE:-1}
+    # Só na própria máquina (127.0.0.1). Quem publica com HTTPS é o Tailscale Serve ou o Caddy.
+    ports:
+      - "127.0.0.1:${LIFEOS_PORTA:-3000}:3000"
+    depends_on:
+      migrar: { condition: service_completed_successfully }
+
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MANTER_DIAS: ${BACKUP_MANTER_DIAS:-14}
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      db: { condition: service_healthy }
+    # Um pg_dump compactado por dia; apaga os mais velhos que MANTER_DIAS (e sobras de backups que falharam).
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -o pipefail
+        while true; do
+          arq=/backups/lifeos-$$(date +%Y-%m-%d-%H%M).sql.gz
+          if pg_dump --clean --if-exists -h db -U lifeos -d lifeos | gzip > "$$arq.tmp"; then mv "$$arq.tmp" "$$arq"; echo "backup: $$arq"; else echo "backup FALHOU"; fi
+          find /backups -name 'lifeos-*.sql.gz' -mtime +$$MANTER_DIAS -delete
+          find /backups -name 'lifeos-*.tmp' -mmin +60 -delete
+          sleep 86400
+        done
+
+volumes:
+  dados:

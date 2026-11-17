@@ -2,7 +2,8 @@
 
 Repositório com vários projetos. Os estáticos (sem build) são publicados pelo GitHub
 Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O CreateFlow
-(Next.js, raiz) é hospedado à parte.
+(Next.js, raiz) é hospedado à parte. O LIFE OS (`life-os/`, Next.js + PostgreSQL) roda no servidor
+do dono (Docker Compose), fora do Pages — ver a seção "LIFE OS" no fim.
 
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
@@ -1554,3 +1555,36 @@ node tools/engine-test.mjs
 # navegador (servidor: python3 -m http.server 8791 em simulador/):
 node tools/ui-shot.mjs --out /tmp/lal && node tools/e2e.mjs
 ```
+
+## LIFE OS (`life-os/`) — sistema operacional pessoal (privado, servidor próprio)
+Pedido do dono (17/11): painel de vida "estilo Tony Stark" com 15 módulos (água, hábitos, agenda, saúde, treinos/futebol,
+sono, bem-estar, estudos, alimentação, metas, finanças, projetos, IA, analytics) em 4 fases; acesso só dele (iPhone,
+computador, tablet); identidade preto `#080B12`, azul-elétrico `#2563EB`, violeta `#7C3AED`, branco, cinza `#94A3B8`,
+detalhes holográficos. O plano dele pode ser de um adolescente (fala em adolescência e "passar direto"): **nada de
+diagnóstico, dieta restritiva, contagem obsessiva de calorias nem incentivo a excesso de exercício**; metas são dele e
+ajustáveis (não recomendação médica); sequências só motivacionais (perder um dia não pune).
+- **Fase 1 (Fundação) ENTREGUE** (branch `claude/ecstatic-turing-p8t9ma`): Central de Comando, Hydro Track, Habit Tracker,
+  Life Calendar (planejamento automático + modo foco), Registrar (botão central), segurança (conta única por
+  `LIFEOS_SETUP_TOKEN`, scrypt, sessões revogáveis no banco, TOTP + códigos de recuperação, limite de tentativas,
+  registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário. **Próximas (esperam o dono):**
+  Fase 2 (Fitness, Health, Sleep, Mind com diário cifrado, Study, Nutrition, Goals) → Fase 3 (Analytics, Web Push,
+  Finance, Project Hub, IA opcional só com o que ele autorizar) → Fase 4 (voz, widgets, Google Calendar, cofre, diário
+  com fotos). O mapa está em `life-os/src/lib/modulos.ts` (a tela "Todos os módulos").
+- Técnica: Next.js 16 (App Router, `output: standalone`, `src/proxy.ts`), TypeScript estrito, Tailwind 4 (tokens no
+  `globals.css` `@theme`), Prisma 7 (`prisma.config.ts`, cliente gerado em `src/generated`, driver `@prisma/adapter-pg`;
+  o `db` é preguiçoso: o build roda sem banco), Recharts, lucide-react. Auth PRÓPRIA (não Auth.js: as sessões JWT do
+  provedor de senha não se revogam). Regras puras e testadas em `src/lib/*.ts` (sem DOM nem banco); toda server action
+  chama `exigirUsuario()`; dias pela data LOCAL do fuso do usuário (`lib/datas.ts`), horários em UTC.
+- Interface: componentes à mão no estilo shadcn/ui (`components/ui.tsx`, `cliente.tsx`); toda grade leva coluna
+  `grid-cols-1` (minmax(0,1fr)) — uma grade sem coluna explícita deixou um nome longo alargar a página do iPhone para 433
+  px; formulários com `useActionState` usam `onReset={manterValores}` (o React 19 limpa o formulário depois da ação e a
+  pessoa perdia o que digitou quando dava erro). Gráficos pela skill dataviz (azul `#3987e5` + água `#199e70`, validados
+  no fundo escuro). Nada de CDN, rastreador nem IA externa (CSP só `'self'`).
+- Testes (rodar antes de todo commit do LIFE OS; o CI `.github/workflows/life-os-testes.yml` roda em todo PR que mexe em
+  `life-os/`): `npm run typecheck && npm test && npm run build && node tests/e2e/fluxo.mjs` (o e2e APAGA o banco
+  `E2E_DATABASE_URL`, padrão `postgresql://postgres@127.0.0.1:5544/lifeos_e2e`; 61 verificações, também no celular).
+  Postgres local: `/usr/lib/postgresql/16/bin` com `runuser -u postgres` (dados em `/var/tmp`, não no scratchpad). O
+  Docker sobe com `dockerd &`; para construir a imagem AQUI (proxy com certificado próprio) use um Dockerfile de teste no
+  scratchpad com `--build-context certs=/root/.ccr` + `NODE_EXTRA_CA_CERTS` e `--network host` — o Dockerfile real
+  fica limpo. Servidores Next mudam o nome do processo para `next-server`: pare com `pkill -f next-server`.
+

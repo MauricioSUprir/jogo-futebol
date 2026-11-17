@@ -1,0 +1,9 @@
+node_modules
+.next
+src/generated
+.env
+.env.*
+!.env.exemplo
+backups
+tests/e2e/saida
+*.tsbuildinfo
