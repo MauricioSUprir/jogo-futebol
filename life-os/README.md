@@ -67,6 +67,19 @@ seguro: sem a `LIFEOS_ENCRYPTION_KEY`, a verificação em duas etapas precisa se
 Alternativa com domínio próprio: um [Caddy](https://caddyserver.com) na frente (`seu.dominio { reverse_proxy
 127.0.0.1:3000 }`) dá HTTPS automático. Nesse caso o site fica na internet: use senha forte e as duas etapas.
 
+### Na nuvem (Railway)
+
+O `railway.json` desta pasta já configura tudo: build pelo `Dockerfile`, migrações do banco antes de cada deploy
+(`sh /migrar/migrar.sh`), verificação em `/api/saude` e deploy só quando algo em `life-os/` muda.
+
+1. Projeto novo no Railway → **Database → PostgreSQL**.
+2. **New → GitHub Repo** com este repositório, branch `main`, e em **Settings → Root Directory**: `life-os`.
+3. Variáveis do serviço: `DATABASE_URL=${{Postgres.DATABASE_URL}}`, `LIFEOS_ENCRYPTION_KEY`, `LIFEOS_SETUP_TOKEN`,
+   `LIFEOS_TRUST_PROXY=1`.
+4. **Settings → Networking → Generate Domain** e abra `/configurar` nesse endereço.
+
+Na nuvem o site fica na internet (com HTTPS): use senha forte e ligue a verificação em duas etapas logo no início.
+
 ### Instalar como app no iPhone
 
 Abra o endereço no **Safari** → botão Compartilhar → **Adicionar à Tela de Início**. Abre em tela cheia, com a barra

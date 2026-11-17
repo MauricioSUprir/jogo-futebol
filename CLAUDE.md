@@ -1587,4 +1587,10 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
   Docker sobe com `dockerd &`; para construir a imagem AQUI (proxy com certificado próprio) use um Dockerfile de teste no
   scratchpad com `--build-context certs=/root/.ccr` + `NODE_EXTRA_CA_CERTS` e `--network host` — o Dockerfile real
   fica limpo. Servidores Next mudam o nome do processo para `next-server`: pare com `pkill -f next-server`.
+- **Na nuvem (dono, 17/11: "cria um link e me manda")**: Railway da conta DELE (gui.drodrigues21, onde está o
+  `gideon-n8n`), projeto `life-os` (Postgres + serviço do repositório com Root Directory `life-os`, branch `main`). O
+  `life-os/railway.json` manda: Dockerfile, pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto vai DENTRO da imagem do
+  app, em `/migrar`), healthcheck `/api/saude` e `watchPatterns` `/life-os/**`. Sem ele o Railway leria o `railway.json` da
+  RAIZ (o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
+  `mirror.gcr.io/library/node:22-bookworm-slim`.
 
