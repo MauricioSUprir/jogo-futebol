@@ -25,6 +25,8 @@ export const EVENTOS_ACESSO: Record<string, string> = {
   diario_senha_errada: "Senha do diário errada",
   diario_bloqueado: "Diário: muitas tentativas",
   diario_apagado: "Diário apagado",
+  documento_enviado: "Documento de saúde enviado",
+  documento_baixado: "Documento de saúde baixado",
 };
 
 export async function registrarAcesso(userId: string | null, event: string, detail?: string) {
