@@ -1,6 +1,7 @@
 "use server";
 // Conta, login, verificação em duas etapas, sessões e perfil.
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { timingSafeEqual } from "node:crypto";
 import QRCode from "qrcode";
@@ -18,6 +19,7 @@ import {
 import { completarSessao, criarSessao, encerrarSessaoAtual, exigirUsuario, idDaSessaoAtual, sessaoAtual } from "@/lib/servidor/sessao";
 import { anotarTentativa, bloqueio } from "@/lib/servidor/limite";
 import { registrarAcesso } from "@/lib/servidor/registro";
+import { salvarPref } from "@/lib/servidor/prefs";
 import { dadosDaRequisicao } from "@/lib/servidor/requisicao";
 import { fusoValido, horaParaMinutos, validaHora } from "@/lib/datas";
 import type { Estado } from "./tipos";
@@ -163,6 +165,8 @@ export async function verificarCodigo(_: Estado, fd: FormData): Promise<Estado> 
 export async function sair(): Promise<void> {
   const s = await sessaoAtual();
   await encerrarSessaoAtual();
+  // A chave do diário (senha extra) sai junto com a sessão.
+  (await cookies()).set("lifeos_diario", "", { path: "/mente", maxAge: 0 });
   if (s) await registrarAcesso(s.user.id, "saiu");
   redirect("/entrar");
 }
@@ -311,6 +315,6 @@ export async function salvarPainel(fd: FormData): Promise<void> {
     .filter((c): c is (typeof CARTOES_PAINEL)[number] => (CARTOES_PAINEL as readonly string[]).includes(c));
   const ocultos = CARTOES_PAINEL.filter((c) => fd.get("ver_" + c) !== "on");
   const completa = [...new Set([...ordem, ...CARTOES_PAINEL])];
-  await db.user.update({ where: { id: user.id }, data: { prefs: { painel: { ordem: completa, ocultos } } } });
+  await salvarPref(user.id, "painel", { ordem: completa, ocultos });
   revalidatePath("/");
 }

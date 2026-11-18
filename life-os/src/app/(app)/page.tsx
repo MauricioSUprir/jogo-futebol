@@ -19,6 +19,22 @@ import { LinhaHabito } from "@/components/habitos/linha";
 import { GraficoSemana } from "@/components/graficos";
 import { PersonalizarPainel } from "@/components/painel/personalizar";
 import { adicionarAgua } from "@/acoes/agua";
+import { CartaoPainelCheckin } from "@/components/checkin/cartao-painel";
+import { CartaoPainelTreinos } from "@/components/treinos/cartao-painel";
+import { CartaoPainelSono } from "@/components/sono/cartao-painel";
+import { CartaoPainelSaude } from "@/components/saude/cartao-painel";
+import { CartaoPainelMente } from "@/components/mente/cartao-painel";
+import { CartaoPainelAlimentacao } from "@/components/alimentacao/cartao-painel";
+import { CartaoPainelEstudos } from "@/components/estudos/cartao-painel";
+import { CartaoPainelMetas } from "@/components/metas/cartao-painel";
+import { insightsTreinos } from "@/lib/servidor/treinos";
+import { insightsSono } from "@/lib/servidor/sono";
+import { insightsSaude } from "@/lib/servidor/saude";
+import { insightsMente } from "@/lib/servidor/mente";
+import { insightsAlimentacao } from "@/lib/servidor/alimentacao";
+import { insightsEstudos } from "@/lib/servidor/estudos";
+import { insightsMetas } from "@/lib/servidor/metas";
+import type { Insight } from "@/lib/insights";
 import { cn } from "@/lib/cn";
 
 export const metadata = { title: "Central de Comando" };
@@ -29,13 +45,26 @@ export default async function CentralDeComando() {
   const hojeK = hoje(tz);
   const agoraMin = minutosNoFuso(new Date(), tz);
 
-  const [agua, habitos, agenda, tarefasFeitas, tarefasPendentes] = await Promise.all([
+  // Insights dos módulos: um módulo com problema não derruba o painel.
+  const seguro = (p: Promise<Insight[]>) => p.catch(() => [] as Insight[]);
+  const [agua, habitos, agenda, tarefasFeitas, tarefasPendentes, contagens, insightsModulos] = await Promise.all([
     aguaDoPeriodo(user, somaDias(hojeK, -400), hojeK),
     carregarHabitos(user, hojeK),
     carregarAgenda(user, hojeK, somaDias(hojeK, 7)),
     db.task.count({ where: { userId: user.id, done: true } }),
     db.task.count({ where: { userId: user.id, done: false, scheduledStart: null } }),
+    Promise.all([
+      db.activity.count({ where: { userId: user.id } }),
+      db.studySession.count({ where: { userId: user.id } }),
+      db.goal.count({ where: { userId: user.id, status: "concluido" } }),
+      db.dailyCheckin.count({ where: { userId: user.id } }),
+      db.sleepLog.count({ where: { userId: user.id } }),
+    ]),
+    Promise.all(
+      [insightsTreinos, insightsSono, insightsEstudos, insightsMetas, insightsMente, insightsAlimentacao, insightsSaude].map((f) => seguro(f(user, hojeK))),
+    ),
   ]);
+  const [atividades, sessoesEstudo, metasConcluidas, checkins, noites] = contagens;
 
   // ───── números do dia ─────
   const diaAgua = agua.resumo[agua.resumo.length - 1];
@@ -72,14 +101,28 @@ export default async function CentralDeComando() {
     agua7: agua.resumo.slice(-8, -1),
     aguaAnterior7: agua.resumo.slice(-15, -8),
     habitos: habitos.map((h) => ({ nome: h.habito.name, pct30: h.taxa30.pct, esperados30: h.taxa30.esperados, sequencia: h.sequencia.unidade === "dias" ? h.sequencia.valor : 0 })),
+    // A prova que o Study Center já comenta (com o checklist) não se repete aqui.
     provasProximas: agenda
       .filter((i) => i.tipo === "evento" && i.categoria === "prova" && i.dia >= hojeK)
+      .filter((i) => !insightsModulos.flat().some((m) => m.texto.includes(i.titulo)))
       .map((i) => ({ titulo: i.titulo, dias: diasEntre(hojeK, i.dia) })),
   });
+  // Primeiro os avisos de atenção (ex.: descanso), depois os positivos; no máximo 6.
+  const peso = { atencao: 0, positivo: 1, neutro: 2 } as Record<string, number>;
+  const todosInsights = [...insightsModulos.flat(), ...insights]
+    .map((i, k) => ({ i, k }))
+    .sort((a, b) => (peso[a.i.tom] ?? 3) - (peso[b.i.tom] ?? 3) || a.k - b.k)
+    .map((x) => x.i)
+    .slice(0, 6);
   const xp = calcularXp({
     habitos: habitos.reduce((s, h) => s + h.total, 0),
     diasMetaAgua: agua.resumo.filter((d) => d.bateu).length,
     tarefas: tarefasFeitas,
+    atividades,
+    sessoesEstudo,
+    metasConcluidas,
+    checkins,
+    noites,
   });
   const lv = nivel(xp);
 
@@ -237,11 +280,11 @@ export default async function CentralDeComando() {
     ),
     insights: (
       <Cartao key="insights" titulo="Smart Insights" icone={Lightbulb}>
-        {insights.length === 0 ? (
-          <p className="py-3 text-sm text-suave">Registre alguns dias de água e hábitos e os padrões aparecem aqui.</p>
+        {todosInsights.length === 0 ? (
+          <p className="py-3 text-sm text-suave">Registre alguns dias de água, hábitos, sono e treinos e os padrões aparecem aqui.</p>
         ) : (
           <ul className="grid grid-cols-1 gap-2">
-            {insights.map((i, k) => (
+            {todosInsights.map((i, k) => (
               <li key={k} className="flex gap-2 text-sm">
                 <Sparkles
                   className={cn("mt-0.5 h-4 w-4 shrink-0", i.tom === "positivo" ? "text-ok" : i.tom === "atencao" ? "text-alerta" : "text-eletrico-claro")}
@@ -254,6 +297,14 @@ export default async function CentralDeComando() {
         )}
       </Cartao>
     ),
+    checkin: <CartaoPainelCheckin key="checkin" user={user} hojeK={hojeK} />,
+    treinos: <CartaoPainelTreinos key="treinos" user={user} hojeK={hojeK} />,
+    estudos: <CartaoPainelEstudos key="estudos" user={user} hojeK={hojeK} />,
+    sono: <CartaoPainelSono key="sono" user={user} hojeK={hojeK} />,
+    metas: <CartaoPainelMetas key="metas" user={user} hojeK={hojeK} />,
+    alimentacao: <CartaoPainelAlimentacao key="alimentacao" user={user} hojeK={hojeK} />,
+    mente: <CartaoPainelMente key="mente" user={user} hojeK={hojeK} />,
+    saude: <CartaoPainelSaude key="saude" user={user} hojeK={hojeK} />,
   };
 
   const kpis = [

@@ -97,7 +97,14 @@ export async function salvarEvento(_: Estado, fd: FormData): Promise<Estado> {
 
 export async function excluirEvento(fd: FormData): Promise<void> {
   const user = await exigirUsuario();
-  await db.calendarEvent.deleteMany({ where: { id: String(fd.get("id") ?? ""), userId: user.id } });
+  const id = String(fd.get("id") ?? "");
+  // O que outros módulos ligaram ao evento: o checklist da prova sai junto; a consulta e a meta só perdem o vínculo.
+  await db.$transaction([
+    db.checklistItem.deleteMany({ where: { userId: user.id, eventId: id } }),
+    db.healthRecord.updateMany({ where: { userId: user.id, eventId: id }, data: { eventId: null } }),
+    db.goal.updateMany({ where: { userId: user.id, eventId: id }, data: { eventId: null } }),
+    db.calendarEvent.deleteMany({ where: { id, userId: user.id } }),
+  ]);
   revalidar();
 }
 
