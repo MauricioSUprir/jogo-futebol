@@ -1,13 +1,13 @@
 # LIFE OS — sistema operacional pessoal
 
-Painel privado para organizar a rotina: água, hábitos, agenda e tarefas hoje; saúde, treinos, sono, estudos,
-finanças, projetos e IA nas próximas fases. Roda num **servidor só seu** (um computador de casa ou uma VPS), com
+Painel privado para organizar a rotina: água, hábitos, agenda, treinos e futebol, saúde, sono, bem-estar, alimentação,
+estudos e metas; finanças, projetos, relatórios e IA nas próximas fases. Roda num **servidor só seu** (um computador de casa ou uma VPS), com
 banco de dados próprio e login privado. Nenhum dado sai do servidor: sem rastreadores, sem CDN, sem IA externa.
 
 Identidade: preto profundo `#080B12`, azul‑elétrico `#2563EB`, violeta `#7C3AED`, branco `#F8FAFC`, cinza
 `#94A3B8` e bordas holográficas. Funciona no iPhone, no computador e no tablet, e instala como app (PWA).
 
-## O que já funciona (Fase 1 — Fundação)
+## Fase 1 — Fundação
 
 | Módulo | O que faz |
 |---|---|
@@ -15,11 +15,25 @@ Identidade: preto profundo `#080B12`, azul‑elétrico `#2563EB`, violeta `#7C3A
 | **Hydro Track** (`/agua`) | Copo, garrafa e botões rápidos configuráveis; registro personalizado (quantidade, bebida, dia e horário); outras bebidas à parte (só a água conta para a meta); meta diária ajustável (o histórico guarda a meta de cada dia); dia de treino; desfazer; gráficos de 7/30 dias com a linha da meta e por hora do dia; média, meta batida, sequência, regularidade, treino × descanso; tabela; exportação CSV. |
 | **Habit Tracker** (`/habitos`) | Hábitos diários, em dias da semana ou X vezes por semana, com meta por dia (ex.: 2×); sequências só motivacionais (hoje pendente não quebra; dia de descanso é neutro); conclusão 7/30/90 dias; calendário do mês para marcar dias passados; conquistas (3, 7, 14, 30… dias); ícones e cores; arquivar; ordenar; sugestões do primeiro uso; o hábito "Registrar água" se marca sozinho quando a meta é batida. |
 | **Life Calendar** (`/agenda`) | Semana, mês e dia; provas, trabalhos, aulas, consultas, treinos, partidas, eventos, aniversários, compromissos, metas e lembretes; dia inteiro e vários dias; repetição diária/semanal/mensal/anual com fim; tarefas com duração, prioridade e prazo; **planejamento automático** (encaixa as tarefas nos horários livres da sua janela do dia, com folga antes/depois dos compromissos e pausa depois de 90 min de foco — mostra a proposta antes de gravar); **modo foco** (só a atividade de agora, com contagem regressiva); exportação `.ics` (Calendário do iPhone, Google Agenda, Outlook). |
-| **Registrar** (botão central) | Água, hábitos de hoje, novo evento e nova tarefa num lugar só. |
+| **Registrar** (botão central) | Água, hábitos de hoje, treino, sono, refeição, estudo, "como estou" (check-in), novo evento e nova tarefa num lugar só. |
 | **Segurança** (`/configuracoes/seguranca`) | Verificação em duas etapas (app autenticador + 8 códigos de recuperação), troca de senha, sessões ativas (encerrar uma ou todas as outras) e registro de acessos. |
 | **Dados** (`/configuracoes/dados`) | Exportação completa em JSON, água em CSV e agenda em `.ics`. |
 
-Os outros módulos aparecem em **Todos os módulos** (`/mais`) com a fase em que chegam.
+## Fase 2 — Saúde e rotina
+
+| Módulo | O que faz |
+|---|---|
+| **Fitness Center** (`/treinos`) | **Musculação:** fichas com exercícios (grupo muscular, séries, repetições, carga, intervalo), favoritas, semana de treinamento (a ficha de cada dia e os dias de recuperação), sessão pela ficha com a carga da última vez já preenchida, cronômetro de intervalo (+15 s, pausa, vibração), histórico, evolução da carga por exercício e observações de técnica. **Futebol:** partidas (minutos, gols, assistências, posição, placar, desempenho percebido), treinos técnicos e recreativo; estatísticas por temporada, participações em gol a cada 90 min, por posição, jogos por mês e comparação entre temporadas. **Cardio:** caminhada, corrida, bicicleta, esteira, natação; distância e ritmo. **Recuperação:** descanso planejado, cansaço, recuperação e dor percebidos, desconfortos, o sono das últimas noites e **alertas para não acumular esforço sem descanso** (6+ dias seguidos, carga da semana muito acima das anteriores, cansaço alto, dor). Esforço percebido 0–10 (CR-10). Registrar uma atividade marca o dia de treino no Hydro Track. |
+| **Health Center** (`/saude/central`) | Consultas (as marcadas vão para a agenda), vacinas com a próxima dose, exames, medicamentos prescritos e orientações, alergias, lesões e dores, sintomas, **documentos de saúde** (PDF/imagem até 5 MB, cifrados no banco), **informações para emergências** (tela grande para mostrar a alguém, contatos com toque para ligar) e o **diário de saúde** (energia, disposição, o sono da noite e a atividade do dia, com os padrões dos seus registros — sem diagnóstico). |
+| **Sleep Lab** (`/sono`) | Hora de dormir e de acordar (a virada da meia-noite no seu fuso), tempo até pegar no sono, despertares, qualidade, diário de sono; meta ajustável (padrão 9 h — não é recomendação médica); gráficos de 7/30 dias; regularidade dos horários; dias de aula × fim de semana ("jet lag social"); energia depois de noites com × sem a meta; aviso "hora de preparar o descanso" no painel. |
+| **Mind Center** (`/mente`) | Humor, energia, estresse e emoções do dia; histórico e padrões de estresse (dia da semana, noites curtas, véspera de prova); **diário privado** (acontecimentos, reflexões, pensamentos, "3 coisas boas") sempre cifrado e com **senha extra opcional**; exercícios de respiração (caixa, 4-7-8, coerência); apoio sempre à vista (CVV 188). |
+| **Nutrition Hub** (`/alimentacao`) | Diário de refeições com horário, grupos de alimentos, fome e saciedade; frutas, vegetais e variedade; planejamento de lanches e refeições (também para dias de treino); lista de compras; receitas favoritas. Sem calorias, peso nem dieta restritiva. |
+| **Study Center** (`/estudos`) | Matérias com média alvo e meta semanal; provas e trabalhos na agenda com **checklist antes da prova**; **Pomodoro** que registra a sessão sozinho; horas estudadas por matéria × meta e "Planejar a semana na agenda" (cria as tarefas para o planejamento automático); conteúdos com dificuldades e **revisões programadas** (1, 3, 7, 14, 30 dias); **flashcards** (caixas de Leitner); simulados e resumos; **notas e quanto falta** para a média; painel escolar por matéria. |
+| **Goals Center** (`/metas`) | Metas nas 7 categorias do plano, com prazo (vai para a agenda), prioridade, objetivo anual, etapas ou valor numérico com histórico de progresso; concluídas e conquistas. |
+| **Como estou** (painel, Saúde, Registrar) | Check-in do dia (energia, humor, estresse, disposição, emoções) compartilhado pelo Health Center e pelo Mind Center. |
+
+O painel ganhou um cartão por módulo (todos escondíveis e reordenáveis) e os Smart Insights de todos eles; os
+próximos módulos aparecem em **Todos os módulos** (`/mais`) com a fase em que chegam.
 
 ## Segurança e privacidade
 
@@ -34,6 +48,11 @@ Os outros módulos aparecem em **Todos os módulos** (`/mais`) com a fase em que
 - **Limite de tentativas:** 5 erros por usuário (ou 20 por IP) em 15 minutos bloqueiam o login.
 - **Cabeçalhos:** CSP só com o próprio servidor, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, HSTS.
 - **Banco fechado:** no Docker Compose o PostgreSQL não abre porta nenhuma; o app só escuta em `127.0.0.1`.
+- **Diário do Mind Center:** título e texto sempre cifrados (AES‑256‑GCM). Com a senha extra, a chave sai da senha
+  (scrypt) e o servidor guarda só o sal e um verificador; destrancado, a chave fica 15 minutos num cookie `httpOnly`
+  cifrado com a chave do servidor (some ao sair ou ao trancar). Esqueceu a senha extra, as entradas não voltam.
+- **Documentos de saúde:** cifrados no banco (AES‑256‑GCM); upload só do próprio site (Origin conferido), tipo pelo
+  conteúdo do arquivo; download só do dono, registrado no registro de acessos.
 - **IA:** nada é enviado para fora. O assistente (Fase 3) será opcional e só lerá os módulos que você autorizar.
 - O sistema mostra padrões dos seus registros, **não diagnostica** nada. A meta de água é sua, ajustável — não é
   recomendação médica.
@@ -131,17 +150,31 @@ life-os/
 ├── prisma/                 schema e migrações (PostgreSQL)
 ├── src/
 │   ├── app/(publico)/      configurar, entrar, verificação, offline
-│   ├── app/(app)/          painel, agua, habitos, agenda (+foco), saude, mais, configuracoes
-│   ├── app/api/            exportar (JSON, CSV, ICS) e saude (verificação do servidor)
-│   ├── acoes/              server actions (conta, agua, habitos, agenda) — toda ação confere a sessão
-│   ├── lib/                regras PURAS e testadas (datas, habitos, planejador, recorrencia, agua, insights, ics)
-│   ├── lib/seguranca/      senha (scrypt), totp, cifra (AES-256-GCM)
+│   ├── app/(app)/          painel, agua, habitos, agenda (+foco), treinos, saude (+central), sono, mente,
+│   │                       alimentacao, estudos, metas, mais, configuracoes
+│   ├── app/api/            exportar (JSON, CSV, ICS), documentos (saúde) e saude (verificação do servidor)
+│   ├── acoes/              server actions (uma por módulo) — toda ação confere a sessão e o dono do registro
+│   ├── lib/                regras PURAS e testadas (datas, habitos, planejador, recorrencia, agua, insights, ics,
+│   │                       treinos, saude, sono, checkin, mente, alimentacao, estudos, metas)
+│   ├── lib/seguranca/      senha (scrypt), totp, cifra (AES-256-GCM), cifra de arquivos, chave do diário
 │   ├── lib/servidor/       sessão, limite de tentativas, registro de acessos, leituras do banco
 │   └── components/         interface (componentes no estilo shadcn/ui, feitos com Tailwind)
 ├── public/                 ícones, service worker (sw.js), robots.txt
 ├── tests/                  unidade (vitest) e ponta a ponta (Playwright)
 ├── Dockerfile, docker-compose.yml
 ```
+
+### Contrato de um módulo
+
+Cada módulo mora nas suas pastas (rota em `app/(app)/<rota>`, `acoes/<modulo>.ts`, `lib/<modulo>.ts` puro e testado,
+`lib/servidor/<modulo>.ts`, `components/<modulo>/`) e entrega à casca comum:
+
+- `CartaoPainel<Nome>({ user, hojeK })` — cartão do painel (servidor);
+- `RegistroRapido…` + `dadosRegistroRapido<Nome>(user, hojeK)` — formulário do botão Registrar (montado no layout);
+- `insights<Nome>(user, hojeK)` — até 2 Smart Insights (padrões, nunca diagnóstico);
+- `exportar<Nome>(userId)` — a parte do módulo na exportação JSON;
+- `tests/e2e/modulos/<NN>-<modulo>.mjs` — o teste de ponta a ponta, carregado pelo `fluxo.mjs`
+  (`E2E_MODULOS=10-treinos` roda só ele; `E2E_PORTA` muda a porta).
 
 ### Decisões técnicas
 
@@ -157,9 +190,6 @@ life-os/
 
 ## Próximas fases
 
-- **Fase 2 — Saúde e rotina:** Fitness Center (musculação, futebol, cardio, recuperação), Health Center (consultas,
-  vacinas, exames, diário de saúde), Sleep Lab, Mind Center (diário com senha extra e criptografia), Study Center
-  (matérias, provas, Pomodoro, flashcards, notas), Nutrition Hub e Goals Center.
 - **Fase 3 — Inteligência:** Analytics Center (relatórios diário/semanal/mensal, PDF), notificações (Web Push no
   iPhone), Finance Center, Project Hub (Kanban) e Life Intelligence (assistente de IA opcional, local ou por API, só com
   o que você autorizar).

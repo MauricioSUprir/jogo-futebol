@@ -1566,10 +1566,26 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
 - **Fase 1 (Fundação) ENTREGUE** (PR #649): Central de Comando, Hydro Track, Habit Tracker,
   Life Calendar (planejamento automático + modo foco), Registrar (botão central), segurança (conta única por
   `LIFEOS_SETUP_TOKEN`, scrypt, sessões revogáveis no banco, TOTP + códigos de recuperação, limite de tentativas,
-  registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário. **Próximas (esperam o dono):**
-  Fase 2 (Fitness, Health, Sleep, Mind com diário cifrado, Study, Nutrition, Goals) → Fase 3 (Analytics, Web Push,
-  Finance, Project Hub, IA opcional só com o que ele autorizar) → Fase 4 (voz, widgets, Google Calendar, cofre, diário
-  com fotos). O mapa está em `life-os/src/lib/modulos.ts` (a tela "Todos os módulos").
+  registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário.
+- **Fase 2 (Saúde e rotina) ENTREGUE** (dono, 18/11: "já faz isso aqui tudo de uma vez"): Fitness Center (`/treinos`:
+  musculação com fichas/sessões/cronômetro/evolução da carga, futebol por temporada, cardio, recuperação com ALERTAS de
+  esforço sem descanso — regras puras em `lib/treinos.ts`), Health Center (`/saude/central`: consultas que vão para a
+  agenda, vacinas, exames, medicamentos, alergias, lesões, sintomas, documentos CIFRADOS no banco por `/api/documentos`,
+  emergência, diário de saúde), Sleep Lab (`/sono`: virada da meia-noite no fuso, média CIRCULAR dos horários, aula ×
+  fim de semana, sono × energia), Mind Center (`/mente`: check-in, padrões de estresse, diário sempre cifrado com senha
+  extra opcional — chave por scrypt, cookie `lifeos_diario` de 15 min cifrado com a chave do servidor —, respiração,
+  CVV 188), Nutrition Hub (`/alimentacao`: SEM calorias), Study Center (`/estudos`: provas na agenda com checklist,
+  Pomodoro, revisões espaçadas, Leitner, notas e "quanto falta", "Planejar a semana" cria tarefas da agenda) e Goals
+  Center (`/metas`: etapas ou número, prazo na agenda, conquistas). O check-in do dia (`DailyCheckin`,
+  `components/checkin`) é COMUM à saúde e à mente. Cada módulo entrega `CartaoPainel<Nome>`, `RegistroRapido…` +
+  `dadosRegistroRapido<Nome>`, `insights<Nome>` e `exportar<Nome>` (contrato em `life-os/README.md`); o e2e carrega um
+  arquivo por módulo de `tests/e2e/modulos/` (`E2E_MODULOS`, `E2E_PORTA`). Preferências por chave em
+  `lib/servidor/prefs.ts` (`salvarPref` nunca apaga as outras). Lições: worktree de agente NASCE NA `main`, não no
+  commit atual (avançar com `merge --ff-only` antes); link do menu para rota que ainda não existe deixa o
+  pré-carregamento pendurado e o `networkidle` do e2e nunca chega — juntar as rotas antes do e2e completo.
+  **Próximas (esperam o dono):** Fase 3 (Analytics, Web Push, Finance, Project Hub, IA opcional só com o que ele
+  autorizar) → Fase 4 (voz, widgets, Google Calendar, cofre, diário com fotos). O mapa está em
+  `life-os/src/lib/modulos.ts` (a tela "Todos os módulos").
 - Técnica: Next.js 16 (App Router, `output: standalone`, `src/proxy.ts`), TypeScript estrito, Tailwind 4 (tokens no
   `globals.css` `@theme`), Prisma 7 (`prisma.config.ts`, cliente gerado em `src/generated`, driver `@prisma/adapter-pg`;
   o `db` é preguiçoso: o build roda sem banco), Recharts, lucide-react. Auth PRÓPRIA (não Auth.js: as sessões JWT do

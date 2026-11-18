@@ -82,7 +82,8 @@ async function AbaHoje({ user, hojeK, checkins }: { user: Usuario; hojeK: string
   const hojeC = checkins.get(hojeK) ?? null;
   const acesso = await acessoAoDiario(user.id);
   const positivasHoje = acesso.aberto ? await lerEntradas(user.id, acesso, { tipo: "positivo", de: hojeK }) : [];
-  const temCheckin = !!hojeC && (hojeC.humor !== null || hojeC.energia !== null || hojeC.estresse !== null);
+  // O diário de saúde também grava energia e disposição: o check-in "da mente" conta só com humor ou estresse.
+  const temCheckin = !!hojeC && (hojeC.humor !== null || hojeC.estresse !== null);
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       <Cartao
