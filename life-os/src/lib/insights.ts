@@ -72,10 +72,29 @@ export function gerarInsights(opts: {
 
 // ───── Gamificação (recompensas virtuais, derivadas dos registros) ─────
 
-export const XP = { habito: 10, metaAgua: 15, tarefa: 5 };
+export const XP = { habito: 10, metaAgua: 15, tarefa: 5, atividade: 10, estudo: 5, meta: 50, checkin: 2, noite: 2 };
 
-export function calcularXp(c: { habitos: number; diasMetaAgua: number; tarefas: number }): number {
-  return c.habitos * XP.habito + c.diasMetaAgua * XP.metaAgua + c.tarefas * XP.tarefa;
+/** XP pelo que foi feito (registro, não intensidade: treinar mais forte não dá mais pontos). */
+export function calcularXp(c: {
+  habitos: number;
+  diasMetaAgua: number;
+  tarefas: number;
+  atividades?: number;
+  sessoesEstudo?: number;
+  metasConcluidas?: number;
+  checkins?: number;
+  noites?: number;
+}): number {
+  return (
+    c.habitos * XP.habito +
+    c.diasMetaAgua * XP.metaAgua +
+    c.tarefas * XP.tarefa +
+    (c.atividades ?? 0) * XP.atividade +
+    (c.sessoesEstudo ?? 0) * XP.estudo +
+    (c.metasConcluidas ?? 0) * XP.meta +
+    (c.checkins ?? 0) * XP.checkin +
+    (c.noites ?? 0) * XP.noite
+  );
 }
 
 /** Nível n começa em 100 · n(n−1)/2 XP: 0, 100, 300, 600, 1000… */

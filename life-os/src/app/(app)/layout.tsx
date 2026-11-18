@@ -6,21 +6,37 @@ import { BarraInferior, BarraLateral } from "@/components/casca/barras";
 import { RegistroRapido, type ExtraRegistro } from "@/components/casca/registro-rapido";
 import { FormCheckin } from "@/components/checkin/form";
 import { checkinsDoPeriodo } from "@/lib/servidor/checkin";
-import { Smile } from "lucide-react";
+import { Apple, Dumbbell, GraduationCap, MoonStar, Smile } from "lucide-react";
+import { RegistroRapidoTreino } from "@/components/treinos/registro-rapido";
+import { RegistroRapidoSono } from "@/components/sono/registro-rapido";
+import { RegistroRapidoRefeicao } from "@/components/alimentacao/registro-rapido";
+import { RegistroRapidoEstudo } from "@/components/estudos/registro-rapido";
+import { dadosRegistroRapidoTreinos } from "@/lib/servidor/treinos";
+import { dadosRegistroRapidoSono } from "@/lib/servidor/sono";
+import { dadosRegistroRapidoAlimentacao } from "@/lib/servidor/alimentacao";
+import { dadosRegistroRapidoEstudos } from "@/lib/servidor/estudos";
 
 export const dynamic = "force-dynamic";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const user = await exigirUsuario();
   const hojeK = hoje(user.timezone);
-  const [agua, habitos, checkins] = await Promise.all([
+  const [agua, habitos, checkins, rTreino, rSono, rRefeicao, rEstudo] = await Promise.all([
     aguaDoPeriodo(user, hojeK, hojeK),
     carregarHabitos(user, hojeK, { dias: 1 }),
     checkinsDoPeriodo(user.id, hojeK, hojeK),
+    dadosRegistroRapidoTreinos(user, hojeK),
+    dadosRegistroRapidoSono(user, hojeK),
+    dadosRegistroRapidoAlimentacao(user, hojeK),
+    dadosRegistroRapidoEstudos(user, hojeK),
   ]);
   const dia = agua.resumo[0];
   // Registros rápidos dos módulos no botão central (o formulário vem pronto do servidor).
   const extras: ExtraRegistro[] = [
+    { chave: "treino", rotulo: "Treino", titulo: "Registrar treino", icone: <Dumbbell aria-hidden />, conteudo: <RegistroRapidoTreino {...rTreino} /> },
+    { chave: "sono", rotulo: "Sono", titulo: "Registrar a noite", icone: <MoonStar aria-hidden />, conteudo: <RegistroRapidoSono {...rSono} /> },
+    { chave: "refeicao", rotulo: "Refeição", titulo: "Registrar refeição", icone: <Apple aria-hidden />, conteudo: <RegistroRapidoRefeicao {...rRefeicao} /> },
+    { chave: "estudo", rotulo: "Estudo", titulo: "Registrar estudo", icone: <GraduationCap aria-hidden />, conteudo: <RegistroRapidoEstudo {...rEstudo} /> },
     {
       chave: "checkin",
       rotulo: "Como estou",

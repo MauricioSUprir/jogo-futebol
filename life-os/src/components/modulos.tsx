@@ -4,12 +4,13 @@ import type { Modulo } from "@/lib/modulos";
 import { FASES } from "@/lib/modulos";
 import { cn } from "@/lib/cn";
 
-export function CartaoModulo({ m }: { m: Modulo }) {
+export function CartaoModulo({ m, resumo }: { m: Modulo; resumo?: React.ReactNode }) {
   const conteudo = (
     <>
       <div className="min-w-0 flex-1">
         <p className="font-display font-semibold">{m.nome}</p>
         <p className="mt-0.5 text-sm text-suave">{m.descricao}</p>
+        {resumo && <p className="numero mt-1.5 text-sm text-eletrico-claro">{resumo}</p>}
       </div>
       {m.href ? (
         <ArrowRight className="h-4 w-4 shrink-0 text-eletrico-claro" aria-hidden />

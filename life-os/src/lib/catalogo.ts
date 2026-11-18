@@ -79,7 +79,22 @@ export const SUGESTOES_HABITO = [
 ] as const;
 
 /** Cartões do painel inicial, na ordem padrão. */
-export const CARTOES_PAINEL = ["agua", "habitos", "agenda", "proximos", "semana", "insights"] as const;
+export const CARTOES_PAINEL = [
+  "agua",
+  "habitos",
+  "agenda",
+  "checkin",
+  "treinos",
+  "estudos",
+  "sono",
+  "metas",
+  "proximos",
+  "semana",
+  "insights",
+  "alimentacao",
+  "mente",
+  "saude",
+] as const;
 export type CartaoPainel = (typeof CARTOES_PAINEL)[number];
 
 export const NOMES_CARTOES: Record<CartaoPainel, string> = {
@@ -89,4 +104,12 @@ export const NOMES_CARTOES: Record<CartaoPainel, string> = {
   proximos: "Próximos 7 dias",
   semana: "Sua semana",
   insights: "Smart Insights",
+  checkin: "Como estou hoje",
+  treinos: "Fitness Center",
+  estudos: "Study Center",
+  sono: "Sleep Lab",
+  metas: "Goals Center",
+  alimentacao: "Nutrition Hub",
+  mente: "Mind Center",
+  saude: "Health Center",
 };

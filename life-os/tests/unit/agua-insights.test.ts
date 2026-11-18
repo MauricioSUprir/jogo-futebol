@@ -50,5 +50,7 @@ describe("insights e nível", () => {
     expect(nivel(299).nivel).toBe(2);
     expect(nivel(300).nivel).toBe(3);
     expect(calcularXp({ habitos: 3, diasMetaAgua: 2, tarefas: 4 })).toBe(80);
+    // Fase 2: registrar conta, intensidade não (treinar mais forte não dá mais XP).
+    expect(calcularXp({ habitos: 0, diasMetaAgua: 0, tarefas: 0, atividades: 2, sessoesEstudo: 3, metasConcluidas: 1, checkins: 5, noites: 4 })).toBe(103);
   });
 });

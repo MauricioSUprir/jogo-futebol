@@ -312,7 +312,9 @@ async function main() {
     const cookieSessao = (await ctx.cookies()).find((c) => c.name === "lifeos_sessao");
     confere(cookieSessao?.httpOnly && cookieSessao.sameSite === "Lax", "cookie de sessão httpOnly e SameSite=Lax");
     const json = await (await fetch(BASE + "/api/exportar", { headers: { cookie: cookies } })).json();
-    confere(json.formato === "life-os/v1" && json.habitos.length === 7 && json.agua.registros.length >= 2, "exportação JSON completa");
+    confere(json.formato === "life-os/v2" && json.habitos.length === 7 && json.agua.registros.length >= 2, "exportação JSON completa");
+    confere(["treinos", "saude", "sono", "mente", "alimentacao", "estudos", "metas"].every((k) => json[k] && typeof json[k] === "object"), "exportação inclui os módulos da Fase 2");
+    confere(!("checkins" in json.saude) && Array.isArray(json.mente.checkins), "check-ins exportados uma vez só");
     confere(!JSON.stringify(json).includes("passwordHash") && !JSON.stringify(json).includes("totpSecret"), "exportação sem senha nem segredo");
     const csv = await (await fetch(BASE + "/api/exportar/agua", { headers: { cookie: cookies } })).text();
     confere(csv.includes("dia;hora;ml;bebida;tipo") && csv.includes("Água;garrafa"), "CSV da água");
