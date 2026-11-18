@@ -5,7 +5,7 @@ export const JANELA_MIN = 15;
 export const MAX_POR_USUARIO = 5;
 export const MAX_POR_IP = 20;
 
-export async function bloqueio(username: string, ip: string | null, kind: "senha" | "codigo"): Promise<number | null> {
+export async function bloqueio(username: string, ip: string | null, kind: "senha" | "codigo" | "diario"): Promise<number | null> {
   let desde = new Date(Date.now() - JANELA_MIN * 60_000);
   // Um acerto zera a contagem (as falhas antes dele não contam mais).
   const acerto = await db.loginAttempt.findFirst({
@@ -30,7 +30,7 @@ export async function bloqueio(username: string, ip: string | null, kind: "senha
   return null;
 }
 
-export async function anotarTentativa(username: string, ip: string | null, kind: "senha" | "codigo", success: boolean) {
+export async function anotarTentativa(username: string, ip: string | null, kind: "senha" | "codigo" | "diario", success: boolean) {
   await db.loginAttempt.create({ data: { username, ip, kind, success } });
   // limpeza simples: tentativas com mais de 30 dias
   if (Math.random() < 0.05) {

@@ -130,18 +130,18 @@ async function conferirSenhaDoDiario(userId: string, username: string, senha: st
   if (!trava) return { erro: "O diário não tem senha extra." };
   const { ip } = await dadosDaRequisicao();
   const chaveLimite = `diario:${username}`;
-  const minutos = await bloqueio(chaveLimite, ip, "senha");
+  const minutos = await bloqueio(chaveLimite, ip, "diario");
   if (minutos) {
     await registrarAcesso(userId, "diario_bloqueado");
     return { erro: `Muitas tentativas. Tente de novo em ${minutos} min.` };
   }
   const chave = await chaveDaSenha(senha, trava.salt);
   if (!chaveConfere(trava.verifier, chave)) {
-    await anotarTentativa(chaveLimite, ip, "senha", false);
+    await anotarTentativa(chaveLimite, ip, "diario", false);
     await registrarAcesso(userId, "diario_senha_errada");
     return { erro: "Senha do diário incorreta." };
   }
-  await anotarTentativa(chaveLimite, ip, "senha", true);
+  await anotarTentativa(chaveLimite, ip, "diario", true);
   return { chave };
 }
 

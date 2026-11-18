@@ -18,6 +18,13 @@ export const EVENTOS_ACESSO: Record<string, string> = {
   codigos_recuperacao_novos: "Novos códigos de recuperação",
   dados_exportados: "Dados exportados",
   perfil_alterado: "Perfil alterado",
+  diario_senha_ligada: "Senha extra do diário ligada",
+  diario_senha_trocada: "Senha do diário trocada",
+  diario_senha_desligada: "Senha extra do diário desligada",
+  diario_destrancado: "Diário destrancado",
+  diario_senha_errada: "Senha do diário errada",
+  diario_bloqueado: "Diário: muitas tentativas",
+  diario_apagado: "Diário apagado",
 };
 
 export async function registrarAcesso(userId: string | null, event: string, detail?: string) {

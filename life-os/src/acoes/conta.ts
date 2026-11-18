@@ -1,6 +1,7 @@
 "use server";
 // Conta, login, verificação em duas etapas, sessões e perfil.
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { timingSafeEqual } from "node:crypto";
 import QRCode from "qrcode";
@@ -164,6 +165,8 @@ export async function verificarCodigo(_: Estado, fd: FormData): Promise<Estado> 
 export async function sair(): Promise<void> {
   const s = await sessaoAtual();
   await encerrarSessaoAtual();
+  // A chave do diário (senha extra) sai junto com a sessão.
+  (await cookies()).set("lifeos_diario", "", { path: "/mente", maxAge: 0 });
   if (s) await registrarAcesso(s.user.id, "saiu");
   redirect("/entrar");
 }
