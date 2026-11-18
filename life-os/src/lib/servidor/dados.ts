@@ -30,8 +30,12 @@ import { ocorrencias, type Ocorrencia } from "@/lib/recorrencia";
 
 // ───────────── Água ─────────────
 
+/** Configuração da água (criada com o padrão na primeira leitura; tolera leituras simultâneas — ver configSono). */
 export async function configAgua(userId: string) {
-  return db.waterSettings.upsert({ where: { userId }, create: { userId }, update: {} });
+  const atual = await db.waterSettings.findUnique({ where: { userId } });
+  if (atual) return atual;
+  await db.waterSettings.createMany({ data: [{ userId }], skipDuplicates: true });
+  return db.waterSettings.findUniqueOrThrow({ where: { userId } });
 }
 
 export async function aguaDoPeriodo(user: User, de: ChaveDia, ate: ChaveDia) {

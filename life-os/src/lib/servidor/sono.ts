@@ -7,8 +7,13 @@ import { checkinsDoPeriodo } from "./checkin";
 import { aulaVsLivre, bateuMeta, duracaoMin, formatarDuracao, horaDeMinutos, regularidade, sonoEEnergia, type Noite } from "@/lib/sono";
 import { umaCasa } from "@/lib/checkin";
 
+/** Configuração do sono (criada com o padrão na primeira leitura). Várias partes da mesma página leem ao mesmo
+ * tempo: o upsert do Prisma não é atômico aqui (dois INSERT na primeira visita), então cria com ON CONFLICT DO NOTHING. */
 export async function configSono(userId: string) {
-  return db.sleepSettings.upsert({ where: { userId }, create: { userId }, update: {} });
+  const atual = await db.sleepSettings.findUnique({ where: { userId } });
+  if (atual) return atual;
+  await db.sleepSettings.createMany({ data: [{ userId }], skipDuplicates: true });
+  return db.sleepSettings.findUniqueOrThrow({ where: { userId } });
 }
 
 export async function noitesDoPeriodo(userId: string, de: ChaveDia, ate: ChaveDia): Promise<Noite[]> {
