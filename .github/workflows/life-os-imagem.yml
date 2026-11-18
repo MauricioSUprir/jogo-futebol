@@ -1,0 +1,46 @@
+name: LIFE OS — imagem
+# Monta a imagem do LIFE OS (life-os/Dockerfile, alvo "app") a cada mudança na main e publica no GitHub Container
+# Registry: ghcr.io/mauriciosuprir/life-os:latest (e :<commit>). O serviço do Railway roda essa imagem — a conta do
+# Railway não tem acesso ao repositório, só à imagem pública. As migrações rodam no pré-deploy do serviço
+# (sh /migrar/migrar.sh, dentro da própria imagem).
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'life-os/**'
+      - '.github/workflows/life-os-imagem.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+concurrency:
+  group: life-os-imagem
+  cancel-in-progress: true
+jobs:
+  imagem:
+    name: imagem
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Montar e publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: life-os
+          target: app
+          push: true
+          tags: |
+            ghcr.io/mauriciosuprir/life-os:latest
+            ghcr.io/mauriciosuprir/life-os:${{ github.sha }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.title=LIFE OS
+            org.opencontainers.image.description=LIFE OS — sistema operacional pessoal
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

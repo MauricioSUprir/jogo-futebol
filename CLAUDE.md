@@ -1588,9 +1588,12 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
   scratchpad com `--build-context certs=/root/.ccr` + `NODE_EXTRA_CA_CERTS` e `--network host` — o Dockerfile real
   fica limpo. Servidores Next mudam o nome do processo para `next-server`: pare com `pkill -f next-server`.
 - **Na nuvem (dono, 17/11: "cria um link e me manda")**: Railway da conta DELE (gui.drodrigues21, onde está o
-  `gideon-n8n`), projeto `life-os` (Postgres + serviço do repositório com Root Directory `life-os`, branch `main`). O
-  `life-os/railway.json` manda: Dockerfile, pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto vai DENTRO da imagem do
-  app, em `/migrar`), healthcheck `/api/saude` e `watchPatterns` `/life-os/**`. Sem ele o Railway leria o `railway.json` da
-  RAIZ (o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
+  `gideon-n8n`), projeto `life-os` (Postgres + serviço `life-os`). Essa conta NÃO tem acesso ao repositório (é do
+  MauricioSUprir): o serviço roda a IMAGEM `ghcr.io/mauriciosuprir/life-os:latest`, montada pelo
+  `.github/workflows/life-os-imagem.yml` a cada mudança em `life-os/` na `main`; atualizar o site = redeploy do serviço
+  depois do workflow (Railway MCP `redeploy` ou o botão no painel). O pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto
+  vai DENTRO da imagem do app, em `/migrar`), o healthcheck `/api/saude` e o start ficam nas configurações do serviço; o
+  `life-os/railway.json` vale se um dia o serviço for ligado ao repositório (sem ele o Railway leria o `railway.json` da
+  RAIZ, o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
   `mirror.gcr.io/library/node:22-bookworm-slim`.
 
