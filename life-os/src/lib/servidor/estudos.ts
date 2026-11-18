@@ -100,7 +100,7 @@ export async function insightsEstudos(user: User, hojeK: ChaveDia): Promise<Insi
     const pendentes = prova.checklist.filter((c) => !c.feito).length;
     lista.push({
       tom: pendentes ? "atencao" : "positivo",
-      texto: `Prova "${prova.titulo}" ${contagem(n)}${pendentes ? `: ${pendentes} ${pendentes === 1 ? "item" : "itens"} do checklist por fazer.` : ": checklist completo."}`,
+      texto: `${/^prova\b/i.test(prova.titulo) ? prova.titulo : `Prova "${prova.titulo}"`} ${contagem(n)}${pendentes ? `: ${pendentes} ${pendentes === 1 ? "item" : "itens"} do checklist por fazer.` : ": checklist completo."}`,
     });
   }
   // Ritmo da semana: só com estudo registrado nas últimas 2 semanas (dados suficientes).

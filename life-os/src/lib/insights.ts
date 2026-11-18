@@ -63,7 +63,7 @@ export function gerarInsights(opts: {
   for (const p of opts.provasProximas.slice(0, 2)) {
     r.push({
       tom: p.dias <= 2 ? "atencao" : "neutro",
-      texto: p.dias === 0 ? `Hoje tem prova: ${p.titulo}.` : `${p.titulo} em ${p.dias} ${p.dias === 1 ? "dia" : "dias"}.`,
+      texto: p.dias === 0 ? `Hoje tem prova: ${p.titulo}.` : p.dias === 1 ? `${p.titulo} amanhã.` : `${p.titulo} em ${p.dias} dias.`,
     });
   }
 

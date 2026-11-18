@@ -101,8 +101,10 @@ export default async function CentralDeComando() {
     agua7: agua.resumo.slice(-8, -1),
     aguaAnterior7: agua.resumo.slice(-15, -8),
     habitos: habitos.map((h) => ({ nome: h.habito.name, pct30: h.taxa30.pct, esperados30: h.taxa30.esperados, sequencia: h.sequencia.unidade === "dias" ? h.sequencia.valor : 0 })),
+    // A prova que o Study Center já comenta (com o checklist) não se repete aqui.
     provasProximas: agenda
       .filter((i) => i.tipo === "evento" && i.categoria === "prova" && i.dia >= hojeK)
+      .filter((i) => !insightsModulos.flat().some((m) => m.texto.includes(i.titulo)))
       .map((i) => ({ titulo: i.titulo, dias: diasEntre(hojeK, i.dia) })),
   });
   // Primeiro os avisos de atenção (ex.: descanso), depois os positivos; no máximo 6.

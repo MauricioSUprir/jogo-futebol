@@ -46,7 +46,8 @@ export async function CartaoPainelEstudos({ user, hojeK }: { user: User; hojeK: 
             <CalendarClock className="h-4 w-4 shrink-0 text-perigo" aria-hidden />
             {r.proximaProva ? (
               <span className="min-w-0 truncate">
-                {r.proximaProva.titulo} <span className="text-suave">· {diaRelativo(r.proximaProva.dia, hojeK)} ({contagem(diasEntre(hojeK, r.proximaProva.dia))})</span>
+                {r.proximaProva.titulo} <span className="text-suave">· {diaRelativo(r.proximaProva.dia, hojeK)}
+                  {Math.abs(diasEntre(hojeK, r.proximaProva.dia)) > 1 && ` (${contagem(diasEntre(hojeK, r.proximaProva.dia))})`}</span>
               </span>
             ) : (
               <span className="text-suave">Nenhuma prova nos próximos 30 dias</span>

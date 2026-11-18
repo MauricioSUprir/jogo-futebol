@@ -110,6 +110,17 @@ export function RegistroRapido({
             </div>
           </section>
 
+          {extras.length > 0 && (
+            <section aria-label="Registrar nos módulos" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {extras.map((e) => (
+                <button key={e.chave} type="button" onClick={() => setModo(e.chave)} className={classesBotao("secundario", "g", "justify-start px-3 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0")}>
+                  {e.icone}
+                  <span className="truncate">{e.rotulo}</span>
+                </button>
+              ))}
+            </section>
+          )}
+
           <section aria-labelledby="rr-hab">
             <h3 id="rr-hab" className="mb-2 flex items-center gap-2 text-sm font-semibold">
               <Check className="h-4 w-4 text-eletrico-claro" aria-hidden /> Hábitos de hoje
@@ -151,16 +162,6 @@ export function RegistroRapido({
             )}
           </section>
 
-          {extras.length > 0 && (
-            <section aria-label="Registrar nos módulos" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              {extras.map((e) => (
-                <button key={e.chave} type="button" onClick={() => setModo(e.chave)} className={classesBotao("secundario", "g", "justify-start px-3 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0")}>
-                  {e.icone}
-                  <span className="truncate">{e.rotulo}</span>
-                </button>
-              ))}
-            </section>
-          )}
 
           <section className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setModo("evento")} className={classesBotao("secundario", "g")}>
