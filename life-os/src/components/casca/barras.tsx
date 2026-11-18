@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarDays, Gauge, HeartPulse, LayoutGrid, LogOut, PanelLeftClose, PanelLeftOpen, Plus } from "lucide-react";
-import { NAV_CONFIG, NAV_PRINCIPAL, ativo } from "./navegacao";
+import { NAV_CONFIG, NAV_GRUPOS, NAV_PRINCIPAL, ROTAS_MAIS, ROTAS_SAUDE, ativo, itemAtivo } from "./navegacao";
 import { Logo } from "../logo";
 import { cn } from "@/lib/cn";
 import { sair } from "@/acoes/conta";
@@ -30,7 +30,8 @@ export function BarraLateral({ nome }: { nome: string }) {
       return !v;
     });
   };
-  const itens = [...NAV_PRINCIPAL, NAV_CONFIG];
+  const selecionado = itemAtivo(pathname, [...NAV_PRINCIPAL, NAV_CONFIG]);
+  const grupos = [...NAV_GRUPOS, { itens: [NAV_CONFIG] }];
   return (
     <aside
       className={cn(
@@ -66,26 +67,31 @@ export function BarraLateral({ nome }: { nome: string }) {
           {!recolhida && <span>Registrar</span>}
         </button>
       </div>
-      <nav className="mt-4 flex-1 space-y-1 overflow-y-auto px-3" aria-label="Módulos">
-        {itens.map((i) => {
-          const sel = ativo(pathname, i.href);
-          return (
-            <Link
-              key={i.href}
-              href={i.href}
-              title={recolhida ? i.nome : undefined}
-              aria-current={sel ? "page" : undefined}
-              className={cn(
-                "group flex h-10 items-center gap-3 rounded-xl text-sm transition",
-                recolhida ? "justify-center" : "px-3",
-                sel ? "bg-eletrico/15 text-texto shadow-[inset_0_0_0_1px_rgb(37_99_235/0.35)]" : "text-suave hover:bg-white/5 hover:text-texto",
-              )}
-            >
-              <i.icone className={cn("h-[18px] w-[18px] shrink-0", sel && "text-eletrico-claro")} aria-hidden />
-              {!recolhida && <span className="truncate">{i.nome}</span>}
-            </Link>
-          );
-        })}
+      <nav className="mt-4 flex-1 overflow-y-auto px-3 pb-2" aria-label="Módulos">
+        {grupos.map((g, k) => (
+          <div key={k} className={cn("space-y-1", k > 0 && "mt-3 border-t border-borda pt-3")}>
+            {g.nome && !recolhida && <p className="rotulo px-3 pb-1 text-[0.62rem]">{g.nome}</p>}
+            {g.itens.map((i) => {
+              const sel = selecionado === i.href;
+              return (
+                <Link
+                  key={i.href}
+                  href={i.href}
+                  title={recolhida ? i.nome : undefined}
+                  aria-current={sel ? "page" : undefined}
+                  className={cn(
+                    "group flex h-10 items-center gap-3 rounded-xl text-sm transition",
+                    recolhida ? "justify-center" : "px-3",
+                    sel ? "bg-eletrico/15 text-texto shadow-[inset_0_0_0_1px_rgb(37_99_235/0.35)]" : "text-suave hover:bg-white/5 hover:text-texto",
+                  )}
+                >
+                  <i.icone className={cn("h-[18px] w-[18px] shrink-0", sel && "text-eletrico-claro")} aria-hidden />
+                  {!recolhida && <span className="truncate">{i.nome}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
       <div className={cn("border-t border-borda p-3", recolhida && "flex justify-center")}>
         <form action={sair} className={cn("flex items-center gap-2", !recolhida && "justify-between")}>
@@ -113,8 +119,8 @@ const INFERIOR = [
 ];
 
 function ativoInferior(pathname: string, href: string) {
-  if (href === "/saude") return ["/saude", "/agua"].some((p) => ativo(pathname, p));
-  if (href === "/mais") return ["/mais", "/habitos", "/configuracoes"].some((p) => ativo(pathname, p));
+  if (href === "/saude") return ROTAS_SAUDE.some((p) => ativo(pathname, p));
+  if (href === "/mais") return ROTAS_MAIS.some((p) => ativo(pathname, p));
   return ativo(pathname, href);
 }
 

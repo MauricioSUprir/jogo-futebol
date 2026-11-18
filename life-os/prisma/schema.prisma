@@ -1,4 +1,4 @@
-// LIFE OS — banco de dados (Fase 1: fundação).
+// LIFE OS — banco de dados (Fase 1: fundação; Fase 2: saúde e rotina).
 // Datas de "dia" (água, hábitos, tarefas) são @db.Date na data LOCAL do usuário (fuso em User.timezone).
 // Horários (eventos, registros) são timestamptz em UTC.
 
@@ -43,6 +43,32 @@ model User {
   habits        Habit[]
   events        CalendarEvent[]
   tasks         Task[]
+
+  // Fase 2
+  workoutPlans   WorkoutPlan[]
+  activities     Activity[]
+  recoveryLogs   RecoveryLog[]
+  healthRecords  HealthRecord[]
+  healthFiles    HealthFile[]
+  emergencyInfo  EmergencyInfo?
+  checkins       DailyCheckin[]
+  sleepSettings  SleepSettings?
+  sleepLogs      SleepLog[]
+  journalLock    JournalLock?
+  journalEntries JournalEntry[]
+  meals          Meal[]
+  mealPlanItems  MealPlanItem[]
+  shoppingItems  ShoppingItem[]
+  recipes        Recipe[]
+  subjects       Subject[]
+  studySessions  StudySession[]
+  studyTopics    StudyTopic[]
+  flashcards     Flashcard[]
+  grades         Grade[]
+  studyNotes     StudyNote[]
+  quizResults    QuizResult[]
+  checklistItems ChecklistItem[]
+  goals          Goal[]
 }
 
 model Session {
@@ -190,6 +216,9 @@ model CalendarEvent {
   // nenhuma | diaria | semanal | mensal | anual
   recurrence      String    @default("nenhuma")
   recurrenceUntil DateTime? @db.Date
+  // Fase 2: matéria da prova/trabalho (Study Center).
+  subjectId       String?
+  subject         Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
   createdAt       DateTime  @default(now())
 
   @@index([userId, start])
@@ -211,4 +240,550 @@ model Task {
   createdAt      DateTime  @default(now())
 
   @@index([userId, done])
+}
+
+// ═════════════════════════ FASE 2 — SAÚDE E ROTINA ═════════════════════════
+
+// ───────────────────────── Fitness Center ─────────────────────────
+
+// Ficha de treino (musculação): exercícios, dias da semana em que entra e favorita.
+model WorkoutPlan {
+  id         String         @id @default(cuid())
+  userId     String
+  user       User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  // Grupos musculares / objetivo, em texto curto ("Peito e tríceps").
+  focus      String?
+  // Dias da semana da ficha (semana de treinamento): bit 0 = domingo … bit 6 = sábado. 0 = livre.
+  weekdays   Int            @default(0)
+  favorite   Boolean        @default(false)
+  archived   Boolean        @default(false)
+  position   Int            @default(0)
+  notes      String?
+  createdAt  DateTime       @default(now())
+  exercises  PlanExercise[]
+  activities Activity[]
+
+  @@index([userId, archived])
+}
+
+model PlanExercise {
+  id          String      @id @default(cuid())
+  planId      String
+  plan        WorkoutPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name        String
+  // peito | costas | pernas | ombros | bracos | core | corpo_todo | mobilidade | outro
+  muscleGroup String      @default("outro")
+  sets        Int         @default(3)
+  // Texto: "10", "8-12", "30 s".
+  reps        String      @default("10")
+  loadKg      Float?
+  restSec     Int         @default(60)
+  notes       String?
+  position    Int         @default(0)
+
+  @@index([planId])
+}
+
+// Qualquer atividade física: musculação, cardio ou futebol.
+model Activity {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day          DateTime     @db.Date
+  at           DateTime?
+  // musculacao | cardio | futebol
+  kind         String
+  // cardio: caminhada | corrida | bicicleta | esteira | natacao | outro
+  // futebol: partida | treino | recreativo
+  subtype      String?
+  title        String?
+  planId       String?
+  plan         WorkoutPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+  durationMin  Int
+  // Esforço percebido 0–10 (escala CR-10). Carga da sessão = duração × esforço.
+  effort       Int?
+  distanceKm   Float?
+  notes        String?
+  // Futebol
+  minutes      Int?
+  goals        Int?
+  assists      Int?
+  position     String?
+  team         String?
+  opponent     String?
+  competition  String?
+  scoreFor     Int?
+  scoreAgainst Int?
+  // Desempenho percebido 1–10.
+  rating       Int?
+  createdAt    DateTime     @default(now())
+  sets         WorkoutSet[]
+
+  @@index([userId, day])
+  @@index([userId, kind, day])
+}
+
+// Séries feitas numa sessão de musculação.
+model WorkoutSet {
+  id          String   @id @default(cuid())
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  exercise    String
+  muscleGroup String   @default("outro")
+  setIndex    Int      @default(1)
+  reps        Int?
+  loadKg      Float?
+  durationSec Int?
+  notes       String?
+
+  @@index([activityId])
+}
+
+// Recuperação percebida do dia.
+model RecoveryLog {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day        DateTime @db.Date
+  // Descanso planejado.
+  restDay    Boolean  @default(false)
+  // 1–5
+  fatigue    Int?
+  recovery   Int?
+  soreness   Int?
+  discomfort String?
+  bodyPart   String?
+  notes      String?
+  updatedAt  DateTime @updatedAt
+
+  @@id([userId, day])
+}
+
+// ───────────────────────── Health Center ─────────────────────────
+
+// Um registro de saúde. type: consulta | vacina | exame | sintoma | medicamento | orientacao | alergia | lesao | dor
+model HealthRecord {
+  id           String       @id @default(cuid())
+  userId       String
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         String
+  title        String
+  // Data da consulta, da dose, do exame ou do início.
+  day          DateTime     @db.Date
+  // Horário (consultas marcadas).
+  at           DateTime?
+  // Fim (medicamento, lesão, sintoma).
+  endDay       DateTime?    @db.Date
+  // Profissional, local ou laboratório.
+  professional String?
+  // Orientações, resultado, observações.
+  details      String?
+  // Medicamento: dose e frequência; vacina: dose (1ª, reforço…).
+  dose         String?
+  // Próxima dose ou retorno.
+  nextDay      DateTime?    @db.Date
+  // Dor ou sintoma: intensidade 0–10.
+  severity     Int?
+  bodyPart     String?
+  // ativo | encerrado
+  status       String       @default("ativo")
+  // Evento criado na agenda (consulta marcada).
+  eventId      String?
+  createdAt    DateTime     @default(now())
+  files        HealthFile[]
+
+  @@index([userId, type, day])
+}
+
+// Documento de saúde (PDF ou imagem), cifrado no banco (AES-256-GCM com a chave do servidor).
+model HealthFile {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recordId  String?
+  record    HealthRecord? @relation(fields: [recordId], references: [id], onDelete: Cascade)
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime      @default(now())
+
+  @@index([userId])
+  @@index([recordId])
+}
+
+// Informações para emergências.
+model EmergencyInfo {
+  userId      String   @id
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bloodType   String?
+  allergies   String?
+  conditions  String?
+  medications String?
+  // [{ nome, relacao, telefone }]
+  contacts    Json     @default("[]")
+  insurance   String?
+  notes       String?
+  updatedAt   DateTime @updatedAt
+}
+
+// Check-in do dia (diário de saúde do Health Center e humor do Mind Center usam o mesmo).
+model DailyCheckin {
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         DateTime @db.Date
+  // 1–10
+  energy      Int?
+  // 1–5
+  mood        Int?
+  // 1–5
+  stress      Int?
+  // 1 ruim · 2 regular · 3 boa · 4 ótima
+  disposition Int?
+  emotions    String[] @default([])
+  // Observações de saúde do dia.
+  notes       String?
+  updatedAt   DateTime @updatedAt
+
+  @@id([userId, day])
+}
+
+// ───────────────────────── Sleep Lab ─────────────────────────
+
+model SleepSettings {
+  userId     String @id
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Meta de sono em minutos (ajustável; não é recomendação médica).
+  targetMin  Int    @default(540)
+  // Horários pretendidos (HH:MM).
+  bedtime    String @default("22:30")
+  wake       String @default("06:30")
+  // Dias de aula: bit 0 = domingo … bit 6 = sábado (padrão seg–sex).
+  schoolDays Int    @default(62)
+  // Lembrete de preparar o descanso: minutos antes do horário de dormir.
+  remindMin  Int    @default(30)
+}
+
+// Uma noite de sono. day = o dia em que acordou.
+model SleepLog {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day        DateTime @db.Date
+  bedtime    DateTime
+  wakeTime   DateTime
+  // Minutos até pegar no sono.
+  latencyMin Int?
+  awakenings Int?
+  // 1–5
+  quality    Int?
+  // Diário de sono.
+  notes      String?
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, day])
+}
+
+// ───────────────────────── Mind Center ─────────────────────────
+
+// Senha extra do diário: a chave das entradas sai da senha (scrypt); o servidor guarda só o sal e um verificador.
+model JournalLock {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  salt      String
+  // Texto conhecido cifrado com a chave da senha (confere a senha sem guardá-la).
+  verifier  String
+  createdAt DateTime @default(now())
+}
+
+// Entrada do diário. Título e texto sempre cifrados (AES-256-GCM); com a senha extra, com a chave dela.
+model JournalEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day       DateTime @db.Date
+  // diario | acontecimento | reflexao | pensamentos | positivo
+  kind      String   @default("diario")
+  titleEnc  String?
+  bodyEnc   String
+  // true = cifrada com a chave da senha extra.
+  locked    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, day])
+}
+
+// ───────────────────────── Nutrition Hub ─────────────────────────
+
+model Meal {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day         DateTime @db.Date
+  at          DateTime
+  // cafe | lanche_manha | almoco | lanche_tarde | jantar | ceia | pre_treino | pos_treino | outro
+  slot        String
+  description String
+  // frutas | vegetais | cereais | proteinas | leguminosas | laticinios | oleaginosas | outros
+  groups      String[] @default([])
+  // Fome antes e saciedade depois (1–5).
+  hunger      Int?
+  satiety     Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, day])
+}
+
+// Planejamento de refeições e lanches por dia da semana (e para dias de treino).
+model MealPlanItem {
+  id          String  @id @default(cuid())
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekdays    Int     @default(127)
+  slot        String
+  description String
+  trainingDay Boolean @default(false)
+  position    Int     @default(0)
+
+  @@index([userId])
+}
+
+model ShoppingItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  quantity  String?
+  category  String   @default("outros")
+  checked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, checked])
+}
+
+model Recipe {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  ingredients String
+  steps       String?
+  tags        String[] @default([])
+  favorite    Boolean  @default(true)
+  forTraining Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ───────────────────────── Study Center ─────────────────────────
+
+model Subject {
+  id            String          @id @default(cuid())
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  color         String          @default("azul")
+  // Média que quer atingir (escala da nota, padrão 0–10).
+  targetAvg     Float           @default(6)
+  // Meta semanal de estudo em minutos.
+  weeklyGoalMin Int             @default(120)
+  archived      Boolean         @default(false)
+  position      Int             @default(0)
+  createdAt     DateTime        @default(now())
+  sessions      StudySession[]
+  topics        StudyTopic[]
+  flashcards    Flashcard[]
+  grades        Grade[]
+  notes         StudyNote[]
+  quizzes       QuizResult[]
+  events        CalendarEvent[]
+
+  @@index([userId, archived])
+}
+
+model StudySession {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  day         DateTime @db.Date
+  at          DateTime
+  durationMin Int
+  // estudo | pomodoro | exercicios | revisao | simulado | leitura
+  kind        String   @default("estudo")
+  topic       String?
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId, day])
+}
+
+// Conteúdo da matéria: status, dificuldade e revisões programadas (repetição espaçada).
+model StudyTopic {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title          String
+  // pendente | estudando | concluido
+  status         String    @default("pendente")
+  difficulty     Boolean   @default(false)
+  difficultyNote String?
+  // Etapa da revisão espaçada (0 = nenhuma feita) e a próxima data.
+  reviewStage    Int       @default(0)
+  nextReview     DateTime? @db.Date
+  completedAt    DateTime?
+  position       Int       @default(0)
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, nextReview])
+  @@index([subjectId])
+}
+
+// Flashcard com caixas de Leitner (1–5).
+model Flashcard {
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId    String?
+  subject      Subject?  @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  front        String
+  back         String
+  box          Int       @default(1)
+  due          DateTime  @db.Date
+  lastReviewed DateTime?
+  correct      Int       @default(0)
+  wrong        Int       @default(0)
+  createdAt    DateTime  @default(now())
+
+  @@index([userId, due])
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId String
+  subject   Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  title     String
+  value     Float
+  maxValue  Float    @default(10)
+  weight    Float    @default(1)
+  day       DateTime @db.Date
+  // "1º bimestre", "2º trimestre"…
+  term      String?
+  createdAt DateTime @default(now())
+
+  @@index([subjectId])
+}
+
+// Resumos.
+model StudyNote {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// Questões e simulados.
+model QuizResult {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjectId String?
+  subject   Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  title     String
+  day       DateTime @db.Date
+  total     Int
+  correct   Int
+  notes     String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, day])
+}
+
+// Checklist antes da prova (eventos "prova" da agenda).
+model ChecklistItem {
+  id       String  @id @default(cuid())
+  userId   String
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventId  String
+  text     String
+  done     Boolean @default(false)
+  position Int     @default(0)
+
+  @@index([userId, eventId])
+}
+
+// ───────────────────────── Goals Center ─────────────────────────
+
+model Goal {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title       String
+  // saude | estudos | tecnologia | financas | futebol | pessoal | criativo
+  category    String       @default("pessoal")
+  description String?
+  // Por que essa meta importa (motivação).
+  why         String?
+  deadline    DateTime?    @db.Date
+  // Objetivo anual (ano).
+  year        Int?
+  // 1 = alta, 2 = média, 3 = baixa
+  priority    Int          @default(2)
+  // ativo | pausado | concluido
+  status      String       @default("ativo")
+  // etapas (progresso pelas etapas) | numero (valor atual × alvo)
+  measure     String       @default("etapas")
+  target      Float?
+  current     Float        @default(0)
+  unit        String?
+  completedAt DateTime?
+  // Evento do prazo na agenda.
+  eventId     String?
+  position    Int          @default(0)
+  createdAt   DateTime     @default(now())
+  steps       GoalStep[]
+  updates     GoalUpdate[]
+
+  @@index([userId, status])
+}
+
+model GoalStep {
+  id       String    @id @default(cuid())
+  goalId   String
+  goal     Goal      @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title    String
+  done     Boolean   @default(false)
+  doneAt   DateTime?
+  dueDay   DateTime? @db.Date
+  position Int       @default(0)
+
+  @@index([goalId])
+}
+
+// Histórico de progresso da meta.
+model GoalUpdate {
+  id     String   @id @default(cuid())
+  goalId String
+  goal   Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  at     DateTime @default(now())
+  // Valor novo (metas numéricas).
+  value  Float?
+  note   String?
+
+  @@index([goalId, at])
 }

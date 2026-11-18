@@ -1,11 +1,20 @@
-// Teste de ponta a ponta do LIFE OS (Fase 1) no Chromium, contra o build de produção e um banco zerado.
+// Teste de ponta a ponta do LIFE OS no Chromium, contra o build de produção e um banco zerado.
 // Uso: npm run build && node tests/e2e/fluxo.mjs
 //   E2E_DATABASE_URL (padrão: postgresql://postgres@127.0.0.1:5544/lifeos_e2e) — o banco é APAGADO e recriado.
+//   E2E_PORTA (padrão 3100) — porta do servidor de teste.
+//   E2E_MODULOS=treinos,sono — roda só esses testes de módulo (tests/e2e/modulos/*.mjs); vazio = todos.
 //   --sem-servidor --url http://localhost:3100   usa um servidor já rodando
+//
+// Testes dos módulos da Fase 2: cada arquivo de tests/e2e/modulos/ exporta
+//   export const nome = "Fitness Center";
+//   export const rotasCelular = ["/treinos"];              // conferidas no iPhone (sem rolagem lateral)
+//   export async function testar({ pagina, BASE, confere, enviar, visivel, saida, path }) { … }
+// e roda logado, depois da agenda, na ordem do nome do arquivo.
 import { createRequire } from "node:module";
 import { spawn, execSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
+import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,7 +25,8 @@ const pg = require("pg");
 const raiz = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const saida = path.join(raiz, "tests/e2e/saida");
 const args = process.argv.slice(2);
-const BASE = args.includes("--url") ? args[args.indexOf("--url") + 1] : "http://127.0.0.1:3100";
+const PORTA = process.env.E2E_PORTA ?? "3100";
+const BASE = args.includes("--url") ? args[args.indexOf("--url") + 1] : `http://127.0.0.1:${PORTA}`;
 const DB = process.env.E2E_DATABASE_URL ?? "postgresql://postgres@127.0.0.1:5544/lifeos_e2e";
 const TOKEN = process.env.E2E_TOKEN ?? "token-de-teste-" + randomBytes(4).toString("hex");
 const SENHA = "Senha-forte-2026";
@@ -75,7 +85,7 @@ async function subirServidor() {
     LIFEOS_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
     LIFEOS_COOKIE_SECURE: "0",
     LIFEOS_TRUST_PROXY: "0",
-    PORT: "3100",
+    PORT: PORTA,
   };
   // O mesmo servidor do Docker (output standalone).
   const p = spawn(process.execPath, [".next/standalone/server.js"], { cwd: raiz, env: { ...env, HOSTNAME: "127.0.0.1" }, stdio: ["ignore", "pipe", "pipe"] });
@@ -99,6 +109,20 @@ async function semRolagemLateral(pagina, nome) {
   confere(r.sw <= r.w + 1, `${nome}: sem rolagem lateral (${r.sw} ≤ ${r.w})`);
 }
 
+const visivel = (loc, timeout = 8000) => loc.first().waitFor({ state: "visible", timeout }).then(() => true, () => false);
+
+async function carregarModulos() {
+  const pasta = path.join(raiz, "tests/e2e/modulos");
+  const filtro = (process.env.E2E_MODULOS ?? "").split(",").map((x) => x.trim()).filter(Boolean);
+  const arquivos = (await readdir(pasta).catch(() => [])).filter((a) => a.endsWith(".mjs")).sort();
+  const mods = [];
+  for (const a of arquivos) {
+    if (filtro.length && !filtro.includes(a.replace(/\.mjs$/, ""))) continue;
+    mods.push({ arquivo: a, ...(await import(pathToFileURL(path.join(pasta, a)).href)) });
+  }
+  return mods;
+}
+
 async function enviar(pagina, seletorBotao) {
   await Promise.all([pagina.waitForLoadState("networkidle"), pagina.locator(seletorBotao).first().click()]);
   await pagina.waitForTimeout(250);
@@ -106,6 +130,7 @@ async function enviar(pagina, seletorBotao) {
 
 async function main() {
   await mkdir(saida, { recursive: true });
+  const modulos = await carregarModulos();
   let servidor = null;
   if (!args.includes("--sem-servidor")) {
     console.log("Zerando o banco de teste e subindo o servidor…");
@@ -223,6 +248,18 @@ async function main() {
     confere(await pg1.getByText("Prova de Matemática").first().waitFor({ state: 'visible', timeout: 8000 }).then(() => true, () => false), "painel mostra a prova nos próximos 7 dias");
     await pg1.screenshot({ path: path.join(saida, "pc-painel.png"), fullPage: true });
 
+    let n = 0;
+    for (const m of modulos) {
+      console.log(`\n4.${++n}. ${m.nome ?? m.arquivo}`);
+      try {
+        await m.testar({ pagina: pg1, BASE, confere, enviar, visivel, saida, path });
+      } catch (e) {
+        falhas++;
+        console.error(`ERRO no teste de ${m.arquivo}:`, e);
+        await pg1.screenshot({ path: path.join(saida, `erro-${m.arquivo}.png`), fullPage: true }).catch(() => {});
+      }
+    }
+
     console.log("\n5. Verificação em duas etapas");
     await pg1.goto(BASE + "/configuracoes/seguranca");
     await enviar(pg1, "button:has-text('Ligar verificação em duas etapas')");
@@ -289,7 +326,8 @@ async function main() {
     await cel.addCookies((await ctx.cookies()).map((c) => ({ ...c })));
     const pc = await cel.newPage();
     pc.on("pageerror", (e) => erros.push(`[cel ${pc.url()}] ${e.message}`));
-    for (const rota of ["/", "/agua", "/habitos", "/agenda", "/agenda?vista=mes", "/agenda?vista=tarefas", "/saude", "/mais", "/configuracoes/seguranca"]) {
+    const rotasMods = modulos.flatMap((m) => m.rotasCelular ?? []);
+    for (const rota of ["/", "/agua", "/habitos", "/agenda", "/agenda?vista=mes", "/agenda?vista=tarefas", "/saude", "/mais", "/configuracoes/seguranca", ...rotasMods]) {
       await pc.goto(BASE + rota);
       await semRolagemLateral(pc, rota);
     }

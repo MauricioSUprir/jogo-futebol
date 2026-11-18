@@ -14,6 +14,8 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
   const dia = agua.resumo[0];
   return (
     <div className="min-h-dvh lg:flex">
+      {/* No iPhone instalado (barra de status translúcida), o que rola não passa por baixo do relógio e da bateria. */}
+      <div aria-hidden className="pointer-events-none fixed inset-x-0 top-0 z-40 h-[env(safe-area-inset-top)] bg-fundo/90 backdrop-blur-xl" />
       <a href="#conteudo" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-eletrico focus:px-3 focus:py-2">
         Pular para o conteúdo
       </a>
