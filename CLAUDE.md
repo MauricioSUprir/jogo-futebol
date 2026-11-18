@@ -1567,7 +1567,7 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
   Life Calendar (planejamento automático + modo foco), Registrar (botão central), segurança (conta única por
   `LIFEOS_SETUP_TOKEN`, scrypt, sessões revogáveis no banco, TOTP + códigos de recuperação, limite de tentativas,
   registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário.
-- **Fase 2 (Saúde e rotina) ENTREGUE** (dono, 18/11: "já faz isso aqui tudo de uma vez"): Fitness Center (`/treinos`:
+- **Fase 2 (Saúde e rotina) ENTREGUE** (PR #652; dono, 18/11: "já faz isso aqui tudo de uma vez"): Fitness Center (`/treinos`:
   musculação com fichas/sessões/cronômetro/evolução da carga, futebol por temporada, cardio, recuperação com ALERTAS de
   esforço sem descanso — regras puras em `lib/treinos.ts`), Health Center (`/saude/central`: consultas que vão para a
   agenda, vacinas, exames, medicamentos, alergias, lesões, sintomas, documentos CIFRADOS no banco por `/api/documentos`,
@@ -1606,8 +1606,10 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
 - **Na nuvem (dono, 17/11: "cria um link e me manda")**: Railway da conta DELE (gui.drodrigues21, onde está o
   `gideon-n8n`), projeto `life-os` (Postgres + serviço `life-os`). Essa conta NÃO tem acesso ao repositório (é do
   MauricioSUprir): o serviço roda a IMAGEM `ghcr.io/mauriciosuprir/life-os:latest`, montada pelo
-  `.github/workflows/life-os-imagem.yml` a cada mudança em `life-os/` na `main`; atualizar o site = redeploy do serviço
-  depois do workflow (Railway MCP `redeploy` ou o botão no painel). O pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto
+  `.github/workflows/life-os-imagem.yml` a cada mudança em `life-os/` na `main` (tags `latest` e o SHA do commit);
+  atualizar o site = depois do workflow, `connect-service-source` do Railway MCP com a imagem
+  `ghcr.io/mauriciosuprir/life-os:<sha do merge>` (a tag fixa força a imagem nova; o redeploy da `latest` pode reusar a
+  que está em cache). Projeto `79b78278-…`, serviço `life-os` `1a026877-…`. O pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto
   vai DENTRO da imagem do app, em `/migrar`), o healthcheck `/api/saude` e o start ficam nas configurações do serviço; o
   `life-os/railway.json` vale se um dia o serviço for ligado ao repositório (sem ele o Railway leria o `railway.json` da
   RAIZ, o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
