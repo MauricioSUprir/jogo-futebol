@@ -1,8 +1,9 @@
 "use client";
-// O botão central "Registrar": água, hábitos de hoje, evento e tarefa num lugar só.
-import { useEffect, useState } from "react";
+// O botão central "Registrar": água, hábitos de hoje, os registros rápidos dos módulos (treino, sono, refeição,
+// estudo, como estou), evento e tarefa num lugar só.
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { CalendarPlus, Check, Droplets, ListPlus, Minus } from "lucide-react";
+import { ArrowLeft, CalendarPlus, Check, Droplets, ListPlus, Minus } from "lucide-react";
 import { DialogoBase, BotaoEnvio } from "../cliente";
 import { EVENTO_REGISTRAR } from "./barras";
 import { adicionarAgua } from "@/acoes/agua";
@@ -23,6 +24,15 @@ export interface HabitoRapido {
   programado: boolean;
 }
 
+/** Registro rápido de um módulo: o formulário já vem montado pelo servidor (layout). */
+export interface ExtraRegistro {
+  chave: string;
+  rotulo: string;
+  titulo: string;
+  icone: ReactNode;
+  conteudo: ReactNode;
+}
+
 export function RegistroRapido({
   hoje,
   copo,
@@ -31,6 +41,7 @@ export function RegistroRapido({
   aguaMl,
   metaMl,
   habitos,
+  extras = [],
 }: {
   hoje: string;
   copo: number;
@@ -39,9 +50,11 @@ export function RegistroRapido({
   aguaMl: number;
   metaMl: number;
   habitos: HabitoRapido[];
+  extras?: ExtraRegistro[];
 }) {
   const [aberto, setAberto] = useState(false);
-  const [modo, setModo] = useState<"inicio" | "evento" | "tarefa">("inicio");
+  const [modo, setModo] = useState<string>("inicio");
+  const extra = extras.find((e) => e.chave === modo);
   useEffect(() => {
     const abrir = () => {
       setModo("inicio");
@@ -61,11 +74,17 @@ export function RegistroRapido({
     <DialogoBase
       aberto={aberto}
       aoFechar={() => setAberto(false)}
-      titulo={modo === "evento" ? "Novo evento" : modo === "tarefa" ? "Nova tarefa" : "Registrar"}
+      titulo={modo === "evento" ? "Novo evento" : modo === "tarefa" ? "Nova tarefa" : extra ? extra.titulo : "Registrar"}
       descricao={modo === "inicio" ? "O que você quer registrar agora?" : undefined}
     >
+      {modo !== "inicio" && (
+        <button type="button" onClick={() => setModo("inicio")} className={classesBotao("fantasma", "p", "-mt-2 mb-3 -ml-2")}>
+          <ArrowLeft className="h-4 w-4" /> Voltar
+        </button>
+      )}
       {modo === "evento" && <FormEvento dia={hoje} />}
       {modo === "tarefa" && <FormTarefa dia={hoje} />}
+      {extra && <div key={extra.chave}>{extra.conteudo}</div>}
       {modo === "inicio" && (
         <div className="grid grid-cols-1 gap-5">
           <section aria-labelledby="rr-agua">
@@ -131,6 +150,17 @@ export function RegistroRapido({
               </ul>
             )}
           </section>
+
+          {extras.length > 0 && (
+            <section aria-label="Registrar nos módulos" className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {extras.map((e) => (
+                <button key={e.chave} type="button" onClick={() => setModo(e.chave)} className={classesBotao("secundario", "g", "justify-start px-3 [&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0")}>
+                  {e.icone}
+                  <span className="truncate">{e.rotulo}</span>
+                </button>
+              ))}
+            </section>
+          )}
 
           <section className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => setModo("evento")} className={classesBotao("secundario", "g")}>

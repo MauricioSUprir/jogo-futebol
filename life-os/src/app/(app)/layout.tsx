@@ -3,15 +3,32 @@ import { aguaDoPeriodo, carregarHabitos } from "@/lib/servidor/dados";
 import { hoje } from "@/lib/datas";
 import { programado } from "@/lib/habitos";
 import { BarraInferior, BarraLateral } from "@/components/casca/barras";
-import { RegistroRapido } from "@/components/casca/registro-rapido";
+import { RegistroRapido, type ExtraRegistro } from "@/components/casca/registro-rapido";
+import { FormCheckin } from "@/components/checkin/form";
+import { checkinsDoPeriodo } from "@/lib/servidor/checkin";
+import { Smile } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function LayoutApp({ children }: { children: React.ReactNode }) {
   const user = await exigirUsuario();
   const hojeK = hoje(user.timezone);
-  const [agua, habitos] = await Promise.all([aguaDoPeriodo(user, hojeK, hojeK), carregarHabitos(user, hojeK, { dias: 1 })]);
+  const [agua, habitos, checkins] = await Promise.all([
+    aguaDoPeriodo(user, hojeK, hojeK),
+    carregarHabitos(user, hojeK, { dias: 1 }),
+    checkinsDoPeriodo(user.id, hojeK, hojeK),
+  ]);
   const dia = agua.resumo[0];
+  // Registros rápidos dos módulos no botão central (o formulário vem pronto do servidor).
+  const extras: ExtraRegistro[] = [
+    {
+      chave: "checkin",
+      rotulo: "Como estou",
+      titulo: "Como você está hoje?",
+      icone: <Smile aria-hidden />,
+      conteudo: <FormCheckin dia={hojeK} atual={checkins.get(hojeK) ?? null} />,
+    },
+  ];
   return (
     <div className="min-h-dvh lg:flex">
       {/* No iPhone instalado (barra de status translúcida), o que rola não passa por baixo do relógio e da bateria. */}
@@ -42,6 +59,7 @@ export default async function LayoutApp({ children }: { children: React.ReactNod
           agua: h.habito.source === "agua",
           programado: programado(h.def, hojeK),
         }))}
+        extras={extras}
       />
     </div>
   );
