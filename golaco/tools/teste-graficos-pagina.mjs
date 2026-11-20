@@ -31,10 +31,12 @@
 //      está a mais de 0,03 da VERDADE no mesmo pixel (a referência SSAA 8×8 da A2, física; o C14a: o quadro sem AA perde a linha
 //      mais fina que o pixel que o MSAA pega certo — nos quadros sem a verdade, o pré-jogo, só a mistura).
 //      A meta conta só as bordas com o centro do pixel FORA da região (a amostra extrapolada, o N11, o que o `centroid` muda):
-//      ≤ 0,2% delas e ≤ o da main com o MSAA forçado (a referência); com o centro DENTRO, a franja é o fundo escondido na mistura
-//      do MSAA (o piso da medida) e fica informativa. (2) a cobertura das bandeiras de mastro a 50 e a
-//      100 m (só a malha delas, sobre magenta, com o bandeirão da saída já fechado): pixels visivelmente cobertos (> 40/255 do
-//      fundo) no build ÷ no SSAA reduzido, nas caixas das 16 bandeiras da Média. Meta ≥ 0,8, informativa (a main já cumpre). (3) a A2C da torcida
+//      ≤ 0,2% delas e ≤ o da main com o MSAA forçado (a referência; 5 linhas informativas desde o C14, com o motivo); com o
+//      centro DENTRO, a franja é o fundo escondido na mistura do MSAA (o piso da medida) e fica informativa. A GUARDA da K1 (as
+//      correções do fechamento): ≤ 0,5 × a main forçada na torcida na TV na bola e nas bandeiras nas duas poses (K1_GUARDA). (2)
+//      a cobertura das bandeiras de mastro a 50 e a 100 m (só a malha delas, sobre magenta, com o bandeirão da saída já fechado):
+//      pixels visivelmente cobertos (> 40/255 do fundo) no build ÷ no SSAA reduzido, nas caixas das 16 bandeiras da Média. Meta
+//      ≥ 0,8, guarda desde as correções do fechamento (a main sem AA já cumpre: era informativa). (3) a A2C da torcida
 //      (informativa): cobertura ÷ SSAA e a cintilação da silhueta em dois quadros com a câmera andando 0,25 px.
 //   P  chamadas e triângulos no quadro fixo da TV ('jogo') = a referência (+0; triângulos ≤ +1%); CPU do quadro (medirQuadro
 //      sem a GPU, CPU 4×, com a demo, como o teste-desempenho-celular) PAREADA: com `--base <pasta golaco>`, a versão medida e
@@ -921,6 +923,14 @@ const K1_INFO = {
   'area.torcida': 'fora por 1 px (1 de 1737; a main 0): uma linha decidida por 1 px muda com a semente — a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30)',
   'area.placas': 'fora por 1 px (1 de 366; a main 0): uma linha decidida por 1 px muda com a semente — a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30)',
 };
+// A GUARDA da K1 (as correções do fechamento do item 45): nas linhas com folga contra a main com o MSAA forçado (a referência
+// gravada, a mesma semente 4), as franjas de centro FORA ≤ 0,5 × as dela. Medido: no CI 16 rodadas iguais em todos os dígitos
+// (a torcida 0 de 2162, as bandeiras 25 de 1440 e 2 de 462); aqui 4 rodadas iguais, a torcida 2 de 2134 (a máquina muda 2 px, a
+// rodada não); a main forçada, 3 rodadas iguais: 14 de 804, 172 de 1291 e 15 de 360 (reprova as três). As mutações: sem o
+// `centroid` (as 4 declarações), as bandeiras 12,53% e 3,36% (o limite 6,66% e 2,08%); a torcida sem a A2C, 1,41% (o limite
+// 0,87%): reprovam. A torcida e as placas com o gol no foco ficam só informativas (a main forçada dá 0 px nelas).
+const K1_GUARDA = new Set(['jogo.torcida', 'jogo.bandeiras', 'area.bandeiras']);
+const K1_GUARDA_FATOR = 0.5;
 
 // ================================================================== as cargas do celular (build, oposta, igual)
 /**
@@ -1170,6 +1180,12 @@ try {
           meta('K', `K1 franjas na silhueta, centro do pixel FORA da região (a amostra extrapolada, N11): ${l.cat} (${onde})`,
             `${pct(l.fracFora, 2)} de ${l.bFora} px de borda (${l.fFora})${l.bordas ? '' : ' (o MSAA não muda a região)'}${l.comVerdade ? ` · só pela mistura (a régua de antes do C14a) ${pct(l.fracForaMistura, 2)} (${l.fForaMistura})` : ' · sem a verdade SSAA'} · região ${pct(l.area, 1)} do quadro${Number.isFinite(rf) ? ` · ref ${pct(rf, 2)}` : ' · sem referência'} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
             `≤ 0,2% e ≤ a da main com o MSAA forçado${motivo ? ` · informativa: ${motivo}` : ''}`, naoMede ? null : l.fracFora <= 0.002 && (!Number.isFinite(rf) || l.fracFora <= rf + tolF), motivo ? 'info' : 'meta');
+          if (K1_GUARDA.has(`${l.nome}.${l.cat}`)) {
+            const lim = K1_GUARDA_FATOR * (rf ?? NaN) * tolRef();
+            meta('K', `K1 guarda: franjas de centro FORA ≤ ${f(K1_GUARDA_FATOR, 1)} × as da main com o MSAA forçado (a referência, a mesma semente): ${l.cat} (${onde})`,
+              `${pct(l.fracFora, 2)} (${l.fFora} de ${l.bFora} px) · main forçada ${Number.isFinite(rf) ? pct(rf, 2) : 'sem referência'} · limite ${pct(lim, 2)} · MSAA ${buildAA ? 'do build' : 'forçado'}`,
+              `≤ ${f(K1_GUARDA_FATOR, 1)} × a main forçada (a mutação sem o centroid passa dele nas bandeiras)`, Number.isFinite(lim) && lim > 0 && l.fracFora <= lim);
+          }
           meta('K', `K1 franjas, centro DENTRO da região (o fundo escondido na mistura: o piso da medida): ${l.cat} (${onde})`,
             `${pct(l.fracDentro, 2)} de ${l.bDentro} px (${l.fDentro}) · todas as bordas ${pct(l.frac, 2)} de ${l.bordas}`, 'informativa', null, 'info');
         }
@@ -1184,8 +1200,10 @@ try {
             const aaRot = rot === 'build' ? (buildAA ? 'com MSAA' : 'sem AA') : (buildAA ? 'sem AA' : 'MSAA forçado');
             const areaCx = cx.reduce((a, b) => a + (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1), 0);
             meta('K', `K2 cobertura das bandeiras de mastro a ${d} m (${rot === 'build' ? 'o build' : 'a carga oposta'}, ${aaRot})`, `${f(raz, 3)} do SSAA (${n1} × ${n3} px em ${cx.length} caixas, ${pct(n3 / areaCx, 0)} delas; bandeirão ${f(cel.bandeirao?.abre, 2)} depois de ${cel.bandeirao?.passos} passos)`,
-              // (informativa desde o C3: a main já cumpre — 0,966 / 0,935 sem AA —, plano §4)
-              rot === 'build' ? '≥ 0,8 · informativa: a main já cumpre (0,966 / 0,935 sem AA)' : '—', rot === 'build' ? raz >= 0.8 : null, 'info');
+              // (guarda desde as correções do fechamento, contra a perda grosseira das bandeiras de longe: a main sem AA dá 0,966 /
+              // 0,935 e com o MSAA forçado, sem a compensação do mip, 1,006 / 1,004 — tirar a COMPENSA_MIP não a reprova; plano §4. A
+              // carga oposta só informa)
+              rot === 'build' ? '≥ 0,8 (guarda: a main sem AA 0,966 / 0,935; com o MSAA forçado 1,006 / 1,004)' : '—', rot === 'build' ? raz >= 0.8 : null, rot === 'build' ? 'meta' : 'info');
           }
         }
         // (3) a torcida: cobertura e cintilação da silhueta (a A2C só entra com ganho medido)
