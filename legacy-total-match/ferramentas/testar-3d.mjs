@@ -513,8 +513,11 @@ if (fr) {
   if (!PUBLICA) await esperaFotos(fr);
   const fr2 = await fotosDoPedido(fr);
   const fotoTrava = !PUBLICA ? await fr.evaluate(() => { const T = window.__golaco.tm; return T.fotos ? T.fotos.de(T.trava) : null; }) : null;
-  confere("Estrelato: o meu jogador (rae-me) sem foto; " + (PUBLICA ? "nenhuma foto na pública" : "os outros com foto na pro, carregadas pelo 3D") + " (item 31)",
-    fr2.raeFoto === false && (PUBLICA ? fr2.lados.every(l => l.total === 0) : fr2.lados[0].total + fr2.lados[1].total >= 9 && fr2.lados.every(l => l.ruins.length === 0) && !!fr2.fotos && fr2.fotos.prontas >= 9 && fr2.fotos.erros === 0 && fotoTrava && fotoTrava.url === null), { ...fr2, fotoTrava });
+  // (item 45, C15) as fotos que o 3D pede são as dos titulares com foto dos dois lados, e o adversário é o do calendário (sorteado):
+  // 2 a 9 titulares com foto nas rodadas medidas (o meu clube, 5) — o "prontas ≥ 9" de antes reprovava com 7 pedidas e 7 prontas.
+  // Vale: o pedido com ≥ 9 fotos (o meu elenco tem 10), as pedidas = os titulares com foto do pedido (≥ 1) e todas carregadas
+  confere("Estrelato: o meu jogador (rae-me) sem foto; " + (PUBLICA ? "nenhuma foto na pública" : "os outros com foto na pro, carregadas pelo 3D (as dos titulares, todas)") + " (item 31)",
+    fr2.raeFoto === false && (PUBLICA ? fr2.lados.every(l => l.total === 0) : fr2.lados[0].total + fr2.lados[1].total >= 9 && fr2.lados.every(l => l.ruins.length === 0) && !!fr2.fotos && fr2.fotos.pedidas >= 1 && fr2.fotos.pedidas === fr2.lados[0].tit + fr2.lados[1].tit && fr2.fotos.prontas === fr2.fotos.pedidas && fr2.fotos.erros === 0 && fotoTrava && fotoTrava.url === null), { ...fr2, fotoTrava });
   const ecR = await fr.evaluate(() => (window.__golaco.tm.pedido.partida || {}).empateContinua);
   confere("Estrelato: jogo da liga = o empate não continua (partida.empateContinua false)", ecR === false, ecR);
   const pausa = await pausaDo3d(fr);
