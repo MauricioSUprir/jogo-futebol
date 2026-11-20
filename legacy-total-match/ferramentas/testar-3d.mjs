@@ -34,8 +34,10 @@
    Item 106 (a tela cedo: a tela antes do jogo à vista enquanto o 3D monta), com o golaco de verdade na Partida rápida: o recado
    tm3d:tela antes do tm3d:pronto e a tela pintada (um quadro inteiro) antes de a cena 3D nascer — a ordem, não quanto o 3D demora
    (revisão do item 106: o "≥ 1 s antes" media a lentidão do 3D); nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
-   do tm3d:pronto fecha com tm3d:sair "simular", sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some da vista ≤ 0,5 s
-   depois do 2º toque (o remove() do quadro, o desmonte do WebGL, depois) e o TM simula o result de sempre.
+   do tm3d:pronto fecha com tm3d:sair "simular" no próprio toque, sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some
+   da vista ≤ 0,5 s depois de o tm3d:sair chegar ao TM (o remove() do quadro, o desmonte do WebGL, depois; o 3D divide o fio com o TM
+   e, sob carga, a mensagem pode esperar as tarefas da carga dele: o total do toque até sumir vai na linha, informativo — item 45,
+   C15) e o TM simula o result de sempre.
    Modo Leilão (PR 4; seção 7): o Jogar do jogo contra um bot de um treino abre o GOLAÇO com o time do leilão — 11 SEM banco
    (o pedido 11 + 11 e o mundo 11 × 11) —, a duração e a dificuldade da sala travadas e os escudos desenhados; o "Simular o resto"
    grava o feito '3d' antes de o 2D mostrar o placar, sem pausa. A página de ensaio da seção 6 mora em ferramentas/lib/ensaio-3d.mjs.
@@ -120,7 +122,15 @@ await p.addInitScript(() => {
     setTimeout(() => {
       const g = window.__golaco, b = () => document.querySelector('#prepartida [data-aba="simular"]');
       const r = { tela: !!(g && g.prepartida && g.prepartida.aberta && b()), antes: !(g && g.pronto) };
-      if (r.tela) { b().click(); r.armado = g.prepartida.estado.armado; r.t = Date.now(); b().click(); r.tick = g.mundo.tick; }
+      if (r.tela) {
+        b().click(); r.armado = g.prepartida.estado.armado; r.t = Date.now();
+        // (item 45, C15) a hora em que o 3D manda o tm3d:sair: o postMessage do pai trocado SÓ durante o 2º toque e devolvido (o
+        // método é da própria janela — [Global] —: um delete o apagaria)
+        const P = window.parent, pm = P.postMessage;
+        try { P.postMessage = function (d, ...x) { if (d && d.tipo === "tm3d:sair" && r.postou == null) r.postou = Date.now(); return pm.call(P, d, ...x); }; } catch (e) {}
+        try { b().click(); } finally { try { P.postMessage = pm; } catch (e) {} }
+        r.tick = g.mundo.tick;
+      }
       localStorage.setItem("teste106:toques", JSON.stringify(r));
     }, 30);
   });
@@ -420,14 +430,21 @@ if (fr) {
   const naTela = await p.evaluate(() => window.__naTela);
   for (let i = 0; i < 100 && !(await p.evaluate(() => window.__someEm != null)); i++) await p.waitForTimeout(100);
   const someEm = await p.evaluate(() => window.__someEm);
-  const chegou = await ate(() => TM.ui.current() === "quick-result" && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
+  const ate106 = await ate(() => TM.ui.current() === "quick-result" && !document.querySelector(".tm3d-tela"), "^(Ver resultado|Pular)", 120);
   await p.waitForTimeout(1500);
   const u = await ultimaPartida();
   const some = toques && toques.t && someEm ? (someEm - toques.t) / 1000 : null;
+  // (item 45, C15) o "some" em três partes: o 3D manda o tm3d:sair no próprio toque (postou), a mensagem chega à página do TM
+  // (chegou: o 3D é da mesma origem e divide o fio com o TM — com a carga do 3D no meio, ela espera as tarefas dele; 0,883 s numa
+  // rodada da main sob carga) e o TM tira o quadro da vista (someTM, o que o item 106 guarda)
+  const chegouEm = await p.evaluate(() => (window.__msgs3d.find(m => m.tipo === "tm3d:sair") || {}).t || null);
+  const postou = toques && toques.t && toques.postou ? (toques.postou - toques.t) / 1000 : null;
+  const chegou = toques && toques.postou && chegouEm ? (chegouEm - toques.postou) / 1000 : null;
+  const someTM = chegouEm && someEm ? (someEm - chegouEm) / 1000 : null;
   confere("item 106 · Partida rápida: o tm3d:tela tira o aviso \"Abrindo o estádio 3D…\" e o X do TM", !!naTela && naTela.aviso === "none" && naTela.x === "none", naTela);
-  confere("item 106 · Partida rápida: o \"Simular partida\" (2 toques) ANTES do tm3d:pronto → tm3d:sair \"simular\", sem tm3d:pronto nem tm3d:fim; o quadro some da vista ≤ 0,5 s depois do 2º toque; o TM simula o result de sempre",
-    !!toques && toques.tela && toques.antes && toques.armado === "simular" && toques.tick === 0 && u.msgs[0] === "tm3d:tela" && !u.msgs.includes("tm3d:pronto") && some != null && some <= 0.5 && chegou && simulouNoTM(u, true),
-    { toques, some, chegou, msgs: u.msgs, em3d: u.em3d, placar: u.placar, antes: u.antes, toasts: u.toasts });
+  confere("item 106 · Partida rápida: o \"Simular partida\" (2 toques) ANTES do tm3d:pronto → tm3d:sair \"simular\" no próprio toque (≤ 0,1 s), sem tm3d:pronto nem tm3d:fim; o quadro some da vista ≤ 0,5 s depois de o tm3d:sair chegar ao TM (o total, do toque, informativo); o TM simula o result de sempre",
+    !!toques && toques.tela && toques.antes && toques.armado === "simular" && toques.tick === 0 && u.msgs[0] === "tm3d:tela" && !u.msgs.includes("tm3d:pronto") && postou != null && postou <= 0.1 && someTM != null && someTM <= 0.5 && ate106 && simulouNoTM(u, true),
+    { toques, some, postou, chegou, someTM, chegouResultado: ate106, msgs: u.msgs, em3d: u.em3d, placar: u.placar, antes: u.antes, toasts: u.toasts });
 }
 
 // 2) Carreira de técnico: o clube com o escudo e o estádio do TM, adversário escalado direito e resultado registrado
