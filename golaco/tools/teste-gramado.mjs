@@ -806,6 +806,41 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
       SH.aplicarTrocas('void main() {}', SS.TROCA_RECORTE, 'teste', m => av7.push(m));
       reg('G7 o recorte dos letreiros: dentro do #ifdef USE_ALPHATEST (sem alphaTest o uniform nem existe), o alfa da A2C limitado a [0, 1], e a troca sem o trecho avisa',
         `${okIfdef ? '#ifdef e clamp' : 'SEM o #ifdef ou o clamp'} · sem o trecho: ${av7.length} aviso(s)`, '#ifdef e clamp · 1 aviso', okIfdef && av7.length === 1);
+      // G8 (as correções do fechamento do item 45): a amostra da SILHUETA pela UV `centroid` (o N11 do C10; GLSL ES 3.00 §4.3): o
+      // vertex e o fragment das bandeiras e do quadro da torcida, com e sem o ramo do impostor, declaram `centroid varying vec2
+      // vUvC`, o vertex a escreve e o fragment lê o atlas por ela. A K1 da página mede o efeito (13,4% de franjas nas bandeiras sem
+      // o centroid, 2,2% com, no C10), mas o SwiftShader do CI não a reprova sozinha: esta é a guarda da estrutura, provada pela
+      // mutação (G8b: sem o `centroid`, sem a escrita e com a leitura pela vUv, cada uma reprova).
+      const silhuetas = {
+        bandeiras: SS.shaderBandeiras(),
+        torcida: SS.shaderTorcida(null),
+        'torcida com o impostor': SS.shaderTorcida(imp0),
+      };
+      const RE_CENTROID = /\bcentroid\s+varying\s+vec2\s+vUvC\s*;/;
+      const conferirCentroid = S => {
+        const v = semComent(S.vert), fr = semComent(S.frag);
+        const decl = RE_CENTROID.test(v) && RE_CENTROID.test(fr);
+        const escreve = /\bvUvC\s*=/.test(v.slice(v.search(/\bvoid\s+main\s*\(/)));
+        const le = /\btexture(?:2D|Lod|Grad)?\s*\(\s*uAtlas\s*,\s*vUvC\b/.test(fr);
+        return { ok: decl && escreve && le, txt: `${decl ? 'centroid' : 'SEM centroid'} · ${escreve ? 'escreve' : 'NÃO escreve'} · ${le ? 'lê o atlas pela vUvC' : 'NÃO lê pela vUvC'}` };
+      };
+      const g8 = Object.entries(silhuetas).map(([nome, S]) => ({ nome, ...conferirCentroid(S) }));
+      reg('G8 as silhuetas pela UV centroid: as bandeiras e o quadro da torcida, com e sem o impostor, declaram `centroid varying vec2 vUvC` no vertex e no fragment, o vertex a escreve e o fragment lê o atlas por ela',
+        g8.map(x => `${x.nome}: ${x.txt}`).join(' · '), 'os 3 com centroid, escrita e leitura', g8.every(x => x.ok));
+      // G8b: as mutações (a guarda que passa com o defeito não protege nada)
+      const mutS = (S, de, para, onde = ['vert', 'frag']) => {
+        const r = { ...S };
+        let achou = false;
+        for (const k of onde) if (r[k].includes(de)) { r[k] = r[k].split(de).join(para); achou = true; }
+        return achou ? r : null;
+      };
+      const mutC = {
+        'sem o centroid (as 4 declarações)': Object.values(silhuetas).map(S => mutS(S, 'centroid varying vec2 vUvC', 'varying vec2 vUvC')),
+        'o vertex sem escrever a vUvC': [mutS(silhuetas.bandeiras, '  vUvC = uv;\n', '', ['vert']), mutS(silhuetas.torcida, '  vUvC = vUv;\n', '', ['vert'])],
+        'a leitura das bandeiras pela vUv': [mutS(silhuetas.bandeiras, 'textureGrad(uAtlas, vUvC,', 'textureGrad(uAtlas, vUv,', ['frag'])],
+      };
+      const g8b = Object.entries(mutC).map(([nome, ms]) => ({ nome, pega: ms.every(m => m !== null && !conferirCentroid(m).ok) }));
+      reg('G8b a guarda das silhuetas reprova as mutações (sem o centroid, sem a escrita, a leitura pela vUv)', g8b.map(x => `${x.nome}: ${x.pega ? 'reprova' : 'PASSA'}`).join(' · '), 'as 3 reprovam', g8b.every(x => x.pega));
     }
   }
 }
