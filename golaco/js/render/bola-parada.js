@@ -276,7 +276,7 @@ export function criarTelaBolaParada(cena) {
       return v;
     },
     esconder() { linha.atualizar(null, pts, null, null, 0); classes(null, false); },
-    /** A malha da mira (o main.js compila o programa dela na carga do módulo: renderer.compileAsync). */
+    /** A malha da mira (o main.js compila o programa dela na carga do módulo: renderer.compile). */
     get malha() { return linha.malha; },
     get linha() { return linha.estado; },
     /** Estado para os testes (main.js __golaco.bolaParada.estado). */

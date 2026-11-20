@@ -19,7 +19,8 @@
 //      a opção da pausa desligada no meio do jogo (o lance armado não toca);
 //   V7 celular 844×390 Média (a régua do teste-replay G4/G6): chamadas de desenho por plano (tv e fechada ≤ o máximo ao vivo
 //      + 1; atrás do gol ≤ + 3: o lado de cá entra no quadro, como no replay do gol), CPU do quadro do replay (sem o
-//      desenho) p95 ≤ o do jogo + 1 ms, e nada some (os 22 e os 2 treinadores e a bola em todo quadro);
+//      desenho) p95 ≤ o do jogo + 1 ms — os dois com 1 quadro em 8 desenhado (item 45, C15) —, e nada some (os 22 e os 2
+//      treinadores e a bola em todo quadro);
 //   V8 online com duas abas pelo BroadcastChannel (?replayParada=1 nas DUAS; rev. R26): as duas mostram o replay no mesmo
 //      tick, sem dessincronia, os hashes a cada 60 passos iguais e a partida segue; variante, na mesma partida, com os
 //      replays desligados numa aba (replay.automatico(false): o estado do ?replay=0 e do "Replays: Desligado"): só a outra
@@ -429,8 +430,12 @@ if (roda('E')) try {
       for (let i = 0; i < 120; i++) passo(false);
       let cham = 0, tri = 0;
       for (let i = 0; i < 120; i++) { const des = i % 2 === 0; passo(des); if (!des || g.replay.estado?.ativo) continue; const e = g.estado(); cham = Math.max(cham, e.desenhoChamadas); tri = Math.max(tri, e.desenhoTriangulos); }
+      // (item 45, C15) a CPU do jogo no MESMO regime de desenho do replay (1 quadro em 8 desenhado): o quadro logo depois de um
+      // desenhado leva os picos (o desenho do Chromium sem GPU — com o MSAA 4× da Média, ~4× mais trabalho — disputa os núcleos com o
+      // fio da página), e o replay tem ~13% dos quadros assim; o jogo medido sem desenho nenhum não tinha esses picos e o p95 do
+      // replay passava dele no CI (3,30 e 2,70 ms contra 1,40 e 1,30; a média 0,60 e 0,43)
       g.medirQuadro({ zerar: true });
-      for (let i = 0; i < 600; i++) passo(false);
+      for (let i = 0; i < 600; i++) passo(i % 8 === 0);
       const q = g.medirQuadro({ zerar: true });
       return { cham, tri, p95: q.cpu.p95, media: q.cpu.media, n: q.quadros };
     });

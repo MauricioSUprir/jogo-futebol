@@ -9,9 +9,10 @@
 // Qualidade: o que desenhar é um prefixo da malha (Baixa ⊂ Média ⊂ Alta: 8/10/12 faixas, 6/16/32 bandeiras); na Baixa
 // nada mexe (sem onda nem balanço). Luz dos refletores à noite e a luz falsa dos sinalizadores (luz-falsa.js).
 import * as THREE from 'three';
-import { BANDEIRAS, faixas, bandeiras, bandeiroes, BANDEIRA_GLSL, BANDEIRAO_GLSL, SOB_GLSL, LENTE_GLSL } from './bandeiras-dados.js';
+import { BANDEIRAS, faixas, bandeiras, bandeiroes } from './bandeiras-dados.js';
+import { shaderBandeiras } from './silhuetas-shader.js';
 import { aberturaBandeirao } from './festa.js';
-import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
+import { UNIFORMS_LUZ } from './luz-falsa.js';
 import { criarCanvas, texturaCanvas } from './util.js';
 import { desenharEscudo, imagemEscudo } from './escudo-desenho.js';
 
@@ -21,88 +22,9 @@ const Y_BANDEIRA = 576, BAND_W = 182, BAND_H = 128;
 const Y_BANDEIRAO = 704;
 const BANDEIRAO_PX = [[0, Y_BANDEIRAO, 512, 128], [512, Y_BANDEIRAO, 512, 298]];
 const MASTRO_PX = [8, 1012, 8, 8];
-
-const VERT = /* glsl */`
-#include <common>
-#include <fog_pars_vertex>
-attribute vec2 aLocal;
-attribute vec4 aMeta;
-uniform float uTempo;
-uniform float uAnimada;
-uniform vec2 uAbre;
-uniform vec3 uBandA[2];
-uniform vec3 uBandU[2];
-uniform vec3 uBandV[2];
-uniform vec3 uBandN[2];
-uniform vec2 uBandLarg;
-uniform vec3 uSol;
-uniform vec2 uLuz;
-uniform vec4 uLente;
-varying vec2 vUv;
-varying float vLuz;
-varying vec3 vFlare;
-${BANDEIRA_GLSL}
-${BANDEIRAO_GLSL}
-${SOB_GLSL}
-${LENTE_GLSL}
-${LUZ_FALSA_GLSL}
-void main() {
-  float tipo = aMeta.x;
-  vec3 p;
-  vec3 n;
-  if (tipo < 0.5) {
-    p = position;
-    n = vec3(aMeta.z, 0.0, aMeta.w);
-  } else if (tipo < 2.5) {
-    vec3 e = vec3(aMeta.z, 0.0, aMeta.w);
-    n = vec3(-e.z, 0.0, e.x);
-    vec3 l;
-    if (tipo < 1.5) l = bandeiraPonto(aLocal.x, aLocal.y, aMeta.y, uTempo, uAnimada);
-    else {
-      float th = uAnimada > 0.5 ? ${BANDEIRAS.onda.bal.toFixed(3)} * sin(${(2 * Math.PI * BANDEIRAS.onda.balHz).toFixed(5)} * uTempo + aMeta.y) : 0.0;
-      float c = cos(th), s = sin(th);
-      l = vec3(c * aLocal.x - s * aLocal.y, s * aLocal.x + c * aLocal.y, 0.0);
-    }
-    // debaixo do bandeirão aberto a bandeira abaixa (some na mão): nada de mastro furando o pano
-    vec2 mb = vec2(${BANDEIRAS.sob.bandeira.map(v => v.toFixed(2)).join(', ')});
-    float sob = max(sobBandeirao(position, uBandA[0], uBandU[0], uBandV[0], uAbre.x, mb), sobBandeirao(position, uBandA[1], uBandU[1], uBandV[1], uAbre.y, mb));
-    // perto da lente da câmera da bola parada ela também abaixa (bandeiras-dados.js alturaPelaLente; uLente.w 0 fora dela)
-    l *= (1.0 - sob) * alturaPelaLente(position, uLente);
-    p = position + e * l.x + vec3(0.0, l.y, 0.0) + n * l.z;
-  } else {
-    bool k0 = tipo < 3.5;
-    float ab = k0 ? uAbre.x : uAbre.y;
-    float v = min(aLocal.y, ab);
-    float larg = k0 ? uBandLarg.x : uBandLarg.y;
-    n = k0 ? uBandN[0] : uBandN[1];
-    float dz = ondaBandeirao(aLocal.x, v, larg, uTempo, uAnimada) * ab;
-    p = (k0 ? uBandA[0] : uBandA[1]) + (k0 ? uBandU[0] : uBandU[1]) * aLocal.x + (k0 ? uBandV[0] : uBandV[1]) * v + n * dz;
-  }
-  vec4 mvPosition = viewMatrix * vec4(p, 1.0);
-  gl_Position = projectionMatrix * mvPosition;
-  vUv = uv;
-  vLuz = uLuz.x + uLuz.y * abs(dot(n, uSol));
-  vFlare = luzFalsa(p);
-  #include <fog_vertex>
-}
-`;
-
-const FRAG = /* glsl */`
-#include <common>
-#include <fog_pars_fragment>
-uniform sampler2D uAtlas;
-varying vec2 vUv;
-varying float vLuz;
-varying vec3 vFlare;
-void main() {
-  vec4 t = texture2D(uAtlas, vUv);
-  if (t.a < 0.5) discard;
-  gl_FragColor = vec4(t.rgb * (vLuz + vFlare), 1.0);
-  #include <tonemapping_fragment>
-  #include <colorspace_fragment>
-  #include <fog_fragment>
-}
-`;
+// os shaders (a onda, o mastro, os bandeirões no vertex; o recorte com a cobertura de longe e a UV centroid no fragment): os
+// TEXTOS em render/silhuetas-shader.js shaderBandeiras (puro: o tools/teste-gramado confere o shader montado e o ?gfx=antigo bit
+// a bit; a revisão do bloco 3 do item 45)
 
 /**
  * Atlas (1024²): as faixas (uma linha de 48 px cada), 4 desenhos de bandeira, os 2 bandeirões e o mastro. festa (só com
@@ -191,7 +113,8 @@ function atlasFesta(lista, festa = null, escudo = null) {
 const u = x => x / ATLAS, v = y => 1 - y / ATLAS;   // canvas → uv (flipY)
 
 /**
- * Cria a malha. opc = {qualidade, hora, identidade (identidade.js; só a do Total Match muda os textos e as cores)}.
+ * Cria a malha. opc = {qualidade, hora, identidade (identidade.js; só a do Total Match muda os textos e as cores), antigo (o
+ * `?gfx=antigo` do item 45: o shader de antes, sem a UV centroid nem a compensação de alfa; render/torcida.js o passa)}.
  * Devolve {mesh, atualizar(festa, t), definirQualidade(q), definirHora(h), contagem}.
  */
 export function criarBandeiras(cena, opc = {}) {
@@ -260,7 +183,7 @@ export function criarBandeiras(cena, opc = {}) {
   const tex = ident ? atlasFesta(lFaixas, ident.festa, imagemEscudo(ident, ident.festa.escudo ?? 0)) : atlasFesta(lFaixas);
   const uni = {
     ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
-    uAtlas: { value: tex }, uTempo: { value: 0 }, uAnimada: { value: 1 }, uAbre: { value: new THREE.Vector2(0, 0) },
+    uAtlas: { value: tex }, uTamAtlas: { value: new THREE.Vector2(ATLAS, ATLAS) }, uCompensa: { value: 1 }, uTempo: { value: 0 }, uAnimada: { value: 1 }, uAbre: { value: new THREE.Vector2(0, 0) },
     uBandA: { value: lBand2.map(b => new THREE.Vector3(...b.A)) }, uBandU: { value: lBand2.map(b => new THREE.Vector3(...b.U)) },
     uBandV: { value: lBand2.map(b => new THREE.Vector3(...b.V)) }, uBandN: { value: lBand2.map(b => new THREE.Vector3(...b.N)) },
     uBandLarg: { value: new THREE.Vector2(lBand2[0].larg, lBand2[1].larg) },
@@ -268,7 +191,8 @@ export function criarBandeiras(cena, opc = {}) {
     uLente: { value: new THREE.Vector4(0, 0, 0, 0) },
     uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
   };
-  const material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: VERT, fragmentShader: FRAG, fog: true, side: THREE.DoubleSide });
+  const sh = shaderBandeiras({ antigo: !!opc.antigo });
+  const material = new THREE.ShaderMaterial({ uniforms: uni, vertexShader: sh.vert, fragmentShader: sh.frag, fog: true, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(geo, material);
   mesh.name = 'festa-bandeiras';
   mesh.frustumCulled = false;   // a mureta do lado de lá está em todo quadro do jogo; o resto mexe no shader
@@ -290,6 +214,11 @@ export function criarBandeiras(cena, opc = {}) {
       uni.uAnimada.value = q === 'baixa' ? 0 : 1;
     },
     definirHora(h) { uni.uLuz.value.set(h === 'noite' ? 0.36 : 0.62, h === 'noite' ? 0.12 : 0.42); },
+    /**
+     * O gancho físico dos testes (item 45, C10: graficos.fisico): true = os desenhos seguintes sem a compensação de alfa pelo
+     * mip (a peça de verdade: as referências SSAA e as máscaras); false = de volta. Só o uniform (nada recompila).
+     */
+    fisico(v) { uni.uCompensa.value = v ? 0 : 1; },
     /** A lente da câmera da bola parada ({x, y, z}) neste quadro, ou null fora desse plano: as bandeiras perto dela abaixam. */
     definirLente(p) { if (p) uni.uLente.value.set(p.x, p.y, p.z, 1); else uni.uLente.value.w = 0; },
     dispose() { cena.remove(mesh); geo.dispose(); material.dispose(); tex.dispose(); },

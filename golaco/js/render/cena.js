@@ -3,8 +3,50 @@
 // câmera da sombra é justa (quadrado fixo em volta da jogada) e anda em passos de 1 texel
 // ("texel snapping", Alex Tardif / MS "Common Techniques to Improve Shadow Depth Maps") para a
 // borda da sombra não tremeluzir quando a câmera segue o jogador.
+//
+// O antisserrilhado (item 45, `golaco/PLANO-GRAFICOS.md` passo 1): o MSAA 4× do próprio canvas (o pedido `antialias` do
+// contexto; sem passada extra) pela tabela AA_QUALIDADE — a Média passou a ter (D1); o QUALIDADE.antialias do config.js
+// ficou como a tabela de antes (?gfx=antigo) e o config.js, do fecho do hash, não se toca. A troca de qualidade compara o
+// antisserrilhado PEDIDO com o do CONTEXTO (o que o navegador deu: a queda automática deixa a Baixa num contexto com MSAA),
+// nunca com o nome da qualidade. Recriar o renderizador (canvas novo) leva o canvas inteiro (atributos e inert) e o recorte
+// local e roda os ganchos aoRecriar — os mesmos do contexto restaurado (webglcontextrestored).
 import * as THREE from 'three';
 import { QUALIDADE } from '../config.js';
+import { GRAFICOS } from './graficos-opcoes.js';
+
+/** O antisserrilhado (MSAA do canvas) por qualidade. O ?aa=0|1 passa por cima; o ?gfx=antigo volta ao QUALIDADE.antialias. */
+export const AA_QUALIDADE = Object.freeze({ baixa: false, media: true, alta: true });
+// o teto dos aparelhos de toque (escolha D8 do dono): o MSAA que a tabela ACRESCENTA (o da Média) só com a área da tela ×
+// min(dpr, pixelRatioMax)² ≤ 1,2 MP — o 844×390 dá 0,74 MP e o 932×430 0,90 (com MSAA); o iPad mini 1,9 e o iPad Pro 12,9"
+// 3,1 (sem: a Média do tablet fica como antes, pr 1,5 e sem MSAA, ~100 MB a menos no Safari). O MSAA que já existia (a Alta)
+// fica em todo aparelho: nada pior que antes. No PC não há teto
+export const AA_TETO_TOQUE = 1.2e6;
+// a exposição por tom: o Neutral pede × 1,40 para a cena ficar no brilho do ACES (PLANO-GRAFICOS.md §2, D2; só diagnóstico)
+export const FATOR_TOM = Object.freeze({ aces: 1, neutro: 1.4 });
+const fatorTom = FATOR_TOM[GRAFICOS.tom] ?? 1;
+
+/** O aparelho, para o teto: toque (pointer: coarse), dpr e a TELA (screen: não muda ao girar o celular). */
+function ambiente() {
+  if (typeof window === 'undefined') return { toque: false, dpr: 1, telaW: 0, telaH: 0 };
+  return {
+    toque: !!window.matchMedia?.('(pointer: coarse)').matches,
+    dpr: window.devicePixelRatio || 1,
+    telaW: window.screen?.width ?? 0, telaH: window.screen?.height ?? 0,
+  };
+}
+
+/** O antisserrilhado PEDIDO para a qualidade `nome` neste aparelho (a tabela, o ?aa, o ?gfx=antigo e o teto do toque). */
+export function aaPedido(nome, opc = GRAFICOS, amb = ambiente()) {
+  const q = QUALIDADE[nome];
+  if (opc.aa === true || opc.aa === false) return opc.aa;
+  if (opc.gfxAntigo) return !!q?.antialias;
+  let aa = !!AA_QUALIDADE[nome];
+  if (aa && q && !q.antialias && amb.toque) {
+    const pr = Math.min(amb.dpr, q.pixelRatioMax);
+    if (amb.telaW * amb.telaH * pr * pr > AA_TETO_TOQUE) aa = false;
+  }
+  return aa;
+}
 
 const HORAS = {
   dia: {
@@ -71,12 +113,12 @@ function criarCeu() {
   return { mesh, uni };
 }
 
-function criarRenderer(canvas, q) {
+function criarRenderer(canvas, q, aa) {
   const r = new THREE.WebGLRenderer({
-    canvas, antialias: q.antialias, alpha: false, stencil: false, powerPreference: 'high-performance',
+    canvas, antialias: aa, alpha: false, stencil: false, powerPreference: 'high-performance',
   });
   r.outputColorSpace = THREE.SRGBColorSpace;
-  r.toneMapping = THREE.ACESFilmicToneMapping;
+  r.toneMapping = GRAFICOS.tom === 'neutro' ? THREE.NeutralToneMapping : THREE.ACESFilmicToneMapping;
   r.shadowMap.enabled = q.sombras;
   r.shadowMap.type = q.mapaSombra >= 2048 ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
   return r;
@@ -88,7 +130,26 @@ function criarRenderer(canvas, q) {
 export function criarCena(opc) {
   let nomeQ = opc.qualidade;
   let q = QUALIDADE[nomeQ];
-  let renderer = criarRenderer(opc.canvas, q);
+  // o contexto: o antisserrilhado PEDIDO ao criá-lo e o que o navegador DEU (o atributo devolvido e as amostras do buffer
+  // padrão: Média 4 no MSAA). Lidos na criação e no contexto restaurado, com o buffer padrão ligado
+  const ctx = { pedido: aaPedido(nomeQ), aa: false, amostras: 0 };
+  let renderer = criarRenderer(opc.canvas, q, ctx.pedido);
+  const lerContexto = () => {
+    const gl = renderer.getContext();
+    ctx.aa = !!gl.getContextAttributes()?.antialias;
+    ctx.amostras = gl.getParameter(gl.SAMPLES) | 0;
+  };
+  lerContexto();
+  // os ganchos de quem precisa saber do contexto novo (a A2C dos finos, a mira): na recriação e no contexto restaurado
+  const ganchos = [];
+  const rodarGanchos = motivo => {
+    const ev = { motivo, renderer, aa: ctx.aa, amostras: ctx.amostras };
+    for (const fn of ganchos.slice()) {
+      try { fn(ev); } catch (e) { console.error('cena: gancho aoRecriar falhou', e); }
+    }
+  };
+  // a chave do último tamanho do buffer (largura x altura @ pixel ratio): o resize e o visualViewport chamam os dois
+  let chaveTam = '';
   const cena = new THREE.Scene();
   const ceu = criarCeu();
   cena.add(ceu.mesh);
@@ -143,7 +204,8 @@ export function criarCena(opc) {
     extra.target.position.set(0, 0, 0);
     cena.fog.color.setHex(H.nevoa); cena.fog.near = H.nevoaPerto; cena.fog.far = H.nevoaLonge;
     renderer.setClearColor(H.horizonte);
-    renderer.toneMappingExposure = H.exposicao;
+    // (o ?tom=neutro pede × 1,40; aqui a exposição sobrevive à troca de hora e à recriação)
+    renderer.toneMappingExposure = H.exposicao * fatorTom;
     // base ortonormal da vista da luz
     eixoD.crossVectors(new THREE.Vector3(0, 1, 0), dirLuz).normalize();
     if (eixoD.lengthSq() < 1e-6) eixoD.set(1, 0, 0);
@@ -153,39 +215,88 @@ export function criarCena(opc) {
   configurarSombra();
   aplicarHora(hora);
   const foco = new THREE.Vector3();
+  // o contexto restaurado (o ouvinte em todo canvas da cena; depois do ouvinte do three, posto no construtor do renderizador:
+  // o dele refaz o estado da GPU antes; o setClearColor mora no WebGLBackground, que o initGLContext refaz — a hora repõe)
+  function aoRestaurar() { lerContexto(); aplicarHora(hora); rodarGanchos('contexto'); }
+  // recriar para a qualidade `nome`: o antisserrilhado PEDIDO para ela é outro que o do CONTEXTO, e este contexto não foi pedido
+  // assim (o navegador recusou o MSAA: recriar daria o mesmo)
+  const precisaRecriar = nome => { const aa = aaPedido(nome); return aa !== ctx.aa && aa !== ctx.pedido; };
+  opc.canvas.addEventListener('webglcontextrestored', aoRestaurar);
 
   return {
     cena,
     get renderer() { return renderer; },
     get qualidade() { return nomeQ; },
     get hora() { return hora; },
+    /** O antisserrilhado do CONTEXTO (o atributo que o navegador deu) e as amostras do buffer padrão (SAMPLES: 4 com MSAA). */
+    get aaContexto() { return ctx.aa; },
+    get amostras() { return ctx.amostras; },
     anisotropia() { return Math.min(renderer.capabilities.getMaxAnisotropy(), nomeQ === 'baixa' ? 2 : nomeQ === 'media' ? 4 : 8); },
     definirHora: aplicarHora,
-    /** Troca a qualidade. Se o antisserrilhado mudar, recria o renderizador (novo canvas). */
+    /**
+     * Troca a qualidade. Recria o renderizador (canvas novo) quando o antisserrilhado PEDIDO para ela é outro que o do
+     * CONTEXTO — menos quando este contexto já foi pedido assim (o navegador recusou o MSAA: recriar daria o mesmo). Sem
+     * `recriarSePreciso` (a queda automática no meio da partida: recompilar trava a tela) o contexto fica, com o MSAA dele.
+     * Devolve se recriou.
+     */
     definirQualidade(nome, recriarSePreciso = true) {
       const nova = QUALIDADE[nome];
       if (!nova) return false;
+      const aa = aaPedido(nome);
       let recriou = false;
-      if (recriarSePreciso && nova.antialias !== q.antialias) {
+      if (recriarSePreciso && precisaRecriar(nome)) {
         const velho = renderer;
         const cv = velho.domElement;
         const novo = document.createElement('canvas');
-        novo.id = cv.id; novo.className = cv.className;
+        // o canvas inteiro: TODOS os atributos (id, classe, aria-label, inert, a largura e a altura do buffer) e o inert
+        for (const a of cv.attributes) novo.setAttribute(a.name, a.value);
+        novo.inert = cv.inert;
+        // o único estado do renderizador que se perderia (o recorte do vão das placas no pré-jogo, render/vao-placas.js)
+        const recorte = velho.localClippingEnabled;
+        cv.removeEventListener('webglcontextrestored', aoRestaurar);
         cv.replaceWith(novo);
         if (luz.shadow.map) { luz.shadow.map.dispose(); luz.shadow.map = null; }
         velho.dispose();
         velho.forceContextLoss();
-        renderer = criarRenderer(novo, nova);
+        renderer = criarRenderer(novo, nova, aa);
+        renderer.localClippingEnabled = recorte;
+        novo.addEventListener('webglcontextrestored', aoRestaurar);
+        ctx.pedido = aa;
+        lerContexto();
+        // (o canvas novo é outro buffer: o próximo redimensionar acerta o tamanho e o pixel ratio)
+        chaveTam = '';
         recriou = true;
       }
       nomeQ = nome; q = nova;
       configurarSombra();
       aplicarHora(hora);
+      if (recriou) rodarGanchos('recriacao');
       return recriou;
     },
+    /** A troca para a qualidade `nome` recriaria o renderizador (a pausa mostra a tela "Ajustando…" antes; o main.js C12). */
+    precisaRecriar,
+    /**
+     * Os ganchos do contexto novo: fn({motivo: 'recriacao' | 'contexto', renderer, aa, amostras}) roda depois da recriação do
+     * renderizador (definirQualidade) e no contexto restaurado (webglcontextrestored). Devolve a função que o tira.
+     */
+    aoRecriar(fn) {
+      ganchos.push(fn);
+      return () => { const i = ganchos.indexOf(fn); if (i >= 0) ganchos.splice(i, 1); };
+    },
+    /** Quantos ganchos do contexto novo estão registrados (testes: nenhum vaza a cada pré-jogo — o letreiro de fora, C10). */
+    get nGanchos() { return ganchos.length; },
+    /**
+     * O buffer do canvas para a janela w × h (px CSS) com o pixel ratio da qualidade. Só mexe quando a largura, a altura ou o
+     * pixel ratio mudam (o resize e o visualViewport chamam os dois; cada atribuição a canvas.width/height refaz o provedor do
+     * canvas e, com MSAA, realoca as amostras): um setDrawingBufferSize, 2 atribuições. Devolve se mudou.
+     */
     redimensionar(w, h) {
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, q.pixelRatioMax));
-      renderer.setSize(w, h, false);
+      const pr = Math.min(window.devicePixelRatio || 1, q.pixelRatioMax);
+      const chave = `${w}x${h}@${pr}`;
+      if (chave === chaveTam) return false;
+      chaveTam = chave;
+      renderer.setDrawingBufferSize(w, h, pr);
+      return true;
     },
     /** Sombra acompanha a jogada, andando de texel em texel. */
     acompanhar(x, z) {

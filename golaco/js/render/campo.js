@@ -5,10 +5,13 @@
 // é estático vira um mesh só por material.
 import * as THREE from 'three';
 import { CAMPO, ESTADIO } from '../config.js';
-import { juntarGeometrias, cilindroEntre, caixa } from './util.js';
+import { juntarGeometrias, cilindroEntre, caixa, atributosFino, alfaDoCanvas } from './util.js';
 import {
-  GRAMA, texGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
+  GRAMA, texGramadoAntigo, texManchasGramado, texDetalheGrama, texPlacas, PLACA, texArquibancada, ARQ, texBandeira, texBrilho, mascaraTexto,
 } from './texturas.js';
+import { valoresGramado, GRAMADO_HORAS, gFocoDe, rasanteDaCamera } from './gramado.js';
+import { shaderGramado, shaderGramadoAntigo, shaderLinhas, aplicarTrocas, SHADER_FINOS } from './gramado-shader.js';
+import { GRAFICOS } from './graficos-opcoes.js';
 import { imagemEscudo } from './escudo-desenho.js';
 import { REDE_GLSL, fixo as fixoRede, REDE } from './rede-onda.js';
 import { VEU, COMPRIMENTO_PERFIL, pontoPerfil, profundidadeVeu } from '../rede-forma.js';
@@ -33,41 +36,89 @@ const HG = 0.45;
 
 // 0 = dia, 1 = noite (compartilhado pelos materiais do chão): à noite a luz dos refletores
 // forma um "poço" de luz — gramado mais claro no meio e caindo para as bordas e o entorno.
+// (o luzNoite do shader: render/gramado-shader.js LUZ_NOITE_GLSL)
 const uNoite = { value: 0 };
-const LUZ_NOITE_GLSL = `
-  float luzNoite(vec2 p) {
-    vec2 q = vec2(p.x / 62.0, p.y / 41.0);
-    float r2 = q.x * q.x * 0.75 + q.y * q.y;
-    return mix(1.04, 0.5, smoothstep(0.3, 1.35, r2));
-  }`;
 
-/** Injeta o grão (textura de detalhe em coordenadas do mundo, duas escalas) num material. */
-function comDetalhe(mat, detalhe, forca) {
+/**
+ * O gramado e o chão de fora de ANTES do item 45 (só o `?gfx=antigo`): o grão (textura de detalhe em coordenadas do mundo,
+ * duas escalas) e o poço de luz da noite por cima da cor do material/textura. O MESMO texto de shader e a mesma chave da main
+ * (render/gramado-shader.js shaderGramadoAntigo; o teste-gramado confere pelo hash gravado da main).
+ */
+function comDetalheAntigo(mat, detalhe, forca) {
+  const S = shaderGramadoAntigo(forca);
   mat.onBeforeCompile = sh => {
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uForca = { value: forca };
     sh.uniforms.uNoite = uNoite;
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec2 vMundoXZ;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform sampler2D uDetalhe;\nuniform float uForca;\nuniform float uNoite;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL)
-      .replace('#include <map_fragment>', `#include <map_fragment>
-        {
-          float d1 = texture2D(uDetalhe, vMundoXZ * 0.55).r;
-          float d2 = texture2D(uDetalhe, vMundoXZ * 0.137 + 0.31).r;
-          float d = d1 * d2 * 4.0;
-          diffuseColor.rgb *= mix(1.0, d, uForca);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
-        }`);
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'gramado antigo, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'gramado antigo, fragment');
   };
-  mat.customProgramCacheKey = () => 'grama-detalhe-' + forca;
+  mat.customProgramCacheKey = () => S.chave;
   return mat;
+}
+
+/**
+ * O gramado no shader (item 45, `PLANO-GRAFICOS.md` passos 2 e 3): os textos em render/gramado-shader.js shaderGramado (puro: o
+ * teste-gramado confere o shader montado — as derivadas antes de qualquer desvio, as chaves). `faixas` = a cor inteira do
+ * gramado pela conta (as 18 faixas da UEFA, o desgaste, as manchas, o entorno); sem ela (o chão de fora), só o grão e a noite
+ * por cima da cor do material. `profundidade` = a profundidade relativa ao foco (no gramado e no chão de fora). `uniforms`: os
+ * do gramado (render/gramado.js valoresGramado; os MESMOS objetos nos dois materiais), que o campo muda na troca da hora e, o
+ * uGFoco e o uRasante, por quadro; 0 chamada a mais.
+ */
+function comDetalhe(mat, detalhe, forca, { faixas = false, profundidade = false, uniforms = null } = {}) {
+  const S = shaderGramado(forca, { faixas, profundidade });
+  mat.onBeforeCompile = sh => {
+    sh.uniforms.uDetalhe = { value: detalhe };
+    sh.uniforms.uForca = { value: forca };
+    sh.uniforms.uNoite = uNoite;
+    if (faixas || profundidade) Object.assign(sh.uniforms, uniforms);
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'gramado, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'gramado, fragment');
+  };
+  mat.customProgramCacheKey = () => S.chave;
+  return mat;
+}
+
+/** Os uniforms do gramado no shader (render/gramado.js): os valores de uma hora num objeto de uniforms do three. */
+function uniformsGramado(hora) {
+  const u = {};
+  for (const [k, val] of Object.entries(valoresGramado(hora))) u[k] = { value: Array.isArray(val) ? new THREE.Vector3(...val) : val };
+  return u;
+}
+function horaGramado(u, hora) {
+  for (const [k, val] of Object.entries(valoresGramado(hora))) {
+    if (k === 'uGFoco') continue; // escrito por quadro (focador)
+    if (Array.isArray(val)) u[k].value.set(...val); else u[k].value = val;
+  }
+}
+
+/**
+ * O onBeforeRender do gramado e do chão de fora (item 45, C7): o uGFoco = o g da profundidade no ponto do chão no meio da tela
+ * (render/gramado.js gFocoDe) e o uRasante = o da hora (`base()`: 0 com o gancho semProfundidade) apagado pela altura da
+ * câmera (render/gramado.js rasanteDaCamera: nada abaixo de 3 m, inteiro de 8 m para cima — a revisão do C4–C8: nas câmeras
+ * baixas o foco cai longe do assunto), pela câmera que vai desenhar — vale para TODA câmera (TV, replay, cinema, Livre,
+ * pré-jogo) sem fio no main.js. O three sobe os uniforms do material no 1º desenho dele em cada render() (o
+ * `_currentMaterialId` volta a −1 no fim de cada um), depois deste gancho; a sombra usa o onBeforeShadow, que não passa aqui.
+ */
+function focador(u, base) {
+  const o = [0, 0, 0], d = [0, 0, 0];
+  return (renderer, cena, camera) => {
+    const e = camera.matrixWorld.elements;
+    o[0] = e[12]; o[1] = e[13]; o[2] = e[14];
+    d[0] = -e[8]; d[1] = -e[9]; d[2] = -e[10];
+    u.uGFoco.value = gFocoDe(o, d);
+    u.uRasante.value = rasanteDaCamera(base(), o[1]);
+  };
 }
 
 // ------------------------------------------------------------------ linhas
 
-function criarLinhas(detalhe) {
+/**
+ * As linhas do campo (um mesh só, antisserrilhado analítico). `uGramado` (os uniforms do gramado no shader; null no
+ * `?gfx=antigo`): as linhas mais brancas pelo `uBrancoLinha` (item 45, C7: o ACES do r170 acinzentava o branco — pico L 0,908 —;
+ * × 1,8 de dia no albedo dá o pico 0,952, a G5, sem `toneMapped = false`, que dava 0,98 e quebrava a noite).
+ */
+function criarLinhas(detalhe, uGramado = null) {
   const pos = [], cruz = [], idx = [];
   const y = 0.012;
   function quad(ax, az, bx, bz, ca, cb) {
@@ -152,31 +203,16 @@ function criarLinhas(detalhe) {
     color: 0xf3f6f1, transparent: true, depthWrite: false,
     polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4,
   });
+  const S = shaderLinhas({ branco: !!uGramado });
   mat.onBeforeCompile = sh => {
     sh.uniforms.uMeia = { value: h };
     sh.uniforms.uDetalhe = { value: detalhe };
     sh.uniforms.uNoite = uNoite;
-    sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nattribute float aCruz;\nvarying float vCruz;\nvarying vec2 vMundoXZ;')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvCruz = aCruz;\nvMundoXZ = (modelMatrix * vec4(transformed, 1.0)).xz;');
-    sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\nuniform float uMeia;\nuniform sampler2D uDetalhe;\nuniform float uNoite;\nvarying float vCruz;\nvarying vec2 vMundoXZ;' + LUZ_NOITE_GLSL)
-      .replace('#include <alphatest_fragment>', `
-        {
-          // cobertura analítica da linha no pixel; abaixo de ~1,5 px a linha não afina mais,
-          // só fica mais transparente (não some nem pisca à distância)
-          float w = max(fwidth(vCruz), 1e-5);
-          float hw = max(uMeia, 0.75 * w);
-          float cob = clamp((hw - abs(vCruz)) / w + 0.5, 0.0, 1.0) * (uMeia / hw);
-          diffuseColor.a *= cob;
-          if (diffuseColor.a < 0.004) discard;
-          float d = texture2D(uDetalhe, vMundoXZ * 0.55).r * 2.0;
-          diffuseColor.rgb *= mix(1.0, d, 0.35);
-          diffuseColor.rgb *= mix(1.0, luzNoite(vMundoXZ), uNoite);
-        }
-        #include <alphatest_fragment>`);
+    if (uGramado) sh.uniforms.uBrancoLinha = uGramado.uBrancoLinha;
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, S.vertex, 'linhas, vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'linhas, fragment');
   };
-  mat.customProgramCacheKey = () => 'linhas-aa';
+  mat.customProgramCacheKey = () => S.chave;
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.renderOrder = 1;
@@ -186,7 +222,39 @@ function criarLinhas(detalhe) {
 
 // ------------------------------------------------------------------ gols
 
-function criarGols() {
+/**
+ * A LARGURA MÍNIMA das peças finas do gol (item 45, C9; `PLANO-GRAFICOS.md` passo 5, o "phone-wire AA" do Humus): hastes do véu,
+ * cordas do pé e do fundo, mastros das bandeirinhas e as tampas deles ficam a 0,3–0,9 px na TV do celular e saíam TRACEJADAS
+ * (abaixo de 1 px a peça cai entre os centros dos pixels ou das amostras e some aos pedaços). No vértice a peça cresce no corte
+ * (crescer o raio do círculo por k cresce a silhueta na tela por k em qualquer direção da câmera) e a COBERTURA esmaece o que
+ * cresceu, pelo MSAA do contexto que desenha:
+ * - com MSAA na Média e na Alta: até `largMin` px EXATO, alfa = largura real ÷ largura nova, em alfa para cobertura (A2C, sem
+ *   ordenar). Com 1 px exato as 4 amostras cobrem a faixa uma vez cada, e a A2C (no SwiftShader por degraus fixos, alfa ≥ 0,2 /
+ *   0,4 / 0,6 / 0,8, sem pontilhado) mostra o mesmo tanto com a câmera andando; a corda deitada cresce a partir do contato com o
+ *   chão (aChao);
+ * - sem MSAA, e na BAIXA também com ele (a queda automática deixa a Baixa no contexto da Média, com as 4 amostras; e o `?aa=1`):
+ *   mistura com cobertura ANALÍTICA, como as linhas do campo. Na Baixa (pixel ratio 1) as cordas do gol de lá ficam a ~0,4 px e
+ *   a A2C de 1 px saltava entre 1 e 2 amostras de 4: na F do teste-graficos-celular, a "Baixa com MSAA" no gol de lá cintilava
+ *   ×2,26 o SSAA na corda do fundo e ×1,97 no mastro; com a mistura, ×1,35 e ×0,46 (o fechamento, C14a). A Média e a Alta seguem
+ *   com a A2C: a mistura nelas fecha a F também, mas a franja de 1 px grava a profundidade e apaga a rede atrás da peça — no PC
+ *   Alta a razão da seção A no gol de lá ia de ×1,02 a ×1,15 da main (meta ≤ ×1,10). A peça cresce até a meia largura + `franja`
+ *   px e cada pixel leva a fração da faixa de verdade na caixa dele, no eixo menor da tela (a soma por coluna é a largura da
+ *   faixa). Com 1 px e o alfa constante, cada coluna acendia 1 ou 2 pixels inteiros e a corda do fundo, em diagonal, cintilava
+ *   ×2,2 o SSAA. Em TODO vértice fino, com qualquer largura (a revisão do bloco 3): com um limiar (só abaixo de 2 px), a peça
+ *   que cruzava o limiar entre as duas pontas interpolava um vértice analítico com um de fora (a meia largura de −1 a ~1, o
+ *   lado de 0 a ±2) e abria um BURACO onde a meia interpolada passava por 0 — na Baixa, nas câmeras perto do gol (a corda do pé
+ *   a 1,09/0,89 px nas pontas: 31 faixas de 1 px com menos da metade do físico, a pior 0,02). Sem o limiar o crescimento
+ *   (meia + franja) ÷ meia vai a 1 sozinho nas peças grossas, sem salto (o mesmo caso: a pior 0,95).
+ * Postes e travessão (≥ 1,6 px mesmo na Baixa do gol de lá) não crescem. O px vem do `uAlturaBuffer` (a altura do buffer onde
+ * se desenha, no onBeforeRender da malha: acompanha a rotação, a queda de 1,5 para 1 e a recriação sem gancho).
+ */
+export const FINOS = Object.freeze({ largMin: 1, franja: 1 });
+// os lados do prisma fino (antes 5 nas cordas, 8 no resto): com 16 a largura na tela varia só 2% com o giro (2r × cos(π/16) a 2r);
+// a A2C só fica parada a 1 px EXATO, e o octógono do mastro de frente para a TV dava 1,08 px (×1,96)
+const SEGS_FINO = 16;
+
+
+function criarGols(antigo = false) {
   const g = CAMPO.gol;
   const R = g.raioPoste;
   const zp = g.largura / 2 + R;          // centro do poste (igual a bola.js)
@@ -194,27 +262,89 @@ function criarGols() {
   const geos = [], cores = [];
   const branco = new THREE.Color(0xf7f9f8), preto = new THREE.Color(0x1a1d1e);
   const zl = g.largura / 2, H = VEU.haste, F = VEU.fundo;
+  // uma peça: o cilindro de a a b com os atributos da largura mínima. Fina = cresce abaixo de FINOS.largMin px, com SEGS_FINO
+  // lados; as pontas FECHADAS onde ficam à vista (a revisão do bloco 3: o material só desenha a frente das faces, e a ponta
+  // aberta virava um anel com o fundo aparecendo — a ponta de trás da haste e a da frente da corda do pé, a 1,41 raio do eixo
+  // do poste, 100% expostas; as das cordas, 46%; no plano 'atras' do replay a boca da haste tinha 5–8 px). Só o mastro fica
+  // aberto: o pé no plano do chão (a boca para baixo) e a cabeça dentro da tampa dele. No `?gfx=antigo`, os lados (`velho`)
+  // e as tampas de antes
+  const peca = (a, b, raio, velho, cor, { fino = true, noChao = false, tampa = !fino } = {}) => {
+    const segs = fino && !antigo ? SEGS_FINO : velho;
+    geos.push(atributosFino(cilindroEntre(a, b, raio, segs, !tampa && !antigo), a, b, fino ? raio : 0, { noChao, segs }));
+    cores.push(cor);
+  };
   for (const s of [-1, 1]) {
     const x = s * MX;
     for (const t of [-1, 1]) {
-      geos.push(cilindroEntre([x, 0, t * zp], [x, yt + R, t * zp], R, 16)); cores.push(branco);
+      peca([x, 0, t * zp], [x, yt + R, t * zp], R, 16, branco, { fino: false });
       // haste do canto de cima (véu de noiva): do alto do poste para trás, segura a faixa de cima da rede
-      geos.push(cilindroEntre([x, yt, t * zp], [x + s * H, g.altura + 0.02, t * zl], 0.028, 8)); cores.push(branco);
+      peca([x, yt, t * zp], [x + s * H, g.altura + 0.02, t * zl], 0.028, 8, branco, { tampa: true });
       // pé da lateral no chão (corda presa por estacas), do poste até o fundo do véu
-      geos.push(cilindroEntre([x + s * R, 0.012, t * zl], [x + s * F, 0.012, t * zl], 0.012, 5)); cores.push(branco);
-      // mastro da bandeirinha
-      geos.push(cilindroEntre([x, 0, t * MZ], [x, 1.55, t * MZ], 0.018, 8)); cores.push(branco);
-      geos.push(cilindroEntre([x, 1.55, t * MZ], [x, 1.57, t * MZ], 0.022, 8)); cores.push(preto);
+      peca([x + s * R, 0.012, t * zl], [x + s * F, 0.012, t * zl], 0.012, 5, branco, { noChao: true, tampa: true });
+      // mastro da bandeirinha e a tampa dele
+      peca([x, 0, t * MZ], [x, 1.55, t * MZ], 0.018, 8, branco);
+      peca([x, 1.55, t * MZ], [x, 1.57, t * MZ], 0.022, 8, preto, { tampa: true });
     }
-    geos.push(cilindroEntre([x, yt, -zp - R], [x, yt, zp + R], R, 16)); cores.push(branco);
+    peca([x, yt, -zp - R], [x, yt, zp + R], R, 16, branco, { fino: false });
     // fundo do véu preso no chão (corda e estacas)
-    geos.push(cilindroEntre([x + s * F, 0.012, -zl], [x + s * F, 0.012, zl], 0.014, 5)); cores.push(branco);
+    peca([x + s * F, 0.012, -zl], [x + s * F, 0.012, zl], 0.014, 5, branco, { noChao: true, tampa: true });
   }
   const matArm = new THREE.MeshLambertMaterial({ vertexColors: true, emissive: LUZ_GOL.armDia });
   const estrutura = new THREE.Mesh(juntarGeometrias(geos, cores), matArm);
   estrutura.name = 'gols';
+  const finos = larguraMinima(estrutura, antigo);
   const rede = criarRede();
-  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms, matArm, matRede: rede.mesh.material };
+  return { estrutura, rede: rede.mesh, uniformsRede: rede.uniforms, matArm, matRede: rede.mesh.material, finos };
+}
+
+/**
+ * O shader e o esmaecimento da largura mínima numa malha de finos (render/util.js atributosFino). Controles: definirAA(amostras)
+ * = o SAMPLES do contexto que desenha e definirQualidade(nome) = a qualidade de agora; o modo sai dos dois: A2C (lista opaca) só
+ * com SAMPLES ≥ 2 e fora da Baixa (nunca a A2C sem amostras; a Baixa na mistura com ou sem as amostras que a queda deixa); senão
+ * mistura (transparente, escrevendo a profundidade, renderOrder 1; a rede continua no 2: a franja quase
+ * transparente esconde a rede atrás dela — medido na Baixa com o teste-rede-tela, os finos depois da rede mudavam o "clareia o gol
+ * na TV" de ΔL* 17,4 a 17,6 de dia e 18,2 a 18,5 à noite, e nada nas câmeras de perto: não pesa, fica); fisico(bool) =
+ * os desenhos seguintes SEM os truques (a peça de verdade, opaca: as referências e as máscaras dos testes). Os dois mudam o
+ * material FORA do desenho (o `transparent` decide a lista no projectObject, antes do onBeforeRender), sempre escrevem tudo (um
+ * material estragado por fora volta ao certo) e só pedem o programa novo quando algo mudou. `antigo` (`?gfx=antigo`): o
+ * material de antes, sem shader nem modos.
+ */
+function larguraMinima(mesh, antigo = false) {
+  const mat = mesh.material;
+  if (antigo) return { definirAA() {}, definirQualidade() {}, fisico() {}, get estado() { return { modo: 'antigo', amostras: null, largMin: null }; } };
+  const U = { uAlturaBuffer: { value: 1 }, uLargMin: { value: FINOS.largMin }, uFranja: { value: FINOS.franja }, uModoFino: { value: 0 } };
+  mat.onBeforeCompile = sh => {
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = aplicarTrocas(sh.vertexShader, SHADER_FINOS.vertex, 'gols (finos), vertex');
+    sh.fragmentShader = aplicarTrocas(sh.fragmentShader, SHADER_FINOS.fragment, 'gols (finos), fragment');
+  };
+  mat.customProgramCacheKey = () => SHADER_FINOS.chave;
+  // (os testes acham o uniform aqui: teste-graficos-pagina R4)
+  mat.userData.uAlturaBuffer = U.uAlturaBuffer;
+  mesh.onBeforeRender = renderer => {
+    const alvo = renderer.getRenderTarget();
+    U.uAlturaBuffer.value = alvo ? alvo.height : renderer.getContext().drawingBufferHeight;
+  };
+  let amostras = 0, fisico = false, baixa = false;
+  const aplicar = () => {
+    const a2c = !fisico && amostras >= 2 && !baixa, mistura = !fisico && !a2c;
+    const mudou = mat.alphaToCoverage !== a2c || mat.transparent !== mistura;
+    mat.alphaToCoverage = a2c;
+    mat.transparent = mistura;
+    mat.depthWrite = true;
+    // o canvas opaco: na A2C o fragmento escreve a cobertura no alfa (render/util.js alfaDoCanvas); a mistura volta à de sempre
+    alfaDoCanvas(mat, a2c);
+    mesh.renderOrder = mistura ? 1 : 0;
+    U.uModoFino.value = fisico ? 0 : a2c ? 1 : 2;
+    if (mudou) mat.needsUpdate = true;
+  };
+  aplicar();
+  return {
+    definirAA(n) { amostras = n | 0; aplicar(); },
+    definirQualidade(nome) { baixa = nome === 'baixa'; aplicar(); },
+    fisico(v) { fisico = !!v; aplicar(); },
+    get estado() { return { modo: fisico ? 'fisico' : U.uModoFino.value === 1 ? 'a2c' : 'mistura', amostras, largMin: U.uLargMin.value }; },
+  };
 }
 
 /**
@@ -763,14 +893,20 @@ function criarRefletores() {
 export function criarCampo(opc) {
   const aniso = opc.aniso ?? 4;
   const ident = opc.identidade && opc.identidade.tm ? opc.identidade : null;
-  const tamGrama = opc.qualidade === 'baixa' ? 1024 : 2048;
+  // o gramado no shader (item 45): a textura só das manchas e do desgaste, 512 × 256 (256 × 128 na Baixa; antes a textura
+  // inteira de 2048 × 1024, ~11 MB na GPU com os mips); o `?gfx=antigo` volta a textura e o shader de antes, bit a bit
+  const antigo = GRAFICOS.gfxAntigo;
+  const tamGrama = opc.qualidade === 'baixa' ? (antigo ? 1024 : 256) : (antigo ? 2048 : 512);
   const grupo = new THREE.Group();
   grupo.name = 'campo';
   const detalhe = texDetalheGrama(opc.qualidade === 'baixa' ? 256 : 512, aniso);
+  const uGramado = antigo ? null : uniformsGramado('dia');
   // gramado (campo + entorno)
   const gg = new THREE.PlaneGeometry(GRAMA.lx, GRAMA.lz, 1, 1);
   gg.rotateX(-Math.PI / 2);
-  const matGrama = comDetalhe(new THREE.MeshLambertMaterial({ map: texGramado(tamGrama, aniso) }), detalhe, 0.85);
+  const matGrama = antigo
+    ? comDetalheAntigo(new THREE.MeshLambertMaterial({ map: texGramadoAntigo(tamGrama, aniso) }), detalhe, 0.85)
+    : comDetalhe(new THREE.MeshLambertMaterial({ map: texManchasGramado(tamGrama, aniso) }), detalhe, 0.85, { faixas: true, profundidade: true, uniforms: uGramado });
   const grama = new THREE.Mesh(gg, matGrama);
   grama.receiveShadow = true;
   grama.name = 'gramado';
@@ -779,12 +915,23 @@ export function criarCampo(opc) {
   const gf = new THREE.PlaneGeometry(420, 420, 1, 1);
   gf.rotateX(-Math.PI / 2);
   gf.translate(0, -0.02, 0);
-  // atrás das placas a grama continua até a arquibancada (mais escura, sem faixas)
-  const fora = new THREE.Mesh(gf, comDetalhe(new THREE.MeshLambertMaterial({ color: 0x2c5a26 }), detalhe, 0.6));
+  // atrás das placas a grama continua até a arquibancada (mais escura, sem faixas): a cor de fora do gramado no shader
+  // (render/gramado.js, a mesma matiz das faixas; antes 0x2c5a26, h 143,8°)
+  const fora = new THREE.Mesh(gf, antigo
+    ? comDetalheAntigo(new THREE.MeshLambertMaterial({ color: 0x2c5a26 }), detalhe, 0.6)
+    : comDetalhe(new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(...GRAMADO_HORAS.dia.fora) }), detalhe, 0.6, { profundidade: true, uniforms: uGramado }));
   fora.name = 'chao-fora';
   grupo.add(fora);
-  grupo.add(criarLinhas(detalhe));
-  const gols = criarGols();
+  // a profundidade relativa ao foco (C7): o uGFoco e o uRasante de cada desenho, pela câmera dele (os mesmos uniforms nos dois
+  // materiais; os dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos
+  // testes; `rasBase` = o uRasante da hora antes da altura da câmera
+  let horaG = 'dia', semProf = false, semMan = false, rasBase = uGramado ? uGramado.uRasante.value : 0;
+  if (uGramado) grama.onBeforeRender = fora.onBeforeRender = focador(uGramado, () => rasBase);
+  const rasante = () => { if (uGramado) uGramado.uRasante.value = rasBase = semProf ? 0 : valoresGramado(horaG).uRasante; };
+  const manchas = () => { if (uGramado) uGramado.uManchas.value = semMan ? 0 : valoresGramado(horaG).uManchas; };
+  grupo.add(criarLinhas(detalhe, uGramado));
+  const gols = criarGols(antigo);
+  gols.finos.definirQualidade(opc.qualidade ?? 'media');
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
@@ -809,9 +956,41 @@ export function criarCampo(opc) {
     grupo,
     /** Vetores dos uniforms da rede (a = [x, y, z, amp]·4, b = [τ, pano, 0, 0]·4): rede-onda.js uniformsRede. */
     rede: { a: uRede.uRedeA.value, b: uRede.uRedeB.value, mesh: gols.rede },
+    /**
+     * O antisserrilhado dos finos do gol (item 45, C9: FINOS) pelas AMOSTRAS do contexto que desenha (o SAMPLES: o
+     * `cena.amostras`) e pela qualidade (o definirQualidade abaixo): ≥ 2 fora da Baixa = alfa para cobertura; < 2, ou na Baixa
+     * (a queda: o contexto da Média com as 4 amostras), mistura. O main.js chama na criação e no `cena.aoRecriar` (a recriação do
+     * renderizador e o contexto restaurado); sem chamada, a mistura (certa em qualquer contexto).
+     */
+    definirAA(amostras) { gols.finos.definirAA(amostras); },
+    /**
+     * Os gráficos do item 45 (testes e diagnóstico): antigo = o `?gfx=antigo` (o gramado de antes); gramado = os uniforms do
+     * gramado no shader ({uClara, uEscura, uManchas, uRasante, uGFoco, …}: render/gramado.js), null no antigo;
+     * semProfundidade(bool) = o termo de profundidade desligado (o uRasante em 0, também depois de uma troca de hora) — a G4 do
+     * teste-graficos-celular mede o TERMO, com − sem ele (sem efeito no antigo, que não tem o termo); semManchas(bool) = as
+     * manchas desligadas (o uManchas em 0, também depois de uma troca de hora) — a G1 e a G2 medem a cor e as faixas sem
+     * depender de onde as manchas caem perto do foco (a revisão do C4–C8; sem efeito no antigo); fisico(bool) = os desenhos
+     * seguintes SEM os truques dos finos (C9: sem a largura mínima, sem A2C, sem mistura — a peça de verdade, opaca; com false
+     * voltam): as referências SSAA e as máscaras geométricas dos testes (seções A, A2 e F) não dependem do código medido;
+     * finos = o estado dos finos agora ({modo: 'a2c' | 'mistura' | 'fisico', amostras, largMin}).
+     */
+    graficos: {
+      antigo, gramado: uGramado,
+      semProfundidade(v) { semProf = !!v; rasante(); },
+      semManchas(v) { semMan = !!v; manchas(); },
+      fisico(v) { gols.finos.fisico(v); },
+      get finos() { return gols.finos.estado; },
+    },
     definirHora(hora) {
       const noite = hora === 'noite';
       uNoite.value = noite ? 1 : 0;
+      if (uGramado) {
+        horaG = hora;
+        horaGramado(uGramado, hora);
+        rasante();
+        manchas();
+        fora.material.color.setRGB(...(GRAMADO_HORAS[hora] ?? GRAMADO_HORAS.dia).fora);
+      }
       // arquibancada à noite: só a luz que escapa dos refletores
       for (const m of arq.userData.materiais) m.color.setScalar(noite ? 0.42 : 1);
       arq.userData.definirHora?.(hora);
@@ -861,7 +1040,8 @@ export function criarCampo(opc) {
     definirMedidor(fn) { medidorCad = fn ?? null; cad3d?.definirMedidor(medidorCad); },
     /** Altura da tela em px CSS (a escolha dos blocos de perto é pelos px da cadeira). */
     definirAlturaTela(px) { if (px > 0) alturaTela = px; },
-    definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); },
+    // (os finos do gol também: a Baixa desenha na mistura com ou sem as amostras da queda — C14a do item 45)
+    definirQualidade(q) { qualCad = q; cad3d?.definirQualidade(q); gols.finos.definirQualidade(q); },
     /** Mostra/esconde as cadeiras 3D (testes; escondidas, a cadeira pintada volta em todo bloco). */
     mostrarCadeiras(v) { cad3d?.ligar(v); },
     /** As cadeiras 3D neste quadro (testes): {carregado, blocos, instancias, teto, mascara, torcedores, orcamento}. */

@@ -63,6 +63,9 @@ for (const c of CONFIGS) {
       cena3d.redimensionar(cfg.w, cfg.h);
       const campo = criarCampo({ qualidade: cfg.q, aniso: cena3d.anisotropia() });
       cena3d.cena.add(campo.grupo);
+      // os finos do gol pelo MSAA do contexto, como o main.js (item 45; a revisão do bloco 3: sem isto a armação ficava na
+      // mistura também nas configurações com MSAA, um modo que o jogo não usa nelas)
+      campo.definirAA?.(cena3d.amostras ?? 0);
       campo.definirHora(cfg.hora);
       const gl = cena3d.renderer.getContext();
       const W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;

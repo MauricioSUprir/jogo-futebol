@@ -38,14 +38,15 @@
 //     MESMO quadro) — L1 largura da linha pela máscara (tiras de 6 px ao longo da parte cheia: área ÷ comprimento) p95 ≤ 4,8 px
 //     no celular e ≤ 7,5 px no PC; L2 constante (p95/p5 ≤ 1,35 por tipo); L4 a área da mira ≤ 75% da de antes no escanteio e
 //     no tiro de meta e ≤ 110% na falta no 844×390 e no PC (as de antes: o mapa do item 65, 2a13ca14, a mesma régua; em
-//     568×320, informativo, ≤ 100%); L5 o miolo (o pixel mais claro da tira) × o mesmo ponto sem a mira, sobre o gramado, ≥ 3:1
-//     em ≥ 95% das tiras, e L5b em qualquer fundo o miolo ou o contorno ≥ 3:1; L6 nenhum pixel amarelo nem azul que a mira tenha
+//     568×320, informativo, ≤ 100%); L5 o miolo (o pixel mais claro da tira) × o mesmo ponto sem a mira, sobre o gramado (os pixels
+//     com linha do campo no fundo, pela geometria — o mesmo quadro sem a malha 'linhas' —, ficam fora: são do L5b; a malha
+//     achada é uma linha própria, sem ela a régua voltaria calada à cor), ≥ 3:1 em ≥ 95% das tiras, e L5b em qualquer fundo o miolo ou o contorno ≥ 3:1; L6 nenhum pixel amarelo nem azul que a mira tenha
 //     posto; A2 o anel do alvo no escanteio ≥ 20 × 6 px e ≥ 95% fora do HUD; C1 com curva 0 nenhum pixel verde junto da bola,
 //     e o arco cresce ≥ 4 px (celular) / 8 px (PC) por degrau; ≤ +1 chamada, ≤ +500 triângulos e nenhum programa WebGL novo
 //     quando a mira aparece pela 1ª vez (compilado na carga do módulo: a 1ª contagem com a mira nunca desenhada, a 2ª com ela
 //     acesa).
 //  0  O módulo (render/bola-parada.js) não está no download inicial: carregado sob demanda.
-//   node tools/teste-bola-parada-tela.mjs [--prints <pasta>] [--raiz <pasta do jogo>] [--so 7]
+//   node tools/teste-bola-parada-tela.mjs [--prints <pasta>] [--raiz <pasta do jogo>] [--so 7] [--lista-tiras]
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 
@@ -536,6 +537,16 @@ const MEDIR_MIRA = async () => {
   const pts = g.bolaParada.pontos();
   g.bolaParada.linha(false); g.desenhar(); g.desenhar();
   const B = ler(), eB = g.estado();
+  // C: o mesmo quadro sem a mira e sem as LINHAS DO CAMPO (a malha 'linhas' escondida) — onde B ≠ C o fundo tem linha do campo
+  let C = null;
+  {
+    const THREE = await import('three');
+    const cenas = new Set();
+    THREE.Scene.prototype.onBeforeRender = function (r) { if (r.domElement === cv) cenas.add(this); };
+    try { g.desenhar(); } finally { delete THREE.Scene.prototype.onBeforeRender; }
+    const lin = [...cenas].map(c => c.getObjectByName('linhas')).find(Boolean);
+    if (lin) { const v0 = lin.visible; lin.visible = false; g.desenhar(); g.desenhar(); C = ler(); lin.visible = v0; g.desenhar(); }
+  }
   // (a mira religada acende em 0,15 s do relógio: g.desenhar() não anda o tempo)
   g.bolaParada.linha(true); for (let i = 0; i < 12; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
   const dif = i => (Math.abs(A[i] - B[i]) + Math.abs(A[i + 1] - B[i + 1]) + Math.abs(A[i + 2] - B[i + 2])) / 3;
@@ -574,7 +585,8 @@ const MEDIR_MIRA = async () => {
     const nx = -ty, ny = tx;
     if (p.x < LADO || p.y < LADO || p.x > W - LADO || p.y > H - LADO) continue;
     const x0 = Math.floor((p.x - LADO - META) * k), x1 = Math.ceil((p.x + LADO + META) * k), y0 = Math.floor((p.y - LADO - META) * k), y1 = Math.ceil((p.y + LADO + META) * k);
-    let n = 0, borda = false, melhor = -1, contraste = 0, maxC = 0, grama = true;
+    let n = 0, borda = false, melhor = -1, contraste = 0, maxC = 0, grama = true, nLinha = 0;
+    let melhorV = -1, contrasteV = 0, gramaV = true; // a régua de antes (a cor do fundo, com as linhas do campo): só a lista
     for (let y = Math.max(0, y0); y < Math.min(CH, y1); y++) for (let x = Math.max(0, x0); x < Math.min(CW, x1); x++) {
       const ux = (x + 0.5) / k - p.x, uy = (y + 0.5) / k - p.y, al = ux * tx + uy * ty, at = ux * nx + uy * ny;
       if (Math.abs(al) > META || Math.abs(at) > LADO) continue;
@@ -584,14 +596,20 @@ const MEDIR_MIRA = async () => {
       if (Math.abs(at) > LADO - 1.5) borda = true;
       const la = lum(A, i), lb = lum(B, i), c = (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
       // o miolo: o pixel mais claro da tira × o fundo dele sem a mira; maxC: o maior contraste de um pixel da mira com o próprio
-      // fundo (o miolo OU o contorno: o "casing"); grama: o fundo da tira inteira é gramado (não a barreira, as placas, as linhas)
-      if (la > melhor) { melhor = la; contraste = c; }
+      // fundo (o miolo OU o contorno: o "casing"); grama: o fundo da tira é gramado (não a barreira, as placas, a torcida)
       if (c > maxC) maxC = c;
-      const f = hsv(B, i);
-      if (!(f.h >= 60 && f.h <= 140 && f.s >= 0.2 && f.v >= 0.12 && f.v <= 0.8)) grama = false;
+      const f = hsv(B, i), corDeGrama = f.h >= 60 && f.h <= 140 && f.s >= 0.2 && f.v >= 0.12 && f.v <= 0.8;
+      if (la > melhorV) { melhorV = la; contrasteV = c; }
+      if (!corDeGrama) gramaV = false;
+      // (C15) o pixel com LINHA DO CAMPO no fundo (B ≠ C além do limiar da máscara) fica fora do L5 pela geometria: é o L5b. Pela
+      // cor, a linha de longe misturada com a grama ficava na saturação do limiar (0,17–0,26) e a tira com ela entrava ou não no
+      // "gramado" pelo tom (o pior da main, 2,90:1 no 844×390, e o do item 45, 2,73:1 no 568×320, eram o miolo sobre a linha)
+      if (C && (Math.abs(B[i] - C[i]) + Math.abs(B[i + 1] - C[i + 1]) + Math.abs(B[i + 2] - C[i + 2])) / 3 > 10) { nLinha++; continue; }
+      if (la > melhor) { melhor = la; contraste = c; }
+      if (!corDeGrama) grama = false;
     }
     if (!n || borda) continue;
-    tiras.push({ larg: n / (k * k) / (2 * META), contraste, maxC, grama });
+    tiras.push({ i, larg: n / (k * k) / (2 * META), contraste, maxC, grama: grama && melhor >= 0, nLinha, contrasteV, gramaV });
   }
   // A2: o anel (os pontos do anel na tela, a caixa com o traço) e a parte dele fora do HUD
   let anel = null;
@@ -608,7 +626,7 @@ const MEDIR_MIRA = async () => {
     anel = { w: Math.max(...xs) - Math.min(...xs) + tr, h: Math.max(...ys) - Math.min(...ys) + tr, fora: naTela.filter(p => !noHud(p)).length / 32 };
   }
   return {
-    W, H, k, nm: nm / (k * k), pct: nm / (CW * CH), amAz, tiras, anel, linha: L,
+    W, H, k, nm: nm / (k * k), pct: nm / (CW * CH), amAz, tiras, anel, linha: L, linhasAchada: !!C,
     chamadas: eA.desenhoChamadas - eB.desenhoChamadas, triangulos: eA.desenhoTriangulos - eB.desenhoTriangulos, programas: eA.programas,
     hora: document.documentElement.classList.contains('noite') ? 'noite' : 'dia',
   };
@@ -710,7 +728,12 @@ if (!SO || SO.split(',').includes('7')) for (const T of TELAS7) {
     return { rot: `${x.tipo} ${x.hora}`, n: g.length, ok: g.filter(t => t.contraste >= 3).length / Math.max(1, g.length), min: Math.min(...g.map(t => t.contraste)),
       nb: x.tiras.length, okb: x.tiras.filter(t => t.maxC >= 3).length / Math.max(1, x.tiras.length), minb: Math.min(...x.tiras.map(t => t.maxC)) };
   });
-  meta(`7 L5 ${T.nome}: o contraste do miolo (o pixel mais claro da tira × o mesmo ponto sem a mira) sobre o gramado (a tira inteira) ≥ 3:1 em ≥ 95% das tiras, dia e noite`,
+  // --lista-tiras: cada tira (G = gramado; L = px com linha do campo no fundo; c = o miolo; a régua de antes: cor e miolo com a linha)
+  if (args.includes('--lista-tiras')) for (const x of okL) console.log(`      ${T.id} ${x.tipo} ${x.hora}: ` + x.tiras.map(t => `[${t.i} ${t.grama ? 'G' : '-'} L ${t.nLinha} c ${f2(t.contraste)} cb ${f2(t.maxC)} antes ${t.gramaV ? 'G' : '-'} ${f2(t.contrasteV)}]`).join(' '));
+  // (as correções do fechamento) sem a malha 'linhas' o C fica nulo e o L5 voltaria calado à régua pela cor: a estrutura da régua
+  meta(`7 L5 ${T.nome}: a malha 'linhas' achada (a régua do L5 pela geometria: o mesmo quadro sem as linhas do campo)`,
+    okL.map(x => `${x.tipo} ${x.hora} ${x.linhasAchada ? 'sim' : 'NÃO'}`).join(' · '), okL.length === 6 && okL.every(x => x.linhasAchada));
+  meta(`7 L5 ${T.nome}: o contraste do miolo (o pixel mais claro da tira × o mesmo ponto sem a mira) sobre o gramado (o fundo da tira; os pixels com linha do campo ficam no L5b) ≥ 3:1 em ≥ 95% das tiras, dia e noite`,
     fr.map(x => `${x.rot} ${Math.round(x.ok * 100)}% de ${x.n} (pior ${f2(x.min)}:1)`).join(' · '), fr.length === 6 && fr.every(x => x.n >= 3 && x.ok >= 0.95));
   meta(`7 L5b ${T.nome}: em qualquer fundo (a barreira, as placas, a torcida, as linhas do campo), algum pixel da mira (o miolo ou o contorno) ≥ 3:1 com o próprio fundo em ≥ 95% das tiras`,
     fr.map(x => `${x.rot} ${Math.round(x.okb * 100)}% de ${x.nb} (pior ${f2(x.minb)}:1)`).join(' · '), fr.length === 6 && fr.every(x => x.nb >= 5 && x.okb >= 0.95));

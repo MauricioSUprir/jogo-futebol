@@ -20,7 +20,8 @@
 //   T9 celular 844×390 Média: p95 da CPU do quadro na cena ≤ p95 do jogo + 1 ms; chamadas de desenho ≤ jogo + 3 (sem
 //      contar a malha perto da torcida — a densidade real do item 69, PR 3: 1 chamada quando a câmera está perto da
 //      arquibancada, que o teste-estadio 14b/14d confere e o orçamento do 3D de perto paga; a main já ficava no teto, 29 ×
-//      26); os programas de shader não aumentam na cena (pré-carga); 0 geometria e 0 textura a mais depois de 10 trocas;
+//      26); os programas de shader não aumentam na cena (pré-carga; a base contada depois do impostor da torcida e com a contagem
+//      parada — item 45, C15); 0 geometria e 0 textura a mais depois de 10 trocas;
 //   T10 a placa com ≥ 40 px de largura no celular no plano ENTRA, com os números certos;
 //   T11 com 2, 3, 4 e 5 trocas na mesma parada, cada par na faixa ≥ 1,5 s (cena + jogo) e nenhuma página por < 0,5 s
 //       seguidos (contraprova de 14/10: com 4 e 5 um par NUNCA aparecia; no fim do ENTRA uma página piscava 0,1 s);
@@ -394,6 +395,19 @@ for (const L of roda('L') ? LAYOUTS.filter(L => !telas || telas.some(t => L.nome
       const pg = P.pagina;
       if (!(await temCena(pg))) { t8Ok = false; t8.push(`${L.nome}: sem a cena`); continue; }
       await pg.evaluate(() => window.__golaco.relogio.avancar(1000 / 60, { desenhar: true }));
+      // (item 45, C15) a base dos programas DEPOIS do que compila sozinho depois do pronto: o impostor da torcida (assado em fatias
+      // ociosas, ~4–6 s depois do pronto; o programa dele compila no 1º quadro desenhado depois) e um ShaderMaterial ~0,05–0,2 s
+      // depois — antes, quem chegava no meio da cena contava como programa novo da cena (o 36 → 37 do CI; na main e no item 45).
+      // O impostor pronto (ou sem ele), e a contagem igual em 3 leituras seguidas, cada uma com um quadro desenhado e 0,4 s ocioso
+      if (L.cel) {
+        await pg.waitForFunction(() => { const i = window.__golaco.estadio?.impostor; return !i || i.pronto || i.falhou; }, null, { timeout: 30000 }).catch(() => {});
+        let n0 = -1, iguais = 0;
+        for (let k = 0; k < 20 && iguais < 3; k++) {
+          const n = await pg.evaluate(() => { window.__golaco.relogio.avancar(1000 / 60, { desenhar: true }); return window.__golaco.estado().programas; });
+          iguais = n === n0 ? iguais + 1 : 1; n0 = n;
+          await pg.waitForTimeout(400);
+        }
+      }
       const progs0 = await pg.evaluate(() => window.__golaco.estado().programas);
       await trocar(pg, {});
       const ini = await ateCena(pg);

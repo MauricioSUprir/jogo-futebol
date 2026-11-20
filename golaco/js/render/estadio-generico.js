@@ -15,7 +15,7 @@
 // Orçamento: no jogo as mesmas 5 chamadas do Maracanã (3 das arquibancadas + 2 da cobertura); no pré-jogo ≤ 14 peças de fora.
 import * as THREE from 'three';
 import { ESTADIO, CAMPO } from '../config.js';
-import { criarCanvas, texturaCanvas, gerador, juntarGeometrias } from './util.js';
+import { criarCanvas, texturaCanvas, gerador, juntarGeometrias, recorteAA } from './util.js';
 import { definirForma } from '../estadio-forma.js';
 import { definirLadoDeCa } from './torcida-dados.js';
 import { definirFormaBandeiras } from './bandeiras-dados.js';
@@ -682,7 +682,7 @@ function texEsplanada(P, q, aniso) {
 
 /**
  * O estádio de fora no pré-jogo: a fachada pelo estilo, a placa, o túnel, as marcas e o entorno. A mesma interface de
- * render/estadio-fora.js criarEstadioFora: {grupo, modoFora, definirHora, atualizar, dispose, info}.
+ * render/estadio-fora.js criarEstadioFora: {grupo, modoFora, definirHora, definirAA, fisico, aa, atualizar, dispose, info}.
  */
 export function criarForaForma(cena, opc, P, pecas) {
   const q = opc.qualidade ?? 'media', aniso = opc.aniso ?? 4;
@@ -699,6 +699,8 @@ export function criarForaForma(cena, opc, P, pecas) {
   };
   const fachada = criarFachada(P, aniso, fa, q);
   const placa = criarPlacaG(P, pecas.texPlaca(ident));
+  // o letreiro (item 45, C10; render/util.js recorteAA): transparente (a borda pela mistura), a A2C não o pega (medido: pior)
+  const aa = recorteAA([placa.material]);
   const estrutura = [fachada, placa, ...pecas.criarTunel(ident?.fachada ?? fa)];
   // as marcas próprias, a água e os morros numa malha só (o pré-jogo do celular tem ≤ 40 chamadas por plano)
   const comEntorno = opc.entorno !== false;
@@ -733,6 +735,9 @@ export function criarForaForma(cena, opc, P, pecas) {
     // de dentro a tigela tapa a fachada (nos cantos abertos ela aparece pelo vão: fica)
     modoFora(v) { for (const m of entorno) m.visible = !!v; fachada.visible = !!v || P.abertos; placa.visible = !!v; if (marcas) marcas.visible = !!v; },
     definirHora,
+    definirAA: n => aa.definirAA(n),
+    fisico: v => aa.fisico(v),
+    get aa() { return aa.estado; },
     atualizar() { /* nada por quadro */ },
     dispose() {
       if (disposto) return;

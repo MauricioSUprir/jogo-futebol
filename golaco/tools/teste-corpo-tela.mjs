@@ -248,20 +248,25 @@ async function nucaDeCostas(pg) {
       for (let i = 0; i < W * H; i++) if (parte[i] === 1) dl.push(Math.abs(L(A.d, i * 4) - L(B.d, i * 4)));
       dl.sort((p, q) => p - q);
       const pc = (l, f) => l.length ? l[Math.min(l.length - 1, Math.floor(f * l.length))] : NaN;
-      // a emenda cabeça → corpo (de cima para baixo em cada coluna): o tom 2–4 px acima × 2–4 px abaixo (informativo)
+      // a emenda cabeça → corpo (de cima para baixo em cada coluna): o tom 2–4 px acima × 2–4 px abaixo (informativo). Entre a
+      // cabeça e o corpo da máscara cabem até 2 pixels de nenhuma das duas cores (item 45, C15: com o MSAA da Média o pixel da
+      // fronteira mistura o vermelho e o verde — a coluna com os dois colados caía de ~410 para ~110, e a medida, para a metade)
       const em = [];
-      for (let x = 0; x < W; x++) for (let y = 4; y < H - 4; y++) {
+      const vaoAte = (i, y) => { for (let g = 0; g <= 2 && y + 1 + g < H; g++) { const k = parte[i + (1 + g) * W]; if (k === 2) return g; if (k !== 0) return -1; } return -1; };
+      for (let x = 0; x < W; x++) for (let y = 4; y < H - 7; y++) {
         const i = y * W + x;
-        if (parte[i] !== 1 || parte[i + W] !== 2) continue;
+        if (parte[i] !== 1) continue;
+        const g = vaoAte(i, y);
+        if (g < 0) continue;
         let ac = 0, ab = 0;
-        for (let k = 2; k <= 4; k++) { ac += L(A.d, (i - k * W) * 4); ab += L(A.d, (i + (k + 1) * W) * 4); }
+        for (let k = 2; k <= 4; k++) { ac += L(A.d, (i - k * W) * 4); ab += L(A.d, (i + (k + 1 + g) * W) * 4); }
         em.push(Math.abs(ac - ab) / 3);
       }
       em.sort((p, q) => p - q);
       // a costura do meio (informativo): na faixa da cabeça logo acima da emenda, a mediana de 9 linhas por coluna e o
       // maior degrau entre colunas vizinhas no meio da tela (±60 px)
       let yEm = 0, nEm = 0;
-      for (let y = 0; y < H - 1; y++) for (let x = (W >> 1) - 60; x < (W >> 1) + 60; x++) if (parte[y * W + x] === 1 && parte[(y + 1) * W + x] === 2) { yEm += y; nEm++; }
+      for (let y = 0; y < H - 3; y++) for (let x = (W >> 1) - 60; x < (W >> 1) + 60; x++) if (parte[y * W + x] === 1 && vaoAte(y * W + x, y) >= 0) { yEm += y; nEm++; }
       let costura = NaN;
       if (nEm) {
         const y0 = Math.round(yEm / nEm) - 40, col = [];

@@ -16,10 +16,11 @@ export const GRAMA = {
 };
 
 /**
- * Gramado inteiro (faixas de corte + manchas grandes + desgaste na boca do gol e no meio).
- * O grão fino fica na textura de detalhe (repetida), para não precisar de resolução aqui.
+ * O gramado de ANTES do item 45 (faixas de corte de 5,25 m + manchas grandes + desgaste na boca do gol e no meio), intacto:
+ * só o `?gfx=antigo` (render/graficos-opcoes.js) o usa. O de hoje é o gramado no shader (render/gramado.js + campo.js, com as
+ * manchas e o desgaste de texManchasGramado). O grão fino fica na textura de detalhe (repetida).
  */
-export function texGramado(largura, aniso) {
+export function texGramadoAntigo(largura, aniso) {
   const W = largura, H = largura / 2;
   const c = criarCanvas(W, H);
   const g = c.getContext('2d');
@@ -86,6 +87,73 @@ export function texGramado(largura, aniso) {
   g.fillRect(0, 0, X(-CAMPO.meioX), H);
   g.fillRect(X(CAMPO.meioX), 0, W - X(CAMPO.meioX), H);
   return texturaCanvas(c, { aniso });
+}
+
+/**
+ * As manchas do gramado no shader (item 45, `PLANO-GRAFICOS.md` passo 2): ruído de valor em METROS em três escalas (as
+ * manchas de 2,5–10 m, o peso maior na de 10 m), normalizado pelo desvio (n = 0,5 + desvio·(v − média)/σ, cortado em [0, 1]:
+ * a média fica em 0,504 e o shader faz × (1 + uManchas·(n − 0,5)), só luminância). Calibrado pela MEDIDA (a G6 do
+ * teste-graficos-celular: o σL em blocos de 8 m, sem a média da faixa nem um plano; meta 0,010 ± 0,004): o peso na escala
+ * grande e o desvio de 0,45 (29% dos texels no 0 ou no 1) deixam o uManchas em 0,17 (render/gramado.js); com o desvio de
+ * 0,25 e as escalas de 9/4,5/2,2 m a G6 pedia ~0,36 (a reta medida: 0,0028 com 0,10 e 0,0056 com 0,20). O desgaste: as
+ * mesmas manchas elípticas da textura de antes (o centro, 0,6 do raio com 0,45 da força e a borda em 0), a força composta
+ * (1 − Π(1 − a)).
+ */
+export const MANCHAS_GRAMADO = Object.freeze({
+  escalas: Object.freeze([[10, 0.6, 17], [5, 0.25, 40], [2.5, 0.15, 62]]),   // [m, peso, semente]
+  desvio: 0.45,
+  gasto: Object.freeze([
+    // [x, z, raio em x, raio em z, força]: a boca dos gols, a marca do pênalti, a frente da área (dos dois lados) e o círculo central
+    ...[-1, 1].flatMap(s => [[s * (CAMPO.meioX - 2.2), 0, 3.4, 4.2, 0.32], [s * (CAMPO.meioX - CAMPO.marcaPenalti), 0, 1.6, 1.4, 0.2], [s * (CAMPO.meioX - 8), 0, 9, 7, 0.08]]),
+    [0, 0, 3, 2.5, 0.14],
+  ]),
+});
+
+/**
+ * As manchas e o desgaste do gramado no shader (item 45): DADOS lineares (sem sRGB) na área do GRAMA (campo + entorno), na
+ * mesma disposição da textura de antes (a linha de cima do canvas = z0). R = as manchas n (média 0,5); G = o desgaste (0 a 1:
+ * quanto a grama vai para a cor amarelada do desgaste, um valor do shader); B 0; A 255. As faixas, as cores e o entorno
+ * escurecido viraram conta do shader (render/gramado.js, render/campo.js). `largura` 512 (Média e Alta) ou 256 (Baixa); a
+ * altura é a metade.
+ */
+export function texManchasGramado(largura, aniso) {
+  const W = largura, H = largura / 2;
+  const c = criarCanvas(W, H);
+  const g = c.getContext('2d');
+  const img = g.createImageData(W, H);
+  const M = MANCHAS_GRAMADO;
+  const v = new Float64Array(W * H);
+  let soma = 0, soma2 = 0;
+  for (let y = 0; y < H; y++) {
+    const zm = GRAMA.z0 + ((y + 0.5) * GRAMA.lz) / H;
+    for (let x = 0; x < W; x++) {
+      const xm = GRAMA.x0 + ((x + 0.5) * GRAMA.lx) / W;
+      let a = 0;
+      for (const [esc, peso, sem] of M.escalas) a += peso * ruido(xm / esc + 64, zm / esc + 64, 1024, 1024, sem);
+      v[x + y * W] = a; soma += a; soma2 += a * a;
+    }
+  }
+  const N = W * H, media = soma / N, sigma = Math.sqrt(Math.max(1e-12, soma2 / N - media * media));
+  for (let y = 0; y < H; y++) {
+    const zm = GRAMA.z0 + ((y + 0.5) * GRAMA.lz) / H;
+    for (let x = 0; x < W; x++) {
+      const xm = GRAMA.x0 + ((x + 0.5) * GRAMA.lx) / W;
+      const i = x + y * W, k = 4 * i;
+      const n = Math.min(1, Math.max(0, 0.5 + (M.desvio * (v[i] - media)) / sigma));
+      let resto = 1;
+      for (const [cx, cz, rx, rz, f] of M.gasto) {
+        const r = Math.hypot((xm - cx) / rx, (zm - cz) / rz);
+        const a = r < 0.6 ? f * (1 - (0.55 * r) / 0.6) : r < 1 ? f * 0.45 * (1 - (r - 0.6) / 0.4) : 0;
+        resto *= 1 - a;
+      }
+      img.data[k] = Math.round(n * 255);
+      img.data[k + 1] = Math.round((1 - resto) * 255);
+      img.data[k + 2] = 0;
+      img.data[k + 3] = 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return texturaCanvas(c, { aniso, cor: false });
 }
 
 /** Grão da grama: tons de cinza em torno de 0,5 (multiplicado por 2 no shader), repetível. */

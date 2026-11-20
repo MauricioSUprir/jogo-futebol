@@ -1,5 +1,8 @@
 // Utilidades do desenho (three.js): junção de geometrias, ruído determinístico e canvas.
 import * as THREE from 'three';
+import { aplicarTrocas } from './gramado-shader.js';
+import { TROCA_RECORTE } from './silhuetas-shader.js';
+import { GRAFICOS } from './graficos-opcoes.js';
 
 /** Hash inteiro → [0, 1). Determinístico (as texturas saem iguais em toda abertura). */
 export function hash2(x, y, s = 0) {
@@ -83,17 +86,112 @@ export function juntarGeometrias(geos, cores = null) {
   return saida;
 }
 
-/** Cilindro entre dois pontos (para traves, mastros, estruturas). */
-export function cilindroEntre(a, b, raio, segs = 12) {
+/** Cilindro entre dois pontos (para traves, mastros, estruturas); `aberto` = sem as tampas das pontas. */
+export function cilindroEntre(a, b, raio, segs = 12, aberto = false) {
   const va = new THREE.Vector3(...a), vb = new THREE.Vector3(...b);
   const dir = new THREE.Vector3().subVectors(vb, va);
   const len = dir.length();
-  const g = new THREE.CylinderGeometry(raio, raio, len, segs, 1, false);
+  const g = new THREE.CylinderGeometry(raio, raio, len, segs, 1, aberto);
   g.translate(0, len / 2, 0);
   const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.normalize());
   g.applyQuaternion(q);
   g.translate(va.x, va.y, va.z);
   return g;
+}
+
+/**
+ * Os atributos da LARGURA MÍNIMA de uma peça do gol feita por cilindroEntre(a, b, raio, segs) (item 45, C9; render/campo.js
+ * criarGols, `PLANO-GRAFICOS.md` passo 5):
+ * - aFino = a MEIA LARGURA MÍNIMA do prisma (0 = a peça não cresce: postes e travessão). A largura de um polígono regular de n
+ *   lados vai de raio × (1 + cos(π/n)) com n ímpar, ou 2 × raio × cos(π/n) com n par, até 2 × raio: com o raio, a corda de 5
+ *   lados ficava com 0,90 de "1 px" no lado mais estreito e caía entre os centros dos pixels;
+ * - aEixo = o ponto do eixo a–b mais perto do vértice (o centro do corte dele) e aDir = a direção do eixo (unitária);
+ * - aChao = 1 na corda deitada no gramado (`noChao`, eixo horizontal): o corte cresce a partir do contato com o chão
+ *   (crescendo em volta do eixo, a metade de baixo ficaria atrás do gramado).
+ * O juntarGeometrias só mantém o atributo que TODAS as peças têm: toda peça da malha passa por aqui. Devolve a geometria.
+ */
+export function atributosFino(geo, a, b, raio, { noChao = false, segs = 0 } = {}) {
+  const p = geo.attributes.position, n = p.count;
+  const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], l2 = dx * dx + dy * dy + dz * dz || 1, l = Math.sqrt(l2);
+  const meia = segs >= 3 ? raio * (segs % 2 ? (1 + Math.cos(Math.PI / segs)) / 2 : Math.cos(Math.PI / segs)) : raio;
+  const fino = new Float32Array(n).fill(meia), chao = new Float32Array(n).fill(noChao ? 1 : 0);
+  const eixo = new Float32Array(n * 3), dir = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const t = Math.min(1, Math.max(0, ((p.getX(i) - a[0]) * dx + (p.getY(i) - a[1]) * dy + (p.getZ(i) - a[2]) * dz) / l2));
+    eixo[3 * i] = a[0] + t * dx; eixo[3 * i + 1] = a[1] + t * dy; eixo[3 * i + 2] = a[2] + t * dz;
+    dir[3 * i] = dx / l; dir[3 * i + 1] = dy / l; dir[3 * i + 2] = dz / l;
+  }
+  geo.setAttribute('aFino', new THREE.BufferAttribute(fino, 1));
+  geo.setAttribute('aEixo', new THREE.BufferAttribute(eixo, 3));
+  geo.setAttribute('aDir', new THREE.BufferAttribute(dir, 3));
+  geo.setAttribute('aChao', new THREE.BufferAttribute(chao, 1));
+  return geo;
+}
+
+/**
+ * O CANVAS OPACO com a A2C (item 45, a revisão do bloco 3: a regressão do V8 do teste-tecnicos-tela). O alfa que o alfa para
+ * cobertura usa é o MESMO que o fragmento escreve, e o three r170 cria o contexto sempre com `alpha: true` (o `alpha: false` do
+ * renderizador só vale para a limpeza): a borda das silhuetas da torcida, das letras e dos finos deixava o buffer do canvas com
+ * alfa < 1 (na tela some no fundo quase preto da página; qualquer CÓPIA do canvas sai translúcida — o drawImage num canvas 2D que
+ * guarda o quadro anterior misturava o plano de antes nas bordas das pessoas: o 1º desenho depois de um corte de câmera saía
+ * diferente do 2º, 207–228 px a 1/2 no V8). A mistura PRÓPRIA só no canal alfa: o destino fica (0 · alfa do fragmento + 1 · alfa
+ * do destino, que a limpeza e os opacos deixam em 1) e a cor é substituída (1 · cor + 0 · destino) — a cobertura não muda (a A2C
+ * vem antes da mistura) e o canvas fica opaco. a2c false: a mistura de antes do material de volta (o material que nunca ligou a
+ * A2C não é tocado: o `?gfx=antigo` fica bit a bit).
+ */
+export function alfaDoCanvas(m, a2c) {
+  if (!m) return;
+  const orig = m.userData.alfaCanvas;
+  if (a2c) {
+    if (!orig) {
+      m.userData.alfaCanvas = {
+        blending: m.blending, blendEquation: m.blendEquation, blendSrc: m.blendSrc, blendDst: m.blendDst,
+        blendEquationAlpha: m.blendEquationAlpha, blendSrcAlpha: m.blendSrcAlpha, blendDstAlpha: m.blendDstAlpha,
+      };
+    }
+    m.blending = THREE.CustomBlending;
+    m.blendEquation = THREE.AddEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.ZeroFactor;
+    m.blendEquationAlpha = THREE.AddEquation; m.blendSrcAlpha = THREE.ZeroFactor; m.blendDstAlpha = THREE.OneFactor;
+  } else if (orig) {
+    Object.assign(m, orig);
+    m.userData.alfaCanvas = null;
+  }
+}
+
+/**
+ * O antisserrilhado de RECORTES por alphaTest (item 45, C10; `PLANO-GRAFICOS.md` passo 5: os letreiros do pré-jogo) pelas
+ * AMOSTRAS do contexto que desenha (o SAMPLES: o `cena.amostras`, nunca o nome da qualidade — a queda deixa a Baixa num contexto
+ * com MSAA). Só os materiais OPACOS: o recorte transparente já tem a borda pela MISTURA (o alfa da textura é a cobertura) — medido
+ * contra o SSAA 3× na região do letreiro (o pré-jogo do celular Média), a A2C ficava pior que a mistura: Estádio Golaço 0,035 →
+ * 0,067–0,072 na fachada, Aflitos 0,075 → 0,077–0,093. No opaco (o letreiro dos pórticos do Maracanã, limiar 0,5), com MSAA (≥ 2) o
+ * alfa para cobertura CENTRADO no limiar (TROCA_RECORTE): fachada 0,059 → 0,044, aéreo 0,035 → 0,035; o do r170 (o
+ * smoothstep(limiar, limiar + fwidth, a) do alphatest_fragment, three.module.js:13990) começa no limiar e afina a letra meio pixel:
+ * 0,059 → 0,076. Sem MSAA, o descarte de hoje (o A2C não faz nada sem amostras). fisico(true) = os desenhos seguintes sem a A2C (o
+ * gancho dos testes). Muda o material FORA do desenho, sempre reescreve tudo (um material estragado por fora volta ao certo) e só
+ * pede o programa novo quando algo mudou (o alphaToCoverage é o bit 21 da chave do programa). A troca do texto (TROCA_RECORTE,
+ * render/silhuetas-shader.js) pelo aplicarTrocas que AVISA quando não acha o trecho (o mesmo do gramado). No `?gfx=antigo` (a
+ * escolha D7 do dono), nada: os materiais ficam como antes do item 45. Devolve {definirAA(n), fisico(v), estado}.
+ */
+export function recorteAA(materiais, { antigo = GRAFICOS.gfxAntigo } = {}) {
+  const lista = antigo ? [] : materiais.filter(m => m && !m.transparent && m.alphaTest > 0);
+  for (const m of lista) {
+    m.onBeforeCompile = sh => { sh.fragmentShader = aplicarTrocas(sh.fragmentShader, TROCA_RECORTE, 'recorte com A2C, fragment'); };
+    m.customProgramCacheKey = () => 'recorte-a2c';
+  }
+  let amostras = 0, fisico = false;
+  const aplicar = () => {
+    const a2c = !fisico && amostras >= 2;
+    for (const m of lista) {
+      if (m.alphaToCoverage !== a2c) { m.alphaToCoverage = a2c; m.needsUpdate = true; }
+      alfaDoCanvas(m, a2c);
+    }
+  };
+  return {
+    definirAA(n) { amostras = n | 0; aplicar(); },
+    fisico(v) { fisico = !!v; aplicar(); },
+    /** {a2c (o dos materiais agora), amostras, fisico, materiais (os opacos com alphaTest: os que a A2C pega)}. */
+    get estado() { return { a2c: lista.length > 0 && lista.every(m => m.alphaToCoverage), amostras, fisico, materiais: lista.length }; },
+  };
 }
 
 /** Caixa com centro e tamanho. */

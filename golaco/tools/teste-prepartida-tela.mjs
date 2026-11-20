@@ -89,7 +89,8 @@
 //       segurar) o editor que só baixa quando o teste solta: o Personalizar ocupado e, depois do Jogar, o editor não abre por cima do
 //       jogo
 //   Online (§8.3; duas abas do mesmo Chromium pelo BroadcastChannel, ?online=<sala>&transporte=bc&lado=0|1&ia=1&D=4):
-//   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"
+//   O1* A pronto e B na tela: nenhum passo nos dois, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…" (os avisos do
+//       Pronto de A em diante, com a ligação de volta nos dois lados depois da troca de qualidade do O3 — item 45, C15)
 //   O2  B pronto: os dois saem em ≤ 0,5 s; os hashes iguais em todos os HASH_CADA até 1200 passos
 //   O3  antes do Pronto, A troca o time mostrado, a vista e as Opções (qualidade, horário): hashes iguais, nenhum "Pausado por"
 //   O4  A pula o pré-jogo e B assiste: A parado em n = D com "{B} ainda está no pré-jogo"
@@ -1214,8 +1215,10 @@ if (faz('online')) {
       const infoOn = await A.evaluate(() => [...document.querySelectorAll('#prepartida .pp-info-l')].map(l => l.textContent.replace(/\s+/g, ' ').trim()).join(' / ')).catch(() => '');
       meta('E23 online: a linha de informação sem a dificuldade (item 33)', `"${infoOn}"`, 'sem Fácil/Normal/Difícil/Lenda', !!infoOn && !/Difícil|Normal|Fácil|Lenda|Dificuldade/.test(infoOn));
       if (telas) {
+        // avisos = todos (o "Pausado por" do O2/O3); avisosO1 = só os do Pronto de A em diante (o O1 e o O5)
         const avisos = new Set();
-        const olhar = async () => { for (const [p, k] of [[A, 'A'], [B, 'B']]) { const t = await textoAviso(p); if (t) avisos.add(`${k}: ${t}`); } };
+        let avisosO1 = null;
+        const olhar = async () => { for (const [p, k] of [[A, 'A'], [B, 'B']]) { const t = await textoAviso(p); if (t) { avisos.add(`${k}: ${t}`); avisosO1?.add(`${k}: ${t}`); } } };
         // O3: A mexe na tela (o time, a vista, as Opções) com B parado nela
         await A.bringToFront();
         passo('O3: teclas em A');
@@ -1240,6 +1243,15 @@ if (faz('online')) {
         await olhar();
         a = await on(A); b = await on(B);
         const o3 = { menu: menuA, noite: hora, aberta: a.aberta, foco: a.pp.foco, nA: a.n, nB: b.n, editor: a.editor };
+        // (item 45, C15) a troca de qualidade do O3 recompila a cena de A: com duas abas no Chromium sem GPU é uma tarefa longa de
+        // ~40 s sem pacote nenhum de A (nem o de B processado em A), e um dos lados mostra "A conexão parou" (o aviso certo para 40 s
+        // sem pacote) — o O1 contava esse aviso do O3 (o Set era um só) e reprovava 1 rodada em 3, na base e no PR. O O1 começa com a
+        // ligação de volta nos dois lados (conexão 'ok' e sem o aviso) e conta só os avisos do Pronto de A em diante
+        const tVolta = Date.now();
+        const volta = await Promise.all([A, B].map(p => p.waitForFunction(() => { const o = window.__golaco.online; return !!o && o.conexao === 'ok' && !/conexão parou/i.test(o.aviso); }, null, { timeout: 60000 }).then(() => true, () => false)));
+        const doO3 = [...avisos].filter(t => /conexão parou/i.test(t));
+        const textoO3 = `${doO3.length ? `antes do Pronto (o O3) ${doO3.join(' | ')}; ` : ''}a ligação de volta em ${((Date.now() - tVolta) / 1000).toFixed(1)} s${volta.every(Boolean) ? '' : ' (não voltou em 60 s)'}`;
+        avisosO1 = new Set();
         passo('O1: A pronto');
         // O1 + O5: A pronto (o clique de verdade) e B na tela por ESPERA s
         await A.click('#prepartida [data-aba="pronto"]');
@@ -1252,13 +1264,13 @@ if (faz('online')) {
           maxN = Math.max(maxN, x.n, y.n);
           if (!x.aberta || !y.aberta) break;
         }
-        wo = [...avisos].some(t => /W\.O\./.test(t));
+        wo = [...avisosO1].some(t => /W\.O\./.test(t));
         a = await on(A); b = await on(B);
         const botaoA = await A.evaluate(() => document.querySelector('#prepartida [data-aba="pronto"] .pp-aba-txt')?.textContent ?? '');
-        const parou = [...avisos].filter(t => /conexão parou/i.test(t));
+        const parou = [...avisosO1].filter(t => /conexão parou/i.test(t));
         meta('O1* A pronto e B na tela: nenhum passo, nenhum "A conexão parou" nem W.O.; A diz "Aguardando {B}…"',
-          `${ESPERA} s: passos (máx.) ${maxN}; A "${botaoA}" (fase ${a.fase}), B fase ${b.fase} vê A na fase ${b.faseRemota}; telas ${a.aberta}/${b.aberta}; avisos ${avisos.size ? [...avisos].join(' | ') : 'nenhum'}`,
-          '0 passos; "Aguardando Lado 1…"; as duas abertas; nenhum "conexão parou"', maxN === 0 && botaoA === 'Aguardando Lado 1…' && a.fase === 1 && b.faseRemota === 1 && a.aberta && b.aberta && !parou.length && !wo);
+          `${ESPERA} s: passos (máx.) ${maxN}; A "${botaoA}" (fase ${a.fase}), B fase ${b.fase} vê A na fase ${b.faseRemota}; telas ${a.aberta}/${b.aberta}; avisos ${avisosO1.size ? [...avisosO1].join(' | ') : 'nenhum'} (${textoO3})`,
+          '0 passos; "Aguardando Lado 1…"; as duas abertas; nenhum "conexão parou" do Pronto em diante', maxN === 0 && botaoA === 'Aguardando Lado 1…' && a.fase === 1 && b.faseRemota === 1 && a.aberta && b.aberta && !parou.length && !wo);
         meta(`O5 B ${ESPERA} s na tela com A esperando: nenhum W.O. oferecido (os pacotes chegando)${ESPERA >= 60 ? '; aos 60 s o Sair de A em destaque' : ''}`,
           `W.O. ${wo ? 'oferecido' : 'não'}; destaque do Sair ${a.pp.destaqueCanto}`, `nenhum${ESPERA >= 60 ? '; destaque' : ''}`, !wo && (ESPERA < 60 || a.pp.destaqueCanto));
         passo('O2: B pronto');

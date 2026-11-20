@@ -49,9 +49,15 @@
 //   P14 (o Modo Leilão do TM, PR 6: as notas escondidas; ?notasOcultas=1 = o partida.notasOcultas do pedido) no PC 1280×720 e no
 //       celular 844×390: a pausa (o 1º nível com o cartão do meu time, as Opções, o Modo de jogo e as Estatísticas) sem nenhuma nota
 //       ("nota N", "geral N", .pp-nota, .c-nota) e o cartão IGUAL ao sem o parâmetro (as mesmas fichas: a pausa não depende da nota)
-//   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
+//   (item 45, C12: a queda automática da qualidade)
+//   P15 com a queda (Automática + __golaco.quedaDeTeste), a linha "Agora: Baixa (o aparelho não segurou a Média; escolha Média para
+//       tentar de novo)" à vista nas Opções — também no celular, onde a linha da qualidade some sem a queda —, numa linha só e
+//       inteira de 844×390 a 568×320, e as Opções sem rolar (o P2); no PC ("Agora: Média … a Alta") em 1280×720 e nas janelas
+//       baixas (1366×600, 1280×520, 1000×520, 800×600). Sem a queda (a base) reprova
+//   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito: ≥ 1 passo
+//       e ≥ 40% dos passos POR QUADRO do rAF de B da janela fechada — item 45, C15)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
-//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|notas]
+//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|notas|queda]
 // (--raiz: mede outra cópia do jogo — a base a5abaa4e tem de REPROVAR)
 import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -74,7 +80,7 @@ const res = [];
 const meta = (nome, medido, alvo, ok) => { res.push({ nome, medido, alvo, ok: !!ok }); console.log(`${ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}\n          ${medido}  (alvo: ${alvo})`); };
 const erros = [];
 // as coletas das metas (cada sessão soma aqui; as metas saem no fim)
-const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0, p12: [], p13: [] };
+const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0, p12: [], p13: [], p15: [] };
 // (item 125) a área do campo da BASE (29d67bad; o mapa do item 125, a mesma pausa, com o entalhe no celular) e a meta de cada tela
 const CAMPO_BASE = { '1920x1010': [554, 444, 1.30], '1280x720': [362, 290, 1.30], '1024x768': [285, 228, 1.30], '844x390': [282, 226, 1.30], '667x375': [282, 226, 1.15], '568x320': [220, 173, 1.10] };
 const CORTADOS_MAX = { '1920x1010': 0, '1280x720': 0, '1024x768': 0, '844x390': 0, '667x375': 1, '568x320': 5 };
@@ -968,20 +974,28 @@ async function sessaoOnline() {
     // a meta compara a mesma janela com a pausa fechada logo antes — com ela aberta o jogo anda (≥ 40% e ≥ 1 passo). Com a máquina
     // cheia a vazão oscila DENTRO dos 6 s (o deploy do #620: 15 aberta × 50 fechada; passou na nova rodada; a revisão do item 125:
     // 15 × 57 com outro teste junto, 35 × 20 sozinho): até 3 medidas, vale a 1ª que passar — o defeito que o S1 guarda (a pausa
-    // parando o online) dá 0 passos nas três
+    // parando o online) dá 0 passos nas três.
+    // (item 45, C15) A régua é POR QUADRO do rAF de B, não por 3 s: a página roda no máximo MAX_PASSOS_POR_QUADRO (5) passos por
+    // quadro (laco.js) e, com duas abas no Chromium sem GPU, o rAF de B cai de 2–5 para ~1 por segundo com a pausa aberta (a pausa
+    // por cima do 3D custa mais no desenho por software) — os passos por 3 s mediam o desenho, não a pausa (reprovava na base e
+    // no PR: 12/55, 8/34, 15/46 na sonda da revisão do bloco 4). Com a pausa aberta o online anda ≥ 1 passo e ≥ 40% dos passos
+    // por quadro da janela fechada; o defeito (a pausa parando o online) continua dando 0 passos
+    await B.evaluate(() => { if (window.__s1raf != null) return; window.__s1raf = 0; const f = () => { window.__s1raf++; requestAnimationFrame(f); }; requestAnimationFrame(f); });
+    const lerS1 = () => B.evaluate(() => ({ n: window.__golaco.online.n, q: window.__s1raf }));
+    const porQuadro = x => (x.q > 0 ? x.p / x.q : 0);
     const medidas = [];
     let andou = false;
     for (let k = 0; k < 3 && !andou; k++) {
-      const nF0 = await B.evaluate(() => window.__golaco.online.n);
+      const f0 = await lerS1();
       await B.waitForTimeout(3000);
-      const n0 = await B.evaluate(() => window.__golaco.online.n);
+      const f1 = await lerS1();
       await B.evaluate(() => window.__golaco.abrirMenu());
       await B.waitForTimeout(3000);
-      const n1 = await B.evaluate(() => window.__golaco.online.n);
+      const a1 = await lerS1();
       await B.evaluate(() => window.__golaco.fecharMenu());
-      const fechada = n0 - nF0, aberta = n1 - n0;
-      medidas.push(`${aberta}/${fechada}`);
-      andou = aberta >= 1 && aberta >= 0.4 * fechada;
+      const fechada = { p: f1.n - f0.n, q: f1.q - f0.q }, aberta = { p: a1.n - f1.n, q: a1.q - f1.q };
+      medidas.push(`${aberta.p}/${fechada.p} (${porQuadro(aberta).toFixed(1)}/${porQuadro(fechada).toFixed(1)} por quadro, em ${aberta.q}/${fechada.q} quadros)`);
+      andou = aberta.p >= 1 && aberta.q >= 1 && porQuadro(aberta) >= 0.4 * porQuadro(fechada);
     }
     P.s1.push(`online: passos em 3 s com a pausa aberta/fechada ${medidas.join(', ')}`);
     // (de propósito: no online a IA joga pelo meu controlado e o outro lado não espera)
@@ -1034,6 +1048,45 @@ async function sessaoNotas() {
     `${vistos.join(' · ')}${ruins.length ? ' — ' + ruins.slice(0, 4).join(' | ') : ''}`, 'nenhuma nota; o cartão igual', !ruins.length);
 }
 
+// ------------------------------------------------------------------ sessão: a linha da queda automática (item 45, C12)
+/** P15: a linha da queda nas Opções (celular com toque e entalhe; o PC na Alta), sem ?q — a Automática —, depois da quedaDeTeste. */
+async function sessaoQueda() {
+  const PC_Q = [PC, [1366, 600], [1280, 520], [1000, 520], [800, 600]];
+  for (const [toque, telas] of [[true, CEL], [false, PC_Q]]) {
+    const rot = toque ? 'queda celular' : 'queda PC';
+    const s = await abrir({ largura: telas[0][0], altura: telas[0][1], dpr: 1, toque });
+    const pg = s.pagina;
+    try {
+      await pg.goto(`${srv.url}index.html?replay=0&comemoracao=0&semente=5${toque ? '&toque=1&entalhe=1' : ''}`, { waitUntil: 'load' });
+      await pronta(pg);
+      await carregarPausa(pg);
+      await manual(pg);
+      const q = await pg.evaluate(() => (typeof window.__golaco.quedaDeTeste === 'function' ? window.__golaco.quedaDeTeste() : null));
+      if (!q) { P.p15.push({ ok: false, medido: `${rot}: sem a __golaco.quedaDeTeste()` }); continue; }
+      const esperado = toque ? /^Agora: Baixa \(o aparelho não segurou a Média; escolha Média para tentar de novo\)$/ : /^Agora: Média \(o aparelho não segurou a Alta; escolha Alta para tentar de novo\)$/;
+      for (const [W, H] of telas) {
+        await pg.setViewportSize({ width: W, height: H });
+        await pg.waitForTimeout(80);
+        await abrirPausa(pg);
+        await pg.evaluate(() => document.getElementById('btn-opcoes')?.click());
+        await quadros(pg, 2);
+        const m = await pg.evaluate(MEDIR);
+        conferirNivel(`${rot} ${W}×${H} opções`, m, !toque);
+        const l = await pg.evaluate(() => {
+          const e = document.getElementById('info-qualidade');
+          if (!e) return null;
+          const cs = getComputedStyle(e), r = e.getBoundingClientRect();
+          return { texto: e.textContent, vis: e.getClientRects().length > 0 && cs.display !== 'none' && cs.visibility !== 'hidden', linhas: Math.round(r.height / parseFloat(cs.lineHeight)), corta: e.scrollWidth > e.clientWidth + 1, f: parseFloat(cs.fontSize) };
+        });
+        const ok = !!l && l.vis && esperado.test(l.texto) && !l.corta && (!toque || l.linhas === 1) && m.rola <= 0;
+        P.p15.push({ ok, medido: `${rot} ${W}×${H}: ${l ? `${l.vis ? 'à vista' : 'ESCONDIDA'}, ${l.linhas} linha(s), ${l.f} px${l.corta ? ', CORTADA' : ''}${esperado.test(l.texto) ? '' : `, "${l.texto}"`}` : 'sem a linha'}; rola ${m.rola}` });
+      }
+      await pg.evaluate(() => window.__golaco.fecharMenu());
+    } catch (e) { erros.push(`${rot}: ${e.stack ?? e}`); }
+    finally { erros.push(...s.erros.map(x => `${rot}: ${x}`)); await s.navegador.close(); }
+  }
+}
+
 // ------------------------------------------------------------------ as sessões
 const t0 = Date.now();
 if (!SO || SO === 'cel') await sessaoCelular();
@@ -1052,6 +1105,7 @@ if (!SO || SO === 'tm') {
 }
 if (!SO || SO === 'online') await sessaoOnline();
 if (!SO || SO === 'notas') await sessaoNotas();
+if (!SO || SO === 'queda') await sessaoQueda();
 await srv.fechar();
 
 // ------------------------------------------------------------------ as metas
@@ -1080,6 +1134,8 @@ if (P.p10custo.length || P.p10.length) {
   console.log('          custos (toques / teclas / apertos do controle, a partir do jogo):');
   for (const n of nomes) console.log(`            ${n}: ${custo('toque', n) ?? '-'} / ${custo('teclado', n) ?? '-'} / ${custo('controle', n) ?? '-'}`);
 }
+if (P.p15.length) meta('P15 a linha da queda automática da qualidade (item 45, C12): à vista nas Opções (também no celular), uma linha inteira no celular, sem rolar',
+  P.p15.map(x => `${x.ok ? '' : 'FALHA '}${x.medido}`).join(' | '), 'todas', P.p15.every(x => x.ok));
 if (P.p11n) meta('P11 a linha "Duração | Dificuldade" (item 33): à vista onde vale, escondida no resto; os rótulos inteiros; no celular a altura do nível igual',
   `${P.p11n} medidas; problemas: ${lista(P.p11, 6)}`, 'nenhum', P.p11.length === 0);
 if (P.s1.length) meta('S1 o mundo parado com a pausa aberta (0/60 passos; 10/10 fechada); no online o jogo anda', P.s1.join('; '), '0/10 fora do online', !P.s1.some(x => x.startsWith('FALHA')));
