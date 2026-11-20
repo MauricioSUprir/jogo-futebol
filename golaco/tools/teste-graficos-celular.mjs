@@ -24,7 +24,8 @@
 //      deitadas: andando ao longo da peça o traço é o mesmo pixel a pixel e a cintilação não mede nada): em pontos ao longo
 //      da projeção de cada peça, a intensidade SOMADA no corte transversal (±3 px). Buraco = soma < 15% da do SSAA (físico) no
 //      mesmo ponto e quadro; cintilação = CV da soma por ponto nos 8 quadros. Metas POR PEÇA, valendo a pior: buracos ≤ 5%;
-//      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA. Na Média e na Baixa, e na "Baixa com
+//      cintilação ≤ 1,5 × a do SSAA (piso 0,02 no denominador); soma ±30% da do SSAA; uma pose sem nenhum ponto reprova (as
+//      correções do fechamento: antes saía informativa e a régua sumia calada). Na Média e na Baixa, e na "Baixa com
 //      MSAA" da queda (o contexto da Média com a qualidade Baixa: pixel ratio 1). Na Baixa e na queda, também a pose do LIMIAR (a corda
 //      do pé de perto, com a meia largura de 1 px caindo entre as pontas: a revisão do bloco 3). Na Média, informativa, a F
 //      SOBRE O GRAMADO (a revisão do bloco 3, achado 6 das medidas): as peças com o gramado atrás e as somas do quadro só com
@@ -37,7 +38,7 @@
 //      do L dos pixels da linha perto do foco); G6 o σL das manchas em blocos de 8 m, sem a média da faixa e sem uma
 //      QUADRÁTICA em x e z, no quadro como ele sai (com o termo de profundidade: uma foto real também tem a curva do ângulo) —
 //      INFORMATIVA: a meta 0,010 ± 0,004 é provisória até a régua da foto (o piso, o quadro sem as manchas, e a régua do C6,
-//      sem o termo e sem um plano, ao lado); G7 GPU = JS (a classe lida em cada faixa = gramado.js faixaEm(x), quando o módulo
+//      sem o termo e sem um plano, ao lado); G7 GPU = JS, estrutura (a classe lida em cada faixa = gramado.js faixaEm(x), quando o módulo
 //      existe: {claro}, booleano (claro) ou a paridade/índice da faixa — esta, sem dizer qual é clara, casa pela maioria); G4b
 //      a profundidade nas outras câmeras (1ª pessoa e lateral baixa do replay, steadicam, câmera do gol, Jogador e Atrás do
 //      Livre, falta e escanteio, aéreo do pré-jogo e, desde a revisão do C4–C8, as câmeras baixas das cenas: o contraplano e a
@@ -890,7 +891,8 @@ function metasF(rotulo, F, chave, qual = 'build', tipo = 'meta') {
   for (const cn of Object.keys(F)) {
     const r0 = F[cn], r = r0?.[qual];
     const nomeCam = NOME_CAM_F[cn] ?? cn;
-    if (!r) { meta('F', `Finos (${rotulo}, ${nomeCam}): sem peça fina no quadro`, '—', 'peças no quadro', false, 'info'); continue; }
+    // (as correções do fechamento: sem pontos a régua da pose some — reprova com o tipo da chamada, informativa só quando a F é)
+    if (!r) { meta('F', `Finos (${rotulo}, ${nomeCam}): sem peça fina no quadro`, '—', 'peças no quadro', false, tipo); continue; }
     for (const t of r.validas) {
       const e = r.tipos[t], s = slugPeca(t);
       guarda(`F.${chave}.${cn}.${s}.buracos`, e.buracos); guarda(`F.${chave}.${cn}.${s}.cint`, e.cint); guarda(`F.${chave}.${cn}.${s}.cintSSAA`, e.cintS); guarda(`F.${chave}.${cn}.${s}.soma`, e.soma);
@@ -1159,7 +1161,7 @@ try {
           total = a + b; certos = Math.max(a, b);
         }
         guarda('G7.media.dia.acerto', total ? certos / total : NaN);
-        meta('G', 'G7 GPU = JS (classe da faixa × gramado.js faixaEm)', `${pct(total ? certos / total : NaN, 2)} de ${total} px${temClaro ? '' : ' (paridade pela maioria)'}`, '100% fora da borda', total > 0 && certos === total);
+        meta('G', 'G7 GPU = JS (classe da faixa × gramado.js faixaEm)', `${pct(total ? certos / total : NaN, 2)} de ${total} px${temClaro ? '' : ' (paridade pela maioria)'}`, '100% fora da borda', total > 0 && certos === total, 'estrutura');
       } else meta('G', 'G7 GPU = JS (gramado.js faixaEm)', 'sem gramado.js faixaEm nesta versão', 'estrutural (C4 em diante)', null, 'info');
 
       // G4b: o L do gramado no foco nas outras câmeras, com × sem o termo de profundidade, e o salto no corte TV → 1ª pessoa
