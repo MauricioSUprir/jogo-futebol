@@ -54,7 +54,8 @@
 //       tentar de novo)" à vista nas Opções — também no celular, onde a linha da qualidade some sem a queda —, numa linha só e
 //       inteira de 844×390 a 568×320, e as Opções sem rolar (o P2); no PC ("Agora: Média … a Alta") em 1280×720 e nas janelas
 //       baixas (1366×600, 1280×520, 1000×520, 800×600). Sem a queda (a base) reprova
-//   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
+//   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito: ≥ 1 passo
+//       e ≥ 40% dos passos POR QUADRO do rAF de B da janela fechada — item 45, C15)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
 //   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|notas|queda]
 // (--raiz: mede outra cópia do jogo — a base a5abaa4e tem de REPROVAR)
@@ -973,20 +974,28 @@ async function sessaoOnline() {
     // a meta compara a mesma janela com a pausa fechada logo antes — com ela aberta o jogo anda (≥ 40% e ≥ 1 passo). Com a máquina
     // cheia a vazão oscila DENTRO dos 6 s (o deploy do #620: 15 aberta × 50 fechada; passou na nova rodada; a revisão do item 125:
     // 15 × 57 com outro teste junto, 35 × 20 sozinho): até 3 medidas, vale a 1ª que passar — o defeito que o S1 guarda (a pausa
-    // parando o online) dá 0 passos nas três
+    // parando o online) dá 0 passos nas três.
+    // (item 45, C15) A régua é POR QUADRO do rAF de B, não por 3 s: a página roda no máximo MAX_PASSOS_POR_QUADRO (5) passos por
+    // quadro (laco.js) e, com duas abas no Chromium sem GPU, o rAF de B cai de 2–5 para ~1 por segundo com a pausa aberta (a pausa
+    // por cima do 3D custa mais no desenho por software) — os passos por 3 s mediam o desenho, não a pausa (reprovava na base e
+    // no PR: 12/55, 8/34, 15/46 na sonda da revisão do bloco 4). Com a pausa aberta o online anda ≥ 1 passo e ≥ 40% dos passos
+    // por quadro da janela fechada; o defeito (a pausa parando o online) continua dando 0 passos
+    await B.evaluate(() => { if (window.__s1raf != null) return; window.__s1raf = 0; const f = () => { window.__s1raf++; requestAnimationFrame(f); }; requestAnimationFrame(f); });
+    const lerS1 = () => B.evaluate(() => ({ n: window.__golaco.online.n, q: window.__s1raf }));
+    const porQuadro = x => (x.q > 0 ? x.p / x.q : 0);
     const medidas = [];
     let andou = false;
     for (let k = 0; k < 3 && !andou; k++) {
-      const nF0 = await B.evaluate(() => window.__golaco.online.n);
+      const f0 = await lerS1();
       await B.waitForTimeout(3000);
-      const n0 = await B.evaluate(() => window.__golaco.online.n);
+      const f1 = await lerS1();
       await B.evaluate(() => window.__golaco.abrirMenu());
       await B.waitForTimeout(3000);
-      const n1 = await B.evaluate(() => window.__golaco.online.n);
+      const a1 = await lerS1();
       await B.evaluate(() => window.__golaco.fecharMenu());
-      const fechada = n0 - nF0, aberta = n1 - n0;
-      medidas.push(`${aberta}/${fechada}`);
-      andou = aberta >= 1 && aberta >= 0.4 * fechada;
+      const fechada = { p: f1.n - f0.n, q: f1.q - f0.q }, aberta = { p: a1.n - f1.n, q: a1.q - f1.q };
+      medidas.push(`${aberta.p}/${fechada.p} (${porQuadro(aberta).toFixed(1)}/${porQuadro(fechada).toFixed(1)} por quadro, em ${aberta.q}/${fechada.q} quadros)`);
+      andou = aberta.p >= 1 && aberta.q >= 1 && porQuadro(aberta) >= 0.4 * porQuadro(fechada);
     }
     P.s1.push(`online: passos em 3 s com a pausa aberta/fechada ${medidas.join(', ')}`);
     // (de propósito: no online a IA joga pelo meu controlado e o outro lado não espera)
