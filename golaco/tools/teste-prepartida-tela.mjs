@@ -1244,9 +1244,9 @@ if (faz('online')) {
         a = await on(A); b = await on(B);
         const o3 = { menu: menuA, noite: hora, aberta: a.aberta, foco: a.pp.foco, nA: a.n, nB: b.n, editor: a.editor };
         // (item 45, C15) a troca de qualidade do O3 recompila a cena de A: com duas abas no Chromium sem GPU é uma tarefa longa de
-        // ~40 s, sem pacote nenhum de A, e B mostra "A conexão parou" (o aviso certo para 40 s sem pacote) — o O1 contava esse aviso
-        // do O3 (o Set era um só) e reprovava 1 rodada em 3, na base e no PR. O O1 começa com a ligação de volta nos dois lados
-        // (conexão 'ok' e o aviso de B fora) e conta só os avisos do Pronto de A em diante
+        // ~40 s sem pacote nenhum de A (nem o de B processado em A), e um dos lados mostra "A conexão parou" (o aviso certo para 40 s
+        // sem pacote) — o O1 contava esse aviso do O3 (o Set era um só) e reprovava 1 rodada em 3, na base e no PR. O O1 começa com a
+        // ligação de volta nos dois lados (conexão 'ok' e sem o aviso) e conta só os avisos do Pronto de A em diante
         const tVolta = Date.now();
         const volta = await Promise.all([A, B].map(p => p.waitForFunction(() => { const o = window.__golaco.online; return !!o && o.conexao === 'ok' && !/conexão parou/i.test(o.aviso); }, null, { timeout: 60000 }).then(() => true, () => false)));
         const doO3 = [...avisos].filter(t => /conexão parou/i.test(t));

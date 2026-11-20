@@ -148,7 +148,9 @@ export const TEMPOS_NAVEGADOR = {
   // (24/10, D1: + o C7, uma página até o impedimento do time 0, ~5300 passos; localmente 214 s com outra página junto)
   'teste-replay.mjs': 225,
   // medido aqui (máquina dividida, carga ~4 em 4 núcleos: 396 s, o online em tempo real ~285 s); acertar pelo log do CI
-  'teste-replay-paradas-tela.mjs': 400,
+  // (item 45, C15: 249–262 s nos logs do CI de 4a503804, 7a5337dc e 58f3377a; o V7 com o jogo desenhando 1 quadro em 8, +75
+  // quadros desenhados, ~+10 s)
+  'teste-replay-paradas-tela.mjs': 270,
   // (item 31: + o H, 4 páginas novas — 844×390 ?tm pro, 568×320 ?tm pública, a cena curta e o pular no PC, 1366×600 com as fotos
   // em 404 — e 6 gols; 291 s aqui o teste inteiro com outra página junto; estimado ~+70 s no CI; acertar pelo log do CI)
   // (item 126: + 2 páginas com as fotos — 1920×1010 e 568×320 ?tm pro — e 2 gols; ~+30 s estimado; acertar pelo log do CI)
@@ -165,7 +167,8 @@ export const TEMPOS_NAVEGADOR = {
   // sozinho; acertar pelo log do CI)
   // (item 93: 242,8 s no log do CI do #613)
   // (item 45, revisão do bloco 4: + o P14, a sessão nova com a queda gravada — base 306 → 328 s aqui)
-  'teste-pausa-tela.mjs': 261, // 260,8 s no log do CI do 38d6b243 (item 45, run 43187534503); era 249,5 no 1º CI do #618 (item 114)
+  // (item 45, C15: 274–383 s nos logs do CI de 4a503804, 7a5337dc e 58f3377a, com o P15 e o P14 do Leilão; a mediana ~295)
+  'teste-pausa-tela.mjs': 300, // 260,8 s no log do CI do 38d6b243 (item 45, run 43187534503); era 249,5 no 1º CI do #618 (item 114)
   // (item 30: + o P8, dois pares de abas a 568×320 com a cena de substituição — 96 s aqui com a máquina livre; 442 s o teste
   // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
   // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro
@@ -187,6 +190,8 @@ export const TEMPOS_NAVEGADOR = {
   // Chromium 141 do CI: o celular 126 s com a carga 0,1–2,3; a página 339 s com a carga 1,7–3,5, com a CPU pareada contra a base —
   // a P 49 s (sem a base, ~20 s), o R5 26 s, a P2 do toque 11 s; acertar pelo log do CI)
   'teste-graficos-celular.mjs': 126,
-  'teste-graficos-pagina.mjs': 339,
-  'teste-desempenho-celular.mjs': 35,
+  // (C15: a página 239–299 s nos logs do CI com a base do PR — 964a2efd, 55e31f56, 4a503804, 7a5337dc, 58f3377a)
+  'teste-graficos-pagina.mjs': 275,
+  // (item 45, C15: 40–60 s nos logs do CI; o "Sem vazamento" em duas rodadas, ~+5 s)
+  'teste-desempenho-celular.mjs': 60,
 };
