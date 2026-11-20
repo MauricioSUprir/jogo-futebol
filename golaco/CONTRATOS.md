@@ -6516,3 +6516,198 @@ presas por inteiro na postura ou no gesto (peso 1, sem mistura nem a troca medid
 ao desenho; (3) a conferência do braço do treinador é 1 por construção (a pose dele é sempre a da passada: os gestos e as
 posturas entram depois) e não é mais calculada a cada passo. Aqui: 24,5 → ~21 µs (a base, 18). Testado e NÃO entrou: pular a
 camada com o treinador parado (muda a pose em até 39 mm: a camada também endireita a pelve e o tórax de quem para).
+
+## Gráficos do celular (item 45, #639; 20/11; contrato)
+Pedido do dono (a fila antiga, "Urgente": "melhora extrema dos gráficos no celular (qualidade baixa/média)"; o item 45 da FILA,
+categoria I). Plano, medidas de cada passo e lições em `PLANO-GRAFICOS.md`; pesquisa e fontes em `PESQUISA-ESTADIO.md` §19; as
+escolhas que o dono pode trocar no "Depende do dono" 30 da `FILA.md`. **Só desenho**: tudo em `js/render/`, `main.js`, `hud.js` e
+`css/`; nenhum arquivo do fecho (`fecho-hash --diff` 0: o `config.js` não se toca), `hash-igual` (1440 hashes) e `hash-partida`
+(400) IGUAIS contra a main. O celular de referência é o 844×390, dpr 2, Média.
+
+**O antisserrilhado no render (`render/cena.js`).**
+- `AA_QUALIDADE` = {baixa: false, media: true, alta: true}: o MSAA do PRÓPRIO canvas (o `antialias` do contexto; 4 amostras no
+  Chrome e no WebKit), sem passada extra. A Média passou a ter (antes, só a Alta); a Baixa fica sem (escolha D3: o `discard`
+  de sempre).
+- `aaPedido(nome)`, nesta ordem: `?aa=0|1` por cima de tudo; `?gfx=antigo` volta ao `QUALIDADE.antialias`; senão a tabela, com
+  o TETO DOS APARELHOS DE TOQUE (`AA_TETO_TOQUE` 1,2 MP, escolha D8): o MSAA que a tabela ACRESCENTA (o da Média) só com
+  `screen.width × screen.height × min(dpr, pixelRatioMax)²` ≤ 1,2 MP — o 844×390 dá 0,74 MP e o 932×430 0,90 (com MSAA); o iPad
+  mini 1,9 e o iPad Pro 12,9" 3,1 ficam como antes (pr 1,5, sem MSAA). A Alta fica com o MSAA em todo aparelho; no PC não há teto
+  (a Média escolhida à mão ganha o MSAA).
+- **O `config.QUALIDADE.antialias` é LEGADO**: só o `?gfx=antigo` o lê. O `config.js` é do fecho: a tabela mora no `cena.js` (duas
+  fontes de verdade, de propósito). Mudar o AA de uma qualidade é no `AA_QUALIDADE`.
+- O contexto guarda o PEDIDO e o que o navegador DEU: `cena3d.aaContexto` (o `getContextAttributes().antialias`) e
+  `cena3d.amostras` (o `SAMPLES` do buffer padrão), lidos na criação e no contexto restaurado. Quem decide pelo MSAA (a A2C dos
+  finos, da torcida e dos letreiros) lê o `amostras`, NUNCA o nome da qualidade: a queda automática deixa a Baixa num contexto com
+  MSAA.
+- `definirQualidade(nome, recriarSePreciso)` recria o renderizador (canvas novo) só quando o AA pedido para `nome` é outro que o
+  do contexto e o contexto não foi pedido assim (`precisaRecriar`: o navegador recusou o MSAA, recriar daria o mesmo); desde o item
+  45 também a troca Média ↔ Baixa. A recriação copia TODOS os atributos do canvas (o `aria-label` incluído) e o `inert`, copia o
+  `localClippingEnabled` (o vão das placas do pré-jogo), zera a chave do redimensionar (o canvas novo nasce 300×150) e roda os
+  ganchos `aoRecriar`.
+- `redimensionar(w, h)`: só com a largura, a altura ou o pixel ratio mudados (a chave `w x h @ pr`: o `resize` e o
+  `visualViewport` chamam os dois), um `setDrawingBufferSize(w, h, pr)` (2 atribuições a `canvas.width/height`; antes até 8 por
+  mudança). Devolve se mudou.
+- **Nenhum render target DEPOIS da passada principal.** No Chrome Android (Ganesh) a média das amostras sai dentro da memória da
+  GPU (`EXT_multisampled_render_to_texture`) só com o desenho direto no canvas; um pós-processo (FXAA, bloom, uma cópia do quadro)
+  faz a média por cópia (`WebGLTextures.js` do r170), o caminho que a Arm desaconselha, e no r170 a cena num render target perde o
+  tom e o sRGB. Render target ANTES da passada (o impostor da torcida assado na carga) e nas ferramentas de teste pode. Efeito de
+  tela inteira novo pede outra conta de custo.
+- `?tom=neutro`: `NeutralToneMapping` com a exposição × `FATOR_TOM.neutro` 1,40 dentro do `aplicarHora` (sobrevive à troca de hora
+  e à recriação); só para comparar, escolhido na carga. O jogo fica no ACES (escolha D2).
+
+**As opções (`render/graficos-opcoes.js`: `GRAFICOS`, lidas uma vez na carga; em Node, o padrão).**
+- `?aa=0|1`: o MSAA forçado em qualquer qualidade (por cima do `?gfx=antigo` e do teto dos tablets).
+- `?gfx=antigo` (escolha D7): tudo o que é IMAGEM do item 45 desligado — o gramado de antes bit a bit (a textura de 2048 × 1024, o
+  shader e a chave `grama-detalhe-<força>`), a Média sem MSAA, sem a profundidade, as linhas e os finos de antes, a torcida, as
+  bandeiras e o impostor com o texto da main (o FNV-1a dos programas no P3) e os letreiros sem A2C. O painel, a troca com a tela, a
+  queda gravada e o teto FICAM.
+- `?tom=neutro` (acima); `?qps=1` ou `?perf=1` (o painel, abaixo).
+
+**O gramado (`render/gramado.js`, puro e fora do fecho; os textos do shader em `render/gramado-shader.js`).**
+- A conta em JS e o GLSL gerado das MESMAS constantes (o modelo do `rede-onda.js`; o `teste-gramado` interpreta o GLSL e compara).
+  As 18 faixas da UEFA (Pitch Quality Guidelines 2025 §4.3.1, Fig. 15): por metade, as bordas
+  `BORDAS_METADE` = {0; 5,5; 11; 16,5; 22; 28,1; 34,2; 40,3; 46,4; 52,5} m de cada linha de fundo (a pequena área, a marca do
+  pênalti e a grande área em bordas); a paridade GLOBAL (a 1, junto ao gol da esquerda, clara; a 9 clara, a 10 escura, a 18
+  escura); atrás das linhas de fundo a alternância continua com 5,5 m. Sempre iguais, sem inverter pela vista (escolha D4).
+  `faixaEm(x)` → {indice, paridade, distBorda}; `misturaEm(x, fw)`.
+- O degrau filtrado por uma CAIXA `w = fwidth(x) + uBorda` (`BORDA_CORTE` 0,10 m, a borda macia do corte): `t = mix(0,5; p;
+  clamp(2·dB/w; 0; 1))`. As derivadas e as leituras de textura com mip no TOPO do bloco (`glslTopoGramado`, um `fwidth` só), fora
+  de desvio; as funções do GLSL não derivam.
+- As cores (escolha D1): albedos lineares pela inversa EXATA do ACES do r170 (`tools/lib/cor-aces.mjs`) — a faixa clara `#6b7f45`,
+  a escura `#61723a`, o chão de fora `#47541d` (`GRAMADO_HORAS`; a noite com o MESMO albedo). A textura vira só as manchas e o
+  desgaste (`texManchasGramado`: 512 × 256, 256 × 128 na Baixa; antes 2048 × 1024, ~11 MB na GPU) com `MANCHAS_GRAMADO`;
+  `uManchas` 0,17 (só luminância), `GRAMADO_ENTORNO` 0,88, `GRAMADO_GASTO`. As linhas × `uBrancoLinha` (1,8 de dia, 1,9 à noite;
+  nada de `toneMapped = false`, que quebra a noite). **Cor nova se calibra pela MEDIDA da página** (`teste-graficos-celular` G1,
+  G2, G6) e só se confere pelo modelo (o modelo dava ΔL 0,104 e a página 0,099).
+- **A profundidade relativa ao foco** (escolha D9): g = (1 − μ)², μ = V.y/|V| da câmera ao ponto do chão; a cor
+  × (1 + p), p = clamp(uRasante·(g − uGFoco); ±`PROFUNDIDADE.limite` 0,08), indo ao cinza `saturacao` 0,6 × p (ao longe o ΔC do
+  termo ≤ 0). `uGFoco` = o g do ponto onde o raio do meio da tela toca o chão (`gFocoDe`; sem tocar, o horizonte, g = 1): o meio
+  da tela não muda de brilho com a câmera. `uRasante` = o da hora (0,41 de dia e de noite) × `rasanteDaCamera` (0 com a câmera
+  abaixo de 3 m de altura, inteiro de 8 m para cima): as câmeras baixas (a 1ª pessoa e a lateral do replay, a comemoração, a
+  câmera do gol, a falta, o pré-jogo de perto, as cenas) ficam sem o gradiente, como antes; a TV, o escanteio, o Atrás do Livre e
+  os aéreos com ele. Os dois uniforms são escritos no `onBeforeRender` do gramado e do chão de fora, pela câmera que vai desenhar:
+  vale para TODA câmera, sem fio no `main.js`. As chaves de cache `grama-detalhe-<força>[-faixas][-prof]-v2`.
+- Ganchos dos testes: `campo.graficos.semProfundidade(bool)`, `semManchas(bool)`, `fisico(bool)` e `finos` (o estado).
+
+**Os finos e as silhuetas.**
+- **Os finos do gol** (as hastes do véu, as cordas do pé e do fundo, os mastros e as tampas; `campo.js larguraMinima`, `FINOS` =
+  {largMin 1, franja 1}, os atributos de `util.js atributosFino`, o `SHADER_FINOS` com a chave `gols-finos-v2`, 16 lados): abaixo
+  de 1 px o vértice sai do eixo pela lateral da TELA e a cobertura esmaece o que cresceu ("phone-wire AA", Humus). O modo sai das
+  AMOSTRAS e da qualidade (`campo.definirAA(amostras)`, `campo.definirQualidade(nome)`): A2C (a lista opaca) com `SAMPLES` ≥ 2 fora
+  da Baixa; a MISTURA com a cobertura analítica (transparente, escrevendo a profundidade, `renderOrder` 1; a rede no 2) sem
+  amostras e NA BAIXA também com as amostras da queda. O px vem do `uAlturaBuffer`, refeito no `onBeforeRender` da malha (o buffer
+  onde se desenha). Postes e travessão não crescem.
+- **A regra das silhuetas com MSAA** (o pixel da borda é sombreado no CENTRO, mesmo fora do triângulo, e a UV lê o vizinho no
+  atlas): nos shaders próprios (o quadro da torcida, o ramo do impostor, as bandeiras; os textos em `render/silhuetas-shader.js`) a
+  UV da AMOSTRA vai num varying `centroid` e as DERIVADAS (o nível do mip, a compensação do alfa) saem da cópia SEM `centroid` (a
+  derivada de uma entrada `centroid` pode sair imprecisa); atlas NOVO lido por material do three (placas, escudos, números,
+  patrocínios) leva 2–4 px de SANGRIA nas células — nenhum precisou até aqui (a K1 das placas na TV na bola dá 0 px).
+- As bandeiras: o alfa compensado pelo nível do mip (`COMPENSA_MIP` 0,22, o mesmo da torcida) e o alfa 1 escrito. A torcida: A2C
+  com amostras (`torcida.definirAA`): uma TROCA medida — as franjas e a cintilação da torcida caem, as das bandeiras na frente
+  dela sobem (a K1 no "Depende do dono" 30). Os letreiros com `alphaTest` (o pré-jogo; `util.js recorteAA`): A2C só nos OPACOS
+  (`TROCA_RECORTE`, centrada no limiar); o transparente fica com a mistura (com a A2C ficava pior).
+- **O canvas opaco com a A2C**: o three r170 pede o contexto com `alpha: true`, e a A2C escreve no buffer o alfa da cobertura
+  (uma cópia do canvas, um `drawImage`, saía translúcida: o V8 do `teste-tecnicos-tela`). TODO material com A2C passa por
+  `util.js alfaDoCanvas(m, a2c)`: a mistura própria só do canal alfa (o destino fica em 1; a cor igual bit a bit). Material novo com
+  A2C chama a mesma função; o `teste-estadio` 10b confere o alfa 255 em todo pixel.
+- Troca no texto de um shader do three: sempre pelo `aplicarTrocas` (`render/gramado-shader.js`), que avisa quando não acha o
+  trecho; derivada e leitura com mip implícito nunca dentro de desvio (o `teste-gramado` G confere os shaders montados).
+
+**Os ganchos do contexto novo (`cena3d.aoRecriar(fn)`).** `fn({motivo: 'recriacao' | 'contexto', renderer, aa, amostras})` roda
+depois da recriação do renderizador (`definirQualidade`) e no `webglcontextrestored` (o ouvinte em todo canvas que o `cena.js` cria,
+depois do do three, que refaz o estado da GPU; a hora é reaplicada). Devolve a função que o tira (`nGanchos`: nenhum vaza por
+pré-jogo). Registrados: `campo.definirAA` e `torcida.definirAA` (pelo `cena3d.amostras`), a A2C dos letreiros de fora
+(`render/prejogo.js`), a mira (`aquecerMira`, e um quadro já no contexto restaurado) e o cronômetro da GPU do painel (`reiniciar`
+no contexto restaurado). **Quem guarda estado do contexto** (uma A2C, um uniform do buffer, um programa aquecido) registra um
+gancho: o three se recupera sozinho, os ganchos não. Antes do item 45 não havia ouvinte de perda de contexto.
+
+**O painel `?perf` / `?qps` (`render/medidor-quadros.js`, puro e SOB DEMANDA).**
+- F3 liga dentro do HUD (escondido no replay e nas cenas, como antes). `?qps=1` ou `?perf=1` (`main.js PAINEL_URL`) o põem no
+  `body` com `.perf-fixo` (z 62): POR CIMA de tudo em todas as fases (a tela antes do jogo, a pausa, o replay, a carga), abaixo da
+  tela "Ajustando…" e do erro (z 63) e do "Gire o celular"; NUNCA pega toque (`pointer-events: none`, `user-select: none`: o dono
+  manda o print). O medidor só baixa com o painel à vista ou com o `__golaco.perf()` (a lista `SO_COM_PAINEL` do `teste-carga`:
+  nunca no download inicial nem na pré-carga).
+- Mede os intervalos entre DESENHOS (o `cena3d.desenhar` envolto: a tela antes do jogo mostra 30, não 60), a CPU do quadro, a GPU
+  só com o `EXT_disjoint_timer_query_webgl2` (sem ela, "—"; o lixo do SwiftShader descartado) e o rAF (todo quadro do navegador).
+  O anel de `MEDIDOR.anel` 240 desenhos (p50, p95, pior 1%) e o acumulado por fase (`FASES`: jogo, replay, comemoração, cena,
+  pré-jogo, tela, pausa).
+- As linhas (`textoPainel`): qps e ms; CPU e GPU p95; chamadas, triângulos e a fase; a qualidade (escolha → atual), o buffer e o
+  pixel ratio; o AA (MSAA 4×, o `SAMPLES` e o modo provável pelo `modoAA` — implícito no Chrome Android, separado no Safari e no
+  Graphite, emulado no SwiftShader —, o teto dos tablets); a GPU (`WEBGL_debug_renderer_info`; no Firefox o `gl.RENDERER`); "rAF
+  N Hz · teto 1 a cada n"; a queda (a da sessão e a gravada); uma linha por fase.
+- `__golaco.perf()` devolve o mesmo objeto (null antes de o medidor chegar; a 1ª chamada o pede).
+
+**A troca de qualidade (`main.js`).**
+- **Imediata** (`__golaco.definirQualidade(nome)`, a API dos testes; `trocarQualidadeJa`): recria se preciso, os ganchos e o
+  `renderer.compile()` síncrono só quando recriou — quem chama troca e desenha no mesmo `evaluate`.
+- **Pela pausa** (≡ → Opções; `trocarQualidadePelaPausa`): sem nada a mudar (o mesmo nível e o mesmo contexto) só marca a escolha;
+  senão `trocandoQ` (a lógica roda e o 3D não desenha), `hud.ocupado('Ajustando os gráficos…')` JÁ OPACA (sem a transição de 0,35
+  s do `.carregando`; z 63; a pausa `inert`, o foco na tela, o `tratarAcao` ignora 'pausa', 'ajuda' e 'menu-*', o `pausado()`
+  vale), dois quadros, a recriação, os ganchos, `compilarAntesDoDesenho()`, um quadro desenhado e `hud.livre()`. Pedida no meio de
+  outra, entra quando ela acaba; no online só o que está à vista compila (no 1º desenho).
+- **A espera dos programas tem fim**: com o `KHR_parallel_shader_compile`, `esperarProgramas` com o prazo `COMPILAR_PRAZO_MS` 3 s e
+  fim na perda do contexto e no renderizador trocado — o `compileAsync` do r170 nunca resolve com o contexto perdido, e a sonda dele
+  joga erro sem dono depois.
+- O `compile()` do r170 percorre TODOS os objetos da cena (os materiais pelo `scene.traverse`, também os escondidos; só as luzes
+  pelo visível): o que está na cena na hora da troca compila junto; só o que chega depois compila quando aparece.
+- A linha "Qualidade" da pausa: a Média diz "antisserrilhado e sombras simples" só com o contexto com MSAA (`qualidadeAA`).
+
+**A queda automática e a queda GRAVADA (`render/ritmo-desenho.js`, puro: `criarQueda`, `QUEDA`; escolha D5).**
+- Na SESSÃO, a regra de antes: depois de `QUEDA.esperaMs` 3 s, janelas de `janelaS` 2,5 s de DESENHOS; o qps abaixo do `minimo`
+  (Alta 48, Média 30) cai um nível, no máximo uma queda a cada `entreTrocasMs` 4 s; só na "Automática", com a página à vista, fora
+  da pausa, do relógio manual e da troca. Cai SEM recriar o contexto (`definirQualidade(nome, false)`): o MSAA fica até a próxima
+  carga; caem o pixel ratio e as sombras.
+- **Grava** `prefs.qualidadeQueda = {de, para, v: 1}` (`golaco.prefs.v1`) com a janela que caiu lenta DE VERDADE (a mediana dos
+  intervalos ≥ o intervalo do mínimo − `folgaMedianaMs` 1 ms: Média 32,3 ms). O ritmo PRESO em 30 regular (a mediana a ±
+  `tolDivisorMs` 1 ms de 33,3 e p90 − p10 ≤ `tremorMaxMs` 2 ms: o iPhone em pouca energia, o economizador do Android) só grava se a
+  janela SEGUINTE, já no nível de baixo, desenhar mais rápido (a mediana ≥ `ajudaMs` 1 ms abaixo).
+- **NÃO grava**: alguns soluços longos (a mediana não cai: a queda na sessão vem, a gravação não); a mesma cadência presa no nível
+  de baixo (o limite do sistema); com `navigator.webdriver`, `?prints=1` e `?demo=1` (`podeGravar` false: o 3D no quadro do
+  `testar-3d`, os rAF falsos dos testes); uma janela inativa no meio desfaz a espera. `__golaco.quedaDeTeste()` cai e grava de
+  propósito.
+- A próxima carga em "Automática" abre no nível gravado (`nivelInicial`: nunca sobe). Escolher qualquer qualidade à mão — também a
+  "Automática" — apaga a gravada e a da sessão (`escolherQualidade`). A gravada NÃO expira (a proposta de tentar de novo a cada
+  ~10 cargas está no "Depende do dono" 30). A pausa diz "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar
+  de novo)" (`quedaAgora`); no celular a linha `.queda` aparece numa linha só (11 px até 600 px de largura: a pausa não rola).
+
+**O teto de quadros (`ritmo-desenho.js criarTeto`, `TETO`; escolha D6).**
+- Só no celular (`criarTeto({ligado: ehCelular})`; o PC não muda). O período da tela = a média dos intervalos do rAF a ± `faixa`
+  25% da mediana dos últimos `amostras` 30 (todo quadro do navegador), refeita a cada `refazMs` 2 s; n = max(1, floor(Hz/60 +
+  0,1)) (`nDoTeto`): 60 e 90 Hz → 1 (sem teto), 120 → 2 (60 desenhos), 144 → 2 (72), 165 → 2 (82,5), 240 → 4 (60); o n vai a 2
+  a partir de ~114 Hz. Desenha quando já passaram (n − 0,5) períodos desde o último desenho — pelo TEMPO, não pelo contador: um
+  vsync perdido não espera um quadro a mais —; a descida rápida (a média dos últimos `rapidas` 8 intervalos acima de
+  `rapidaRazao` 1,2 × o período baixa o n na hora), subir só na conta de 2 s.
+- Mora no `aoQuadro`, nunca dentro do `quadro()`: o relógio manual dos testes e o `teste-laco` não passam por ele. A tela antes
+  do jogo (30 pelo relógio) passa por cima (`forcar` com `pp.aberta`). A lógica anda pelo relógio: nada se perde. `__golaco.teto`
+  = {ligado, hz, n, periodo}; o painel mostra o n.
+
+**API dos testes** (`__golaco`): `perf()`, `definirQualidade(nome)` (imediata), `quedaDeTeste()`, `qualidadeEstado` ({escolha,
+atual, sessao, gravada, agora, trocando}), `teto`, `graficos` ({fisico(bool): os desenhos seguintes SEM os truques — a largura
+mínima e a A2C dos finos, a A2C da torcida, a compensação das bandeiras e a A2C dos letreiros —, para as referências SSAA e as
+máscaras geométricas; `finos`; `ganchos`}).
+
+**Testes.** Node (padrão, `rodar-testes.mjs`): `teste-gramado` (A–G: as bordas UEFA, a paridade, o GLSL interpretado = o JS em
+double e float32, as cores pela inversa do ACES, o g do foco e as câmeras baixas, as guardas estáticas dos shaders montados — as
+derivadas e as leituras com mip antes do 1º desvio, o `?gfx=antigo` = a main pelo hash, as chaves distintas, a troca que avisa),
+`teste-medidor-quadros` (M1–M9) e `teste-ritmo-desenho` (R1–R11 a queda, T1–T7 o teto). Navegador (`rodar-navegador.mjs`, no CI
+do PR e fora do deploy): `teste-graficos-celular` (pelos módulos: S a sonda e o MSAA por qualidade, A o serrilhado do campo, F os
+finos — Média, Baixa, a queda, o limiar e a haste —, G1–G7 e G4b o gramado e as linhas, D o grão, N a noite, a Baixa e o PC) e
+`teste-graficos-pagina` (pela página: S2 o celular, o tablet e o PC, A2 o quadro inteiro contra o SSAA 8×8, K as franjas, P as
+chamadas e a CPU PAREADA com a base do PR pela `GOLACO_BASE` — o job do CI monta uma worktree dela —, P2 o painel, P3 as chaves de
+volta, R a recriação e o contexto, Q a queda, Z o redimensionar, T o teto). A referência da main em `tools/dados/graficos-ref.json`
+(só valores agregados, o Chromium 141 do CI; gravar de novo sempre com ele, pelo `--raiz <main> --gravar-referencia`). Os dois
+reprovam por padrão (vale, guarda e estrutura); `--informativo` só mostra (para medir a main); as linhas informativas saem `INFO`,
+com o motivo. Também: `teste-estadio` 10b (o canvas opaco), `teste-pausa-tela` P15 (a linha da queda sem rolar) e o
+`teste-carga` (`SO_COM_PAINEL`; a folga 442,1 KB).
+
+**Lições** (as que valem fora daqui; as outras no fim da seção 6 do plano):
+- **A régua tem de ser mais fina que o que ela julga**: o SSAA 3×3 tem menos níveis numa borda alinhada com a tela que o MSAA 4×,
+  e uma linha só (a de cima das placas de lá) reprovava a A2 inteira. Decompor por peça e conferir contra uma referência densa
+  (o 8×8) antes de mexer no desenho; e a franja se confere contra a verdade no MESMO pixel.
+- **Calibração contra uma meta provisória é conta circular** (o `uManchas` contra a régua da foto que nunca foi refeita: a G6
+  ficou informativa).
+- **Um modo de desenho que fecha uma meta abre outra longe dela** (a mistura dos finos com MSAA apagava a rede atrás da franja no
+  PC): medir as metas vizinhas juntas em toda variante.
+- **Linha decidida por poucos px muda com a semente**: medir em mais de uma antes de chamá-la de fechada.
+- **Uma regra de "duas janelas lentas" mede a coisa errada** quando a 2ª janela já roda no nível de baixo: quem decide é a
+  cadência do nível de baixo.

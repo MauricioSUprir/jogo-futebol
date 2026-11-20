@@ -1388,7 +1388,8 @@ celular de verdade". Esta seção junta as três pesquisas do plano — o antiss
 código na main `e41aa791` — e a revisão delas. Nada foi medido em aparelho: os custos de GPU são estimativas tiradas das
 fontes, e as cores são contas com os shaders do three r170 e a luz do `cena.js` (`node golaco/tools/lib/cor-aces.mjs --auto`
 refaz todas e confere as cópias da luz pelo texto do `cena.js` e do `campo.js`). A tabela antes → depois, medida pelos dois
-testes novos (`teste-graficos-celular` e `teste-graficos-pagina`, seção 4 do plano), vem com o PR.
+testes novos (`teste-graficos-celular` e `teste-graficos-pagina`, seção 4 do plano), está na §19.1 (o PR #639), com o que a
+medida corrigiu nesta pesquisa.
 
 **O que a auditoria achou** (o celular de referência: 844×390, dpr 2, Média; as linhas são as da main `e41aa791`).
 - **Sem antisserrilhado na Média:** o buffer de 1266×585 vai à tela ampliado ×1,333 sem MSAA (`config.js` 412-416:
@@ -1409,9 +1410,10 @@ testes novos (`teste-graficos-celular` e `teste-graficos-pagina`, seção 4 do p
   recriar o renderizador (o `cena.js` passa a guardar `antialias false` com o contexto em MSAA e a próxima troca compara com o
   valor errado); o redimensionar faz até 8 atribuições a `canvas.width/height` por mudança (o `window` e o `visualViewport`,
   e o `setPixelRatio` já chama o `setSize`); a recriação do renderizador perde o `aria-label`, o `inert`, o
-  `localClippingEnabled` do vão das placas e a mira aquecida; nenhum ouvinte de perda de contexto; o `compile()` do r170 só
-  percorre o visível; nenhum teto de quadros nos celulares de 90–165 Hz; o iPad entra como celular e cairia na Média com MSAA
-  (2049×1536 × 4 amostras, ~100 MB no Safari); nenhum teste mede tom, contraste, faixas ou serrilhado.
+  `localClippingEnabled` do vão das placas e a mira aquecida; nenhum ouvinte de perda de contexto; ~~o `compile()` do r170
+  só percorre o visível~~ (errado: ele percorre a cena inteira, §19.1); nenhum teto de quadros nos celulares de 90–165 Hz; o
+  iPad entra como celular e cairia na Média com MSAA (2049×1536 × 4 amostras, ~100 MB no Safari); nenhum teste mede tom,
+  contraste, faixas ou serrilhado.
 
 **Fontes e o que se aproveitou de cada uma: o antisserrilhado.**
 
@@ -1431,7 +1433,7 @@ testes novos (`teste-graficos-celular` e `teste-graficos-pagina`, seção 4 do p
 | Qualcomm, Anti-aliasing with Adreno — https://docs.qualcomm.com/bundle/publicresource/80-71528-1/topics/anti_aliasing_with_adreno.md — e Meta, Mobile MSAA analysis — https://developers.meta.com/horizon/documentation/native/android/mobile-msaa-analysis/ | No Adreno, +10–15% de tempo de GPU (0,5–1,5 ms por quadro numa área maior, no Quest); escalando para 740.610 px, ~+0,2–0,7 ms (estimativa) |
 | Imagination (PowerVR), MSAA performance — https://docs.imgtec.com/performance-guides/graphics-recommendations/html/topics/msaa-performance.html — e analytical AA — https://docs.imgtec.com/performance-guides/graphics-recommendations/html/topics/preferred-analytical-aa-solution.html | "2x virtually free, 4x noticeable": o PowerVR GE8xxx é candidato à Baixa por padrão, pela GPU lida no `WEBGL_debug_renderer_info` (a medir com o dono) |
 | Unity, URP anti-aliasing — https://docs.unity3d.com/6000.1/Documentation/Manual/urp/anti-aliasing.html —, Godot, 3D antialiasing — https://docs.godotengine.org/en/stable/tutorials/3d/3d_antialiasing.html — e NVIDIA, FXAA sample — https://docs.nvidia.com/gameworks/content/gameworkslibrary/graphicssamples/opengl_samples/fxaa.htm | Onde as fontes divergem: Unity e Godot recomendam FXAA no celular porque já desenham num buffer intermediário (lá o MSAA sai por passada separada); o nosso jogo desenha direto no canvas, o único caminho com a média na GPU no Chrome Android. O FXAA custa ~1–3 ms num celular médio (extrapolado dos 0,88 ms a 1080p numa GTX 460), borra a textura, a rede e as linhas de 12 cm e, no r170, a cena num render target perde o tom e o sRGB (`WebGLRenderer.js:1792-1804`). Não entraram o FXAA, o SMAA (3 passadas, +64 KB) nem o TAA |
-| three.js r170: `WebGLRenderer.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/WebGLRenderer.js —, `WebGLProgram.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/webgl/WebGLProgram.js —, `WebGLTextures.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/webgl/WebGLTextures.js —, `TAARenderPass.js` — https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/TAARenderPass.js — e `alphatest_fragment` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/shaders/ShaderChunk/alphatest_fragment.glsl.js | O `setSize` usa o pixel ratio ANTIGO (só o `setPixelRatio` o muda): o redimensionar passa a um `setDrawingBufferSize(w, h, pr)` só; o `alphaToCoverage` tira o `#define OPAQUE` e liga o `SAMPLE_ALPHA_TO_COVERAGE` também no ShaderMaterial, com programas separados pelo bit (`WebGLProgram.js:744`, `WebGLPrograms.js:564`); o `alphatest_fragment` já faz `smoothstep(alphaTest, alphaTest + fwidth(a), a)` com A2C (os letreiros); o `compile()` percorre só o visível (`traverseVisible`); o `TAARenderPass` só acumula com a cena parada (rastro na bola e nos jogadores) |
+| three.js r170: `WebGLRenderer.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/WebGLRenderer.js —, `WebGLProgram.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/webgl/WebGLProgram.js —, `WebGLTextures.js` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/webgl/WebGLTextures.js —, `TAARenderPass.js` — https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/TAARenderPass.js — e `alphatest_fragment` — https://github.com/mrdoob/three.js/blob/r170/src/renderers/shaders/ShaderChunk/alphatest_fragment.glsl.js | O `setSize` usa o pixel ratio ANTIGO (só o `setPixelRatio` o muda): o redimensionar passa a um `setDrawingBufferSize(w, h, pr)` só; o `alphaToCoverage` tira o `#define OPAQUE` e liga o `SAMPLE_ALPHA_TO_COVERAGE` também no ShaderMaterial, com programas separados pelo bit (`WebGLProgram.js:744`, `WebGLPrograms.js:564`); o `alphatest_fragment` já faz `smoothstep(alphaTest, alphaTest + fwidth(a), a)` com A2C (os letreiros); ~~o `compile()` percorre só o visível (`traverseVisible`)~~ o `compile()` percorre TODOS os objetos da cena (os materiais pelo `scene.traverse`, também os escondidos; só as luzes pelo `traverseVisible`: corrigido no C12, §19.1); o `TAARenderPass` só acumula com a cena parada (rastro na bola e nos jogadores) |
 | web3dsurvey: MAX_SAMPLES — https://web3dsurvey.com/webgl2/parameters/MAX_SAMPLES —, EXT_disjoint_timer_query_webgl2 — https://web3dsurvey.com/webgl2/extensions/EXT_disjoint_timer_query_webgl2 — e KHR_parallel_shader_compile — https://web3dsurvey.com/webgl2/extensions/KHR_parallel_shader_compile | MAX_SAMPLES 4 em ~98% dos Android e ≥ 4 em 100% dos iOS; o tempo de GPU só em 0,43% dos Android e 0,22% dos iOS (o painel mostra "—" sem ela); a compilação paralela em 0,23% dos Android e 98,6% dos iOS: recriar o contexto TRAVA a tela no Android. Daí: a queda automática não recria (cai o pixel ratio e as sombras, o MSAA fica até a próxima carga) e a troca pela pausa mostra a tela de carregar por cima, sem transição |
 | Firefox, bug 1769283 — https://bugzilla.mozilla.org/show_bug.cgi?id=1769283 — e Stack Overflow, o `WEBGL_debug_renderer_info` obsoleto no Firefox — https://stackoverflow.com/questions/69055946/what-does-the-message-webgl-debug-renderer-info-is-deprecated-in-firefox-and-wi | O Firefox usa a preferência `webgl.msaa-samples` (padrão 4; fatia pequena); lá o painel lê a GPU pelo `gl.RENDERER` comum |
 | Apple, Choosing a resource storage mode for Apple GPUs — https://developer.apple.com/documentation/metal/choosing-a-resource-storage-mode-for-apple-gpus | O armazenamento sem memória só vale nos MS implícitos do ANGLE/Metal, não no renderbuffer do WebKit: no iPhone o MSAA é memória de verdade |
@@ -1450,7 +1452,7 @@ testes novos (`teste-graficos-celular` e `teste-graficos-pagina`, seção 4 do p
 
 | Fonte | O que se aproveitou |
 |---|---|
-| WebKit, o teste do rAF no modo de pouca energia — https://webkit.googlesource.com/WebKit/+/2538ba1dc66c1a9ab694bc167c5d56293dae7e8e/LayoutTests/fast/animation/request-animation-frame-throttling-lowPowerMode.html —, Motion, "When browsers throttle requestAnimationFrame" — https://motion.dev/blog/when-browsers-throttle-requestanimationframe — e o fórum da GreenSock — https://greensock.com/forums/topic/26826-any-way-to-keep-gsap-running-at-60fps-while-mobile-device-is-in-low-power-mode/ | O iPhone em pouca energia limita o rAF a ~30 qps (o WebKit testa um intervalo de 30 ms), e o limiar da queda é `qps < 30`: ela dispararia por acaso e, gravada, deixaria o aparelho na Baixa para sempre. Daí: na sessão a queda segue como hoje, mas só GRAVA com duas janelas lentas seguidas, fora do ritmo preso num divisor da tela com pouco tremor e fora de webdriver, `?prints=1` e `?demo=1` |
+| WebKit, o teste do rAF no modo de pouca energia — https://webkit.googlesource.com/WebKit/+/2538ba1dc66c1a9ab694bc167c5d56293dae7e8e/LayoutTests/fast/animation/request-animation-frame-throttling-lowPowerMode.html —, Motion, "When browsers throttle requestAnimationFrame" — https://motion.dev/blog/when-browsers-throttle-requestanimationframe — e o fórum da GreenSock — https://greensock.com/forums/topic/26826-any-way-to-keep-gsap-running-at-60fps-while-mobile-device-is-in-low-power-mode/ | O iPhone em pouca energia limita o rAF a ~30 qps (o WebKit testa um intervalo de 30 ms), e o limiar da queda é `qps < 30`: ela dispararia por acaso e, gravada, deixaria o aparelho na Baixa para sempre. Daí: na sessão a queda segue como antes e só GRAVA com a janela lenta de verdade (a mediana dos intervalos); o ritmo preso em 30 com pouco tremor só grava quando o nível de baixo desenha mais rápido (a regra do plano, "duas janelas lentas seguidas", quase nunca gravava: §19.1); nunca com webdriver, `?prints=1` e `?demo=1` |
 | iGeeksBlog — https://www.igeeksblog.com/this-hidden-safari-setting-unlocks-120hz-scrolling/ — e Macworld — https://www.macworld.com/article/3040366/enable-faster-scrolling-in-safari-and-more-with-this-hidden-setting.html | O Safari do iPhone já segura o desenho perto de 60 por padrão: o teto de 60 pesa no Android, onde também corta pela metade o custo do MSAA nos 120 Hz. O *n* do teto é max(1, floor(Hz/60 + 0,1)): 90 Hz sem teto (45 regulares ou 60 aos trancos seriam piores), 144 Hz a 72, 165 Hz a 82,5 (o `round` dava 55) |
 
 **Fontes e o que se aproveitou de cada uma: o tom e a cor.**
@@ -1517,3 +1519,95 @@ Android Adreno ou Mali e um iPhone) é o que fecha. O modo do MSAA no SwiftShade
 no Android. A citação secundária "3.2 Mowing, p. 70" não bate com a edição de 2025 da UEFA (conferida no PDF). As fotos do
 Commons são só ordem de grandeza. Os artigos de Quilez não abriram, e a auditoria correu sem os créditos do Firecrawl (busca
 web comum).
+
+### 19.1 O resultado (o PR #639): antes → depois e o que a medida corrigiu nesta pesquisa
+Medido com os dois testes novos no Chromium 141 do CI (SwiftShader, MSAA 4× de verdade: a sonda confirmou `antialias` true e
+`SAMPLES` 4 com o pedido), a main `e41aa791` pela referência gravada (`tools/dados/graficos-ref.json`) e o item 45 pelas
+medidas de cada passo (a seção 6 do `PLANO-GRAFICOS.md`; o CI do `85aa3d20`, já com a main `5b7986a2`, passou com todas). "Forçado"
+= a main com o MSAA pedido de fora. Todas as linhas abaixo VALEM no CI (reprovam fora da meta), menos as marcadas "informativa".
+
+**`teste-graficos-celular`** (pelos módulos: o campo numa tela de 1266 × 585, a TV do celular):
+
+| Meta | Main | Item 45 |
+|---|---|---|
+| S o MSAA: Média / Baixa / `?aa=1` na Baixa (`SAMPLES`) | 0 / 0 / 0 | 4 / 0 / 4 |
+| A o serrilhado do campo, razão contra o sem AA ≤ 0,6 (dia: foco / gol de lá; noite: foco / lá) | 1,00 / 1,00; 1,00 / 1,00 | 0,53 / 0,50; 0,46 / 0,46 |
+| F os finos, buracos ≤ 5% (Média: foco / lá; Baixa: foco / lá) | 33,3% / 55,0%; 57,1% / 62,5% | 0% / 0%; 0% / 0% |
+| F os finos, cintilação ≤ 1,5 × o SSAA, a pior peça (Média: foco / lá; Baixa: foco / lá) | ×12,6 / ×5,84; ×6,49 / ×6,02 | ×1,42 / ×1,31; ×1,17 / ×1,38 |
+| F a Baixa da queda (com as 4 amostras), cintilação (foco / lá) | ×1,69 / ×2,56 (forçado) | ×1,12 / ×1,35 |
+| F a haste de perto (o gol de lado), cintilação (Média / Baixa / a queda) | ×4,24 / ×4,03 / ×1,17 | ×0,93 / ×0,21 / ×0,26 |
+| G1 a cor na faixa do foco: L 0,58 ± 0,02, C 0,10 ± 0,01, h 124 ± 3° | 0,582 / 0,127 / 134,7° | 0,581 / 0,100 / 124,0° |
+| G2 o ΔL das faixas 0,056 ± 0,008 | 0,099 | 0,056 |
+| G3 as faixas (18) e a pior borda (≤ 0,10 m da UEFA) | 20; 2,59 m | 18; 0,02 m |
+| G4 a profundidade, o termo longe − perto +0,026 ± 0,008 (dia / noite / Baixa; o PC pelo ângulo, 0,033) | 0 | 0,0260 / 0,0257 / 0,0260; PC 0,0326 / 0,0324 |
+| G4b o foco com − sem o termo ≤ 0,005 nas 16 câmeras (a TV, o replay, as cenas, o pré-jogo, o Livre) | — | o pior −0,0034 (o aéreo) |
+| G5 o pico da linha 0,952 ± 0,01 de dia; ≤ 0,97 à noite | 0,909; 0,902 | 0,952; 0,951 |
+| G6 as manchas, σL em blocos de 8 m (informativa: a régua da foto não foi refeita; 0,010 ± 0,004 provisória) | 0,0049 | 0,0100 |
+| D o grão, longe ÷ perto do foco, E / cintilação (informativa: o filtro só entraria se o longe passasse do perto) | ×0,70 / ×0,32 | ×0,68 / ×0,29 (sem filtro) |
+
+**`teste-graficos-pagina`** (a página inteira, `?prints=1`, celular 844×390 Média):
+
+| Meta | Main | Item 45 |
+|---|---|---|
+| S2 `SAMPLES`: o celular / o tablet 1366×1024 (o teto de 1,2 MP) / o tablet com `?aa=1` / o PC 1280×720 na Média | 0 / 0 / 0 / 0 | 4 / 0 / 4 / 4 |
+| A2 o quadro inteiro (jogadores, bola, torcida, placas), razão ≤ 0,6 contra o SSAA 8×8 (TV na bola / gol no foco) | 1,00 / 1,00 (forçado ×0,53 / ×0,42) | 0,48 / 0,41 |
+| K1 as franjas da silhueta com o centro do pixel FORA, ≤ 0,2% (informativa): a torcida na TV na bola; as bandeiras (bola / foco) | forçado: 1,74%; 13,32% / 4,17% | 0,09% (0,22% na semente 7); 1,74% / 0,43% |
+| K2 a cobertura das bandeiras de mastro ≥ 0,8 do SSAA, a 50 / 100 m (informativa: a main sem AA já cumpre) | 0,966 / 0,935 | 1,006 / 1,011 |
+| P as chamadas; os triângulos (≤ ref + 1%) | 31; 91 524 | 31; 92 044 (+0,57%: os finos de 16 lados e as pontas fechadas) |
+| P a CPU p95 do quadro PAREADA com a base (a mediana das diferenças ≤ +1,0 ms) | — | −0,10 a +0,30 ms (aqui e no CI) |
+| P2 o painel `?perf` (p95, fase, AA, buffer, GPU, rAF); por cima da tela antes do jogo e da pausa; o qps da tela antes do jogo | não existe; escondido; mostra 60, desenha 30 | existe; por cima nos dois; mostra 30, desenha 30 |
+| R a troca Média → Baixa → Média pela pausa (`SAMPLES`); a tela "Ajustando…" | 0 → 0 → 0; nunca | 4 → 0 → 4; à vista e opaca |
+| R a Alta → Baixa no pré-jogo: o recorte do vão e o `aria-label` | false; null | true; "Campo 3D" |
+| R o contexto perdido e restaurado: os ganchos (a A2C dos finos e da torcida, a mira) | não rodam | rodam |
+| R5 a GPU que nunca diz "pronto" (o `KHR_parallel_shader_compile` falso): a carga com a tela cedo chega ao pronto | não em 90 s | 5,2–6,0 s |
+| Q a queda gravada: `quedaDeTeste()` e a recarga em Automática | não existe; Média | o mesmo canvas, `SAMPLES` 4; a recarga na Baixa |
+| Z as atribuições a `canvas.width/height` (o mesmo tamanho / um tamanho novo) | 8 / 8 | 0 / 2 |
+| T os desenhos por segundo no celular a 90 / 120 / 144 / 165 Hz (o PC a 144 Hz) | 90 / 120 / 144 / 165 (144) | 90 / 60 / 72 / 82,5 (144) |
+
+O download inicial (`teste-carga`): 3,45 → 3,57 MB (o nosso 2859 → 2978 KB, +4 KB deles da junção com o Leilão); a folga até
+os 4 MB 561,5 → 442,1 KB (a mínima, 120 KB). O medidor do painel (~21 KB) só baixa com o painel.
+
+**O que a medida corrigiu nesta pesquisa:**
+- **O `compile()` do r170 percorre a cena INTEIRA** (os materiais pelo `scene.traverse`, também os escondidos; só as luzes pelo
+  `traverseVisible`): a troca pela pausa compila junto o que está escondido (a tela "Ajustando…" fica mais tempo: 3–5 s no
+  SwiftShader) e nada engasga quando aparece depois.
+- **O `compileAsync` do r170 nunca resolve com o contexto perdido** (a sonda do `isReady` continua e joga erro sem dono): a espera
+  dos programas é própria, com o prazo de 3 s (`main.js esperarProgramas`). O SwiftShader do CI não tem o
+  `KHR_parallel_shader_compile`: o caminho das GPUs de verdade só se testa com a extensão falsa (o R5).
+- **A queda gravada pela mediana**, não por "duas janelas lentas seguidas": a 2ª janela já roda no nível de baixo, e exigir que
+  ela também fique lenta é exigir que a Baixa NÃO resolva (0 de 20 sementes gravavam com a Média a ~25 qps e a Baixa a ~50). O
+  ritmo preso em 30 grava só quando o nível de baixo desenha mais rápido; o 20 (50 ms) saiu dos divisores (nenhuma fonte de
+  sistema que limite a 20).
+- **Os números calibrados pela página**, não pelo modelo: o `uManchas` ficou 0,17 (a pesquisa dava 0,08–0,12; a calibração foi
+  contra a meta provisória da G6, por isso informativa), o `uRasante` 0,41 de dia e de noite (o 0,22 do modelo dava ~+0,014; com
+  a metade à noite, ~+0,013, fora da meta) e o pico da linha × 1,8 de dia e × 1,9 à noite.
+- **A profundidade se apaga nas câmeras baixas** (`rasanteDaCamera`, de 3 a 8 m de altura): numa câmera baixa o raio do meio da
+  tela toca o chão muito além do assunto (a steadicam a 106 m, a câmera do gol a 37 m), e o chão aos pés dele caía no teto de −8%.
+- **A A2C entrou na torcida, não nas bandeiras**: na torcida ela ganha (as franjas na TV na bola 1,95 → 0,33%, a cintilação da
+  silhueta ×1,32 → ×1,28 do SSAA) e custa franjas nas bandeiras na frente dela; nas bandeiras não muda nada medido (ficam com o
+  alfa compensado e o `centroid`). Nos letreiros, só nos OPACOS (no transparente a A2C ficava pior que a mistura).
+- **O canvas opaco**: o three r170 pede o contexto com `alpha: true` e a A2C escreve no buffer o alfa da cobertura — qualquer cópia
+  do canvas saía translúcida (`render/util.js alfaDoCanvas`).
+- **Os finos da Baixa da queda na mistura**: com as 4 amostras que a queda deixa, a A2C de 1 px saltava entre 1 e 2 amostras
+  (×2,26 o SSAA na corda do fundo); a mistura em todo contexto fechava isso mas apagava a rede atrás da franja no PC (a A ×1,15 da
+  main): só a Baixa vai para a mistura.
+- **A régua da A2 com o SSAA 8×8**: o 3×3 tem 3 níveis numa borda alinhada com a tela, menos que os 4 do MSAA (a borda de cima das
+  placas de lá pesava ×6,46 só por isso).
+- **O grão ao longe** não cintila mais que o de perto (o longe ÷ o perto ×0,29 na cintilação): o filtro pela derivada não entrou.
+
+**As fontes que se aproveitaram** (as tabelas acima, por tema): o MSAA do próprio canvas e "nenhum render target depois" (o
+`drawing_buffer.cc` do Chromium, o `EXT_multisampled_render_to_texture`, a Arm); o AA real do contexto e a guarda do
+redimensionar (o `webgl_rendering_context_base.cc` e o `setDrawingBufferSize` do r170); o teto dos tablets, o teto de quadros, a
+queda gravada e o `?aa=0` (o `blitFramebuffer` do WebKit, o modo de pouca energia do WebKit, o Safari perto de 60); a queda sem
+recriar e a espera própria dos programas (o web3dsurvey do `KHR_parallel_shader_compile`); o painel sem o tempo de GPU na
+maioria (o web3dsurvey do `EXT_disjoint_timer_query_webgl2`); os ganchos do contexto restaurado (o `WEBGL_lose_context`); a A2C só
+com amostras e o `discard` na Baixa (o `OES_sample_variables`); o `centroid` com a derivada sem ele (o GLSL ES 3.00); a largura
+mínima dos finos (Humus); a A2C da torcida e a compensação do alfa (Golus, Castaño); o ACES com a correção no albedo (os shaders do
+r170, o ajuste de Hill, OKLab); as 18 faixas (a UEFA 2025, a Premier League, a LFP); a profundidade pelo ângulo (Kimes 1983,
+Sandmeier 1998) e não pela névoa (Koschmieder); medir o grão antes de filtrar (o `EXT_texture_filter_anisotropic`). Não entraram
+(com o motivo nas tabelas): o FXAA, o SMAA e o TAA (Unity, Godot, NVIDIA, o `TAARenderPass`), o AgX e o Neutral (só no `?tom=`),
+o xadrez da Ligue 1 (opção futura por liga) e as faixas que invertem no contraplano (NALP).
+
+**Ainda não confirmado:** nada foi medido num celular de verdade (o custo do MSAA no Chrome Android e no Safari, o teto num
+celular de 120 Hz, o engasgo da queda); o minuto do dono com `?perf=1&aa=0` × `?perf=1&aa=1` num Android e num iPhone, com o print
+do painel, é o que fecha ("Depende do dono" 30).
