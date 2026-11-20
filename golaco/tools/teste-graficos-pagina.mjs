@@ -56,7 +56,9 @@
 //      não lia o ?gfx=antigo); ?tom=neutro: NeutralToneMapping e a exposição = a do ACES × 1,40 de dia e de noite, também depois do
 //      definirHora e de uma recriação (Média → Alta → Baixa recria nas duas versões).
 //   R  recriação e contexto. (1) celular com a tela antes do jogo, pelo ≡ → Opções: Média → Baixa → Média com SAMPLES 4 → 0 →
-//      4, o canvas novo com o aria-label e o inert de antes, a tela "Ajustando…" à vista e fora, a mira da falta desenha depois;
+//      4 e os finos do gol de volta na A2C com 4 amostras (também no R3 e no "escolher a Média" da Q: as correções do
+//      fechamento — um definirQualidade de mão única nos finos reprova), o canvas novo com o aria-label e o inert de antes, a
+//      tela "Ajustando…" à vista e fora, a mira da falta desenha depois;
 //      com o módulo da mira baixado ANTES das trocas, o programa dela já está no renderizador novo sem ela ser desenhada (C12);
 //      a mensagem POR CIMA do painel ?perf (a pilha do ponto em 5 pontos da linha dela) e, durante a troca, a pausa inert e o
 //      foco na tela de carregar, de volta na pausa no fim (a revisão do bloco 4).
@@ -73,7 +75,7 @@
 //   Q  queda: a natural com webdriver (rAF falso a 20 Hz com tremor, sem ?q, 8,6 s) cai na sessão e NÃO grava (a recarga abre
 //      na Média); com o teto (C13), a 120 Hz por 8,6 s (60 desenhos) não cai; __golaco.quedaDeTeste(): o mesmo canvas, 'baixa',
 //      SAMPLES continua 4, a queda nas preferências e na linha da pausa; a recarga em Automática abre na Baixa com SAMPLES 0;
-//      escolher a Média apaga.
+//      escolher a Média apaga e volta a SAMPLES 4 com os finos na A2C.
 //   Z  redimensionar: atribuições a canvas.width/height do #tela (contadas pelo addInitScript) com o mesmo tamanho (resize e
 //      visualViewport) e com um tamanho novo (espera a janela e o buffer mudarem). Metas 0 e 2 (main: 8 e até 8).
 //   T  teto: um rAF falso (tempo virtual) a 90, 120, 144 e 165 Hz conta os desenhos do #tela por segundo: celular 90 / 60 / 72
@@ -537,7 +539,8 @@ async function instalarPagina() {
         let n = 0; for (let i = 0; i < W * H; i++) if (px[4 * i] + px[4 * i + 1] + px[4 * i + 2] > 24) n++;
         naoPreto = n / (W * H);
       }
-      return { q: g.qualidade, antes, depois: canvasInfo(), naoPreto };
+      const fi = g.graficos?.finos ?? null;
+      return { q: g.qualidade, antes, depois: canvasInfo(), naoPreto, finos: fi ? { ...fi } : null };
     },
     /** O quadro desenha? (fração de pixels que não são pretos) */
     naoPreto() {
@@ -1090,8 +1093,10 @@ try {
       if (so.has('R')) {
         const b = await P(pg, 'trocaImediata', 'baixa'), m = await P(pg, 'trocaImediata', 'media');
         meta('R', 'R3 __golaco.definirQualidade: troca e desenha no mesmo evaluate', `Baixa: ${pct(b.naoPreto)} não preto (${b.q}) · Média: ${pct(m.naoPreto)} não preto (${m.q})`, '≥ 50% não preto nas duas', b.naoPreto >= 0.5 && m.naoPreto >= 0.5, 'estrutura');
-        meta('R', 'R3 SAMPLES pela tabela na troca imediata (Média → Baixa → Média)', `${b.antes?.info?.samples} → ${b.depois?.info?.samples} → ${m.depois?.info?.samples}${b.depois?.id !== b.antes?.id ? ' (recriou)' : ''}${m.depois?.id !== m.antes?.id ? ' (recriou)' : ''}`, '4 → 0 → 4',
-          b.antes?.info?.samples === 4 && b.depois?.info?.samples === 0 && m.depois?.info?.samples === 4);
+        // (as correções do fechamento: os finos do gol de VOLTA na A2C com as 4 amostras na Média — um definirQualidade de mão única
+        // nos finos deixava a Média na mistura, que apaga a rede atrás da peça: a A do PC Alta a × 1,15 da main, C14a)
+        meta('R', 'R3 SAMPLES pela tabela na troca imediata (Média → Baixa → Média) e os finos do gol de volta na A2C', `${b.antes?.info?.samples} → ${b.depois?.info?.samples} → ${m.depois?.info?.samples}${b.depois?.id !== b.antes?.id ? ' (recriou)' : ''}${m.depois?.id !== m.antes?.id ? ' (recriou)' : ''} · os finos na Baixa ${b.finos ? `${b.finos.modo}/${b.finos.amostras}` : '—'}, de volta na Média ${m.finos ? `${m.finos.modo}/${m.finos.amostras}` : '—'}`, '4 → 0 → 4 · a2c/4',
+          b.antes?.info?.samples === 4 && b.depois?.info?.samples === 0 && m.depois?.info?.samples === 4 && m.finos?.modo === 'a2c' && m.finos?.amostras === 4);
       }
     } catch (e) {
       if (!invalido) meta('—', 'Rodou (celular, build)', e.message.split('\n')[0].slice(0, 240), 'sem erro', false, 'estrutura');
@@ -1429,15 +1434,16 @@ try {
             const depois = await P(pg, 'canvasInfo');
             const v1 = await pg.evaluate(() => window.__ajuste.visto);
             const mira = await P(pg, 'miraCompilada');
-            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1), mira, fim };
+            const finos = await pg.evaluate(() => { const fi = window.__golaco.graficos?.finos; return fi ? { ...fi } : null; });
+            return { ok, antes, depois, ajustando: v1 - v0, aindaAjustando: await P(pg, 'ajustando'), terminou: terminou && qr, s: ((Date.now() - t0) / 1000).toFixed(1), mira, fim, finos };
           };
           const b = await troca('baixa'), m = await troca('media');
           await pg.evaluate(() => clearInterval(window.__ajuste.id));
           meta('R', 'R1 as trocas terminam (a qualidade pedida, sem "Ajustando…", e 3 quadros depois)', `Baixa ${b.terminou ? 'terminou' : 'NÃO terminou'} em ${b.s} s · Média ${m.terminou ? 'terminou' : 'NÃO terminou'} em ${m.s} s`, 'as duas em ≤ 90 s',
             b.terminou && m.terminou, 'estrutura');
           const sam = [b.antes?.info?.samples, b.depois?.info?.samples, m.depois?.info?.samples];
-          meta('R', 'R1 pelo ≡ → Opções: Média → Baixa → Média (SAMPLES)', `${menu ? '' : 'a pausa NÃO abriu · '}${b.ok && m.ok ? '' : 'botão não achado · '}${sam.join(' → ')}${b.depois?.id !== b.antes?.id ? ' (recriou)' : ' (mesmo canvas)'}${m.depois?.id !== m.antes?.id ? ' (recriou)' : ' (mesmo canvas)'}`,
-            '4 → 0 → 4', sam[0] === 4 && sam[1] === 0 && sam[2] === 4);
+          meta('R', 'R1 pelo ≡ → Opções: Média → Baixa → Média (SAMPLES) e os finos do gol de volta na A2C', `${menu ? '' : 'a pausa NÃO abriu · '}${b.ok && m.ok ? '' : 'botão não achado · '}${sam.join(' → ')}${b.depois?.id !== b.antes?.id ? ' (recriou)' : ' (mesmo canvas)'}${m.depois?.id !== m.antes?.id ? ' (recriou)' : ' (mesmo canvas)'} · os finos na Baixa ${b.finos ? `${b.finos.modo}/${b.finos.amostras}` : '—'}, de volta na Média ${m.finos ? `${m.finos.modo}/${m.finos.amostras}` : '—'}`,
+            '4 → 0 → 4 · a2c/4', sam[0] === 4 && sam[1] === 0 && sam[2] === 4 && m.finos?.modo === 'a2c' && m.finos?.amostras === 4);
           meta('R', 'R1 o canvas depois das trocas: aria-label e inert de antes', `aria "${b.antes?.aria}" → "${b.depois?.aria}" → "${m.depois?.aria}" · inert ${b.antes?.inert} → ${b.depois?.inert} → ${m.depois?.inert}`,
             'os de antes', b.depois?.aria === b.antes?.aria && m.depois?.aria === b.antes?.aria && b.depois?.inert === b.antes?.inert && m.depois?.inert === b.antes?.inert && b.antes?.aria === 'Campo 3D');
           const opMin = await pg.evaluate(() => window.__ajuste.opMin);
@@ -1697,10 +1703,13 @@ try {
       await irPara(s, true);
       const q3 = await pg.evaluate(() => ({ q: window.__golaco.qualidade, escolha: window.__golaco.estado().escolhaQualidade, info: window.__P.info() }));
       meta('Q', 'Q a recarga depois da queda gravada abre na Baixa', `${q3.q} (${q3.escolha}) · SAMPLES ${q3.info?.samples}`, 'baixa, SAMPLES 0', q3.q === 'baixa' && q3.info?.samples === 0);
-      await pg.evaluate(() => window.__golaco.definirQualidade('media'));
+      const fq = await pg.evaluate(() => { const g = window.__golaco; g.definirQualidade('media'); const fi = g.graficos?.finos; return { fi: fi ? { ...fi } : null, samples: window.__P.info()?.samples }; });
       const p3 = await prefs();
       meta('Q', 'Q escolher a Média apaga a queda', `preferências: qualidade ${JSON.stringify(p3.qualidade)} · qualidadeQueda ${JSON.stringify(p3.qualidadeQueda ?? null)}`, 'sem qualidadeQueda',
         dt ? !('qualidadeQueda' in p3) : null, dt ? 'meta' : 'info');
+      // (as correções do fechamento: a página aberta na Baixa — os finos na mistura — e a Média escolhida põe os finos de volta na A2C)
+      meta('Q', 'Q escolher a Média depois da queda: SAMPLES 4 e os finos do gol na A2C', `SAMPLES ${fq.samples} · os finos ${fq.fi ? `${fq.fi.modo}/${fq.fi.amostras}` : '—'}`, 'SAMPLES 4 · a2c/4',
+        fq.samples === 4 && fq.fi?.modo === 'a2c' && fq.fi?.amostras === 4);
       // (4) o teto, C13: a 120 Hz o celular desenha 60 — a queda mede os quadros DESENHADOS e 60 ≥ 30 não é "o aparelho não segura":
       // um rAF falso a 120 Hz por 8,6 s de volta na Automática não cai. No FIM da Q: com o render de verdade do SwiftShader (3–6
       // quadros por segundo) a página cai sozinha depois de 3 + 2,5 s, e no meio da Q isso tirava a Média do quedaDeTeste
