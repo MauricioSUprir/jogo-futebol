@@ -168,7 +168,7 @@ export const TEMPOS_NAVEGADOR = {
   // (item 93: 242,8 s no log do CI do #613)
   // (item 45, revisão do bloco 4: + o P14, a sessão nova com a queda gravada — base 306 → 328 s aqui)
   // (item 45, C15: 274–383 s nos logs do CI de 4a503804, 7a5337dc e 58f3377a, com o P15 e o P14 do Leilão; a mediana ~295)
-  'teste-pausa-tela.mjs': 300, // 260,8 s no log do CI do 38d6b243 (item 45, run 43187534503); era 249,5 no 1º CI do #618 (item 114)
+  'teste-pausa-tela.mjs': 300, // a mediana do C15 acima (~295 s); antes 260,8 s no log do CI do 38d6b243 (item 45, run 43187534503) e 249,5 no 1º CI do #618 (item 114)
   // (item 30: + o P8, dois pares de abas a 568×320 com a cena de substituição — 96 s aqui com a máquina livre; 442 s o teste
   // inteiro dividindo a máquina com outro teste de navegador; estimado ~+120 s no CI sobre os 160; acertar pelo log do CI;
   // da revisão, o P8f–P8i na 1ª sessão — o menu de A, B em pé por 6 s e a espera mais longa de A —: o P8 147 s aqui com outro

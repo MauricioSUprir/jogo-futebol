@@ -309,7 +309,8 @@ do dono (Docker Compose), fora do Pages — ver a seção "LIFE OS" no fim.
   (modelos com esqueleto + animações reais CMU/Mixamo; aprovado pelo dono, fim da fila).
 - **Entrega em lote** (pedido do dono): fazer a fila inteira e só entregar (PR + merge + link)
   quando tudo estiver pronto; nas mensagens de andamento, só estimativa.
-- **Urgente:** melhora extrema dos gráficos no celular (qualidade baixa/média).
+- **Urgente:** melhora extrema dos gráficos no celular (qualidade baixa/média) — ENTREGUE no PR #639 (20/11; item 45 da FILA); falta
+  o minuto do dono com `?perf=1` num celular de verdade ("Depende do dono" 30).
 - **PRIMEIRA COISA na próxima sessão:** gerar os rostos com o dono pelo ChatGPT (pedido em
   `tools/rostos/pedido-chatgpt.txt`, lotes 02–35, pasta do Drive "GOLAÇO – rostos") e colocar no jogo.
 - **Jogador tem que ser um modelo humano 3D realista inteiro** (corpo e cabeça com formato de
@@ -1007,8 +1008,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   onde a bola cai e o arco verde da curva junto da bola; sem painel nem texto. A IA não usa (hash-partida da demo IGUAL).
   Testes: `teste-mira`, `teste-entrada`, `teste-bola-parada-tela` (7: a mira pelos pixels) e `teste-hud-minimo --so-mirada`.
   **Download inicial** (`teste-carga` 4 MB): desde 21/10 os sons da torcida (~1,4 MB de MP3) baixam no 1º GESTO
-  (`render/som.js`; antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB; código novo que não precisa do começo continua
-  sob demanda.
+  (`render/som.js`; antes dele nada toca) — 3,88 → 2,57 MB, folga ~1,4 MB naquele dia; hoje 3,57 MB, folga 442 KB (item 45,
+  20/11); código novo que não precisa do começo continua sob demanda.
 - **Carrinho (item 34)** (dono, 17/10 e 23/10: "preciso do botão de carrinho"; contrato "Carrinho (item 34)",
   `PESQUISA-ETAPA4.md` §18, PR #597): `js/carrinho.js` (puro, folha) = um PLANO montado no aperto (`j.carrinho`, como o
   `j.mergulho`) e um QUADRO puro do tempo (`quadroCarrinho`: a pelve cai pela gravidade em 0,25 s, impacto, deslize — ~1 s a
@@ -1116,11 +1117,13 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   - **Teste que passa com a guarda desligada não protege nada**: provar por mutação (o O8 passava sem exposição).
   Pendente ("Depende do dono" 27): a costura do meio da cabeça (~2–3 L* no close, já existia; junto com o F1), o print
   do túnel no aparelho do dono e o custo do `textureGrad` numa GPU de celular.
-- **Gráficos do celular** (item 45, categoria I, PR #639; contrato "Gráficos do celular (item 45)", `PESQUISA-ESTADIO.md`
-  §19 e §19.1, plano e medidas em `PLANO-GRAFICOS.md`; as escolhas no "Depende do dono" 30): só desenho (fecho 0, hashes
+- **Gráficos do celular** (item 45, categoria I, PR #639; dono, fila antiga: "melhora extrema dos gráficos no celular
+  (qualidade baixa/média)"; contrato "Gráficos do celular (item 45)", `PESQUISA-ESTADIO.md` §19 e §19.1, plano e medidas em
+  `PLANO-GRAFICOS.md`; as escolhas no "Depende do dono" 30): só desenho (fecho 0, hashes
   IGUAIS). MSAA 4× do próprio canvas na Média pela tabela `render/cena.js AA_QUALIDADE` (o `config.QUALIDADE.antialias` é
   legado; nos aparelhos de toque só até 1,2 MP; NENHUM render target depois da passada principal); quem depende do MSAA lê o
-  `cena3d.amostras`, nunca o nome da qualidade, e registra um `cena3d.aoRecriar` (recriação e contexto restaurado); todo
+  `cena3d.amostras`, nunca só o nome da qualidade (os finos do gol leem os dois: na Baixa da queda, a mistura), e registra um
+  `cena3d.aoRecriar` (recriação e contexto restaurado); todo
   material com A2C passa por `render/util.js alfaDoCanvas` (o canvas opaco). O gramado no shader (`render/gramado.js`, GLSL =
   JS): as 18 faixas da UEFA, o verde pela inversa do ACES, a profundidade relativa ao foco (apagada nas câmeras baixas) e as
   linhas mais brancas; os finos do gol com a largura mínima; as silhuetas com `centroid` na amostra e a derivada sem ele. O
@@ -1140,6 +1143,8 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
     mesmo regime de desenho, a base de uma contagem espera o que chega sozinho depois do pronto (o impostor) e linha decidida
     por poucos px muda com a semente;
   - o runner do CI muda de velocidade entre rodadas: dividir as partes pelo runner LENTO.
+  Pendente ("Depende do dono" 30): o minuto do dono com `?perf=1&aa=0|1` num Android e num iPhone, a queda gravada que não
+  expira e a K1 (5 linhas informativas).
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

@@ -6536,9 +6536,9 @@ escolhas que o dono pode trocar no "Depende do dono" 30 da `FILA.md`. **Só dese
 - **O `config.QUALIDADE.antialias` é LEGADO**: só o `?gfx=antigo` o lê. O `config.js` é do fecho: a tabela mora no `cena.js` (duas
   fontes de verdade, de propósito). Mudar o AA de uma qualidade é no `AA_QUALIDADE`.
 - O contexto guarda o PEDIDO e o que o navegador DEU: `cena3d.aaContexto` (o `getContextAttributes().antialias`) e
-  `cena3d.amostras` (o `SAMPLES` do buffer padrão), lidos na criação e no contexto restaurado. Quem decide pelo MSAA (a A2C dos
-  finos, da torcida e dos letreiros) lê o `amostras`, NUNCA o nome da qualidade: a queda automática deixa a Baixa num contexto com
-  MSAA.
+  `cena3d.amostras` (o `SAMPLES` do buffer padrão), lidos na criação e no contexto restaurado. Quem decide pelo MSAA (a A2C da
+  torcida e dos letreiros) lê o `amostras`, NUNCA o nome da qualidade: a queda automática deixa a Baixa num contexto com MSAA. Os
+  finos do gol leem os DOIS (a A2C só com amostras E fora da Baixa: na queda eles vão para a mistura, C14a; abaixo).
 - `definirQualidade(nome, recriarSePreciso)` recria o renderizador (canvas novo) só quando o AA pedido para `nome` é outro que o
   do contexto e o contexto não foi pedido assim (`precisaRecriar`: o navegador recusou o MSAA, recriar daria o mesmo); desde o item
   45 também a troca Média ↔ Baixa. A recriação copia TODOS os atributos do canvas (o `aria-label` incluído) e o `inert`, copia o
@@ -6598,10 +6598,13 @@ escolhas que o dono pode trocar no "Depende do dono" 30 da `FILA.md`. **Só dese
   amostras e NA BAIXA também com as amostras da queda. O px vem do `uAlturaBuffer`, refeito no `onBeforeRender` da malha (o buffer
   onde se desenha). Postes e travessão não crescem.
 - **A regra das silhuetas com MSAA** (o pixel da borda é sombreado no CENTRO, mesmo fora do triângulo, e a UV lê o vizinho no
-  atlas): nos shaders próprios (o quadro da torcida, o ramo do impostor, as bandeiras; os textos em `render/silhuetas-shader.js`) a
-  UV da AMOSTRA vai num varying `centroid` e as DERIVADAS (o nível do mip, a compensação do alfa) saem da cópia SEM `centroid` (a
-  derivada de uma entrada `centroid` pode sair imprecisa); atlas NOVO lido por material do three (placas, escudos, números,
-  patrocínios) leva 2–4 px de SANGRIA nas células — nenhum precisou até aqui (a K1 das placas na TV na bola dá 0 px).
+  atlas): nos shaders próprios (o quadro da torcida, o ramo do impostor, as bandeiras; os textos em `render/silhuetas-shader.js`, o
+  ramo do impostor em `render/impostor-dados.js`, `glslImpostor`) a UV da AMOSTRA vai num varying `centroid` e as DERIVADAS (o
+  nível do mip, a compensação do alfa) saem da cópia SEM `centroid` (a derivada de uma entrada `centroid` pode sair imprecisa; o
+  `teste-gramado` G8 guarda a declaração, a escrita e a leitura, e a K1 da página guarda o efeito nas bandeiras: ≤ 0,5 × a main
+  com o MSAA forçado); atlas NOVO lido por material do three (placas, escudos, números, patrocínios) leva 2–4 px de SANGRIA nas
+  células — a sangria não entrou: a medida só acusou 1 px nas placas com o gol no foco (0,27%; a main 0), proposta no "Depende do
+  dono" 30; os números e os patrocínios do corpo novo (a versão de teste) não foram medidos pela K.
 - As bandeiras: o alfa compensado pelo nível do mip (`COMPENSA_MIP` 0,22, o mesmo da torcida) e o alfa 1 escrito. A torcida: A2C
   com amostras (`torcida.definirAA`): uma TROCA medida — as franjas e a cintilação da torcida caem, as das bandeiras na frente
   dela sobem (a K1 no "Depende do dono" 30). Os letreiros com `alphaTest` (o pré-jogo; `util.js recorteAA`): A2C só nos OPACOS
@@ -6666,9 +6669,9 @@ gancho: o three se recupera sozinho, os ganchos não. Antes do item 45 não havi
   `testar-3d`, os rAF falsos dos testes); uma janela inativa no meio desfaz a espera. `__golaco.quedaDeTeste()` cai e grava de
   propósito.
 - A próxima carga em "Automática" abre no nível gravado (`nivelInicial`: nunca sobe). Escolher qualquer qualidade à mão — também a
-  "Automática" — apaga a gravada e a da sessão (`escolherQualidade`). A gravada NÃO expira (a proposta de tentar de novo a cada
-  ~10 cargas está no "Depende do dono" 30). A pausa diz "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar
-  de novo)" (`quedaAgora`); no celular a linha `.queda` aparece numa linha só (11 px até 600 px de largura: a pausa não rola).
+  "Automática" — apaga a gravada e a da sessão (`escolherQualidade`). A gravada NÃO expira (a proposta de tentar de novo o nível do
+  aparelho a cada ~10 partidas — cargas do jogo — está no "Depende do dono" 30). A pausa diz "Agora: Baixa (o aparelho não
+  segurou a Média; escolha Média para tentar de novo)" (`quedaAgora`); no celular a linha `.queda` aparece numa linha só (11 px até 600 px de largura: a pausa não rola).
 
 **O teto de quadros (`ritmo-desenho.js criarTeto`, `TETO`; escolha D6).**
 - Só no celular (`criarTeto({ligado: ehCelular})`; o PC não muda). O período da tela = a média dos intervalos do rAF a ± `faixa`
@@ -6688,13 +6691,16 @@ máscaras geométricas; `finos`; `ganchos`}).
 
 **Testes.** Node (padrão, `rodar-testes.mjs`): `teste-gramado` (A–G: as bordas UEFA, a paridade, o GLSL interpretado = o JS em
 double e float32, as cores pela inversa do ACES, o g do foco e as câmeras baixas, as guardas estáticas dos shaders montados — as
-derivadas e as leituras com mip antes do 1º desvio, o `?gfx=antigo` = a main pelo hash, as chaves distintas, a troca que avisa),
+derivadas e as leituras com mip antes do 1º desvio, o `?gfx=antigo` = a main pelo hash, as chaves distintas, a troca que avisa;
+G8 o `centroid` das silhuetas),
 `teste-medidor-quadros` (M1–M9) e `teste-ritmo-desenho` (R1–R11 a queda, T1–T7 o teto). Navegador (`rodar-navegador.mjs`, no CI
 do PR e fora do deploy): `teste-graficos-celular` (pelos módulos: S a sonda e o MSAA por qualidade, A o serrilhado do campo, F os
 finos — Média, Baixa, a queda, o limiar e a haste —, G1–G7 e G4b o gramado e as linhas, D o grão, N a noite, a Baixa e o PC) e
-`teste-graficos-pagina` (pela página: S2 o celular, o tablet e o PC, A2 o quadro inteiro contra o SSAA 8×8, K as franjas, P as
+`teste-graficos-pagina` (pela página: S2 o celular, o tablet e o PC, A2 o quadro inteiro contra o SSAA 8×8, K as franjas — a
+guarda ≤ 0,5 × a main com o MSAA forçado nas três linhas com folga — e a cobertura das bandeiras de longe (K2, guarda), P as
 chamadas e a CPU PAREADA com a base do PR pela `GOLACO_BASE` — o job do CI monta uma worktree dela —, P2 o painel, P3 as chaves de
-volta, R a recriação e o contexto, Q a queda, Z o redimensionar, T o teto). A referência da main em `tools/dados/graficos-ref.json`
+volta, R a recriação e o contexto — os finos de volta na A2C com 4 amostras depois de Baixa → Média, também em Q —, Q a queda, Z
+o redimensionar, T o teto). A referência da main em `tools/dados/graficos-ref.json`
 (só valores agregados, o Chromium 141 do CI; gravar de novo sempre com ele, pelo `--raiz <main> --gravar-referencia`). Os dois
 reprovam por padrão (vale, guarda e estrutura); `--informativo` só mostra (para medir a main); as linhas informativas saem `INFO`,
 com o motivo. Também: `teste-estadio` 10b (o canvas opaco), `teste-pausa-tela` P15 (a linha da queda sem rolar) e o

@@ -1287,7 +1287,8 @@ function posDesenhada(id) {
 }
 const render = { bola: { x: 0, y: 0, z: 0 }, jogador: { x: 0, z: 0 }, camera: { x: 0, y: 0, z: 0 }, quadros: 0, alfa: 0, queda: null };
 // a queda automática da qualidade (item 45, C12; a decisão em render/ritmo-desenho.js): GRAVA só fora dos testes automáticos — o
-// resto (as duas janelas lentas seguidas, o ritmo preso num divisor da tela) o módulo decide
+// resto o módulo decide (a janela lenta de verdade, pela mediana, grava na hora; o 30 preso num divisor da tela só quando o nível
+// de baixo desenha mais rápido; os soluços não gravam)
 const RITMO = criarQueda({ podeGravar: !(navigator.webdriver || PRINTS || DEMO_ON) });
 // o teto de quadros (item 45, C13; render/ritmo-desenho.js; a escolha D6 do dono): só no celular, o quadro() roda 1 a cada n
 // quadros da tela — 120 Hz desenha 60, 144 → 72, 165 → 82,5, 240 → 60; 60 e 90 Hz como antes. Decide no aoQuadro, nunca dentro

@@ -1551,10 +1551,10 @@ medidas de cada passo (a seção 6 do `PLANO-GRAFICOS.md`; o CI do `85aa3d20`, j
 |---|---|---|
 | S2 `SAMPLES`: o celular / o tablet 1366×1024 (o teto de 1,2 MP) / o tablet com `?aa=1` / o PC 1280×720 na Média | 0 / 0 / 0 / 0 | 4 / 0 / 4 / 4 |
 | A2 o quadro inteiro (jogadores, bola, torcida, placas), razão ≤ 0,6 contra o SSAA 8×8 (TV na bola / gol no foco) | 1,00 / 1,00 (forçado ×0,53 / ×0,42) | 0,48 / 0,41 |
-| K1 as franjas da silhueta com o centro do pixel FORA, ≤ 0,2% (informativa): a torcida na TV na bola; as bandeiras (bola / foco) | forçado: 1,74%; 13,32% / 4,17% | 0,09% (0,22% na semente 7); 1,74% / 0,43% |
-| K2 a cobertura das bandeiras de mastro ≥ 0,8 do SSAA, a 50 / 100 m (informativa: a main sem AA já cumpre) | 0,966 / 0,935 | 1,006 / 1,011 |
+| K1 as franjas da silhueta com o centro do pixel FORA, ≤ 0,2% (informativa; a guarda ≤ 0,5 × a main com o MSAA forçado, desde as correções do fechamento): a torcida na TV na bola; as bandeiras (bola / foco) | forçado: 1,74%; 13,32% / 4,17% | 0,09% (0,22% na semente 7; 0% no CI); 1,74% / 0,43% |
+| K2 a cobertura das bandeiras de mastro ≥ 0,8 do SSAA, a 50 / 100 m (guarda: a main sem AA já cumpria) | 0,966 / 0,935 (forçado 1,006 / 1,004) | 1,006 / 1,011 |
 | P as chamadas; os triângulos (≤ ref + 1%) | 31; 91 524 | 31; 92 044 (+0,57%: os finos de 16 lados e as pontas fechadas) |
-| P a CPU p95 do quadro PAREADA com a base (a mediana das diferenças ≤ +1,0 ms) | — | −0,10 a +0,30 ms (aqui e no CI) |
+| P a CPU p95 do quadro PAREADA com a base (a mediana das diferenças ≤ +1,0 ms) | a main contra ela mesma: até +0,70 | +0,00 a +0,50 nos 5 CIs do C15 (+0,20 / +0,30 nos 2 do C14; +0,40 no `85aa3d20`, +0,50 no `187f5acb`); −0,50 a +0,80 na máquina dos testes daqui |
 | P2 o painel `?perf` (p95, fase, AA, buffer, GPU, rAF); por cima da tela antes do jogo e da pausa; o qps da tela antes do jogo | não existe; escondido; mostra 60, desenha 30 | existe; por cima nos dois; mostra 30, desenha 30 |
 | R a troca Média → Baixa → Média pela pausa (`SAMPLES`); a tela "Ajustando…" | 0 → 0 → 0; nunca | 4 → 0 → 4; à vista e opaca |
 | R a Alta → Baixa no pré-jogo: o recorte do vão e o `aria-label` | false; null | true; "Campo 3D" |
@@ -1564,8 +1564,9 @@ medidas de cada passo (a seção 6 do `PLANO-GRAFICOS.md`; o CI do `85aa3d20`, j
 | Z as atribuições a `canvas.width/height` (o mesmo tamanho / um tamanho novo) | 8 / 8 | 0 / 2 |
 | T os desenhos por segundo no celular a 90 / 120 / 144 / 165 Hz (o PC a 144 Hz) | 90 / 120 / 144 / 165 (144) | 90 / 60 / 72 / 82,5 (144) |
 
-O download inicial (`teste-carga`): 3,45 → 3,57 MB (o nosso 2859 → 2978 KB, +4 KB deles da junção com o Leilão); a folga até
-os 4 MB 561,5 → 442,1 KB (a mínima, 120 KB). O medidor do painel (~21 KB) só baixa com o painel.
+O download inicial (`teste-carga`): 3,45 → 3,57 MB contra a `e41aa791` (o nosso 2859 → 2978 KB, +4 KB deles da junção com o
+Leilão; a folga 561,5 → 442,1 KB); contra a main de hoje, a `5b7986a2`, 3,46 → 3,57 MB (o nosso 2864 → 2978 KB, +114 KB; a folga
+557,0 → 442,1 KB; a mínima, 120 KB). O medidor do painel (~21 KB) só baixa com o painel.
 
 **O que a medida corrigiu nesta pesquisa:**
 - **O `compile()` do r170 percorre a cena INTEIRA** (os materiais pelo `scene.traverse`, também os escondidos; só as luzes pelo
@@ -1583,7 +1584,8 @@ os 4 MB 561,5 → 442,1 KB (a mínima, 120 KB). O medidor do painel (~21 KB) só
   a metade à noite, ~+0,013, fora da meta) e o pico da linha × 1,8 de dia e × 1,9 à noite.
 - **A profundidade se apaga nas câmeras baixas** (`rasanteDaCamera`, de 3 a 8 m de altura): numa câmera baixa o raio do meio da
   tela toca o chão muito além do assunto (a steadicam a 106 m, a câmera do gol a 37 m), e o chão aos pés dele caía no teto de −8%.
-- **A A2C entrou na torcida, não nas bandeiras**: na torcida ela ganha (as franjas na TV na bola 1,95 → 0,33%, a cintilação da
+- **A A2C entrou na torcida, não nas bandeiras**: na torcida ela ganha (as franjas na TV na bola 1,95 → 0,33%, pela régua do
+  bloco 3 — a da tabela acima, com a verdade SSAA, dá 0,09% —; a cintilação da
   silhueta ×1,32 → ×1,28 do SSAA) e custa franjas nas bandeiras na frente dela; nas bandeiras não muda nada medido (ficam com o
   alfa compensado e o `centroid`). Nos letreiros, só nos OPACOS (no transparente a A2C ficava pior que a mistura).
 - **O canvas opaco**: o three r170 pede o contexto com `alpha: true` e a A2C escreve no buffer o alfa da cobertura — qualquer cópia

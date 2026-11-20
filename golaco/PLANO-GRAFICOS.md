@@ -150,6 +150,18 @@ partes 1 e 2). Só testes, o `tempos-ci` e o plano: `fecho-hash` 0.
   I, a decisão 29 e o entregue); `CLAUDE.md` (o parágrafo "Gráficos do celular" e a linha da categoria I). O corpo do PR fica com
   o coordenador (o rascunho na sessão).
 
+**As correções do fechamento (20/11; `9637f99f`, `449ca096`, `b3ccc9d7`, `e1b6e7df`, `986d695a`, `0680290d` e este).** As três
+revisões do fechamento (os documentos, as metas e medidas, o código e o CI): nenhum defeito no código do jogo; as guardas que
+faltavam entraram nos testes, cada uma provada por mutação, e os documentos foram acertados. O medido está na seção 6 ("Medido nas
+correções do fechamento"). Só testes, comentários e documentos: `fecho-hash` 0; o `main.js` só num comentário (`hash-igual` 1440
+e `hash-partida` 400 IGUAIS).
+- **As guardas novas:** o `centroid` das silhuetas (`teste-gramado` G8) e a K1 ≤ 0,5 × a main com o MSAA forçado nas três linhas
+  com folga; a K2 de volta a guarda; a F numa pose sem pontos reprova; o R1, o R3 e a Q conferem os finos de volta na A2C; o
+  total do "some" do `testar-3d` ≤ 1,5 s; a malha das linhas como estrutura do L5; a G7 `estrutura`.
+- **O V7 fica como está:** medido pelos mesmos quadros nos dois lados, o corte não devolve a sensibilidade (a régua "≤ o jogo + 1
+  ms" deixa a diferença de custo do jogo e do replay de folga); o limite e a faixa perdida estão na seção 6.
+- **As partes do navegador ficam 3** (o pior caso medido, 43,6 min de testes numa parte, abaixo de ~55).
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -625,6 +637,11 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
   reprova as de melhoria). Toda linha informativa sai como `INFO`, com "[passaria]" ou "[fora]" no medido e o MOTIVO no alvo.
   Além das desta tabela, ficaram informativas as linhas que o C14a deixou fora (as 5 da K1 abaixo); os buracos da queda passaram
   de informativos a guarda.
+- **Desde as correções do fechamento (20/11):** a K2 volta a guarda; a K1 ganha a guarda "≤ 0,5 × a main com o MSAA forçado" nas
+  três linhas com folga (a torcida na TV na bola e as bandeiras na bola e com o gol no foco; a mutação sem o `centroid` a reprova
+  nas bandeiras) e o `teste-gramado` G8 guarda a estrutura do `centroid`; a G7 é `estrutura` também no código; a F numa pose sem
+  pontos reprova com o tipo da chamada (antes saía `INFO`); o R1, o R3 e o "escolher a Média" da Q conferem os finos de volta na
+  A2C com 4 amostras.
 
 **`teste-graficos-celular` (módulos):**
 
@@ -672,7 +689,7 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | G4 | O termo (com − sem): ΔL +0,026 ± 0,008; ΔC ≤ 0; \|Δh\| ≤ 2° | reprova (0) | 0 (sem o gancho: a main não tem o termo); o absoluto, informativo: ΔL +0,0075 (as manchas, não zero), ΔC +0,0004, Δh −0,18° | vale |
 | G5 | 0,952 ± 0,01 e ≤ 0,97 | reprova (0,908) | 0,909 | vale |
 | G6 | 0,010 ± 0,004 | a confirmar | 0,0054 em 58 blocos (a pesquisa estimou ~0,005): fora por falta de mancha. Régua nova (quadrática): 0,0049 | **informativa** (a régua da foto não foi refeita; ver "Pendente" abaixo) |
-| G7 | GPU = JS | estrutural | sem `gramado.js` | estrutura a partir do C4 |
+| G7 | GPU = JS | estrutural | sem `gramado.js` | estrutura a partir do C4 (no código desde as correções do fechamento; era `meta`) |
 | G4b | Com × sem o termo ≤ 0,005 nas 16 câmeras (as 9 e as 7 baixas das cenas, desde a revisão do C4–C8); a parte do termo no salto TV → 1ª pessoa ≤ 0,01 | guarda nova | sem o gancho: o L no foco vai de 0,513 a 0,650 nas 16; o salto bruto 0,0011 (informativo), a parte do termo 0 | guarda (o com × sem só com o gancho do C7) |
 | D | O grão | informativa | contra o SSAA do mesmo LOD: E 0,0033 (perto) a 0,0020 (longe), cintilação ×1,30–×1,33 em todas as faixas; longe ÷ perto: E ×0,70, cintilação ×0,32 (com o SSAA 3×: E 0,0030–0,0034, ×0,66–×0,84) | informativa. **C8: medido, sem filtro** (o gramado do C6 + o termo do C7: longe ÷ perto E ×0,68, cintilação ×0,29; ×1,33–1,36 o SSAA em todas as faixas; a Baixa ×0,72 / ×0,29; passo 4) |
 | N | Noite G1 | informativa (só o Δh conta) | L 0,568, C 0,124, h 138,0° | informativa |
@@ -708,12 +725,12 @@ Cada linha das tabelas "medido na main", abaixo de cada tabela, termina numa des
 | S2 | Tablet com `?aa=1` = 4 / PC 1280×720 Média = 4 | reprova | 0 / 0 | vale |
 | A2 | Razão ≤ 0,6 (TV na bola / gol no foco) | reprova | 1,00 / 1,00 (forçado ×0,70 / ×0,47 contra o SSAA do mesmo LOD; com o 3× era ×0,70 / ×0,55); máscara 1,41% / 0,97%. Desde o C14a contra o SSAA 8×8 (o 3×3 errava as bordas alinhadas com a tela): forçado ×0,53 / ×0,42 | vale |
 | A2 | Carga oposta forçada; carga igual = o mesmo quadro | estrutura | `SAMPLES` 4; 0 px nos 3 quadros, o hash igual | estrutura |
-| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83%. Desde o C14a a franja também a mais de 0,03 da verdade (o SSAA 8×8): 1,74% (14); as bandeiras 13,32% / 4,17% | ~~vale~~ **informativa desde o C14**: passa na semente do teste (4: 0,09%) e reprova na 7 (0,22%; a main 0%) — a A2C da torcida do C10, trocada pela K3; "Depende do dono" 30 |
+| K | K1 franjas ≤ 0,2% com o centro FORA: torcida, TV na bola | reprova | 2,36% (19 de 804 px; forçado). O centro dentro, informativo: 1,32% (11 de 835); todas as bordas 1,83%. Desde o C14a a franja também a mais de 0,03 da verdade (o SSAA 8×8): 1,74% (14); as bandeiras 13,32% / 4,17% | ~~vale~~ **informativa desde o C14**: passa na semente do teste (4: 0,09%) e reprova na 7 (0,22%; a main 0%) — a A2C da torcida do C10, trocada pela K3; "Depende do dono" 30. **Guarda desde as correções do fechamento:** ≤ 0,5 × a main forçada (0,87%; o item 45 0,09% aqui e 0% no CI, a mesma semente) |
 | K | K1 franjas ≤ 0,2% com o centro FORA: torcida, gol no foco | — | 0% (0 de 611). O centro dentro: 1,24% (11 de 890), todas 0,73%: era 100% piso, a meta antiga reprovava mesmo com o `centroid` certo | ~~guarda~~ **informativa desde o C14**: fora por 1 px desde o C10 (1 de 1737; a main 0); a régua "≥ 3 px" ou "≤ main + 2 px" só com prova em mais poses ("Depende do dono" 30) |
-| K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | ~~vale~~ **informativa desde o C14**: 1,74% / 0,43% no C14a, a borda de cima das faixas da mureta (defeito do desenho); a cobertura analítica nessa borda ou a sangria de 1 texel vão ao "Depende do dono" 30 |
+| K | K1 franjas ≤ 0,2% com o centro FORA: bandeiras (bola / gol no foco) | reprova (o N11) | 13,40% (173 de 1291) / 3,91% (14 de 358) (forçado; a linha verde-clara da faixa da mureta). O centro dentro: 1,85% / 0,51% | ~~vale~~ **informativa desde o C14**: 1,74% / 0,43% no C14a, a borda de cima das faixas da mureta (defeito do desenho); a cobertura analítica nessa borda ou a sangria de 1 texel vão ao "Depende do dono" 30. **Guarda desde as correções do fechamento:** ≤ 0,5 × a main forçada (6,66% / 2,08%; a mutação sem o `centroid` dá 12,53% / 3,36% e reprova) |
 | K | K1 franjas: placas (bola / gol no foco) | — | 0 px de borda fora / 0% de 366; o centro dentro 0% de 1262 / 219 | bola: guarda (vale no C14); gol no foco: **informativa desde o C14**, fora por 1 px desde o C9 (1 de 366; a main 0), como a da torcida |
 | K | K1 franjas: letreiro do pré-jogo | reprova | 0 px de borda (sem a A2C o MSAA não muda um `alphaTest`) | **informativa** (na main não mede nada; ~~com a A2C do C10 vira guarda ≤ 0,2%~~ — o letreiro do Estádio Golaço é TRANSPARENTE e a A2C do C10 não o pega: continua 0 px; o opaco, o do Maracanã, só na edição pro, medido à parte no C10. O C14 decide se mede o pro aqui) |
-| K | K2 cobertura das bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | reprova (as de longe) | 0,966 / 0,935 sem AA; forçado 1,006 / 1,004 | **informativa** |
+| K | K2 cobertura das bandeiras de mastro ≥ 0,8 do SSAA (50 m / 100 m) | reprova (as de longe) | 0,966 / 0,935 sem AA; forçado 1,006 / 1,004 | ~~informativa~~ **guarda desde as correções do fechamento** (contra a perda grosseira; a main com o MSAA forçado, sem a compensação, dá 1,006 / 1,004: tirar a `COMPENSA_MIP` não a reprova) |
 | K | K3 A2C da torcida | informativa | ~~sem AA: cobertura 0,986, cintilação ×1,16 (no Chromium 153: 0,926 e ×1,32); forçado 0,987 e ×1,23~~ regravada com a cena assentada (`35f967c5`): sem AA 0,926 e 6,05% (SSAA 4,60%, ×1,32); forçado 0,926 e ×1,32 | informativa |
 | P | Chamadas = ref; triângulos ≤ ref + 1% | guarda | 31; 91 524 | guarda |
 | P | CPU p95 ≤ 6 ms (a mediana de 6 janelas de 400 quadros) | guarda | 7 rodadas da main (C2/C3, "historicoCpu" no JSON): 5,8 a 6,8, mediana 6,2. Com o 141, pareada: 5,6; 6,9; 7,0; 6,7; 6,8 | o "≤ 6 ms" absoluto **informativo** (a base já passa dele: "Depende do dono" 30) |
@@ -910,7 +927,7 @@ regressões —, 11/11; cada achado conferido antes; o medido, na seção 6, "Me
 - `teste-medidor-quadros`: p95, fase, o intervalo entre desenhos; o caso N3 (30 desenhos num rAF de 60 = 30).
 - `teste-ritmo-desenho`:
   - o teto: 60, 90, 120, 144, 165 e 240 Hz com tremor de ±0,5 ms dão 60, 90, 60, 72, 82,5 e 60 desenhos, desvio dos intervalos ≤ 1 ms; a troca de refresh no meio;
-  - a decisão da queda: rAF a 30 regular → cai, não grava; 25 qps com tremor em duas janelas → cai e grava; uma janela só → cai, não grava; com webdriver → nunca grava.
+  - a decisão da queda (a regra da revisão do bloco 4): rAF a 30 regular → cai, não grava (preso); 25 qps com tremor → cai e grava na mesma janela (a mediana); soluços (60 qps com 1 quadro de 300 ms a cada 10) → cai, não grava; a presa que a Baixa resolve → grava na janela seguinte; com webdriver → nunca grava.
 
 ---
 
@@ -1130,7 +1147,7 @@ o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos 
 
 - **Provado por mutação:** sem o `aquecerMira()` no gancho, o R4 da mira reprova (sem programa); sem o `compilarAntesDoDesenho()`
   da troca pela pausa e sem o gancho, o R1 da mira também; o `podeGravar` sem o `navigator.webdriver`, a queda natural da Q grava
-  (e a recarga abre na Baixa); sem o `display` da `.opcao-info.queda` o P14 reprova (escondida no celular) e sem os 11 px também
+  (e a recarga abre na Baixa); sem o `display` da `.opcao-info.queda` o P15 reprova (escondida no celular) e sem os 11 px também
   (cortada em 568×320); no `teste-ritmo-desenho`, sem o ritmo preso, sem o `podeGravar`, com uma janela só, a pausa que não
   desfaz o "seguidas" e sem a espera de 3 s: cada uma reprova.
 - **Não provado por mutação (dito):** o `transition: none` do `hud.ocupado`. Escondida (display none), a tela de carregar não faz
@@ -1156,7 +1173,7 @@ o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos 
   instante do H5 — a mesma área, 1,9%), `teste-estadio` (66 de 66 nos dois, 280 → 278 s; a memória da troca de qualidade sem
   vazamento nos dois: 30 → 30 geometrias na base, 29 → 29 no HEAD), `teste-bola-parada-tela` (55 de 55 nos dois; ± 1 px na mira),
   `teste-mira-tela` (19 de 19, as mesmas linhas; o tempo 180 → 40 s não é do C12: com `--raiz` noutra pasta o teste DESENHA cada
-  posição — `DESENHAR` —, e a base ia por ela), `teste-pausa-tela` (a base reprova só no P14 novo), `teste-prepartida-tela` (115
+  posição — `DESENHAR` —, e a base ia por ela), `teste-pausa-tela` (a base reprova só no P15 novo), `teste-prepartida-tela` (115
   de 115 nos dois; 765 → 753 s; o E7* não apareceu), `teste-tm-tela` (passa nos dois) e o TM de ponta a ponta (`testar-3d` pro em 105 s e `--publica` em 124 s, nenhum erro
   de página; o `testar-3d` grava `{qualidade: "baixa"}` antes — a queda nem mede lá; com webdriver ela não gravaria de qualquer
   jeito). O painel `?perf` com a `quedaDeTeste()`: "queda: sessão Média → Baixa · gravada Média → Baixa" e "AA MSAA 4× (SAMPLES 4)"
@@ -1305,7 +1322,7 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
 - **Recusadas, com o motivo:**
   - **A queda gravada que expira** (código 11): é escolha de produto (a escolha D5 do dono só diz "escolher uma qualidade à mão
     apaga a queda"); quantas cargas, e se a pessoa vê a Média engasgar de novo, é decisão dele. Vai ao "Depende do dono" 30 com a
-    proposta (tentar de novo o nível do aparelho a cada ~10 cargas; uma queda nova grava de novo).
+    proposta (tentar de novo o nível do aparelho a cada ~10 partidas, cargas do jogo; uma queda nova grava de novo).
   - **A queda automática só no pixel ratio** (código 9): já é assim na main (o `configurarSombra` marca os materiais e a troca das
     defines recompila); tirar as sombras é metade do que a queda quer, e "manter as sombras na Baixa da queda" faria a queda não
     aliviar a GPU. Corrigido só o texto do plano (seção 2): o motivo "sem o KHR a recompilação trava" era inexato. Medir o engasgo
@@ -1596,6 +1613,71 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
   — os 4 Node e os 3 navegadores do `testes`, o painel em 8 partes e o "junta", e os 8 jobs do `tm-testes` (que roda no PR porque o
   `testar-3d.mjs` mudou).
 
+**Medido nas correções do fechamento** (20/11; as três revisões do fechamento — os documentos, as metas e medidas, o código e o
+CI —, cada achado conferido no código antes; Chromium 141 do CI, SwiftShader, um teste de navegador por vez, carga 1,6–4,7 (11,9
+durante a mutação da F, com o `hash-igual` junto); base = a main `5b7986a2` por `git archive`; logs e cópias em
+`scratchpad/f45/fech/corr/`). Só testes, comentários e documentos: `fecho-hash` 0; o `main.js` mudou só num comentário
+(`hash-igual` 1440 e `hash-partida` 400 IGUAIS contra a main).
+
+| Achado (lente) | O que mudou | Medido | A mutação reprova |
+|---|---|---|---|
+| O `centroid` das silhuetas sem guarda (código 1; medidas 4) | `teste-gramado` G8: as bandeiras e o quadro da torcida, com e sem o impostor, declaram `centroid varying vec2 vUvC` no vertex e no fragment, o vertex a escreve e o fragment lê o atlas por ela; a G8b prova as 3 mutações no texto | o HEAD passa | sem o `centroid` nas 4 declarações de `render/silhuetas-shader.js`: a G8 reprova (a G5–G7 passavam) |
+| A K1 inteira informativa (código 1b; medidas 4) | a guarda ≤ 0,5 × a main com o MSAA forçado (a referência, a mesma semente) na torcida na TV na bola e nas bandeiras na bola e com o gol no foco (`K1_GUARDA`) | o HEAD 4 rodadas iguais aqui (2 de 2134, 25 de 1439, 2 de 463) e 16 no CI (0 de 2162, 25 de 1440, 2 de 462); a main forçada 3 rodadas iguais (14 de 804, 172 de 1291, 15 de 360): reprova as três | sem o `centroid`: as bandeiras 12,53% / 3,36% (os limites 6,66% / 2,08%); a torcida sem a A2C (`render/torcida.js aplicarAA`): 1,41% (o limite 0,87%) |
+| A K2 informativa (código 1c) | volta a guarda (≥ 0,8; a carga oposta só informa) | o HEAD 1,006 / 1,011; a main sem AA 0,966 / 0,935 | — (contra a perda grosseira; a main com o MSAA forçado, sem a compensação do mip, dá 1,006 / 1,004: tirar a `COMPENSA_MIP` não a reprova) |
+| A F sem pontos saía `INFO` (código 2) | a linha "sem peça fina no quadro" pelo tipo da chamada | o HEAD: nenhuma pose sem pontos | a pose da haste olhando para longe: a régua nova REPROVA (a Média); a antiga sai `INFO` e o teste passa |
+| A volta da queda sem guarda (código 3) | o R1, o R3 e o "escolher a Média" da Q exigem os finos em `a2c` com SAMPLES 4 | o HEAD: a Baixa `mistura`/0, de volta na Média `a2c`/4 nos três | o `definirQualidade` dos finos de mão única (`campo.js`): `mistura`/4 — reprovam o R1, o R3, a Q e também o R4 (na mesma página, depois do R1) |
+| O "some" do `testar-3d` sem teto no total (medidas 5; código 4) | o total do toque até sumir ≤ 1,5 s (a main sob carga 7,7 deu 0,946 s no C15; o item 45 0,021–0,200 s) | pro 0,031 s (postou 0, chegou 0,003, someTM 0,028) e `--publica` 0,018 s; nenhum erro de página | 1,6 s de tarefa no mesmo toque, depois do tm3d:sair: postou 0, chegou 1,604, someTM 0,021 — as duas partes passavam; o total 1,625 reprova (com a tarefa num `setTimeout`, a mensagem chega antes e o someTM 1,62 já reprovava) |
+| O L5 voltava calado à régua pela cor (medidas 7) | a linha de estrutura "a malha 'linhas' achada" nas 3 telas | o HEAD passa nas 3 telas (31 de 31) | a malha renomeada (`campo.js`): a linha nova reprova nas 3 telas, e o L5 do contraste continuava passando (pela cor) |
+| A G7 `meta` no código (medidas 8) | `estrutura` | o HEAD 100% de 501 598 px | — |
+| O V7 perdeu sensibilidade (medidas 6) | nada (abaixo: o corte pelos mesmos quadros não a devolve) | — | — |
+
+- **O V7, medido pelos mesmos quadros** (o relógio da página em volta de cada `avancar` sem desenho, separado em "logo depois de
+  um desenhado" e "os outros", o mesmo corte no jogo e no replay; 2 rodadas por lado; a régua do C15 ao lado):
+
+  | Rodada | jogo: depois / outros | falta: depois / outros | espalmada: depois / outros | a régua do C15 (replay × jogo, o limite) |
+  |---|---|---|---|---|
+  | HEAD 1 | 2,10 / 1,90 | 1,60 / 0,60 | 3,60 / 0,40 | 0,70 / 0,40 × 1,80 (≤ 2,80) |
+  | HEAD 2 | 1,70 / 2,20 | 0,80 / 0,50 | 2,10 / 0,50 | 0,60 / 0,40 × 1,80 (≤ 2,80) |
+  | main 1 | 1,60 / 2,40 | 1,10 / 0,90 | 1,60 / 0,40 | 0,80 / 0,40 × 1,80 (≤ 2,80) |
+  | main 2 | 3,90 / 2,80 | 1,00 / 0,60 | 1,40 / 0,30 | 0,70 / 0,30 × 2,30 (≤ 3,30) |
+
+  Os "depois" são poucos (20–75 quadros) e o p95 deles vai de 1,40 a 3,90 entre rodadas: flutua. Pelos "outros", o jogo dá
+  1,90–2,80 ms e o replay 0,30–0,90: o limite (o jogo + 1) iria a 2,90–3,80, MENOS sensível que a régua do C15. O motivo é a
+  régua, não o corte: o replay custa ~1,5 ms menos que o jogo (o jogo tem a simulação), e "≤ o jogo + 1 ms" deixa essa folga em
+  qualquer corte. **Fica a régua do C15** (o jogo com 1 quadro em 8 desenhado). O limite: 2,80–3,30 ms aqui (3,20 no C15) e
+  ~3,0–4,2 no CI (o jogo 2,00–3,20 nos CIs do C15), contra 2,40–2,60 aqui e 1,90–2,50 no CI com a régua antiga (o jogo sem
+  desenho). **A faixa perdida:** o replay que ficar de +1,6 a +2,4 ms mais caro (dos 0,3–0,9 ms dele) passa a passar aqui; de
+  ~+2,5 ms para cima reprova (a mutação do C15, +3 ms: 4,40 contra 3,20). Proposta, se um dia importar: a CPU do replay PAREADA
+  com a base (como a P), não contra o jogo. A instrumentação foi só da medida (o teste ficou como no HEAD).
+- **Os documentos** (as três lentes): a frase das bandeiras "não se desmancham mais" saiu (a main já passava: "continuam
+  inteiras também com o antisserrilhado"); o E7* "não está provado que venha do item 45" (a main 1 de 13, o item 45 6 de 15, p ≈
+  0,08; nas alternadas, 1 a 1); a sangria (a medida só acusou 1 px nas placas com o gol no foco; o contrato corrigido) e os atlas
+  do corpo novo não medidos pela K; o pedido do 120 Hz só para Android; a web3dsurvey (0,23% dos Android e 98,6% dos iOS com a
+  compilação paralela); a regra antiga da queda ("duas janelas lentas seguidas") no plano (seção 4), no comentário do `main.js` e
+  no `rodar-testes.mjs`; a queda que não expira com o mesmo texto em todo lugar ("a cada ~10 partidas, cargas do jogo"; "o nível
+  do aparelho"); as franjas da torcida, das bandeiras E das placas, e o 1,74% da main (a torcida) separado do das bandeiras; a
+  §19.1 com a régua do bloco 3 marcada, a CPU com as faixas medidas e o download contra a main de hoje; o contrato (o ramo do
+  impostor em `impostor-dados.js`; os finos leem as amostras E a qualidade — a linha 6539 contradizia a 6596); o P14 → P15 aqui
+  na seção 6; o comentário do `tempos-ci` (300 s, a mediana do C15); a F sobre o gramado com o número no PR e no "Depende do
+  dono" 30; a coluna da mutação na tabela do PR; no `CLAUDE.md`, a linha "Urgente" ENTREGUE, a frase do dono e o pendente no
+  parágrafo dos gráficos e a folga do download de hoje.
+- **As partes do navegador ficam 3:** o pior caso medido foi a parte 2 do `187f5acb`, 43,6 min de testes (o runner lento, ×1,35–
+  1,45; a divisão estimava 2062 / 2076 / 2077 s), abaixo de ~55; com 4 partes seriam ~30 min cada, mais uma máquina por PR.
+- **A CPU:** a pareada nos CIs do C15 +0,00 a +0,50 ms (+0,20 / +0,30 nos 2 do C14; +0,40 no `85aa3d20`, +0,50 no `187f5acb`);
+  aqui −0,50 a +0,80 (a mediana de 6 pares, um deles a +1,2); a main contra ela mesma até +0,70. A absoluta: no CI 3,50–5,20 ms
+  (a base 3,50–5,20), aqui o item 45 5,90–7,30 e a main 6,00–7,50. Não afrouxei: a +0,80 aqui a pareada fica a 0,2 ms do limite e
+  o CI pode reprovar por sorteio — a proposta (repetir o job; com duas seguidas, medir ~10 rodadas da main contra ela mesma no CI
+  e pôr o limite no p95 delas) está no "Depende do dono" 30.
+- **Recusado:** nenhum achado. Opcionais não feitos: o T3 "Passar" do Leilão no `e13798c3` (o TM não muda neste PR; passou em 3
+  outros commits).
+- **Lições:**
+  - **Guarda por fator da base só onde a base tem folga e a medida é determinística:** a K1 por semente fixa repete em todos os
+    dígitos (16 CIs, 4 rodadas aqui), mas onde a main dá 0 px não há fator (a torcida e as placas com o gol no foco).
+  - **"≤ o jogo + 1 ms" para algo mais barato que o jogo deixa a diferença de folga** em qualquer corte dos quadros: a piora do
+    próprio replay se pega pareando com a base.
+  - **Uma linha que sai `INFO` quando não acha o que medir esconde a régua que sumiu:** "sem pontos" e "sem a malha" são
+    estrutura (ou reprovam pelo tipo da chamada).
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1610,7 +1692,7 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
 5. **`readPixels` com o MSAA implícito falha em alguns Adreno** (entrada 280): só importa para ferramenta no aparelho.
 6. **Perda de contexto no iOS** com os +24 MB: coberta pelos ganchos (passo 7, seção R); o que não volta sozinho aparece na seção R.
 7. **Franjas na silhueta** dos atlas que não são nossos (o corpo novo, os patrocínios): a seção K acusa; a sangria no atlas é da frente do corpo, e o PR diz se ficou algo.
-8. **Um celular que só segura 30 regulares** cai na sessão como hoje; desde a revisão do bloco 4 grava a queda quando a Baixa desenha mais rápido que os 30 (a carga era a causa) e não grava quando a Baixa fica nos mesmos 30 (o limite do sistema, como o iPhone em pouca energia — ou um aparelho lento em todo nível, que a medida não separa). O 20 regular (50 ms) grava sempre que a janela é lenta. A queda gravada não expira: só a escolha à mão a apaga (a proposta de tentar de novo a cada ~10 cargas vai ao "Depende do dono" 30).
+8. **Um celular que só segura 30 regulares** cai na sessão como hoje; desde a revisão do bloco 4 grava a queda quando a Baixa desenha mais rápido que os 30 (a carga era a causa) e não grava quando a Baixa fica nos mesmos 30 (o limite do sistema, como o iPhone em pouca energia — ou um aparelho lento em todo nível, que a medida não separa). O 20 regular (50 ms) grava sempre que a janela é lenta. A queda gravada não expira: só a escolha à mão a apaga (a proposta de tentar de novo o nível do aparelho a cada ~10 partidas, cargas do jogo, vai ao "Depende do dono" 30).
 9. **O que vai ao dono junto do "Depende do dono" 30** (a revisão do C4–C8; sem meta que meça, ou decisão de gosto):
    - **A profundidade nas câmeras baixas** (decidido, seção 2): a 1ª pessoa, a lateral do replay, a comemoração, a câmera do gol,
      a falta, o pré-jogo de perto e as cenas ficam sem o gradiente de vista (como antes do item 45); a TV, o escanteio, o Atrás do
@@ -1623,12 +1705,12 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
    - **O chão de fora nas câmeras do lado de cá**: rgb 59,76,11 de dia (L 0,389, C 0,090, h 124,2°, o alvo do plano) e 26,40,4 à
      noite (na main 21,88,25). A razão C/L é 0,23, contra 0,17 do gramado: lê como oliva. Opção: C 0,07 (C/L 0,17).
 10. **Pedir ao dono:**
-   - 1 minuto com `?perf=1&aa=0` e `?perf=1&aa=1` num Android (Adreno ou Mali) e num iPhone, de dia, na partida;
+   - 1 minuto com `?perf=1&aa=0` e `?perf=1&aa=1` num Android qualquer (o painel diz a placa de vídeo) e num iPhone, de dia, na partida (os links prontos no PR; no TM não dá para pôr o `?perf=1`); se der, rolando a tela para a barra do navegador aparecer e sumir (o item 4 acima);
    - o print do painel;
    - a impressão do gramado novo contra o `?gfx=antigo`;
-   - o teto (C13) num celular de 120 Hz de verdade (o rAF falso do teste não tem o vsync nem a taxa adaptativa do Android): no
-     minuto com `?perf=1`, a linha "rAF 120 Hz · teto 1 a cada 2" e ~60 qps no jogo (num de 90 Hz, "teto 1 a cada 1" e ~90; o
-     iPhone já segura o Safari perto de 60). O "rAF" é o ritmo em que o navegador chama a página: num aparelho que não segura o
+   - o teto (C13) num ANDROID de 120 Hz de verdade (o rAF falso do teste não tem o vsync nem a taxa adaptativa do Android): no
+     minuto com `?perf=1`, a linha "rAF 120 Hz · teto 1 a cada 2" e ~60 qps no jogo (num de 90 Hz, "teto 1 a cada 1" e ~90; no
+     iPhone o Safari já fica em 60: a linha diz "rAF 60 Hz · teto 1 a cada 1", e está certo). O "rAF" é o ritmo em que o navegador chama a página: num aparelho que não segura o
      desenho ele fica abaixo da tela (a revisão do bloco 4 trocou o "tela" por "rAF");
    - o painel não pega toque (o dono joga com ele à vista) e fica debaixo da tela "Ajustando os gráficos…": o print é o jeito de
      mandar os números.
@@ -1686,6 +1768,7 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
 | C14 | as metas valendo e os dois testes no CI: `632326b2` (as metas por padrão, o motivo nas informativas, a base pela `GOLACO_BASE`), `964a2efd` (a lista do navegador, a base do PR no job e os tempos) e o plano | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs`, `.github/workflows/golaco-testes.yml` | não |
 | C15 | a recalibração e as flutuações: `7a5337dc` (o L5 pela geometria), `b8658b44` (a emenda do C9b), `056b8b3c` (o "Sem vazamento" em duas rodadas), `58f3377a` (o S1 por quadro do rAF), `c5bc730f` (o O1* do Pronto em diante), `98990ab3` (as fotos do Estrelato), `e13798c3` (o V7 no mesmo regime de desenho), `3978a715` (os tempos do CI), `a1dca10e` (o "some" do item 106), `833dad50` (o T9 depois do impostor) e o plano | `teste-bola-parada-tela`, `teste-corpo-tela`, `teste-desempenho-celular`, `teste-pausa-tela`, `teste-prepartida-tela`, `teste-replay-paradas-tela`, `teste-substituicao-tela`, `tools/lib/tempos-ci.mjs`, `legacy-total-match/ferramentas/testar-3d.mjs` | não |
 | C16 | os documentos: `2748c713` (o contrato "Gráficos do celular" e a §19.1 da pesquisa), `93cb0cb7` (o item 45 FEITO na FILA e no CATEGORIAS e o "Depende do dono" 30) e o do `CLAUDE.md` e do plano | `golaco/CONTRATOS.md`, `golaco/PESQUISA-ESTADIO.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md`, `golaco/PLANO-GRAFICOS.md` | não |
+| CF | as correções do fechamento: `9637f99f` (o `teste-gramado` G8, o `centroid`), `449ca096` (a guarda da K1 e a K2), `b3ccc9d7` (os finos de volta no R1, no R3 e na Q), `e1b6e7df` (a F sem pontos e a G7), `986d695a` (a malha do L5), `0680290d` (o total do "some" do `testar-3d`) e o dos documentos | `tools/teste-gramado.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/teste-graficos-celular.mjs`, `tools/teste-bola-parada-tela.mjs`, `legacy-total-match/ferramentas/testar-3d.mjs`; `js/main.js` (comentário), `tools/rodar-testes.mjs`, `tools/lib/tempos-ci.mjs` (comentários); `CONTRATOS.md`, `PESQUISA-ESTADIO.md`, `FILA.md`, `CATEGORIAS.md`, `CLAUDE.md`, `PLANO-GRAFICOS.md` | só um comentário |
 
 **Fechamento:**
 - O PR sai do rascunho com a tabela antes → depois (seção 4), as fontes e o pedido ao dono (seção 7).

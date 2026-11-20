@@ -216,7 +216,7 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
 
 | ordem | id | tarefa | status | o que falta | plano curto | horas | mexe no hash |
 |---|---|---|---|---|---|---|---|
-| 45 | graficos-celular | Melhora dos gráficos no celular (Baixa e Média), marcada "Urgente" na fila antiga | **FEITO** (20/11, PR #639, base `5b7986a2` — o #653, a main de 20/11; o item começou na `e41aa791`; branch `claude/football-game-design-q2tr7a`; contrato "Gráficos do celular (item 45)", `PESQUISA-ESTADIO.md` §19 com as fontes e §19.1 com o antes → depois; o plano, as medidas de cada passo e as lições em `PLANO-GRAFICOS.md`; as escolhas que o dono pode trocar no "Depende do dono" 30). Só desenho: `fecho-hash --diff` 0, `hash-igual` (1440 hashes) e `hash-partida` (400) IGUAIS contra a main. O que muda: o MSAA 4× do próprio canvas na Média (`render/cena.js AA_QUALIDADE`; o `config.QUALIDADE.antialias` fica legado; nos aparelhos de toque só até 1,2 MP — o tablet fica como antes; `?aa=0|1`, `?gfx=antigo` e `?tom=neutro` em `render/graficos-opcoes.js`); o gramado no shader (`render/gramado.js`, puro, GLSL = JS): as 18 faixas da UEFA com a grande área, a pequena e a marca do pênalti nas bordas, o verde realista pela inversa do ACES (L 0,582 → 0,581, C 0,127 → 0,100, h 134,7° → 124,0°; o ΔL das faixas 0,099 → 0,056), as manchas e a textura de 2048 → 512 (~11 → ~0,7 MB na GPU); a profundidade relativa ao foco (o termo 0 → +0,026; nas câmeras baixas, nada) e as linhas mais brancas (0,909 → 0,952); os finos do gol com a largura mínima (os buracos na Média 33–55% → 0%, na Baixa 57–63% → 0%), as bandeiras com o alfa compensado, a torcida com A2C, as silhuetas com `centroid` e o canvas opaco (`render/util.js alfaDoCanvas`); o serrilhado do campo (razão contra o sem AA) 1,00 → 0,46–0,53 e o do quadro inteiro 1,00 → 0,41–0,48; o painel `?perf`/`?qps` por cima de tudo e sem pegar toque (`render/medidor-quadros.js`, sob demanda; `__golaco.perf()`); a troca de qualidade pela pausa com a tela "Ajustando os gráficos…" e os ganchos do contexto novo (`cena3d.aoRecriar`, também no contexto restaurado); a queda automática GRAVADA (a próxima carga em Automática abre na Baixa; escolher à mão apaga); o teto de 60 desenhos no celular de 120 Hz (144 → 72, 165 → 82,5; 90 sem teto; `render/ritmo-desenho.js`). Chamadas iguais (31), triângulos +0,57%, a CPU pareada com a base −0,10 a +0,30 ms (≤ +1,0); o download 3,45 → 3,57 MB (a folga 561,5 → 442,1 KB). Testes novos: `teste-graficos-celular` e `teste-graficos-pagina` (navegador, no CI do PR, a CPU pareada com a base do PR; reprovam a main), `teste-gramado`, `teste-medidor-quadros` e `teste-ritmo-desenho` (Node); recalibrados de propósito: o L5 do `teste-bola-parada-tela` (pela geometria), a emenda do C9b do `teste-corpo-tela` e o `teste-rede-tela` (o campo pelo `definirAA`); as flutuações do S1, do O1*, do V7, do T9 e do `testar-3d` com réguas novas. As linhas que a auditoria citava, corrigidas: a sombra de contato em `jogador3d.js:339-346` (antes 329-336), a anisotropia em `cena.js:234` (162), o gramado em `campo.js:896-922` (667-670; já o shader novo) e o `QUALIDADE` em `config.js:412-416` (400-404). Ficou (informativo, no "Depende do dono" 30): 5 linhas da K1 (as franjas da torcida e das bandeiras), a CPU "≤ 6 ms" absoluta, a G6 das manchas, nada medido num celular de verdade | — | — | 12 (o plano: ~27,5) | não |
+| 45 | graficos-celular | Melhora dos gráficos no celular (Baixa e Média), marcada "Urgente" na fila antiga | **FEITO** (20/11, PR #639, base `5b7986a2` — o #653, a main de 20/11; o item começou na `e41aa791`; branch `claude/football-game-design-q2tr7a`; contrato "Gráficos do celular (item 45)", `PESQUISA-ESTADIO.md` §19 com as fontes e §19.1 com o antes → depois; o plano, as medidas de cada passo e as lições em `PLANO-GRAFICOS.md`; as escolhas que o dono pode trocar no "Depende do dono" 30). Só desenho: `fecho-hash --diff` 0, `hash-igual` (1440 hashes) e `hash-partida` (400) IGUAIS contra a main. O que muda: o MSAA 4× do próprio canvas na Média (`render/cena.js AA_QUALIDADE`; o `config.QUALIDADE.antialias` fica legado; nos aparelhos de toque só até 1,2 MP — o tablet fica como antes; `?aa=0|1`, `?gfx=antigo` e `?tom=neutro` em `render/graficos-opcoes.js`); o gramado no shader (`render/gramado.js`, puro, GLSL = JS): as 18 faixas da UEFA com a grande área, a pequena e a marca do pênalti nas bordas, o verde realista pela inversa do ACES (L 0,582 → 0,581, C 0,127 → 0,100, h 134,7° → 124,0°; o ΔL das faixas 0,099 → 0,056), as manchas e a textura de 2048 → 512 (~11 → ~0,7 MB na GPU); a profundidade relativa ao foco (o termo 0 → +0,026; nas câmeras baixas, nada) e as linhas mais brancas (0,909 → 0,952); os finos do gol com a largura mínima (os buracos na Média 33–55% → 0%, na Baixa 57–63% → 0%), as bandeiras com o alfa compensado, a torcida com A2C, as silhuetas com `centroid` e o canvas opaco (`render/util.js alfaDoCanvas`); o serrilhado do campo (razão contra o sem AA) 1,00 → 0,46–0,53 e o do quadro inteiro 1,00 → 0,41–0,48; o painel `?perf`/`?qps` por cima de tudo e sem pegar toque (`render/medidor-quadros.js`, sob demanda; `__golaco.perf()`); a troca de qualidade pela pausa com a tela "Ajustando os gráficos…" e os ganchos do contexto novo (`cena3d.aoRecriar`, também no contexto restaurado); a queda automática GRAVADA (a próxima carga em Automática abre na Baixa; escolher à mão apaga); o teto de 60 desenhos no celular de 120 Hz (144 → 72, 165 → 82,5; 90 sem teto; `render/ritmo-desenho.js`). Chamadas iguais (31), triângulos +0,57% (92 044; 92 050 no CI); a CPU pareada com a base (a mediana das diferenças ≤ +1,0 ms): +0,00 a +0,50 nos CIs do C15, +0,20 / +0,30 nos do C14, −0,50 a +0,80 na máquina dos testes daqui (a main contra ela mesma até +0,70); o download 3,46 → 3,57 MB contra a main `5b7986a2` (o nosso 2864 → 2978 KB, +114 KB; a folga 557,0 → 442,1 KB). Testes novos: `teste-graficos-celular` e `teste-graficos-pagina` (navegador, no CI do PR, a CPU pareada com a base do PR; reprovam a main), `teste-gramado`, `teste-medidor-quadros` e `teste-ritmo-desenho` (Node); recalibrados de propósito: o L5 do `teste-bola-parada-tela` (pela geometria), a emenda do C9b do `teste-corpo-tela` e o `teste-rede-tela` (o campo pelo `definirAA`); as flutuações do S1, do O1*, do V7, do T9 e do `testar-3d` com réguas novas. As linhas que a auditoria citava, corrigidas: a sombra de contato em `jogador3d.js:339-346` (antes 329-336), a anisotropia em `cena.js:234` (162), o gramado em `campo.js:896-922` (667-670; já o shader novo) e o `QUALIDADE` em `config.js:412-416` (400-404). Ficou (informativo, no "Depende do dono" 30): 5 linhas da K1 (as franjas da torcida, das bandeiras e das placas; as das bandeiras e a da torcida na TV na bola com a guarda ≤ 0,5 × a main com o MSAA forçado), a CPU "≤ 6 ms" absoluta, a G6 das manchas, a F sobre o gramado, nada medido num celular de verdade | — | — | 12 (o plano: ~27,5) | não |
 | 46 | sombras-dia | Sombra do estádio no gramado e nos jogadores durante o jogo de dia | parcial. O sol e a sombra dos jogadores existem (`cena.js:1-17/106-123`); a sombra da estrutura só aparece nas cadeiras | Uma máscara analítica | `sombraEstadio(x, z, solDir)` pura, pela planta (fora do fecho), como uniform da grama e dos jogadores, sem mapa de sombra novo. teste-sombra-estadio em Node (raio × sólidos) e item novo no teste-estadio | 6 | não |
 | 47 | torcida-ondas | A torcida reagir em onda no gol e na chance | parcial. Pular e levantar os braços está feito (`teste-torcida.mjs:226-230`). A reação é a mesma para o time todo no mesmo instante (`torcida.js:72-75`), e a ola só sai com a torcida calma (`festa.js:11-13/55-56`) | A propagação pela distância | Atraso pela distância ao gol ou ao lance: uniform com o t do evento, a mesma conta em JS e GLSL. Caso novo no teste-torcida, que reprova hoje: quem está perto do gol levanta antes | 4 | não |
 | 48 | fotografos | Fotógrafos atrás do gol | pendente. Não existe nada no `golaco/` | Fazer do zero | Pesquisa (área de mídia da UEFA e da CBF). `fotografos-dados.js` puro: posições depois das placas, poses e mira na bola. `render/fotografos.js` instanciado (1–2 chamadas, LOD baixa), flash por luz falsa. teste-fotografos: fora do campo, das placas, da área técnica e dos trilhos, e o cone vazio na câmera do gol, na "atrás do gol" do replay e na "Atrás" do Livre. Item novo no teste-estadio | 10 | não |
@@ -930,8 +930,9 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
       diz "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar de novo)". Grava só com a janela lenta de
       verdade (a mediana dos intervalos ≥ 32,3 ms na Média: alguns soluços não gravam); o ritmo preso em 30 (o iPhone em pouca
       energia, o economizador do Android) só quando a Baixa desenha mais rápido; nunca nos testes automáticos. **A decidir: a
-      gravada não expira.** Proposta: tentar de novo o nível do aparelho a cada ~10 cargas (uma queda nova grava de novo; a
-      pessoa veria a Média engasgar uma vez a cada ~10 partidas). Alternativa: a queda silenciosa de antes (só na sessão).
+      gravada não expira.** Proposta: tentar de novo o nível do aparelho a cada ~10 partidas (cargas do jogo; uma queda nova grava
+      de novo; a pessoa veria a Média engasgar uma vez a cada ~10 partidas). Alternativa: a queda silenciosa de antes (só na
+      sessão).
     - **D6, o teto de quadros** (aplicada): no celular, 60 desenhos por segundo, nunca abaixo de 60 (120 Hz → 60, 144 → 72, 165 →
       82,5, 240 → 60; 90 Hz sem teto: 45 regulares ou 60 aos trancos seriam piores); o PC sem teto. Alternativa: sem teto (no
       celular de 120 Hz o MSAA custaria o dobro por segundo).
@@ -960,29 +961,45 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
       `WEBGL_debug_renderer_info` — só depois de medir num aparelho com ela.
     - **As metas que ficaram informativas** (o número e o quanto falta):
       - **K1, as franjas da silhueta com o centro do pixel fora** (meta ≤ 0,2%; a main com o MSAA forçado dá 1,74% na torcida e
-        13,32% / 4,17% nas bandeiras): (1) a torcida na TV na bola, 0,09% na semente do teste e 0,22% na semente 7 (falta 0,02
-        ponto; a main 0% nessa semente) — vem da A2C da torcida, que derrubou as franjas e a cintilação dela e custou franjas nas
+        13,32% / 4,17% nas bandeiras). Desde as correções do fechamento, três delas têm a GUARDA "≤ 0,5 × a main com o MSAA
+        forçado" (a mesma semente; no CI 16 rodadas iguais em todos os dígitos; aqui 4 do item 45 e 3 da main, iguais): a torcida
+        na TV na bola e as bandeiras nas duas poses — a mutação sem o `centroid` (as bandeiras 12,53% / 3,36%, o limite 6,66% /
+        2,08%) e a torcida sem a A2C (1,41%, o limite 0,87%) reprovam —, e o `teste-gramado` G8 guarda a estrutura do `centroid`.
+        As linhas: (1) a torcida na TV na bola, 0,09% na semente do teste aqui (0% no CI) e 0,22% na semente 7 (falta 0,02 ponto;
+        a main 0% nessa semente) — vem da A2C da torcida, que derrubou as franjas e a cintilação dela e custou franjas nas
         bandeiras na frente; proposta: medir em 2 sementes e aceitar a troca, ou tirar a A2C da torcida e perder a cintilação; (2)
         as bandeiras na TV na bola, 1,74% (falta 1,54 ponto), e (3) com o gol no foco, 0,43% (falta 0,23): a borda de cima das
-        faixas da mureta (defeito do desenho); proposta: a cobertura analítica dos finos nessa borda ou 1 texel de sangria no
-        atlas; (4) a torcida e (5) as placas com o gol no foco, 1 px cada (0,06% e 0,27%; a main 0): proposta: a linha contar com
-        ≥ 3 px ou "≤ a main + 2 px", só com prova em mais poses.
-      - **A CPU do quadro "≤ 6 ms" absoluta**: a main já passa dela nesta máquina (5,6–7,0 ms) e fica abaixo no CI (3,50–4,30); o
-        item 45 5,90 ms aqui e 3,50–4,30 no CI. Vale a PAREADA com a base (a mediana das diferenças ≤ +1,0 ms: −0,10 a +0,30); o
-        +0,2 do plano não se mede neste equipamento (a main contra ela mesma deu até +0,70).
+        faixas da mureta (defeito do desenho; essa linha não existe na versão publicada, que não tem o antisserrilhado: é um resto
+        pequeno que o antisserrilhado traz); proposta: a cobertura analítica dos finos nessa borda ou 1 texel de sangria no atlas;
+        (4) a torcida e (5) as placas com o gol no foco, 1 px cada (0,06% e 0,27%; a main 0): proposta: a linha contar com ≥ 3 px
+        ou "≤ a main + 2 px", só com prova em mais poses. A sangria nos atlas não entrou (a medida só acusou esse 1 px das
+        placas); os números e os patrocínios do corpo novo (a versão de teste) não foram medidos pela K — o `teste-corpo-tela`
+        passa; a sangria, se precisar, é da frente do corpo.
+      - **A CPU do quadro "≤ 6 ms" absoluta**: no CI 3,50–5,20 ms (a base também 3,50–5,20); na máquina dos testes daqui o item 45
+        5,90–7,30 e a main 6,00–7,50 (fora da meta por 0,2–1,3 ms nos dois). Vale a PAREADA com a base (a mediana das diferenças ≤
+        +1,0 ms): +0,00 a +0,50 nos 5 CIs do C15, +0,20 / +0,30 nos 2 do C14, +0,40 no `85aa3d20` e +0,50 no `187f5acb`; −0,50 a
+        +0,80 aqui (a mediana de 6 pares, um deles a +1,2); a main contra ela mesma até +0,70. O +0,2 do plano não se mede neste
+        equipamento. **Risco:** a +0,80 aqui a pareada fica a 0,2 ms do limite; no CI o pior medido é +0,50, mas uma rodada pode
+        reprovar por sorteio. Proposta (sem afrouxar sem prova): reprovou no CI, repetir o job; reprovou duas vezes seguidas, medir
+        ~10 rodadas da main contra ela mesma no CI e pôr o limite no p95 delas.
       - **G6, as manchas**: σL 0,0100 contra a meta provisória 0,010 ± 0,004 (a main 0,0049); vale quando a régua da foto for
         refeita (as fotos da Allianz Arena pela homografia das linhas do campo).
-      - A K2 (a main sem AA já cumpria: 0,966 / 0,935 → 1,006 / 1,011), o letreiro da K1 (o opaco, o do Maracanã, só na edição
-        pro, que a página do teste não abre) e o grão (o longe não cintila mais que o perto: o filtro não entrou).
+      - A F sobre o gramado (o grão e a sombra atrás da peça entram na conta): falta 1,41 na cintilação (× 2,91 o SSAA, a haste com
+        o gol no foco, 4 pontos; meta ≤ × 1,5) e 0,06 na soma (1,36, a corda do pé no gol de lá; meta 0,7–1,3); a guarda que vale é
+        a sobre o preto.
+      - O letreiro da K1 (o opaco, o do Maracanã, só na edição pro, que a página do teste não abre) e o grão (o longe não cintila
+        mais que o perto: o filtro não entrou). A K2 (a main sem AA já cumpria: 0,966 / 0,935 → 1,006 / 1,011) voltou a guarda nas
+        correções do fechamento (contra a perda grosseira; tirar a compensação do mip não a reprova: a main com o MSAA forçado dá
+        1,006 / 1,004).
       - Os dois testes novos não rodam no deploy (no PR, sim, com a base para a CPU pareada): marcar `deploy: true` na lista do
         `rodar-navegador.mjs` custaria ~6–8 min por publicação, com a CPU só informativa lá.
       - O anúncio do "Ajustando os gráficos…" no leitor de tela não tem teste (o CI não tem leitor de tela).
-    - **As duas flutuações não rastreadas e uma régua com o mesmo defeito do V7** (nenhuma vem do código do item 45; as outras
-      seis flutuações ganharam réguas novas no C15):
-      - `teste-prepartida-tela` E7* ("depois do Pular: pré-jogo true"): a main 1 de 13, o item 45 6 de 15 (p ≈ 0,08: a contagem
-        não prova); o provável é o quadro de segundos do Chromium sem GPU no pré-jogo (o "Pular" some 3 s depois do último gesto e
-        o toque cai na camada de baixo). Proposta: tocar no Pular no mesmo `evaluate` em que ele aparece, ou esperar pelos quadros
-        e não pelo relógio.
+    - **As duas flutuações não rastreadas e uma régua com o mesmo defeito do V7** (as outras seis flutuações ganharam réguas
+      novas no C15):
+      - `teste-prepartida-tela` E7* ("depois do Pular: pré-jogo true"): não está provado que venha do item 45 — a main também
+        falha (1 de 13), o item 45 mais (6 de 15; p ≈ 0,08, não prova); nas rodadas alternadas, 1 a 1. O provável é o quadro de
+        segundos do Chromium sem GPU no pré-jogo (o "Pular" some 3 s depois do último gesto e o toque cai na camada de baixo).
+        Proposta: tocar no Pular no mesmo `evaluate` em que ele aparece, ou esperar pelos quadros e não pelo relógio.
       - `teste-camera-tela` N (Δ 5,5 cm entre a página de dia e a de noite, meta ≤ 1 mm) no CI de um commit que só mudou um teste
         de outra coisa: o mesmo código passou em outros dois CIs e em 8 de 8 rodadas aqui (main e item 45); a câmera não mudou no
         item 45. Hipótese não provada: os quadros no relógio de verdade antes do relógio manual levam a câmera a outro ramo da
@@ -990,10 +1007,21 @@ IA × IA e o 25 (a corrida dos lances rápidos) com o dono ("Depende do dono" 9a
       - `teste-replay` G4: a mesma régua de CPU que o V7 do `teste-replay-paradas-tela` tinha (o replay com 1 quadro em 8
         desenhado e o jogo sem nenhum); não reprovou em nenhum CI medido. Proposta: a mesma correção do V7 (o jogo medido no
         mesmo regime de desenho), se reprovar.
-    - **Pedir a você (1 minuto, de dia, na partida):** num Android (Adreno ou Mali) e num iPhone, `?perf=1&aa=0` e
-      `?perf=1&aa=1`, com o print do painel nos dois (o painel não pega toque: dá para jogar com ele à vista). Junto: a impressão
-      do gramado novo contra o `?gfx=antigo` e, num celular de 120 Hz, a linha "rAF 120 Hz · teto 1 a cada 2" com ~60 qps no jogo
-      (num de 90 Hz, "teto 1 a cada 1" e ~90).
+    - **As correções do fechamento (20/11; as três revisões), decididas pela recomendada:** a guarda da K1 (≤ 0,5 × a main com o
+      MSAA forçado) nas três linhas com folga e a K2 de volta a guarda; o `centroid` guardado pela estrutura (`teste-gramado` G8);
+      a F numa pose sem pontos reprova; os finos de volta na A2C conferidos (R1, R3 e a Q); o total do "some" do `testar-3d` com
+      o teto de 1,5 s; a malha das linhas como estrutura do L5; a G7 `estrutura`. O V7 fica com a régua do C15: medir o jogo e o
+      replay pelos mesmos quadros não devolveu a sensibilidade (pelos "outros" o limite iria a 2,90–3,80 ms; pelos "logo depois
+      de um desenhado", 20–75 quadros, flutua de 1,40 a 3,90) — o limite fica em 2,80–3,30 ms aqui e ~3,0–4,2 no CI, e o replay
+      que ficar de +1,6 a +2,4 ms mais caro passa (de ~+2,5 ms reprova); proposta, se importar: a CPU do replay PAREADA com a base,
+      como a P. As partes do navegador do CI ficam 3 (o pior caso medido, 43,6 min de testes numa parte, abaixo de ~55).
+    - **Pedir a você (1 minuto, de dia, na partida):** num Android qualquer (o painel diz a placa de vídeo) e num iPhone,
+      https://mauriciosuprir.github.io/jogo-futebol/golaco/?perf=1&aa=0 e …/golaco/?perf=1&aa=1, com o print do painel nos dois
+      (o painel não pega toque: dá para jogar com ele à vista; no TM não dá para pôr o `?perf=1`). Junto: a impressão do gramado
+      novo contra o …/golaco/?gfx=antigo; num ANDROID de 120 Hz, a linha "rAF 120 Hz · teto 1 a cada 2" com ~60 qps no jogo (num
+      de 90 Hz, "teto 1 a cada 1" e ~90; no iPhone o Safari já fica em 60: a linha diz "rAF 60 Hz · teto 1 a cada 1", e está
+      certo); e, se der, rolar a tela para a barra do navegador aparecer e sumir algumas vezes no minuto (com o MSAA cada tamanho
+      novo realoca ~24 MB, e os Adreno 4xx/5xx emulam o redimensionar: o painel mostra se engasga).
 
 ## Obsoleto
 

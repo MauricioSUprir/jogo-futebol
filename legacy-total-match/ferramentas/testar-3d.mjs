@@ -403,8 +403,8 @@ if (fr) {
 // recado tm3d:tela tira o aviso "Abrindo o estádio 3D…" e o X do TM — e o "Simular partida" (2 toques) feito antes do tm3d:pronto
 // fecha com tm3d:sair 'simular', sem tm3d:fim e sem tm3d:pronto (a carga do 3D para: a página do quadro é da mesma origem e as
 // tarefas longas dela travariam o TM); o quadro some da vista (o quadro seguinte da página do TM já sem ele) ≤ 0,5 s depois de o
-// tm3d:sair chegar ao TM e ≤ 1,5 s depois do 2º toque — o remove(), o desmonte do WebGL, fica para depois — e o TM simula (com os titulares da tela: o placar pode ser outro, como
-// no 1b). Na base não há tm3d:tela: reprova
+// tm3d:sair chegar ao TM e ≤ 1,5 s depois do 2º toque — o remove(), o desmonte do WebGL, fica para depois — e o TM simula (com os
+// titulares da tela: o placar pode ser outro, como no 1b). Na base não há tm3d:tela: reprova
 {
   await p.evaluate(() => {
     window.__msgs3d.length = 0; window.__toasts.length = 0; window.__naTela = null; window.__someEm = null;
