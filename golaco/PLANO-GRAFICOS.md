@@ -140,6 +140,16 @@ partes 1 e 2). Só testes, o `tempos-ci` e o plano: `fecho-hash` 0.
 - **Parte 2:** as seis flutuações (o S1 online, o O1*, os dois do `testar-3d`, o V7 e o T9) estão também na main e nenhuma é defeito
   do jogo; cada régua nova mede o que o teste quer e reprova por mutação. Os tempos do CI pelos logs; o TM passa.
 
+**O C16 (20/11; `2748c713`, `93cb0cb7` e este): os documentos.** Só documentos (`fecho-hash` 0; `hash-igual`, 1440 hashes, e
+`hash-partida`, 400, IGUAIS contra a main `5b7986a2`, rodados de novo neste passo).
+- `CONTRATOS.md`: a seção "Gráficos do celular (item 45, #639)" com tudo o que o passo 9 pede, os testes e as lições;
+- `PESQUISA-ESTADIO.md` §19.1: o antes → depois dos dois testes, o download, o que a medida corrigiu na pesquisa e as fontes que se
+  aproveitaram; três afirmações antigas da §19 corrigidas (o `compile()` que "só percorre o visível", duas vezes, e a gravação por
+  "duas janelas lentas seguidas");
+- `FILA.md`: o item 45 FEITO, as linhas que a auditoria citava corrigidas e o "Depende do dono" 30; `CATEGORIAS.md` (a categoria
+  I, a decisão 29 e o entregue); `CLAUDE.md` (o parágrafo "Gráficos do celular" e a linha da categoria I). O corpo do PR fica com
+  o coordenador (o rascunho na sessão).
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -1579,6 +1589,13 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
   - **Na janela, `postMessage` é da própria janela ([Global]):** um `delete` depois de trocá-lo apaga o método (a 1ª versão da régua
     do "some" quebrou o resto do `testar-3d`).
 
+**Depois do plano do C15** (o que ficou fora dele, porque o plano foi o último commit do C15):
+- o T9 do `teste-substituicao-tela` reprovou mais uma vez com a régua ANTIGA no CI do `a1dca10e` (o navegador 3 de 3: programas 36
+  → 37); a régua nova está no `833dad50`, o commit seguinte;
+- o CI do `85aa3d20` (o fecho do C15) passou INTEIRO: [run 44794599063](https://github.com/MauricioSUprir/jogo-futebol/actions/runs/44794599063)
+  — os 4 Node e os 3 navegadores do `testes`, o painel em 8 partes e o "junta", e os 8 jobs do `tm-testes` (que roda no PR porque o
+  `testar-3d.mjs` mudou).
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1668,7 +1685,7 @@ repetida nos dois lados, o caso que reprova rastreado e a régua nova provada po
 | C14a | as metas que estavam fora: `77073fd3` (os finos na mistura na Baixa com as amostras da queda; a guarda na Q), `0ab75a89` (a pose da haste na F), `a39c0673` (a A2 contra o SSAA 8×8, a A2 por peça, a K1 com a verdade, a referência da página regravada só na A2 e na K) e o plano | `js/render/campo.js`, `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/dados/graficos-ref.json` | não |
 | C14 | as metas valendo e os dois testes no CI: `632326b2` (as metas por padrão, o motivo nas informativas, a base pela `GOLACO_BASE`), `964a2efd` (a lista do navegador, a base do PR no job e os tempos) e o plano | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs`, `.github/workflows/golaco-testes.yml` | não |
 | C15 | a recalibração e as flutuações: `7a5337dc` (o L5 pela geometria), `b8658b44` (a emenda do C9b), `056b8b3c` (o "Sem vazamento" em duas rodadas), `58f3377a` (o S1 por quadro do rAF), `c5bc730f` (o O1* do Pronto em diante), `98990ab3` (as fotos do Estrelato), `e13798c3` (o V7 no mesmo regime de desenho), `3978a715` (os tempos do CI), `a1dca10e` (o "some" do item 106), `833dad50` (o T9 depois do impostor) e o plano | `teste-bola-parada-tela`, `teste-corpo-tela`, `teste-desempenho-celular`, `teste-pausa-tela`, `teste-prepartida-tela`, `teste-replay-paradas-tela`, `teste-substituicao-tela`, `tools/lib/tempos-ci.mjs`, `legacy-total-match/ferramentas/testar-3d.mjs` | não |
-| C16 | "Item 45 (docs): contrato, FILA, CATEGORIAS, CLAUDE.md e o Depende do dono 30" | `golaco/CONTRATOS.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md` | não |
+| C16 | os documentos: `2748c713` (o contrato "Gráficos do celular" e a §19.1 da pesquisa), `93cb0cb7` (o item 45 FEITO na FILA e no CATEGORIAS e o "Depende do dono" 30) e o do `CLAUDE.md` e do plano | `golaco/CONTRATOS.md`, `golaco/PESQUISA-ESTADIO.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md`, `golaco/PLANO-GRAFICOS.md` | não |
 
 **Fechamento:**
 - O PR sai do rascunho com a tabela antes → depois (seção 4), as fontes e o pedido ao dono (seção 7).
