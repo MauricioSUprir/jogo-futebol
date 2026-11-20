@@ -36,6 +36,11 @@
    (revisão do item 106: o "≥ 1 s antes" media a lentidão do 3D); nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
    do tm3d:pronto fecha com tm3d:sair "simular", sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some da vista ≤ 0,5 s
    depois do 2º toque (o remove() do quadro, o desmonte do WebGL, depois) e o TM simula o result de sempre.
+   Modo Leilão (PR 4; seção 7): o Jogar do jogo contra um bot de um treino abre o GOLAÇO com o time do leilão — 11 SEM banco
+   (o pedido 11 + 11 e o mundo 11 × 11) —, a duração e a dificuldade da sala travadas e os escudos desenhados; o "Simular o resto"
+   grava o feito '3d' antes de o 2D mostrar o placar, sem pausa. A página de ensaio da seção 6 mora em ferramentas/lib/ensaio-3d.mjs.
+   Notas escondidas do Modo Leilão (PR 6; seção 8): o treino com o Overall escondido leva partida.notasOcultas ao GOLAÇO e o 3D
+   mostra a tela antes do jogo, o Editar time e a pausa sem nota (o pedido do treino à mostra, seção 7, sem o campo).
    O Chromium headless não passa pelo proxy: o three.js (jsdelivr) vem do cache de golaco/tools/lib/navegador.mjs. */
 import fs from "fs";
 import path from "path";
@@ -573,20 +578,9 @@ if (fr) {
 // 3D; 'parado' = não responde: o X do TM fica à vista). O golaco de verdade, com a tela, está nas seções 1–3 (e no
 // golaco/tools/teste-prepartida-tela.mjs E14)
 {
-  const ENSAIO = `<!doctype html><meta charset="utf-8"><title>ensaio</title><script>
-(function () {
-  var id = new URLSearchParams(location.search).get("tm"), modo = localStorage.getItem("ensaio3d:modo") || "simular", ped = null;
-  try { ped = JSON.parse(localStorage.getItem("tm3d:pedido:" + id)); } catch (e) {}
-  localStorage.setItem("ensaio3d:ultimo", JSON.stringify({ id: id, url: location.search, titulo: ped && ped.titulo, casa: ped && ped.home && ped.home.name,
-    fora: ped && ped.away && ped.away.name, nCasa: ped && ped.home ? ped.home.players.length : 0, nFora: ped && ped.away ? ped.away.players.length : 0,
-    userSide: ped && ped.userSide, controle: ped && ped.controle }));
-  if (modo === "parado") return;
-  parent.postMessage({ tipo: "tm3d:pronto", id: id }, location.origin);
-  setTimeout(function () { parent.postMessage({ tipo: "tm3d:sair", id: id, motivo: modo === "erro" ? "erro" : "simular" }, location.origin); }, 250);
-})();
-</script>`;
-  const ROTA_ENSAIO = /\/golaco\/ensaio-3d\.html(\?|$)/;
-  await cx.route(ROTA_ENSAIO, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ENSAIO }));
+  // (a página de ensaio mora em ferramentas/lib/ensaio-3d.mjs: o testar-leilao.mjs --tela e o testar-leilao-online.mjs usam a mesma)
+  const { ENSAIO_3D, ROTA_ENSAIO_3D: ROTA_ENSAIO } = await import(path.join(AQUI, "lib/ensaio-3d.mjs"));
+  await cx.route(ROTA_ENSAIO, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ENSAIO_3D }));
   const pastaReal = await p.evaluate(() => { const v = TM.tm3d.PASTA; TM.tm3d.PASTA = "golaco/ensaio-3d.html"; return v; });
   await p.evaluate(() => { const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s); });
   // (um quadro que sobrou de um caso que não voltou sai antes do próximo: senão o próximo caso o via como "o quadro abriu")
@@ -764,6 +758,130 @@ if (fr) {
   await limpa();
   await p.evaluate((v) => { TM.tm3d.PASTA = v; localStorage.removeItem("ensaio3d:modo"); localStorage.removeItem("ensaio3d:ultimo"); }, pastaReal);
   await cx.unroute(ROTA_ENSAIO);
+}
+
+// 7) o Modo Leilão (PR 4; PLANO-LEILAO.md §3.6): o "Jogar" do jogo contra um bot abre o GOLAÇO de verdade com o time do leilão — 11
+// SEM banco — (o pedido 11 + 11 e o mundo 11 × 11), a duração e a dificuldade da SALA (3 min, Difícil) travadas, mando neutro, o
+// empate que continua (o mata-mata) e os escudos desenhados do leilão; o 3D aberto marca o abriu; "Simular o resto" leva ao tm3d:fim
+// e o resultado do 3D fica gravado (feito '3d') ANTES de o 2D mostrar o placar, sem o botão de pausa. Pela sessão do leilão (o leilão
+// do treino com 1 bot passa sozinho, a ×40; as telas dele estão no testar-leilao.mjs --tela)
+{
+  await p.evaluate(async () => {
+    const s = TM.storage.settings(); s.partidasTela = "tela"; TM.storage.saveSettings(s);
+    TM.leilaoSessao.acelerar(40);
+    window.__SL = await TM.leilaoSessao.criarTreino({ liga: "br", bots: 1, formato: "mata", tempo: 10, duracao3d: 3, dificuldade3d: "dificil", mundo: TM.data.mundoBase() });
+    TM.ui.go("leilao-lote");
+  });
+  const esc = await ate(() => !!(window.__SL.sala && window.__SL.sala.meta.estado === "escalacao"), null, 240);
+  await p.evaluate(() => { window.__SL.acelerar(1); return window.__SL.prontoEscalacao(true); });
+  await p.evaluate(() => TM.ui.go("leilao-camp"));
+  const podeJ = await ate(() => { const c = window.__SL.ver().camp; return !!(c && c.meuJogo && c.meuJogo.podeJogar && document.querySelector(".lei-jogar:not([disabled])")); }, null, 60);
+  // o que a página vê: o gravar3d (quando respondeu) e a 1ª vez que o placar do 2D aparece
+  const id = await p.evaluate(() => {
+    const S = window.__SL, W = window.__lei3d = { gravados: [], vista: null };
+    const g3 = S.gravar3d;
+    S.gravar3d = function () { const a = arguments; return g3.apply(S, a).then(r => { W.gravados.push({ t: performance.now(), origem: a[2], e: r && r.jogo ? r.jogo.e : null }); return r; }); };
+    new MutationObserver(() => { const sc = document.querySelector(".screen.is-active .live-score"); if (sc && !W.vista) W.vista = { t: performance.now(), rota: TM.ui.current(), pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)) }; })
+      .observe(document.body, { subtree: true, childList: true });
+    // (a hora do tm3d:fim — o "Voltar ao Total Match" do 3D: o resultado já tem de estar gravado desde o apito)
+    addEventListener("message", e => { if (e.data && e.data.tipo === "tm3d:fim" && W.fim == null) W.fim = performance.now(); });
+    const id = window.__leiId = S.ver().camp.meuJogo.id, b = document.querySelector(".lei-jogar");
+    if (b) b.click();
+    return id;
+  });
+  const fr = podeJ ? await espera3d() : null;
+  let ped = null, abriu = null, r = null;
+  if (fr) {
+    ped = await fr.evaluate(() => {
+      const g = window.__golaco, P = g.tm.pedido, m = g.mundo;
+      return { n: [P.home.players.length, P.away.players.length], jogadores: [0, 1].map(t => m.jogadores.filter(j => j.time === t).length), partida: P.partida,
+        escudos: [P.home.identidade.escudoTipo, P.away.identidade.escudoTipo], ticks: m.partida.ticksPorTempo, dif: m.dificuldade || "normal" };
+    });
+    abriu = await p.evaluate(i => { const j = window.__SL.jogos[i]; return !!(j && j.e === "reservado" && j.modo === "3d" && j.abriu != null); }, id);
+    await abaDaTela(fr, "jogar");
+    await fr.waitForFunction(() => !window.__golaco.prepartida.aberta && window.__golaco.mundo.tick > 0, null, { timeout: 30000 }).catch(() => {});
+    r = await simulaEVolta(fr);
+  }
+  const feito = await ate(() => { const j = window.__SL.jogos[window.__leiId]; return !!(j && j.e === "feito") && !!window.__lei3d.vista; }, null, 60);
+  const g = await p.evaluate(i => { const j = window.__SL.jogos[i]; return j ? { e: j.e, fim: j.fim, em3d: !!(j.res && j.res.em3d), score: j.res && j.res.score, alterada: !!window.__SL.ver().alterada } : null; }, id);
+  const W = await p.evaluate(() => window.__lei3d);
+  await print("07-leilao-2d");
+  confere("Leilão (PR 4): o Jogar abre o GOLAÇO com o time de 11 sem banco — o pedido 11 + 11 e o mundo 11 × 11 —, 3 min por tempo (10 800 ticks) e Difícil travados, mando neutro, o empate que continua no mata-mata, os escudos desenhados; o 3D aberto marca o abriu",
+    esc && podeJ && !!ped && ped.n.join() === "11,11" && ped.jogadores.join() === "11,11" && ped.ticks === 10800 && ped.dif === "dificil" && ped.partida.minutosPorTempo === 3 && ped.partida.dificuldade === "dificil"
+    && ped.partida.ajustesFixos === true && ped.partida.neutro === true && ped.partida.empateContinua === true && ped.escudos.every(t => t === "ultimate") && abriu
+    // (o Overall à mostra: o pedido sem o campo das notas escondidas — PR 6)
+    && ped.partida.notasOcultas === undefined, { esc, podeJ, ped, abriu });
+  confere("Leilão (PR 4): \"Simular o resto\" → o apito → o resultado do 3D gravado JÁ NO APITO (antes do tm3d:fim do \"Voltar ao Total Match\"; feito '3d', o placar do 3D) e antes de o 2D mostrar o placar, sem o botão de pausa; a sala confere (não congela)",
+    !!r && feito && !!g && g.fim === "3d" && g.em3d && g.score[0] === r.res.homeGoals && g.score[1] === r.res.awayGoals && !g.alterada
+    && W.gravados.length >= 1 && W.gravados.every(x => x.origem === "3d" && x.e === "feito") && W.fim != null && W.gravados[0].t < W.fim && W.gravados[0].t <= W.vista.t && !W.vista.pausa, { feito, g, res3d: r && { h: r.res.homeGoals, a: r.res.awayGoals }, W });
+  await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
+}
+
+// 8) as notas escondidas do Modo Leilão (PR 6; PLANO-LEILAO.md §3.6): um treino com o Overall escondido; o Jogar abre o GOLAÇO de
+// verdade com partida.notasOcultas no pedido e o 3D esconde as notas SÓ na tela — a tela antes do jogo (as fichas com "?" e a
+// raridade neutra, o canto sem o GERAL, a lista do leitor de tela sem nota nem geral), o Editar time do Personalizar (as cartas com
+// "?", sem a nota do time nem os números da carta) e a pausa (nada de nota) —; o resultado volta e é gravado como sempre (com 1 bot
+// o jogo é a final: no fim dele o campeonato acaba e as notas aparecem — a revelação da decisão 13)
+{
+  await p.evaluate(async () => {
+    TM.leilaoSessao.acelerar(40);
+    window.__SL = await TM.leilaoSessao.criarTreino({ liga: "it", bots: 1, formato: "mata", tempo: 10, duracao3d: 3, overall: "escondido", mundo: TM.data.mundoBase() });
+    TM.ui.go("leilao-lote");
+  });
+  const esc = await ate(() => !!(window.__SL.sala && window.__SL.sala.meta.estado === "escalacao"), null, 240);
+  await p.evaluate(() => { window.__SL.acelerar(1); return window.__SL.prontoEscalacao(true); });
+  await p.evaluate(() => TM.ui.go("leilao-camp"));
+  const podeJ = await ate(() => { const c = window.__SL.ver().camp; return !!(c && c.meuJogo && c.meuJogo.podeJogar && document.querySelector(".lei-jogar:not([disabled])")); }, null, 60);
+  const id = await p.evaluate(() => { const id = window.__leiId = window.__SL.ver().camp.meuJogo.id, b = document.querySelector(".lei-jogar"); if (b) b.click(); return id; });
+  const fr = podeJ ? await espera3d() : null;
+  let tela = null, ed = null, pausa = null, r = null;
+  // o texto que entrega a nota: "nota 78", "geral 81", "GERAL 81", "Nota do time" com número
+  const VAZA = "/\\b(nota|geral)\\s*\\d/i";
+  if (fr) {
+    await fr.waitForFunction(() => window.__golaco.prepartida && window.__golaco.prepartida.aberta && document.querySelectorAll("#prepartida .pp-ficha").length >= 11, null, { timeout: 30000 }).catch(() => {});
+    tela = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)(), g = window.__golaco, fs = [...document.querySelectorAll("#prepartida .pp-ficha")];
+      return { pedido: g.tm.pedido.partida.notasOcultas, pagina: g.notasOcultas, fichas: fs.length, notas: [...new Set(fs.map(f => f.querySelector(".pp-nota").textContent))], raridades: [...new Set(fs.map(f => [...f.classList].find(c => /^r-/.test(c))))],
+        geral: document.querySelectorAll("#prepartida .pp-geral, #prepartida .pp-est").length, lista: rx.test((document.querySelector("#prepartida .pp-lista") || {}).textContent || ""),
+        texto: rx.test(document.getElementById("prepartida").innerText) };
+    }, VAZA);
+    await print("08-leilao-oculto-tela");
+    // o Personalizar abre o Editar time (antes do jogo)
+    await abaDaTela(fr, "personalizar");
+    await fr.waitForFunction(() => document.querySelectorAll("#editar-time .carta").length >= 11, null, { timeout: 30000 }).catch(() => {});
+    await fr.waitForTimeout(400);
+    ed = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)(), raiz = document.getElementById("editar-time"), cs = [...raiz.querySelectorAll(".carta")];
+      const c0 = raiz.querySelector(".carta.no-campo"); if (c0) c0.click();
+      const info = (raiz.querySelector(".ed-info") || raiz).innerText;
+      const aria = cs.map(c => c.getAttribute("aria-label") || "").join(" | ");
+      return { cartas: cs.length, notas: [...new Set(cs.map(c => (c.querySelector(".c-nota") || {}).textContent.replace(/[°]/g, "")))], cab: (raiz.querySelector("[data-ed-nota]") || {}).innerHTML,
+        numeros: raiz.querySelectorAll(".ed-numeros").length, texto: rx.test(raiz.innerText) || rx.test(info), aria: rx.test(aria) };
+    }, VAZA);
+    await print("08-leilao-oculto-editor");
+    await fr.evaluate(() => { const b = document.querySelector('#editar-time [data-ed="voltar"]'); if (b) b.click(); });
+    await fr.waitForTimeout(600);
+    await abaDaTela(fr, "jogar");
+    await fr.waitForFunction(() => !window.__golaco.prepartida.aberta && window.__golaco.mundo.tick > 0, null, { timeout: 30000 }).catch(() => {});
+    await fr.waitForTimeout(500);
+    pausa = await fr.evaluate(vz => {
+      const rx = new Function("return " + vz)();
+      window.__golaco.abrirMenu();
+      const m = document.getElementById("menu"), txt = m ? m.innerText : "";
+      const c = document.querySelector('#menu [data-cmd="continuar"]'); if (c) c.click();
+      return { aberto: !!txt, texto: rx.test(txt), notas: document.querySelectorAll("#menu .pp-nota, #menu .c-nota").length };
+    }, VAZA);
+    r = await simulaEVolta(fr);
+  }
+  const feito = await ate(() => { const j = window.__SL.jogos[window.__leiId]; return !!(j && j.e === "feito"); }, null, 60);
+  const g = await p.evaluate(i => { const j = window.__SL.jogos[i], V = window.__SL.ver(); return j ? { e: j.e, fim: j.fim, alterada: !!V.alterada, oc: V.notasOcultas, campFim: !!(V.camp && V.camp.fim), rev: V.revelados } : null; }, id);
+  confere("Leilão (PR 6): o Overall escondido vai ao GOLAÇO (partida.notasOcultas) e a tela antes do jogo mostra as 11 fichas com '?' e a raridade neutra, sem o GERAL nem as estrelas e sem nota na lista do leitor de tela",
+    esc && podeJ && !!tela && tela.pedido === true && tela.pagina === true && tela.fichas === 11 && tela.notas.join() === "?" && tela.raridades.join() === "r-n" && tela.geral === 0 && !tela.lista && !tela.texto, { esc, podeJ, tela });
+  confere("Leilão (PR 6): o Editar time (o Personalizar) com as cartas em '?', sem a nota do time, os números da carta e nota nenhuma no texto e nos rótulos; a pausa sem nota",
+    !!ed && ed.cartas >= 11 && ed.notas.join() === "?" && !ed.cab && !ed.numeros && !ed.texto && !ed.aria && !!pausa && pausa.aberto && !pausa.texto && !pausa.notas, { ed, pausa });
+  confere("Leilão (PR 6): o jogo do 3D com as notas escondidas volta e é gravado como sempre (feito '3d'); era a final: o campeonato acabou e as notas aparecem",
+    !!r && feito && !!g && g.fim === "3d" && !g.alterada && g.campFim && g.oc === false && Array.isArray(g.rev) && g.rev.every(Boolean), { g, res: r && r.res && [r.res.homeGoals, r.res.awayGoals] });
+  await p.evaluate(() => { const S = TM.leilaoSessao.atual(); if (S) S.parar(); TM.ui.go("modes"); });
 }
 
 confere("nenhum erro de página (TM e 3D)", erros.length === 0, erros);

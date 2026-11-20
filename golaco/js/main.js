@@ -166,7 +166,7 @@ import { criarAutorGol, zerarAutorGol, autorEventos } from './render/autor-gol.j
 import { criarSom } from './render/som.js';
 import { criarPartida, passoPartida, entradaDemoPartida, minutoDeJogo, acrescimoDeJogo, regrasPartida, teleportar, mudarDuracao, definirDificuldade } from './partida.js';
 // o tempo de jogo e a dificuldade (item 33; puro, fora do fecho do hash: os ciclos da pausa, os textos, o pedido do TM)
-import { ajustesDoPedido, classicoDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
+import { ajustesDoPedido, classicoDoPedido, notasOcultasDoPedido, minutosValidos, nivelValido, proximaDuracao, proximoNivel, duracaoAnterior, nivelAnterior, maisFacil, nivelDoPasso, textoDuracao, textoNivel, resultadoComAjustes } from './ajustes-partida.js';
 // o relógio do placar em MM:SS (item 32): a conta pura FORA do fecho do hash (só lê m.tick e m.partida)
 import { segundoDeJogo } from './relogio-placar.js';
 import { montarFalta } from './faltas.js';
@@ -326,6 +326,12 @@ const DIF_PARAM = nivelValido(params.get('dif'));
 // do anfitrião, o mesmo nos dois aparelhos) > desligado. Só no modo 'partida' (o Livre e os Pênaltis nunca: criarMundoTreino).
 const CLASSICO_PARAM = params.get('classico') === '1' ? true : params.get('classico') === '0' ? false : null;
 const CLASSICO_PAG = CLASSICO_PARAM ?? (TM ? classicoDoPedido(PEDIDO_TM) : false);
+// As notas escondidas (o Modo Leilão do TM com o "Overall escondido", PR 6 do leilão): a tela antes do jogo e o Editar time sem a
+// nota, os números da carta e o GERAL (a pausa não mostra nota). De onde vem: o pedido do TM (partida.notasOcultas) OU o
+// ?notasOcultas=1 (testes). O parâmetro só LIGA: nada no endereço desliga o que o pedido manda esconder (com o "=0" por cima
+// do pedido, quem abrisse o quadro do 3D com o endereço mexido via as notas de uma sala escondida). Só a TELA: a simulação, o
+// hash e o resultado não mudam.
+const NOTAS_OCULTAS = params.get('notasOcultas') === '1' || (TM ? notasOcultasDoPedido(PEDIDO_TM) : false);
 const ajustes = {
   minutosPorTempo: MIN_PARAM ?? (ONLINE || TM ? AJ_PEDIDO.minutosPorTempo ?? CFG.PARTIDA.minutosPorTempo
     : minutosValidos(prefs.minutosPorTempo) ?? CFG.PARTIDA.minutosPorTempo),
@@ -494,7 +500,7 @@ const SOB = {
   editor: {
     carga: null, ok: false,
     baixar: () => { pedirFontesDisp(); return Promise.all([import('./editor-time.js'), cssSobDemanda('css/editor.css', 'css/prejogo.css')]).then(([md]) => md); },
-    criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor() }); },
+    criar(md) { editor = md.criarEditorTime({ raiz: document.getElementById('editar-time'), aoPronto: ed => aoPronto(ed), aoFechar: () => aoFecharEditor(), notasOcultas: NOTAS_OCULTAS }); },
   },
   // as cenas das paradas (o cartão e o intervalo): as cenas puras, as constantes delas (js/cenas-config.js chega junto, pelo
   // import delas), o cartão 3D, a tela das tarjas e o CSS dela (antes do prejogo.css, como o do editor); o guardador de lances
@@ -3722,7 +3728,9 @@ function abasDoModo(modo) {
     case 'rae': return [J, V, S];
     case 'livre': return [{ ...J, texto: 'Jogar' }, { id: 'jogadores', texto: 'Jogadores', icone: 'jogadores', espera3d: true }, { id: 'camera', texto: 'Câmera', icone: 'camera', espera3d: true }];
     case 'penaltis': return [{ ...J, texto: 'Bater pênaltis' }, { id: 'adversario', texto: 'Cobradores do adversário', icone: 'lista' }];
-    case 'online': return [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, V];
+    // (o par do Modo Leilão: o "Simular partida" ao lado do "Pronto" — qualquer um escolhe e os dois saem; o Online 3D da sala, sem)
+    case 'online': return simularOnline() ? [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, S, V]
+      : [{ id: 'pronto', texto: 'Pronto', icone: 'pronto', primaria: true, espera3d: true }, V];
     default: return [J, V, P];
   }
 }
@@ -3762,6 +3770,8 @@ function dadosPrepartida() {
     hora, estadio: IDENT?.estadio?.nome ?? 'Estádio Golaço', data: TM ? (pt?.data ?? null) : new Date(), trava: TRAVA_TM, times,
     // (a dificuldade da IA contra a pessoa, item 33: o "Beginner, 6 minutes" do FC; sem ela no online, no Livre e nos Pênaltis)
     dificuldade: dificuldadeNaTela(),
+    // (o Overall escondido do Modo Leilão do TM: as fichas sem nota e sem a cor da raridade, o canto sem o GERAL)
+    notasOcultas: NOTAS_OCULTAS,
   });
 }
 /** O nível que a tela antes do jogo mostra: o do mundo (o Normal sem o campo); null no online e fora da partida. */
@@ -4062,7 +4072,7 @@ function acaoPrepartida(id) {
     // "Simular o resto" da pausa, com a partida já começada, continua pelo motor 3D. A tela fica (o mundo parado no tick 0) até o
     // TM fechar o quadro: fechada aqui, o jogo andava e aparecia nesse meio-tempo. Vão junto os titulares que a tela mostra (os do
     // Personalizar; revisão A2): o TM simula com eles
-    case 'simular': simularNoTM(); break;
+    case 'simular': if (mundo.online) simularOnlineTela(true); else simularNoTM(); break;
     case 'canto':
       // (antes do 3D a carga para: o TM fecha o quadro — item 106)
       pararCarga();
@@ -4097,11 +4107,33 @@ function abrirMenuDaTela(abrir) {
  * (o [<] armado) = o Sair da pausa de hoje: conta como derrota, o outro recebe o W.O.
  */
 // (ppOnline mora no topo do arquivo, com as outras da tela)
-const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0);
+const bitsTelaOnline = () => MOD_PAG_ON.E_TELA | (ppOnline.pronto ? MOD_PAG_ON.E_PRONTO : 0) | (ppOnline.simular ? MOD_PAG_ON.E_SIMULAR : 0);
+/** O online com o "Simular partida" na tela antes do jogo: o pedido do par do Modo Leilão (online.simular); nos testes, &simular=1. */
+function simularOnline() { return ONLINE_TM ? !!PEDIDO_TM.online.simular : ONLINE_BC && PARAMS0.get('simular') === '1'; }
+/**
+ * O "Simular partida" do online (o par do Leilão): meu = eu escolhi (o 2º toque da aba); senão o outro escolheu (o bit E_SIMULAR ou a
+ * mensagem). Os dois saem: o pacote com o bit e a mensagem vão já; meio segundo depois (o que está saindo sai) o 3D fecha com
+ * 'tm3d:sair' {motivo: 'simular'} — o TM grava o simulado com a semente, uma vez. A tela não começa o jogo (nem com os dois prontos).
+ */
+function simularOnlineTela(meu) {
+  if (!PAG_ONLINE || !pp?.aberta || PAG_ONLINE.encerrado || !simularOnline()) return false;
+  // (o Simular do outro que chega depois do meu: já está saindo — agiu)
+  if (ppOnline.simular) return true;
+  // (o Pronto é final: depois dele o MEU Simular fica desligado — a aba também, aria-disabled; o do outro ainda vale: ele escolheu
+  // antes de ver o meu Pronto. Sem isso, "A pronto → A Simular + B Pronto juntos" levava B ao jogo e A ao simulado — revisão do
+  // PR 5 do Leilão)
+  if (meu && ppOnline.pronto) return false;
+  ppOnline.simular = meu ? 'eu' : 'outro';
+  pp.aviso(meu ? 'Simulando a partida…' : `${PAG_ONLINE.nomeOutro} escolheu simular a partida.`, 4000);
+  PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
+  if (meu) PAG_ONLINE.enviarControle({ tipo: 'simular' });
+  setTimeout(() => { pararCarga(); if (TM) sairTM({ motivo: 'simular', titulares: titularesTM() }); }, 500);
+  return true;
+}
 function acaoPrepartidaOnline(id) {
   if (!PAG_ONLINE || !pp?.aberta) return;
   if (id === 'pronto') {
-    if (ppOnline.pronto || PAG_ONLINE.encerrado) return;
+    if (ppOnline.pronto || ppOnline.simular || PAG_ONLINE.encerrado) return;
     ppOnline = { pronto: true, desde: performance.now() };
     pp.aguardando(PAG_ONLINE.nomeOutro);
     // (o toque no Pronto é o gesto: a tela cheia deitada do Android já aqui — a saída depois não é um gesto)
@@ -4170,6 +4202,8 @@ const PP_QPS = 30;
  * pacotes chegam), o pacote com a MINHA fase e a saída conjunta: eu pronto e o outro pronto (ou além da tela).
  */
 function quadroOnlineTela(agoraMs) {
+  // (o "Simular partida" do outro que chegou antes de a tela abrir: vale agora)
+  if (PAG_ONLINE.simularPendente) PAG_ONLINE.reavisarSimular();
   PAG_ONLINE.quadro(agoraMs, { antes: true });
   PAG_ONLINE.enviarPacote(agoraMs, bitsTelaOnline());
   if (!saidaOnlineTela() && ppOnline.pronto && !PAG_ONLINE.encerrado && agoraMs - ppOnline.desde >= 60000) pp.destacarCanto(true);
@@ -4180,7 +4214,7 @@ function quadroOnlineTela(agoraMs) {
  * Chromium sem GPU, e esperar por ele dava 0,9 s de um lado ao outro (no evento, 12–19 ms).
  */
 function saidaOnlineTela() {
-  if (!pp?.aberta || !ppOnline.pronto || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
+  if (!pp?.aberta || !ppOnline.pronto || ppOnline.simular || !PAG_ONLINE || PAG_ONLINE.encerrado || PAG_ONLINE.faseRemota < 1) return false;
   // (o pacote com o meu Pronto sai antes: o outro sai pela mesma regra)
   PAG_ONLINE.enviarPacote(performance.now(), bitsTelaOnline());
   jogarPrepartida();
@@ -4578,15 +4612,25 @@ async function iniciar() {
     const on = ONLINE_TM ? PEDIDO_TM.online : null;
     PAG_ONLINE = MOD_PAG_ON.criarPaginaOnline({
       lado: LADO_ONLINE, D: on ? on.D0 : +params.get('D') || 4, nomes: on?.nomes ?? ['Lado 0', 'Lado 1'],
+      // (o par do Leilão: a ligação que cai é o simulado, não o W.O. — os textos do aviso)
+      quedaSimula: simularOnline(),
       transporte: ONLINE_TM ? 'porta' : 'bc', sala: on ? on.sala : params.get('online'),
       ao: {
         menuPausar: () => { if (PAG_ONLINE.pausar(performance.now())) hud.fecharMenu(); },
         // sair no meio = derrota (fair play no TM); o 'abandono' vai antes, para o outro ver o W.O. na hora
         menuSair: () => { hud.fecharMenu(); PAG_ONLINE.sair(); setTimeout(() => { if (TM) avisarTM('tm3d:sair', { abandono: true }); }, 400); },
-        wo: (vencedor, motivo) => { if (TM) fimTM(resultadoAtualTM(), { online: { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 } }); },
+        // (o resultado do W.O. leva o online.wo também no que fica gravado em localStorage — o placar parcial não é o do apito: o
+        // par do Leilão guarda o do apito e não pode confundir os dois)
+        wo: (vencedor, motivo) => {
+          if (!TM) return;
+          const online = { wo: { vencedor, motivo }, hashFinal: hashMundo(mundo) >>> 0 }, r = resultadoAtualTM();
+          fimTM(r && typeof r === 'object' ? { ...r, online } : r, { online });
+        },
         dessinc: info => { if (TM) fimTM(null, { online: { dessinc: true, n: info?.n ?? null } }); },
         // a fase do outro subiu (item 64): a tela antes do jogo sai já, se eu estou pronto
         fase: () => saidaOnlineTela(),
+        // (o par do Leilão) o outro escolheu "Simular partida": eu saio também
+        simular: () => simularOnlineTela(false),
         // (item 30, só no convidado) as opções do anfitrião chegaram: a cena de substituição dele vale aqui também
         opcoes: m => {
           const v = MOD_PAG_ON.substOnline(LADO_ONLINE, substLigada, m.subst);
@@ -4951,6 +4995,8 @@ const api = {
     duracao(min) { return mudarAjuste('duracao', min); },
     dificuldade(n) { return mudarAjuste('dificuldade', n); },
   },
+  /** As notas escondidas (o Overall escondido do Modo Leilão do TM, PR 6; ?notasOcultas=1 nos testes): só a tela. */
+  get notasOcultas() { return NOTAS_OCULTAS; },
   /** Põe uma edição do time na fila (entra no próximo passo, como a do "Editar time"). */
   editarTime(ed) { edicaoNaFila = ed ?? null; },
   get edicaoNaFila() { return edicaoNaFila; },
@@ -5004,6 +5050,8 @@ const api = {
       conexao: MOD_ON.estadoConexao(s, performance.now()).estado, pausado: PAG_ONLINE.pausado, pausasRestam: PAG_ONLINE.pausasRestam,
       // (item 64: as fases — 0 tela, 1 pronto, 2 pré-jogo, 3 jogo; -1 = nenhum pacote do outro — e o abandono)
       fase: faseOnlineLocal(), faseRemota: PAG_ONLINE.faseRemota, encerrado: PAG_ONLINE.encerrado,
+      // (o par do Leilão: o "Simular partida" — 'eu' | 'outro' | null — e o que o outro mandou)
+      simular: ppOnline.simular ?? null, simularRemoto: PAG_ONLINE.simularRemoto, simularPendente: PAG_ONLINE.simularPendente, comSimular: simularOnline(),
       aviso: (() => { const a = document.getElementById('online-aviso'); return a && !a.hidden ? a.textContent : ''; })(),
       pausar: () => PAG_ONLINE.pausar(performance.now()), retomar: () => PAG_ONLINE.retomar(performance.now()) };
   },

@@ -33,9 +33,12 @@ for (const [nome, w, h, dpr, mob] of TAMANHOS) {
     });
     const nome = e => (e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\s+/).slice(0, 2).join('.') : e.tagName) + (e.textContent ? ' "' + e.textContent.trim().slice(0, 18) + '"' : '');
     const pares = [];
+    // (a camada fixa de cada um: uma barra fixa embaixo — a da Criar sala, a do Saguão — fica por cima do conteúdo que rola por
+    // baixo dela de propósito; só se comparam os da mesma camada, como no nada sobre nada dos testes do leilão)
+    const camada = e => { let a = e; while (a && a !== document.body) { if (getComputedStyle(a).position === 'fixed') return a; a = a.parentElement; } return null; };
     for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
       const A = els[i], B = els[j];
-      if (A.contains(B) || B.contains(A)) continue;
+      if (A.contains(B) || B.contains(A) || camada(A) !== camada(B)) continue;
       const a = A.getBoundingClientRect(), bb = B.getBoundingClientRect();
       const ix = Math.min(a.right, bb.right) - Math.max(a.left, bb.left), iy = Math.min(a.bottom, bb.bottom) - Math.max(a.top, bb.top);
       if (ix > 1 && iy > 1) pares.push(nome(A) + '  X  ' + nome(B) + '  (' + Math.round(ix) + 'x' + Math.round(iy) + ')');

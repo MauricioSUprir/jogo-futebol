@@ -142,10 +142,19 @@
   // Mesma linguagem do pôster do próximo jogo: foto do estádio do mandante em verde
   // e preto, faixas das capas, escudos grandes, placar no meio e os autores dos gols.
   // o: { a, b (times com club/nation), hs, as, events?, titulo?, res?: {cls: "v"|"d"|"e", txt}, nota?, neutro? }
+  // o escudo DESENHADO (o do Ultimate) de um time sem clube nem seleção: o time do Ultimate e os dele ({ forma, simb, cor }) e
+  // o do Modo Leilão ({ escudo: "forma|simb", cor, sigla }); null sem o escudoUT (aí nada muda)
+  function escudoUT(t, cls) {
+    var e = t && t.escudoUT, u = TM.ut && TM.ut._i;
+    if (!e || !u || !u.escudoEl) return null;
+    var cfg = e.forma ? { forma: e.forma, simb: e.simb } : (u.escudoCfg ? u.escudoCfg({ escudo: e.escudo }) : { forma: "classico", simb: "star" });
+    try { return u.escudoEl(cfg, e.cor || (t.colors && t.colors.primary) || "#22c55e", e.sigla != null ? e.sigla : (t.short || ""), cls); } catch (x) { return null; }
+  }
   function escudoDe(t, cls) {
     t = t || {};
     if (t.club) return TM.img.clubImg(t.club, cls);
     if (t.nation) return TM.img.nationImg(t.nation, cls);
+    var eu = escudoUT(t, cls); if (eu) return eu;
     var c = null, n = null;
     try { c = t.id ? TM.data.club(t.id) : null; } catch (e) {}
     if (c) return TM.img.clubImg(c, cls);
@@ -588,7 +597,7 @@
     topbar: topbar, sectorBar: sectorBar, playerRow: playerRow, ovBadge: ovBadge, button: button, toast: toast,
     showPlayer: showPlayer, optionsMenu: optionsMenu, confirm: confirmSheet,
     applyTheme: applyTheme, compAccent: compAccent, applyCompTheme: applyCompTheme, compBanner: compBanner,
-    stadiumBanner: stadiumBanner, posterFim: posterFim, resultadoDe: resultadoDe, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
+    stadiumBanner: stadiumBanner, posterFim: posterFim, resultadoDe: resultadoDe, escudoUT: escudoUT, teamPickerEl: teamPickerEl, pickTeam: pickTeam, chipKids: chipKids, posPanel: posPanel, dropdown: dropdown, arrivalCutscene: arrivalCutscene,
     current: function () { return current; }
   };
 
@@ -869,6 +878,7 @@
     var MAIS = [
       { ic: "🥅", nome: "Pênaltis 3D", rota: "penaltis3d" }, { ic: "🏋️", nome: "Modo Livre 3D", rota: "livre3d" },
       { icone: "wifi", nome: "Online 3D", rota: "online3d" },   // ícone direto (Lucide), sem emoji
+      { icone: "gavel", nome: "Leilão", rota: "leilao" },       // Modo Leilão (js/leilao-tela.js)
       { ic: "💎", nome: "Dream Team", rota: "dream" }, { ic: "🎲", nome: "Draft", rota: "draft" },
       { ic: "🪙", nome: "Arena", rota: "arena" },      { ic: "🏟️", nome: "Grupo", rota: "groupcomp" },
       { ic: "✏️", nome: "Editor", rota: "editor" },    { ic: "💾", nome: "Carreiras", rota: "saves" },

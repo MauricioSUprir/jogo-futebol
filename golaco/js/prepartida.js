@@ -412,8 +412,9 @@ export function textoTatica(t) {
  * Os dados da tela (puros: só LEEM o mundo; nada do m.rng). ctx (o que é da página: textos, cores, escudos) = {humano, humanos,
  * modo ('partida' | 'tm' | 'rae' | 'livre' | 'penaltis' | 'online'), competicao, classico, hora ('dia' | 'noite'), estadio, data
  * (Date | 'AAAA-MM-DD' | null), trava (o id do travado do Rumo ao Estrelato), times: [{escudo, camisa, camisaGol, cor, pessoa}],
- * dificuldade ('facil' | 'normal' | 'dificil' | 'lenda' | null: a da IA contra a pessoa, item 33)}. A dificuldade vira
- * {curta: 'Normal', longa: 'Dificuldade: Normal'}; null no online (duas pessoas), no Livre e nos Pênaltis.
+ * dificuldade ('facil' | 'normal' | 'dificil' | 'lenda' | null: a da IA contra a pessoa, item 33), notasOcultas (o Modo Leilão do
+ * TM com o Overall escondido, PR 6: as fichas com nota null e a raridade neutra 'n', o time sem o geral nem as estrelas)}. A
+ * dificuldade vira {curta: 'Normal', longa: 'Dificuldade: Normal'}; null no online (duas pessoas), no Livre e nos Pênaltis.
  */
 export function dadosDaPartida(m, ctx = {}) {
   const humanos = ctx.humanos ?? [ctx.humano ?? 0];
@@ -434,16 +435,16 @@ export function dadosDaPartida(m, ctx = {}) {
         if (id == null || (fora && fora.has(id))) continue;
         const f = fichaDe(id);
         if (!f) continue;
-        const nota = notaExibida(f, v.pos);
-        fichas.push({ vaga: v.id, fila: v.fila, col: v.col, pos: v.pos, id, num: f.num ?? '', nome: f.camisa ?? f.nome ?? '', nota, raridade: raridade(nota), gol: v.pos === 'GOL', voce: ctx.trava != null && id === ctx.trava });
+        const nota = ctx.notasOcultas ? null : notaExibida(f, v.pos);
+        fichas.push({ vaga: v.id, fila: v.fila, col: v.col, pos: v.pos, id, num: f.num ?? '', nome: f.camisa ?? f.nome ?? '', nota, raridade: nota == null ? 'n' : raridade(nota), gol: v.pos === 'GOL', voce: ctx.trava != null && id === ctx.trava });
       }
     }
-    const nt = tm && forma ? notaTime(tm.vagas, forma) : { geral: 0 };
+    const nt = ctx.notasOcultas ? { geral: null } : tm && forma ? notaTime(tm.vagas, forma) : { geral: 0 };
     return {
       t, nome: el?.nome ?? extra.nome ?? '', sigla: el?.sigla ?? extra.sigla ?? '', elenco: tm?.elenco ?? null,
       escudo: extra.escudo ?? null, camisa: extra.camisa ?? null, camisaGol: extra.camisaGol ?? null, cor: extra.cor ?? null,
       humano: humanos.includes(t), pessoa: extra.pessoa ?? null,
-      formacao, tatica: { ...(tm?.tatica ?? TATICA_PADRAO) }, selo: seloTatica(tm?.tatica), geral: nt.geral, estrelas: estrelas(nt.geral || 0),
+      formacao, tatica: { ...(tm?.tatica ?? TATICA_PADRAO) }, selo: seloTatica(tm?.tatica), geral: nt.geral, estrelas: nt.geral == null ? null : estrelas(nt.geral || 0),
       fichas, texto: null,
     };
   });

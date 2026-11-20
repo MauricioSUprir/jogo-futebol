@@ -43,6 +43,16 @@ export function classicoDoPedido(pedido) {
   return !!(p && typeof p === 'object' && p.classico === true);
 }
 
+/**
+ * O pedido do Total Match esconde as notas (partida.notasOcultas === true; o Modo Leilão com o "Overall escondido", PR 6 do
+ * TM)? Só a TELA muda: a tela antes do jogo e o Editar time sem a nota, os números da carta e o GERAL; a simulação, o hash e o
+ * resultado não mudam. Vale também no online (o pedido do anfitrião, o mesmo nos dois aparelhos).
+ */
+export function notasOcultasDoPedido(pedido) {
+  const p = pedido && typeof pedido === 'object' ? pedido.partida : null;
+  return !!(p && typeof p === 'object' && p.notasOcultas === true);
+}
+
 /** O ciclo da pausa: 3 → 4 → 5 → 6 → 8 → 10 → 3. Um valor fora da lista (o ?min dos testes) vai à menor opção maior que ele. */
 export function proximaDuracao(min) {
   const k = DURACOES.indexOf(min);

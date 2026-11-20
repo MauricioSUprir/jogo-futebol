@@ -16,9 +16,25 @@
     };
   }
 
+  // FNV-1a de 32 bits de um texto (a semente de um sorteio que todo aparelho refaz igual)
+  function hashStr(s) {
+    var h = 2166136261; s = String(s);
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  // roda fn() com o Math.random preso à semente (um texto) e devolve o que ela retornar;
+  // o Math.random volta ao original mesmo com erro. Iguais aos de copa.js (o mesmo sorteio)
+  function comSemente(semente, fn) {
+    var orig = Math.random;
+    Math.random = makeRng(hashStr(semente));
+    try { return fn(); } finally { Math.random = orig; }
+  }
+
   var TM = (global.TM = global.TM || {});
   TM.rng = {
     make: makeRng,
+    hashStr: hashStr,
+    comSemente: comSemente,
     // helpers construídos sobre uma função rng()
     int: function (rng, min, max) { return Math.floor(rng() * (max - min + 1)) + min; },
     pick: function (rng, arr) { return arr[Math.floor(rng() * arr.length)]; },

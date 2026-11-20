@@ -1961,6 +1961,11 @@
     podeJogar: podeJogar, temContrato: temContrato, ehEmprestimo: ehEmprestimo, podeVender: podeVender,
     objBump: objBump, utTeam: utTeam, goUT: goUT, utTop: utTop, wallet: wallet,
     escudoDe: escudoDe, escudoEl: escudoEl, escudoSvg: escudoSvg, nomeExibido: nomeExibido, siglaDe: siglaDe, painelVinculos: painelVinculos, separaCampo: separaCampo,
+    // o escudo desenhado também para outros modos (o Leilão): as listas do seletor e a leitura de "forma|símbolo";
+    // escudoEl(cfg, cor, sigla) e escudoSvg(cfg, cor, sigla) já servem a qualquer clube (não leem o st())
+    CORES: CORES, FORMAS: FORMAS, FORMA_ORDEM: FORMA_ORDEM, SIMBOLOS: SIMBOLOS, escudoCfg: escudoCfg,
+    // a silhueta da carta (cabeça e ombros) para quem mostra o jogador sem a carta (o Leilão: a foto da pública)
+    silhueta: silhueta,
     DIVS: DIVS, divInfo: divInfo, nomeClube: nomeClube, nomeLiga: nomeLiga, nomePais: nomePais,
     on: on, emit: emit
   };

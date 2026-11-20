@@ -1,0 +1,6243 @@
+#!/usr/bin/env node
+/* Testes do Modo Leilão (PLANO-LEILAO.md §4.1), em Node, sem navegador e sem rede.
+   Carrega num `vm` o rng.js, o data.js (com um TM.storage falso), o viverde.js, o competitions.js, o ultimate.js (as
+   listas do escudo desenhado; o TM.ui de mentira) e os arquivos do leilão, nas duas edições (pública e pro), e roda:
+     L1 lotes · L2 ordem · L3 lance · L4 relógio · L5 fechar · L6 fim · L7 robôs · L8 protocolo (o leilão inteiro
+     pela sessão e pela rede em memória = a máquina pura) · L9 formações e escalação · L10 conferência ·
+     R a rede em memória · S a sessão (botões, motivos, formação, escalação, recarregar, sair, Minhas salas) ·
+     F a rede firebase() sobre o banco falso que se comporta como o SDK compat (ferramentas/lib/banco-falso.mjs): a mesma
+     bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, o onDisconnect ·
+     O o leilão ONLINE: as sessões (criarSala, entrar, abrir) pela firebase() sobre o banco falso em 2, 4 e 8 "aparelhos"
+     (a sala por transação, as recusas, o leilão inteiro igual em todos, o relógio ±5 s, o que pula e o que dorme, quem cai,
+     quem some, o ack perdido, o lance velho, recarregar, outra aba, a presença, passar o clube, a limpeza, a sala mexida —
+     o vivo apagado, os lotes trocados, a edição trocada — e a volta da página sem derrubar a conexão do TM); o servidor
+     falso confere cada gravação do vivo: nenhum lote fecha antes do fim, nenhum lance entra depois ·
+     C o campeonato (PR 3; TM.leilaoCamp e o motor): C1 o calendário dos 3 formatos (T de 2 a 8), C2 a tabela com o
+     desempate total (contra a conta feita no teste, com as chaves embaralhadas), C3 a chave com as folgas, C4 o gol de ouro,
+     C5 a mesma semente = o mesmo resultado (também noutro "aparelho"), C6 os classificados do misto, C7 o semLesao e o motor
+     SEM a opção igual ao de antes (contra a origin/main quando o git a tem e sempre contra a referência gravada em
+     ferramentas/dados/motor-ref.json), C8 a máquina do jogo (aberto → reservado → feito, o prazo, o W.O., a conferência e o
+     campeonato inteiro por 3 "aparelhos" ao mesmo tempo na rede em memória) ·
+     K o campeonato pela SESSÃO (leilao-sessao.js): K0 a duração estimada e o formato, K1 o treino com 1 pessoa e 1–7 bots
+     nos 3 formatos até o campeão (o prazo de 2 min no jogo da pessoa, o Simular que grava antes de responder, cada jogo
+     reservado e gravado uma vez e conferido, a mesma vista noutro "aparelho"), K2 recarregar no meio = os mesmos
+     resultados, K3 a escalação mudada vale a partir do próximo jogo que não começou, K4 a sala adulterada congela ·
+     TD o jogo contra um bot em 3D (PR 4): o resultado do 3D convertido (o gol de ouro e os pênaltis do empate com a
+     semente), gravar uma vez, o W.O. depois do prazo do 3D pelo relógio do servidor, o 3D que não abriu = o simulado,
+     duas abas do mesmo técnico (uma reserva só), a duração e a dificuldade do 3D na sala e a conferência que aceita o 3D
+     e acusa o adulterado ·
+     KO o campeonato ONLINE pela firebase() sobre o banco falso (2, 4 e 8 aparelhos; a limpeza; as regras opcionais do
+     firebase/regras-leilao-validate.json avaliadas em cada gravação: nenhuma honesta recusada, as adulterações recusadas)
+   Uma linha por bloco; o código de saída é 1 se algum reprovar.
+   Uso: node ferramentas/testar-leilao.mjs [--so L1,L7] [--leiloes 1000] [-v] [--rapido] [--caso O1,O4,quatro]
+   (o --caso também escolhe os do KO: dois, limpeza, quatro, oito)
+   --gravar-motor [arquivo]: regrava a referência do motor do C7 (padrão: o js/engine.js da origin/main, pelo git) — só
+   quando o motor mudou DE PROPÓSITO (dizer no PR)
+   (--rapido: o leilão online de 8 até a metade e sem o da queda; --caso: só esses pedaços do O; LEILAO_DEPURA=1 mostra
+   o andamento do O)
+   --tela: o navegador num aparelho (§4.2; o Chromium do Playwright, o TM servido daqui, o relógio do treino acelerado pelo
+   gancho da sessão): "Mais modos" com 13 atalhos, o treino inteiro com 3 bots (os botões, os apagados com o motivo, o Tudo
+   de dois toques, passar, outro valor), recarregar no meio, a escalação, nada sobre nada nos 8 tamanhos, a barra de lance à
+   vista com o relógio rodando, o tema claro, o Formato na Criar, o campeonato no treino pela tela (os 3 formatos até o
+   campeão: Seu jogo com o prazo, o Simular partida que grava antes de mostrar, o Ver o jogo no 2D sem pausa com a
+   prorrogação do gol de ouro e os pênaltis gravados, a tabela, a chave com folgas, o fim) nos 8 tamanhos, no escuro e no
+   claro, e nenhum erro no console; e (T14, PR 4) o jogo contra um bot em 3D pela página de ensaio do 3D
+   (ferramentas/lib/ensaio-3d.mjs): as Partidas em 3D na Criar, o pedido de 11 + 11, o resultado do 3D gravado antes do 2D
+   sem pausa, o "Simular partida" da tela do 3D, o 3D fechado sem resultado = W.O. depois do prazo, o "Sempre simular" e
+   recarregar no meio do 3D (aberto: W.O.; nem aberto: o simulado em 2 min). Uso: node ferramentas/testar-leilao.mjs --tela
+   [--so3d: só o T14] [--prints <pasta>]. Nenhum teste usa o Firebase: o SDK do gstatic é trocado por um vazio. */
+import fs from "node:fs";
+import vm from "node:vm";
+import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import crypto from "node:crypto";
+import { execSync } from "node:child_process";
+import { avaliadorRegras } from "./lib/regras-leilao.mjs";
+import { PASTA_ENSAIO_3D, servirEnsaio3d, ligaEnsaio3d } from "./lib/ensaio-3d.mjs";
+
+const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const args = process.argv.slice(2);
+const opt = (n, p) => { const i = args.indexOf(n); return i >= 0 && args[i + 1] ? args[i + 1] : p; };
+const SO = opt("--so", null) ? opt("--so").split(",").map(s => s.trim().toUpperCase()) : null;
+const N_LEILOES = +opt("--leiloes", 1000);
+// --ocultas: o L7 com as notas escondidas (os robôs pela nota percebida, PR 6) — a medida "depois" do PLANO §8 "Durante o PR 6"
+const OCULTAS_L7 = args.includes("--ocultas");
+const VERBOSO = args.includes("-v");
+const SO_3D = args.includes("--so3d");
+const SO_OCULTAS = args.includes("--soOcultas");
+if (args.includes("--tela")) process.exit(await testeTela());
+const ARQS = ["js/rng.js", "js/data.js", "js/viverde.js", "js/competitions.js", "js/ultimate.js", "js/engine.js", "js/leilao.js", "js/leilao-camp.js", "js/leilao-rede.js", "js/leilao-sessao.js"];
+const REF_MOTOR = path.join(RAIZ, "ferramentas/dados/motor-ref.json");
+if (args.includes("--gravar-motor")) process.exit(gravarMotor());
+
+/* ---------- o carregador: um mundo por edição, com um TM.storage falso ---------- */
+function carrega(ed, guardado) {
+  const store = Object.assign({}, guardado || {});
+  const ctx = { console, Math, Date, JSON, Promise, setTimeout, clearTimeout, Uint32Array, crypto: globalThis.crypto };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  ctx.TM = {
+    storage: {
+      edition: () => ed,
+      read: (k, f) => (k in store ? JSON.parse(store[k]) : f),
+      write: (k, v) => { store[k] = JSON.stringify(v); return true; },
+      remove: k => { delete store[k]; },
+      readRaw: () => null, writeRaw: () => true, removeRaw: () => {},
+      suUnlocked: () => false,
+      settings: () => ({})
+    },
+    // o ultimate.js só usa o TM.ui nas telas: na carga, basta existir
+    ui: { el: () => null, register: () => {}, go: () => {} }
+  };
+  for (const f of ARQS) vm.runInContext(fs.readFileSync(path.join(RAIZ, f), "utf8"), ctx, { filename: f });
+  ctx.TM._store = store;
+  return ctx.TM;
+}
+
+/* ---------- placar ---------- */
+const resultados = [];
+let falhas = 0;
+function bloco(nome, titulo, fn) {
+  if (SO && !SO.includes(nome)) return;
+  const t0 = performance.now(), erros = [], notas = [];
+  const ok = (c, msg) => { if (!c) erros.push(msg); return !!c; };
+  try { fn(ok, s => notas.push(s)); } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+  const ms = performance.now() - t0;
+  const linha = `${erros.length ? "REPROVOU" : "ok      "} ${nome.padEnd(4)} ${titulo}${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`;
+  console.log(linha);
+  if (erros.length) {
+    falhas++;
+    erros.slice(0, VERBOSO ? 200 : 8).forEach(e => console.log("         · " + e));
+    if (erros.length > 8 && !VERBOSO) console.log(`         · … mais ${erros.length - 8}`);
+  }
+  resultados.push({ nome, ok: !erros.length });
+}
+
+const t00 = performance.now();
+const TMs = { public: carrega("public"), pro: carrega("pro") };
+const MUNDO = { public: TMs.public.data.mundoBase(), pro: TMs.pro.data.mundoBase() };
+const LIGAS = MUNDO.public.leagues.map(l => l.id);
+const LE = TMs.public.leilao;
+const cacheLotes = {};
+function lotesDe(ed, liga, T) {
+  const k = ed + "|" + liga + "|" + T;
+  return cacheLotes[k] || (cacheLotes[k] = TMs[ed].leilao.criarLotes(MUNDO[ed], liga, T));
+}
+function ctxDe(ed, liga, T, semente, extra) {
+  const { lotes, fora } = lotesDe(ed, liga, T);
+  return TMs[ed].leilao.contexto(Object.assign({ T, lotes, fora, semente }, extra || {}));
+}
+const GR = ["GK", "DF", "MF", "FW"];
+const cmpNota = (a, b) => (b.overall - a.overall) || (String(a.id).length - String(b.id).length) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+function jsonIgual(a, b) { return JSON.stringify(a) === JSON.stringify(b); }
+
+/* ---------- o motor de leilão só de robôs (o relógio é o dos acontecimentos) ---------- */
+// politica(v, ctx, t) devolve a ação de um técnico "humano" de teste (ou null); sem política, todos são robôs
+function leilaoRobos(ctx, o) {
+  o = o || {};
+  const L = o.LE || LE, T = ctx.T, bots = [];
+  for (let t = 0; t < T; t++) bots.push(L.perfilRobo(ctx.semente, t));
+  let agora = 1000, v = L.inicial(ctx, agora), passos = 0;
+  const estados = [v], vendas = [], erros = [];
+  while (v.fase !== "fim" && passos < 20000) {
+    passos++;
+    let melhor = null;
+    for (const b of bots) {
+      if (o.humanos && o.humanos.includes(b.t)) continue;
+      const a = L.robo(v, ctx, b);
+      if (a && (!melhor || a.quando < melhor.a.quando)) melhor = { a, b };
+    }
+    if (o.politica) for (const t of o.humanos || []) {
+      const a = o.politica(v, ctx, t);
+      if (a && (!melhor || a.quando < melhor.a.quando)) melhor = { a, b: { t }, humano: true };
+    }
+    const fim = L.fimDoLote(v, ctx);
+    let r;
+    if (melhor && melhor.a.quando < fim) {
+      agora = Math.max(agora, melhor.a.quando);
+      if (melhor.humano) r = melhor.a.acao === "lance" ? L.lance(v, ctx, melhor.b.t, melhor.a.alvo, v.seq, agora) : L.passar(v, ctx, melhor.b.t, v.seq, agora);
+      else r = L.aplicarRobo(v, ctx, melhor.b, v.seq, v.n || 0, agora);
+      if (!r.ok) { erros.push("ação recusada: " + r.motivo + " (" + (melhor.humano ? "humano" : "robô") + " " + melhor.b.t + ")"); break; }
+      // todos os outros passaram ou não podem: quem viu fecha na hora (a sessão faz o mesmo)
+      if (r.vivo.seq === v.seq && L.todosPassaram(r.vivo, ctx)) {
+        estados.push(r.vivo);
+        const r2 = L.fechar(r.vivo, ctx, r.vivo.seq, agora);
+        if (!r2.ok) { erros.push("fechar depois de todos passarem: " + r2.motivo); break; }
+        const ultimo = r.vivo; r = r2;
+        if ((ultimo.lider ?? -1) >= 0) vendas.push({ i: ultimo.i, t: ultimo.lider, preco: ultimo.valor });
+      } else if (r.vivo.seq !== v.seq && (v.lider ?? -1) >= 0) vendas.push({ i: v.i, t: v.lider, preco: v.valor });
+    } else {
+      agora = Math.max(agora, fim);
+      r = L.fechar(v, ctx, v.seq, agora);
+      if (!r.ok) { erros.push("fechar na hora: " + r.motivo); break; }
+      if ((v.lider ?? -1) >= 0) vendas.push({ i: v.i, t: v.lider, preco: v.valor });
+    }
+    v = r.vivo;
+    estados.push(v);
+  }
+  if (v.fase !== "fim") erros.push("não terminou em " + passos + " passos");
+  return { v, estados, vendas, erros, minutos: (agora - 1000) / 60000, bots };
+}
+function rngT(s) { return TMs.public.rng.make(TMs.public.rng.hashStr(String(s))); }
+
+/* ===================================================== L1 lotes ===================================================== */
+bloco("L1", "lotes por cota de posição do mundo-base", (ok, nota) => {
+  let casos = 0, falta = 0;
+  const curtos = [], menos = [];
+  // 20 lotes por técnico (dono, 15/11; eram 13): 40 com 2, 80 com 4, 160 com 8. As cotas na proporção das fotos (1,5 GK e
+  // 2,5 FW de cada 13 lotes), feitas aqui sem o leilao.js: GK ⌈3n/26⌉, FW ⌈5n/26⌉, DF e MF dividem o resto (a sobra ímpar no
+  // DF), n = lotes por técnico × T
+  const POR = 20, MAXF = { GK: 1, DF: 5, MF: 5, FW: 4 };
+  const cotaEsp = (T, por) => { const n = por * T, gk = Math.ceil(n * 3 / 26), fw = Math.ceil(n * 5 / 26), r = n - gk - fw; return { GK: gk, DF: Math.ceil(r / 2), MF: Math.floor(r / 2), FW: fw }; };
+  ok(LE.LOTES_POR_TEC === POR && LE.lotesPorTec() === POR && LE.lotesPorTec(3) === POR && LE.lotesPorTec(2) === 13 && LE.lotesPorTec(1) === 13,
+    `20 lotes por técnico nas salas novas e 13 nas de regras 1 e 2: ${LE.LOTES_POR_TEC} · ${[1, 2, 3].map(r => LE.lotesPorTec(r)).join(", ")}`);
+  ok(jsonIgual(LE.cotas(2), { GK: 5, DF: 14, MF: 13, FW: 8 }) && jsonIgual(LE.cotas(4), { GK: 10, DF: 27, MF: 27, FW: 16 }) && jsonIgual(LE.cotas(8), { GK: 19, DF: 55, MF: 55, FW: 31 }),
+    "cotas de 2, 4 e 8 técnicos: " + [2, 4, 8].map(T => JSON.stringify(LE.cotas(T))).join(" · "));
+  // as salas de antes (regras 1 e 2): as cotas de 13 por técnico são as de antes (GK ⌈1,5T⌉, FW ⌈2,5T⌉): 4 técnicos = 6 GK,
+  // 18 DF, 18 MF e 10 FW
+  ok(jsonIgual(LE.cotas(4, 13), { GK: 6, DF: 18, MF: 18, FW: 10 }), "cotas de 4 técnicos com 13: " + JSON.stringify(LE.cotas(4, 13)));
+  for (let T = 2; T <= 8; T++) {
+    const q = LE.cotas(T), q13 = LE.cotas(T, 13), gk = Math.ceil(1.5 * T), fw = Math.ceil(2.5 * T), df = Math.ceil((13 * T - gk - fw) / 2);
+    ok(q.GK + q.DF + q.MF + q.FW === POR * T && GR.every(g => q[g] >= T), `T${T}: as cotas somam ${q.GK + q.DF + q.MF + q.FW} (esperado ${POR * T}) ou um grupo com menos de 1 por técnico`);
+    ok(jsonIgual(q13, { GK: gk, DF: df, MF: 13 * T - gk - fw - df, FW: fw }), `T${T}: as cotas de 13 mudaram: ${JSON.stringify(q13)}`);
+  }
+  // a conta de antes (13 por técnico), feita aqui: os melhores de cada grupo pela cota, `fora` os melhores que sobram até
+  // o máximo do grupo numa formação por técnico
+  function lotesAntes(todos, T) {
+    const q = LE.cotas(T, 13), lotes = [], fora = [], usados = new Set();
+    for (const g of GR) todos.filter(p => p.pos === g).sort(cmpNota).slice(0, q[g]).forEach(p => { lotes.push(p.id); usados.add(p.id); });
+    const nf = { GK: 0, DF: 0, MF: 0, FW: 0 };
+    todos.slice().sort(cmpNota).forEach(p => { if (!usados.has(p.id) && nf[p.pos] < MAXF[p.pos] * T) { nf[p.pos]++; fora.push(p.id); } });
+    return { lotes: lotes.sort(), fora };
+  }
+  for (const ed of ["public", "pro"]) {
+    const W = MUNDO[ed], L = TMs[ed].leilao;
+    for (const liga of LIGAS) {
+      const lg = W.leaguesById[liga], doLiga = new Set(lg.clubIds);
+      // todos os jogadores elegíveis da liga, para conferir "os melhores"
+      const todos = [];
+      lg.clubIds.forEach(cid => { const c = W.clubsById[cid]; if (c.custom || c.viverde || c.especial) return; c.playerIds.forEach(pid => { const p = W.playersById[pid]; if (p && !p.especial) todos.push(p); }); });
+      const naLiga = {}; GR.forEach(g => { naLiga[g] = todos.filter(p => p.pos === g).length; });
+      for (let T = 2; T <= 8; T++) {
+        casos++;
+        const { lotes, fora } = L.criarLotes(W, liga, T), q = L.cotas(T), id = `${ed}/${liga}/T${T}`;
+        const qEsp = cotaEsp(T, POR);
+        ok(jsonIgual(q, qEsp), `${id}: cotas ${JSON.stringify(q)} (esperado ${JSON.stringify(qEsp)})`);
+        // a cota nunca come a reserva de `fora` (o máximo de cada grupo numa formação × T: qualquer time completa os 11 de graça,
+        // compre o que comprar); o que falta num grupo vai para os grupos com folga e, sem folga, a liga fica com menos lotes
+        const livre = {}, teto = {};
+        GR.forEach(g => { livre[g] = Math.max(0, naLiga[g] - MAXF[g] * T); teto[g] = Math.min(q[g], livre[g]); });
+        const faltou = GR.reduce((a, g) => a + q[g] - teto[g], 0), folga = GR.reduce((a, g) => a + livre[g] - teto[g], 0);
+        const esperado = GR.reduce((a, g) => a + teto[g], 0) + Math.min(faltou, folga);
+        ok(lotes.length === esperado && esperado <= POR * T, `${id}: ${lotes.length} lotes (esperado ${esperado})`);
+        if (esperado < POR * T) menos.push(`${id} ${esperado}`);
+        ok(lotes.length >= 13 * T, `${id}: ${lotes.length} lotes, menos que os ${13 * T} de antes`);
+        for (const g of GR) {
+          const n = lotes.filter(l => l.pos === g).length;
+          if (n < teto[g] || n > livre[g]) { falta++; ok(false, `${id}: ${n} ${g} (a cota sem a reserva de fora: ${teto[g]}; livres ${livre[g]})`); }
+        }
+        // a sala de antes (regras 2): os mesmos lotes e os mesmos de fora da conta de antes, exatamente 13T
+        const de13 = L.criarLotes(W, liga, T, { regras: 2 }), ref = lotesAntes(todos, T);
+        ok(de13.lotes.length === 13 * T && jsonIgual(de13.lotes.map(l => l.id).sort(), ref.lotes) && jsonIgual(de13.fora.map(l => l.id), ref.fora), `${id}: os lotes da sala de regras 2 não são os de antes`);
+        for (const g of GR) {
+          // os melhores do grupo: nenhum de fora dos lotes passa um do lote
+          const noLote = new Set(lotes.map(l => l.id));
+          const piorLote = lotes.filter(l => l.pos === g).sort(cmpNota).pop();
+          const melhorFora = todos.filter(p => p.pos === g && !noLote.has(p.id)).sort(cmpNota)[0];
+          if (piorLote && melhorFora) ok(cmpNota(piorLote, melhorFora) < 0, `${id}: ${g} ${melhorFora.id}(${melhorFora.overall}) fora e ${piorLote.id}(${piorLote.overall}) no lote`);
+          // fora: os melhores que sobraram, até o máximo do grupo numa formação por técnico (GK 1, DF 5, MF 5, FW 4) — com a
+          // reserva, sempre ele inteiro: todos completam de graça, comprem o que comprarem
+          const nf = fora.filter(l => l.pos === g).length, alvo = MAXF[g] * T;
+          const sobra = todos.filter(p => p.pos === g && !noLote.has(p.id)).length;
+          ok(nf === Math.min(alvo, sobra), `${id}: fora com ${nf} ${g} (alvo ${alvo}, sobram ${sobra})`);
+          ok(nf === alvo, `${id}: fora com ${nf} ${g}, abaixo do máximo de uma formação × T (${alvo})`);
+          if (nf < alvo) curtos.push(`${id} ${g} ${nf}/${alvo}`);
+        }
+        const ids = lotes.concat(fora).map(l => l.id);
+        ok(new Set(ids).size === ids.length, `${id}: jogador repetido`);
+        for (const l of lotes.concat(fora)) {
+          if (!doLiga.has(l.clubId)) { ok(false, `${id}: ${l.id} de fora da liga (${l.clubId})`); break; }
+          const c = W.clubsById[l.clubId], p = W.playersById[l.id];
+          if (c.custom || c.viverde || c.especial || l.clubId === "viverde" || (p && p.especial)) { ok(false, `${id}: ${l.id} especial/criado/Viverde`); break; }
+          const campos = ["id", "name", "pos", "grupos", "overall", "attrs", "nationId", "clubId", "homeClubId", "number", "height", "weight"];
+          const sem = campos.filter(k => l[k] == null);
+          if (sem.length) { ok(false, `${id}: ${l.id} sem ${sem.join(",")}`); break; }
+          if (l.grupos[0] !== l.pos) { ok(false, `${id}: ${l.id} grupos ${l.grupos} sem a posição principal na frente`); break; }
+        }
+        // determinístico: duas gerações do mundo-base dão os mesmos lotes
+        if (T === 4 && (liga === "br" || liga === "en")) ok(jsonIgual(L.criarLotes(TMs[ed].data.mundoBase(), liga, T), { lotes, fora }), `${id}: outro mundo-base, outros lotes`);
+      }
+    }
+  }
+  // com o clube criado, o Viverde no lugar de um clube e o Editor no armazenamento, os lotes não mudam
+  for (const ed of ["public", "pro"]) {
+    const guardado = {
+      customClub: JSON.stringify({ slotClubId: "br-0", fixo: "viverde" }),
+      edits: JSON.stringify({
+        players: { [MUNDO[ed].clubsById["br-1"].playerIds[0]]: { overall: 99, pos: "GK", name: "Editado" } },
+        moves: { [MUNDO[ed].clubsById["en-0"].playerIds[0]]: "br-2" },
+        created: [{ id: "ed0", clubId: "br-3", name: "Criado", pos: "FW", overall: 95 }]
+      })
+    };
+    const TMe = carrega(ed, guardado);
+    const carreira = TMe.data.world();
+    ok(carreira.clubsById["br-0"].custom && carreira.playersById.ed0, `${ed}: o armazenamento falso não montou a carreira com o clube criado/Editor`);
+    for (const liga of ["br", "en"]) for (const T of [4, 8]) {
+      const com = TMe.leilao.criarLotes(TMe.data.mundoBase(), liga, T), sem = lotesDe(ed, liga, T);
+      ok(jsonIgual(com, sem), `${ed}/${liga}/T${T}: com edições e clube criado, os lotes mudaram`);
+    }
+    ok(TMe.data.world() === carreira, `${ed}: o mundoBase mexeu no cache da carreira`);
+  }
+  nota(`${casos} casos (30 ligas × 2 edições × T 2–8, ${POR} por técnico)${falta ? ", " + falta + " cotas faltando" : ""}; menos lotes (a reserva de fora) em ${menos.length} (${menos.join(", ")}); fora abaixo do alvo em ${curtos.length}${curtos.length ? " (" + curtos.join(", ") + ")" : ""}`);
+});
+
+/* ===================================================== L2 ordem ===================================================== */
+bloco("L2", "ordem dos lotes pela semente", (ok, nota) => {
+  let casos = 0, blocos = 0, blocosVariados = 0, faixasVariadas = 0, primeiroGk = 0;
+  for (const ed of ["public", "pro"]) for (const liga of LIGAS) for (let T = 2; T <= 8; T++) {
+    const { lotes } = lotesDe(ed, liga, T), L = lotes.length;
+    for (const sem of ["s1-" + liga, "outra-" + T]) {
+      casos++;
+      const fila = LE.ordem(lotes, sem, T), id = `${ed}/${liga}/T${T}/${sem}`;
+      ok(fila.length === L && new Set(fila).size === L && fila.every(i => i >= 0 && i < L), `${id}: não é permutação`);
+      ok(jsonIgual(fila, LE.ordem(lotes, sem, T)), `${id}: mesma semente, outra ordem`);
+      const gks = fila.map((li, k) => lotes[li].pos === "GK" ? k : -1).filter(k => k >= 0);
+      const lim = Math.max(1, Math.floor(0.2 * L));
+      ok(gks[0] < lim, `${id}: 1º goleiro em ${gks[0]} (limite ${lim})`);
+      ok(gks.every(k => k < L - T), `${id}: goleiro no último bloco`);
+      primeiroGk += gks[0] / L;
+      // blocos de T: posições e faixas de nota variadas
+      const ovs = lotes.map(l => l.overall).sort((a, b) => a - b), corte = ovs[Math.floor(L / 2)];
+      for (let b = 0; b + T <= L; b += T) {
+        const bl = fila.slice(b, b + T).map(i => lotes[i]);
+        blocos++;
+        if (new Set(bl.map(l => l.pos)).size >= 2) blocosVariados++;
+        if (bl.some(l => l.overall >= corte) && bl.some(l => l.overall < corte)) faixasVariadas++;
+      }
+    }
+    ok(!jsonIgual(LE.ordem(lotes, "a", T), LE.ordem(lotes, "b", T)), `${ed}/${liga}/T${T}: sementes diferentes, mesma ordem`);
+  }
+  const pv = blocosVariados / blocos, fv = faixasVariadas / blocos;
+  ok(pv >= 0.9, `blocos com 2+ posições: ${(pv * 100).toFixed(1)}% (meta ≥ 90%)`);
+  ok(fv >= 0.6, `blocos com notas altas e baixas: ${(fv * 100).toFixed(1)}% (meta ≥ 60%)`);
+  nota(`${casos} ordens; blocos com 2+ posições ${(pv * 100).toFixed(0)}%, com notas altas e baixas ${(fv * 100).toFixed(0)}%; 1º goleiro em média a ${(primeiroGk / casos * 100).toFixed(0)}% da fila`);
+});
+
+/* ================================= ajudantes dos blocos da máquina (um contexto pequeno) ================================= */
+const C4 = ctxDe("public", "br", 4, "maquina");
+function vivoAberto(ctx, agora) { const v = LE.inicial(ctx, agora || 0); return v; }
+function abertoEm(v, ctx) { return v.abre + ctx.espera; }
+// passa todos os técnicos neste lote (fecha sem lance)
+function todosPassam(v, ctx, agora) {
+  let r = { ok: true, vivo: v };
+  for (let t = 0; t < ctx.T && r.vivo.seq === v.seq; t++) { r = LE.passar(r.vivo, ctx, t, v.seq, agora); if (!r.ok) return r; }
+  return r;
+}
+// monta um vivo com o técnico t dono dos lotes `idx` (pela máquina: compras de R$ 1 no lote certo seria lento; aqui a conta)
+function comCompras(ctx, v, t, idx, preco) {
+  const n = JSON.parse(JSON.stringify(v));
+  n.d = n.d.split("");
+  idx.forEach(i => { n.d[i] = LE.letra(t); n.cx[t][0] -= preco; n.cx[t][1] -= 1; n.cx[t][2 + GR.indexOf(ctx.lotes[i].pos)]++; });
+  n.d = n.d.join("");
+  return n;
+}
+
+/* ===================================================== L3 lance ===================================================== */
+bloco("L3", "lance: mínimo, máximo, Tudo, cabe, completo, seq, toque, valor, líder", (ok) => {
+  const ctx = C4, v0 = vivoAberto(ctx, 0), a = abertoEm(v0, ctx) + 100, s = v0.seq;
+  ok(v0.seq === 1 && v0.fase === "lotes" && v0.i === ctx.fila[0] && v0.k === 0, "vivo inicial");
+  ok(v0.cx.every(c => jsonIgual(c, [100, 11, 0, 0, 0, 0])), "caixa inicial R$ 100 e 11 vagas");
+  let r = LE.lance(v0, ctx, 0, 1, s, v0.abre + 10);
+  ok(!r.ok && r.motivo === "pausa", "lance na pausa entre lotes: " + r.motivo);
+  r = LE.lance(v0, ctx, 0, 0, s, a); ok(!r.ok && r.motivo === "valor", "lance de R$ 0: " + r.motivo);
+  r = LE.lance(v0, ctx, 0, 1, s, a); ok(r.ok && r.vivo.valor === 1 && r.vivo.lider === 0 && r.vivo.n === 1, "lance mínimo de R$ 1");
+  const v1 = r.vivo;
+  r = LE.lance(v1, ctx, 1, 1, s, a + 100); ok(!r.ok && r.motivo === "valor", "lance igual ao atual: " + r.motivo);
+  r = LE.lance(v1, ctx, 0, 5, s, a + 100); ok(!r.ok && r.motivo === "lider", "o líder dá outro lance: " + r.motivo);
+  r = LE.passar(v1, ctx, 0, s, a + 100); ok(!r.ok && r.motivo === "lider", "o líder passa: " + r.motivo);
+  // máximo = saldo − (vagas − 1)
+  const vm = JSON.parse(JSON.stringify(v1)); vm.cx[2] = [30, 11, 0, 0, 0, 0];
+  ok(LE.maximo(vm, ctx, 2) === 20 && LE.pode(vm, ctx, 2, a + 100).max === 20, "máximo de R$ 30 com 11 vagas = R$ 20");
+  r = LE.lance(vm, ctx, 2, 21, s, a + 100); ok(!r.ok && r.motivo === "max", "acima do máximo: " + r.motivo);
+  r = LE.lance(vm, ctx, 2, 20, s, a + 100); ok(r.ok && r.vivo.valor === 20, "Tudo (o máximo)");
+  ok(LE.maximo(v1, ctx, 3) === 90, "máximo inicial R$ 90");
+  // com o máximo abaixo do valor + 1 não pode
+  const vm2 = JSON.parse(JSON.stringify(v1)); vm2.valor = 20; vm2.cx[2] = [30, 11, 0, 0, 0, 0];
+  ok(LE.pode(vm2, ctx, 2, a + 100).motivo === "max", "máximo R$ 20 com valor R$ 20: não pode");
+  // não cabe: já tem goleiro e o lote é goleiro
+  const iGk = ctx.lotes.findIndex(l => l.pos === "GK"), outroGk = ctx.lotes.findIndex((l, i) => l.pos === "GK" && i !== iGk);
+  let vg = JSON.parse(JSON.stringify(v0)); vg.i = outroGk; vg = comCompras(ctx, vg, 1, [iGk], 3);
+  r = LE.lance(vg, ctx, 1, 1, s, a); ok(!r.ok && r.motivo === "goleiro", "dois goleiros: " + r.motivo);
+  ok(LE.lance(vg, ctx, 0, 1, s, a).ok, "quem não tem goleiro pode");
+  // sem vaga que sirva: o grupo cheio na formação que mais o aceita (5 DF, 5 MF ou 4 FW, todos só daquele grupo) e
+  // mais um só daquele grupo
+  const MAXG = { DF: 5, MF: 5, FW: 4 };
+  let testouPosicao = false;
+  for (const ctxP of [ctx, ctxDe("public", "br", 8, "maquina"), ctxDe("public", "en", 8, "maquina")]) {
+    for (const g of ["DF", "MF", "FW"]) {
+      const puros = ctxP.lotes.map((l, i) => l.grupos.length === 1 && l.pos === g ? i : -1).filter(i => i >= 0);
+      if (puros.length < MAXG[g] + 1 || testouPosicao) continue;
+      const vp0 = LE.inicial(ctxP, 0);
+      let vf = JSON.parse(JSON.stringify(vp0)); vf.i = puros[MAXG[g]]; vf = comCompras(ctxP, vf, 1, puros.slice(0, MAXG[g]), 1);
+      r = LE.lance(vf, ctxP, 1, 1, vf.seq, abertoEm(vf, ctxP) + 10);
+      ok(!r.ok && r.motivo === "posicao", `${MAXG[g]} ${g} só ${g} + outro: ${r.motivo}`);
+      testouPosicao = true;
+    }
+  }
+  ok(testouPosicao, "nenhuma liga com jogadores de um grupo só para o teste de 'sem vaga que sirva'");
+  // o "cabe" é em QUALQUER uma das 6 formações (§1.3): para cada uma, o time com as vagas dela menos uma aceita o lote que
+  // só fecha nela; os parciais do plano (o 3º atacante, o 4º, o 5º zagueiro, o 5º meia) também; com nenhuma, 'posicao'
+  {
+    const ctxF = ctxDe("public", "br", 8, "maquina");
+    const puros = g => ctxF.lotes.map((l, i) => l.grupos.length === 1 && l.pos === g ? i : -1).filter(i => i >= 0);
+    const P = { GK: puros("GK"), DF: puros("DF"), MF: puros("MF"), FW: puros("FW") };
+    const monta = (cont, g) => {
+      const usados = { GK: 0, DF: 0, MF: 0, FW: 0 }, idx = [];
+      for (const gr of GR) for (let n = 0; n < (cont[gr] || 0); n++) idx.push(P[gr][usados[gr]++]);
+      const lote = P[g][usados[g]];
+      if (idx.some(i => i == null) || lote == null) return null;
+      let v = JSON.parse(JSON.stringify(LE.inicial(ctxF, 0)));
+      v.i = lote; v.k = ctxF.fila.indexOf(lote); v = comCompras(ctxF, v, 1, idx, 1);
+      return { v, idx, lote, ag: abertoEm(v, ctxF) + 10 };
+    };
+    const caso = (cont, g, nome, soNela) => {
+      const m = monta(cont, g);
+      if (!m) { ok(false, `${nome}: sem jogadores de um grupo só para montar`); return; }
+      const pd = LE.pode(m.v, ctxF, 1, m.ag), r = LE.lance(m.v, ctxF, 1, 1, m.v.seq, m.ag);
+      const depois = LE.formacoesQueCabem(LE.contaMascaras(m.idx.concat([m.lote]).map(i => ctxF.lotes[i])));
+      if (soNela) {
+        ok(jsonIgual(depois, soNela), `${nome}: com ele o time cabe em ${depois} (esperado ${soNela})`);
+        ok(pd.pode && r.ok, `${nome}: pode ${pd.pode} (${pd.motivo}), lance ${r.ok ? "aceito" : r.motivo}`);
+      } else ok(!depois.length && !pd.pode && pd.motivo === "posicao" && !r.ok && r.motivo === "posicao", `${nome}: cabe em ${depois}, pode ${pd.motivo}, lance ${r.motivo}`);
+    };
+    const UM = { "4-4-2": "MF", "4-3-3": "FW", "3-5-2": "MF", "3-4-3": "FW", "5-4-1": "DF", "4-2-4": "FW" };
+    for (const f of LE.FORMACOES) {
+      const vg = LE.VAGAS_FORM[f], cont = { GK: vg[0], DF: vg[1], MF: vg[2], FW: vg[3] };
+      cont[UM[f]]--;
+      caso(cont, UM[f], `o 11º que só fecha a ${f}`, [f]);
+    }
+    caso({ GK: 1, FW: 2 }, "FW", "o 3º atacante", ["4-3-3", "3-4-3", "4-2-4"]);
+    caso({ GK: 1, FW: 3 }, "FW", "o 4º atacante", ["4-2-4"]);
+    caso({ GK: 1, DF: 4 }, "DF", "o 5º zagueiro", ["5-4-1"]);
+    caso({ GK: 1, MF: 4 }, "MF", "o 5º meia", ["3-5-2"]);
+    caso({ GK: 1, FW: 4 }, "FW", "o 5º atacante", null);
+    caso({ GK: 1, DF: 5 }, "DF", "o 6º zagueiro", null);
+  }
+  // completo
+  const vc = JSON.parse(JSON.stringify(v0)); vc.cx[3] = [50, 0, 1, 4, 4, 2];
+  r = LE.lance(vc, ctx, 3, 1, s, a); ok(!r.ok && r.motivo === "completo", "time completo: " + r.motivo);
+  // seq visto diferente
+  r = LE.lance(v0, ctx, 0, 1, s + 1, a); ok(!r.ok && r.motivo === "seq", "seq diferente: " + r.motivo);
+  // toque velho (> 2 s) e toque recente
+  r = LE.lance(v0, ctx, 0, 1, s, a + 2600, { toque: a + 100 }); ok(!r.ok && r.motivo === "velho", "toque de 2,5 s atrás: " + r.motivo);
+  r = LE.lance(v0, ctx, 0, 1, s, a + 1500, { toque: a + 100 }); ok(r.ok, "toque de 1,4 s atrás");
+  // a repescagem do MESMO lote tem outro seq: o lance velho guardado é recusado
+  let v = v0, ag = a;
+  const primeiro = v0.i;
+  while (v.fase === "lotes") { const rr = todosPassam(v, ctx, ag); if (!rr.ok) { ok(false, "passar: " + rr.motivo); break; } v = rr.vivo; ag += 10; }
+  ok(v.fase === "rep" && v.i === primeiro && (v.sem || [])[0] === primeiro, `repescagem abre no 1º lote (fase ${v.fase}, i ${v.i})`);
+  r = LE.lance(v, ctx, 0, 1, s, abertoEm(v, ctx) + 10); ok(!r.ok && r.motivo === "seq", "lance com o seq do mesmo lote na fase de lotes: " + r.motivo);
+  r = LE.lance(v, ctx, 0, 1, v.seq, abertoEm(v, ctx) + 10); ok(r.ok, "lance com o seq da repescagem");
+  // alvo que não é número
+  r = LE.lance(v0, ctx, 0, "abc", s, a); ok(!r.ok && r.motivo === "valor", "alvo inválido: " + r.motivo);
+});
+
+/* ===================================================== L4 relógio ===================================================== */
+bloco("L4", "relógio do lote: 10 s, volta a 8 s, fim derivado", (ok) => {
+  const ctx = C4, v0 = vivoAberto(ctx, 5000), ini = abertoEm(v0, ctx);
+  ok(LE.fimDoLote(v0, ctx) === v0.abre + 1500 + 10000, "fim = abre + 1,5 s + 10 s");
+  // lance com 9 s faltando: o fim não muda
+  let r = LE.lance(v0, ctx, 0, 1, v0.seq, ini + 1000); ok(r.ok && LE.fimDoLote(r.vivo, ctx) === ini + 10000, "lance com 9 s faltando: fim igual");
+  // lance com 3 s faltando: volta a 8 s
+  r = LE.lance(r.vivo, ctx, 1, 2, v0.seq, ini + 7000); ok(r.ok && LE.fimDoLote(r.vivo, ctx) === ini + 7000 + 8000, "lance com 3 s faltando: 8 s de novo");
+  const fim = LE.fimDoLote(r.vivo, ctx);
+  let r2 = LE.lance(r.vivo, ctx, 2, 3, v0.seq, fim); ok(!r2.ok && r2.motivo === "tarde", "lance na hora do fim: " + r2.motivo);
+  r2 = LE.lance(r.vivo, ctx, 2, 3, v0.seq, fim - 1); ok(r2.ok, "lance 1 ms antes do fim");
+  // a hora do lance gravada pelo carimbo (o TIMESTAMP do servidor)
+  r2 = LE.lance(r.vivo, ctx, 2, 3, v0.seq, fim - 1, { carimbo: { ".sv": "timestamp" } }); ok(r2.ok && r2.vivo.t && r2.vivo.t[".sv"] === "timestamp", "carimbo no lugar da hora");
+  // tempo do lote de 20 s: dur 20 s, extensão 8 s
+  const c20 = ctxDe("public", "br", 4, "maquina", { tempo: 20000 }), v20 = LE.inicial(c20, 0);
+  ok(LE.fimDoLote(v20, c20) === 1500 + 20000 && c20.ext === 8000, "tempo do lote de 20 s");
+  // repescagem: 6 s e lance com menos de 6 s volta a 6 s
+  let v = v0, ag = ini;
+  while (v.fase === "lotes") { v = todosPassam(v, ctx, ag).vivo; ag += 10; }
+  ok(v.fase === "rep" && LE.fimDoLote(v, ctx) === v.abre + 1500 + 6000, "repescagem: 6 s");
+  const ir = abertoEm(v, ctx);
+  r = LE.lance(v, ctx, 0, 1, v.seq, ir + 5000); ok(r.ok && LE.fimDoLote(r.vivo, ctx) === ir + 5000 + 6000, "repescagem: lance com 1 s faltando volta a 6 s");
+});
+
+/* ===================================================== L5 fechar ===================================================== */
+bloco("L5", "fechar: vendido, sem lance, todos passaram, pulado, idempotente", (ok) => {
+  const ctx = C4, v0 = vivoAberto(ctx, 0), ini = abertoEm(v0, ctx);
+  let r = LE.lance(v0, ctx, 1, 7, v0.seq, ini + 100), v1 = r.vivo;
+  r = LE.fechar(v1, ctx, v0.seq, ini + 5000); ok(!r.ok && r.motivo === "cedo", "fechar antes da hora: " + r.motivo);
+  const fim = LE.fimDoLote(v1, ctx);
+  r = LE.fechar(v1, ctx, v0.seq, fim);
+  ok(r.ok && r.vivo.seq === v0.seq + 1 && r.vivo.d[v0.i] === "b", "vendido: o dono do lote");
+  const g = GR.indexOf(ctx.lotes[v0.i].pos);
+  ok(r.ok && r.vivo.cx[1][0] === 93 && r.vivo.cx[1][1] === 10 && r.vivo.cx[1][2 + g] === 1, "vendido: o caixa desconta R$ 7 e uma vaga");
+  ok(r.ok && r.vivo.k === 1 && r.vivo.i === ctx.fila[1] && r.vivo.abre === fim && (r.vivo.lider ?? -1) === -1 && !r.vivo.valor, "o próximo lote abre");
+  // fechar 2× = 1×
+  const r2 = LE.fechar(v1, ctx, v0.seq, fim + 50); ok(r2.ok && jsonIgual(Object.assign({}, r2.vivo, { abre: 0 }), Object.assign({}, r.vivo, { abre: 0 })), "fechar do mesmo estado: o mesmo resultado");
+  const r3 = LE.fechar(r.vivo, ctx, v0.seq, fim + 50); ok(!r3.ok && r3.motivo === "seq", "fechar de novo com o seq velho: " + r3.motivo);
+  // sem lance → repescagem
+  const fim0 = LE.fimDoLote(v0, ctx);
+  r = LE.fechar(v0, ctx, v0.seq, fim0); ok(r.ok && jsonIgual(r.vivo.sem, [v0.i]) && r.vivo.d[v0.i] === "-", "sem lance: vai para a repescagem");
+  // todos passaram (sem líder): fecha na hora, sem lance
+  r = todosPassam(v0, ctx, ini + 200); ok(r.ok && r.vivo.seq === v0.seq + 1 && jsonIgual(r.vivo.sem, [v0.i]), "todos passaram: fecha na hora");
+  // com líder: os outros passam → vendido na hora
+  let v = v1, s = v1.seq;
+  for (const t of [0, 2]) { r = LE.passar(v, ctx, t, s, ini + 300); v = r.vivo; ok(r.ok && v.seq === s, "passar " + t + " ainda não fecha"); }
+  r = LE.passar(v, ctx, 3, s, ini + 400); ok(r.ok && r.vivo.seq === s + 1 && r.vivo.d[v0.i] === "b" && r.vivo.cx[1][0] === 93, "o último passa: vendido na hora");
+  // quem não pode conta como "passou": com 3 técnicos que já têm goleiro, só um passa e o goleiro fecha
+  const iGk = ctx.fila.find(i => ctx.lotes[i].pos === "GK"), kGk = ctx.fila.indexOf(iGk);
+  const gksDeFora = ctx.lotes.map((l, i) => l.pos === "GK" && i !== iGk ? i : -1).filter(i => i >= 0);
+  let vg = JSON.parse(JSON.stringify(v0)); vg.k = kGk; vg.i = iGk;
+  for (let t = 0; t < 3; t++) vg = comCompras(ctx, vg, t, [gksDeFora[t]], 2);
+  r = LE.passar(vg, ctx, 3, vg.seq, ini + 100); ok(r.ok && r.vivo.seq === vg.seq + 1 && (r.vivo.sem || []).includes(iGk), "os outros não podem: o único que pode passa e fecha");
+  // ninguém pode: o lote é pulado (nem vai para a repescagem)
+  let vp = JSON.parse(JSON.stringify(v0));
+  for (let t = 0; t < 4; t++) vp = comCompras(ctx, vp, t, [gksDeFora[t]], 2);
+  // um goleiro que sobrou com um lote livre antes dele e um que não é goleiro depois (com 20 por técnico há 10 goleiros: o
+  // primeiro que sobrou pode vir colado a outro)
+  const gkRestante = ctx.lotes.map((l, i) => l.pos === "GK" && !gksDeFora.slice(0, 4).includes(i) ? i : -1).filter(i => i >= 0)
+    .find(i => { const k = ctx.fila.indexOf(i); return k > 0 && k + 1 < ctx.fila.length && vp.d[ctx.fila[k - 1]] === "-" && ctx.lotes[ctx.fila[k + 1]].pos !== "GK"; });
+  const kg = ctx.fila.indexOf(gkRestante);
+  vp.k = kg - 1; vp.i = ctx.fila[kg - 1];
+  if (vp.d[vp.i] !== "-") { ok(false, "montagem do pulado"); return; }
+  r = LE.fechar(vp, ctx, vp.seq, LE.fimDoLote(vp, ctx));
+  ok(r.ok && r.vivo.i !== gkRestante && r.vivo.k === kg + 1 && !(r.vivo.sem || []).includes(gkRestante), `ninguém pode: o goleiro é pulado (abriu k ${r.vivo.k}, esperado ${kg + 1})`);
+});
+
+/* ===================================================== L6 fim ===================================================== */
+bloco("L6", "fim: 11 que cabem, 1 goleiro, o completar só com os de fora", (ok, nota) => {
+  let leiloes = 0, completados = 0;
+  const cenarios = [];
+  for (const ed of ["public", "pro"]) for (const liga of ["br", "en", "br3", "jp", "py", "ch"]) for (const T of [2, 5, 8]) cenarios.push([ed, liga, T]);
+  function confereFim(res, ctx, id) {
+    const v = res.v, L = TMs.public.leilao;
+    ok(v.fase === "fim", `${id}: não terminou`);
+    for (let t = 0; t < ctx.T; t++) {
+      const time = L.timeDe(v, ctx, t);
+      ok(time.length === 11, `${id}: técnico ${t} com ${time.length}`);
+      ok(time.filter(p => p.pos === "GK").length === 1, `${id}: técnico ${t} com ${time.filter(p => p.pos === "GK").length} goleiros`);
+      ok(L.formacoesQueCabem(L.contaMascaras(time)).length > 0, `${id}: técnico ${t} não cabe em formação nenhuma`);
+      ok(v.cx[t][1] === 0, `${id}: técnico ${t} com vaga no fim`);
+    }
+    const f = v.f || "", d = v.d;
+    ok(f.length === ctx.fora.length, `${id}: f com ${f.length} (fora ${ctx.fora.length})`);
+    // o completar refeito aqui, sem o do leilao.js (§1.3): um por vez para quem tem menos jogadores (empate: o técnico de
+    // menor índice), o MELHOR de fora ainda livre que cabe (pela nota; desempate pelo id)
+    {
+      const foraOrd = ctx.fora.map((_, j) => j).sort((x, y) => cmpNota(ctx.fora[x], ctx.fora[y]));
+      const tms = [], trav = [], fEsp = ctx.fora.map(() => "-");
+      for (let t = 0; t < ctx.T; t++) { tms.push([]); trav.push(false); }
+      for (let i = 0; i < d.length; i++) if (d[i] !== "-") tms[L.LETRAS.indexOf(d[i])].push(ctx.lotes[i]);
+      for (;;) {
+        let alvo = -1;
+        for (let t = 0; t < ctx.T; t++) if (tms[t].length < 11 && !trav[t] && (alvo < 0 || tms[t].length < tms[alvo].length)) alvo = t;
+        if (alvo < 0) break;
+        const j = foraOrd.find(j => fEsp[j] === "-" && L.formacoesQueCabem(L.contaMascaras(tms[alvo].concat([ctx.fora[j]]))).length > 0);
+        if (j == null) { trav[alvo] = true; continue; }
+        fEsp[j] = L.letra(alvo); tms[alvo].push(ctx.fora[j]);
+      }
+      ok(fEsp.join("") === (f || fEsp.map(() => "-").join("")), `${id}: o completar não deu os melhores de fora na ordem (${f} × esperado ${fEsp.join("")})`);
+    }
+    const idsFora = new Set(ctx.fora.map(l => l.id));
+    for (let j = 0; j < f.length; j++) if (f[j] !== "-") { completados++; ok(idsFora.has(ctx.fora[j].id), `${id}: completou com quem não é de fora`); }
+    // ninguém dos lotes no completar, ninguém repetido
+    const todos = [];
+    for (let t = 0; t < ctx.T; t++) L.timeDe(v, ctx, t).forEach(p => todos.push(p.id));
+    ok(new Set(todos).size === todos.length, `${id}: jogador em dois times`);
+    ok(d.length === ctx.L, `${id}: d`);
+  }
+  for (const [ed, liga, T] of cenarios) {
+    const ctx = ctxDe(ed, liga, T, "fim-" + liga);
+    leiloes++;
+    const res = leilaoRobos(ctx); res.erros.forEach(e => ok(false, `${ed}/${liga}/T${T}: ${e}`));
+    confereFim(res, ctx, `${ed}/${liga}/T${T}`);
+    // um "humano" que passa sempre: completa de graça no fim
+    const resP = leilaoRobos(ctx, { humanos: [0], politica: (v, c, t) => (v.lider ?? -1) !== t && LE.pode(v, c, t).pode ? { acao: "passar", quando: v.abre + c.espera + 200 } : null });
+    resP.erros.forEach(e => ok(false, `${ed}/${liga}/T${T} passivo: ${e}`));
+    confereFim(resP, ctx, `${ed}/${liga}/T${T} passivo`);
+    const doPassivo = (resP.v.f || "").split("").filter(c => c === "a").length;
+    ok(doPassivo === 11, `${ed}/${liga}/T${T}: quem passou sempre completou ${doPassivo} de graça`);
+    // um "humano" guloso: dá o lance mínimo em tudo o que a tela deixa (a tela confia no `pode`)
+    const resG = leilaoRobos(ctx, { humanos: [1], politica: (v, c, t) => LE.pode(v, c, t).pode ? { acao: "lance", alvo: (v.valor || 0) + 1, quando: Math.max(v.abre + c.espera, v.t || 0) + 300 } : null });
+    resG.erros.forEach(e => ok(false, `${ed}/${liga}/T${T} guloso: ${e}`));
+    confereFim(resG, ctx, `${ed}/${liga}/T${T} guloso`);
+    // todos passam sempre: todo mundo completa de graça (o completar de 11T)
+    const resT = leilaoRobos(ctx, { humanos: Array.from({ length: T }, (_, i) => i), politica: (v, c, t) => LE.pode(v, c, t).pode ? { acao: "passar", quando: v.abre + c.espera + 100 + t } : null });
+    resT.erros.forEach(e => ok(false, `${ed}/${liga}/T${T} todos passam: ${e}`));
+    confereFim(resT, ctx, `${ed}/${liga}/T${T} todos passam`);
+  }
+  nota(`${leiloes * 4} leilões (robôs, um que passa, um guloso, todos passam); ${completados} jogadores completados de graça`);
+});
+
+/* ===================================================== L7 robôs ===================================================== */
+bloco("L7", `robôs: ${N_LEILOES} leilões só de robôs${OCULTAS_L7 ? " com as notas escondidas (a nota percebida)" : ""}`, (ok, nota) => {
+  const r = rngT("L7");
+  let completos = 0, recusas = 0, acimaMax = 0, precoSobe = 0, comQuartis = 0, minutos = 0, sobra = 0, tecs = 0, conf = 0;
+  let somaPreco = 0, nVendas = 0, somaNotaTime = 0, nTimes = 0;
+  const amostra = [];
+  for (let n = 0; n < N_LEILOES; n++) {
+    const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7);
+    const ctx = ctxDe(ed, liga, T, "L7-" + n, OCULTAS_L7 ? { notasOcultas: true } : null), res = leilaoRobos(ctx);
+    res.vendas.forEach(x => { somaPreco += x.preco; nVendas++; });
+    if (res.v.fase === "fim") for (let t = 0; t < T; t++) { const tm = LE.timeDe(res.v, ctx, t); if (tm.length) { somaNotaTime += tm.reduce((a, l) => a + l.overall, 0) / tm.length; nTimes++; } }
+    if (res.erros.length) { recusas++; if (recusas <= 5) ok(false, `${ed}/${liga}/T${T}/L7-${n}: ${res.erros[0]}`); }
+    if (res.v.fase === "fim" && !(res.v.f || "").replace(/-/g, "").length) completos++;
+    minutos += res.minutos;
+    res.v.cx.forEach(c => { sobra += c[0]; tecs++; });
+    // nunca acima do máximo: cada lance contra o caixa do estado anterior
+    for (let k = 1; k < res.estados.length; k++) {
+      const a = res.estados[k - 1], b = res.estados[k];
+      if (b.seq === a.seq && (b.n || 0) > (a.n || 0) && b.valor > LE.maximo(a, ctx, b.lider)) acimaMax++;
+      if (n < 60) { const c = LE.conferir(a, b, ctx); if (!c.ok) { conf++; if (conf <= 3) ok(false, `conferência acusou um leilão honesto: ${c.motivo} (${liga}/T${T}/L7-${n}, passo ${k})`); } }
+    }
+    // o preço cresce com a nota: o quartil de cima custa mais que o de baixo
+    const vs = res.vendas.map(x => ({ ov: ctx.lotes[x.i].overall, p: x.preco })).sort((a, b) => b.ov - a.ov);
+    if (vs.length >= 8) {
+      const q = Math.floor(vs.length / 4), media = a => a.reduce((s, x) => s + x.p, 0) / a.length;
+      comQuartis++;
+      if (media(vs.slice(0, q)) > media(vs.slice(-q))) precoSobe++;
+    }
+    if (n < 20) amostra.push({ ctx, res });
+  }
+  const pc = completos / N_LEILOES, ps = precoSobe / Math.max(1, comQuartis);
+  ok(pc >= 0.99, `completam sem a reposição: ${(pc * 100).toFixed(1)}% (meta ≥ 99%)`);
+  ok(acimaMax === 0, `${acimaMax} lances acima do máximo`);
+  ok(ps >= 0.9, `o quartil de cima custa mais em ${(ps * 100).toFixed(1)}% dos leilões (meta ≥ 90%)`);
+  // a mesma semente dá o mesmo leilão
+  for (const { ctx, res } of amostra.slice(0, 10)) {
+    const ctx2 = LE.contexto({ T: ctx.T, lotes: ctx.lotes, fora: ctx.fora, semente: ctx.semente, notasOcultas: ctx.notasOcultas });
+    ok(jsonIgual(leilaoRobos(ctx2).vendas, res.vendas), `mesma semente, outro leilão (${ctx.semente})`);
+  }
+  // dois robôs com o MESMO perfil não repetem a sequência (o sorteio leva o técnico)
+  {
+    const ctx = amostra[0].ctx, estados = amostra[0].res.estados.slice(0, 200);
+    let iguais = 0, comparados = 0;
+    const b0 = { t: 0, perfil: "equilibrado", agress: 1, formacao: "4-4-2" }, b1 = Object.assign({}, b0, { t: 1 });
+    for (const v of estados) {
+      if ((v.lider ?? -1) === 0 || (v.lider ?? -1) === 1) continue;
+      const a0 = LE.robo(v, ctx, b0), a1 = LE.robo(v, ctx, b1);
+      if (a0 && a1) { comparados++; if (a0.quando === a1.quando && a0.alvo === a1.alvo) iguais++; }
+    }
+    ok(comparados > 20 && iguais / comparados < 0.2, `dois robôs iguais repetem ${iguais} de ${comparados} ações`);
+  }
+  // o mesmo robô rodado por 3 "aparelhos" dá o mesmo leilão: cada um calcula e tenta a transação; quem chega
+  // depois do estado mudar aborta (seq/n) e recalcula
+  for (const { ctx, res } of amostra.slice(0, 5)) {
+    const bots = []; for (let t = 0; t < ctx.T; t++) bots.push(LE.perfilRobo(ctx.semente, t));
+    const ra = rngT("aparelhos-" + ctx.semente);
+    let agora = 1000, v = LE.inicial(ctx, agora), passos = 0, abortos = 0;
+    while (v.fase !== "fim" && passos++ < 20000) {
+      // cada aparelho escolhe a próxima ação pelo estado que viu (todos viram o mesmo)
+      const planos = [0, 1, 2].map(() => { let m = null; for (const b of bots) { const a = LE.robo(v, ctx, b); if (a && (!m || a.quando < m.a.quando)) m = { a, b }; } return m; });
+      const fim = LE.fimDoLote(v, ctx), p = planos[0];
+      if (p && p.a.quando < fim) {
+        agora = Math.max(agora, p.a.quando);
+        // os 3 tentam em ordem sorteada, com o seq/n que viram
+        const ordemAp = [0, 1, 2].sort(() => ra() - 0.5);
+        const seqV = v.seq, nV = v.n || 0;
+        let atual = v;
+        for (const ap of ordemAp) {
+          const rr = LE.aplicarRobo(atual, ctx, planos[ap].b, seqV, nV, agora);
+          if (rr.ok) atual = rr.vivo; else abortos++;
+        }
+        if (atual.seq === v.seq && LE.todosPassaram(atual, ctx)) atual = LE.fechar(atual, ctx, atual.seq, agora).vivo;
+        v = atual;
+      } else {
+        agora = Math.max(agora, fim);
+        // os 3 tentam fechar; só o 1º consegue
+        let atual = v;
+        for (let ap = 0; ap < 3; ap++) { const rr = LE.fechar(atual, ctx, v.seq, agora); if (rr.ok) atual = rr.vivo; else abortos++; }
+        v = atual;
+      }
+    }
+    const final = d => d.v ? d.v.d + "|" + JSON.stringify(d.v.cx) : "";
+    ok(final({ v }) === final(res), `3 aparelhos, outro leilão (${ctx.semente})`);
+    ok(abortos > 0, "3 aparelhos sem nenhuma transação abortada (o teste não testou nada)");
+  }
+  ok(conf === 0, `conferência acusou ${conf} transições honestas`);
+  nota(`${(pc * 100).toFixed(1)}% completos sem a reposição; quartil de cima mais caro em ${(ps * 100).toFixed(0)}%; ~${(minutos / N_LEILOES).toFixed(1)} min de leilão em média; sobra média R$ ${(sobra / tecs).toFixed(1)} por técnico; preço médio R$ ${(somaPreco / Math.max(1, nVendas)).toFixed(2)}; nota média do time ${(somaNotaTime / Math.max(1, nTimes)).toFixed(2)}`);
+});
+
+/* ===================================================== L8 protocolo (a sessão) ===================================================== */
+// o relógio e a agenda de mentira: a hora só anda de um acontecimento para o próximo (o leilão inteiro em segundos)
+function relogioVirtual(inicio) {
+  const V = { hora: inicio || 1_000_000, fila: [], id: 0 };
+  V.relogio = () => V.hora;
+  V.agendar = (fn, ms) => { const e = { at: V.hora + Math.max(0, +ms || 0), fn, id: ++V.id, morto: false }; V.fila.push(e); return e; };
+  V.cancelar = e => { if (e) e.morto = true; };
+  // roda até pare() ou a agenda esvaziar; entre um acontecimento e outro, todas as promessas pendentes
+  V.anda = async (pare, max = 400000) => {
+    for (let k = 0; k < max; k++) {
+      await new Promise(r => setImmediate(r));
+      if (pare && pare()) return true;
+      V.fila = V.fila.filter(e => !e.morto);
+      if (!V.fila.length) return !!(pare && pare());
+      let m = 0;
+      for (let i = 1; i < V.fila.length; i++) { const a = V.fila[i], b = V.fila[m]; if (a.at < b.at || (a.at === b.at && a.id < b.id)) m = i; }
+      const e = V.fila.splice(m, 1)[0];
+      V.hora = Math.max(V.hora, e.at);
+      e.fn();
+    }
+    return false;
+  };
+  // espera uma promessa que depende da agenda (a latência da rede): anda até ela resolver
+  V.espera = async p => { let feito = false; p.then(() => { feito = true; }, () => { feito = true; }); await V.anda(() => feito); return p; };
+  return V;
+}
+function armazemFalso(guardado) {
+  const g = guardado || {};
+  return { g, ler: (k, p) => (k in g ? JSON.parse(g[k]) : p), gravar: (k, v) => { g[k] = JSON.stringify(v); }, apagar: k => { delete g[k]; } };
+}
+// o "humano" de teste: decide como um robô com o perfil do técnico 0 e age pela API da sessão (lance/passar), meio
+// milissegundo depois do robô que empataria com ele (na máquina pura o robô ganha o empate)
+function piloto(S, V, Lx) {
+  const perfil = Lx.perfilRobo(S.ctx.semente, S.eu);
+  let pend = null, chave = null, parado = false, acoes = 0;
+  const olha = () => {
+    const v = S.vivoN;
+    if (parado || !v || v.fase === "fim" || !S.sala || S.sala.meta.estado !== "leilao") { if (pend) V.cancelar(pend); pend = null; return; }
+    const k = v.seq + ":" + v.n + ":" + v.p;
+    if (k === chave) return;
+    chave = k;
+    if (pend) V.cancelar(pend);
+    pend = null;
+    const a = Lx.robo(v, S.ctx, perfil);
+    if (!a) return;
+    pend = V.agendar(() => { pend = null; acoes++; if (a.acao === "lance") S.lance(a.alvo); else S.passar(); }, a.quando + 0.5 - S.hora());
+  };
+  const off = S.aoMudar(olha);
+  olha();
+  return { parar() { parado = true; off(); if (pend) V.cancelar(pend); }, acoes: () => acoes };
+}
+function politicaPiloto(Lx, semente) {
+  const perfil = Lx.perfilRobo(semente, 0);
+  return (v, c, t) => { const a = Lx.robo(v, c, perfil); return a && Object.assign({}, a, { quando: a.quando + 0.5 }); };
+}
+// conta as transações que cada aparelho tentou e as que abortaram (para provar que houve disputa)
+function contaTransacoes(rede) {
+  const c = { tentou: 0, abortou: 0 }, orig = rede.transacao;
+  rede.transacao = (cam, fn) => { c.tentou++; return orig(cam, fn).then(r => { if (!r.feito) c.abortou++; return r; }); };
+  return c;
+}
+function resumoFinal(v) { return v ? JSON.stringify({ d: v.d, cx: v.cx, f: v.f || "", sem: v.sem || [] }) : "sem vivo"; }
+function vendasDaRede(arv) {
+  const out = [], vd = arv && arv.vendas;
+  if (vd) Object.keys(vd).forEach(k => { if (vd[k]) out.push({ i: +k, t: vd[k].t, preco: vd[k].v }); });
+  return out.sort((a, b) => a.i - b.i);
+}
+async function blocoAsync(nome, titulo, fn) {
+  if (SO && !SO.includes(nome)) return;
+  const t0 = performance.now(), erros = [], notas = [];
+  const ok = (c, msg) => { if (!c) erros.push(msg); return !!c; };
+  try { await fn(ok, s => notas.push(s)); } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+  const ms = performance.now() - t0;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} ${nome.padEnd(4)} ${titulo}${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) {
+    falhas++;
+    erros.slice(0, VERBOSO ? 200 : 8).forEach(e => console.log("         · " + e));
+    if (erros.length > 8 && !VERBOSO) console.log(`         · … mais ${erros.length - 8}`);
+  }
+  resultados.push({ nome, ok: !erros.length });
+}
+// confere um fim de leilão visto por uma sessão: 11 que cabem para todos, o vivo de cada aparelho = o do banco
+function confereFimSessao(ok, S, id) {
+  const Lx = TMs.public.leilao, v = S.vivoN, ctx = S.ctx;
+  ok(v && v.fase === "fim", `${id}: não chegou ao fim`);
+  if (!v) return;
+  for (let t = 0; t < ctx.T; t++) {
+    const time = Lx.timeDe(v, ctx, t);
+    ok(time.length === 11 && Lx.formacoesQueCabem(Lx.contaMascaras(time)).length > 0, `${id}: técnico ${t} com ${time.length} que ${Lx.formacoesQueCabem(Lx.contaMascaras(time)).length ? "" : "não "}cabem`);
+    const e = S.escalacao(t);
+    ok(e && e.tit.length === 11 && e.tit.every(k => k >= 0) && e.n === 11, `${id}: escalação do técnico ${t} incompleta: ${JSON.stringify(e && e.tit)}`);
+  }
+  ok(!S.alterada, `${id}: a conferência acusou a sala honesta (${S.alterada})`);
+}
+
+// anda o relógio virtual até a hora h (os acontecimentos antes dela acontecem)
+// (na hora da sessão S, que pode estar acelerada ou deslocada da hora da agenda)
+async function ate(V, h, S) {
+  const agora = () => (S ? S.hora() : V.hora), f = S && S._fator ? S._fator() : 1;
+  if (h > agora()) V.agendar(() => {}, (h - agora()) / f);
+  await V.anda(() => agora() >= h);
+}
+
+async function testeSessao() {
+  await blocoAsync("S", "sessão: identidades, botões e motivos, Tudo, antes/fechado, formação, escalação, Pronto, pausa, Minhas salas", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, U = TMx.ut._i, mundo = MUNDO.public;
+    // --- identidades: 7 bots com nomes e clubes fictícios, cores sem repetir (nem a do humano), escudo desenhado
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "br", bots: 7, semente: "S-ident", codigo: "SIDENT", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true,
+        clube: { nome: "Um Nome de Clube Muito Comprido", sigla: "abcd", cor: "#EF4444", escudo: "diamante|crown" } }));
+      const tv = A.ver().tecnicos;
+      ok(tv.length === 8 && A.eu === 0 && tv[0].eu && !tv[0].bot && tv.slice(1).every(t => t.bot), "8 técnicos, o humano no 0 e 7 bots");
+      ok(tv[0].clube.nome === "Um Nome de Clube" && tv[0].clube.sigla === "ABC" && tv[0].clube.cor === "#ef4444" && tv[0].clube.escudo === "diamante|crown", "o clube do humano limpo: " + JSON.stringify(tv[0].clube));
+      const nomes = tv.slice(1).map(t => t.nome), clubes = tv.slice(1).map(t => t.clube.nome), cores = tv.map(t => t.clube.cor.toLowerCase());
+      ok(nomes.every(n => /^Bot [A-ZÀ-Ú][a-zà-ú]+$/.test(n)) && new Set(nomes).size === 7, "nomes dos bots: " + nomes.join(", "));
+      ok(clubes.every(c => SS.CLUBES_BOT.some(x => x[0] === c)) && new Set(clubes).size === 7, "clubes dos bots: " + clubes.join(", "));
+      ok(new Set(cores).size === 8, "cores repetidas: " + cores.join(" "));
+      ok(tv.every(t => { const c = U.escudoCfg({ escudo: t.clube.escudo }); return c.forma + "|" + c.simb === t.clube.escudo && U.FORMAS[c.forma] && U.SIMBOLOS.includes(c.simb) && t.clube.nome.length <= 16 && /^[A-Z0-9À-Ú]{1,3}$/.test(t.clube.sigla); }), "escudos: " + tv.map(t => t.clube.escudo).join(" "));
+      // os nomes pelo perfil (Arrojado/Ousado… para quem compra estrelas)
+      // o nome vem do perfil (Arrojado/Ousado… para quem compra estrelas); um nome avulso só com os do perfil já usados
+      ok(tv.slice(1).every(t => { const lst = SS.NOMES_BOT[Lx.perfilRobo("S-ident", t.t).perfil]; return lst.includes(t.nome) || lst.every(n => nomes.slice(0, t.t - 1).includes(n)); }),
+        "nome × perfil: " + tv.slice(1).map(t => t.nome + "/" + Lx.perfilRobo("S-ident", t.t).perfil).join(", "));
+      const B = await V.espera(SS.criarTreino({ liga: "br", bots: 3, semente: "S-ident2", codigo: "SIDEN2", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true }));
+      ok(jsonIgual(B.ver().tecnicos[0].clube, { nome: "Meu Clube", sigla: "MEU", cor: "#22c55e", escudo: "classico|tm-bola" }), "sem o Ultimate, o clube padrão: " + JSON.stringify(B.ver().tecnicos[0].clube));
+      A.parar(); B.parar();
+    }
+    // --- botões, motivos e respostas do lance (3 técnicos; a pessoa com latência de 40 ms, o "outro aparelho" sem)
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "en", bots: 2, semente: "S-botoes", codigo: "SBOTAO", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: 40, semAtual: true }));
+      const outro = A.rede.outroCliente({ latencia: 0 }), ctx = A.ctx;
+      const lanceDe = (t, alvo) => V.espera(outro.transacao("vivo", cur => { const r = Lx.lance(cur, ctx, t, alvo, cur.seq, outro.horaServidor()); return r.ok ? r.vivo : undefined; }));
+      await V.anda(() => !!A.vivoN);
+      let w = A.ver();
+      ok(w.lote && w.lote.pausa && w.botoes["+1"].motivo === "pausa" && !w.botoes.passar.pode, "na pausa entre lotes, os botões desligados: " + JSON.stringify(w.botoes && w.botoes["+1"]));
+      ok(w.lote && w.lote.ordem === 1 && w.lote.total === 3 * Lx.LOTES_POR_TEC && w.lote.retrato && w.lote.dur === 10000 && w.proximos.length === 5, "o lote 1 de 60 (3 técnicos × 20) com o retrato, 10 s e os 5 próximos: " + (w.lote && w.lote.total));
+      await ate(V, w.lote.liberado + 10, A);
+      w = A.ver();
+      ok(w.botoes["+1"].pode && w.botoes["+1"].alvo === 1 && w.botoes["+5"].alvo === 5 && w.botoes["+10"].alvo === 10 && w.botoes.tudo.alvo === 90 && w.botoes.outro.min === 1 && w.botoes.outro.max === 90 && w.botoes.passar.pode, "os alvos sobre o valor visto (0) e o Tudo R$ 90: " + JSON.stringify(w.botoes));
+      let r = await V.espera(A.lance("+1"));
+      w = A.ver();
+      ok(r.ok && r.estado === "aceito" && w.lote.lider === 0 && w.lote.valor === 1, "o +1 aceito: " + JSON.stringify(r));
+      ok(w.botoes["+1"].motivo === "lider" && !w.botoes.passar.pode && w.tecnicos[0].lider, "quem lidera não dá lance nem passa");
+      await lanceDe(1, 2);
+      // a pessoa toca no +1 (vê R$ 2) e o técnico 2 chega antes com R$ 3
+      const pa = A.lance("+1"); await lanceDe(2, 3); r = await V.espera(pa);
+      ok(!r.ok && r.estado === "antes" && r.valor === 3 && A.ver().lote.lider === 2, "alguém chegou antes: " + JSON.stringify(r));
+      // o +5 também é sobre o valor VISTO: com um lance no meio, aborta (nunca sobe sozinho, mesmo cobrindo o novo)
+      const pb = A.lance("+5"); await lanceDe(1, 4); r = await V.espera(pb);
+      ok(!r.ok && r.estado === "antes" && r.valor === 4 && A.ver().lote.lider === 1, "o +5 com um lance no meio: " + JSON.stringify(r));
+      r = await V.espera(A.lance(1000)); ok(!r.ok && r.motivo === "max" && r.max === 90, "outro valor acima do máximo: " + JSON.stringify(r));
+      r = await V.espera(A.lance(4)); ok(!r.ok && r.motivo === "valor", "outro valor que não passa do atual: " + JSON.stringify(r));
+      const vendidos = []; A.on("vendido", x => vendidos.push(x));
+      r = await V.espera(A.lance("tudo"));
+      ok(r.ok && r.valor === 90, "o Tudo: " + JSON.stringify(r));
+      await V.anda(() => A.vivoN.seq > w.lote.seq);   // ninguém cobre R$ 90: todos passaram, fecha na hora
+      w = A.ver();
+      ok(vendidos.length === 1 && vendidos[0].t === 0 && vendidos[0].preco === 90 && vendidos[0].eu, "vendido para a pessoa por R$ 90: " + JSON.stringify(vendidos));
+      ok(w.tecnicos[0].saldo === 10 && w.tecnicos[0].vagas === 10 && w.tecnicos[0].max === 1 && w.ultimo && w.ultimo.tipo === "vendido", "o caixa depois do Tudo: " + JSON.stringify(w.tecnicos[0]));
+      ok(w.meu.time.length === 1 && w.meu.escalacao.n === 1 && w.meu.escalacao.tit.filter(k => k >= 0).length === 1, "o comprado no campinho");
+      await V.anda(() => A.vendas[vendidos[0].i]);
+      ok(A.ver().vendas.some(x => x.i === vendidos[0].i && x.t === 0 && x.preco === 90), "a venda registrada (vendas)");
+      // o próximo lote: passar; depois o lance chega com o lote já fechado
+      await ate(V, A.ver().lote.liberado + 10, A);
+      if (A.ver().botoes.passar.pode) {
+        r = await V.espera(A.passar());
+        ok(r.ok && A.ver().botoes["+1"].motivo === "passou" && A.ver().tecnicos[0].passou, "passar: " + JSON.stringify(r));
+      } else ok(false, "não pôde passar: " + JSON.stringify(A.ver().botoes.passar));
+      await V.anda(() => A.ver().lote && !A.ver().lote.pausa && A.ver().botoes["+1"].pode);
+      const pf = A.lance("+1");
+      await V.espera(outro.transacao("vivo", cur => Lx.fechar(cur, ctx, cur.seq, Lx.fimDoLote(cur, ctx)).vivo));
+      r = await V.espera(pf);
+      ok(!r.ok && r.estado === "fechado", "o lance que chega com o lote fechado: " + JSON.stringify(r));
+      // textos dos motivos (as telas mostram)
+      ok(SS.textoMotivo("max", { max: 90 }) === "Acima do seu máximo R$ 90" && SS.textoMotivo("goleiro") === "Você já tem goleiro" && SS.textoMotivo("antes", { valor: 7 }) === "Alguém chegou antes: R$ 7", "textoMotivo");
+      // pausa e aceleração do relógio do treino (ganchos)
+      const h0 = A.hora(); A.pausar(); V.hora += 5000;
+      ok(A.hora() === h0 && A.pausado(), "pausado, o relógio do treino não anda");
+      const seqP = A.vivoN.seq; await V.anda(null, 30);
+      ok(A.vivoN.seq === seqP, "pausado, nada acontece");
+      A.retomar(); A.acelerar(10); const h1 = A.hora(); V.hora += 100;
+      ok(Math.abs(A.hora() - h1 - 1000) < 1e-6, "acelerado 10×: " + (A.hora() - h1));
+      A.acelerar(1);
+      A.parar();
+    }
+    // --- formação e escalação: a preferida que deixa de caber muda sozinha (com aviso); trocar; Pronto → campeonato
+    {
+      // a preferida: uma em que o time que a pessoa vai ganhar de graça NÃO cabe (pela máquina pura, sem lances dela)
+      const ctxE = Lx.contexto(Object.assign({ T: 4, semente: "S-esc" }, Lx.criarLotes(mundo, "en", 4)));
+      const puraE = leilaoRobos(ctxE, { LE: Lx, humanos: [0], politica: () => null });
+      const cabemE = Lx.formacoesQueCabem(Lx.contaMascaras(Lx.timeDe(puraE.v, ctxE, 0)));
+      const pref = Lx.FORMACOES.find(f => !cabemE.includes(f)) || "4-2-4";
+      const V = relogioVirtual(), arm = armazemFalso();
+      const A = await V.espera(SS.criarTreino({ liga: "en", bots: 3, formacao: pref, semente: "S-esc", codigo: "SESCAL", mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true }));
+      const avisos = [], estados = []; A.on("formacao", x => avisos.push(x)); A.on("estado", x => estados.push(x.estado));
+      await V.anda(() => !!A.vivoN);
+      let r = await V.espera(A.trocar(0, 1)); ok(!r.ok && r.motivo === "incompleto", "trocar com o time incompleto: " + JSON.stringify(r));
+      r = await V.espera(A.mudarFormacao("4-3-3")); ok(r.ok && A.escalacao(0).formacao === "4-3-3", "mudar a formação no começo");
+      r = await V.espera(A.mudarFormacao(pref)); ok(r.ok, "de volta à preferida " + pref);
+      // a pessoa não dá lance: completa de graça no fim (com os melhores de fora, sem olhar a preferida)
+      await V.anda(() => A.vivoN.fase === "fim");
+      await V.anda(() => A.sala.meta.estado === "escalacao");
+      const time = Lx.timeDe(A.vivoN, A.ctx, 0), cabem = Lx.formacoesQueCabem(Lx.contaMascaras(time));
+      const e = A.escalacao(0);
+      ok(cabem.includes(e.formacao) && e.n === 11 && e.tit.every(k => k >= 0), "a escalação no fim cabe: " + e.formacao + " em " + cabem);
+      ok(jsonIgual(cabem, cabemE), "o time de graça ≠ o da máquina pura: " + cabem + " × " + cabemE);
+      ok(!cabem.includes(pref) && avisos.length >= 1 && avisos[0].de === pref && avisos[avisos.length - 1].para === e.formacao && A.escal[0].formacao === e.formacao && e.pref === e.formacao && !e.aviso,
+        `o ${pref} deixou de caber: o aviso e a formação nova (${JSON.stringify(avisos)}, escal ${JSON.stringify(A.escal[0])})`);
+      const naoCabe = Lx.FORMACOES.find(f => !cabem.includes(f));
+      if (naoCabe) { r = await V.espera(A.mudarFormacao(naoCabe)); ok(!r.ok && r.motivo === "naoCabe", "mudar para uma que não cabe: " + JSON.stringify(r)); }
+      // trocar duas vagas do mesmo grupo vale; o goleiro com um zagueiro, não
+      const slots = Lx.slotsDe(e.formacao), dfs = slots.map((s, i) => s[0] === "DF" ? i : -1).filter(i => i >= 0);
+      r = await V.espera(A.trocar(dfs[0], dfs[1]));
+      const e2 = A.escalacao(0);
+      ok(r.ok && e2.manual && e2.tit[dfs[0]] === e.tit[dfs[1]] && e2.tit[dfs[1]] === e.tit[dfs[0]], "trocar dois zagueiros: " + JSON.stringify(r));
+      r = await V.espera(A.trocar(0, dfs[0])); ok(!r.ok && r.motivo === "grupo", "o goleiro na vaga do zagueiro: " + JSON.stringify(r));
+      // a formação nova desfaz a troca à mão (a automática da formação nova)
+      const outra = cabem.find(f => f !== e.formacao);
+      if (outra) { r = await V.espera(A.mudarFormacao(outra)); ok(r.ok && !A.escalacao(0).manual && A.escalacao(0).formacao === outra, "outra formação: a automática"); }
+      // Pronto: com só uma pessoa, o campeonato abre na hora (sem esperar os 60 s)
+      const hP = A.hora();
+      r = await V.espera(A.prontoEscalacao(true));
+      await V.anda(() => A.sala.meta.estado === "camp");
+      ok(A.sala.meta.estado === "camp" && A.hora() - hP < 1000 && A.ver().meu.pronto, "Pronto leva ao campeonato: " + A.sala.meta.estado + " em " + (A.hora() - hP) + " ms");
+      ok(jsonIgual(estados, ["escalacao", "camp"]), "estados da sala: " + estados);
+      A.parar();
+    }
+    // --- só olhar (regras de outra versão), conferência e Minhas salas
+    {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "es", bots: 2, semente: "S-x", codigo: "SXAAAA" }, base)));
+      await V.anda(() => A.vivoN && A.vivoN.seq >= 3);
+      A.parar(); await V.anda(null, 30);
+      // a sala gravada com outras regras: abre só para olhar (nada anda)
+      const g = JSON.parse(arm.g["leilao:sala:SXAAAA"]); g.sala.meta.regras = Lx.REGRAS + 1; arm.g["leilao:sala:SXAAAA"] = JSON.stringify(g);
+      const O = await V.espera(SS.abrir("SXAAAA", base));
+      const seqO = O.vivoN.seq; await V.anda(null, 40);
+      const rO = await V.espera(O.lance("+1"));
+      ok(O.soOlhar && O.vivoN.seq === seqO && !rO.ok && rO.motivo === "fase", "regras de outra versão: só olha");
+      O.parar();
+      g.sala.meta.regras = Lx.REGRAS; arm.g["leilao:sala:SXAAAA"] = JSON.stringify(g);
+      // um vivo adulterado (o saldo que volta) congela a sessão
+      const B = await V.espera(SS.abrir("SXAAAA", base)), alt = [];
+      B.on("alterada", x => alt.push(x.motivo));
+      const outro = B.rede.outroCliente();
+      await V.espera(outro.transacao("vivo", cur => { cur.cx[1][0] = 150; return cur; }));
+      const seqB = B.vivoN.seq; await V.anda(null, 40);
+      ok(B.alterada && alt.length === 1 && B.vivoN.seq === seqB && !B.ver().botoes["+1"].pode, "o vivo adulterado congela: " + B.alterada);
+      B.parar();
+      // o treino de antes (regras 2, gravado no aparelho pela versão de 13 lotes por técnico): reabre com os 13T lotes dele,
+      // as Minhas salas contam "de 39" e ele anda até o fim com os 11 de cada um
+      {
+        const R0 = await V.espera(SS.criarTreino(Object.assign({ liga: "es", bots: 2, semente: "S-r2", codigo: "SXRGR2" }, base)));
+        await V.anda(() => !!R0.vivoN); R0.parar(); await V.anda(null, 30);
+        const g2 = JSON.parse(arm.g["leilao:sala:SXRGR2"]), lt13 = Lx.criarLotes(mundo, "es", 3, { regras: 2 });
+        const ctx13 = Lx.contexto({ T: 3, lotes: lt13.lotes, fora: lt13.fora, semente: g2.sala.meta.semente, tempo: g2.sala.cfg.tempo });
+        g2.sala.meta.regras = 2; g2.lotes = { l: lt13.lotes, f: lt13.fora }; g2.vivo = Lx.inicial(ctx13, g2.vivo.abre); delete g2.vendas;
+        arm.g["leilao:sala:SXRGR2"] = JSON.stringify(g2);
+        const x2 = SS.salas({ armazem: arm }).find(x => x.codigo === "SXRGR2");
+        const R2 = await V.espera(SS.abrir("SXRGR2", base));
+        ok(R2.ctx && R2.ctx.L === 39 && !R2.soOlhar && x2 && x2.lotes === 39 && x2.regrasOk, "o treino de regras 2 reabre com os 39 lotes dele: " + JSON.stringify({ L: R2.ctx && R2.ctx.L, so: R2.soOlhar, lotes: x2 && x2.lotes }));
+        await V.anda(() => R2.vivoN && R2.vivoN.fase === "fim");
+        const onze = [0, 1, 2].every(t => Lx.timeDe(R2.vivoN, R2.ctx, t).length === 11);
+        ok(R2.vivoN && R2.vivoN.fase === "fim" && onze && !R2.alterada, "o treino de regras 2 anda até o fim com os 11 de cada um: " + JSON.stringify({ fase: R2.vivoN && R2.vivoN.fase, onze, alt: R2.alterada }));
+        R2.parar(); await V.anda(null, 30);
+        R2.rede.apagar && R2.rede.apagar();
+      }
+      // Minhas salas: até 3 treinos guardados (o 4º tira o mais antigo)
+      for (const c of ["SXBBBB", "SXCCCC", "SXDDDD"]) { const X = await V.espera(SS.criarTreino(Object.assign({ liga: "de", bots: 1, semente: c, codigo: c }, base))); await V.anda(null, 5); X.parar(); V.hora += 1000; }
+      await V.anda(null, 30);
+      const ls = SS.salas({ armazem: arm });
+      ok(jsonIgual(ls.map(x => x.codigo), ["SXDDDD", "SXCCCC", "SXBBBB"]) && ls.every(x => x.treino && x.T === 2 && x.estado === "leilao" && x.regrasOk && x.clube), "Minhas salas: " + JSON.stringify(ls.map(x => [x.codigo, x.estado, x.T])));
+      ok(!arm.g["leilao:sala:SXAAAA"], "o 4º treino não tirou o mais antigo");
+    }
+    nota("identidades, Tudo de R$ 90, antes/fechado/max/valor, passar, formação com aviso, trocar, Pronto, pausa, aceleração, só olhar, conferência, Minhas salas");
+  });
+}
+
+async function testeProtocolo() {
+  await blocoAsync("L8", "protocolo: o leilão inteiro pela sessão e pela rede em memória = a máquina pura", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, mundo = MUNDO.public;
+    const ligas = [["en", 5], ["br", 3], ["it", 7]];
+    let cenarios = 0, abortos = 0, transacoes = 0, lances = 0;
+    for (const [liga, bots] of ligas) {
+      const sem = "L8-" + liga, cod = "L8" + liga.toUpperCase();
+      // a máquina pura com o mesmo "humano"
+      const ctxP = Lx.contexto(Object.assign({ T: bots + 1, semente: sem }, (() => { const r = Lx.criarLotes(mundo, liga, bots + 1); return { lotes: r.lotes, fora: r.fora }; })()));
+      const pura = leilaoRobos(ctxP, { LE: Lx, humanos: [0], politica: politicaPiloto(Lx, sem) });
+      ok(!pura.erros.length, `${liga}: a máquina pura: ${pura.erros[0]}`);
+      const esperado = resumoFinal(pura.v);
+      const vendasPuras = pura.vendas.slice().sort((a, b) => a.i - b.i);
+
+      // (a) 1 aparelho (o treino no celular), latência 40 ms; (b) 3 aparelhos escalonados (0; 1,5; 3 s); (c) 3 ao mesmo
+      // tempo; (d) latências sorteadas de 0 a 150 ms com 3 ao mesmo tempo (só os invariantes); (e) o 1º aparelho cai no
+      // meio (os outros seguem; invariantes)
+      for (const cen of ["a", "b", "c", "d", "e"]) {
+        cenarios++;
+        const V = relogioVirtual(), arm = armazemFalso(), id = `${liga}/T${bots + 1}/${cen}`;
+        const rs = TMx.rng.make(TMx.rng.hashStr("lat:" + id));
+        const lat = cen === "d" ? () => Math.floor(rs() * 151) : 40;
+        const A = await V.espera(SS.criarTreino({ liga, bots, formacao: "4-4-2", semente: sem, codigo: cod + cen, mundo, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: lat, semAtual: true }));
+        const sessoes = [A], contas = [contaTransacoes(A.rede)];
+        if (cen !== "a") {
+          for (const k of [1, 2]) {
+            const rede = A.rede.outroCliente({ latencia: lat });
+            contas.push(contaTransacoes(rede));
+            sessoes.push(await V.espera(SS.abrir(A.codigo, { rede, eu: -1, atraso: cen === "b" || cen === "e" ? 1500 * k : 0, agendar: V.agendar, cancelar: V.cancelar, semAtual: true })));
+          }
+        }
+        const pil = piloto(A, V, Lx);
+        if (cen === "e") {
+          // o 1º aparelho (com o "humano") cai quando o leilão passa da metade
+          await V.anda(() => A.vivoN && A.vivoN.seq >= Math.floor(ctxP.fila.length / 2));
+          pil.parar(); A.parar();
+        }
+        const fim = sessoes[sessoes.length - 1];
+        const chegou = await V.anda(() => fim.vivoN && fim.vivoN.fase === "fim" && sessoes.every(S => S.parado || (S.vivoN && S.vivoN.fase === "fim")));
+        ok(chegou, `${id}: o leilão não terminou (seq ${fim.vivoN && fim.vivoN.seq})`);
+        // a sala passa à escalação e, com 60 s (ninguém marcou "Pronto"), ao campeonato
+        await V.anda(() => fim.sala && fim.sala.meta.estado === "camp");
+        ok(fim.sala && fim.sala.meta.estado === "camp", `${id}: a sala não passou à escalação e ao campeonato (${fim.sala && fim.sala.meta.estado})`);
+        const banco = A.rede._arvore();
+        for (const S of sessoes) if (!S.parado) {
+          confereFimSessao(ok, S, id);
+          ok(resumoFinal(S.vivoN) === resumoFinal(Lx.norm(banco.vivo, S.ctx)), `${id}: o aparelho ${sessoes.indexOf(S)} viu outro fim`);
+        }
+        if (cen === "a" || cen === "b" || cen === "c") {
+          ok(resumoFinal(Lx.norm(banco.vivo, A.ctx)) === esperado, `${id}: o leilão pela rede ≠ a máquina pura`);
+          const vr = vendasDaRede(banco);
+          ok(jsonIgual(vr, vendasPuras), `${id}: as vendas gravadas ≠ as da máquina pura (${vr.length} × ${vendasPuras.length}): ${JSON.stringify(vendasPuras.filter(x => !vr.some(y => jsonIgual(x, y))))} × ${JSON.stringify(vr.filter(x => !vendasPuras.some(y => jsonIgual(x, y))))}`);
+        }
+        // ao mesmo tempo, os outros aparelhos disputam (e abortam); escalonados, quase não tentam (o 1º já agiu)
+        const tentOutros = contas.slice(1).reduce((s, c) => s + c.tentou, 0), abOutros = contas.slice(1).reduce((s, c) => s + c.abortou, 0);
+        if (cen === "c") ok(abOutros > 0, `${id}: nenhuma transação dos outros aparelhos abortou (o teste não testou a disputa)`);
+        if (cen === "b") ok(tentOutros <= 0.05 * contas[0].tentou, `${id}: escalonados, os outros aparelhos tentaram ${tentOutros} transações (o 1º, ${contas[0].tentou})`);
+        abortos += abOutros;
+        transacoes += contas.reduce((s, c) => s + c.tentou, 0);
+        lances += pil.acoes();
+        ok(pil.acoes() > 0, `${id}: o "humano" não agiu`);
+        sessoes.forEach(S => S.parar());
+        pil.parar();
+      }
+
+      // (f) recarregar a página no meio: o mesmo estado, o mesmo tempo que faltava, e o fim = a máquina pura
+      {
+        cenarios++;
+        const V = relogioVirtual(), arm = armazemFalso(), id = `${liga}/T${bots + 1}/recarregar`;
+        const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, latencia: 40, semAtual: true };
+        const A = await V.espera(SS.criarTreino(Object.assign({ liga, bots, formacao: "4-4-2", semente: sem, codigo: cod + "F", mundo }, base)));
+        let pil = piloto(A, V, Lx);
+        // para no meio de um lote com lance (tempo correndo)
+        await V.anda(() => A.vivoN && A.vivoN.seq >= 12 && (A.vivoN.n || 0) >= 1 && A.hora() > A.vivoN.t + 300);
+        const horaAntes = A.hora();
+        pil.parar(); A.parar();
+        // o que já estava a caminho da rede termina (no treino a "rede" é a própria página) e vai para o aparelho
+        await V.anda(null, 60);
+        const gravado = JSON.parse(arm.g["leilao:sala:" + A.codigo]), vivoGravado = JSON.stringify(gravado.vivo);
+        const hEsperada = Math.max(gravado.relogio || 0, gravado.vivo.abre || 0, gravado.vivo.t || 0);
+        const fimG = Lx.fimDoLote(gravado.vivo, A.ctx), restanteG = fimG - Math.max(hEsperada, gravado.vivo.abre + A.ctx.espera);
+        V.hora += 10 * 60000;                          // a página ficou fechada 10 min: o relógio do treino não anda
+        const B = await V.espera(SS.abrir(A.codigo, base));
+        ok(JSON.stringify(B.vivo) === vivoGravado, `${id}: depois de recarregar, outro vivo`);
+        ok(Math.abs(B.hora() - hEsperada) < 1 && B.hora() - horaAntes < 100, `${id}: o relógio do treino andou com a página fechada (${B.hora() - horaAntes} ms)`);
+        const depois = B.ver();
+        ok(depois.lote && depois.lote.i === gravado.vivo.i && Math.abs(depois.lote.restante - restanteG) < 1 && restanteG > 0, `${id}: o lote voltou com outro tempo (${restanteG} → ${depois.lote && depois.lote.restante})`);
+        ok(B.eu === 0 && depois.tecnicos.length === bots + 1, `${id}: voltou como outro técnico`);
+        pil = piloto(B, V, Lx);
+        await V.anda(() => B.vivoN && B.vivoN.fase === "fim");
+        confereFimSessao(ok, B, id);
+        ok(resumoFinal(B.vivoN) === esperado, `${id}: recarregando no meio, o leilão ≠ a máquina pura`);
+        pil.parar();
+        // sair da sala apaga o treino do aparelho (e nada grava de novo depois)
+        await V.espera(B.sair());
+        await V.anda(null, 50);
+        ok(!Object.keys(arm.g).some(k => k.indexOf("leilao:sala:") === 0) && !(arm.g["leilao:salas"] && JSON.parse(arm.g["leilao:salas"]).length), `${id}: sair da sala não apagou o treino: ${Object.keys(arm.g)}`);
+      }
+    }
+    nota(`${cenarios} leilões pela sessão (${ligas.map(x => x[0] + "/T" + (x[1] + 1)).join(", ")}; 1 aparelho, 3 escalonados, 3 ao mesmo tempo, latências sorteadas, o 1º aparelho caindo, recarregar no meio); ${transacoes} transações, ${abortos} abortadas pela disputa; ${lances} ações do "humano"`);
+  });
+}
+
+/* ===================================================== L9 formações ===================================================== */
+bloco("L9", "formações e escalação: os grupos do jogador, nunca dois goleiros, as vagas do TM, o encaixe de menor custo", (ok, nota) => {
+  const F = TMs.public.comp.FORMATIONS;
+  for (const f of LE.FORMACOES) {
+    ok(!!F[f], `${f} não existe em TM.comp.FORMATIONS`);
+    if (!F[f]) continue;
+    const c = [0, 0, 0, 0]; F[f].forEach(s => c[GR.indexOf(s[0])]++);
+    ok(jsonIgual(c, LE.VAGAS_FORM[f]), `${f}: vagas ${JSON.stringify(LE.VAGAS_FORM[f])} × ${JSON.stringify(c)} no TM`);
+  }
+  const J = (pos, grupos) => ({ id: "x" + Math.random(), pos, grupos: grupos || [pos] });
+  const base = [J("GK"), J("DF"), J("DF"), J("DF"), J("DF"), J("MF"), J("MF"), J("MF"), J("MF"), J("FW")];
+  const cabe = time => LE.formacoesQueCabem(LE.contaMascaras(time));
+  ok(jsonIgual(cabe(base.concat([J("MF", ["MF", "FW"])])), ["4-4-2"]), "o MEI/ATA cabe como atacante no 4-4-2: " + cabe(base.concat([J("MF", ["MF", "FW"])])));
+  ok(cabe(base.concat([J("MF")])).length === 0, "um meia só meia não cabe (4 DF + 5 MF + 1 FW): " + cabe(base.concat([J("MF")])));
+  ok(cabe([J("GK"), J("GK")]).length === 0, "dois goleiros cabem");
+  ok(cabe([J("GK"), J("DF", ["DF", "MF"]), J("GK")]).length === 0, "dois goleiros (com outro no meio) cabem");
+  ok(cabe([J("FW"), J("FW"), J("FW"), J("FW"), J("FW")]).length === 0, "5 atacantes puros cabem");
+  ok(jsonIgual(cabe([J("FW"), J("FW"), J("FW"), J("FW")]), ["4-2-4"]), "4 atacantes: só o 4-2-4");
+  // o encaixe de verdade
+  const e = LE.encaixe(base.concat([J("MF", ["MF", "FW"])]), "4-4-2");
+  ok(e && e[10] === 3 && e.filter(g => g === 3).length === 2 && e[0] === 0, "encaixe do MEI/ATA como atacante: " + JSON.stringify(e));
+  ok(LE.encaixe(base.concat([J("MF")]), "4-4-2") === null, "encaixe impossível dá null");
+  // a formação preferida muda sozinha para a que cabe e mais se parece
+  ok(LE.formacaoPara("4-4-2", base) === "4-4-2", "a preferida que cabe fica");
+  const tresAtac = [J("GK"), J("FW"), J("FW"), J("FW")];
+  ok(LE.formacaoPara("4-4-2", tresAtac) === "4-3-3", "4-4-2 com 3 atacantes vira " + LE.formacaoPara("4-4-2", tresAtac));
+  // empate na distância (4-3-3 e 3-4-3 estão a 4 do 5-4-1): vale a ordem da lista
+  ok(LE.formacaoPara("5-4-1", tresAtac) === "4-3-3", "5-4-1 com 3 atacantes vira " + LE.formacaoPara("5-4-1", tresAtac));
+  const quatroAtac = tresAtac.concat([J("FW")]);
+  ok(LE.formacaoPara("5-4-1", quatroAtac) === "4-2-4", "5-4-1 com 4 atacantes vira " + LE.formacaoPara("5-4-1", quatroAtac));
+  const cincoZag = [J("GK"), J("DF"), J("DF"), J("DF"), J("DF"), J("DF")];
+  ok(LE.formacaoPara("4-3-3", cincoZag) === "5-4-1", "4-3-3 com 5 zagueiros vira " + LE.formacaoPara("4-3-3", cincoZag));
+  ok(LE.formacaoPara("4-4-2", [J("GK"), J("GK")]) === null, "sem formação possível: null");
+  // os grupos de verdade do TM: um MEI com o ATA (playerVersa) cabe como atacante
+  const { lotes } = lotesDe("public", "br", 8);
+  const meiAta = lotes.find(l => l.pos === "MF" && l.grupos.includes("FW"));
+  ok(!!meiAta, "nenhum meia com o grupo dos atacantes nos lotes da br");
+  if (meiAta) {
+    ok(jsonIgual(meiAta.grupos, [meiAta.pos].concat(TMs.public.comp.playerVersa(MUNDO.public.playersById[meiAta.id]))), "grupos = pos + playerVersa");
+    ok(jsonIgual(cabe(base.concat([meiAta])), ["4-4-2"]), "o MEI/ATA real cabe como atacante");
+  }
+  ok(lotes.filter(l => l.pos === "GK").every(l => jsonIgual(l.grupos, ["GK"])), "goleiro com outro grupo");
+  ok(lotes.filter(l => l.pos !== "GK").every(l => !l.grupos.includes("GK")), "jogador de linha com o grupo dos goleiros");
+
+  // a escalação: os 11 de cada time no fim, cada um numa vaga dos SEUS grupos, com o menor custo de função (−1/−2);
+  // nenhuma troca de duas vagas baixa o custo (o encaixe é o ótimo) e o custo é o do specificPenalty do TM
+  let times = 0, penTot = 0, comPen = 0, versaUsado = 0;
+  for (const [liga, T] of [["br", 4], ["en", 8], ["jp", 3], ["it", 6]]) {
+    const ctx = ctxDe("public", liga, T, "esc-" + liga), res = leilaoRobos(ctx);
+    for (let t = 0; t < T; t++) {
+      times++;
+      const e = LE.escalacaoDe(res.v, ctx, t, null, "4-4-2"), slots = LE.slotsDe(e.formacao);
+      const ok11 = e.n === 11 && e.tit.length === 11 && new Set(e.tit).size === 11 && e.tit.every(k => k >= 0);
+      ok(ok11, `${liga}/T${T}/t${t}: escalação ${JSON.stringify(e.tit)}`);
+      if (!ok11) continue;
+      ok(e.formacao === LE.formacaoPara("4-4-2", LE.timeDe(res.v, ctx, t)), `${liga}/t${t}: formação ${e.formacao}`);
+      const custo = tit => tit.reduce((s, k, i) => s + LE.custoVaga(LE.retratoDe(ctx, k), slots[i]), 0);
+      const c0 = custo(e.tit);
+      ok(c0 < LE.FORA_VAGA && c0 === e.pen.reduce((a, b) => a + b, 0), `${liga}/t${t}: custo ${c0} × pen ${e.pen}`);
+      penTot += c0; if (c0) comPen++;
+      e.tit.forEach((k, i) => { const r = LE.retratoDe(ctx, k); if (slots[i][0] !== r.pos) versaUsado++; ok(r.grupos.includes(slots[i][0]), `${liga}/t${t}: ${r.pos} ${r.grupos} na vaga ${slots[i][0]}`); });
+      for (let a = 0; a < 11; a++) for (let b = a + 1; b < 11; b++) {
+        const tt = e.tit.slice(); [tt[a], tt[b]] = [tt[b], tt[a]];
+        if (custo(tt) < c0) { ok(false, `${liga}/t${t}: trocar ${a} e ${b} baixa o custo (${custo(tt)} < ${c0})`); a = 11; break; }
+      }
+      // o custo da vaga = o specificPenalty do TM com o jogador de verdade (sem gravar nada no retrato)
+      const k0 = e.tit[5], r0 = LE.retratoDe(ctx, k0), p0 = MUNDO.public.playersById[r0.id];
+      ok(LE.custoVaga(r0, slots[5]) === TMs.public.comp.specificPenalty(p0, slots[5]) && !("_versa" in r0), `${liga}/t${t}: custo da vaga ≠ specificPenalty (${r0.id})`);
+      // trocar à mão: o goleiro com um de linha não; dois do mesmo grupo sim (e a manual vale enquanto for válida)
+      const gk = slots.findIndex(sl => sl[0] === "GK"), df = slots.map((sl, i) => sl[0] === "DF" ? i : -1).filter(i => i >= 0);
+      ok(LE.trocarVagas(e, ctx, gk, df[0]).erro === "grupo", `${liga}/t${t}: goleiro trocado com zagueiro`);
+      const tr = LE.trocarVagas(e, ctx, df[0], df[1]);
+      ok(tr.tit && tr.tit[df[0]] === e.tit[df[1]], `${liga}/t${t}: troca de zagueiros recusada (${tr.erro})`);
+      const em = LE.escalacaoDe(res.v, ctx, t, { formacao: e.formacao, tit: tr.tit }, "4-4-2");
+      ok(em.manual && jsonIgual(em.tit, tr.tit), `${liga}/t${t}: a escalação à mão não vale`);
+      const ruim = tr.tit.slice(); ruim[gk] = tr.tit[df[0]]; ruim[df[0]] = tr.tit[gk];
+      ok(!LE.escalacaoDe(res.v, ctx, t, { formacao: e.formacao, tit: ruim }, "4-4-2").manual, `${liga}/t${t}: a escalação à mão inválida valeu`);
+    }
+  }
+  // o método húngaro contra a força bruta (matrizes pequenas sorteadas)
+  {
+    const r = rngT("hungaro");
+    const perms = (m, n) => { const out = []; const rec = (pre, usados) => { if (pre.length === n) { out.push(pre.slice()); return; } for (let j = 0; j < m; j++) if (!usados[j]) { usados[j] = 1; pre.push(j); rec(pre, usados); pre.pop(); usados[j] = 0; } }; rec([], []); return out; };
+    let errados = 0;
+    for (let caso = 0; caso < 300; caso++) {
+      const n = 1 + Math.floor(r() * 5), m = n + Math.floor(r() * 3);
+      // vagas e jogadores de mentira com grupos sorteados: o custo pela própria escalacao (slots do 4-4-2 cortados)
+      const a = []; for (let i = 0; i < n; i++) { a.push([]); for (let j = 0; j < m; j++) a[i].push(r() < 0.25 ? LE.FORA_VAGA : Math.floor(r() * 3)); }
+      let melhor = Infinity; for (const p of perms(m, n)) { let c = 0; for (let i = 0; i < n; i++) c += a[i][p[i]]; melhor = Math.min(melhor, c); }
+      const col = LE._hungaro(a, n, m); let c = 0; for (let i = 0; i < n; i++) c += a[i][col[i]];
+      if (c !== melhor || new Set(col).size !== n) errados++;
+    }
+    ok(errados === 0, `o método húngaro errou ${errados} de 300 contra a força bruta`);
+  }
+  // time incompleto (durante o leilão): os que tem nas vagas, o resto vazio
+  {
+    const ctx = ctxDe("public", "br", 4, "esc-parcial"), res = leilaoRobos(ctx), meio = res.estados[Math.floor(res.estados.length / 2)];
+    const e = LE.escalacaoDe(meio, ctx, 0, null, "4-4-2"), idx = LE.timeIdx(meio, ctx, 0);
+    ok(e.n === idx.length && e.n < 11 && e.tit.filter(k => k >= 0).length === e.n && e.tit.filter(k => k < 0).length === 11 - e.n, `escalação com ${idx.length}: ${JSON.stringify(e.tit)}`);
+  }
+  nota(`${times} times escalados no ótimo (${comPen} com −1/−2, custo médio ${(penTot / Math.max(1, times)).toFixed(2)}; ${versaUsado} jogadores fora do grupo principal, em grupo seu)`);});
+
+/* ===================================================== L10 conferência ===================================================== */
+bloco("L10", "conferência: o vivo adulterado é acusado", (ok, nota) => {
+  // um leilão honesto, com o ouvinte vendo todos os estados e pulando estados (1 de cada 2 e de cada 3)
+  const ctx = ctxDe("public", "en", 6, "conferencia"), res = leilaoRobos(ctx), E = res.estados;
+  let honestas = 0, acusadas = 0;
+  for (const passo of [1, 2, 3]) for (let k = passo; k < E.length; k += passo) {
+    honestas++;
+    const c = LE.conferir(E[k - passo], E[k], ctx);
+    if (!c.ok) { acusadas++; if (acusadas <= 3) ok(false, `honesto acusado (${passo}): ${c.motivo} no passo ${k}`); }
+  }
+  ok(LE.conferir(null, E[0], ctx).ok, "o vivo inicial");
+  // pega um estado com lance e um fechamento com venda
+  const kLance = E.findIndex((v, k) => k > 0 && v.seq === E[k - 1].seq && (v.n || 0) === (E[k - 1].n || 0) + 1 && v.valor >= 3);
+  const kVenda = E.findIndex((v, k) => k > 0 && v.seq === E[k - 1].seq + 1 && (E[k - 1].lider ?? -1) >= 0);
+  const cl = o => JSON.parse(JSON.stringify(o));
+  const acusa = (a, b, nome) => { const c = LE.conferir(a, b, ctx); ok(!c.ok, `${nome}: não acusou`); if (VERBOSO) console.log("         " + nome + " → " + c.motivo); return c.motivo; };
+  const motivos = [];
+  if (kLance > 0) {
+    const a = E[kLance - 1], b = cl(E[kLance]);
+    // saldo que sobe
+    const b1 = cl(b); b1.cx[0][0] += 5; motivos.push(acusa(a, b1, "saldo que sobe"));
+    // lance acima do máximo
+    const b2 = cl(b); b2.valor = LE.maximo(a, ctx, b2.lider) + 1; motivos.push(acusa(a, b2, "lance acima do máximo"));
+    // lance que desce
+    const b3 = cl(b); b3.valor = Math.max(1, (a.valor || 0)); b3.n = (a.n || 0) + 1; motivos.push(acusa(a, b3, "lance que não sobe"));
+    // o lote trocado no meio
+    const b4 = cl(b); b4.i = ctx.fila[ctx.fila.length - 1]; motivos.push(acusa(a, b4, "lote trocado"));
+  } else ok(false, "sem estado com lance");
+  if (kVenda > 0) {
+    const a = E[kVenda - 1], b = E[kVenda], dono = a.lider;
+    // venda sem dinheiro: o dono marcado e o caixa sem o desconto
+    const b1 = cl(b); b1.cx[dono][0] = a.cx[dono][0]; motivos.push(acusa(a, b1, "venda sem descontar"));
+    // venda por menos que o lance
+    const b2 = cl(b); b2.cx[dono][0] = a.cx[dono][0] - a.valor + 1; motivos.push(acusa(a, b2, "venda por menos que o lance"));
+    // venda para quem não deu lance (outro técnico, com o mesmo preço)
+    const outro = (dono + 1) % ctx.T, b3 = cl(b);
+    b3.d = b3.d.slice(0, a.i) + LE.letra(outro) + b3.d.slice(a.i + 1);
+    b3.cx[dono] = a.cx[dono].slice(); b3.cx[outro][0] -= a.valor; b3.cx[outro][1] -= 1; b3.cx[outro][2 + GR.indexOf(ctx.lotes[a.i].pos)]++;
+    motivos.push(acusa(a, b3, "venda para quem não liderava sem lance novo"));
+    // saldo negativo (venda sem dinheiro de verdade)
+    const b4 = cl(b); b4.cx[dono][0] = -3; motivos.push(acusa(a, b4, "saldo negativo"));
+    // o dono de um lote vendido muda
+    const vendido = b.d.split("").findIndex(c => c !== "-");
+    const b5 = cl(b); const c0 = b5.d[vendido], c1 = c0 === "a" ? "b" : "a"; b5.d = b5.d.slice(0, vendido) + c1 + b5.d.slice(vendido + 1);
+    motivos.push(acusa(a, b5, "o dono que muda"));
+  } else ok(false, "sem fechamento com venda");
+  // seq que volta (um estado de dois lotes atrás)
+  const kx = Math.floor(E.length / 2), kv = E.findIndex(v => v.seq === E[kx].seq - 2);
+  ok(kv >= 0, "sem estado de dois lotes atrás");
+  if (kv >= 0) { const m = acusa(E[kx], E[kv], "seq que volta"); ok(m === "voltou", "seq que volta acusado como " + m); motivos.push(m); }
+  // estados pulados de qualquer tamanho (o ouvinte do Firebase pode perder vários lotes): pares (j, k) sorteados de leilões
+  // honestos com repescagem, lotes pulados e completar de graça — e o fim, que nada muda depois
+  const rp = rngT("L10-pulos");
+  const leiloesP = [
+    ["en", 6, "conferencia", null],
+    ["br", 4, "pulos-passa", { humanos: [0], politica: (v, c, t) => (v.lider ?? -1) !== t && LE.pode(v, c, t).pode ? { acao: "passar", quando: v.abre + c.espera + 200 } : null }],
+    ["jp", 3, "pulos-todos", { humanos: [0, 1, 2], politica: (v, c, t) => LE.pode(v, c, t).pode ? (v.k % 3 === t ? { acao: "lance", alvo: (v.valor || 0) + 1, quando: v.abre + c.espera + 100 + t } : { acao: "passar", quando: v.abre + c.espera + 300 + t }) : null }],
+    ["it", 8, "pulos-guloso", { humanos: [1], politica: (v, c, t) => LE.pode(v, c, t).pode ? { acao: "lance", alvo: (v.valor || 0) + 1, quando: Math.max(v.abre + c.espera, v.t || 0) + 300 } : null }]
+  ].map(([liga, T, sem, o]) => { const c = ctxDe("public", liga, T, sem); const rr = leilaoRobos(c, o || undefined); rr.erros.forEach(e => ok(false, `${liga}/T${T}: ${e}`)); return { ctx: c, E: rr.estados }; });
+  let paresHonestos = 0, paresAcusados = 0, comRep = 0, comFim = 0;
+  for (const { ctx: c, E: EE } of leiloesP) {
+    for (let n = 0; n < 1500; n++) {
+      const j = Math.floor(rp() * EE.length), k = j + Math.floor(rp() * (EE.length - j));
+      if (k === j && n % 2) continue;
+      paresHonestos++;
+      if (EE[k].fase === "rep") comRep++;
+      if (EE[k].fase === "fim") comFim++;
+      const cc = LE.conferir(EE[j], EE[k], c);
+      if (!cc.ok) { paresAcusados++; if (paresAcusados <= 3) ok(false, `honesto acusado: ${cc.motivo} de ${j} (seq ${EE[j].seq}, ${EE[j].fase}) a ${k} (seq ${EE[k].seq}, ${EE[k].fase}) em ${c.semente}`); }
+    }
+  }
+  ok(paresAcusados === 0, `${paresAcusados} de ${paresHonestos} pares honestos com estados pulados acusados`);
+  ok(comRep > 50 && comFim > 50, `pares com a repescagem (${comRep}) e com o fim (${comFim})`);
+  // adulterações com o seq pulando 2 ou mais (nos 4 leilões: com repescagem e lotes pulados)
+  const motivosPulo = [], feitos = new Set();
+  for (const { ctx: c, E: EE } of leiloesP) {
+    const NV = v => LE.norm(v, c);
+    const novosDe = (a, b) => { const out = []; for (let i = 0; i < c.L; i++) if (a.d[i] === "-" && b.d[i] !== "-") out.push(i); return out; };
+    const pares = [];
+    for (let j = 1; j < EE.length; j++) for (let k = j + 1; k < EE.length && EE[k].seq <= EE[j].seq + 4; k++) if (EE[k].seq >= EE[j].seq + 2) pares.push([NV(EE[j]), NV(EE[k])]);
+    ok(pares.length > 50, `${c.semente}: pares com o seq pulando 2 a 4: ${pares.length}`);
+    const acusaPulo = (a, b, nome) => { const r = LE.conferir(a, b, c); ok(!r.ok, `${c.semente}: ${nome}: não acusou`); motivosPulo.push(r.motivo); if (VERBOSO) console.log("         " + c.semente + ": " + nome + " → " + r.motivo); return r.motivo; };
+    const darLote = (b, t, i, preco) => { b.d = b.d.slice(0, i) + LE.letra(t) + b.d.slice(i + 1); b.cx[t][0] -= preco; b.cx[t][1] -= 1; b.cx[t][2 + GR.indexOf(c.lotes[i].pos)]++; };
+    const tirarLote = (b, t, i, preco) => { b.d = b.d.slice(0, i) + "-" + b.d.slice(i + 1); b.cx[t][0] += preco; b.cx[t][1] += 1; b.cx[t][2 + GR.indexOf(c.lotes[i].pos)]--; };
+    const semCompra = (a, b) => { const nv = novosDe(a, b), q = []; for (let t = 0; t < c.T; t++) if (!nv.some(i => b.d[i] === LE.letra(t))) q.push(t); return q; };
+    const pagou = (a, b, t) => a.cx[t][0] - b.cx[t][0];
+    const feitosAqui = new Set();
+    const vez = nome => !feitosAqui.has(nome) && (feitosAqui.add(nome), feitos.add(nome), true);
+    for (const [a, b] of pares) {
+      const livres = semCompra(a, b), nv = novosDe(a, b);
+      // um lote da janela (comprado por u, que só comprou ele) passa de graça para quem não comprou nada
+      if (!feitosAqui.has("janela") && livres.length) {
+        // (t com folga no caixa: sozinho, o vivo continua de pé — só a conta do salto acusa)
+        const folga = t => b.cx[t][0] <= LE.SALDO - (LE.VAGAS - b.cx[t][1]) - 1;
+        const i = nv.find(i => i !== a.i && nv.filter(x => b.d[x] === b.d[i]).length === 1), t = i == null ? null : livres.find(t => LE.cabeLote(b, c, t, i) && b.cx[t][1] > 1 && folga(t));
+        if (t != null) {
+          const u = LE.LETRAS.indexOf(b.d[i]), b1 = cl(b); tirarLote(b1, u, i, pagou(a, b, u)); darLote(b1, t, i, 0); vez("janela");
+          const m = acusaPulo(a, b1, "seq+2: lote da janela de graça"); ok(m === "fechamento", `${c.semente}: o lote da janela de graça acusado como ${m}`);
+        }
+      }
+      // o melhor lote ainda por vir (depois do de b), com R$ 1 descontado
+      if (!feitosAqui.has("futuro") && livres.length && b.fase === "lotes") {
+        const t = livres[0], fut = c.fila.slice(b.k + 1).filter(i => b.d[i] === "-" && !(b.sem || []).includes(i) && LE.cabeLote(b, c, t, i));
+        const i = fut.sort((x, y) => c.lotes[y].overall - c.lotes[x].overall)[0];
+        if (i != null && b.cx[t][0] > b.cx[t][1]) { const b2 = cl(b); darLote(b2, t, i, 1); vez("futuro"); acusaPulo(a, b2, "seq+2: lote ainda por vir"); }
+      }
+      // quem não comprou pagou
+      if (!feitosAqui.has("pagou") && livres.some(t => b.cx[t][0] >= 2 + b.cx[t][1])) { const t = livres.find(t => b.cx[t][0] >= 2 + b.cx[t][1]), b3 = cl(b); b3.cx[t][0] -= 2; vez("pagou"); acusaPulo(a, b3, "seq+2: saldo que cai sem compra"); }
+      // o seq que pula mais do que a janela
+      if (vez("seq")) { const b4 = cl(b); b4.seq += 60; acusaPulo(a, b4, "seq+60 sem lotes para tanto"); }
+      // a posição que volta (o lote de b é o de uma posição antes da de a, ainda sem dono)
+      if (!feitosAqui.has("volta") && a.fase === b.fase && a.k > 0) {
+        const lista = a.fase === "lotes" ? c.fila : (b.sem || []), k = [...Array(a.k).keys()].reverse().find(k => b.d[lista[k]] === "-");
+        if (k != null) { const b5 = cl(b); b5.k = k; b5.i = lista[k]; vez("volta"); acusaPulo(a, b5, "seq+2 com a posição de volta"); }
+      }
+      // o lote de a com líder sem dono em b (a compra desfeita)
+      if (!feitosAqui.has("lider") && a.lider >= 0 && b.d[a.i] !== "-" && nv.filter(i => b.d[i] === b.d[a.i]).length === 1) {
+        const dono = LE.LETRAS.indexOf(b.d[a.i]), b6 = cl(b); tirarLote(b6, dono, a.i, pagou(a, b, dono)); vez("lider"); acusaPulo(a, b6, "seq+2: o lote com líder sem dono");
+      }
+      // o lote de a vendido por menos que o lance (o líder sem outra compra)
+      if (!feitosAqui.has("barato") && a.lider >= 0 && a.valor >= 3 && b.d[a.i] === LE.letra(a.lider) && nv.filter(i => b.d[i] === b.d[a.i]).length === 1) {
+        const b7 = cl(b); b7.cx[a.lider][0] = a.cx[a.lider][0] - 1; vez("barato"); acusaPulo(a, b7, "seq+2: o lote de a por R$ 1 (lance de R$ " + a.valor + ")");
+      }
+      // um lote sem lance tirado da repescagem: parece pulado, mas alguém podia comprar
+      if (!feitosAqui.has("pulado") && a.fase === "lotes" && b.fase === "lotes") {
+        const novosSem = (b.sem || []).slice((a.sem || []).length).filter(i => i !== a.i);
+        if (novosSem.length) {
+          const b8 = cl(b); b8.sem = b8.sem.filter(i => i !== novosSem[0]); vez("pulado");
+          const m = acusaPulo(a, b8, "seq+2: lote sem lance tirado da repescagem"); ok(m === "pulado", `${c.semente}: o lote tirado da repescagem acusado como ${m}`);
+        }
+      }
+      // a repescagem perde um lote antigo
+      if (!feitosAqui.has("sem") && (a.sem || []).length) { const b9 = cl(b); b9.sem = b9.sem.slice(1); vez("sem"); acusaPulo(a, b9, "seq+2: a `sem` perde um lote"); }
+    }
+  }
+  for (const caso of ["janela", "futuro", "pagou", "seq", "volta", "lider", "barato", "pulado", "sem"]) ok(feitos.has(caso), `adulteração com o seq pulando não montada: ${caso}`);
+  // depois do fim: nada muda (nem o seq, nem os de graça); o `f` do fim = o completar das compras (também visto de longe)
+  {
+    let fimC = null;
+    for (const { ctx: c, E: EE } of leiloesP) { const ult = LE.norm(EE[EE.length - 1], c); if ((ult.f || "").replace(/-/g, "").length >= 2) { fimC = { c, EE, ult }; break; } }
+    ok(!!fimC, "nenhum fim com completados de graça");
+    if (fimC) {
+      const { c, EE, ult } = fimC, f = ult.f.split("");
+      const acusaFim = (a, b, nome) => { const r = LE.conferir(a, b, c); ok(!r.ok, `${nome}: não acusou`); motivosPulo.push(r.motivo); return r.motivo; };
+      const b1 = cl(ult); b1.seq++; acusaFim(ult, b1, "depois do fim, seq+1 sem mudar nada");
+      // dois de graça do mesmo grupo trocados entre técnicos (ou um de graça trocado pelo melhor de fora livre)
+      let troca = null;
+      for (let j = 0; j < f.length && !troca; j++) for (let k = 0; k < f.length && !troca; k++) if (f[j] !== "-" && f[k] !== "-" && f[j] !== f[k] && c.fora[j].pos === c.fora[k].pos) troca = [j, k];
+      if (!troca) for (let j = 0; j < f.length && !troca; j++) for (let k = 0; k < f.length && !troca; k++) if (f[j] !== "-" && f[k] === "-" && c.fora[j].pos === c.fora[k].pos) troca = [j, k];
+      ok(!!troca, "nenhuma troca possível no completar");
+      if (troca) {
+        const f2 = f.slice(); [f2[troca[0]], f2[troca[1]]] = [f2[troca[1]], f2[troca[0]]];
+        const b2 = cl(ult); b2.f = f2.join("");
+        const b3 = cl(b2); b3.seq++;
+        acusaFim(ult, b2, "depois do fim, o completar trocado (mesmo seq)");
+        acusaFim(ult, b3, "depois do fim, o completar trocado (seq+1)");
+        const m4 = acusaFim(EE[Math.floor(EE.length / 2)], b2, "o fim visto de longe com o completar trocado");
+        ok(m4 === "completar", "o completar trocado acusado como " + m4);
+        ok(!LE.conferir(null, b2, c).ok, "o completar trocado sem o vivo anterior: não acusou");
+      }
+    }
+  }
+  ok(acusadas === 0, `${acusadas} de ${honestas} transições honestas acusadas`);
+  nota(`${honestas} transições honestas (também com estados pulados), ${motivos.length} adulterações acusadas (${[...new Set(motivos)].join(", ")}); ${paresHonestos} pares honestos com saltos de qualquer tamanho (${comRep} na repescagem, ${comFim} no fim), ${motivosPulo.length} adulterações com o seq pulando ou depois do fim (${[...new Set(motivosPulo)].join(", ")})`);
+});
+
+/* ============================== a bateria comum das redes (R na memória, F no Firebase falso) ==============================
+   M: rede, agora(), avanca(ms) (o tempo de mentira anda e o que estava marcado acontece), outro(latencia) (outro aparelho
+   na MESMA sala), cair(rede)/voltar(rede) (a conexão daquele aparelho), arvore() (a sala no servidor), tolTS (o quanto o
+   carimbo devolvido pela transação pode ficar longe da hora do servidor: no online é a estimativa local). */
+async function bateriaRede(ok, M) {
+  const { rede } = M, TS = rede.TS;
+  // espera a promessa andando o tempo (o que ela pede ao "servidor" leva a latência)
+  const ja = async (p, ms = 200) => { await M.avanca(ms); return p; };
+  const vistos = [];
+  const para = rede.ouvir("vivo", v => vistos.push(v));
+  await M.avanca(0);
+  ok(vistos.length === 1 && vistos[0] === null, "ouvir entrega o valor de agora (null): " + JSON.stringify(vistos));
+  // a transação com o carimbo da hora e sem campos vazios
+  const t0 = M.agora();
+  let r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 1, t: TS, h: [], p: "00", sem: [], lider: -1 } : undefined));
+  await M.avanca(0);
+  const noServidor = (M.arvore() || {}).vivo || {};
+  ok(r.feito && Math.abs(r.valor.t - t0) <= M.tolTS && noServidor.t === t0 && !("h" in r.valor) && !("sem" in r.valor) && r.valor.lider === -1 && !("h" in noServidor),
+    "transação: carimbo resolvido e vazios fora: " + JSON.stringify(r.valor) + " no servidor " + JSON.stringify(noServidor));
+  ok(vistos.length === 2 && vistos[1].seq === 1 && vistos[1].t === t0, "o ouvinte viu a transação (uma vez, com a hora do servidor): " + JSON.stringify(vistos));
+  r = await ja(rede.transacao("vivo", cur => cur === null ? { seq: 9 } : undefined));
+  ok(!r.feito && r.valor && r.valor.seq === 1, "transação abortada devolve o atual: " + JSON.stringify(r));
+  // atualizar em vários caminhos e gravar null apaga
+  await ja(rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3", pronto: true } }));
+  ok((await ja(rede.ler("escal/1/formacao"))) === "4-3-3", "atualizar com caminhos");
+  await ja(rede.gravar("escal/0", null));
+  ok((await ja(rede.ler("escal/0"))) === null && (await ja(rede.ler("escal/1"))) !== null, "gravar null apaga");
+  await ja(rede.gravar("escal/1", null));
+  ok(!("escal" in (M.arvore() || {})), "o pai vazio some");
+  // dois aparelhos no mesmo banco, com latência e transações concorrentes
+  const b = M.outro(30);
+  await M.avanca(100);
+  const p1 = b.transacao("cont", c => (c || 0) + 1), p2 = rede.transacao("cont", c => (c || 0) + 1), p3 = b.transacao("cont", c => (c || 0) + 1);
+  await M.avanca(1000);
+  await Promise.all([p1, p2, p3]);
+  ok((await ja(rede.ler("cont"))) === 3, "três transações concorrentes somam 3");
+  // a queda: a operação espera a volta; aoCair e aoVoltar avisam
+  let caiu = 0, voltou = 0; b.aoCair(() => caiu++); b.aoVoltar(() => voltou++);
+  M.cair(b);
+  await M.avanca(0);
+  ok(!b.conectado() && caiu === 1, "aoCair e conectado");
+  let feito = false; const p4 = b.gravar("x", 1).then(() => { feito = true; });
+  await M.avanca(100);
+  ok(!feito && (await ja(rede.ler("x"))) === null, "sem conexão a gravação espera");
+  M.voltar(b);
+  await M.avanca(200); await p4;
+  ok(feito && (await ja(rede.ler("x"))) === 1 && voltou === 1 && b.conectado(), "na volta a gravação vai (e aoVoltar avisa)");
+  // o que o servidor faz quando a conexão cai (aoDesconectar): vale uma vez; cancelar tira
+  await ja(b.gravar("pres/b/k1", true)); await ja(b.gravar("pres/b/k2", true));
+  await ja(b.aoDesconectar("pres/b/k1").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").apagar());
+  await ja(b.aoDesconectar("pres/b/k2").cancelar());
+  const vp = []; const paraP = rede.ouvir("pres", v => vp.push(v));
+  await M.avanca(100);
+  M.cair(b); await M.avanca(100);
+  ok(JSON.stringify(vp[vp.length - 1]) === JSON.stringify({ b: { k2: true } }), "aoDesconectar: o servidor apaga quando cai (o cancelado fica): " + JSON.stringify(vp));
+  M.voltar(b); await M.avanca(200);
+  await ja(b.gravar("pres/b/k1", true));
+  M.cair(b); await M.avanca(100);
+  ok((await ja(rede.ler("pres/b/k1"))) === true, "aoDesconectar vale uma vez (na volta, rearme)");
+  M.voltar(b); await M.avanca(200);
+  // a testemunha da hora: a hora que o servidor pôs
+  const tb = M.agora();
+  const tw = await ja(rede.testemunha("bate/eu", { sid: "s1" }));
+  const bate = await ja(rede.ler("bate/eu"));
+  ok(typeof tw === "number" && Math.abs(tw - tb) <= M.tolTS && bate && bate.ts === tw && bate.sid === "s1", "testemunha: a hora do servidor (" + (tw - tb) + " ms) e o que gravou " + JSON.stringify(bate));
+  paraP(); para();
+  return b;
+}
+
+/* ===================================================== R rede em memória ===================================================== */
+async function testeRede() {
+  if (SO && !SO.includes("R")) return;
+  const t0 = performance.now(), erros = [];
+  const ok = (c, m) => { if (!c) erros.push(m); };
+  const R = TMs.public.leilaoRede;
+  const guardado = {};
+  const armazem = { ler: (k, p) => (k in guardado ? JSON.parse(guardado[k]) : p), gravar: (k, v) => { guardado[k] = JSON.stringify(v); }, apagar: k => { delete guardado[k]; } };
+  let hora = 1000;
+  const agendaFila = [];
+  const agendar = (fn, ms) => agendaFila.push({ at: hora + ms, fn });
+  const roda = async () => { for (let i = 0; i < 50; i++) { await new Promise(r => setImmediate(r)); agendaFila.sort((a, b) => a.at - b.at); while (agendaFila.length && agendaFila[0].at <= hora) agendaFila.shift().fn(); } };
+  const rede = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
+  await bateriaRede(ok, {
+    rede, tolTS: 0, agora: () => hora,
+    // anda até cada coisa marcada (na hora dela) e só então até o fim
+    avanca: async ms => {
+      const alvo = hora + ms;
+      for (let i = 0; i < 10000; i++) {
+        await roda();
+        agendaFila.sort((a, b) => a.at - b.at);
+        if (!agendaFila.length || agendaFila[0].at > alvo) break;
+        hora = Math.max(hora, agendaFila[0].at);
+      }
+      hora = alvo; await roda();
+    },
+    outro: lat => rede.outroCliente({ latencia: lat }),
+    cair: b => b._cair(), voltar: b => b._voltar(),
+    arvore: () => rede._arvore()
+  });
+  // a gravação no aparelho: outra rede com o mesmo código volta ao mesmo ponto
+  hora += 500; await roda();
+  ok(guardado["leilao:sala:TREINO1"] && JSON.parse(guardado["leilao:salas"]).includes("TREINO1"), "gravou a sala e o índice");
+  const volta = R.memoria("TREINO1", { relogio: () => hora, agendar, armazem });
+  ok((await volta.ler("vivo")).seq === 1, "o treino volta depois de recarregar");
+  ok(jsonIgual(R.salasGuardadas(armazem), ["TREINO1"]), "salasGuardadas");
+  // reconectar: cai e volta (os dois avisos)
+  let c2 = 0, v2 = 0; rede.aoCair(() => c2++); rede.aoVoltar(() => v2++);
+  rede.reconectar();
+  ok(c2 === 1 && v2 === 1 && rede.conectado(), "reconectar: cai e volta");
+  rede.fechar();
+  rede.apagar();
+  ok(!guardado["leilao:sala:TREINO1"] && !guardado["leilao:salas"], "apagar some com a gravação");
+  const ms = performance.now() - t0;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} R    rede em memória: ouvir, transação, carimbo, vazios, gravação, concorrência, queda, aoDesconectar, testemunha (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) { falhas++; erros.forEach(e => console.log("         · " + e)); }
+}
+
+/* ============================================ F rede no Firebase (o banco falso) ============================================
+   A rede firebase() do leilao-rede.js sobre o banco falso que se comporta como o SDK compat 10.12.5
+   (ferramentas/lib/banco-falso.mjs): a MESMA bateria do R e o que só o online tem — a transação com o cache velho repete, a
+   1ª rodada com o valor do servidor (o SDK rodaria com null e abortaria sem perguntar), o TIMESTAMP resolvido no servidor (a
+   estimativa no valor devolvido), a hora pela testemunha de menor ida e volta (o relógio do aparelho ±5 s e pulando depois
+   da calibração), o ack perdido ('desconectado' e o servidor gravou), a gravação sem conexão reenviada, o onDisconnect no
+   servidor, a permissão recusada, a limpeza dos valores, o ouvir sempre depois, reconectar, apagar e a disputa de 4
+   aparelhos. Nenhum Firebase de verdade. */
+async function testeFirebase() {
+  if (SO && !SO.includes("F")) return;
+  const t00 = performance.now(), erros = [], notas = [];
+  const ok = (c, m) => { if (!c) erros.push(m); return !!c; };
+  const R = TMs.public.leilaoRede;
+  const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+  // o tempo de mentira: o servidor, o agendador e os relógios dos aparelhos andam juntos
+  const T = { hora: 1000, fila: [], seq: 0 };
+  const agendar = (fn, ms) => { T.fila.push({ at: T.hora + Math.max(0, +ms || 0), fn, s: T.seq++ }); };
+  const avanca = async (ms = 0) => {
+    const alvo = T.hora + ms;
+    const proximo = () => { T.fila.sort((a, b) => a.at - b.at || a.s - b.s); return T.fila.length && T.fila[0].at <= alvo; };
+    for (let volta = 0; volta < 200000; volta++) {
+      for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r));
+      // as promessas em cadeia podem marcar mais coisa: espera mais um pouco antes de dar o tempo por andado
+      if (!proximo()) { for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r)); if (!proximo()) break; }
+      const it = T.fila.shift(); T.hora = Math.max(T.hora, it.at); it.fn();
+    }
+    T.hora = Math.max(T.hora, alvo);
+  };
+  // espera a promessa andando o tempo (o pedido e a resposta levam a latência dos dois lados)
+  const ja = async (p, ms = 400) => { await avanca(ms); return p; };
+  const banco = new BancoFalso({ relogio: () => T.hora, tempo: () => T.hora, agendar });
+  let nAparelho = 0;
+  const redes = new Map();   // rede → o cid do cliente dela no banco falso
+  // um aparelho: o cliente do banco falso (o SDK) + a rede firebase() da sala; desvio = o relógio de parede dele (±5 s)
+  function aparelho(codigo, o = {}) {
+    const cli = banco.cliente({ uid: o.uid || "u" + (++nAparelho), latencia: o.latencia ?? 0, relogio: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    const mono = { base: 50000 + nAparelho * 1000, pulo: 0 };
+    const rede = R.firebase(codigo, { db: cli.db, firebase: cli.firebase, relogio: () => T.hora - 1000 + mono.base + mono.pulo, relogioParede: () => T.hora + (o.desvio ? o.desvio() : 0) });
+    redes.set(rede, cli.cid);
+    return { cli, rede, mono };
+  }
+  const sala = c => banco.ler("leiloes/" + c);
+  try {
+
+  /* F1 a mesma bateria do R */
+  const A = aparelho("SALA1");
+  await avanca(0);
+  await bateriaRede(ok, {
+    rede: A.rede, tolTS: 0, agora: () => T.hora, avanca,
+    outro: lat => aparelho("SALA1", { latencia: lat }).rede,
+    cair: rd => banco.derrubar(redes.get(rd)), voltar: rd => banco.conectar(redes.get(rd)),
+    arvore: () => sala("SALA1")
+  });
+
+  /* F2 a transação: a 1ª rodada com o valor do servidor; o cache velho repete; a armadilha do SDK */
+  banco.gravar("leiloes/SALA2/cont", 3);
+  banco.gravar("leiloes/SALA2/novo", 3);
+  const B = aparelho("SALA2", { latencia: { sobe: 10, desce: 120 } });
+  await avanca(500);
+  // o SDK puro (sem a rede): no caminho que ninguém ouve, a 1ª rodada vê null e a fn que aborta com null nem pergunta
+  const viuSdk = [];
+  let rs = await ja(B.cli.db.ref("leiloes/SALA2/cont").transaction(c => { viuSdk.push(c); return c == null ? undefined : c + 1; }, undefined, false));
+  ok(viuSdk.length === 1 && viuSdk[0] === null && !rs.committed && sala("SALA2").cont === 3, "o SDK falso imita a armadilha: 1ª rodada com null aborta sem perguntar ao servidor " + JSON.stringify(viuSdk));
+  // a rede: ouve antes, a fn vê o valor do servidor (num caminho que este aparelho nunca ouviu)
+  const viuRede = [];
+  let pr = B.rede.transacao("novo", c => { viuRede.push(c); return c == null ? undefined : c + 1; });
+  await avanca(1000); let r = await pr;
+  ok(r.feito && r.valor === 4 && viuRede[0] === 3 && sala("SALA2").novo === 4, "a rede: a 1ª rodada já com o valor do servidor " + JSON.stringify(viuRede));
+  await ja(B.rede.transacao("cont", c => c + 1));   // o cont vai a 4, como o novo
+  // o cache velho: B ouve, o servidor muda e o dado demora 120 ms a chegar; a transação de B repete com o valor de lá
+  const vistosB = []; const paraB = B.rede.ouvir("cont", v => vistosB.push(v));
+  await avanca(500);
+  banco.gravar("leiloes/SALA2/cont", 10);
+  const viuVelho = [];
+  pr = B.rede.transacao("cont", c => { viuVelho.push(c); return (c || 0) + 1; });
+  await avanca(2000); r = await pr;
+  ok(r.feito && r.valor === 11 && viuVelho.join() === "4,10" && sala("SALA2").cont === 11, "o cache velho: o servidor recusa ('datastale') e a fn roda de novo com o valor de lá: " + viuVelho.join(" → "));
+  ok(vistosB.join() === "4,10,11", "o ouvinte viu só valores do servidor (sem o líder falso do applyLocally): " + vistosB.join(","));
+  paraB();
+  // nenhuma escuta esquecida (a transação solta a dela)
+  await new Promise(res => setTimeout(res, 10)); await avanca(100);
+  ok(!B.cli.db.__falso.estado().escutas.length, "a transação não deixa escuta pendurada: " + JSON.stringify(B.cli.db.__falso.estado().escutas));
+
+  /* F3 a hora: o TIMESTAMP no servidor, a estimativa no valor, a testemunha de menor ida e volta, o relógio que pula */
+  let desvio = 5000;
+  const H = aparelho("SALA3", { latencia: 40, desvio: () => desvio });
+  await avanca(300);
+  const offSdk = H.rede._hora().offsetSdk;
+  ok(Math.abs(offSdk - (-5000 - 40)) < 1, "o .info/serverTimeOffset do aperto de mão: " + offSdk);
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 45, "antes da testemunha, a hora pelo aperto de mão (erro = a volta): " + (H.rede.horaServidor() - T.hora));
+  const tTx = T.hora;
+  pr = H.rede.transacao("x", c => ({ t: H.rede.TS, v: 1 }));
+  await avanca(500); r = await pr;
+  const srvX = sala("SALA3").x.t;
+  ok(r.feito && srvX >= tTx && srvX <= tTx + 200 && Math.abs(r.valor.t - srvX) <= 100, `TIMESTAMP: o servidor pôs ${srvX - tTx} ms depois; a transação devolve a estimativa (${r.valor.t - srvX} ms de diferença)`);
+  const tg = T.hora;
+  await ja(H.rede.gravar("y", { t: H.rede.TS }));
+  ok(typeof sala("SALA3").y.t === "number" && sala("SALA3").y.t === tg + 40, "gravar com o carimbo: a hora do servidor quando chegou (" + (sala("SALA3").y.t - tg) + " ms)");
+  // as testemunhas (latências diferentes: vale a de menor ida e volta)
+  const amostrasIda = [80, 15, 120, 40];
+  for (const lat of amostrasIda) {
+    banco.definirLatencia(H.cli.cid, lat);
+    const s0 = T.hora; pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(lat * 4 + 50); const tw = await pr;
+    ok(typeof tw === "number" && tw === s0 + lat, "a testemunha devolve a hora em que o servidor gravou (" + (tw - s0) + " ms, latência " + lat + ")");
+    await avanca(400);   // o que ainda está no caminho (o fim da escuta da leitura) chega antes da próxima
+
+  }
+  const esc = H.rede._hora().escolhida;
+  ok(esc && esc.ida === 30 && Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, `a hora pela amostra de menor ida e volta (${esc && esc.ida} ms): erro ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms`);
+  // o relógio de parede pula +60 s depois da calibração: a hora não muda (o relógio monótono)
+  desvio = 65000;
+  ok(Math.abs(H.rede.horaServidor() - T.hora) <= 15.5, "o relógio de parede pula +60 s depois da calibração: a hora não muda");
+  // o relógio monótono pula (o aparelho dormiu e ele parou 3 s): a próxima testemunha não cruza e recomeça a janela
+  H.mono.pulo = -3000;
+  const errDepois = H.rede.horaServidor() - T.hora;
+  banco.definirLatencia(H.cli.cid, 60);
+  pr = H.rede.testemunha("bate/h", { sid: "h1" }); await avanca(400); await pr;
+  ok(Math.abs(errDepois + 3000) < 20 && Math.abs(H.rede.horaServidor() - T.hora) <= 60.5 && H.rede._hora().amostras === 1, `o relógio monótono pulou 3 s: a testemunha recomeça a janela (erro ${errDepois.toFixed(0)} → ${(H.rede.horaServidor() - T.hora).toFixed(1)} ms)`);
+  // o relógio de um aparelho ±5 s: as horas gravadas são as do servidor
+  desvio = -5000;
+  const H2 = aparelho("SALA3", { latencia: 25, desvio: () => -5000 });
+  await avanca(200);
+  pr = H2.rede.testemunha("bate/h2", {}); const s2 = T.hora; await avanca(300); const tw2 = await pr;
+  ok(tw2 >= s2 && tw2 <= s2 + 100 && Math.abs(H2.rede.horaServidor() - T.hora) <= 25.5, "o aparelho atrasado 5 s: a testemunha e a hora são as do servidor");
+
+  // duas abas da mesma conta gravam o mesmo bate: a leitura de depois do ack é a da outra — sem testemunho, sem calibrar
+  const X = aparelho("SALA7", { latencia: 50 }), Y = aparelho("SALA7", { latencia: 10 });
+  await avanca(300);
+  pr = X.rede.testemunha("bate/eu", { sid: "x" });
+  await avanca(50);
+  Y.rede.gravar("bate/eu", { sid: "y", ts: 1 });
+  await avanca(500); const twX = await pr;
+  ok(twX === null && X.rede._hora().amostras === 0 && sala("SALA7").bate.eu.sid === "y", "outra aba gravou o mesmo bate antes da leitura: a testemunha devolve null e não calibra");
+
+  /* F4 o ack perdido: a transação rejeita com 'desconectado' e o servidor gravou; conferir lendo de novo */
+  const K = aparelho("SALA4", { latencia: 20 });
+  await avanca(200);
+  await ja(K.rede.gravar("cont", 1)); await avanca(100);
+  banco.cairNoProximoAck(K.cli.cid);
+  let erro = null;
+  pr = K.rede.transacao("cont", c => (c || 0) + 1).catch(e => { erro = e; });
+  await avanca(500); await pr;
+  ok(erro && erro.codigo === "desconectado" && sala("SALA4").cont === 2 && !K.rede.conectado(), "o ack perdido: rejeita com 'desconectado' e o servidor gravou (" + (erro && erro.message) + ")");
+  banco.conectar(K.cli.cid); await avanca(300);
+  ok((await ja(K.rede.ler("cont"))) === 2 && K.rede.conectado(), "na volta, ler de novo resolve o 'Conferindo…'");
+  // a gravação com o ack perdido: fica guardada, vai de novo na volta e só então resolve
+  banco.cairNoProximoAck(K.cli.cid);
+  let gravou = false; const pg = K.rede.gravar("g", { v: 7 }).then(() => { gravou = true; });
+  await avanca(300);
+  ok(!gravou && sala("SALA4").g && sala("SALA4").g.v === 7, "set com o ack perdido: o servidor tem, a promessa espera");
+  banco.conectar(K.cli.cid); await avanca(300); await pg;
+  ok(gravou && sala("SALA4").g.v === 7, "na volta, o set vai de novo e resolve");
+  // a transação feita sem conexão vai na volta (o SDK guarda a que não foi mandada)
+  banco.derrubar(K.cli.cid); await avanca(50);
+  let feitoOff = null; pr = K.rede.transacao("cont", c => (c || 0) + 10).then(x => { feitoOff = x; });
+  await avanca(500);
+  ok(feitoOff === null && sala("SALA4").cont === 2, "sem conexão a transação espera");
+  banco.conectar(K.cli.cid); await avanca(500); await pr;
+  ok(feitoOff && feitoOff.feito && sala("SALA4").cont === 12, "na volta a transação vai: " + JSON.stringify(feitoOff));
+
+  /* F5 permissão recusada e a limpeza dos valores */
+  banco.negar = (op, caminho) => caminho.includes("/proibido");
+  let ep = null; await ja(K.rede.gravar("proibido", 1).catch(e => { ep = e; })); await avanca(100);
+  let et = null; pr = K.rede.transacao("proibido", () => 1).catch(e => { et = e; }); await avanca(300); await pr;
+  ok(ep && ep.codigo === "permissao" && et && et.codigo === "permissao" && sala("SALA4").proibido == null, "sem permissão: gravar e transação rejeitam com 'permissao'");
+  banco.negar = null;
+  let lancou = null; try { K.cli.db.ref("leiloes/SALA4/z").set({ a: undefined }); } catch (e) { lancou = e.message; }
+  await ja(K.rede.gravar("z", { a: undefined, b: NaN, c: [], d: 1, e: { f: undefined } })); await avanca(100);
+  ok(/contains undefined/.test(lancou || "") && jsonIgual(sala("SALA4").z, { d: 1 }), "o SDK recusa undefined; a rede limpa como a memória: " + JSON.stringify(sala("SALA4").z));
+  await ja(K.rede.atualizar("", { "escal/0": { formacao: "4-4-2" }, "escal/1": { formacao: "4-3-3" } })); await avanca(100);
+  const escal = await ja(K.rede.ler("escal"));
+  ok(Array.isArray(escal) && escal.length === 2, "o nó de chaves 0..n volta como LISTA (o val() do SDK; a sessão aceita os dois)");
+
+  /* F6 o ouvir sempre depois (o SDK chama dentro do on() e do set) */
+  const O = aparelho("SALA5");
+  await avanca(100);
+  await ja(O.rede.gravar("a", 1)); await avanca(50);
+  const pO = O.rede.ouvir("a", () => {}); await avanca(50);   // o caminho fica com o cache pronto
+  let dentro = 0, depois = 0, fase = "on";
+  const pO2 = O.rede.ouvir("a", () => { if (fase === "on" || fase === "set") dentro++; else depois++; });
+  fase = "set"; O.rede.gravar("a", 2); fase = "fora";
+  await avanca(100);
+  ok(dentro === 0 && depois === 2, `o ouvir nunca chama dentro do on() nem do set (dentro ${dentro}, depois ${depois})`);
+  pO(); pO2();
+
+  /* F7 reconectar (goOffline/goOnline: o servidor roda o onDisconnect), aoCair/aoVoltar, apagar, indisponível */
+  let caiu = 0, voltou = 0; O.rede.aoCair(() => caiu++); O.rede.aoVoltar(() => voltou++);
+  await ja(O.rede.gravar("pres/o", true)); await ja(O.rede.aoDesconectar("pres/o").apagar()); await avanca(50);
+  O.rede.reconectar(); await avanca(300);
+  ok(caiu === 1 && voltou === 1 && O.rede.conectado() && sala("SALA5").pres == null, "reconectar: cai (o onDisconnect roda no servidor) e volta");
+  await ja(O.rede.apagar()); await avanca(100);
+  let ea = null; await O.rede.gravar("a", 3).catch(e => { ea = e; });
+  ok(sala("SALA5") == null && ea && ea.codigo === "apagada", "apagar: a sala some no servidor e nada mais grava");
+  let ei = null; try { R.firebase("X", {}); } catch (e) { ei = e; }
+  ok(ei && ei.codigo === "indisponivel", "sem o banco do TM: erro 'indisponivel'");
+  O.rede.fechar();
+
+  /* F8 a disputa: 4 aparelhos, 12 incrementos cada, latências diferentes, todos no mesmo instante */
+  const D = [0, 15, 40, 90].map((lat, i) => aparelho("SALA6", { latencia: lat, uid: "d" + i }));
+  await avanca(300);
+  const tentativas = [0, 0, 0, 0];
+  const ps = [];
+  for (let k = 0; k < 12; k++) D.forEach((d, i) => ps.push(d.rede.transacao("cont", c => { tentativas[i]++; return (c || 0) + 1; }).catch(e => ({ feito: false, erro: e.codigo }))));
+  await avanca(20000);
+  const rs8 = await Promise.all(ps);
+  ok(rs8.every(x => x.feito) && sala("SALA6").cont === 48, "4 aparelhos × 12 incrementos ao mesmo tempo somam 48: " + sala("SALA6").cont);
+  notas.push(`disputa: ${tentativas.reduce((a, b) => a + b, 0)} rodadas da fn para 48 gravações`);
+  notas.push(`bytes baixados pelo aparelho da bateria ${banco.bytes(A.cli.cid).desce}`);
+  } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+
+  const ms = performance.now() - t00;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} F    rede no Firebase (banco falso como o SDK): a bateria do R, a transação pelo cache, a hora pela testemunha, o ack perdido, a fila sem conexão, onDisconnect, permissão, limpeza, ouvir depois, disputa${notas.length ? " — " + notas.join("; ") : ""} (${(ms / 1000).toFixed(1)} s)`);
+  if (erros.length) { falhas++; erros.slice(0, VERBOSO ? 200 : 12).forEach(e => console.log("         · " + e)); }
+}
+
+/* ============================================ O o leilão online (a sessão sobre o Firebase falso) ============================================
+   As sessões online (criarSala, entrar, abrir) pela rede firebase() do leilao-rede.js sobre o banco falso que se comporta
+   como o SDK compat (ferramentas/lib/banco-falso.mjs), com o tempo de mentira, em 2, 4 e 8 "aparelhos" (cada um com o seu
+   cliente, a sua latência e o seu relógio): a sala por transação (pedido, aceitar, recusar, tirar, configurar, Pronto,
+   Começar), as recusas (código, sala cheia, recusado, edição, regras, fair play), o leilão inteiro com os mesmos vivo,
+   compras e caixas em todos, a corrida de lances, o relógio ±5 s e o pulo depois da calibração (o servidor confere que
+   ninguém fecha cedo e nenhum lance entra depois do fim), quem cai, quem some, o ack perdido, o lance velho na
+   repescagem, recarregar, a sala adulterada, passar o clube, outra aba, a presença, a limpeza e as Minhas salas; O7 a sala
+   mexida fora das regras (o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho
+   depois de encerrar) e O8 a volta da página escondida sem derrubar a conexão do TM inteiro (as salas dos outros modos).
+   Nenhum Firebase de verdade. --rapido: só os leilões de 2 e 4 aparelhos inteiros (o de 8 corta na metade). */
+async function testeOnline() {
+  if (SO && !SO.includes("O")) return;
+  const t00 = performance.now(), erros = [], notas = [];
+  const DEPURA = !!process.env.LEILAO_DEPURA;
+  const ok = (c, m) => { if (!c) { erros.push(m); if (DEPURA) process.stderr.write("  ✗ " + m + "\n"); } return !!c; };
+  const marca = s => { if (DEPURA) process.stderr.write(`[${((performance.now() - t00) / 1000).toFixed(1)} s · ${(T.hora / 1000).toFixed(0)} · ${eventos}] ${s}\n`); };
+  const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, R = TMx.leilaoRede;
+  const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+  const RAPIDO = args.includes("--rapido");
+  // --caso O1,O4,quatro: só esses pedaços (para depurar)
+  const CASOS = opt("--caso", null) ? opt("--caso").split(",") : null, caso = n => !CASOS || CASOS.includes(n);
+  // o tempo de mentira: o servidor, os agendadores das sessões e os relógios dos aparelhos andam juntos
+  const T = { hora: 5_000_000, fila: [], seq: 0 };
+  const agendar = (fn, ms) => { const e = { at: T.hora + Math.max(0, +ms || 0), fn, s: T.seq++, morto: false }; T.fila.push(e); return e; };
+  const cancelar = e => { if (e) e.morto = true; };
+  const respira = async () => { for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r)); };
+  let eventos = 0;
+  // anda o tempo de acontecimento em acontecimento até pare() (ou até limiteMs de tempo de mentira); um laço que roda
+  // 20 mil acontecimentos sem o tempo andar é defeito (a sessão tentando a mesma coisa na hora): reprova em vez de travar
+  async function anda(pare, limiteMs = 2 * 3600_000) {
+    const fim = T.hora + limiteMs;
+    let parado = 0, horaAntes = T.hora;
+    for (let k = 0; k < 4_000_000; k++) {
+      if (T.hora !== horaAntes) { horaAntes = T.hora; parado = 0; } else if (++parado > 20000) throw new Error("laço sem o tempo andar em " + T.hora);
+      await respira();
+      if (pare && pare()) return true;
+      if (T.fila.length > 4000) T.fila = T.fila.filter(e => !e.morto);
+      let m = -1;
+      for (let i = 0; i < T.fila.length; i++) { const e = T.fila[i]; if (e.morto) continue; if (m < 0 || e.at < T.fila[m].at || (e.at === T.fila[m].at && e.s < T.fila[m].s)) m = i; }
+      if (m < 0 || T.fila[m].at > fim) {
+        for (let i = 0; i < 4; i++) await respira();
+        if (pare && pare()) return true;
+        if (T.fila.some(e => !e.morto && e.at <= fim)) continue;
+        T.hora = Math.max(T.hora, fim === Infinity ? T.hora : fim);
+        return !!(pare && pare());
+      }
+      const e = T.fila.splice(m, 1)[0];
+      T.hora = Math.max(T.hora, e.at); eventos++;
+      try { e.fn(); } catch (er) { erros.push("exceção num acontecimento: " + (er && er.stack || er)); }
+    }
+    return false;
+  }
+  const passa = ms => anda(null, ms);
+  async function espera(p, limiteMs = 120_000) {
+    let feito = false, val, err;
+    p.then(v => { feito = true; val = v; }, e => { feito = true; err = e; });
+    await anda(() => feito, limiteMs);
+    if (!feito) throw new Error("a promessa não resolveu em " + limiteMs + " ms");
+    if (err) throw err;
+    return val;
+  }
+  async function rejeita(p, limiteMs) { try { await espera(p, limiteMs); return null; } catch (e) { return e && e.codigo ? e.codigo : String(e && e.message || e); } }
+  const banco = new BancoFalso({ relogio: () => T.hora, tempo: () => T.hora, agendar });
+
+  // ---------- o servidor confere cada gravação do vivo: ninguém fecha cedo, nenhum lance depois do fim ----------
+  const conf = {};   // código → { ctx, cedo: [], tarde: [], fechados, lances }
+  const escreveOrig = banco._escreve.bind(banco);
+  banco._escreve = itens => {
+    const vivos = [];
+    for (const [ps] of itens) if (ps.length === 3 && ps[0] === "leiloes" && ps[2] === "vivo" && conf[ps[1]]) vivos.push(ps[1]);
+    const antes = vivos.map(c => banco.ler("leiloes/" + c + "/vivo"));
+    escreveOrig(itens);
+    vivos.forEach((c, j) => {
+      const C = conf[c], A = antes[j], B = banco.ler("leiloes/" + c + "/vivo");
+      if (!C.ctx || !A || !B) return;
+      const a = Lx.norm(A, C.ctx), b = Lx.norm(B, C.ctx), fimA = Lx.fimDoLote(a, C.ctx);
+      if (a.fase === "fim" || a.i < 0) return;
+      if (b.seq === a.seq && b.n > a.n) { C.lances++; if (T.hora >= fimA) C.tarde.push({ seq: a.seq, n: b.n, hora: T.hora, fim: fimA }); }
+      if (b.seq > a.seq) {
+        C.fechados++; C.fechouEm[a.seq] = { hora: T.hora, fim: fimA };
+        if (T.hora < fimA && !Lx.todosPassaram(a, C.ctx)) {
+          // antes do fim só fecha o passe que deixa todos passados
+          let porPasse = false;
+          for (let t = 0; t < C.ctx.T && !porPasse; t++) {
+            if (t === a.lider || a.p.charAt(t) === "1") continue;
+            const a2 = Object.assign({}, a, { p: a.p.slice(0, t) + "1" + a.p.slice(t + 1) });
+            if (Lx.todosPassaram(a2, C.ctx) && b.p !== a2.p) porPasse = true;
+          }
+          if (!porPasse) C.cedo.push({ seq: a.seq, hora: T.hora, fim: fimA, falta: fimA - T.hora });
+        }
+      }
+    });
+  };
+  function vigia(codigo) {
+    conf[codigo] = conf[codigo] || { ctx: null, cedo: [], tarde: [], fechados: 0, lances: 0, fechouEm: {} };
+    const C = conf[codigo], lt = banco.ler("leiloes/" + codigo + "/lotes"), s = banco.ler("leiloes/" + codigo + "/sala");
+    if (lt && s && s.ordem) C.ctx = Lx.contexto({ T: s.ordem.length, lotes: lt.l, fora: lt.f || [], semente: s.meta.semente, tempo: s.cfg.tempo });
+    return C;
+  }
+
+  // ---------- os aparelhos ----------
+  let nAp = 0;
+  const DOCS = [];
+  function documento() { const d = { hidden: false, ouvintes: [], addEventListener(n, f) { if (n === "visibilitychange") this.ouvintes.push(f); }, removeEventListener(n, f) { this.ouvintes = this.ouvintes.filter(x => x !== f); }, esconde(sim) { this.hidden = sim; this.ouvintes.slice().forEach(f => f()); } }; DOCS.push(d); return d; }
+  // um aparelho: o cliente do banco falso (o SDK), a identidade (uid do TM e o da autenticação), a edição, o armazém das
+  // Minhas salas e a página (a visibilidade); desvio = o relógio de parede dele; mono.pulo = o relógio monótono pulando
+  function aparelho(uid, o = {}) {
+    nAp++;
+    const dev = { uid, ed: o.ed || "public", liberado: !!o.liberado, suspenso: false, desvio: o.desvio || 0, arm: armazemFalso(), doc: documento(), sessoes: [] };
+    dev.cli = banco.cliente({ uid: "auth-" + uid, latencia: o.latencia ?? 20, relogio: () => T.hora + dev.desvio });
+    dev.mono = { base: 40_000 + nAp * 977, pulo: 0 };
+    dev.redePara = codigo => R.firebase(codigo, { db: dev.cli.db, firebase: dev.cli.firebase, relogio: () => T.hora - 5_000_000 + dev.mono.base + dev.mono.pulo, relogioParede: () => T.hora + dev.desvio });
+    dev.opc = extra => Object.assign({
+      id: { uid, auth: "auth-" + uid, nome: o.nome || ("Pessoa " + uid.toUpperCase()), num: "1000-" + String(nAp).padStart(4, "0") },
+      redePara: dev.redePara, edicao: () => dev.ed, suUnlocked: () => dev.liberado, trocarEdicao: ed => { dev.ed = ed; dev.trocou = ed; return ed; },
+      fairplay: () => dev.suspenso, armazem: dev.arm, agendar, cancelar, mundo: MUNDO[dev.ed === "pro" ? "pro" : "public"], doc: dev.doc, semAtual: true
+    }, extra || {});
+    dev.criar = (c, extra) => espera(SS.criarSala(Object.assign(dev.opc(extra), c))).then(S => { dev.sessoes.push(S); return S; });
+    dev.entrar = (codigo, extra) => espera(SS.entrar(codigo, dev.opc(extra))).then(S => { dev.sessoes.push(S); return S; });
+    dev.abrir = (codigo, extra) => espera(SS.abrir(codigo, dev.opc(Object.assign({ online: true }, extra)))).then(S => { dev.sessoes.push(S); return S; });
+    dev.cair = (volta) => banco.derrubar(dev.cli.cid, volta != null ? { volta } : {});
+    dev.voltar = () => banco.conectar(dev.cli.cid);
+    dev.bytes = () => banco.bytes(dev.cli.cid);
+    return dev;
+  }
+  const mesmo = (Ss) => { const j = Ss.map(S => JSON.stringify(S.vivo)); return j.every(x => x === j[0]); };
+  function sala(c) { return banco.ler("leiloes/" + c + "/sala"); }
+  function fimOk(S, id) {
+    const v = S.vivoN, ctx = S.ctx;
+    if (!ok(v && v.fase === "fim", `${id}: não chegou ao fim`)) return;
+    for (let t = 0; t < ctx.T; t++) {
+      const time = Lx.timeDe(v, ctx, t);
+      ok(time.length === 11 && Lx.formacoesQueCabem(Lx.contaMascaras(time)).length > 0, `${id}: técnico ${t} com ${time.length} que não cabem`);
+    }
+    ok(!S.alterada, `${id}: a conferência acusou a sala honesta (${S.alterada})`);
+  }
+  // as vendas registradas batem com o vivo (o dono de cada lote e o caixa = 100 − a soma dos preços)
+  function vendasOk(codigo, ctx, id) {
+    const v = Lx.norm(banco.ler("leiloes/" + codigo + "/vivo"), ctx), vd = banco.ler("leiloes/" + codigo + "/vendas") || {}, soma = new Array(ctx.T).fill(0);
+    let erradas = 0, n = 0;
+    Object.keys(vd).forEach(k => { const x = vd[k]; if (!x) return; n++; if (Lx.LETRAS.indexOf(v.d.charAt(+k)) !== x.t) erradas++; soma[x.t] += x.v; });
+    const vendidos = v.d.split("").filter(c => c !== "-").length;
+    ok(!erradas && n === vendidos, `${id}: vendas registradas ${n} × ${vendidos} vendidos (${erradas} com outro dono)`);
+    for (let t = 0; t < ctx.T; t++) ok(Lx.SALDO - v.cx[t][0] === soma[t], `${id}: o caixa do técnico ${t} (${v.cx[t][0]}) ≠ 100 − as vendas (${soma[t]})`);
+  }
+  function confOk(C, id) {
+    ok(!C.cedo.length, `${id}: ${C.cedo.length} lotes fechados ANTES do fim pela hora do servidor: ${JSON.stringify(C.cedo.slice(0, 3))}`);
+    ok(!C.tarde.length, `${id}: ${C.tarde.length} lances entraram DEPOIS do fim: ${JSON.stringify(C.tarde.slice(0, 3))}`);
+  }
+
+  try {
+
+  if (caso("O1")) /* ---------- O1 entrar: pedido, aceitar, recusar, tirar, as recusas, configurar, Pronto e o Começar ---------- */
+  {
+    const A = aparelho("a"), B = aparelho("b"), C = aparelho("c"), D = aparelho("d"), E = aparelho("e"), G = aparelho("g");
+    // o código sem colisão: AAAAAA já existe (a criação é transação de null: tenta outro)
+    banco.gravar("leiloes/AAAAAA/sala", { meta: { dono: "x", estado: "saguao" } });
+    const SA = await A.criar({ liga: "br", vagas: 4, bots: 1, tempo: 10, formacao: "4-3-3", codigo: "AAAAAA", clube: { nome: "Leões do Norte", sigla: "LDN", cor: "#ef4444", escudo: "redondo|crown" }, semente: "O1" });
+    const cod = SA.codigo;
+    ok(cod !== "AAAAAA" && /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{6}$/.test(cod) && sala("AAAAAA").meta.dono === "x", "o código colidido vira outro (6 letras sem I, O, 0, 1): " + cod);
+    let s = sala(cod);
+    ok(s && s.meta.estado === "saguao" && s.meta.dono === "a" && s.meta.regras === Lx.REGRAS && s.meta.edicao === "public" && s.cfg.vagas === 4 && s.cfg.bots === 1 && typeof s.meta.criada === "number",
+      "a sala nasce no saguão: " + JSON.stringify(s && s.meta));
+    ok(s.tec.a.papel === "dono" && s.tec.a.auth === "auth-a" && s.tec.bot1 && s.tec.bot1.papel === "bot" && s.tec.bot1.clube.cor !== "#ef4444", "o dono e o bot: " + JSON.stringify(Object.keys(s.tec)));
+    ok(SS.salas({ armazem: A.arm }).some(x => x.codigo === cod && x.online && x.estado === "saguao"), "Minhas salas do dono tem a sala online");
+    await passa(200);
+    ok(banco.ler(`leiloes/${cod}/pres/a`) && Object.keys(banco.ler(`leiloes/${cod}/pres/a`)).length === 1 && banco.ler(`leiloes/${cod}/bate/a`).sid === SA.sid, "presença por conexão e o 1º bate do dono");
+    ok((await rejeita(SS.entrar("ABC12", B.opc()))) === "codigo" && (await rejeita(SS.entrar("ZZZZZZ", B.opc()))) === "naoExiste", "código com 5 letras e código que não existe");
+    // o pedido pelo link colado; o dono aceita (a cor repetida vira outra)
+    marca("O1 pedido");
+    const SB = await B.entrar("https://exemplo/?leilao=" + cod.toLowerCase(), { clube: { nome: "Leões", sigla: "LEO", cor: "#ef4444", escudo: "classico|star" } });
+    ok(SB.pedido && SB.pedido.estado === "esperando" && SB.eu === -1 && sala(cod).pedidos.b && sala(cod).pedidos.b.auth === "auth-b", "o pedido de entrada: " + JSON.stringify(SB.pedido));
+    await passa(200);
+    ok(SA.ver().saguao.pedidos.length === 1 && SA.ver().saguao.pedidos[0].uid === "b", "o dono vê o pedido");
+    let r = await espera(SB.aceitar("b")); ok(!r.ok && r.motivo === "naoMembro", "quem só pediu não aceita ninguém: " + JSON.stringify(r));
+    const aceitos = []; SB.on("aceito", () => aceitos.push(1));
+    r = await espera(SA.aceitar("b")); await passa(300);
+    s = sala(cod);
+    ok(r.ok && aceitos.length === 1 && SB.eu === 1 && !SB.pedido && s.tec.b.papel === "tecnico" && !s.pedidos, "aceito: " + JSON.stringify(r) + " eu " + SB.eu);
+    ok(s.tec.b.clube.cor !== "#ef4444" && s.tec.bot1.clube.cor !== s.tec.b.clube.cor && SS._sala.ordemPrevista(s).join() === "a,b,bot1", "as cores sem repetir e a ordem (o bot depois das pessoas): " + SS._sala.ordemPrevista(s).join());
+    ok(SB.ver().tecnicos.length === 3 && SB.ver().tecnicos[1].eu && SB.ver().tecnicos[2].bot, "o técnico novo vê a sala");
+    r = await espera(SB.tirar("bot1")); ok(!r.ok && r.motivo === "dono", "quem não é dono não tira ninguém: " + JSON.stringify(r));
+    // recusado: não entra de novo
+    const SC = await C.entrar(cod);
+    const recus = []; SC.on("recusado", () => recus.push(1));
+    await passa(200);
+    r = await espera(SA.recusar("c")); await passa(300);
+    ok(r.ok && recus.length === 1 && SC.parado && sala(cod).recusados.c, "recusado: " + JSON.stringify(r));
+    ok((await rejeita(SS.entrar(cod, C.opc()))) === "recusado" && !SS.salas({ armazem: C.arm }).length, "quem foi recusado não pede de novo (e a sala sai das Minhas salas dele)");
+    // a sala cheia (4 vagas: a, b, bot1 e d)
+    const SD = await D.entrar(cod); await passa(200); r = await espera(SA.aceitar("d")); await passa(300);
+    ok(r.ok && SD.eu === 2 && sala(cod).tec.bot1 && SS._sala.ordemPrevista(sala(cod)).join() === "a,b,d,bot1", "o 3º entra: " + SS._sala.ordemPrevista(sala(cod)).join());
+    ok((await rejeita(SS.entrar(cod, E.opc()))) === "cheia", "a sala cheia (com o bot contando)");
+    // configurar (só o dono) zera os Pronto
+    r = await espera(SB.pronto(true)); r = await espera(SD.pronto(true)); await passa(300);
+    ok(SA.ver().saguao.prontos === 3 && SA.ver().saguao.total === 3 && SA.ver().saguao.podeComecar, "todos prontos: " + JSON.stringify(SA.ver().saguao));
+    r = await espera(SA.configurar({ tempo: 15 })); await passa(300);
+    ok(r.ok && sala(cod).cfg.tempo === 15000 && SA.ver().saguao.prontos === 1 && SA.ver().saguao.faltam.length === 2, "configurar zera os Pronto: " + JSON.stringify(SA.ver().saguao));
+    r = await espera(SA.configurar({ vagas: 2 })); ok(!r.ok && r.motivo === "vagas", "vagas a menos que os técnicos: " + JSON.stringify(r));
+    // o Overall da sala (PR 6): só o dono muda, zera os Pronto, todos veem; numa sala de regras 4 (antes do PR 6) é recusado
+    ok(sala(cod).cfg.overall === "mostra" && SB.ver().overall === "mostra" && !SB.ver().notasOcultas, "a sala nasce com o Overall à mostra: " + sala(cod).cfg.overall);
+    r = await espera(SB.pronto(true)); await passa(300);
+    r = await espera(SB.configurar({ overall: "escondido" })); ok(!r.ok && sala(cod).cfg.overall === "mostra", "quem não é dono não muda o Overall: " + JSON.stringify(r));
+    r = await espera(SA.configurar({ overall: "escondido" })); await passa(300);
+    ok(r.ok && sala(cod).cfg.overall === "escondido" && SB.ver().overall === "escondido" && SB.ver().notasOcultas && SA.ver().saguao.prontos === 1, "o Overall escondido pelo dono (zera os Pronto): " + JSON.stringify({ cfg: sala(cod).cfg.overall, v: SB.ver().overall, p: SA.ver().saguao.prontos }));
+    r = await espera(SA.configurar({ overall: "mostra" })); await passa(300);
+    ok(r.ok && sala(cod).cfg.overall === "mostra" && !SB.ver().notasOcultas, "o Overall de volta à mostra");
+    {
+      const s4 = JSON.parse(JSON.stringify(sala(cod))); s4.meta.regras = 4; banco.gravar(`leiloes/${cod}/sala/meta/regras`, 4); await passa(300);
+      r = await espera(SA.configurar({ overall: "escondido" })); await passa(300);
+      ok(!r.ok && r.motivo === "regras" && sala(cod).cfg.overall === "mostra", "numa sala de regras 4 o Overall não muda (as de antes ficam à mostra): " + JSON.stringify(r));
+      banco.gravar(`leiloes/${cod}/sala/meta/regras`, Lx.REGRAS); await passa(300);
+    }
+    // tirar
+    const tirados = []; SD.on("tirado", () => tirados.push(1));
+    r = await espera(SA.tirar("d")); await passa(300);
+    ok(r.ok && tirados.length === 1 && SD.parado && !sala(cod).tec.d && sala(cod).recusados.d, "tirar: " + JSON.stringify(r));
+    // a cor de outro técnico
+    r = await espera(SB.meuClube({ nome: "Leões", sigla: "LEO", cor: sala(cod).tec.a.clube.cor, escudo: "classico|star" })); ok(!r.ok && r.motivo === "cor", "a cor de outro técnico: " + JSON.stringify(r));
+    r = await espera(SB.meuClube({ nome: "Tigres", sigla: "TIG", cor: "#a855f7", escudo: "hexagono|flame" })); await passa(300);
+    ok(r.ok && sala(cod).tec.b.clube.nome === "Tigres" && sala(cod).tec.bot1.clube.cor !== "#a855f7", "o clube no saguão (o bot muda de cor se precisar)");
+    // fair play e a edição
+    G.suspenso = true;
+    ok((await rejeita(SS.entrar(cod, G.opc()))) === "fairplay" && (await rejeita(SS.criarSala(G.opc({ liga: "br", vagas: 2 })))) === "fairplay", "suspenso pelo fair play não cria nem entra");
+    // o Começar: com alguém sem Pronto, recusa; dois Começar ao mesmo tempo = 1
+    marca("O1 começar");
+    r = await espera(SA.comecar()); ok(!r.ok && r.motivo === "prontos", "o Começar com alguém sem Pronto: " + JSON.stringify(r));
+    await espera(SB.pronto(true)); await passa(300);
+    const iniciais = []; const paraIni = SA.rede.ouvir("vivo", v => { if (v && v.seq === 1) iniciais.push(v); });
+    const [c1, c2] = await espera(Promise.all([SA.comecar(), SA.comecar()]));
+    await anda(() => SA.vivoN && SB.vivoN && SA.ctx && SB.ctx, 30_000);
+    s = sala(cod);
+    ok([c1, c2].filter(x => x.ok).length === 1 && s.meta.estado === "leilao" && s.ordem.join() === "a,b,bot1" && s.cfg.T === 3, "dois Começar ao mesmo tempo = 1: " + JSON.stringify([c1, c2]));
+    ok(banco.ler(`leiloes/${cod}/lotes`).l.length === 60 && banco.ler(`leiloes/${cod}/lotes`).T === 3 && SA.ctx.L === 60 && SB.ctx.L === 60, "os lotes para 3 técnicos (20 por técnico): " + SA.ctx.L);
+    ok(SA.vivoN.seq === 1 && iniciais.length === 1 && JSON.stringify(SA.vivo) === JSON.stringify(SB.vivo), "um vivo inicial só, o mesmo nos dois aparelhos");
+    paraIni();
+    ok((await rejeita(SS.entrar(cod, aparelho("f").opc()))) === null && sala(cod).pedidos.f && sala(cod).pedidos.f.depois, "depois do Começar, o pedido fica (para passar o clube)");
+    r = await espera(SA.aceitar("f")); ok(!r.ok && r.motivo === "comecou", "e não dá para aceitar: " + JSON.stringify(r));
+    [SA, SB].forEach(x => x.parar());
+    nota_("O1", `colisão do código, pedido pelo link, aceitar, recusar, cheia, configurar zera os Pronto, tirar, cor, fair play, dois Começar = 1`);
+  }
+
+    marca("O2");
+  if (caso("O2")) /* ---------- O2 a edição, as regras e a versão ---------- */
+  {
+    const P = aparelho("p", { ed: "pro", liberado: true }), Q = aparelho("q"), W = aparelho("w", { liberado: true }), U = aparelho("u", { ed: "pro", liberado: true });
+    const SP = await P.criar({ liga: "br", vagas: 4, bots: 0, semente: "O2" });
+    ok(sala(SP.codigo).meta.edicao === "pro", "a sala da Season Update");
+    ok((await rejeita(SS.entrar(SP.codigo, Q.opc()))) === "edicao" && Q.ed === "public", "na pro, sem a chave: não entra");
+    const SW = await W.entrar(SP.codigo);
+    ok(W.trocou === "pro" && SW.pedido && sala(SP.codigo).pedidos.w.edicao === "pro", "na pro, com a chave: troca de edição sozinho e pede");
+    const SX = await aparelho("x").criar({ liga: "es", vagas: 3, bots: 0, semente: "O2b" });
+    const SU = await U.entrar(SX.codigo);
+    ok(U.trocou === "public" && SU.pedido, "quem está na pro entra na pública trocando sozinho");
+    // regras de outra versão: quem não é da sala não entra; quem é, só olha
+    await espera(SX.aceitar("u")); await passa(300);
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, Lx.REGRAS + 1);
+    await passa(300);
+    ok((await rejeita(SS.entrar(SX.codigo, aparelho("y").opc()))) === "regras", "regras de outra versão: quem não é da sala não entra");
+    ok(SU.soOlhar && SX.soOlhar && (await espera(SU.pronto(true))).ok === false, "quem é da sala, com outras regras, só olha");
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, Lx.REGRAS);
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/versaoTM`, "v-velha");
+    SU.parar(); await passa(200);
+    const SU2 = await U.abrir(SX.codigo);
+    ok(SU2.eu === 1 && !SU2.soOlhar && SU2.ver().versaoDiferente, "outra versão do TM: quem é da sala volta (com o aviso)");
+    // a sala de antes (regras 2: o aparelho da versão de 13 lotes por técnico, nela, conta 13): o Começar deste aparelho grava
+    // 13T lotes, e os dois montam o leilão com eles
+    banco.gravar(`leiloes/${SX.codigo}/sala/meta/regras`, 2);
+    await passa(300);
+    await espera(SU2.pronto(true)); await passa(300);
+    const rR2 = await espera(SX.comecar());
+    await anda(() => SX.ctx && SU2.ctx && SX.vivoN && SU2.vivoN, 30_000);
+    const lR2 = banco.ler(`leiloes/${SX.codigo}/lotes`);
+    ok(rR2.ok && lR2 && lR2.l.length === 26 && SX.ctx && SX.ctx.L === 26 && SU2.ctx && SU2.ctx.L === 26 && !SX.alterada && !SU2.alterada,
+      "a sala de regras 2 começa com 13 lotes por técnico (26 com 2): " + JSON.stringify({ r: rR2, n: lR2 && lR2.l.length, a: SX.ctx && SX.ctx.L, b: SU2.ctx && SU2.ctx.L }));
+    [SP, SW, SX, SU2].forEach(x => x.parar());
+    nota_("O2", "pro sem chave recusa, pro com chave e pública trocam sozinhos, regras de outra versão, versão do TM só avisa");
+  }
+
+    marca("O3");
+  /* ---------- O3 os leilões inteiros: 2, 4 e 8 aparelhos ---------- */
+  // o piloto: cada pessoa decide como um robô com o perfil do seu índice e age pela API da sessão (o lance e o passe)
+  function pilotoOnline(S) {
+    const perfil = Lx.perfilRobo(S.ctx.semente, S.eu);
+    let pend = null, chave = null, parado = false, acoes = 0;
+    const olha = () => {
+      const v = S.vivoN;
+      if (parado || !v || !S.ctx || v.fase === "fim" || !S.sala || S.sala.meta.estado !== "leilao") { cancelar(pend); pend = null; return; }
+      const k = v.seq + ":" + v.n + ":" + v.p;
+      if (k === chave) return;
+      chave = k; cancelar(pend); pend = null;
+      const a = Lx.robo(v, S.ctx, perfil);
+      if (!a) return;
+      pend = agendar(() => { pend = null; acoes++; if (a.acao === "lance") S.lance(a.alvo); else S.passar(); }, a.quando + 3 - S.hora());
+    };
+    const off = S.aoMudar(olha);
+    olha();
+    return { parar() { parado = true; off(); cancelar(pend); }, acoes: () => acoes };
+  }
+  async function leilaoInteiro(id, n, nb, o = {}) {
+    const devs = [];
+    for (let k = 0; k < n; k++) devs.push(aparelho(id + "p" + k, { latencia: o.lat ? o.lat(k) : 20, desvio: o.desvio ? o.desvio(k) : 0 }));
+    const dono = devs[0];
+    const S0 = await dono.criar({ liga: o.liga || "en", vagas: n + nb, bots: nb, tempo: 10, semente: "O3-" + id });
+    const cod = S0.codigo, Ss = [S0];
+    for (let k = 1; k < n; k++) { Ss.push(await devs[k].entrar(cod)); }
+    await passa(300);
+    for (let k = 1; k < n; k++) await espera(S0.aceitar(devs[k].uid));
+    await passa(500);
+    for (let k = 1; k < n; k++) await espera(Ss[k].pronto(true));
+    await passa(500);
+    marca(id + ": começar");
+    const rc = await espera(S0.comecar());
+    ok(rc.ok, `${id}: o Começar: ${JSON.stringify(rc)}`);
+    await anda(() => Ss.every(S => S.ctx && S.vivoN), 60_000);
+    const C = vigia(cod);
+    // o relógio de um aparelho pula +60 s DEPOIS da calibração (o de parede; o monótono segue)
+    if (o.pula != null) await anda(() => Ss[o.pula].rede._hora().escolhida, 30_000), (devs[o.pula].desvio += 60_000);
+    const pils = Ss.map(S => pilotoOnline(S));
+    // o aparelho que "dormiu": o relógio monótono fica 4 s para trás no meio do leilão (sem testemunha nova, a hora dele
+    // atrasaria 4 s: os lances dele e os dos bots que ele roda entrariam depois do fim)
+    if (o.dorme != null) {
+      await anda(() => Ss[0].vivoN && Ss[0].vivoN.seq >= 12, 3600_000);
+      devs[o.dorme].mono.pulo -= 4000;
+    }
+    // os DOIS relógios de um aparelho adiantam 5 s juntos (sem salto entre eles): a hora dele fica 5 s à frente até a
+    // próxima testemunha; só a testemunha antes de fechar impede o fechamento cedo
+    if (o.adianta != null) {
+      await anda(() => Ss[0].vivoN && Ss[0].vivoN.seq >= 20, 3600_000);
+      devs[o.adianta].mono.pulo += 5000; devs[o.adianta].desvio += 5000;
+    }
+    let caiu = null;
+    if (o.cai) {
+      // o 1º aparelho (o dono) cai na metade e não volta
+      let ult = -1;
+      await anda(() => { if (DEPURA && S0.vivoN && S0.vivoN.seq !== ult) { ult = S0.vivoN.seq; marca(id + " antes da queda seq " + ult + " " + Ss.map(S => S.vivoN && S.vivoN.seq + ":" + S.vivoN.n).join(",")); } return S0.vivoN && S0.vivoN.seq >= Math.floor(S0.ctx.fila.length / 2); }, 3 * 3600_000);
+      caiu = { cx: S0.vivoN.cx[0].slice(), d: S0.vivoN.d, seq: S0.vivoN.seq };
+      pils[0].parar(); dono.cair(); S0.parar();
+    }
+    const vivos = Ss.filter(S => !S.parado);
+    const metade = o.corta ? Math.floor(Ss[0].ctx.fila.length / 2) : null;
+    let ultSeq = -1;
+    const chegou = await anda(() => {
+      if (DEPURA && vivos[0].vivoN && vivos[0].vivoN.seq !== ultSeq && vivos[0].vivoN.seq % 10 === 0) { ultSeq = vivos[0].vivoN.seq; marca(id + " seq " + ultSeq + " " + vivos.map(S => S.vivoN && S.vivoN.seq).join(",")); }
+      return vivos.every(S => S.vivoN && (metade ? S.vivoN.seq >= metade : S.vivoN.fase === "fim")) && mesmo(vivos);
+    }, 4 * 3600_000);
+    ok(chegou, `${id}: não ${metade ? "chegou à metade" : "terminou"} (seq ${vivos.map(S => S.vivoN && S.vivoN.seq).join(",")})`);
+    pils.forEach(p => p.parar());
+    if (!metade) {
+      // (o campeonato anda sozinho: só de pessoas, os jogos são simulados ao abrir cada rodada e a sala pode ir ao fim)
+      const noCamp = S => S.sala && (S.sala.meta.estado === "camp" || S.sala.meta.estado === "fim");
+      await anda(() => vivos.every(noCamp), 120_000);
+      ok(vivos.every(noCamp), `${id}: a sala não passou à escalação e ao campeonato`);
+      vivos.forEach(S => fimOk(S, id + "/" + S.eu));
+      vendasOk(cod, vivos[0].ctx, id);
+      ok(vivos.every(S => JSON.stringify(S.vivo) === JSON.stringify(banco.ler(`leiloes/${cod}/vivo`))), `${id}: algum aparelho viu outro fim`);
+    }
+    ok(vivos.every(S => !S.alterada), `${id}: a conferência congelou uma sala honesta: ${vivos.map(S => S.alterada).join(",")}`);
+    confOk(C, id);
+    if (caiu) {
+      const v = vivos[0].vivoN;
+      ok(v.cx[0][0] === caiu.cx[0] && v.d.split("").filter((x, i) => x === "a" && caiu.d.charAt(i) !== "a").length === 0, `${id}: quem caiu gastou depois de cair (${caiu.cx[0]} → ${v.cx[0][0]})`);
+    }
+    const acoes = pils.reduce((a, p) => a + p.acoes(), 0);
+    ok(acoes > 0, `${id}: as pessoas não agiram`);
+    const bytes = devs.map(d => d.bytes().desce);
+    Ss.forEach(S => S.parar());
+    return { cod, C, acoes, bytes, fila: vivos[0].ctx.fila.length };
+  }
+  {
+    const vazio = { C: { lances: 0, fechados: 0 }, bytes: [], fila: 0 };
+    const r2 = caso("dois") ? await leilaoInteiro("dois", 2, 0, { liga: "it", lat: k => [15, 60][k] }) : vazio;
+    const r4 = caso("quatro") ? await leilaoInteiro("quatro", 4, 2, { liga: "br", lat: k => [0, 25, 70, 140][k], desvio: k => [0, 5000, -5000, 0][k], pula: 3, dorme: 0, adianta: 2 }) : vazio;
+    const r8 = caso("oito") ? await leilaoInteiro("oito", 8, 0, { liga: "de", lat: k => [0, 10, 20, 40, 60, 90, 120, 150][k], desvio: k => (k % 3 - 1) * 5000, corta: RAPIDO }) : vazio;
+    const rq = RAPIDO || !caso("queda") ? null : await leilaoInteiro("queda", 4, 1, { liga: "es", lat: k => [30, 10, 50, 80][k], cai: true });
+    const kb = b => (b / 1024).toFixed(0);
+    nota_("O3", `2 aparelhos (${r2.fila} lotes, ${r2.C.lances} lances), 4 + 2 bots com ±5 s, o pulo de +60 s e o dono que dorme 4 s, um adiantado 5 s nos dois relógios (${r4.C.lances} lances), 8 (${r8.C.lances} lances${RAPIDO ? ", até a metade" : ""})` +
+      (rq ? `, o 1º caindo na metade (${rq.C.fechados} lotes)` : "") + `; ninguém fechou cedo, nenhum lance depois do fim; KB baixados por aparelho: ${r2.bytes.map(kb).join("/")} · ${r4.bytes.map(kb).join("/")} · ${r8.bytes.map(kb).join("/")}`);
+  }
+
+    marca("O4");
+  if (caso("O4")) /* ---------- O4 dois aparelhos na mão: a corrida, o ack perdido, quem some, o lance velho, recarregar, outra aba ---------- */
+  {
+    // A e B na mão; C entra, fica pronto e esconde a página (ausente o leilão inteiro: passa sozinho em todo lote)
+    const A = aparelho("ma", { latencia: 20 }), B = aparelho("mb", { latencia: 20 }), Cc = aparelho("mc", { latencia: 20 });
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 0, tempo: 10, semente: "O4" });
+    const cod = SA.codigo;
+    let SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("mb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    const SCc = await Cc.entrar(cod); await passa(200); await espera(SA.aceitar("mc")); await passa(300); await espera(SCc.pronto(true)); await passa(300);
+    Cc.doc.esconde(true);
+    await espera(SA.comecar());
+    await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    const C = vigia(cod);
+    const liberou = S => S.vivoN && S.ctx && S.hora() >= S.vivoN.abre + S.ctx.espera + 50 && S.ver().botoes && S.ver().botoes["+1"].pode;
+    // a corrida: os dois +1 no mesmo instante
+    await anda(() => liberou(SA) && liberou(SB), 30_000);
+    marca("O4 corrida");
+    const [ra, rb] = await espera(Promise.all([SA.lance("+1"), SB.lance("+1")]));
+    const venc = ra.ok ? ra : rb, perd = ra.ok ? rb : ra;
+    ok([ra, rb].filter(x => x.ok).length === 1 && venc.valor === 1 && perd.estado === "antes" && perd.valor === 1, "dois lances no mesmo instante: um vence, o outro vê 'antes' (" + JSON.stringify([ra, rb]) + ")");
+    // o ack perdido: o servidor grava e a conexão cai antes da resposta → "Conferindo…" e o resultado certo na volta
+    const quem = ra.ok ? SB : SA, dev = ra.ok ? B : A;
+    await anda(() => quem.ver().botoes && quem.ver().botoes["+1"].pode, 30_000);
+    const seqAck = quem.vivoN.seq;
+    banco.cairNoProximoAck(dev.cli.cid);
+    const pAck = quem.lance("+1");
+    await anda(() => quem.ver().conferindo, 5_000);
+    const w = quem.ver();
+    ok(w.conferindo && w.botoes && w.botoes["+1"].motivo === "conferindo" && (w.rede === "offline" || w.rede === "atualizando"), "o ack perdido: 'Conferindo…' com os botões desligados: " + JSON.stringify({ c: w.conferindo, m: w.botoes && w.botoes["+1"].motivo, rede: w.rede }));
+    await passa(400); dev.voltar();
+    const rAck = await espera(pAck, 30_000);
+    ok(rAck.ok && rAck.conferido && rAck.estado === "aceito" && (quem.vivoN.seq !== seqAck || quem.vivoN.lider === quem.eu) && quem.ver().rede === "ok", "na volta, o resultado certo (o lance tinha entrado): " + JSON.stringify(rAck));
+    // o aparelho que acorda: o relógio monótono parou 5 s (dormiu) e a hora estimada ficou 5 s para trás; o lance no
+    // mesmo instante, com o lote já vencido para o servidor (quem fecha está lento), não pode sair com a hora velha
+    marca("O4 acorda");
+    banco.definirLatencia(A.cli.cid, 600);
+    ok(await anda(() => liberou(SB) && SA.vivoN.lider !== SB.eu, 120_000), "o teste do aparelho que acorda precisa de um lote em que B pode dar lance");
+    const fimS = Lx.fimDoLote(SB.vivoN, SB.ctx), seqS = SB.vivoN.seq;
+    agendar(() => {}, fimS + 150 - T.hora);   // um acontecimento na hora certa (o tempo só para em acontecimentos)
+    await anda(() => T.hora >= fimS + 150, 30_000);
+    if (ok(SB.vivoN.seq === seqS && banco.ler(`leiloes/${cod}/vivo`).seq === seqS, "o lote ainda aberto no servidor depois do fim (o teste precisa)")) {
+      B.mono.pulo -= 5_000;
+      const rs = await espera(SB.lance("+1"), 60_000);
+      ok(!rs.ok && !C.tarde.length, "o aparelho que acordou com a hora velha não dá lance depois do fim: " + JSON.stringify(rs));
+    }
+    banco.definirLatencia(A.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok" && SA.ver().rede === "ok" && SB.vivoN.seq > seqS, 60_000);
+    // o aparelho adiantado: os DOIS relógios de A pulam +10 s juntos (sem salto entre eles) logo que o lote libera e logo
+    // depois de um bate; o passe de B faz A refazer as contas com a hora errada; só a testemunha antes de fechar impede o
+    // fechamento 10 s antes da hora
+    marca("O4 adiantado");
+    const achou = await anda(() => SA.vivoN.fase === "lotes" && SA.vivoN.n === 0 && T.hora - SA.vivoN.abre >= SA.ctx.espera && T.hora - SA.vivoN.abre < SA.ctx.espera + 800 && SB.ver().botoes && SB.ver().botoes.passar.pode, 120_000);
+    ok(achou, "o teste do adiantado precisa de um lote novo em que B pode passar");
+    const seqAd = SA.vivoN.seq, cedoAntes = C.cedo.length;
+    A.mono.pulo += 10_000; A.desvio += 10_000;
+    SA._limpaBate(); SA._timerBate = agendar(() => { SA._timerBate = null; SA._bater(); }, 5000);   // o próximo bate só daqui a 5 s
+    await espera(SB.passar());
+    await anda(() => banco.ler(`leiloes/${cod}/vivo`).seq > seqAd, 60_000);
+    // ninguém passou por A neste lote: ele só pode fechar na hora (o passe que fecharia não existiu)
+    const fAd = C.fechouEm[seqAd];
+    ok(C.cedo.length === cedoAntes && fAd && fAd.hora >= fAd.fim, "o aparelho com os dois relógios 10 s adiantados não fecha o lote cedo (a testemunha): " + JSON.stringify(fAd && { falta: fAd.fim - fAd.hora }));
+    // quem some (a página escondida: sem bate) passa sozinho e não gasta; volta ao controle quando volta
+    const caixaB = () => SA.vivoN.cx[SB.eu][0];
+    const pilA = pilotoOnline(SA);
+    ok(await anda(() => SA.vivoN.seq >= seqAck + 2, 120_000), "o leilão andou depois do ack perdido");
+    const antesB = caixaB(), dAntes = SA.vivoN.d;
+    marca("O4 some");
+    B.doc.esconde(true);
+    await passa(13_000);
+    const ausVisto = SA.ver().tecnicos[SB.eu].ausente, seqSome = SA.vivoN.seq;
+    // o último estado de cada lote (visto por A) desde que B virou ausente: B passou ou não podia
+    const ultimos = {}, offU = SA.aoMudar(() => { if (SA.vivoN && SA.vivoN.fase !== "fim") ultimos[SA.vivoN.seq] = SA.vivoN; });
+    await anda(() => SA.vivoN.seq >= seqSome + 5, 300_000);
+    offU();
+    const vSome = SA.vivoN, lotesSome = Object.keys(ultimos).map(Number).filter(q => q > seqSome && q < vSome.seq).map(q => ultimos[q]);
+    ok(ausVisto && caixaB() === antesB && vSome.d.split("").every((x, i) => x !== Lx.letra(SB.eu) || dAntes.charAt(i) === x), `quem some não gasta (R$ ${antesB} → ${caixaB()}) e aparece ausente (${ausVisto})`);
+    ok(lotesSome.length >= 3 && lotesSome.every(v => v.p.charAt(SB.eu) === "1" || !Lx.pode(v, SA.ctx, SB.eu).pode), "e passa sozinho em cada lote: " + lotesSome.map(v => v.p).join(" "));
+    B.doc.esconde(false);
+    await anda(() => SB.ver().rede === "ok" && !SA.ver().tecnicos[SB.eu].ausente, 30_000);
+    ok(SB.ver().rede === "ok" && !SA.ver().tecnicos[SB.eu].ausente, "de volta (depois de > 5 s escondida): reconecta e fica em dia");
+    await anda(() => liberou(SB) && SA.vivoN.lider !== SB.eu, 120_000);
+    const rVolta = await espera(SB.lance(SB.ver().botoes.tudo.alvo));
+    ok(rVolta.ok || rVolta.estado === "antes", "de volta ao controle, o lance vale: " + JSON.stringify(rVolta));
+    pilA.parar();
+    // recarregar no meio: a sessão para e abre de novo (outro sid); o mesmo estado e o mesmo técnico
+    const vAntes = JSON.stringify(SB.vivo);
+    SB.parar(); await passa(50);
+    SB = await B.abrir(cod);
+    ok(SB.eu === 1 && SB.ctx && (JSON.stringify(SB.vivo) === vAntes || SB.vivoN.seq >= JSON.parse(vAntes).seq), "recarregar no meio: o mesmo técnico e o leilão de onde estava");
+    // a presença: o servidor apaga quando a conexão cai e a sessão rearma na volta
+    const presB = () => Object.keys(banco.ler(`leiloes/${cod}/pres/mb`) || {});
+    await anda(() => presB().includes(SB.sid), 5_000);
+    ok(presB().includes(SB.sid), "a presença de quem está: " + presB());
+    B.cair(); await passa(300);
+    ok(!presB().length && SB.ver().rede === "offline" && SB.ver().botoes && !SB.ver().botoes["+1"].pode && ["conexao", "lider", "passou", "pausa", "fim", "completo", "goleiro", "posicao", "max", "tarde"].includes(SB.ver().botoes["+1"].motivo), "a conexão caiu: a presença sai (onDisconnect) e os botões desligam");
+    B.voltar(); await anda(() => SB.ver().rede === "ok", 30_000);
+    ok(presB().includes(SB.sid) && SB.ver().rede === "ok", "na volta, a presença rearmada");
+    // bate sem ack em 3 s = "Reconectando…"
+    banco.definirLatencia(B.cli.cid, 2500);
+    await anda(() => SB.ver().rede === "reconectando", 20_000);
+    ok(SB.ver().rede === "reconectando", "o bate sem ack em 3 s: 'Reconectando…'");
+    banco.definirLatencia(B.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    // o lance velho guardado: o socket meio aberto (a conexão parece de pé, mas o que sobe fica parado 60 s); o lote
+    // daquele lance fecha (sem lance, vai para a repescagem e reabre depois com outro seq); quando o lance chega, é recusado
+    marca("O4 lance velho");
+    ok(await anda(() => liberou(SB) && SB.vivoN.fase === "lotes", 120_000), "o teste do lance velho precisa de um lote (fase lotes) em que B pode dar lance");
+    const iVelho = SB.vivoN.i, seqVelho = SB.vivoN.seq;
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    const pVelho = SB.lance("+1");
+    await passa(10); banco.definirLatencia(B.cli.cid, 20);
+    const rv = await espera(pVelho, 5 * 60_000);
+    await anda(() => SB.ver().rede === "ok", 60_000);
+    const vVelho = Lx.norm(banco.ler(`leiloes/${cod}/vivo`), SA.ctx);
+    ok(!rv.ok && (rv.estado === "fechado" || rv.motivo === "velho") && vVelho.seq > seqVelho && vVelho.d.charAt(iVelho) !== Lx.letra(SB.eu),
+      `o lance velho guardado é recusado: ${JSON.stringify(rv)} (o lote ${iVelho} ${vVelho.d.charAt(iVelho) === "-" ? (vVelho.sem.includes(iVelho) ? "foi para a repescagem" : "sem dono") : "ficou com " + vVelho.d.charAt(iVelho)})`);
+    // outra aba da mesma conta: a mais nova age; a mais velha fica só olhando (e volta quando a nova some)
+    marca("O4 outra aba");
+    await anda(() => SB._desde != null, 30_000);
+    // as transações e as testemunhas da aba velha enquanto a nova manda (tem de ser nenhuma: nem o motor age)
+    const txVelha = { n: 0, ativo: false }, txOrig = SB.rede.transacao, twOrig = SB.rede.testemunha;
+    SB.rede.transacao = (c, f) => { if (txVelha.ativo) txVelha.n++; return txOrig(c, f); };
+    SB.rede.testemunha = (c, x) => { if (txVelha.ativo) txVelha.n++; return twOrig(c, x); };
+    const SB2 = await B.abrir(cod);
+    await anda(() => SB.outraAba, 10_000);
+    // A escondida: a aba nova de B é a 1ª presente (a que age na hora); a velha não pode agir junto
+    txVelha.ativo = true;
+    A.doc.esconde(true);
+    await passa(25_000);
+    A.doc.esconde(false); txVelha.ativo = false;
+    await anda(() => SA.ver().rede === "ok", 30_000);
+    ok(SB.outraAba && !SB2.outraAba && SB._impede() === "outraAba" && txVelha.n === 0 && banco.ler(`leiloes/${cod}/bate/mb`).sid === SB2.sid,
+      `outra aba: só a mais recente age (${SB.outraAba}/${SB2.outraAba}; a velha fez ${txVelha.n} transações/testemunhas)`);
+    SB2.parar(); await passa(20_000);
+    ok(!SB.outraAba, "a mais nova fechou: a mais velha volta a agir");
+    await anda(() => SA.vivoN.fase === "fim" && SB.vivoN && SB.vivoN.fase === "fim", 3 * 3600_000);
+    fimOk(SA, "O4"); fimOk(SB, "O4b"); confOk(C, "O4");
+    // a sala adulterada (o saldo que sobe, gravado direto no servidor): todos congelam
+    const alt = []; SA.on("alterada", x => alt.push(x)); SB.on("alterada", x => alt.push(x));
+    const vv = banco.ler(`leiloes/${cod}/vivo`); vv.cx[0][0] += 50; banco.gravar(`leiloes/${cod}/vivo`, vv);
+    await passa(500);
+    ok(SA.alterada && SB.alterada && alt.length === 2 && SA.ver().alterada, "a sala alterada fora das regras congela em todos: " + SA.alterada + "/" + SB.alterada);
+    [SA, SB].forEach(x => x.parar());
+    nota_("O4", "a corrida, o ack perdido (Conferindo…), quem some passa e volta, recarregar, outra aba, a presença, Reconectando…, o lance velho na repescagem, a sala adulterada");
+  }
+
+    marca("O5");
+  if (caso("O5")) /* ---------- O5 passar o clube de quem trocou de aparelho ---------- */
+  {
+    const A = aparelho("ca"), B = aparelho("cb"), B2 = aparelho("cb-novo");
+    const SA = await A.criar({ liga: "fr", vagas: 3, bots: 1, semente: "O5" }), cod = SA.codigo;
+    const SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("cb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    await espera(SA.comecar()); await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    const passados = []; SB.on("passado", () => passados.push(1));
+    // a pessoa limpou os dados: outra conta pede para entrar
+    const SN = await B2.entrar(cod); await passa(300);
+    ok(SN.pedido && SN.pedido.depois && SA.ver().pedidosDepois && SA.ver().pedidosDepois.some(p => p.uid === "cb-novo"), "o pedido de quem trocou de aparelho aparece para o dono");
+    let r = await espera(SA.passarClube("cb", "cb-novo")); await passa(500);
+    const s = sala(cod);
+    ok(r.ok && s.ordem[1] === "cb-novo" && s.tec["cb-novo"] && !s.tec.cb && SN.eu === 1 && !SN.pedido && passados.length === 1 && SB.eu === -1, "passar o clube: " + JSON.stringify(r) + " ordem " + s.ordem);
+    await anda(() => SN.ver().botoes && SN.ver().botoes.passar.pode, 60_000);
+    r = await espera(SN.passar());
+    ok(r.ok, "a conta nova age pelo clube: " + JSON.stringify(r));
+    ok((await espera(SB.lance("+1"))).ok === false, "a conta velha não age mais");
+    [SA, SB, SN].forEach(x => x.parar());
+    nota_("O5", "o pedido depois do Começar, passar o clube, a conta nova age e a velha não");
+  }
+
+    marca("O6");
+  if (caso("O6")) /* ---------- O6 a limpeza e as Minhas salas ---------- */
+  {
+    const A = aparelho("la"), B = aparelho("lb");
+    // 30 min parada no saguão: a sessão de quem está apaga (pela testemunha)
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 1, semente: "O6" }), cod = SA.codigo;
+    const apagadas = []; SA.on("apagada", () => apagadas.push(1));
+    await passa(29 * 60000);
+    ok(sala(cod), "com 29 min parada no saguão, a sala continua");
+    await passa(2 * 60000);
+    ok(!sala(cod) && apagadas.length === 1 && SA.parado && !SS.salas({ armazem: A.arm }).length, "30 min parada no saguão: a sala some (e sai das Minhas salas)");
+    // 24 h sem atividade: quem abre a sala vencida apaga; a entrada de quem não é da sala recusa
+    const SA2 = await A.criar({ liga: "en", vagas: 2, bots: 1, semente: "O6b" }), cod2 = SA2.codigo;
+    await espera(SA2.comecar()); await anda(() => SA2.vivoN && SA2.vivoN.seq >= 3, 120_000);
+    SA2.parar(); await passa(25 * 3600_000);
+    ok(sala(cod2) && (await rejeita(SS.entrar(cod2, B.opc()))) === "vencida", "a sala vencida recusa a entrada");
+    const SA3 = await A.abrir(cod2);
+    await anda(() => !sala(cod2), 60_000);
+    ok(!sala(cod2) && SA3.apagada && !SS.salas({ armazem: A.arm }).length, "24 h sem atividade: quem abre apaga");
+    // encerrar: some para todos; as Minhas salas dos outros conferem
+    const SA4 = await A.criar({ liga: "it", vagas: 3, bots: 0, semente: "O6c" }), cod4 = SA4.codigo;
+    const SB4 = await B.entrar(cod4); await passa(200); await espera(SA4.aceitar("lb")); await passa(300);
+    ok(SS.salas({ armazem: B.arm }).some(x => x.codigo === cod4), "a sala nas Minhas salas de quem entrou");
+    SB4.parar(); await passa(100);
+    await espera(SA4.encerrar()); await passa(300);
+    const lista = await espera(SS.conferirSalas(B.opc()));
+    ok(!sala(cod4) && !lista.some(x => x.codigo === cod4) && (await rejeita(SS.abrir(cod4, B.opc({ online: true })))) === "naoExiste", "o dono encerra: a sala some e sai das Minhas salas na conferência");
+    nota_("O6", "30 min no saguão, 24 h sem atividade, a vencida recusa a entrada, encerrar, conferirSalas");
+  }
+
+    marca("O7");
+  if (caso("O7")) /* ---------- O7 a sala mexida fora das regras e o rastro: o vivo apagado, os lotes trocados no saguão, a edição trocada antes do Começar, o bate a caminho depois de encerrar, o Overall e as regras mudados depois do Começar (revisão do PR 6) ---------- */
+  {
+    // (a) o vivo apagado no meio do leilão (uma gravação de qualquer conta logada): congela em todos, nada recomeça
+    const A = aparelho("va"), B = aparelho("vb");
+    const SA = await A.criar({ liga: "en", vagas: 4, bots: 2, tempo: 10, semente: "O7" }), cod = SA.codigo;
+    let SB = await B.entrar(cod); await passa(200); await espera(SA.aceitar("vb")); await passa(300); await espera(SB.pronto(true)); await passa(300);
+    await espera(SA.comecar()); await anda(() => SA.vivoN && SB.vivoN, 30_000);
+    await anda(() => SA.vivoN.seq >= 6, 3600_000);
+    const altV = []; [SA, SB].forEach(S => S.on("alterada", x => altV.push(x.motivo)));
+    banco.gravar(`leiloes/${cod}/vivo`, null);
+    await passa(20_000);
+    ok(!banco.ler(`leiloes/${cod}/vivo`) && SA.alterada && SB.alterada && altV.length === 2 && SA.ver().alterada,
+      `o vivo apagado no meio: a sala congela em todos e o leilão não recomeça do zero (alterada ${SA.alterada}/${SB.alterada}, vivo ${JSON.stringify(banco.ler(`leiloes/${cod}/vivo`) && banco.ler(`leiloes/${cod}/vivo`).seq)})`);
+    // (b) recarregar com o vivo apagado e as vendas gravadas: também congela (não refaz o vivo inicial)
+    SB.parar(); await passa(100);
+    SB = await B.abrir(cod); await passa(10_000);
+    ok(SB.alterada && !banco.ler(`leiloes/${cod}/vivo`), `recarregar com o vivo apagado e vendas gravadas: congela (${SB.alterada})`);
+    [SA, SB].forEach(x => x.parar());
+    // (c) os lotes trocados no saguão por outra conta (mesmo T e liga, outras notas): o Começar grava os deste aparelho
+    const C1 = aparelho("vc"), C2 = aparelho("vd");
+    const SC = await C1.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7c" }), codC = SC.codigo;
+    const SD = await C2.entrar(codC); await passa(200); await espera(SC.aceitar("vd")); await passa(300); await espera(SD.pronto(true)); await passa(300);
+    const certos = TMs.public.leilao.criarLotes(MUNDO.public, "en", 3), mexidos = { l: JSON.parse(JSON.stringify(certos.lotes)), f: certos.fora, T: 3, liga: "en" };
+    mexidos.l.forEach(r => { r.overall = 99; });
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos);
+    await passa(300);
+    const rC = await espera(SC.comecar());
+    await anda(() => SC.ctx && SD.ctx && SC.vivoN && SD.vivoN, 30_000);
+    const ltC = banco.ler(`leiloes/${codC}/lotes`);
+    ok(rC.ok && ltC.l.every((r, i) => r.overall === certos.lotes[i].overall) && ltC.ed === "public" && SC.ctx.lotes.every(r => r.overall !== 99) && SD.ctx.lotes.every(r => r.overall !== 99) && !SC.alterada && !SD.alterada,
+      "os lotes trocados no saguão: o Começar grava os do mundo-base (com a edição da sala) e as duas sessões usam esses: " + JSON.stringify(rC));
+    // depois do Começar, lotes trocados = a sala congela (como antes)
+    banco.gravar(`leiloes/${codC}/lotes`, mexidos); await passa(500);
+    ok(SC.alterada === "lotes" && SD.alterada === "lotes", "os lotes trocados depois do Começar: congela");
+    [SC, SD].forEach(x => x.parar());
+    // (d) a edição do aparelho do dono trocada antes do Começar (a tela de início faz isso sem recarregar): os lotes saem
+    // da edição DA SALA, nunca da Season Update numa sala pública
+    const E = { ed: "public" }, edOrig = TMs.public.storage.edition;
+    const D1 = aparelho("ve"), D2 = aparelho("vf");
+    const edHooks = { edicao: () => E.ed, trocarEdicao: ed => { E.ed = ed; return ed; }, suUnlocked: () => true, mundo: null };
+    TMs.public.storage.edition = () => E.ed;
+    try {
+      const SE = await D1.criar({ liga: "br", ligaNome: "Brasil", vagas: 3, bots: 1, tempo: 10, semente: "O7d" }, edHooks), codE = SE.codigo;
+      const SF = await D2.entrar(codE); await passa(200); await espera(SE.aceitar("vf")); await passa(300); await espera(SF.pronto(true)); await passa(300);
+      E.ed = "pro";
+      const rE = await espera(SE.comecar());
+      await anda(() => SE.ctx && SF.ctx, 30_000);
+      const ltE = banco.ler(`leiloes/${codE}/lotes`), pub = TMs.public.leilao.criarLotes(MUNDO.public, "br", 3);
+      ok(rE.ok && E.ed === "public" && ltE && ltE.ed === "public" && ltE.l.every((r, i) => r.id === pub.lotes[i].id) && !SF.alterada,
+        `a edição trocada antes do Começar: volta à da sala e os lotes são os da pública (${JSON.stringify(rE)}, edição ${E.ed}, 1º ${ltE && ltE.l[0].name} × ${pub.lotes[0].name})`);
+      [SE, SF].forEach(x => x.parar());
+    } finally { TMs.public.storage.edition = edOrig; }
+    // (e) o bate a caminho quando o dono encerra: nada fica órfão em leiloes/{código}
+    const G0 = aparelho("vg", { latencia: 0 }), G1 = aparelho("vh", { latencia: 200 });
+    const SG = await G0.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7e" }), codG = SG.codigo;
+    const SH = await G1.entrar(codG); await passa(1500); await espera(SG.aceitar("vh")); await passa(6000);
+    await anda(() => SH._bateEmVoo, 60_000); await passa(20);
+    const rG = await espera(SG.encerrar()); await passa(5000);
+    ok(rG.ok && SH.apagada && banco.ler(`leiloes/${codG}`) == null, "o bate a caminho quando o dono encerra: a sala não volta (sobrou " + JSON.stringify(banco.ler(`leiloes/${codG}`)) + ")");
+    [SG, SH].forEach(x => x.parar());
+    // (f) o Overall escondido gravado com os lotes no Começar (revisão do PR 6): o cfg.overall ou o meta.regras mudados depois,
+    // direto no banco, congelam a sala em todos — e quem abre a sala depois também congela —, sempre com as notas escondidas
+    for (const [nome, cam, val] of [["o Overall", "sala/cfg/overall", "mostra"], ["as regras", "sala/meta/regras", 4]]) {
+      const K1 = aparelho("vk" + cam.length), K2 = aparelho("vl" + cam.length);
+      const SK = await K1.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O7f" + cam.length, overall: "escondido" }), codK = SK.codigo;
+      let SL = await K2.entrar(codK); await passa(200); await espera(SK.aceitar("vl" + cam.length)); await passa(300); await espera(SL.pronto(true)); await passa(300);
+      const rK = await espera(SK.comecar());
+      await anda(() => SK.ctx && SL.ctx && SK.vivoN && SL.vivoN, 30_000);
+      const ltK = banco.ler(`leiloes/${codK}/lotes`);
+      ok(rK.ok && ltK && ltK.ov === "escondido" && SK.ctx.notasOcultas && SL.ctx.notasOcultas && !SK.alterada && !SL.alterada, `${nome}: os lotes gravados no Começar com o Overall escondido (${ltK && ltK.ov})`);
+      banco.gravar(`leiloes/${codK}/${cam}`, val); await passa(500);
+      const vk = SK.ver(), vl = SL.ver();
+      ok(SK.alterada === "overall" && SL.alterada === "overall" && vk.notasOcultas && vl.notasOcultas && vk.overall === "escondido" && vl.overall === "escondido",
+        `${nome} mudado no banco depois do Começar: congela em todos com as notas escondidas (${SK.alterada}/${SL.alterada}, ${vk.overall}/${vl.overall})`);
+      SL.parar(); await passa(100);
+      SL = await K2.abrir(codK); await passa(2000);
+      ok(SL.alterada === "overall" && SL.ver().notasOcultas, `${nome}: recarregar a sala mexida congela com as notas escondidas (${SL.alterada}, ${SL.ver().notasOcultas})`);
+      [SK, SL].forEach(x => x.parar());
+    }
+    nota_("O7", "o vivo apagado congela (também ao recarregar), os lotes trocados no saguão são regravados no Começar, a edição trocada volta à da sala, o bate a caminho não recria a sala encerrada, o Overall e as regras mudados depois do Começar congelam com as notas escondidas");
+  }
+
+    marca("O8");
+  if (caso("O8")) /* ---------- O8 a volta da página escondida não derruba a conexão do TM inteiro (as salas dos outros modos) ---------- */
+  {
+    // o goOffline/goOnline vale para o TM todo: o servidor roda o onDisconnect das salas do Online 3D e dos outros modos.
+    // Só com o socket preso (o bate sem ack em 3 s depois da volta) e sem outra sala online aberta
+    const outra = { v: false };
+    const A = aparelho("xa"), B = aparelho("xb");
+    const SA = await A.criar({ liga: "en", vagas: 3, bots: 1, tempo: 10, semente: "O8" }), cod = SA.codigo;
+    const SB = await B.entrar(cod, { outrasSalas: () => outra.v }); await passa(200); await espera(SA.aceitar("xb")); await passa(300);
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    // a sala de outro modo deste aparelho: some se a conexão cair (o onDisconnect dela)
+    B.cli.db.ref("salas3d/OUTRA").set({ dono: "xb" }); B.cli.db.ref("salas3d/OUTRA").onDisconnect().remove();
+    await passa(500);
+    let reconexoes = 0; const recOrig = SB.rede.reconectar; SB.rede.reconectar = () => { reconexoes++; recOrig(); };
+    // (a) escondida 7 s com o socket bom: volta "Atualizando…", fica em dia sem reconectar e a outra sala continua
+    B.doc.esconde(true); await passa(7000); B.doc.esconde(false);
+    const atualizando = SB.ver().rede === "atualizando";
+    await anda(() => SB.ver().rede === "ok", 30_000);
+    ok(atualizando && SB.ver().rede === "ok" && reconexoes === 0 && banco.ler("salas3d/OUTRA"),
+      `a volta depois de 7 s escondida com o socket bom: "Atualizando…", em dia sem derrubar a conexão (${reconexoes} reconexões; a sala do outro modo ${banco.ler("salas3d/OUTRA") ? "continua" : "SUMIU"})`);
+    // (b) o socket preso na volta (o que sobe fica parado): sem outra sala aberta, reconecta UMA vez depois de 3 s sem ack
+    outra.v = true;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    ok(reconexoes === 0 && SB.ver().rede === "reconectando" && banco.ler("salas3d/OUTRA"), `o socket preso com outra sala online aberta: "Reconectando…" sem derrubar a conexão (${reconexoes} reconexões, ${SB.ver().rede})`);
+    banco.definirLatencia(B.cli.cid, 20); await anda(() => SB.ver().rede === "ok", 120_000);
+    outra.v = false;
+    B.doc.esconde(true); await passa(7000);
+    banco.definirLatencia(B.cli.cid, { sobe: 60_000, desce: 20 });
+    B.doc.esconde(false); await passa(4000);
+    banco.definirLatencia(B.cli.cid, 20);
+    await anda(() => SB.ver().rede === "ok", 120_000);
+    ok(reconexoes === 1 && SB.ver().rede === "ok", `o socket preso sem outra sala: reconecta uma vez e fica em dia (${reconexoes} reconexões, ${SB.ver().rede})`);
+    [SA, SB].forEach(x => x.parar());
+    banco.gravar("salas3d/OUTRA", null);
+    nota_("O8", "a volta com o socket bom não reconecta (a sala de outro modo continua); com o socket preso, só sem outra sala online aberta");
+  }
+  } catch (e) { erros.push("exceção: " + (e && e.stack || e)); }
+  function nota_(b, s) { notas.push(b + ": " + s); }
+
+  DOCS.length = 0;
+  const ms = performance.now() - t00;
+  console.log(`${erros.length ? "REPROVOU" : "ok      "} O    leilão online (a sessão sobre o Firebase falso): a sala por transação, as recusas, 2/4/8 aparelhos, o relógio, quem cai e quem some, o ack perdido, o lance velho, recarregar, outra aba, passar o clube, a limpeza (${(ms / 1000).toFixed(1)} s, ${eventos} acontecimentos)`);
+  if (VERBOSO || erros.length) notas.forEach(n => console.log("         " + n));
+  if (erros.length) { falhas++; erros.slice(0, VERBOSO ? 200 : 14).forEach(e => console.log("         · " + e)); if (erros.length > 14 && !VERBOSO) console.log(`         · … mais ${erros.length - 14}`); }
+}
+
+/* ===================================================== C o campeonato (PR 3) ===================================================== */
+// o motor (js/engine.js) num contexto à parte: o rng.js daqui + o código dado (o da main, pelo git, ou o de agora)
+function motorEm(src) {
+  const ctx = { console, Math, Date, JSON };
+  ctx.window = ctx;
+  vm.createContext(ctx);
+  ctx.TM = {};
+  vm.runInContext(fs.readFileSync(path.join(RAIZ, "js/rng.js"), "utf8"), ctx, { filename: "rng.js" });
+  vm.runInContext(src, ctx, { filename: "engine.js" });
+  return ctx.TM;
+}
+// os casos do C7 (o motor SEM a opção): times sintéticos pelo rng do TM (sem o data.js: a referência não muda quando o mundo
+// muda) × as opções que o TM usa (realismo, mando, clássico, prorrogação, tática, dificuldade, jogador em foco, fase) ×
+// elencos de 11 e de 18 (com banco: as substituições); cada caso = a partida inteira e uma disputa de pênaltis
+// (uma função declarada: o --gravar-motor roda no topo do arquivo, antes das constantes daqui)
+function VARIANTES_MOTOR() {
+  return [{}, { realism: 1 }, { realism: 5, neutral: true }, { derby: true, crowd: 1 },
+    { startMinute: 91, endMinute: 120, startScore: [1, 1] }, { tacticSide: 0, tactic: "pressao", userSide: 0, difficulty: "lenda" },
+    { focusPlayerId: "j3_9" }, { tactics: ["retranca", "ofensivo"], form: [1, -1], stakes: [1, 0] }];
+}
+function casosMotor(TMx) {
+  const R = TMx.rng, POS = ["GK", "DF", "DF", "DF", "DF", "MF", "MF", "MF", "MF", "FW", "FW", "GK", "DF", "MF", "MF", "FW", "FW", "DF"];
+  function time(s, n) {
+    const r = R.make(R.hashStr("motor-time:" + s));
+    return { id: "t" + s, name: "Time " + s, players: POS.slice(0, n).map((p, i) => {
+      const a = () => 40 + Math.floor(r() * 55);
+      return { id: "j" + s + "_" + i, name: "Jogador " + s + "-" + i, pos: p, overall: a(), attrs: { pac: a(), sho: a(), pas: a(), dri: a(), def: a(), phy: a() } };
+    }) };
+  }
+  const out = [], vars = VARIANTES_MOTOR();
+  for (let vi = 0; vi < vars.length; vi++) for (const n of [11, 18]) for (let s = 0; s < 60; s++) {
+    const sem = "motor:" + s + ":" + vi + ":" + n;
+    const r = R.comSemente(sem, () => TMx.engine.simulate(time(s, n), time(s + 1000, n), Object.assign({}, vars[vi])));
+    const p = R.comSemente(sem + ":pen", () => TMx.engine.shootout(time(s, n), time(s + 1000, n)));
+    out.push({ grupo: vi + "|" + n, txt: JSON.stringify(r) + "|" + JSON.stringify(p) });
+  }
+  return out;
+}
+function sha(txt) { return crypto.createHash("sha256").update(txt).digest("hex"); }
+function resumoMotor(casos) {
+  const por = {};
+  casos.forEach(c => { (por[c.grupo] = por[c.grupo] || []).push(c.txt); });
+  const porGrupo = {};
+  Object.keys(por).forEach(g => { porGrupo[g] = sha(por[g].join("\n")).slice(0, 16); });
+  return { casos: casos.length, sha256: sha(casos.map(c => c.txt).join("\n")), porGrupo };
+}
+function engineDaMain() {
+  try { return execSync("git show origin/main:legacy-total-match/js/engine.js", { cwd: RAIZ, stdio: ["ignore", "pipe", "ignore"] }).toString(); } catch (e) { return null; }
+}
+// --gravar-motor [arquivo]: a referência do C7 (o motor de antes; padrão: o da origin/main)
+function gravarMotor() {
+  const i = args.indexOf("--gravar-motor"), arq = args[i + 1] && !args[i + 1].startsWith("--") ? args[i + 1] : null;
+  let src = null, de = null;
+  if (arq) { src = fs.readFileSync(arq, "utf8"); de = path.relative(RAIZ, path.resolve(arq)); }
+  else {
+    src = engineDaMain();
+    if (!src) { console.log("sem a origin/main no git (git fetch origin main) e sem arquivo: nada gravado"); return 1; }
+    de = "origin/main " + execSync("git rev-parse --short origin/main", { cwd: RAIZ }).toString().trim();
+  }
+  const ref = Object.assign({ sobre: "O motor (js/engine.js) SEM a opção semLesao: " + VARIANTES_MOTOR().length * 2 * 60 + " partidas e disputas de pênaltis de times sintéticos (testar-leilao.mjs, bloco C7; o sha256 do JSON de cada resultado). Regravar só com mudança DE PROPÓSITO no motor: node ferramentas/testar-leilao.mjs --gravar-motor", de }, resumoMotor(casosMotor(motorEm(src))));
+  fs.mkdirSync(path.dirname(REF_MOTOR), { recursive: true });
+  fs.writeFileSync(REF_MOTOR, JSON.stringify(ref, null, 2) + "\n");
+  console.log("referência do motor gravada: " + path.relative(RAIZ, REF_MOTOR) + " (" + ref.casos + " casos, de " + de + ")");
+  return 0;
+}
+
+async function testeCamp() {
+  await blocoAsync("C", "campeonato: calendário, tabela, chave, gol de ouro, semente, misto, semLesao e o motor, a máquina do jogo", async (ok, nota) => {
+    const TMx = TMs.public, LC = TMx.leilaoCamp, Lx = TMx.leilao, Rd = TMx.leilaoRede;
+    const seqN = n => [...Array(n).keys()];
+    const ESPERADAS = { mata: [1, 2, 2, 3, 3, 3, 3], pontos: [2, 6, 6, 10, 10, 14, 14], misto: [2, 4, 4, 7, 7, 9, 9] };
+    const CORES = ["#EF4444", "#3B82F6", "#22C55E", "#EAB308", "#A855F7", "#F97316", "#14B8A6", "#EC4899"];
+    // o fim de um leilão só de robôs para cada T (os times de verdade do C4, C5, C7 e C8)
+    const fins = {};
+    function fimLeilao(T) {
+      if (!fins[T]) { const ctx = ctxDe("public", "br", T, "camp-" + T), r = leilaoRobos(ctx); fins[T] = { ctx, v: r.v }; }
+      return fins[T];
+    }
+    function campDe(formato, T, semente, extra) {
+      const f = fimLeilao(T);
+      return LC.contexto(Object.assign({
+        codigo: "CAMP" + T, semente, formato, T, ctx: f.ctx, vivo: f.v, inicio: 1000,
+        clubes: CORES.slice(0, T).map((cor, t) => ({ nome: "Clube Fictício " + t, sigla: "CF" + t, cor, escudo: "classico|star" })),
+        nomes: seqN(T).map(t => "Técnico " + t), tipos: seqN(T).map(() => "bot")
+      }, extra || {}));
+    }
+    // um nó feito sintético (o placar dado; no mata-mata empatado, os pênaltis para `pen`)
+    const ESC0 = { formacao: "4-4-2", tit: Array(11).fill(-1) };
+    function noFeito(g, pa, pb, pen) {
+      const res = { score: [pa, pb], placar: [pa, pb], events: [{ minute: 0, type: "kickoff", text: "x" }] };
+      if (pen != null) {
+        res.pror = { score: [pa, pb], events: [{ minute: 120, type: "full", score: [pa, pb], text: "Fim da prorrogação!" }] };
+        res.pen = { score: pen === 0 ? [4, 2] : [2, 4], winner: pen, kicks: [] };
+      }
+      res.v = LC.vencedorDe(res);
+      return { e: "feito", ab: [g.a, g.b], modo: "simulado", por: -1, motivo: "abertura", trava: 1, ts: 1000 + g.rodada, esc: [ESC0, ESC0], res };
+    }
+    // o campeonato inteiro com os placares de fn(a, b, g) → [pa, pb, pen?]; confere a cada rodada que nada depois dela abriu
+    function campSint(c, fn, id) {
+      const jogos = {};
+      for (let k = 0; k < 40; k++) {
+        const V = LC.montar(c, jogos);
+        if (V.fim) return { jogos, V };
+        V.rodadas.forEach((R, i) => { if (i > V.atual) ok(!R.aberta && R.jogos.every(g => g.e === "espera"), `${id}: a rodada ${R.n} abriu antes da ${V.atual + 1} acabar`); });
+        V.rodadas[V.atual].jogos.forEach(g => {
+          if (g.e === "feito") return;
+          const p = fn(g.a, g.b, g);
+          jogos[g.id] = noFeito(g, p[0], p[1], g.mata && p[0] === p[1] ? (p[2] != null ? p[2] : (g.a < g.b ? 0 : 1)) : null);
+        });
+      }
+      ok(false, `${id}: não acabou`);
+      return { jogos, V: LC.montar(c, jogos) };
+    }
+    function embaralhaChaves(o, sem) {
+      const r = rngT(sem), ks = Object.keys(o);
+      for (let i = ks.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [ks[i], ks[j]] = [ks[j], ks[i]]; }
+      const n = {}; ks.forEach(k => { n[k] = o[k]; });
+      return n;
+    }
+
+    /* ---- C1 o calendário ---- */
+    let nCal = 0;
+    for (const formato of LC.FORMATOS) for (let T = 2; T <= 8; T++) for (const sem of ["c1a", "c1b", "c1c", "c1d", "c1e"]) {
+      const c = LC.contexto({ codigo: "CAL", semente: sem, formato, T }), rod = LC.estrutura(c), id = `C1 ${formato} T${T} ${sem}`;
+      nCal++;
+      ok(rod.length === ESPERADAS[formato][T - 2] && LC.rodadasDe(formato, T) === rod.length, `${id}: ${rod.length} rodadas (esperava ${ESPERADAS[formato][T - 2]}; rodadasDe ${LC.rodadasDe(formato, T)})`);
+      const ids = new Set();
+      rod.forEach(r => r.jogos.forEach(g => { ok(!ids.has(g.id) && /^[rm]\d+j\d+$/.test(g.id), `${id}: id ${g.id} repetido ou fora do padrão`); ids.add(g.id); }));
+      if (formato !== "mata") {
+        const voltas = formato === "pontos" ? 2 : 1, vezes = {}, casa = Array(T).fill(0), fora = Array(T).fill(0), folgas = Array(T).fill(0);
+        const liga = rod.filter(r => r.fase === "liga");
+        ok(liga.length === (T % 2 ? T : T - 1) * voltas, `${id}: ${liga.length} rodadas de pontos`);
+        liga.forEach(r => {
+          const vistos = new Set();
+          r.jogos.forEach(g => {
+            const a = g.src[0].t, b = g.src[1].t, k = Math.min(a, b) + "-" + Math.max(a, b);
+            ok(a !== b, `${id}: o técnico ${a} contra ele mesmo na rodada ${r.n}`);
+            ok(!vistos.has(a) && !vistos.has(b), `${id}: alguém joga duas vezes na rodada ${r.n}`);
+            vistos.add(a); vistos.add(b); (vezes[k] = vezes[k] || []).push([a, b]); casa[a]++; fora[b]++;
+          });
+          r.folgas.forEach(f => { ok(!vistos.has(f.t), `${id}: quem folga também joga na rodada ${r.n}`); vistos.add(f.t); folgas[f.t]++; });
+          ok(vistos.size === T && r.folgas.length === T % 2, `${id}: rodada ${r.n} com ${vistos.size} de ${T} técnicos e ${r.folgas.length} folga(s)`);
+        });
+        for (let a = 0; a < T; a++) for (let b = a + 1; b < T; b++) {
+          const v = vezes[a + "-" + b] || [];
+          ok(v.length === voltas, `${id}: ${a} × ${b} ${v.length} vez(es) (esperava ${voltas})`);
+          if (voltas === 2 && v.length === 2) ok(v[0][0] === v[1][1] && v[0][1] === v[1][0], `${id}: ${a} × ${b} sem o mando trocado no returno`);
+        }
+        // o mando alterna: dentro de cada turno ninguém faz 3 jogos seguidos como mandante (ou como visitante); a folga não conta
+        for (let v = 1; v <= voltas; v++) for (let t = 0; t < T; t++) {
+          const seqM = liga.filter(r => r.turno === v).map(r => { const g = r.jogos.find(x => x.src[0].t === t || x.src[1].t === t); return g ? (g.src[0].t === t ? "C" : "F") : ""; }).join("");
+          ok(!/CCC|FFF/.test(seqM), `${id}: o técnico ${t} no ${v}º turno com o mando ${seqM}`);
+        }
+        for (let t = 0; t < T; t++) {
+          ok(folgas[t] === (T % 2 ? voltas : 0), `${id}: o técnico ${t} folgou ${folgas[t]} vez(es)`);
+          ok(voltas === 2 ? casa[t] === fora[t] : Math.abs(casa[t] - fora[t]) <= 1, `${id}: o técnico ${t} com ${casa[t]} jogos como mandante e ${fora[t]} como visitante`);
+        }
+      }
+      if (formato === "mata") {
+        let P = 1; while (P < T) P *= 2;
+        const r1 = rod[0], vistos = [];
+        r1.jogos.forEach(g => vistos.push(g.src[0].t, g.src[1].t));
+        r1.folgas.forEach(f => vistos.push(f.t));
+        ok(vistos.slice().sort((x, y) => x - y).join() === seqN(T).join(), `${id}: a 1ª rodada tem ${vistos.join()}`);
+        ok(r1.folgas.length === P - T, `${id}: ${r1.folgas.length} folgas (esperava ${P - T})`);
+        const total = rod.reduce((s, r) => s + r.jogos.length, 0);
+        ok(total === T - 1, `${id}: ${total} jogos no mata-mata (esperava ${T - 1})`);
+        if (rod[1]) {
+          const dupla = rod[1].jogos.filter(g => g.src[0].t != null && g.src[1].t != null).length;
+          ok(dupla === Math.max(0, P - T - P / 4), `${id}: ${dupla} jogo(s) da 2ª rodada entre dois que folgaram (as folgas não se espalharam)`);
+        }
+        ok(rod[rod.length - 1].nome === "Final" && rod[rod.length - 1].jogos.length === 1, `${id}: a última rodada não é a final`);
+      }
+      if (formato === "misto") {
+        const mata = rod.filter(r => r.fase === "mata"), srcs = mata[0].jogos.map(g => g.src.map(s => s.pos).join("×")).join(",");
+        ok(T <= 4 ? mata.length === 1 && srcs === "0×1" : mata.length === 2 && srcs === "0×3,1×2" && mata[1].nome === "Final", `${id}: o mata-mata do misto ${mata.length} rodada(s), ${srcs}`);
+      }
+    }
+    {
+      const e = s => JSON.stringify(LC.estrutura(LC.contexto({ semente: s, formato: "pontos", T: 6 })));
+      ok(e("x") === e("x"), "C1: a mesma semente deu outro calendário");
+      ok(e("x") !== e("y"), "C1: outra semente deu o mesmo calendário");
+      const folgou = new Set();
+      for (let s = 0; s < 40; s++) LC.estrutura(LC.contexto({ semente: "f" + s, formato: "mata", T: 5 }))[0].folgas.forEach(f => folgou.add(f.t));
+      ok(folgou.size === 5, `C1: em 40 sementes só ${folgou.size} de 5 técnicos folgaram no mata-mata (a semente escolhe quem folga)`);
+    }
+    nota(`C1 ${nCal} calendários`);
+
+    /* ---- C2 a tabela: 3/1/0 e o desempate total, contra a conta feita no teste ---- */
+    function sorteioRef(sem, T) {
+      const r = TMx.rng.make(TMx.rng.hashStr("leilao:" + sem + ":camp:desempate")), a = seqN(T), s = [];
+      for (let i = T - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+      a.forEach((t, i) => { s[t] = i; });
+      return s;
+    }
+    const usoRef = { direto: 0, recursivo: 0, sorteio: 0 };
+    function ordemRef(T, lista, sorteio) {
+      function conta(ts, js) {
+        const m = new Map(ts.map(t => [t, { pts: 0, sg: 0, gp: 0 }]));
+        for (const [a, b, pa, pb] of js) {
+          if (!m.has(a) || !m.has(b)) continue;
+          const A = m.get(a), B = m.get(b);
+          A.gp += pa; B.gp += pb; A.sg += pa - pb; B.sg += pb - pa;
+          if (pa > pb) A.pts += 3; else if (pb > pa) B.pts += 3; else { A.pts++; B.pts++; }
+        }
+        return m;
+      }
+      const chave = s => s.pts * 1e6 + (s.sg + 500) * 1e3 + s.gp;
+      function rank(ts, nivel) {
+        const m = conta(ts, nivel === 0 ? lista : lista.filter(([a, b]) => ts.includes(a) && ts.includes(b))), grupos = new Map();
+        ts.forEach(t => { const k = chave(m.get(t)); if (!grupos.has(k)) grupos.set(k, []); grupos.get(k).push(t); });
+        if (nivel > 0 && grupos.size > 1) usoRef.direto++;
+        const out = [];
+        for (const k of [...grupos.keys()].sort((x, y) => y - x)) {
+          const g = grupos.get(k);
+          if (g.length === 1) out.push(g[0]);
+          else if (nivel === 0 || g.length < ts.length) { if (nivel > 0) usoRef.recursivo++; out.push(...rank(g, nivel + 1)); }
+          else { usoRef.sorteio++; out.push(...g.slice().sort((x, y) => sorteio[x] - sorteio[y] || x - y)); }
+        }
+        return out;
+      }
+      return { ordem: rank(seqN(T), 0), linhas: conta(seqN(T), lista) };
+    }
+    let nTab = 0, nChaves = 0;
+    for (const formato of ["pontos", "misto"]) for (let T = 3; T <= 8; T++) for (let s = 0; s < 50; s++) {
+      const sem = `c2-${formato}-${T}-${s}`, c = LC.contexto({ codigo: "TAB", semente: sem, formato, T }), id = `C2 ${formato} T${T} ${sem}`;
+      // placares de 0 a 1 em metade dos sorteios: muitos empates na tabela (o desempate inteiro é exercitado)
+      const r = rngT(sem), gols = s % 2 ? 2 : 3;
+      const { jogos, V } = campSint(c, () => [Math.floor(r() * gols), Math.floor(r() * gols), Math.floor(r() * 2)], id);
+      const lista = [];
+      V.rodadas.forEach(R => { if (R.fase === "liga") R.jogos.forEach(g => lista.push([g.a, g.b, g.placar[0], g.placar[1]])); });
+      const ref = ordemRef(T, lista, sorteioRef(sem, T)), dele = V.tabela.map(l => l.t);
+      nTab++;
+      ok(dele.join() === ref.ordem.join(), `${id}: a tabela ${dele.join()} (a conta do teste: ${ref.ordem.join()})`);
+      V.tabela.forEach((l, i) => {
+        const x = ref.linhas.get(l.t);
+        ok(l.pos === i + 1 && l.pts === x.pts && l.sg === x.sg && l.gp === x.gp && l.j === (formato === "pontos" ? 2 : 1) * (T - 1) && l.v + l.e + l.d === l.j && l.pts === 3 * l.v + l.e,
+          `${id}: a linha do técnico ${l.t} ${JSON.stringify(l)} (a conta: ${JSON.stringify(x)})`);
+      });
+      // as chaves do objeto em outra ordem (o Firebase devolve na dele): a mesma vista, inteira
+      for (let k = 0; k < 3; k++) {
+        nChaves++;
+        ok(JSON.stringify(LC.montar(LC.contexto({ codigo: "TAB", semente: sem, formato, T }), embaralhaChaves(jogos, sem + ":" + k))) === JSON.stringify(V), `${id}: com as chaves embaralhadas (${k}) a vista mudou`);
+      }
+    }
+    // casos feitos à mão: o confronto direto recursivo (Y, Z e X empatados em tudo; o confronto dos três tira o X; o de Y × Z
+    // decide) e o empate total (o sorteio pela semente)
+    {
+      const P = { "0-1": [1, 0], "2-0": [1, 0], "1-2": [2, 1], "0-3": [2, 1], "1-3": [1, 0], "2-3": [1, 0] };
+      const fn = (a, b) => P[a + "-" + b] ? P[a + "-" + b] : [P[b + "-" + a][1], P[b + "-" + a][0]];
+      for (let s = 0; s < 8; s++) {
+        const c = LC.contexto({ codigo: "MAO", semente: "mao" + s, formato: "misto", T: 4 });
+        const { V } = campSint(c, fn, "C2 recursivo");
+        ok(V.tabela.map(l => l.t).join() === "1,2,0,3", `C2 recursivo (semente mao${s}): ${V.tabela.map(l => l.t).join()} (esperava 1,2,0,3)`);
+      }
+      const ordens = new Set();
+      for (let s = 0; s < 8; s++) {
+        const sem = "zero" + s, c = LC.contexto({ codigo: "ZERO", semente: sem, formato: "pontos", T: 4 }), so = sorteioRef(sem, 4);
+        const { V } = campSint(c, () => [0, 0], "C2 zero");
+        const esperado = seqN(4).sort((x, y) => so[x] - so[y]).join();
+        ok(V.tabela.map(l => l.t).join() === esperado, `C2 empate total (${sem}): ${V.tabela.map(l => l.t).join()} (o sorteio: ${esperado})`);
+        ordens.add(esperado);
+      }
+      ok(ordens.size >= 3, `C2: o sorteio deu só ${ordens.size} ordem(ns) em 8 sementes`);
+    }
+    ok(usoRef.direto > 20 && usoRef.recursivo > 0 && usoRef.sorteio > 20, `C2: os sorteios aleatórios exercitaram pouco o desempate (confronto direto ${usoRef.direto}, recursivo ${usoRef.recursivo}, sorteio ${usoRef.sorteio})`);
+    nota(`C2 ${nTab} tabelas, ${nChaves} com as chaves embaralhadas, o confronto direto decidiu ${usoRef.direto}× (${usoRef.recursivo} recursivo) e o sorteio ${usoRef.sorteio}×`);
+
+    /* ---- C3 a chave do mata-mata (com folgas) e C6 os classificados do misto ---- */
+    let nMata = 0;
+    for (const formato of ["mata", "misto"]) for (let T = 2; T <= 8; T++) for (let s = 0; s < 20; s++) {
+      const sem = `c3-${formato}-${T}-${s}`, c = LC.contexto({ codigo: "KO", semente: sem, formato, T }), id = `${formato === "mata" ? "C3" : "C6"} T${T} ${sem}`;
+      const r = rngT(sem), jogos = {};
+      let V = null, viuLigaFeita = false;
+      for (let k = 0; k < 40; k++) {
+        V = LC.montar(c, jogos);
+        if (V.fim) break;
+        const R = V.rodadas[V.atual];
+        if (formato === "misto" && R.fase === "mata" && !viuLigaFeita) {
+          viuLigaFeita = true;
+          const tab = V.tabela.map(l => l.t), pares = R.jogos.map(g => g.a + "×" + g.b).join(",");
+          const esperado = T <= 4 ? `${tab[0]}×${tab[1]}` : `${tab[0]}×${tab[3]},${tab[1]}×${tab[2]}`;
+          ok(V.ligaFeita && pares === esperado, `${id}: os classificados ${pares} (a tabela ${tab.join()}: esperava ${esperado})`);
+        }
+        if (formato === "misto" && R.fase === "liga") V.rodadas.filter(x => x.fase === "mata").forEach(x => x.jogos.forEach(g => ok(g.a == null && g.b == null && !x.aberta, `${id}: o mata-mata com times antes do fim dos pontos`)));
+        R.jogos.forEach(g => {
+          if (g.e === "feito") return;
+          if (R.fase === "mata") {
+            // os da 2ª rodada em diante são os vencedores dos jogos de antes (ou quem folgou)
+            g.src.forEach((src, lado) => {
+              const t = lado ? g.b : g.a;
+              if (src.venc) ok(t === V.rodadas.flatMap(x => x.jogos).find(x => x.id === src.venc).venc, `${id}: ${g.id} com ${t} no lugar do vencedor de ${src.venc}`);
+            });
+          }
+          const pa = Math.floor(r() * 3), pb = Math.floor(r() * 3);
+          jogos[g.id] = noFeito(g, pa, pb, g.mata && pa === pb ? Math.floor(r() * 2) : null);
+        });
+      }
+      nMata++;
+      ok(V && V.fim, `${id}: não acabou`);
+      if (!V || !V.fim) continue;
+      const mata = V.rodadas.filter(R => R.fase === "mata"), fin = mata[mata.length - 1].jogos[0];
+      ok(V.campeao === fin.venc && V.classificacao[0] === fin.venc && V.classificacao[1] === (fin.venc === fin.a ? fin.b : fin.a), `${id}: o campeão ${V.campeao} e o vice ${V.classificacao[1]} (a final ${fin.a} × ${fin.b}, venceu ${fin.venc})`);
+      ok(V.classificacao.slice().sort((x, y) => x - y).join() === seqN(T).join(), `${id}: a classificação ${V.classificacao.join()} não tem todos`);
+      // quem caiu mais tarde fica na frente de quem caiu antes
+      const caiu = {};
+      mata.forEach((R, i) => R.jogos.forEach(g => { const perd = g.venc === g.a ? g.b : g.a; caiu[perd] = i; }));
+      for (let i = 0; i + 1 < V.classificacao.length; i++) {
+        const x = V.classificacao[i], y = V.classificacao[i + 1];
+        if (x !== V.campeao && caiu[x] != null && caiu[y] != null) ok(caiu[x] >= caiu[y], `${id}: ${x} (caiu na rodada ${caiu[x] + 1}) atrás de ${y} (caiu na ${caiu[y] + 1})`);
+      }
+      if (formato === "misto") {
+        const fora = V.classificacao.filter(t => caiu[t] == null && t !== V.campeao), pos = {};
+        V.tabela.forEach(l => { pos[l.t] = l.pos; });
+        for (let i = 0; i + 1 < fora.length; i++) ok(pos[fora[i]] < pos[fora[i + 1]], `${id}: os não classificados fora da ordem da tabela (${fora.join()})`);
+      }
+    }
+    nota(`C3/C6 ${nMata} chaves`);
+
+    /* ---- C4 o gol de ouro (e os pênaltis) ---- */
+    {
+      const c = campDe("mata", 4, "ouro"), a = LC.timeDoTecnico(c, 0), b = LC.timeDoTecnico(c, 1);
+      ok(a.players.length === 11 && a.players[0].pos === "GK" && a.players[0].number === 1 && a.players.every((p, i) => p.number === i + 1) && a.id === "leilao_CAMP4_0" && a.formation && a.escudoUT.escudo === "classico|star" && a.colors.primary === CORES[0],
+        `C4: o time do técnico ${JSON.stringify({ n: a.players.length, pos0: a.players[0] && a.players[0].pos, id: a.id, f: a.formation, esc: a.escudoUT, cores: a.colors })}`);
+      const esc = LC.escalacaoDoJogo(c, 0), slots = Lx.slotsDe(esc.formacao);
+      ok(a.players.every((p, i) => p.id === Lx.retratoDe(c.ctx, esc.tit[i]).id && (p.overall === Lx.retratoDe(c.ctx, esc.tit[i]).overall - Lx.custoVaga(Lx.retratoDe(c.ctx, esc.tit[i]), slots[i]))),
+        "C4: os jogadores do time não estão nas vagas da escalação (ou sem o −1/−2 da função)");
+      let n = 0, pror = 0, ouro = 0, pen = 0, cortados = 0;
+      for (let s = 0; s < 1500; s++) {
+        const res = LC.simularJogo(a, b, { semente: "ouro:" + s, mataMata: true }), id = `C4 ouro:${s}`;
+        n++;
+        ok(LC.resValido(JSON.parse(JSON.stringify(res)), true) && (res.v === 0 || res.v === 1), `${id}: o resultado não vale no mata-mata (v ${res.v})`);
+        const empatou = res.score[0] === res.score[1];
+        ok(empatou === !!res.pror, `${id}: ${empatou ? "empate sem prorrogação" : "prorrogação sem empate"}`);
+        if (!res.pror) { ok(!res.pen, `${id}: pênaltis sem prorrogação`); continue; }
+        pror++;
+        const evs = res.pror.events, gols = evs.filter(e => e.type === "goal" || e.type === "pengoal"), ult = evs[evs.length - 1];
+        ok(evs.every(e => e.minute >= 91 && e.minute <= 120), `${id}: lance da prorrogação fora dos 91'–120'`);
+        if (res.pror.ouro != null) {
+          ouro++;
+          const g = gols[0];
+          ok(gols.length === 1 && evs[evs.length - 2] === g && ult.type === "full" && ult.minute === g.minute, `${id}: o gol de ouro não acabou o jogo (${gols.length} gols, depois dele ${evs.length - 1 - evs.indexOf(g)} lances)`);
+          ok(res.pror.ouro === g.team && res.v === g.team && !res.pen && res.placar.join() === g.score.join() && res.pror.score.join() === g.score.join() && Math.abs(g.score[0] - g.score[1]) === 1,
+            `${id}: o placar do gol de ouro ${JSON.stringify({ placar: res.placar, pror: res.pror.score, gol: g.score, v: res.v })}`);
+          // a prorrogação de hoje (sem o corte) seguiria até os 120'
+          const et = TMx.rng.comSemente("ouro:" + s + ":pror", () => TMx.engine.simulate(a, b, { realism: 3, neutral: true, semLesao: true, startMinute: 91, endMinute: 120, startScore: res.score.slice(),
+            excludeIds: res.events.filter(e => e.type === "red").map(e => e.playerId), yellowIds: res.events.filter(e => e.type === "yellow").map(e => e.playerId) }));
+          ok(JSON.stringify(et.events.slice(0, evs.length - 1)) === JSON.stringify(evs.slice(0, -1)), `${id}: a prorrogação cortada não é o começo da prorrogação do motor`);
+          if (et.events.length > evs.length) cortados++;
+        } else {
+          ok(gols.length === 0 && ult.type === "full" && ult.minute === 120 && res.pror.score.join() === res.score.join() && res.pen && res.pen.winner === res.v, `${id}: sem gol de ouro e sem os pênaltis certos`);
+          pen++;
+          const fora = new Set(res.events.concat(evs).filter(e => e.type === "red").map(e => e.playerId));
+          ok(res.pen.kicks.length >= 6 && res.pen.kicks.every(k => !fora.has(k.id) && k.id), `${id}: um expulso bateu pênalti (ou a disputa curta demais)`);
+        }
+      }
+      ok(pror > 200 && ouro > 50 && pen > 50 && cortados > 30, `C4: poucos casos (${pror} prorrogações, ${ouro} gols de ouro, ${pen} pênaltis, ${cortados} cortes)`);
+      let semPror = 0;
+      for (let s = 0; s < 300; s++) { const res = LC.simularJogo(a, b, { semente: "pts:" + s }); if (!res.pror && !res.pen) semPror++; }
+      ok(semPror === 300, `C4: fora do mata-mata ${300 - semPror} jogos com prorrogação ou pênaltis`);
+      nota(`C4 ${n} jogos: ${pror} prorrogações, ${ouro} gols de ouro (${cortados} cortados antes do 120'), ${pen} pênaltis`);
+    }
+
+    /* ---- C5 a mesma semente = o mesmo resultado (também noutro "aparelho"); outra trava muda ---- */
+    {
+      const c = campDe("mata", 4, "sem5"), V = LC.montar(c, {}), g = V.rodadas[0].jogos[0];
+      const r1 = LC.reservar(null, { ab: [g.a, g.b], esc: [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)], modo: "simulado", por: -1, motivo: "abertura", ts: 1731600000123 });
+      const j = r1.jogo, base = LC.resultadoDoJogo(c, g.id, j);
+      ok(LC.canon(LC.resultadoDoJogo(c, g.id, JSON.parse(JSON.stringify(j)))) === LC.canon(base), "C5: a mesma semente deu outro resultado");
+      ok(LC.canon(Rd.resolve(JSON.parse(JSON.stringify(base)), 0)) === LC.canon(base), "C5: o resultado guardado como o Firebase guarda mudou o texto canônico");
+      const antes = Math.random;
+      LC.simularJogo(LC.timeDoTecnico(c, 0), LC.timeDoTecnico(c, 1), { semente: "x", mataMata: true });
+      ok(Math.random === antes, "C5: o Math.random não voltou ao original depois da simulação");
+      // outro "aparelho": um TM carregado do zero, os lotes e o vivo pelo JSON (como chegam do banco)
+      const TMb = carrega("public"), f = fimLeilao(4), lt = JSON.parse(JSON.stringify({ l: f.ctx.lotes, f: f.ctx.fora, v: f.v }));
+      const cB = TMb.leilaoCamp.contexto({ codigo: "CAMP4", semente: "sem5", formato: "mata", T: 4, ctx: TMb.leilao.contexto({ T: 4, lotes: lt.l, fora: lt.f, semente: f.ctx.semente }), vivo: lt.v,
+        clubes: JSON.parse(JSON.stringify(c.clubes)), tipos: c.tipos });
+      let iguais = 0, difere = 0;
+      for (let k = 0; k < 120; k++) {
+        const jk = Object.assign({}, j, { trava: j.trava + k }), id = "m1j" + (k % 2);
+        const x = LC.canon(LC.resultadoDoJogo(c, id, jk)), y = TMb.leilaoCamp.canon(TMb.leilaoCamp.resultadoDoJogo(cB, id, JSON.parse(JSON.stringify(jk))));
+        if (x === y) iguais++;
+        if (x !== LC.canon(LC.resultadoDoJogo(c, id, Object.assign({}, jk, { trava: jk.trava + 1000 })))) difere++;
+      }
+      ok(iguais === 120, `C5: noutro aparelho ${120 - iguais} de 120 resultados diferentes`);
+      ok(difere >= 108, `C5: outra trava mudou só ${difere} de 120 resultados`);
+      nota(`C5 120 jogos iguais noutro aparelho, ${difere} mudam com outra trava`);
+    }
+
+    /* ---- C7 o semLesao e o motor SEM a opção igual ao de antes ---- */
+    {
+      const c = campDe("pontos", 4, "les"), a = LC.timeDoTecnico(c, 0), b = LC.timeDoTecnico(c, 1);
+      let com = 0, sem = 0;
+      for (let s = 0; s < 1500; s++) {
+        const x = TMx.rng.comSemente("les:" + s, () => TMx.engine.simulate(a, b, { realism: 3, neutral: true }));
+        const y = TMx.rng.comSemente("les:" + s, () => TMx.engine.simulate(a, b, { realism: 3, neutral: true, semLesao: true }));
+        if (x.injuries.length) com++;
+        if (y.injuries.length || y.events.some(e => e.type === "injury")) sem++;
+      }
+      ok(sem === 0 && com > 100, `C7: com o semLesao ${sem} jogo(s) com lesão (sem a opção: ${com} de 1500)`);
+      const agora = casosMotor(TMx), main = engineDaMain();
+      if (main) {
+        const antes = casosMotor(motorEm(main)), dif = agora.filter((x, i) => x.txt !== antes[i].txt);
+        ok(!dif.length, `C7: o motor sem a opção mudou em ${dif.length} de ${agora.length} casos contra a origin/main (grupos ${[...new Set(dif.map(d => d.grupo))].join(", ")})`);
+      }
+      let ref = null;
+      try { ref = JSON.parse(fs.readFileSync(REF_MOTOR, "utf8")); } catch (e) { ok(false, `C7: sem a referência ${path.relative(RAIZ, REF_MOTOR)} (node ferramentas/testar-leilao.mjs --gravar-motor)`); }
+      if (ref) {
+        const r = resumoMotor(agora), grupos = Object.keys(ref.porGrupo).filter(g => ref.porGrupo[g] !== r.porGrupo[g]);
+        ok(r.casos === ref.casos && r.sha256 === ref.sha256, `C7: o motor sem a opção não bate com a referência gravada (${ref.de}): grupos ${grupos.join(", ") || "?"} (mudança de propósito: --gravar-motor e dizer no PR)`);
+      }
+      nota(`C7 lesões ${com} → ${sem} em 1500 jogos; o motor sem a opção = ${main ? "a origin/main e " : ""}a referência (${agora.length} casos)`);
+    }
+
+    /* ---- C8 a máquina do jogo ---- */
+    {
+      const PZ = LC.PRAZO, ESC = [ESC0, ESC0];
+      const reserva = (j, o) => LC.reservar(j, Object.assign({ ab: [0, 1], esc: ESC, modo: "simulado", por: 0, motivo: "pedido", ts: 5000 }, o));
+      let r = LC.abrir(null, { ts: 1000 });
+      ok(r.ok && r.jogo.e === "aberto" && r.jogo.ini === 1000 && r.jogo.resta === PZ && LC.prazoDe(r.jogo) === 1000 + PZ, `C8 abrir: ${JSON.stringify(r)}`);
+      const ab = r.jogo;
+      ok(!LC.abrir(ab, { ts: 2000 }).ok, "C8: abriu duas vezes");
+      ok(!LC.pausar(ab, {}).ok, "C8: pausou sem a hora");
+      const pa = LC.pausar(ab, { quando: 31000 });
+      ok(pa.ok && pa.jogo.parado === true && pa.jogo.resta === PZ - 30000 && LC.prazoDe(pa.jogo) === null, `C8 pausar: ${JSON.stringify(pa)}`);
+      ok(LC.pausar(ab, { quando: 500 }).jogo.resta === PZ, "C8: a pausa antes da abertura gastou prazo");
+      ok(LC.pausar(ab, { quando: 1000 + PZ + 9999 }).jogo.resta === 0, "C8: o prazo ficou negativo");
+      ok(!LC.pausar(pa.jogo, { quando: 40000 }).ok && !LC.retomar(ab, { ts: 1 }).ok, "C8: pausou o parado ou retomou o que corre");
+      ok(reserva(pa.jogo, { motivo: "prazo", hora: 1e13 }).motivo === "parado", "C8: o prazo parado venceu");
+      const rt = LC.retomar(pa.jogo, { ts: 500000 });
+      ok(rt.ok && rt.jogo.ini === 500000 && rt.jogo.resta === PZ - 30000 && !rt.jogo.parado && LC.prazoDe(rt.jogo) === 500000 + PZ - 30000, `C8 retomar: ${JSON.stringify(rt)}`);
+      const venc = LC.prazoDe(rt.jogo);
+      ok(reserva(rt.jogo, { motivo: "prazo", hora: venc - 1 }).motivo === "cedo" && reserva(rt.jogo, { motivo: "prazo" }).motivo === "cedo", "C8: reservou pelo prazo antes de vencer (ou sem a testemunha)");
+      ok(reserva(null, { motivo: "prazo", hora: 1e13 }).motivo === "sem", "C8: venceu o prazo que nunca correu");
+      const rp = reserva(rt.jogo, { motivo: "prazo", hora: venc, por: -1 });
+      ok(rp.ok && rp.jogo.e === "reservado" && rp.jogo.trava === 5000 && rp.jogo.motivo === "prazo" && rp.jogo.ini == null && rp.jogo.resta == null, `C8 reservar pelo prazo: ${JSON.stringify(rp)}`);
+      ok(reserva(null, { ab: [1, 1] }).motivo === "times" && reserva(null, { modo: "2d" }).motivo === "opcao" && reserva(null, { esc: [ESC0] }).motivo === "times", "C8: reservou com os times, o modo ou as escalações errados");
+      // a escalação gravada é uma cópia: mexer na de agora depois de reservar não muda o jogo
+      const minha = { formacao: "4-3-3", tit: seqN(11) }, rv = reserva(null, { esc: [minha, ESC0] });
+      minha.tit[0] = 99;
+      ok(rv.ok && rv.jogo.esc[0].tit[0] === 0 && rv.jogo.esc[0].formacao === "4-3-3", "C8: a escalação gravada mudou junto com a de agora");
+      ok(reserva(rv.jogo, {}).motivo === "reservado", "C8: reservou duas vezes");
+      // gravar: a trava vista, a forma do resultado, uma vez só
+      const resOk = { score: [2, 1], placar: [2, 1], events: [{ minute: 0, type: "kickoff", text: "x" }], v: 0 };
+      ok(LC.gravar(rv.jogo, { trava: 4999, res: resOk, ts: 6000 }).motivo === "trava", "C8: gravou com outra trava");
+      ok(LC.gravar(rv.jogo, { trava: 5000, res: Object.assign({}, resOk, { v: 1 }), ts: 6000 }).motivo === "res", "C8: gravou um resultado com o vencedor errado");
+      ok(LC.gravar(rv.jogo, { trava: 5000, res: Object.assign({}, resOk, { placar: [1, 1], score: [1, 1], v: -1 }), ts: 6000, mata: true }).motivo === "res", "C8: gravou empate no mata-mata");
+      const gv = LC.gravar(rv.jogo, { trava: 5000, res: resOk, ts: 6000 });
+      ok(gv.ok && gv.jogo.e === "feito" && gv.jogo.ts === 6000 && gv.jogo.trava === 5000 && gv.jogo.esc[0].formacao === "4-3-3" && gv.jogo.res.v === 0, `C8 gravar: ${JSON.stringify(gv)}`);
+      ok(LC.gravar(gv.jogo, { trava: 5000, res: resOk, ts: 7000 }).motivo === "feito" && reserva(gv.jogo, {}).motivo === "feito", "C8: o feito foi regravado ou reservado de novo");
+      // o 3D (PR 4): o que abriu tem o prazo pela duração e, vencido sem resultado, é W.O. de quem reservou; o que não abriu
+      // tem o prazo de começar (2 min: o simulado — bloco TD)
+      const c3 = LC.contexto({ formato: "mata", T: 2, semente: "wo" }), r30 = reserva(null, { modo: "3d", por: 1, ts: 10000 });
+      ok(r30.ok && r30.jogo.inicio === 10000 && LC.prazoDe(r30.jogo, c3) === 10000 + PZ && LC.wo(r30.jogo, { trava: 10000, hora: 1e13, ts: 1 }, c3).motivo === "naoAbriu", `C8: o prazo do 3D que não abriu ${LC.prazoDe(r30.jogo, c3)} (2 min) ou o W.O. dele`);
+      const r3 = LC.marcarAbriu(r30.jogo, { trava: 10000, ts: 10500 });
+      ok(r3.ok && r3.jogo.abriu === 10500 && LC.prazoDe(r3.jogo, c3) === 10000 + LC.prazo3d(4) && LC.prazo3d(4) === 1104000, `C8: o prazo do 3D ${LC.prazoDe(r3.jogo, c3)} (18,4 min com 4 min por tempo)`);
+      ok(LC.wo(r3.jogo, { trava: 10000, hora: 10000 + 1104000 - 1, ts: 1 }, c3).motivo === "cedo" && LC.wo(rv.jogo, { trava: 5000, hora: 1e13, ts: 1 }, c3).motivo === "trava", "C8: W.O. antes do prazo ou no simulado");
+      const w = LC.wo(r3.jogo, { trava: 10000, hora: 10000 + 1104000, ts: 99 }, c3);
+      ok(w.ok && w.jogo.e === "feito" && w.jogo.res.wo === 1 && w.jogo.res.placar.join() === "3,0" && w.jogo.res.v === 0 && LC.resValido(w.jogo.res, true), `C8 W.O.: ${JSON.stringify(w)}`);
+      // o que fazer agora
+      const cP = LC.contexto({ formato: "mata", T: 4, semente: "pa", tipos: ["pessoa", "bot", "pessoa", "bot"] });
+      const g = (a, b, j, extra) => Object.assign({ id: "m1j0", a, b, j, e: j ? j.e : "livre", aberta: true, mata: true }, extra);
+      const aqui = { presente: () => true, visto: () => 7777 }, longe = { presente: () => false, visto: () => 7777 };
+      const A = (gg, info) => JSON.stringify(LC.proximaAcao(cP, gg, info));
+      ok(A(g(1, 3, null), longe) === '{"acao":"reservar","motivo":"abertura","quando":0}' && A(g(0, 2, null), longe) === '{"acao":"reservar","motivo":"abertura","quando":0}', "C8: bot × bot ou pessoa × pessoa sem reservar na abertura");
+      ok(A(g(0, 1, null), aqui) === '{"acao":"abrir","quando":0}' && A(g(0, 1, null), longe) === "null", "C8: o prazo abre sem ninguém do jogo ou não abre com alguém");
+      ok(A(g(0, 1, ab), aqui) === `{"acao":"reservar","motivo":"prazo","quando":${1000 + PZ}}` && A(g(0, 1, ab), longe) === '{"acao":"pausar","quando":0,"desde":7777}', "C8: o prazo correndo não vence ou não para sem ninguém");
+      ok(A(g(0, 1, pa.jogo), aqui) === '{"acao":"retomar","quando":0}' && A(g(0, 1, pa.jogo), longe) === "null", "C8: o prazo parado não volta (ou volta sem ninguém)");
+      ok(A(g(0, 1, rv.jogo), longe) === '{"acao":"gravar","quando":0}' && A(g(0, 1, r3.jogo), longe) === '{"acao":"wo","quando":1114000}' && A(g(0, 1, r30.jogo), longe) === `{"acao":"naoAbriu","quando":${10000 + PZ}}`, "C8: o reservado não grava (ou o 3D sem o W.O. no prazo, ou o que não abriu sem o simulado)");
+      ok(A(g(0, 1, gv.jogo, { e: "feito" }), aqui) === "null" && A(g(0, 1, null, { aberta: false, e: "espera" }), aqui) === "null", "C8: agiu num jogo feito ou de uma rodada que não abriu");
+    }
+
+    /* ---- C8 o campeonato inteiro por 3 "aparelhos" ao mesmo tempo na rede em memória (a mesma interface do online) ---- */
+    for (const [formato, T] of [["misto", 5], ["mata", 6], ["pontos", 3]]) {
+      const id = `C8 rede ${formato} T${T}`, V0 = relogioVirtual(5_000_000), r = rngT(id);
+      const c = campDe(formato, T, "rede-" + formato, { codigo: "REDE" + T, inicio: 5_000_000, tipos: seqN(T).map(t => (t === 0 || (formato === "pontos" && t === 2)) ? "pessoa" : "bot") });
+      const lat = () => Math.floor(r() * 150);
+      const R0 = Rd.memoria("REDE" + T, { guardar: false, relogio: V0.relogio, agendar: V0.agendar, latencia: lat });
+      const redes = [R0, R0.outroCliente({ latencia: lat }), R0.outroCliente({ latencia: lat })];
+      const feitos = {}, conta = { tentou: 0, abortou: 0, reservou: {}, gravou: {}, tipo: {} };
+      // o feito nunca muda depois de gravado (o ts do 1º feito visto = o do fim)
+      R0.ouvir("jogos", js => { Object.keys(js || {}).forEach(k => { if (js[k] && js[k].e === "feito" && feitos[k] == null) feitos[k] = js[k].ts; }); });
+      // a pessoa some 50 s a cada 150 s (o prazo para e volta)
+      const presente = h => Math.floor((h - 5_000_000) / 50000) % 3 !== 1, visto = h => presente(h) ? h : 5_000_000 + Math.floor((h - 5_000_000) / 50000) * 50000;
+      async function age(rede, g, a) {
+        const cam = "jogos/" + g.id;
+        conta.tentou++;
+        let fn = null, hora = null;
+        if (a.acao === "abrir") fn = cur => LC.abrir(cur, { ts: rede.TS });
+        else if (a.acao === "retomar") fn = cur => LC.retomar(cur, { ts: rede.TS });
+        else if (a.acao === "pausar") { hora = await rede.testemunha("bate/x"); fn = cur => LC.pausar(cur, { quando: a.desde != null ? a.desde : hora }); }
+        else if (a.acao === "reservar") {
+          if (a.motivo === "prazo") hora = await rede.testemunha("bate/x");
+          const esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)];
+          fn = cur => LC.reservar(cur, { ab: [g.a, g.b], esc, modo: "simulado", por: -1, motivo: a.motivo, ts: rede.TS, hora });
+        } else if (a.acao === "gravar") {
+          const j = g.j, res = LC.resultadoDoJogo(c, g.id, j);
+          fn = cur => LC.gravar(cur, { trava: j.trava, res, ts: rede.TS, mata: g.mata });
+        }
+        if (!fn) return;
+        const x = await rede.transacao(cam, cur => { const q = fn(cur); return q.ok ? q.jogo : undefined; });
+        if (x.feito) conta.tipo[a.acao] = (conta.tipo[a.acao] || 0) + 1;
+        if (!x.feito) conta.abortou++;
+        else if (a.acao === "reservar") conta.reservou[g.id] = (conta.reservou[g.id] || 0) + 1;
+        else if (a.acao === "gravar") conta.gravou[g.id] = (conta.gravou[g.id] || 0) + 1;
+      }
+      let fim = false;
+      async function aparelho(rede, k) {
+        for (let volta = 0; volta < 3000 && !fim; volta++) {
+          const V = LC.montar(c, (await rede.ler("jogos")) || {});
+          if (V.fim) { fim = true; return; }
+          const h = rede.horaServidor(), info = { presente: () => presente(h), visto: () => visto(h), hora: h };
+          const acoes = [];
+          V.rodadas[V.atual].jogos.forEach(g => { const a = LC.proximaAcao(c, g, info); if (a && a.quando <= h) acoes.push(age(rede, g, a)); });
+          await Promise.all(acoes);
+          await new Promise(ok2 => V0.agendar(ok2, 800 + k * 700 + Math.floor(r() * 400)));
+        }
+      }
+      await V0.espera(Promise.all(redes.map((rede, k) => aparelho(rede, k))));
+      const arv = R0._arvore(), jogos = arv.jogos || {}, V = LC.montar(c, jogos);
+      ok(V.fim, `${id}: o campeonato não acabou`);
+      const todos = V.rodadas.flatMap(R => R.jogos);
+      ok(todos.length === Object.keys(jogos).length && todos.every(g => g.e === "feito"), `${id}: ${todos.filter(g => g.e === "feito").length} de ${todos.length} jogos feitos (${Object.keys(jogos).length} nós)`);
+      todos.forEach(g => {
+        ok(conta.reservou[g.id] === 1 && conta.gravou[g.id] === 1 && feitos[g.id] === jogos[g.id].ts, `${id}: ${g.id} reservado ${conta.reservou[g.id] || 0}× e gravado ${conta.gravou[g.id] || 0}× (o feito mudou depois: ${feitos[g.id] !== jogos[g.id].ts})`);
+        const m = LC.conferirJogo(c, g, jogos[g.id]);
+        ok(m === null, `${id}: a conferência acusou ${g.id} (${m})`);
+        const pessoaBot = LC.confronto(c, g) === "pessoaBot", j = jogos[g.id];
+        ok(j.motivo === (pessoaBot ? "prazo" : "abertura"), `${id}: ${g.id} reservado por '${j.motivo}'`);
+        if (pessoaBot) {
+          const R = V.rodadas.find(x => x.jogos.includes(g));
+          ok(j.trava - R.abre >= LC.PRAZO, `${id}: ${g.id} simulado ${(j.trava - R.abre) / 1000} s depois de a rodada abrir (o prazo é de ${LC.PRAZO / 1000} s com a pessoa presente)`);
+        }
+      });
+      // a mesma vista em todo aparelho
+      const vistas = await V0.espera(Promise.all(redes.map(rede => rede.ler("jogos"))));
+      ok(vistas.every(js => JSON.stringify(LC.montar(c, js)) === JSON.stringify(V)), `${id}: os aparelhos viram campeonatos diferentes`);
+      ok(conta.abortou > 0, `${id}: nenhuma transação disputada (os 3 aparelhos não agiram juntos)`);
+      ok(conta.tipo.abrir > 0 && conta.tipo.pausar > 0 && conta.tipo.retomar > 0, `${id}: o prazo não foi exercitado (${JSON.stringify(conta.tipo)})`);
+      // a sala adulterada: o placar trocado, a escalação com um jogador de outro, os times trocados, um jogo fora da vez
+      const g0 = todos[0], j0 = jogos[g0.id], outro = todos.find(g => g.a !== g0.a && g.b !== g0.a);
+      const mexe = f => { const j = JSON.parse(JSON.stringify(j0)); f(j); return LC.conferirJogo(c, g0, j); };
+      const g1 = todos.find(g => !jogos[g.id].res.pror);
+      if (g1) {
+        const j1 = JSON.parse(JSON.stringify(jogos[g1.id])), p = j1.res.placar;
+        j1.res.placar = [p[0] + 1, p[1]]; j1.res.score = j1.res.placar.slice(); j1.res.v = LC.vencedorDe(j1.res);
+        ok(LC.resValido(j1.res, g1.mata) && LC.conferirJogo(c, g1, j1) === "resultado", `${id}: o placar mexido (${p.join("×")} → ${j1.res.placar.join("×")}) passou`);
+      }
+      ok(mexe(j => { j.res.events[0].text = "outro"; }) === "resultado", `${id}: o texto de um lance mexido passou`);
+      const deOutro = Lx.timeIdx(c.vivo, c.ctx, outro ? outro.a : (g0.a + 1) % T)[0];
+      ok(mexe(j => { j.esc[0].tit[5] = deOutro; }) === "escalacao", `${id}: a escalação com um jogador de outro técnico passou`);
+      ok(mexe(j => { j.ab = [j.ab[1], j.ab[0]]; }) === "times", `${id}: os times trocados passaram`);
+      const futuro = { id: "x", a: g0.a, b: g0.b, aberta: false, mata: g0.mata };
+      ok(LC.conferirJogo(c, futuro, j0) === "vez" && LC.conferirJogo(c, g0, Object.assign({}, j0, { e: "nada" })) === "forma", `${id}: o jogo fora da vez ou sem forma passou`);
+      nota(`${id.slice(3)}: ${todos.length} jogos, ${conta.tentou} ações (${conta.abortou} disputadas; ${Object.keys(conta.tipo).map(k => k + " " + conta.tipo[k]).join(", ")})`);
+    }
+  });
+}
+
+/* ===================================================== K o campeonato pela sessão (PR 3) =====================================================
+   O campeonato da sala pela sessão (leilao-sessao.js) e pela rede: K0 a duração estimada e o formato na sala; K1 o treino
+   com 1 pessoa e 1–7 bots nos 3 formatos até o campeão (cada jogo reservado e gravado uma vez, conferido, o prazo de 2 min
+   no jogo da pessoa, o "Simular partida" que grava antes de responder, a vista igual noutro "aparelho"); K2 recarregar no
+   meio = os mesmos resultados; K3 a escalação mudada vale só a partir do próximo jogo que não começou e a sala adulterada
+   congela. O online (2, 4 e 8 aparelhos no banco falso) é o bloco KO. */
+// a pessoa do treino de teste: simula o próprio jogo (quando a regra `simula(rodada)` diz) assim que ele abre
+function pilotoCamp(S, V, simula) {
+  const feitos = new Set(), pedidos = [];
+  let parado = false;
+  const olha = () => {
+    if (parado) return;
+    const c = S.ver().camp, mj = c && c.meuJogo;
+    if (!mj || !mj.podeSimular || feitos.has(mj.id) || !simula(mj)) return;
+    feitos.add(mj.id);
+    V.agendar(() => { S.simular(mj.id).then(r => pedidos.push({ id: mj.id, r })); }, 1);
+  };
+  const off = S.aoMudar(olha);
+  olha();
+  return { parar() { parado = true; off(); }, pedidos };
+}
+/* ===================================================== NO as notas escondidas (PR 6) ===================================================== */
+// a conta da nota percebida feita AQUI (sem o leilao.js): o mulberry32 do rng.js sobre o FNV-1a de "leilao:{semente}:percebida:{id}",
+// a nota + ⌊r × 7⌋ − 3
+function fnvRef(s) { let h = 2166136261; s = String(s); for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function mulberryRef(seed) {
+  let a = seed >>> 0;
+  return () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const percebidaRef = (sem, id, ov) => ov + Math.floor(mulberryRef(fnvRef("leilao:" + sem + ":percebida:" + id))() * 7) - 3;
+// as medidas de um leilão só de robôs (o "antes e depois" do PLANO §8): preço de uma compra, completo sem a reposição, a sobra
+// e a nota média (a de verdade) do time de cada técnico
+function medidasRobos(ctx, res, Lx) {
+  const m = { vendas: res.vendas.length, preco: res.vendas.reduce((a, x) => a + x.preco, 0), completo: res.v.fase === "fim" && !(res.v.f || "").replace(/-/g, "").length ? 1 : 0, sobra: 0, tecs: 0, nota: 0, times: 0 };
+  res.v.cx.forEach(c => { m.sobra += c[0]; m.tecs++; });
+  if (res.v.fase === "fim") for (let t = 0; t < ctx.T; t++) { const tm = (Lx || LE).timeDe(res.v, ctx, t); if (tm.length) { m.nota += tm.reduce((a, l) => a + l.overall, 0) / tm.length; m.times++; } }
+  return m;
+}
+async function testeOcultas() {
+  await blocoAsync("NO", "notas escondidas (PR 6): as regras, a nota percebida conferida, os robôs só com ela, a opção da sala e a revelação no fim", async (ok, nota) => {
+    const TMx = TMs.public, Lx = TMx.leilao, LC = TMx.leilaoCamp, SS = TMx.leilaoSessao, mundo = MUNDO.public;
+    /* ---- NO1 as regras: 5, as de antes aceitas e à mostra ---- */
+    ok(Lx.REGRAS === 5 && Lx.REGRAS_OCULTAS === 5 && jsonIgual(Lx.REGRAS_ACEITAS, [1, 2, 3, 4, 5]) && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6),
+      `NO1 regras ${Lx.REGRAS}, aceitas ${JSON.stringify(Lx.REGRAS_ACEITAS)}`);
+    const sala = (regras, overall) => ({ meta: { regras }, cfg: { overall } });
+    ok(Lx.ocultasNaSala(sala(5, "escondido")) && !Lx.ocultasNaSala(sala(5, "mostra")) && !Lx.ocultasNaSala(sala(5, undefined)) && !Lx.ocultasNaSala(sala(5, "sim")) &&
+      [1, 2, 3, 4].every(r => !Lx.ocultasNaSala(sala(r, "escondido"))) && !Lx.ocultasNaSala(null) && !Lx.ocultasNaSala({ meta: {} }),
+      "NO1 ocultasNaSala: só cfg.overall 'escondido' numa sala de regras ≥ 5 (as de antes ficam à mostra)");
+    ok(Lx.REVELA_NOTAS === "campeonato" && Lx.PERCEBIDA === 3, `NO1 a decisão 13 (revelar no fim do campeonato) e a nota ± 3: ${Lx.REVELA_NOTAS}, ${Lx.PERCEBIDA}`);
+    /* ---- NO2 a nota percebida: a conta feita aqui, ± 3, as duas edições (dois "aparelhos"), outra semente = outra nota ---- */
+    {
+      const cont = {}; let dif = 0, difSem = 0, n = 0;
+      for (const ed of ["public", "pro"]) for (const p of Object.values(MUNDO[ed].playersById).slice(0, 1500)) {
+        for (const sem of ["NO-a", "NO-b", "123456789"]) {
+          const pc = Lx.notaPercebida(sem, p.id, p.overall), d = pc - p.overall; n++;
+          if (pc !== percebidaRef(sem, p.id, p.overall)) dif++;
+          if (pc !== TMs.pro.leilao.notaPercebida(sem, p.id, p.overall)) dif++;
+          cont[d] = (cont[d] || 0) + 1;
+        }
+        if (Lx.notaPercebida("NO-a", p.id, p.overall) !== Lx.notaPercebida("NO-b", p.id, p.overall)) difSem++;
+        // o ruído não depende da nota (a conta é sobre o id): outra nota, a mesma diferença
+        if (Lx.notaPercebida("NO-a", p.id, 50) - 50 !== Lx.notaPercebida("NO-a", p.id, p.overall) - p.overall) dif++;
+      }
+      ok(dif === 0, `NO2 a nota percebida diferente da conta feita aqui (ou entre os dois "aparelhos") em ${dif} casos`);
+      const chaves = Object.keys(cont).map(Number).sort((a, b) => a - b);
+      ok(jsonIgual(chaves, [-3, -2, -1, 0, 1, 2, 3]) && chaves.every(k => cont[k] / n > 0.12 && cont[k] / n < 0.165), `NO2 a nota ± 3, uniforme: ${JSON.stringify(cont)} em ${n}`);
+      ok(difSem > 3000 * 0.8, `NO2 outra semente, outra nota percebida em só ${difSem} de 3000`);
+      nota(`NO2 ${n} notas percebidas conferidas (${chaves.map(k => k + ": " + (100 * cont[k] / n).toFixed(1) + "%").join(", ")})`);
+    }
+    /* ---- NO3 o contexto: os robôs com a nota percebida, os lotes iguais e a fila (revisão do PR 6) sorteada SEM as faixas de
+       nota com elas escondidas; à mostra, a fila de antes bit a bit ---- */
+    {
+      const v = ctxDe("pro", "br", 4, "NO3"), o = ctxDe("pro", "br", 4, "NO3", { notasOcultas: true });
+      ok(!v.notasOcultas && o.notasOcultas && v.lotes === o.lotes && !jsonIgual(v.fila, o.fila), "NO3 os lotes mudaram (ou a fila não mudou) com as notas escondidas");
+      ok(v.ov.every((x, i) => x === v.lotes[i].overall) && o.ov.every((x, i) => x === percebidaRef("NO3", o.lotes[i].id, o.lotes[i].overall)), "NO3 ctx.ov: a nota de verdade à mostra, a percebida escondida");
+      ok(o.ov.some((x, i) => x !== o.lotes[i].overall), "NO3 com as notas escondidas, nenhuma nota percebida difere da de verdade (o teste não testou nada)");
+      // a fila dos lotes entregava a faixa de nota: em cada grupo, cada trinca seguida tinha um de cada faixa (alta, média, baixa)
+      // em ~89% (o sorteio puro dá ~22%). Escondida, sem as faixas; à mostra, igual à de antes (o ordem() de 3 argumentos)
+      let trincas = 0, cheiasO = 0, cheiasM = 0, filaAntes = 0, ruimFila = 0, n = 0;
+      for (const liga of ["br", "en", "es", "it", "de"]) for (let T = 2; T <= 8; T++) for (let k = 0; k < 6; k++) {
+        const sem = "NO3t-" + k, { lotes, fora } = lotesDe("pro", liga, T);
+        const cm = TMs.pro.leilao.contexto({ T, lotes, fora, semente: sem }), co = TMs.pro.leilao.contexto({ T, lotes, fora, semente: sem, notasOcultas: true });
+        n++;
+        if (jsonIgual(cm.fila, TMs.pro.leilao.ordem(lotes, sem, T))) filaAntes++;
+        const L0 = lotes.length, gks = co.fila.map((li, q) => lotes[li].pos === "GK" ? q : -1).filter(q => q >= 0);
+        if (new Set(co.fila).size !== L0 || co.fila.length !== L0 || gks[0] >= Math.max(1, Math.floor(0.2 * L0)) || gks.some(q => q >= L0 - T)
+          || !jsonIgual(co.fila, TMs.public.leilao.contexto({ T, lotes, fora, semente: sem, notasOcultas: true }).fila)) ruimFila++;
+        for (const g of ["DF", "MF", "FW"]) {
+          const idx = []; lotes.forEach((l, i) => { if (l.pos === g) idx.push(i); });
+          const m = idx.length, faixa = {};
+          idx.forEach((li, r) => { faixa[li] = Math.min(2, Math.floor(r * 3 / m)); });   // (os lotes vêm ordenados pela nota)
+          const subO = co.fila.filter(li => lotes[li].pos === g), subM = cm.fila.filter(li => lotes[li].pos === g);
+          for (let q = 0; q + 2 < Math.floor(m / 3) * 3; q += 3) {
+            trincas++;
+            if (new Set([faixa[subO[q]], faixa[subO[q + 1]], faixa[subO[q + 2]]]).size === 3) cheiasO++;
+            if (new Set([faixa[subM[q]], faixa[subM[q + 1]], faixa[subM[q + 2]]]).size === 3) cheiasM++;
+          }
+        }
+      }
+      const pO = 100 * cheiasO / trincas, pM = 100 * cheiasM / trincas;
+      ok(filaAntes === n, `NO3 à mostra, a fila diferente da de antes em ${n - filaAntes} de ${n} salas`);
+      ok(ruimFila === 0, `NO3 a fila escondida não é permutação, quebra a regra dos goleiros ou muda entre os "aparelhos" em ${ruimFila} de ${n} salas`);
+      ok(pO < 35 && pM > 80, `NO3 as trincas da fila com um lote de cada faixa de nota: escondida ${pO.toFixed(1)}% (meta < 35%; o sorteio puro dá ~22%), à mostra ${pM.toFixed(1)}% (a de antes, ~89%)`);
+      nota(`NO3 a fila: trincas com uma de cada faixa ${pM.toFixed(1)}% à mostra → ${pO.toFixed(1)}% escondida (${trincas} trincas)`);
+    }
+    /* ---- NO4 os robôs só sabem a nota percebida: escondido sobre os lotes de verdade = à mostra sobre lotes com a nota
+       trocada pela percebida (a mesma fila) — o leilão inteiro igual, venda a venda ---- */
+    {
+      const r = rngT("NO4");
+      let iguais = 0, mudou = 0;
+      for (let n = 0; n < 40; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO4-" + n;
+        const o = ctxDe(ed, liga, T, sem, { notasOcultas: true });
+        const copia = o.lotes.map(l => Object.assign({}, l, { overall: percebidaRef(sem, l.id, l.overall) }));
+        const v = TMs[ed].leilao.contexto({ T, lotes: copia, fora: o.fora, semente: sem, fila: o.fila });
+        const ro = leilaoRobos(o), rv = leilaoRobos(v), rr = leilaoRobos(ctxDe(ed, liga, T, sem));
+        if (jsonIgual(ro.vendas, rv.vendas) && resumoFinal(ro.v) === resumoFinal(rv.v)) iguais++;
+        if (!jsonIgual(ro.vendas, rr.vendas)) mudou++;
+      }
+      ok(iguais === 40, `NO4 os robôs com as notas escondidas = os robôs olhando só a nota percebida em ${iguais} de 40 leilões`);
+      ok(mudou >= 30, `NO4 escondido e à mostra deram o mesmo leilão em ${40 - mudou} de 40 (a nota percebida não mudou nada)`);
+    }
+    /* ---- NO5 as medidas pareadas (as mesmas sementes): à mostra × escondido; nunca acima do máximo, a conferência, ≥ 99%
+       completos; o mesmo leilão em 3 "aparelhos" (as duas edições carregadas e a de novo) ---- */
+    {
+      const N = Math.min(N_LEILOES, 300), r = rngT("NO5"), soma = { mostra: null, oculta: null };
+      let acimaMax = 0, conf = 0, recus = 0, aparelhos = 0;
+      const junta = (k, m) => { const a = soma[k] || (soma[k] = { vendas: 0, preco: 0, completo: 0, sobra: 0, tecs: 0, nota: 0, times: 0, n: 0 }); Object.keys(m).forEach(x => { a[x] += m[x]; }); a.n++; };
+      for (let n = 0; n < N; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO5-" + n;
+        const cm = ctxDe(ed, liga, T, sem), co = ctxDe(ed, liga, T, sem, { notasOcultas: true });
+        const rm = leilaoRobos(cm), ro = leilaoRobos(co);
+        if (rm.erros.length || ro.erros.length) { recus++; if (recus <= 3) ok(false, `NO5 ${sem}: ${rm.erros[0] || ro.erros[0]}`); }
+        junta("mostra", medidasRobos(cm, rm)); junta("oculta", medidasRobos(co, ro));
+        for (let k = 1; k < ro.estados.length; k++) {
+          const a = ro.estados[k - 1], b = ro.estados[k];
+          if (b.seq === a.seq && (b.n || 0) > (a.n || 0) && b.valor > Lx.maximo(a, co, b.lider)) acimaMax++;
+          if (n < 30) { const c = Lx.conferir(a, b, co); if (!c.ok) { conf++; if (conf <= 3) ok(false, `NO5 a conferência acusou um leilão honesto escondido: ${c.motivo} (${sem}, passo ${k})`); } }
+        }
+        if (n < 8) {
+          const otherL = TMs[ed === "pro" ? "public" : "pro"].leilao;
+          const c2 = otherL.contexto({ T, lotes: co.lotes, fora: co.fora, semente: sem, notasOcultas: true });
+          const r2 = leilaoRobos(c2, { LE: otherL }), r3 = leilaoRobos(ctxDe(ed, liga, T, sem, { notasOcultas: true }));
+          if (jsonIgual(r2.vendas, ro.vendas) && jsonIgual(r3.vendas, ro.vendas) && resumoFinal(r2.v) === resumoFinal(ro.v)) aparelhos++;
+        }
+      }
+      const fmt = a => ({ preco: a.preco / Math.max(1, a.vendas), completos: 100 * a.completo / a.n, sobra: a.sobra / a.tecs, nota: a.nota / Math.max(1, a.times) });
+      const M = fmt(soma.mostra), O = fmt(soma.oculta);
+      ok(acimaMax === 0, `NO5 ${acimaMax} lances acima do máximo com as notas escondidas`);
+      ok(conf === 0 && recus === 0, `NO5 a conferência acusou ${conf} transições honestas; ${recus} leilões com ação recusada`);
+      ok(O.completos >= 99, `NO5 completam sem a reposição com as notas escondidas: ${O.completos.toFixed(1)}% (meta ≥ 99%)`);
+      ok(aparelhos === 8, `NO5 o mesmo leilão escondido em 3 "aparelhos" em ${aparelhos} de 8`);
+      // os robôs não sabem mais que as pessoas: com a nota percebida eles compram um pouco pior (a nota média do time não sobe)
+      ok(O.nota <= M.nota + 0.05, `NO5 a nota média do time subiu com as notas escondidas: ${M.nota.toFixed(2)} → ${O.nota.toFixed(2)}`);
+      nota(`NO5 ${N} leilões pareados, à mostra → escondido: preço médio R$ ${M.preco.toFixed(2)} → ${O.preco.toFixed(2)}, completos ${M.completos.toFixed(1)}% → ${O.completos.toFixed(1)}%, sobra R$ ${M.sobra.toFixed(1)} → ${O.sobra.toFixed(1)}, nota média do time ${M.nota.toFixed(2)} → ${O.nota.toFixed(2)}`);
+    }
+    /* ---- NO6 a revelação (leilao-camp.js revelados): no fim do campeonato; a alternativa, a cada partida ---- */
+    {
+      const vista = (fim, jogos) => ({ fim, rodadas: [{ jogos }] });
+      const meio = vista(false, [{ e: "feito", a: 0, b: 1 }, { e: "aberto", a: 2, b: 3 }]);
+      let x = LC.revelados("campeonato", meio, 4);
+      ok(!x.todas && jsonIgual(x.t, [false, false, false, false]), "NO6 'campeonato': nada antes do fim — " + JSON.stringify(x));
+      x = LC.revelados("campeonato", vista(true, []), 4);
+      ok(x.todas && x.t.every(Boolean), "NO6 'campeonato': todas no fim — " + JSON.stringify(x));
+      x = LC.revelados("campeonato", null, 3);
+      ok(!x.todas && x.t.length === 3 && !x.t.some(Boolean), "NO6 sem campeonato (o leilão): nada — " + JSON.stringify(x));
+      x = LC.revelados("partida", meio, 4);
+      ok(!x.todas && jsonIgual(x.t, [true, true, false, false]), "NO6 'partida' (a alternativa): os dois times do jogo feito — " + JSON.stringify(x));
+      x = LC.revelados("partida", vista(false, [{ e: "feito", a: 0, b: 1 }, { e: "feito", a: 2, b: 3 }]), 4);
+      ok(x.todas, "NO6 'partida': todos jogaram = todas — " + JSON.stringify(x));
+      // quem comprou melhor: a nota de cada compra contra a reta nota × preço das vendas da sala (a conta feita aqui)
+      const ref = (vs, T) => {
+        const n = vs.length, mp = vs.reduce((a, v) => a + v.preco, 0) / n, mn = vs.reduce((a, v) => a + v.nota, 0) / n;
+        const sxx = vs.reduce((a, v) => a + (v.preco - mp) ** 2, 0), b = sxx > 1e-9 ? vs.reduce((a, v) => a + (v.preco - mp) * (v.nota - mn), 0) / sxx : 0;
+        const ac = Array.from({ length: T }, () => 0); vs.forEach(v => { ac[v.t] += v.nota - (mn + b * (v.preco - mp)); });
+        return ac.map(x => Math.round(x * 10) / 10);
+      };
+      const rr = rngT("NO6");
+      let ruins = 0;
+      for (let k = 0; k < 200; k++) {
+        const T = 2 + Math.floor(rr() * 7), vs = Array.from({ length: 5 + Math.floor(rr() * 40) }, () => ({ t: Math.floor(rr() * T), preco: 1 + Math.floor(rr() * 30), nota: 60 + Math.floor(rr() * 30) }));
+        const got = LC.compraram(vs, T), esp = ref(vs, T);
+        if (got.length !== T || got.some(o => Math.abs(o.acima - esp[o.t]) > 0.11 || o.compras !== vs.filter(v => v.t === o.t).length || o.gasto !== vs.filter(v => v.t === o.t).reduce((a, v) => a + v.preco, 0))) ruins++;
+        // (a ordem: quem comprou, de quem levou mais nota do que pagou para quem levou menos; depois quem não comprou nada)
+        for (let i = 1; i < got.length; i++) if ((got[i].compras && !got[i - 1].compras) || (!!got[i].compras === !!got[i - 1].compras && got[i].acima > got[i - 1].acima)) ruins++;
+      }
+      ok(ruins === 0, `NO6 compraram: a conta diferente da feita aqui (ou fora de ordem) em ${ruins} de 200 salas`);
+      // o mesmo preço: quem levou a nota maior; quem não comprou nada fica no 0 e vai para o FIM da lista, nunca acima de quem
+      // comprou (nem de quem levou menos do que pagou; revisão do PR 6)
+      x = LC.compraram([{ t: 0, preco: 5, nota: 80 }, { t: 1, preco: 5, nota: 70 }], 3);
+      ok(x[0].t === 0 && x[0].acima === 5 && x[1].t === 1 && x[1].acima === -5 && x[2].t === 2 && x[2].acima === 0 && x[2].compras === 0, "NO6 compraram com um preço só: " + JSON.stringify(x));
+      // (o caso da revisão: t2 passou tudo e ficou com o time de graça)
+      x = LC.compraram([{ t: 0, preco: 5, nota: 80 }, { t: 0, preco: 20, nota: 82 }, { t: 1, preco: 30, nota: 79 }, { t: 1, preco: 6, nota: 74 }], 3);
+      ok(x[2].t === 2 && x[2].compras === 0 && x.slice(0, 2).every(o => o.compras > 0), "NO6 quem não comprou nada no fim da lista: " + JSON.stringify(x));
+    }
+    /* ---- NO8 a escalação automática não entrega a ordem das notas (revisão do PR 6): os lotes vêm ordenados pela nota de
+       verdade e o húngaro desempatava pela ordem das linhas — o melhor de dois da mesma função na vaga de índice menor (e com a
+       camisa menor: timeDoTecnico, number = vaga + 1) em ~85% dos pares. Escondidas, as linhas pelo hash da semente + o id:
+       os pares empatados perto de 50% (dentro de 3 erros-padrão por time, os pares de um time não são independentes), a
+       mesma escalação noutro "aparelho" (entra na conferência dos jogos), o mesmo custo; à mostra, a escalação de antes ---- */
+    {
+      const r = rngT("NO8"), cl = { o: [], m: [] };
+      let times = 0, difAparelho = 0, difAntes = 0, difCusto = 0, difForma = 0;
+      const soma = a => a.reduce((x, y) => x + (y || 0), 0);
+      for (let n = 0; n < 150; n++) {
+        const ed = r() < 0.5 ? "public" : "pro", liga = LIGAS[Math.floor(r() * LIGAS.length)], T = 2 + Math.floor(r() * 7), sem = "NO8-" + n;
+        const L2 = TMs[ed].leilao, outro = TMs[ed === "pro" ? "public" : "pro"].leilao;
+        const co = ctxDe(ed, liga, T, sem, { notasOcultas: true }), cm = ctxDe(ed, liga, T, sem);
+        const co2 = outro.contexto({ T, lotes: co.lotes, fora: co.fora, semente: sem, notasOcultas: true });
+        const res = leilaoRobos(co, { LE: L2 });
+        if (res.v.fase !== "fim") continue;
+        for (let t = 0; t < T; t++) {
+          const pref = L2.perfilRobo(sem, t).formacao;
+          const eo = L2.escalacaoDe(res.v, co, t, null, pref), em = L2.escalacaoDe(res.v, cm, t, null, pref);
+          if (eo.n !== 11) continue;
+          times++;
+          if (!jsonIgual(outro.escalacaoDe(res.v, co2, t, null, pref), eo)) difAparelho++;
+          if (eo.formacao !== em.formacao) difForma++;
+          if (soma(eo.pen) !== soma(em.pen)) difCusto++;
+          // à mostra, a de antes: o húngaro na ordem do timeIdx (a ordem dos lotes)
+          const idx = L2.timeIdx(res.v, cm, t), e0 = L2.escalacao(idx.map(k => L2.retratoDe(cm, k)), em.formacao);
+          if (!e0 || !jsonIgual(em.tit, e0.tit.map(i => (i < 0 ? -1 : idx[i]))) || !jsonIgual(em.pen, e0.pen)) difAntes++;
+          for (const [k, e, c] of [["o", eo, co], ["m", em, cm]]) {
+            const slots = L2.slotsDe(e.formacao);
+            let x = 0, np = 0;
+            for (let a = 0; a < 11; a++) for (let b = a + 1; b < 11; b++) {
+              const ra = L2.retratoDe(c, e.tit[a]), rb = L2.retratoDe(c, e.tit[b]);
+              // o empate: os dois sem custo nas duas vagas (trocar não muda nada); notas iguais não contam
+              if (L2.custoVaga(ra, slots[a]) || L2.custoVaga(ra, slots[b]) || L2.custoVaga(rb, slots[a]) || L2.custoVaga(rb, slots[b]) || ra.overall === rb.overall) continue;
+              np++; if (ra.overall > rb.overall) x++;
+            }
+            if (np) cl[k].push([x, np]);
+          }
+        }
+      }
+      // a proporção e o erro-padrão por grupos (cada time um grupo)
+      const est = g => { const X = g.reduce((a, q) => a + q[0], 0), N = g.reduce((a, q) => a + q[1], 0), p = X / N; return { p, se: Math.sqrt(g.reduce((a, q) => a + (q[0] - p * q[1]) ** 2, 0)) / N, N }; };
+      const O = est(cl.o), M = est(cl.m);
+      ok(difAparelho === 0, `NO8 a escalação escondida diferente noutro "aparelho" em ${difAparelho} de ${times} times`);
+      ok(difAntes === 0, `NO8 à mostra, a escalação diferente da de antes em ${difAntes} de ${times} times`);
+      ok(difCusto === 0 && difForma === 0, `NO8 a escalação escondida com outro custo (${difCusto}) ou outra formação (${difForma}) que a de antes`);
+      ok(O.N >= 500 && O.se < 0.03 && Math.abs(O.p - 0.5) <= 3 * O.se, `NO8 os pares empatados da mesma função: o melhor na vaga de índice menor em ${(100 * O.p).toFixed(1)}% ± ${(100 * O.se).toFixed(1)} (${O.N} pares; meta: 50% dentro de 3 erros-padrão)`);
+      ok(M.p > 0.7, `NO8 à mostra (a escalação de antes) o melhor na vaga de índice menor em só ${(100 * M.p).toFixed(1)}%: a medida não mede o que devia`);
+      nota(`NO8 ${times} times, os pares empatados da mesma função com o melhor na vaga de índice menor (e a camisa menor): ${(100 * M.p).toFixed(1)}% à mostra → ${(100 * O.p).toFixed(1)}% ± ${(100 * O.se).toFixed(1)} escondida (${O.N} pares)`);
+    }
+    /* ---- NO9 o Overall vale o gravado com os lotes no Começar (revisão do PR 6): o cfg.overall ou o meta.regras mudados depois
+       (um aparelho adulterado) congelam a sala e a vista segue escondida, também noutro aparelho que abre a sala depois; as
+       regras opcionais recusam as duas gravações ---- */
+    {
+      const V = relogioVirtual(), arm = armazemFalso(), base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      for (const [nome, mexe] of [["o Overall", s2 => { s2.cfg.overall = "mostra"; }], ["as regras", s2 => { s2.meta.regras = 4; }]]) {
+        const cod = nome === "o Overall" ? "NO9OVR" : "NO9REG";
+        const A = await V.espera(SS.criarTreino(Object.assign({ liga: "it", bots: 2, semente: "NO9-" + cod, codigo: cod, tempo: 10, overall: "escondido" }, base)));
+        await V.anda(() => A.ctx && A.vivoN && A.vivoN.seq >= 2);
+        const lt = await V.espera(A.rede.ler("lotes"));
+        ok(lt && lt.ov === "escondido" && A.ctx.notasOcultas && !A.alterada, `NO9 ${nome}: os lotes gravados com o Overall da sala (${lt && lt.ov})`);
+        await V.espera(A.rede.transacao("sala", s2 => { mexe(s2); return s2; }));
+        await V.anda(() => !!A.alterada, 5000);
+        const w = A.ver();
+        ok(A.alterada === "overall" && w.overall === "escondido" && w.notasOcultas, `NO9 ${nome} mudado depois do Começar: a sala congela e as notas seguem escondidas (${A.alterada}, ${w.overall}, ${w.notasOcultas})`);
+        const B = await V.espera(SS.abrir(cod, Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+        const wb = B.ver();
+        ok(B.alterada === "overall" && B.ctx && B.ctx.notasOcultas && wb.overall === "escondido" && wb.notasOcultas, `NO9 ${nome}: outro aparelho que abre a sala mexida congela e não mostra as notas (${B.alterada}, ${wb.overall}, ${wb.notasOcultas})`);
+        B.parar(); A.parar();
+      }
+      // as regras opcionais (firebase/regras-leilao-validate.json): o Overall só muda no saguão; as regras nunca mudam
+      const confere = avaliadorRegras(path.join(RAIZ, "firebase/regras-leilao-validate.json"));
+      const sala = estado => ({ leiloes: { X: { sala: { meta: { dono: "u", estado, regras: 5, criada: 1 }, cfg: { liga: "it", overall: "escondido", T: 3 }, tec: { u: { auth: "u" } } } } } });
+      const recusa = (raiz, cam, v) => confere(raiz, ("leiloes/X/" + cam).split("/"), v, 9000, "u").length > 0;
+      const novaSala = { meta: { dono: "u", estado: "saguao", regras: 5, criada: { ".sv": "timestamp" } }, cfg: { liga: "it", overall: "escondido" }, tec: { u: { auth: "u" } } };
+      const comeca = JSON.parse(JSON.stringify(sala("saguao").leiloes.X.sala)); comeca.meta.estado = "leilao"; comeca.cfg.T = 3;
+      const honesto = [
+        ["criar a sala escondida", recusa({}, "sala", novaSala)],
+        ["mudar o Overall no saguão", recusa(sala("saguao"), "sala/cfg/overall", "mostra")],
+        ["o Começar (o estado e o cfg.T)", recusa(sala("saguao"), "sala", comeca)],
+        ["outra opção do cfg depois do Começar com o mesmo Overall", recusa(sala("leilao"), "sala/cfg/T", 3)]
+      ].filter(x => x[1]);
+      ok(!honesto.length, "NO9 as regras opcionais recusaram um passo honesto: " + honesto.map(x => x[0]).join(", "));
+      const adult = [
+        ["o Overall mudado no leilão", recusa(sala("leilao"), "sala/cfg/overall", "mostra")],
+        ["o Overall apagado no campeonato", recusa(sala("camp"), "sala/cfg/overall", null)],
+        ["o cfg inteiro trocado no leilão", recusa(sala("leilao"), "sala/cfg", { liga: "it", overall: "mostra", T: 3 })],
+        ["as regras mudadas no leilão", recusa(sala("leilao"), "sala/meta/regras", 4)],
+        ["as regras mudadas no saguão", recusa(sala("saguao"), "sala/meta/regras", 4)]
+      ].filter(x => !x[1]);
+      ok(!adult.length, "NO9 as regras opcionais deixaram passar: " + adult.map(x => x[0]).join(", "));
+    }
+    /* ---- NO7 o treino pela sessão: a opção na sala, os robôs com a nota percebida, escondidas até o fim do campeonato ---- */
+    for (const [overall, formato, bots] of [["escondido", "mata", 3], ["mostra", "mata", 1], [undefined, "pontos", 1]]) {
+      const V = relogioVirtual(), arm = armazemFalso(), id = `NO7 ${overall || "padrão"} ${formato}`, cod = ("NO7" + (overall || "pd").slice(0, 2) + formato.slice(0, 1)).toUpperCase();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "it", bots, semente: id, codigo: cod, formato, tempo: 10, overall }, base)));
+      const esc = overall === "escondido";
+      let w = A.ver();
+      ok(A.sala.meta.regras === 5 && A.sala.cfg.overall === (esc ? "escondido" : "mostra") && w.overall === (esc ? "escondido" : "mostra") && w.notasOcultas === esc && !!A.ctx.notasOcultas === esc,
+        `${id}: a sala (${A.sala.cfg.overall}, regras ${A.sala.meta.regras}) e a vista (${w.overall}, ${w.notasOcultas}, ctx ${A.ctx.notasOcultas})`);
+      ok(A.ctx.ov.every((x, i) => x === (esc ? percebidaRef(id, A.ctx.lotes[i].id, A.ctx.lotes[i].overall) : A.ctx.lotes[i].overall)), `${id}: os robôs da sessão sem a nota ${esc ? "percebida" : "de verdade"}`);
+      let viuAberta = false;
+      // (o fim do campeonato = o último jogo gravado: a vista diz fim um pouco antes de a sala gravar o estado 'fim')
+      const off = A.aoMudar(() => { const x = A.ver(); if (esc && !(x.camp && x.camp.fim) && !x.notasOcultas) viuAberta = true; });
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      w = A.ver();
+      ok(w.notasOcultas === esc, `${id}: na escalação, notasOcultas ${w.notasOcultas}`);
+      await V.espera(A.prontoEscalacao(true));
+      const pil = pilotoCamp(A, V, () => true);
+      const chegou = await V.anda(() => A.sala && A.sala.meta.estado === "fim");
+      pil.parar(); off();
+      w = A.ver();
+      ok(chegou && w.camp && w.camp.fim, `${id}: o campeonato não acabou`);
+      ok(!viuAberta, `${id}: as notas apareceram antes do fim do campeonato`);
+      ok(w.notasOcultas === false && w.overall === (esc ? "escondido" : "mostra") && (esc ? w.revelados && w.revelados.length === bots + 1 && w.revelados.every(Boolean) : w.revelados === null),
+        `${id}: no fim, reveladas: ${w.notasOcultas} ${JSON.stringify(w.revelados)}`);
+      ok(w.camp.notas && w.camp.notas.length === bots + 1 && w.camp.melhorTime, `${id}: o fim sem a soma das notas`);
+      // a mesma sala noutro "aparelho": as mesmas notas escondidas
+      const B = await V.espera(SS.abrir(cod, Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      ok(!!B.ctx.notasOcultas === esc && jsonIgual(B.ctx.ov, A.ctx.ov) && B.ver().overall === w.overall, `${id}: outro aparelho, outra nota percebida`);
+      B.parar(); A.parar();
+    }
+  });
+}
+async function testeCampSessao() {
+  await blocoAsync("K", "campeonato pela sessão: o formato, o treino nos 3 formatos até o campeão, o prazo, Simular, recarregar, a escalação do próximo jogo", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, LC = TMx.leilaoCamp, Rd = TMx.leilaoRede, mundo = MUNDO.public;
+    /* ---- K0 a duração estimada e o formato ---- */
+    {
+      const d = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata" }), d8 = LC.duracaoEstimada({ T: 8, tempo: 10000, formato: "pontos", tresD: true, duracao3d: 4 });
+      ok(d.leilao.n === 80 && d.leilao.lo === 10 && d.leilao.hi === 23 && d.camp.rodadas === 2 && d.camp.jogos === 3 && d.camp.lo === 1 && d.camp.hi === 4 && d.total.lo === d.leilao.lo + d.camp.lo, "K0 duração com 4 (mata): " + JSON.stringify(d));
+      ok(d8.leilao.n === 160 && d8.leilao.lo === 20 && d8.leilao.hi === 45 && d8.camp.rodadas === 14 && d8.camp.jogos === 56 && d8.camp.hi > 180 && d8.camp.lo >= 150, "K0 duração com 8 em pontos corridos e 3D (passa de 3 h): " + JSON.stringify(d8));
+      for (let T = 2; T <= 8; T++) for (const f of LC.FORMATOS) {
+        const e = LC.duracaoEstimada({ T, tempo: 15000, formato: f });
+        ok(e.camp.rodadas === LC.rodadasDe(f, T) && e.camp.lo >= 1 && e.camp.hi > e.camp.lo && e.leilao.hi > e.leilao.lo, `K0 ${f} T${T}: ${JSON.stringify(e)}`);
+        const c = LC.contexto({ formato: f, T, semente: "k0" });
+        ok(LC.jogosDe(f, T) === LC.estrutura(c).reduce((s, R) => s + R.jogos.length, 0), `K0 jogosDe(${f}, ${T}) ≠ o calendário`);
+      }
+      ok(LC.formatoDe("mataMata") === "mata" && LC.formatoDe("mata-mata") === "mata" && LC.formatoDe("pontosCorridos") === "pontos" && LC.formatoDe("misto") === "misto" && LC.formatoDe("x") === "mata" && LC.formatoDe(null) === "mata", "K0 formatoDe");
+    }
+    /* ---- K1 o treino com 1 pessoa e 1–7 bots nos 3 formatos, até o campeão ---- */
+    const PLANO = [[1, "mata"], [2, "pontos"], [3, "misto"], [4, "mata"], [5, "pontos"], [6, "misto"], [7, "mata"], [1, "pontos"], [2, "misto"], [3, "mata"], [4, "pontos"], [5, "misto"], [6, "mata"], [7, "pontos"], [7, "misto"]];
+    let nJogos = 0, nPedido = 0, nPrazo = 0;
+    for (const [bots, formato] of PLANO) {
+      const T = bots + 1, id = `K1 ${formato} T${T}`, V = relogioVirtual(), arm = armazemFalso(), cod = ("K1" + formato.slice(0, 2) + T).toUpperCase();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: ["br", "en", "it", "es", "de"][T % 5], bots, semente: id, codigo: cod, formato, tempo: 10 }, base)));
+      ok(A.sala.cfg.formato === formato && A.ver().formato === formato, `${id}: o formato na sala: ${A.sala.cfg.formato}`);
+      const eventos = { jogo: 0, rodada: [] };
+      A.on("jogo", () => eventos.jogo++); A.on("rodada", x => eventos.rodada.push(x.n));
+      // feitos: o ts do 1º feito visto de cada jogo (o feito nunca muda depois)
+      const feitos = {}, reservas = {};
+      A.rede.outroCliente().ouvir("jogos", js => Object.keys(js || {}).forEach(k => {
+        const j = js[k]; if (!j) return;
+        if (j.e !== "aberto" && reservas[k] == null) reservas[k] = j.trava;
+        if (j.e === "feito" && feitos[k] == null) feitos[k] = j.ts;
+      }));
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      await V.espera(A.prontoEscalacao(true));
+      // a pessoa simula o próprio jogo nas rodadas ímpares; nas pares, deixa o prazo vencer
+      const pil = pilotoCamp(A, V, mj => mj.rodada % 2 === 1);
+      const chegou = await V.anda(() => A.sala && A.sala.meta.estado === "fim");
+      pil.parar();
+      ok(chegou, `${id}: o campeonato não acabou (${A.sala && A.sala.meta.estado})`);
+      const w = A.ver(), c = w.camp, js = A.jogos;
+      if (!ok(c && c.fim, `${id}: sem a vista do fim`)) { A.parar(); continue; }
+      const todos = c.rodadas.flatMap(R => R.jogos);
+      ok(todos.length === LC.jogosDe(formato, T) && c.rodadas.length === LC.rodadasDe(formato, T), `${id}: ${todos.length} jogos em ${c.rodadas.length} rodadas`);
+      ok(todos.every(g => g.e === "feito") && Object.keys(js).length === todos.length, `${id}: jogos sem resultado`);
+      ok(c.campeao != null && c.classificacao.length === T && new Set(c.classificacao).size === T && c.classificacao[0] === c.campeao, `${id}: o campeão e a classificação: ${c.campeao} ${c.classificacao}`);
+      ok(!A.alterada, `${id}: a conferência congelou o treino honesto (${A.alterada} ${JSON.stringify(A.alteradaJogo)})`);
+      ok(typeof A.sala.meta.camp === "number" && typeof A.sala.meta.fimCamp === "number" && A.sala.meta.fimCamp >= A.sala.meta.camp, `${id}: meta.camp/fimCamp`);
+      ok(eventos.jogo === todos.length && eventos.rodada.length === c.rodadas.length, `${id}: eventos ${eventos.jogo} jogos, ${eventos.rodada.length} rodadas`);
+      if (formato !== "mata") ok(c.tabela && c.tabela.length === T, `${id}: a tabela`);
+      ok(c.melhorTime && c.notas && c.notas.length === T && c.notas[0].soma === c.melhorTime.soma, `${id}: o melhor time`);
+      const ctxC = A._campCtx();
+      todos.forEach(g => {
+        const j = js[g.id];
+        nJogos++;
+        ok(feitos[g.id] === j.ts && reservas[g.id] === j.trava, `${id}: ${g.id} mudou depois de gravado (ou reservado duas vezes)`);
+        ok(LC.conferirJogo(ctxC, g, j) === null, `${id}: ${g.id} não confere`);
+        // a escalação gravada = a do técnico no momento (a automática, aqui)
+        const pessoaBot = LC.confronto(ctxC, g) === "pessoaBot", R = c.rodadas.find(x => x.jogos.includes(g));
+        if (pessoaBot) {
+          const minhaRodadaImpar = R.n % 2 === 1;
+          if (minhaRodadaImpar) { nPedido++; ok(j.motivo === "pedido" && j.por === 0 && j.trava - R.abre < LC.PRAZO, `${id}: ${g.id} (Simular) reservado por '${j.motivo}' ${(j.trava - R.abre) / 1000} s depois`); }
+          else { nPrazo++; ok(j.motivo === "prazo" && j.trava - R.abre >= LC.PRAZO && j.trava - R.abre < LC.PRAZO + 5000, `${id}: ${g.id} (prazo) reservado por '${j.motivo}' ${(j.trava - R.abre) / 1000} s depois (o prazo é de ${LC.PRAZO / 1000} s)`); }
+        } else ok(j.motivo === "abertura" && j.trava - R.abre < 5000, `${id}: ${g.id} (${LC.confronto(ctxC, g)}) reservado por '${j.motivo}'`);
+      });
+      // o "Simular partida" respondeu com o resultado GRAVADO
+      pil.pedidos.forEach(p => ok(p.r.ok && p.r.jogo && p.r.jogo.e === "feito" && JSON.stringify(p.r.res) === JSON.stringify(js[p.id].res), `${id}: o Simular de ${p.id} respondeu outra coisa: ${JSON.stringify(p.r).slice(0, 120)}`));
+      // a mesma vista noutro "aparelho" (o mesmo banco)
+      const B = await V.espera(SS.abrir(cod, Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      ok(JSON.stringify(B.ver().camp.rodadas.map(R => R.jogos.map(g => [g.id, g.a, g.b, g.placar, g.venc]))) === JSON.stringify(c.rodadas.map(R => R.jogos.map(g => [g.id, g.a, g.b, g.placar, g.venc]))) && B.ver().camp.campeao === c.campeao && !B.alterada, `${id}: outro aparelho viu outro campeonato`);
+      // a partida gravada para o 2D
+      const pt = A.partida(todos[0].id);
+      ok(pt && pt.times.length === 2 && pt.times[0].players.length === 11 && pt.times[0].id === "leilao_" + cod + "_" + todos[0].a && pt.res === todos[0].res, `${id}: partida() para o 2D`);
+      B.parar(); A.parar();
+      ok(SS.salas({ armazem: arm }).some(x => x.codigo === cod && x.estado === "fim" && x.formato === formato), `${id}: Minhas salas com o estado 'fim'`);
+    }
+    nota(`K1 ${PLANO.length} treinos, ${nJogos} jogos (${nPedido} pelo Simular, ${nPrazo} pelo prazo)`);
+
+    /* ---- K2 recarregar no meio = os mesmos resultados ---- */
+    // o mesmo treino duas vezes (a mesma semente, o mesmo relógio): direto, e parado no meio do prazo do jogo da pessoa
+    // na 2ª rodada (os outros jogos dela feitos) e aberto de novo pelo armazém — o mesmo campeonato, jogo a jogo
+    async function treinoK2(parar) {
+      const V = relogioVirtual(), arm = armazemFalso(), cod = "K2MIST";
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      let A = await V.espera(SS.criarTreino(Object.assign({ liga: "en", bots: 5, semente: "K2", codigo: cod, formato: "misto", tempo: 10 }, base)));
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      await V.espera(A.prontoEscalacao(true));
+      let parou = null;
+      if (parar) {
+        const achou = await V.anda(() => {
+          const c = A.ver().camp, mj = c && c.meuJogo;
+          return !!(c && c.rodada && c.rodada.n === parar && mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.prazo.restante > 30000 && c.rodada.jogos.filter(g => g.e !== "feito").length === 1);
+        });
+        ok(achou, "K2: o jogo da pessoa da 2ª rodada nunca ficou aberto sozinho");
+        parou = { hora: A.hora(), feitos: JSON.stringify(A.jogos), rodada: A.ver().camp.rodada.n };
+        A.parar();
+        await V.anda(null, 50);
+        V.hora += 3_600_000;                       // uma hora depois (o relógio do treino parou com a página)
+        A = await V.espera(SS.abrir(cod, base));
+        ok(Math.abs(A.hora() - parou.hora) < 2 && JSON.stringify(A.jogos) === parou.feitos && A.ver().camp.rodada.n === parou.rodada, `K2: reaberto em outro ponto (${A.hora() - parou.hora} ms; rodada ${A.ver().camp && A.ver().camp.rodada.n})`);
+      }
+      await V.anda(() => A.sala && A.sala.meta.estado === "fim");
+      const out = { jogos: A.jogos, fim: A.sala.meta.estado === "fim", campeao: A.ver().camp.campeao, alterada: A.alterada };
+      A.parar();
+      return out;
+    }
+    {
+      const direto = await treinoK2(0), recarregado = await treinoK2(2);
+      ok(direto.fim && recarregado.fim && !direto.alterada && !recarregado.alterada, "K2: algum treino não chegou ao fim");
+      const ks = Object.keys(direto.jogos).sort();
+      ok(ks.length === LC.jogosDe("misto", 6) && JSON.stringify(ks) === JSON.stringify(Object.keys(recarregado.jogos).sort()), "K2: outros jogos depois de recarregar");
+      const dif = ks.filter(k => LC.canon(direto.jogos[k]) !== LC.canon(recarregado.jogos[k]));
+      ok(!dif.length && direto.campeao === recarregado.campeao, `K2: recarregar no meio mudou ${dif.length} jogos (${dif.slice(0, 4).join(", ")}) e o campeão ${direto.campeao} → ${recarregado.campeao}`);
+    }
+
+    /* ---- K3 a escalação mudada vale a partir do próximo jogo que não começou ---- */
+    {
+      // a 1ª liga em que o time de graça da pessoa (ela não dá lance) cabe em 2+ formações: o completar dá os melhores de fora
+      // e um time de 11 costuma caber numa só (com 20 por técnico, o da br só cabe no 3-4-3)
+      let V = null, A = null, cabem = [];
+      const cod = "K3ESCA";
+      for (const liga of ["br", "en", "es", "de", "fr", "pt", "it", "nl", "ar", "us"]) {
+        V = relogioVirtual();
+        const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: armazemFalso(), semAtual: true, mundo };
+        A = await V.espera(SS.criarTreino(Object.assign({ liga, bots: 3, semente: "K3", codigo: cod, formato: "pontos", tempo: 10 }, base)));
+        await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+        cabem = Lx.formacoesQueCabem(Lx.contaMascaras(Lx.timeDe(A.vivoN, A.ctx, 0)));
+        if (cabem.length >= 2) break;
+        A.parar();
+      }
+      ok(cabem.length >= 2, "K3: o time da pessoa cabe em menos de 2 formações em todas as ligas tentadas: " + cabem);
+      // F1 no saguão da escalação, F2 com o 1º jogo aberto, F3 (= F1, outra que a F2) depois de ele começar
+      const [F1, F2] = cabem, F3 = F1;
+      await V.espera(A.mudarFormacao(F1));
+      await V.espera(A.prontoEscalacao(true));
+      // a 1ª rodada abre; o meu jogo fica aberto (o prazo corre): mudo para F2 antes de ele começar
+      await V.anda(() => { const mj = A.ver().camp && A.ver().camp.meuJogo; return !!(mj && mj.e === "aberto"); });
+      const id1 = A.ver().camp.meuJogo.id, lado1 = A.ver().camp.meuJogo.a === 0 ? 0 : 1;
+      await V.espera(A.mudarFormacao(F2));
+      // o prazo vence: reservado com a F2; depois de começar, mudo para F3 (vale no próximo)
+      await V.anda(() => A.jogos[id1] && A.jogos[id1].e === "feito");
+      await V.espera(A.mudarFormacao(F3));
+      const e3 = A.escalacao(0), slots = Lx.slotsDe(F3), dfs = slots.map((s, i) => s[0] === "DF" ? i : -1).filter(i => i >= 0);
+      await V.espera(A.trocar(dfs[0], dfs[1]));
+      const e3b = A.escalacao(0);
+      await V.anda(() => { const c = A.ver().camp; return !!(c && c.rodada && c.rodada.n === 2 && c.meuJogo && c.meuJogo.e === "aberto"); });
+      const id2 = A.ver().camp.meuJogo.id, lado2 = A.ver().camp.meuJogo.a === 0 ? 0 : 1;
+      await V.anda(() => A.jogos[id2] && A.jogos[id2].e === "feito");
+      const j1 = A.jogos[id1], j2 = A.jogos[id2];
+      ok(j1.esc[lado1].formacao === F2 && j2.esc[lado2].formacao === F3, `K3: as formações gravadas ${j1.esc[lado1].formacao}/${j2.esc[lado2].formacao} (esperado ${F2}/${F3})`);
+      ok(e3b.manual && JSON.stringify(j2.esc[lado2].tit) === JSON.stringify(e3b.tit) && JSON.stringify(e3b.tit) !== JSON.stringify(e3.tit), "K3: a troca à mão não foi para o próximo jogo");
+      const pt = A.partida(id1);
+      ok(pt && pt.times[lado1].formation === F2 && pt.times[lado2 === lado1 ? lado1 : lado1].players.length === 11, "K3: o jogo gravado no 2D com a formação de então");
+      A.parar();
+    }
+
+    /* ---- K4 a sala adulterada congela (a conferência dos jogos) ---- */
+    {
+      const V = relogioVirtual(), arm = armazemFalso(), cod = "K4ADUL";
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      // T = 2 no mata-mata: um jogo só, o da pessoa contra o bot
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "it", bots: 1, semente: "K4", codigo: cod, formato: "mata", tempo: 10 }, base)));
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      await V.espera(A.prontoEscalacao(true));
+      await V.anda(() => A.jogos.m1j0 && A.jogos.m1j0.e === "aberto");
+      A.pausar();                                     // o relógio do treino parado: a sessão não age
+      const X = A.rede.outroCliente(), c = A._campCtx();
+      const esc = [LC.escalacaoDoJogo(c, 0), LC.escalacaoDoJogo(c, 1)];
+      // o reservado honesto (outro aparelho reservou): confere
+      await V.espera(X.transacao("jogos/m1j0", cur => LC.reservar(cur, { ab: [0, 1], esc, modo: "simulado", por: -1, motivo: "dono", ts: X.TS }).jogo));
+      await V.anda(null, 20);
+      ok(A.jogos.m1j0.e === "reservado" && !A.alterada, "K4: o reservado honesto congelou: " + A.alterada);
+      // voltar o reservado ao aberto (uma trava nova = outro sorteio, o "jogar de novo"): congela
+      await V.espera(X.gravar("jogos/m1j0", { e: "aberto", ini: A.hora(), resta: LC.PRAZO }));
+      await V.anda(null, 20);
+      ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta" && A.ver().camp && A.ver().camp.alteradaJogo, `K4: o reservado que voltou ao aberto não congelou (${A.alterada} ${JSON.stringify(A.alteradaJogo)})`);
+      A.parar();
+      // as outras adulterações, cada uma num aparelho que abre a sala (a conferência na carga e ao vivo)
+      const arv = A.rede._arvore();
+      // (o simulado depende do código da sala: cada caso abre noutro código, com o contexto dele)
+      const feito = cc => { const j = LC.reservar(null, { ab: [0, 1], esc, modo: "simulado", por: -1, motivo: "dono", ts: 5 }).jogo; return LC.gravar(j, { trava: 5, res: LC.resultadoDoJogo(cc, "m1j0", j), ts: 6, mata: true }).jogo; };
+      const casos = [
+        ["o resultado que a semente não dá", (t, cc) => { const j = feito(cc); j.res.events[0].text = "outro"; t.jogos.m1j0 = j; }, "resultado", null],
+        ["um id fora do calendário", t => { t.jogos.r9j0 = { e: "aberto", ini: 1, resta: 1000 }; }, "id", null],
+        ["os times trocados", t => { t.jogos.m1j0 = LC.reservar(null, { ab: [1, 0], esc: [esc[1], esc[0]], modo: "simulado", por: -1, motivo: "dono", ts: 5 }).jogo; }, "times", null],
+        ["o feito que muda depois de visto", (t, cc) => { t.jogos.m1j0 = feito(cc); },
+          "feito", no => { no.res.placar = [no.res.placar[0] + 1, no.res.placar[1]]; no.res.score = no.res.placar.slice(); no.res.v = LC.vencedorDe(no.res); return no; }],
+        ["os jogos apagados", (t, cc) => { t.jogos.m1j0 = feito(cc); }, "sumiu", () => null]
+      ];
+      for (const [nome, prepara, motivo, depois] of casos) {
+        const cod2 = "K4" + motivo.toUpperCase().slice(0, 4), cc = Object.assign({}, c, { codigo: cod2 });
+        const t = JSON.parse(JSON.stringify(arv)); t.jogos = {}; delete t.relogio;
+        prepara(t, cc);
+        const R1 = Rd.memoria(cod2, { guardar: false, relogio: V.relogio, agendar: V.agendar });
+        await V.espera(R1.gravar("", t));
+        const B = await V.espera(SS.abrir(R1.codigo, Object.assign({ rede: R1.outroCliente(), eu: 0 }, base)));
+        B.pausar();
+        await V.anda(null, 20);
+        if (depois) {
+          ok(!B.alterada, `K4 ${nome}: congelou antes da adulteração (${B.alterada} ${JSON.stringify(B.alteradaJogo)})`);
+          const no = depois(JSON.parse(JSON.stringify(t.jogos.m1j0)));
+          await V.espera(no == null ? R1.gravar("jogos", null) : R1.gravar("jogos/m1j0", no));
+          await V.anda(null, 20);
+        }
+        ok(B.alterada === "jogos" && B.alteradaJogo && B.alteradaJogo.motivo === motivo, `K4 ${nome}: ${B.alterada} ${JSON.stringify(B.alteradaJogo)} (esperado ${motivo})`);
+        B.parar();
+      }
+    }
+  });
+}
+
+/* ===================================================== TD o jogo contra um bot em 3D (PR 4) =====================================================
+   O "Jogar" da pessoa contra um bot (leilao-camp.js resDo3d/res3dValido/marcarAbriu/naoAbriu/wo e a sessão jogar3d/abriu3d/
+   gravar3d), sem navegador: TD1 o resultado do 3D convertido (a vitória com gol, gol contra e pênalti, os cartões e o
+   expulso, as estatísticas; o empate do mata-mata com o gol de ouro e os pênaltis simulados com a semente — o mesmo em todo
+   aparelho, outro com outra trava —; o empate nos pontos); TD2 a máquina (o abriu uma vez, gravar uma vez, o fim e o res
+   do 3D); TD3 a duração e a dificuldade do 3D na cfg e no ver(); TD4 o gravar('3d') pela sessão grava UMA vez e o 2º
+   devolve o gravado; TD5 o "Simular partida" da tela do 3D (o simulado com a semente, as escalações da reserva); TD6 o
+   W.O. depois do prazo do 3D pelo relógio do servidor (e não antes); TD7 o 3D que não abriu = o simulado depois de 2 min;
+   TD8 duas abas do mesmo técnico: uma reserva só; TD9 a conferência aceita o 3D e acusa o adulterado. */
+async function testeCamp3d() {
+  await blocoAsync("TD", "o jogo contra um bot em 3D: o resultado convertido, gravar uma vez, o W.O. pelo prazo, o que não abriu, duas abas, a conferência", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, LC = TMx.leilaoCamp, mundo = MUNDO.public;
+    const cont = { wo: 0, naoAbriu: 0, pror: 0, ouro: 0, pen: 0 };
+    // um treino de mata-mata com 2 (o único jogo: a pessoa contra o bot) até o jogo da pessoa abrir
+    async function treino(cod, extra) {
+      const V = relogioVirtual(), arm = armazemFalso();
+      const base = { relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo };
+      const A = await V.espera(SS.criarTreino(Object.assign({ liga: "br", bots: 1, semente: "TD-" + cod, codigo: cod, formato: "mata", tempo: 10 }, extra || {}, base)));
+      await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+      await V.espera(A.prontoEscalacao(true));
+      await V.anda(() => A.jogos.m1j0 && A.jogos.m1j0.e === "aberto");
+      return { V, A, base };
+    }
+    // um resultado do 3D (o formato do golaco) para os dois times do jogo
+    function r3De(T, gols, cartoes, stats) {
+      const pl = (lado, i) => T[lado].players[i];
+      return {
+        homeGoals: gols.filter(g => g[0] === 0).length, awayGoals: gols.filter(g => g[0] === 1).length,
+        gols: gols.map(([lado, i, minuto, x]) => { const p = x === "contra" ? pl(1 - lado, i) : pl(lado, i); return { lado, tmId: p.id, nome: p.name, minuto, penalti: x === "pen", contra: x === "contra" }; }),
+        cartoes: (cartoes || []).map(([lado, i, minuto, cor]) => ({ lado, tmId: pl(lado, i).id, nome: pl(lado, i).name, minuto, cor })),
+        stats: stats || { possession: [55, 45], shots: [11, 7], onTarget: [5, 3] }
+      };
+    }
+
+    /* ---- TD1 o resultado do 3D convertido ---- */
+    {
+      const { A } = await treino("TD1RES");
+      A.pausar();
+      const c = A._campCtx(), esc = [LC.escalacaoDoJogo(c, 0), LC.escalacaoDoJogo(c, 1)];
+      const j = LC.reservar(null, { ab: [0, 1], esc, modo: "3d", por: 0, motivo: "pedido", ts: 5000 }).jogo;
+      const T = [LC.timeDoTecnico(c, 0, esc[0]), LC.timeDoTecnico(c, 1, esc[1])];
+      // a vitória: gol, pênalti do outro, gol contra a favor, amarelo e vermelho
+      const r3 = r3De(T, [[0, 9, 12], [1, 10, 50, "pen"], [0, 3, 77, "contra"]], [[1, 5, 30, "yellow"], [0, 4, 60, "red"]]);
+      const res = LC.resDo3d(c, "m1j0", j, r3), ev = res.events;
+      const gols = ev.filter(e => e.type === "goal" || e.type === "pengoal");
+      ok(res.em3d === true && res.score.join() === "2,1" && res.placar.join() === "2,1" && res.v === 0 && !res.pror && !res.pen && LC.resValido(res, true), "TD1 vitória: " + JSON.stringify({ s: res.score, p: res.placar, v: res.v }));
+      ok(gols.length === 3 && gols[0].playerId === T[0].players[9].id && gols[0].minute === 12 && gols[1].type === "pengoal" && gols[1].team === 1 && gols[1].playerId === T[1].players[10].id &&
+        gols[2].team === 0 && gols[2].playerId == null && /\(contra\)/.test(gols[2].player) && gols[2].score.join() === "2,1", "TD1 os gols (autor, pênalti, gol contra sem autor): " + JSON.stringify(gols.map(g => [g.type, g.team, g.playerId, g.minute])));
+      const am = ev.find(e => e.type === "yellow"), vm = ev.find(e => e.type === "red");
+      ok(am && am.team === 1 && am.playerId === T[1].players[5].id && vm && vm.team === 0 && res.sentOff && res.sentOff.length === 1 && res.sentOff[0].id === T[0].players[4].id && res.sentOff[0].side === 0, "TD1 os cartões e o expulso");
+      ok(ev.some(e => e.type === "half" && e.minute === 45 && e.score.join() === "1,0") && ev[ev.length - 1].type === "full" && ev.every((e, i) => !i || ev[i - 1].minute <= e.minute), "TD1 o intervalo, o fim e a ordem dos lances");
+      ok(res.stats.possession.join() === "55,45" && res.stats.shots.join() === "11,7" && res.stats.onTarget.join() === "5,3", "TD1 as estatísticas do 3D");
+      const feito = LC.gravar(j, { trava: 5000, res, ts: 6000, mata: true, fim: "3d" });
+      ok(feito.ok && feito.jogo.fim === "3d" && LC.res3dValido(c, "m1j0", feito.jogo), "TD1 o feito do 3D com a forma certa");
+      // o empate no mata-mata: o gol de ouro e os pênaltis com a semente do jogo (o mesmo noutro aparelho; outro com outra trava)
+      const e11 = r3De(T, [[0, 9, 20], [1, 10, 70]]);
+      let difere = 0;
+      for (let k = 0; k < 40; k++) {
+        const jk = Object.assign({}, j, { trava: 7000 + k });
+        const a = LC.resDo3d(c, "m1j0", jk, e11), b = TMs.pro.leilaoCamp.resDo3d(c, "m1j0", jk, JSON.parse(JSON.stringify(e11)));
+        ok(LC.canon(a) === LC.canon(b), `TD1 empate (trava ${7000 + k}): outro resultado noutro aparelho`);
+        ok(a.score.join() === "1,1" && a.pror && a.placar.join() === a.pror.score.join() && a.v !== -1 && LC.resValido(a, true), `TD1 empate (trava ${7000 + k}) sem o gol de ouro/pênaltis: ${JSON.stringify({ p: a.placar, v: a.v })}`);
+        ok(LC.canon(LC.completarMata({ score: [1, 1], events: a.events }, T[0], T[1], LC.sementeJogo(c.codigo, "m1j0", 7000 + k)).pror) === LC.canon(a.pror), "TD1 o gol de ouro não é o da semente do jogo");
+        cont.pror++; if (a.pror.ouro != null) cont.ouro++; if (a.pen) cont.pen++;
+        if (k && LC.canon(a.pror) !== LC.canon(LC.resDo3d(c, "m1j0", j, e11).pror)) difere++;
+      }
+      ok(cont.ouro > 0 && cont.pen > 0 && difere > 0, `TD1 empates: ${cont.ouro} gols de ouro, ${cont.pen} pênaltis, ${difere} diferentes com outra trava`);
+      // o empate nos pontos: fica empate (sem prorrogação)
+      const ep = LC.resDo3d(c, "r1j0", j, e11);
+      ok(ep.v === -1 && !ep.pror && !ep.pen && ep.placar.join() === "1,1" && LC.resValido(ep, false), "TD1 o empate nos pontos");
+      // o 3D com mais gols no placar que na lista: o placar vale, sem autor
+      const r3b = r3De(T, [[0, 9, 12]]); r3b.homeGoals = 2;
+      const rb = LC.resDo3d(c, "r1j0", j, r3b);
+      ok(rb.score.join() === "2,0" && rb.events.filter(e => e.type === "goal").length === 2, "TD1 o gol sem autor do placar do 3D");
+      A.parar();
+    }
+
+    /* ---- TD2 a máquina: o abriu uma vez, gravar uma vez, o fim do 3D ---- */
+    {
+      const c = LC.contexto({ formato: "mata", T: 2, semente: "td2" });
+      const j = LC.reservar(null, { ab: [0, 1], esc: [{ formacao: "4-4-2", tit: [] }, { formacao: "4-4-2", tit: [] }], modo: "3d", por: 0, motivo: "pedido", ts: 1000 }).jogo;
+      const a1 = LC.marcarAbriu(j, { trava: 1000, ts: 1500 });
+      ok(a1.ok && a1.jogo.abriu === 1500 && LC.marcarAbriu(a1.jogo, { trava: 1000, ts: 1600 }).motivo === "abriu" && LC.marcarAbriu(j, { trava: 999, ts: 1600 }).motivo === "trava", "TD2 o abriu: uma vez, com a mesma trava");
+      const rs = { score: [1, 0], placar: [1, 0], events: [{ minute: 10, type: "goal", team: 0 }], v: 0, em3d: true }, rsim = Object.assign({}, rs, { em3d: undefined });
+      ok(LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true }).motivo === "fim" && LC.gravar(a1.jogo, { trava: 1000, res: rsim, ts: 2000, mata: true, fim: "3d" }).motivo === "res" &&
+        LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true, fim: "simulado" }).motivo === "res", "TD2 gravar o 3D sem o fim ou com o resultado trocado");
+      const g = LC.gravar(a1.jogo, { trava: 1000, res: rs, ts: 2000, mata: true, fim: "3d" });
+      ok(g.ok && g.jogo.e === "feito" && g.jogo.fim === "3d" && g.jogo.abriu === 1500 && LC.gravar(g.jogo, { trava: 1000, res: rs, ts: 2100, mata: true, fim: "3d" }).motivo === "feito" &&
+        LC.wo(g.jogo, { trava: 1000, hora: 1e13, ts: 1 }, c).motivo === "feito" && LC.naoAbriu(g.jogo, { trava: 1000, hora: 1e13, ts: 1, res: rsim }, c).motivo === "feito", "TD2 o 3D gravado uma vez só");
+      ok(LC.naoAbriu(a1.jogo, { trava: 1000, hora: 1e13, ts: 1, res: rsim }, c).motivo === "abriu" && LC.naoAbriu(j, { trava: 1000, hora: 1000 + LC.PRAZO - 1, ts: 1, res: rsim }, c).motivo === "cedo" &&
+        LC.naoAbriu(j, { trava: 1000, hora: 1000 + LC.PRAZO, ts: 3, res: rsim }, c).jogo.fim === "simulado", "TD2 o simulado do 3D que não abriu (só depois de 2 min, só sem o abriu)");
+      ok(LC.duracao3dDe(7) === 4 && LC.duracao3dDe("8") === 8 && LC.dificuldade3dDe("x") === "normal" && LC.dificuldade3dDe("lenda") === "lenda" && LC.prazo3d(3) === 948000 && LC.prazo3d() === 1104000, "TD2 a duração e a dificuldade (padrões) e o prazo");
+      const d4 = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata", tresD: true, duracao3d: 4 }), d10 = LC.duracaoEstimada({ T: 4, tempo: 10000, formato: "mata", tresD: true, duracao3d: 10 });
+      ok(d10.camp.lo > d4.camp.lo && d10.camp.hi > d4.camp.hi, "TD2 a duração estimada conta a duração do 3D");
+    }
+
+    /* ---- TD3 a duração e a dificuldade do 3D na cfg da sala e no ver(); TD4 gravar('3d') uma vez ---- */
+    {
+      const { V, A, base } = await treino("TD4GRA", { duracao3d: 6, dificuldade3d: "dificil" });
+      const w = A.ver(), mj = w.camp.meuJogo;
+      ok(A.sala.cfg.duracao3d === 6 && A.sala.cfg.dificuldade3d === "dificil" && w.duracao3d === 6 && w.dificuldade3d === "dificil" && A._campCtx().duracao3d === 6, "TD3 a cfg e o ver(): " + JSON.stringify([A.sala.cfg.duracao3d, A.sala.cfg.dificuldade3d, w.duracao3d, w.dificuldade3d]));
+      ok(mj && mj.contraBot && mj.podeJogar && mj.podeSimular && !mj.tresD, "TD3 o Jogar no meu jogo contra o bot");
+      const r = await V.espera(A.jogar3d());
+      ok(r.ok && r.id === "m1j0" && r.jogo.modo === "3d" && r.jogo.motivo === "pedido" && r.jogo.por === 0 && r.jogo.inicio === r.trava && r.duracao3d === 6 && r.dificuldade3d === "dificil" &&
+        r.times.length === 2 && r.times[r.lado].players.length === 11 && r.times[r.lado].id === "leilao_TD4GRA_0" && r.times[1 - r.lado].id === "leilao_TD4GRA_1", "TD3 o jogar3d: " + JSON.stringify(Object.assign({}, r, { times: null, jogo: null })));
+      await V.anda(() => A.ver().camp.meuJogo.e === "reservado");
+      const mj2 = A.ver().camp.meuJogo;
+      ok(mj2.e === "reservado" && mj2.tresD && !mj2.tresD.abriu && mj2.tresD.fim === r.trava + LC.PRAZO && !mj2.podeJogar && !mj2.podeSimular && (await V.espera(A.simular())).motivo === "jogando" && (await V.espera(A.jogar3d())).motivo === "jogando", "TD3 o 3D reservado: o prazo de abrir, sem Jogar nem Simular");
+      await V.espera(A.abriu3d(r.id, r.trava));
+      await V.anda(() => A.jogos.m1j0.abriu != null);
+      ok(A.jogos.m1j0.abriu >= r.trava && A.ver().camp.meuJogo.tresD.abriu && A.ver().camp.meuJogo.tresD.fim === r.trava + LC.prazo3d(6) && !A.alterada, "TD3 o abriu e o prazo da partida (6 min por tempo)");
+      const T = r.times, eu = r.lado, r3 = r3De(T, [[eu, 9, 33], [eu, 8, 81]], [[1 - eu, 2, 44, "yellow"]]);
+      const g1 = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3));
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0;
+      ok(g1.ok && g1.gravou && g1.res.em3d && g1.res.placar[eu] === 2 && g1.res.placar[1 - eu] === 0 && jf.e === "feito" && jf.fim === "3d" && LC.canon(jf.res) === LC.canon(g1.res) && jf.trava === r.trava, "TD4 o gravar('3d') pela sessão: " + JSON.stringify({ ok: g1.ok, gravou: g1.gravou, fim: jf.fim }));
+      const r3x = r3De(T, [[1 - eu, 9, 10]]);
+      const g2 = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3x)), g3 = await V.espera(A.gravar3d(r.id, r.trava, "simulado", null));
+      ok(g2.ok && !g2.gravou && LC.canon(g2.res) === LC.canon(jf.res) && g3.ok && !g3.gravou && LC.canon(g3.res) === LC.canon(jf.res) && LC.canon(A.jogos.m1j0) === LC.canon(jf), "TD4 o 2º gravar regravou (ou não devolveu o gravado)");
+      await V.anda(() => A.ver().camp.fim);
+      ok(LC.conferirJogo(A._campCtx(), A.ver().camp.rodadas[0].jogos[0], jf) === null && !A.alterada && A.ver().camp.fim && A.ver().camp.campeao === 0, "TD4 o 3D conferido e o campeonato no fim: " + JSON.stringify([A.alterada, A.alteradaJogo]));
+      // a mesma vista noutro aparelho (a conferência dele aceita o 3D)
+      const B = await V.espera(SS.abrir("TD4GRA", Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      await V.anda(() => B.ver().camp && B.ver().camp.campeao != null);
+      ok(!B.alterada && B.ver().camp.campeao === 0 && B.partida("m1j0").res.em3d, "TD4 outro aparelho congelou ou viu outro resultado: " + JSON.stringify(B.alteradaJogo));
+      B.parar(); A.parar();
+    }
+
+    /* ---- TD5 o "Simular partida" da tela do 3D: o simulado com a semente e as escalações da reserva ---- */
+    {
+      const { V, A } = await treino("TD5SIM");
+      const r = await V.espera(A.jogar3d());
+      await V.espera(A.abriu3d(r.id, r.trava));
+      // os titulares da tela (os mesmos 11, noutra ordem) e um de fora: a escalação não muda
+      const tit = { home: r.times[0].players.map(p => p.id).reverse(), away: r.times[1].players.map(p => p.id) };
+      const g = await V.espera(A.gravar3d(r.id, r.trava, "simulado", tit));
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0, c = A._campCtx();
+      ok(g.ok && g.gravou && !g.res.em3d && jf.fim === "simulado" && !jf.escSim && LC.canon(jf.res) === LC.canon(LC.resultadoDoJogo(c, "m1j0", jf)) && !A.alterada, "TD5 o simulado da tela: " + JSON.stringify({ fim: jf.fim, escSim: !!jf.escSim, alterada: A.alterada }));
+      ok(LC.escDaTela(c, jf, { home: ["x"], away: null }) === null && LC.escDaTela(c, jf, tit) === null, "TD5 a tela com os mesmos 11 (ou inválida) mudou a escalação");
+      A.parar();
+    }
+
+    /* ---- TD6 o W.O. depois do prazo do 3D (o relógio do servidor), não antes ---- */
+    {
+      const { V, A } = await treino("TD6WOP", { duracao3d: 3 });
+      const r = await V.espera(A.jogar3d());
+      await V.espera(A.abriu3d(r.id, r.trava));
+      const pz = r.trava + LC.prazo3d(3);
+      let antes = null;
+      V.agendar(() => { antes = A.jogos.m1j0.e; }, pz - 2000 - V.hora);
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      ok(antes === "reservado", `TD6 o W.O. antes do prazo (2 s antes: ${antes})`);
+      const jf = A.jogos.m1j0;
+      cont.wo++;
+      ok(jf.res.wo === r.lado && jf.res.placar[r.lado] === 0 && jf.res.placar[1 - r.lado] === LC.WO && jf.ts >= pz && jf.ts < pz + 5000 && !A.alterada, `TD6 o W.O. de quem reservou ${(jf.ts - r.trava) / 60000} min depois (prazo ${LC.prazo3d(3) / 60000} min): ${JSON.stringify(jf.res)}`);
+      await V.anda(() => A.ver().camp.fim);
+      ok(A.ver().camp.fim && A.ver().camp.campeao === 1 && A.partida("m1j0").res.wo === r.lado, "TD6 o campeonato com o W.O.");
+      // o gravar('3d') que chega depois do W.O.: devolve o gravado (o W.O.), nada regravado
+      const g = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3De(r.times, [[r.lado, 9, 10]])));
+      ok(g.ok && !g.gravou && g.res.wo === r.lado, "TD6 o 3D atrasado regravou o W.O.");
+      A.parar();
+    }
+
+    /* ---- TD7 o 3D que não abriu = o simulado depois de 2 min ---- */
+    {
+      const { V, A } = await treino("TD7NAO");
+      const r = await V.espera(A.jogar3d());
+      let antes = null;
+      V.agendar(() => { antes = A.jogos.m1j0.e; }, r.trava + LC.PRAZO - 1000 - V.hora);
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      ok(antes === "reservado", `TD7 o simulado antes de 2 min (1 s antes: ${antes})`);
+      const jf = A.jogos.m1j0, c = A._campCtx();
+      cont.naoAbriu++;
+      ok(jf.fim === "simulado" && jf.res.wo == null && !jf.res.em3d && jf.abriu == null && jf.ts >= r.trava + LC.PRAZO && jf.ts < r.trava + LC.PRAZO + 5000 &&
+        LC.canon(jf.res) === LC.canon(LC.resultadoDoJogo(c, "m1j0", jf)) && !A.alterada, `TD7 o 3D que não abriu: ${JSON.stringify({ fim: jf.fim, wo: jf.res.wo, dt: jf.ts - r.trava })}`);
+      // o abriu que chega tarde não muda o feito
+      ok((await V.espera(A.abriu3d(r.id, r.trava))).feito === false, "TD7 o abriu depois do simulado");
+      A.parar();
+    }
+
+    /* ---- TD8 duas abas do mesmo técnico: uma reserva só ---- */
+    {
+      const { V, A, base } = await treino("TD8ABA");
+      const B = await V.espera(SS.abrir("TD8ABA", Object.assign({ rede: A.rede.outroCliente(), eu: 0 }, base)));
+      await V.anda(() => B.ver().camp && B.ver().camp.meuJogo && B.ver().camp.meuJogo.podeJogar);
+      const [ra, rb] = await V.espera(Promise.all([A.jogar3d(), B.jogar3d()]));
+      await V.anda(() => B.ver().camp.meuJogo.e === "reservado" && A.ver().camp.meuJogo.e === "reservado");
+      const oks = [ra, rb].filter(x => x.ok);
+      ok(oks.length === 1 && [ra, rb].filter(x => !x.ok)[0].motivo === "jogando" && A.jogos.m1j0.trava === oks[0].trava && !A.alterada && !B.alterada, "TD8 duas reservas: " + JSON.stringify([ra.ok, ra.motivo, rb.ok, rb.motivo]));
+      ok(B.ver().camp.meuJogo.tresD && !B.ver().camp.meuJogo.podeJogar, "TD8 a outra aba sem o 3D em andamento");
+      B.parar(); A.parar();
+    }
+
+    /* ---- TD9 a conferência aceita o 3D e acusa o adulterado ---- */
+    {
+      const { V, A } = await treino("TD9CON");
+      A.pausar();
+      const c = A._campCtx(), g = A._vista().rodadas[0].jogos[0], esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)], eu = g.a === 0 ? 0 : 1;
+      const T = [LC.timeDoTecnico(c, g.a, esc[0]), LC.timeDoTecnico(c, g.b, esc[1])];
+      const res0 = LC.reservar(null, { ab: [g.a, g.b], esc, modo: "3d", por: 0, motivo: "pedido", ts: 5000 }).jogo, ab0 = LC.marcarAbriu(res0, { trava: 5000, ts: 5100 }).jogo;
+      const f3d = (r3, id) => LC.gravar(ab0, { trava: 5000, res: LC.resDo3d(c, id || "m1j0", ab0, r3), ts: 9000, mata: true, fim: "3d" }).jogo;
+      const honesto = f3d(r3De(T, [[0, 9, 12]])), empate = f3d(r3De(T, [[0, 9, 12], [1, 9, 80]]));
+      const wo = LC.wo(ab0, { trava: 5000, hora: 5000 + LC.prazo3d(4), ts: 5000 + LC.prazo3d(4) + 10 }, c).jogo;
+      const sim = LC.naoAbriu(res0, { trava: 5000, hora: 5000 + LC.PRAZO, ts: 5000 + LC.PRAZO + 5, res: LC.resultadoDoJogo(c, "m1j0", res0) }, c).jogo;
+      const cp = x => JSON.parse(JSON.stringify(x));
+      ok([res0, ab0, honesto, empate, wo, sim].every(j => LC.conferirJogo(c, g, j) === null), "TD9 o honesto acusado: " + JSON.stringify([res0, ab0, honesto, empate, wo, sim].map(j => LC.conferirJogo(c, g, j))));
+      const casos = [
+        ["o placar do 3D sem o gol", () => { const j = cp(honesto); j.res.score = [2, 0]; j.res.placar = [2, 0]; return j; }, "resultado"],
+        ["o gol de um jogador do outro time", () => { const j = cp(honesto); j.res.events.find(e => e.type === "goal").playerId = T[1].players[9].id; return j; }, "resultado"],
+        ["o lance fora dos 90'", () => { const j = cp(honesto); j.res.events.find(e => e.type === "goal").minute = 95; return j; }, "resultado"],
+        ["o gol de ouro trocado", () => { const j = cp(empate); j.res.pror.events = j.res.pror.events.slice(0, 1); j.res.pror.score = [2, 1]; j.res.placar = [2, 1]; j.res.v = 0; delete j.res.pen; return j; }, "resultado"],
+        ["o W.O. antes do prazo", () => { const j = cp(wo); j.ts = 5000 + LC.prazo3d(4) - 1000; return j; }, "wo"],
+        ["o W.O. do 3D que não abriu", () => { const j = cp(wo); delete j.abriu; return j; }, "wo"],
+        ["o W.O. contra quem não reservou", () => { const j = cp(wo); j.res = LC.resultadoWO(1 - eu); return j; }, "wo"],
+        ["o 3D pelo prazo", () => { const j = cp(res0); j.motivo = "prazo"; return j; }, "forma"],
+        ["o 3D sem o fim", () => { const j = cp(honesto); delete j.fim; return j; }, "forma"],
+        ["o simulado do 3D com outro resultado", () => { const j = cp(sim); j.res.events[0].text = "outro"; return j; }, "resultado"],
+        ["o resultado do 3D num jogo simulado", () => { const j = cp(honesto); j.modo = "simulado"; return j; }, "forma"]
+      ];
+      casos.forEach(([nome, faz, motivo]) => { const m = LC.conferirJogo(c, g, faz()); ok(m === motivo, `TD9 ${nome}: ${m} (esperado ${motivo})`); });
+      // pela sessão: o reservado que ganha o abriu não congela; o abriu que some depois de visto congela
+      const X = A.rede.outroCliente();
+      await V.espera(X.gravar("jogos/m1j0", res0)); await V.anda(() => A.jogos.m1j0.e === "reservado");
+      await V.espera(X.gravar("jogos/m1j0", ab0)); await V.anda(() => A.jogos.m1j0.abriu != null);
+      ok(!A.alterada, "TD9 o abriu honesto congelou: " + JSON.stringify(A.alteradaJogo));
+      await V.espera(X.gravar("jogos/m1j0", res0)); await V.anda(() => A.alterada || A.jogos.m1j0.abriu == null);
+      await V.anda(() => !!A.alterada, 50);
+      ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta", "TD9 o abriu apagado (o W.O. vira simulado) não congelou: " + JSON.stringify(A.alteradaJogo));
+      A.parar();
+    }
+    /* ---- TD10 as regras do 3D (2; desde o PR 5, a sala nova é de regras 4): a sala de regras 1 segue valendo aqui, sem o Jogar;
+       a de regras 5, só olhar ---- */
+    {
+      const { V, A } = await treino("TD10RG");
+      const Lx = TMx.leilao;
+      ok(Lx.REGRAS === 5 && Lx.REGRAS_3D === 2 && Lx.REGRAS_20 === 3 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6) && A._com3d() && A.ver().camp.meuJogo.podeJogar, "TD10 as regras 5 (as notas escondidas, PR 6; o par desde as 4; 20 lotes por técnico desde as 3) e o Jogar na sala nova");
+      A.sala.meta.regras = 1; A._jogosVer++;
+      const mj = A.ver().camp.meuJogo, r = await V.espera(A.jogar3d());
+      ok(!A.soOlhar && !A._com3d() && mj.com3d === false && !mj.podeJogar && mj.podeSimular && !r.ok && r.motivo === "sem3d", "TD10 a sala de regras 1: " + JSON.stringify({ so: A.soOlhar, pj: mj.podeJogar, ps: mj.podeSimular, r }));
+      // um nó do 3D numa sala de regras 1 (só um aparelho adulterado o grava): a sala congela
+      const c = A._campCtx(), g = A._vista().rodadas[0].jogos[0], esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)];
+      const n3 = LC.reservar(null, { ab: [g.a, g.b], esc, modo: "3d", por: 0, motivo: "pedido", ts: V.hora }).jogo;
+      await V.espera(A.rede.outroCliente().gravar("jogos/m1j0", n3)); await V.anda(() => !!A.alterada, 200);
+      ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "forma", "TD10 o 3D na sala de regras 1 não congelou: " + JSON.stringify(A.alteradaJogo));
+      A.parar();
+    }
+
+    /* ---- TD11 aceitar o W.O. agora (o 3D abriu e fechou sem resultado): de quem reservou, só depois do abriu ---- */
+    {
+      const { V, A } = await treino("TD11DE");
+      const r = await V.espera(A.jogar3d());
+      const sem = await V.espera(A.desistir3d(r.id, r.trava));
+      ok(!sem.ok && A.jogos.m1j0.e === "reservado", "TD11 o W.O. aceito sem o 3D ter aberto: " + JSON.stringify(sem));
+      await V.espera(A.abriu3d(r.id, r.trava));
+      const d = await V.espera(A.desistir3d(r.id, r.trava));
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0, c = A._campCtx(), g = A._vista().rodadas[0].jogos[0];
+      ok(d.ok && jf.res.wo === r.lado && jf.desistiu === true && jf.ts < jf.inicio + LC.prazo3d(4) && !A.alterada && LC.conferirJogo(c, g, jf) === null && !A._caixa3d(),
+        "TD11 o W.O. aceito na hora: " + JSON.stringify({ ok: d.ok, wo: jf.res.wo, desistiu: jf.desistiu, dt: jf.ts - jf.inicio, alt: A.alterada, caixa: A._caixa3d() }));
+      const cp = x => JSON.parse(JSON.stringify(x));
+      const antesAbriu = cp(jf); antesAbriu.ts = jf.abriu - 1;
+      const deOutro = LC.desistir(Object.assign(cp(jf), { e: "reservado", res: null, desistiu: null }), { trava: jf.trava, ts: 1, por: 1 - jf.por });
+      const semWo = cp(jf); semWo.res = LC.resultadoDoJogo(c, "m1j0", jf);
+      ok(LC.conferirJogo(c, g, antesAbriu) === "wo" && deOutro.motivo === "por" && LC.conferirJogo(c, g, Object.assign(cp(jf), { desistiu: 1 })) === "wo" && LC.conferirJogo(c, g, semWo) === "forma",
+        "TD11 a conferência do W.O. aceito: " + JSON.stringify([LC.conferirJogo(c, g, antesAbriu), deOutro.motivo, LC.conferirJogo(c, g, semWo)]));
+      A.parar();
+    }
+
+    /* ---- TD12 o reservado no 3D que ganha o abriu trocando quem reservou (o W.O. iria para o bot) congela a sala ---- */
+    {
+      const { V, A } = await treino("TD12PO");
+      A.pausar();
+      const c = A._campCtx(), g = A._vista().rodadas[0].jogos[0], esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)];
+      const res0 = LC.reservar(null, { ab: [g.a, g.b], esc, modo: "3d", por: 0, motivo: "pedido", ts: V.hora }).jogo;
+      const X = A.rede.outroCliente();
+      await V.espera(X.gravar("jogos/m1j0", res0)); await V.anda(() => A.jogos.m1j0.e === "reservado");
+      const troca = Object.assign(LC.marcarAbriu(res0, { trava: res0.trava, ts: V.hora + 5 }).jogo, { por: 1 });
+      await V.espera(X.gravar("jogos/m1j0", troca)); await V.anda(() => !!A.alterada, 200);
+      ok(A.alterada === "jogos" && A.alteradaJogo && A.alteradaJogo.motivo === "volta", "TD12 o por trocado junto do abriu: " + JSON.stringify(A.alteradaJogo));
+      A.parar();
+    }
+
+    /* ---- TD13 o resultado do 3D guardado no aparelho: o gravar que falha (e o app fechado depois do apito) não perde o 3D ---- */
+    {
+      const { V, A, base } = await treino("TD13GU", { duracao3d: 3 });
+      const r = await V.espera(A.jogar3d());
+      await V.espera(A.abriu3d(r.id, r.trava, "pedidoTD13"));
+      const r3 = r3De(r.times, [[r.lado, 9, 20], [r.lado, 8, 70]]);
+      // a 1ª transação do gravar falha (a rede): o resultado fica guardado e o motor grava sozinho, antes do prazo
+      const orig = A._transJogo; let falhas = 0;
+      A._transJogo = function (id, fn) { if (!falhas++) return Promise.reject(new Error("rede")); return orig.apply(this, arguments); };
+      const g1 = await V.espera(A.gravar3d(r.id, r.trava, "3d", r3));
+      const guardado = !!A._caixa3d() && !!A._caixa3d().r3 && A.ver().camp.meuJogo.tresD.guardado;
+      await V.anda(() => A.jogos.m1j0.e === "feito");
+      const jf = A.jogos.m1j0;
+      ok(!g1.ok && guardado && jf.fim === "3d" && jf.res.em3d && jf.res.placar[r.lado] === 2 && jf.ts < jf.inicio + LC.prazo3d(3) && !A._caixa3d() && !A.alterada,
+        "TD13 o gravar que falhou: " + JSON.stringify({ g1: g1.ok, guardado, fim: jf.fim, wo: jf.res.wo, dt: jf.ts - jf.inicio, caixa: A._caixa3d() }));
+      A._transJogo = orig; A.parar();
+      // o app fechado depois do apito: o resultado na caixa (o aparelho), a sala aberta de novo grava antes do prazo
+      const T2 = await treino("TD13AP", { duracao3d: 3 });
+      const r2 = await T2.V.espera(T2.A.jogar3d());
+      await T2.V.espera(T2.A.abriu3d(r2.id, r2.trava, "pedidoTD13b"));
+      T2.A._guarda3d(r2.id, r2.trava, { r3: r3De(r2.times, [[1 - r2.lado, 9, 30]]) });
+      const arm = T2.base.armazem;
+      T2.A.parar();
+      const B = await T2.V.espera(SS.abrir("TD13AP", Object.assign({ rede: T2.A.rede.outroCliente(), eu: 0 }, T2.base, { armazem: arm })));
+      await T2.V.anda(() => B.jogos.m1j0 && B.jogos.m1j0.e === "feito");
+      const jb = B.jogos.m1j0;
+      ok(jb.fim === "3d" && jb.res.placar[1 - r2.lado] === 1 && jb.res.wo == null && jb.ts < jb.inicio + LC.prazo3d(3) && !B._caixa3d() && !B.alterada,
+        "TD13 o app fechado no pós-jogo: " + JSON.stringify({ fim: jb.fim, wo: jb.res.wo, dt: jb.ts - jb.inicio, caixa: B._caixa3d() }));
+      B.parar();
+    }
+
+    /* ---- TD14 o abriu que falha: o motor insiste até ele ficar gravado (sem ele, o 3D aberto virava o simulado em 2 min) ---- */
+    {
+      const { V, A } = await treino("TD14AB");
+      const r = await V.espera(A.jogar3d());
+      const orig = A._transJogo; let falhas = 0;
+      A._transJogo = function (id, fn) { if (!falhas++) return Promise.reject(new Error("rede")); return orig.apply(this, arguments); };
+      const a1 = await V.espera(A.abriu3d(r.id, r.trava, "pedidoTD14"));
+      await V.anda(() => A.jogos.m1j0.abriu != null || A.jogos.m1j0.e === "feito");
+      const j = A.jogos.m1j0;
+      ok(!a1.feito && j.e === "reservado" && j.abriu != null && j.abriu < r.trava + LC.PRAZO && !A.alterada, "TD14 o abriu insistente: " + JSON.stringify({ a1: a1.feito, e: j.e, abriu: j.abriu != null && j.abriu - r.trava, falhas }));
+      A._transJogo = orig; A.parar();
+    }
+    nota(`TD1 ${cont.pror} empates no mata-mata (${cont.ouro} no gol de ouro, ${cont.pen} nos pênaltis); TD6 ${cont.wo} W.O. pelo prazo; TD7 ${cont.naoAbriu} 3D que não abriu = simulado`);
+  });
+
+  /* ============ PAR (PR 5): o jogo contra um amigo no Online 3D — a máquina pura, os prazos, os W.O., o simulado, a conferência,
+     a vez do jogo de duas pessoas e as regras antigas aceitas (o fluxo pela sessão sobre o banco falso: o KO, --caso par) ============ */
+  await blocoAsync("PAR", "o par (PR 5): o jogo contra um amigo no Online 3D — a máquina, os prazos, os W.O., o simulado, a conferência, a vez e as regras antigas", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, LC = TMx.leilaoCamp, Lx = TMx.leilao, mundo = MUNDO.public;
+    const V = relogioVirtual(), arm = armazemFalso();
+    const A = await V.espera(SS.criarTreino({ liga: "br", bots: 1, semente: "PAR-1", codigo: "PARCTX", formato: "mata", tempo: 10, relogio: V.relogio, agendar: V.agendar, cancelar: V.cancelar, armazem: arm, semAtual: true, mundo }));
+    await V.anda(() => A.sala && A.sala.meta.estado === "escalacao");
+    await V.espera(A.prontoEscalacao(true));
+    await V.anda(() => A.jogos.m1j0 && A.jogos.m1j0.e === "aberto");
+    A.pausar();
+    // (as contas puras não olham quem é pessoa: o contexto do treino com as duas "pessoas" e o par ligado)
+    const c = Object.assign({}, A._campCtx(), { par: true, tipos: ["pessoa", "pessoa"] }), cSem = Object.assign({}, c, { par: false });
+    const g = { id: "m1j0", a: 0, b: 1, aberta: true, mata: true }, P = LC.PRAZO, D = LC.prazoPar(c.duracao3d);
+    const esc = [LC.escalacaoDoJogo(c, 0), LC.escalacaoDoJogo(c, 1)], T = [LC.timeDoTecnico(c, 0, esc[0]), LC.timeDoTecnico(c, 1, esc[1])];
+    const r3 = (h, a) => ({ homeGoals: h, awayGoals: a, gols: [].concat(Array.from({ length: h }, (_, k) => ({ lado: 0, tmId: T[0].players[10 - k].id, nome: T[0].players[10 - k].name, minuto: 10 + k * 20 })), Array.from({ length: a }, (_, k) => ({ lado: 1, tmId: T[1].players[10 - k].id, nome: T[1].players[10 - k].name, minuto: 15 + k * 20 }))),
+      cartoes: [], stats: { possession: [52, 48], shots: [h + 5, a + 4], onTarget: [h + 2, a + 1] } });
+    const conf = j => LC.conferirJogo(c, g, j);
+
+    /* ---- PAR1 a máquina: reservar (o 1º Jogar), entrar (o 2º), o W.O. de quem não veio, o abriu, o simulado, o W.O. de quem
+       saiu e o resultado do 3D ---- */
+    const r0 = LC.reservarPar(null, { ab: [0, 1], esc, por: 1, ts: 1000 }), j0 = r0.jogo;
+    ok(r0.ok && j0.e === "reservado" && j0.par === true && j0.modo === "3d" && j0.motivo === "pedido" && j0.por === 1 && j0.trava === 1000 && j0.inicio === 1000 && j0.vem1 === 1000 && j0.vem0 == null && conf(j0) === null,
+      "PAR1 o 1º Jogar reserva o par (o lado de quem tocou já veio): " + JSON.stringify(j0 && { e: j0.e, par: j0.par, vem0: j0.vem0, vem1: j0.vem1 }));
+    ok(LC.reservarPar({ e: "aberto", parado: true, resta: 70000 }, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok && LC.reservarPar({ e: "aberto", ini: 500, resta: P }, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok
+      && !LC.reservarPar(j0, { ab: [0, 1], esc, por: 0, ts: 2000 }).ok && !LC.reservarPar(null, { ab: [0, 1], esc, por: 5, ts: 2000 }).ok, "PAR1 reservar: do nada e do aberto (correndo ou parado); nunca do reservado; só quem joga");
+    ok(LC.prazoDe(j0, c) === 1000 + P && !LC.naoVeio(j0, { trava: 1000, hora: 1000 + P - 1, ts: 1 }, c).ok && !LC.marcarAbriu(j0, { trava: 1000, ts: 1500 }).ok
+      && !LC.woPar(j0, { trava: 1000, ts: 1500, perdedor: 0 }).ok && !LC.gravar(j0, { trava: 1000, res: LC.resDo3d(c, "m1j0", j0, r3(1, 0)), ts: 1600, mata: true, fim: "3d" }).ok,
+      "PAR1 com um só no Jogar: o W.O. antes dos 2 min, o abriu, o W.O. de quem saiu e o resultado do 3D recusados");
+    const nv = LC.naoVeio(j0, { trava: 1000, hora: 1000 + P, ts: 1000 + P + 7 }, c);
+    ok(nv.ok && nv.jogo.res.wo === 0 && nv.jogo.woPor === "naoVeio" && nv.jogo.res.placar.join() === "0,3" && conf(nv.jogo) === null, "PAR1 o W.O. de quem não veio na hora do prazo: " + JSON.stringify(nv.ok && nv.jogo.res.placar));
+    // (revisão do PR 5, M2: com um só no Jogar e o outro FORA da sala no fim do prazo, o simulado — a sessão escolhe pelos batimentos)
+    const nu = LC.naoAbriu(j0, { trava: 1000, hora: 1000 + P, ts: 1000 + P + 3, res: LC.resultadoDoJogo(c, "m1j0", j0), mata: true }, c);
+    ok(nu.ok && nu.jogo.fim === "simulado" && nu.jogo.res.wo == null && conf(nu.jogo) === null && !LC.naoAbriu(j0, { trava: 1000, hora: 1000 + P - 1, ts: 1, res: LC.resultadoDoJogo(c, "m1j0", j0), mata: true }, c).ok,
+      "PAR1 com um só no Jogar e o outro fora da sala: o simulado no fim do prazo, não antes (M2)");
+    const s0 = LC.gravar(j0, { trava: 1000, res: LC.resultadoDoJogo(c, "m1j0", j0), ts: 1500, mata: true, fim: "simulado" });
+    ok(s0.ok && s0.jogo.fim === "simulado" && conf(s0.jogo) === null, "PAR1 com um só no Jogar, o outro escolhe Simular: o simulado com a semente");
+    const e1 = LC.entrarPar(j0, { trava: 1000, por: 0, ts: 5000 }), j1 = e1.jogo;
+    ok(e1.ok && j1.vem0 === 5000 && j1.vem1 === 1000 && LC.vieram(j1) && conf(j1) === null && !LC.entrarPar(j1, { trava: 1000, por: 0, ts: 6000 }).ok && !LC.entrarPar(j0, { trava: 999, por: 0, ts: 6000 }).ok && !LC.entrarPar(j0, { trava: 1000, por: 4, ts: 6000 }).ok,
+      "PAR1 o 2º Jogar: o lado dele, uma vez, com a mesma trava");
+    ok(LC.prazoDe(j1, c) === 5000 + P && !LC.naoVeio(j1, { trava: 1000, hora: 1e12, ts: 1 }, c).ok && !LC.wo(j1, { trava: 1000, hora: 1e12, ts: 1 }, c).ok && !LC.desistir(j1, { trava: 1000, ts: 1, por: 1 }).ok,
+      "PAR1 com os dois: 2 min para abrir desde o 2º toque; nem o W.O. de quem não veio nem os do jogo contra um bot");
+    const sim1 = LC.resultadoDoJogo(c, "m1j0", j1);
+    const na = LC.naoAbriu(j1, { trava: 1000, hora: 5000 + P, ts: 5000 + P + 9, res: sim1, mata: true }, c);
+    ok(!LC.naoAbriu(j1, { trava: 1000, hora: 5000 + P - 1, ts: 1, res: sim1, mata: true }, c).ok && na.ok && na.jogo.fim === "simulado" && conf(na.jogo) === null, "PAR1 o 3D que não abriu (a ligação que não deu): o simulado depois de 2 min, não antes");
+    const ab = LC.marcarAbriu(j1, { trava: 1000, ts: 9000 }), j2 = ab.jogo;
+    ok(ab.ok && j2.abriu === 9000 && LC.prazoDe(j2, c) === 9000 + D && D === LC.prazo3d(c.duracao3d) + 6 * 60000 && conf(j2) === null && !LC.naoAbriu(j2, { trava: 1000, hora: 9000 + D - 1, ts: 1, res: sim1, mata: true }, c).ok
+      && LC.naoAbriu(j2, { trava: 1000, hora: 9000 + D, ts: 9000 + D + 1, res: sim1, mata: true }, c).ok, "PAR1 o 3D aberto: o prazo da partida (com as pausas combinadas, 6 min: L3) desde o abriu; sem resultado nele, o simulado");
+    const wp = LC.woPar(j2, { trava: 1000, ts: 9500, perdedor: 1 });
+    ok(wp.ok && wp.jogo.res.wo === 1 && wp.jogo.woPor === "saiu" && conf(wp.jogo) === null && !LC.woPar(j1, { trava: 1000, ts: 6000, perdedor: 0 }).ok && !LC.woPar(j2, { trava: 1000, ts: 9500, perdedor: 2 }).ok,
+      "PAR1 quem sai perde por W.O. com o 3D aberto (de qualquer lado); antes do abriu, não — o simulado (M4)");
+    const d11 = LC.resDo3d(c, "m1j0", j2, r3(1, 1)), g3 = LC.gravar(j2, { trava: 1000, res: d11, ts: 9900, mata: true, fim: "3d" });
+    ok(g3.ok && g3.jogo.fim === "3d" && g3.jogo.res.em3d && g3.jogo.res.pror && conf(g3.jogo) === null && !LC.gravar(j1, { trava: 1000, res: LC.resDo3d(c, "m1j0", j1, r3(2, 0)), ts: 9000, mata: true, fim: "3d" }).ok,
+      "PAR1 o resultado do 3D só com o 3D aberto (M4; o empate do mata-mata segue no gol de ouro e nos pênaltis com a semente)");
+
+    /* ---- PAR2 a conferência acusa o par adulterado ---- */
+    const mexe = (j, f) => { const x = JSON.parse(JSON.stringify(j)); f(x); return x; };
+    const adult = [
+      ["o par numa sala sem ele", () => LC.conferirJogo(cSem, g, j1), "forma"],
+      ["o toque de quem reservou fora do inicio", () => conf(mexe(j1, x => { x.vem1 = 1001; })), "forma"],
+      ["o abriu com um só", () => conf(mexe(j0, x => { x.abriu = 2000; })), "forma"],
+      ["o par fora do 3D", () => conf(mexe(j0, x => { x.modo = "simulado"; })), "forma"],
+      ["o W.O. de quem não veio antes dos 2 min", () => conf(mexe(nv.jogo, x => { x.ts = 1000 + P - 1; })), "wo"],
+      ["o W.O. contra quem veio", () => conf(mexe(nv.jogo, x => { x.res = LC.resultadoWO(1); })), "wo"],
+      ["o W.O. de quem saiu sem os dois", () => conf(mexe(nv.jogo, x => { x.woPor = "saiu"; })), "wo"],
+      ["o W.O. do par sem o motivo", () => conf(mexe(wp.jogo, x => { delete x.woPor; })), "wo"],
+      ["o motivo do W.O. do par num jogo comum", () => LC.conferirJogo(c, g, Object.assign({}, s0.jogo, { par: undefined, vem0: undefined, vem1: undefined, modo: "simulado", fim: undefined, woPor: "saiu", inicio: undefined })), "forma"],
+      ["o placar do 3D mexido", () => conf(mexe(g3.jogo, x => { x.res.score = [2, 1]; })), "resultado"],
+      ["o simulado do par mexido", () => conf(mexe(s0.jogo, x => { x.res.placar = [9, 0]; x.res.score = [9, 0]; x.res.v = 0; })), "resultado"],
+      // (revisão do PR 5, M4: o aparelho adulterado que grava os dois toques na mesma reserva, o W.O. de quem saiu e o 3D sem o abriu)
+      ["o 2º toque na mesma hora da reserva (os dois toques gravados juntos)", () => conf(mexe(j1, x => { x.vem0 = x.inicio; })), "forma"],
+      ["o 2º toque antes da reserva", () => conf(mexe(j1, x => { x.vem0 = x.inicio - 5; })), "forma"],
+      ["o W.O. de quem saiu sem o 3D aberto", () => conf(mexe(wp.jogo, x => { delete x.abriu; })), "wo"],
+      ["o W.O. de quem saiu gravado antes do abriu", () => conf(mexe(wp.jogo, x => { x.ts = x.abriu - 1; })), "wo"],
+      ["o resultado do 3D do par sem o abriu", () => conf(mexe(g3.jogo, x => { delete x.abriu; })), "resultado"],
+      ["o resultado do 3D do par gravado antes do abriu", () => conf(mexe(g3.jogo, x => { x.ts = x.abriu - 1; })), "resultado"]
+    ];
+    const err = adult.filter(([, f, m]) => { const r = f(); return !(r === m || (m === "resultado" && r != null)); }).map(([n, f]) => n + " → " + f());
+    ok(!err.length, "PAR2 a conferência acusa o par adulterado: " + JSON.stringify(err));
+
+    /* ---- PAR3 a vez (proximaAcao): o prazo do jogo de duas pessoas corre com uma delas presente; os prazos do par ---- */
+    const gp = j => ({ id: "m1j0", a: 0, b: 1, aberta: true, mata: true, e: j ? j.e : "livre", j });
+    const info = (pa, pb) => ({ presente: t => (t === 0 ? pa : pb), visto: t => (t === 0 ? 100 : 300) });
+    const PA = (j, i, cx) => JSON.stringify(LC.proximaAcao(cx || c, gp(j), i));
+    const ok3 = [
+      [PA(null, info(false, false)), "null"], [PA(null, info(false, true)), '{"acao":"abrir","quando":0}'],
+      [PA({ e: "aberto", ini: 50, resta: P }, info(false, false)), '{"acao":"pausar","quando":0,"desde":300}'],
+      [PA({ e: "aberto", ini: 50, resta: P }, info(true, false)), JSON.stringify({ acao: "reservar", motivo: "prazo", quando: 50 + P })],
+      [PA({ e: "aberto", parado: true, resta: 5000 }, info(true, false)), '{"acao":"retomar","quando":0}'],
+      [PA(j0, info(true, true)), JSON.stringify({ acao: "naoVeio", quando: 1000 + P })], [PA(j1, info(true, true)), JSON.stringify({ acao: "naoAbriu", quando: 5000 + P })],
+      [PA(j2, info(true, true)), JSON.stringify({ acao: "naoAbriu", quando: 9000 + D })],
+      [PA(null, info(true, true), cSem), '{"acao":"reservar","motivo":"abertura","quando":0}']
+    ].filter(([x, y]) => x !== y);
+    ok(!ok3.length, "PAR3 a vez do jogo de duas pessoas e do par: " + JSON.stringify(ok3));
+
+    /* ---- PAR4 as regras: 5 (as notas escondidas, PR 6; o par desde as 4), as salas de regras 1 a 4 aceitas (as de 1 a 3 sem o
+       par; a de 4 COM ele, o jogo contra um amigo em 3D), a de 6 só olhar; o Jogar contra um bot não é o par ---- */
+    ok(Lx.REGRAS === 5 && Lx.REGRAS_PAR === 4 && Lx.REGRAS_3D === 2 && [1, 2, 3, 4, 5].every(r => Lx.regrasAceitas(r)) && !Lx.regrasAceitas(6), "PAR4 as regras 5 (as notas escondidas, PR 6; o par desde as 4) e as aceitas");
+    A.retomar();
+    const mj = A.ver().camp.meuJogo, rb = await V.espera(A.jogarPar());
+    ok(A.sala.meta.regras === Lx.REGRAS && A._comPar() && mj.comPar && !mj.contraAmigo && !mj.par && !rb.ok && rb.motivo === "contraBot", "PAR4 a sala nova com o par; o Jogar contra um bot não é o par: " + JSON.stringify({ rb, mj: [mj.comPar, mj.contraAmigo] }));
+    // (as salas de regras 3 — os 20 lotes por técnico — e 2, antes do par: o 3D contra um bot segue, sem o par)
+    const sem3 = [3, 2].map(rg => { A.sala.meta.regras = rg; A._jogosVer++; return !A._comPar() && A._com3d() && !A.soOlhar && A.ver().camp.meuJogo.podeJogar; });
+    ok(sem3.every(Boolean), "PAR4 as salas de regras 3 e 2: o 3D contra um bot segue, sem o par: " + JSON.stringify(sem3));
+    // (a sala de regras 4, criada antes do PR 6: o jogo contra um amigo em 3D — o par — continua, e as notas à mostra)
+    A.sala.meta.regras = 4; A._jogosVer++;
+    const r4 = { par: A._comPar(), d3: A._com3d(), olhar: A.soOlhar, jogar: A.ver().camp.meuJogo.podeJogar, ocultas: Lx.ocultasNaSala(A.sala) };
+    ok(r4.par && r4.d3 && !r4.olhar && r4.jogar && !r4.ocultas, "PAR4 a sala de regras 4 mantém o jogo contra um amigo em 3D (o par): " + JSON.stringify(r4));
+    A.parar();
+    nota(`PAR1–PAR4: a máquina, ${adult.length} adulterações acusadas, a vez em 9 estados`);
+  });
+}
+
+/* ============================================ KO o campeonato online (a sessão sobre o Firebase falso) ============================================
+   A sala montada no banco falso já no fim do leilão (o leilão de cada um é o bloco O) e as sessões online (abrir) em 2, 4 e
+   8 "aparelhos", cada um com o seu cliente, a sua latência e o seu relógio: todos veem os mesmos jogos, resultados,
+   tabela, chave e campeão; cada jogo é reservado e gravado UMA vez (o servidor falso guarda a história de cada nó); dois
+   aparelhos simulando o mesmo jogo ao mesmo tempo dão um resultado só; o prazo da pessoa é pela hora do servidor (os
+   relógios ±5 s e o pulo de +60 s depois da calibração: nenhum jogo reservado pelo prazo antes de a pessoa ter 2 min de
+   prazo correndo no servidor); quem some (a página escondida) para o prazo e volta; o dono simula os pendentes; quem
+   recarrega vê tudo gravado; quem sai da sala conta como bot; a limpeza não apaga a sala no campeonato com atividade
+   nos jogos e apaga a do fim 24 h depois; as regras opcionais (o .validate do LEIA-ME) não recusam nenhuma gravação
+   honesta; com elas VALENDO, o batimento a caminho de quem acaba de perder o clube é recusado e a sessão não toma isso por
+   queda de conexão (o "passar"). Nenhum Firebase de verdade. --caso dois,limpeza,passar,quatro,oito. */
+async function testeCampOnline() {
+  await blocoAsync("KO", "campeonato online (banco falso): 2, 4 e 8 aparelhos, cada jogo uma vez, o prazo pelo servidor, quem some, o dono, recarregar, quem sai", async (ok, nota) => {
+    const TMx = TMs.public, SS = TMx.leilaoSessao, Lx = TMx.leilao, LC = TMx.leilaoCamp, R = TMx.leilaoRede;
+    const { BancoFalso } = await import(pathToFileURL(path.join(RAIZ, "ferramentas/lib/banco-falso.mjs")).href);
+    const CASOS = opt("--caso", null) ? opt("--caso").split(",") : null, caso = n => !CASOS || CASOS.includes(n);
+    // o tempo de mentira (como o do bloco O): o servidor, as agendas das sessões e os relógios andam juntos
+    const RT = { hora: 9_000_000, fila: [], seq: 0 };
+    const agendar = (fn, ms) => { const e = { at: RT.hora + Math.max(0, +ms || 0), fn, s: RT.seq++, morto: false }; RT.fila.push(e); return e; };
+    const cancelar = e => { if (e) e.morto = true; };
+    const respira = async () => { for (let i = 0; i < 3; i++) await new Promise(r => setImmediate(r)); };
+    let acontecimentos = 0;
+    async function anda(pare, limiteMs = 6 * 3600_000) {
+      const fim = RT.hora + limiteMs;
+      let parado = 0, horaAntes = RT.hora;
+      for (let k = 0; k < 6_000_000; k++) {
+        if (RT.hora !== horaAntes) { horaAntes = RT.hora; parado = 0; } else if (++parado > 20000) throw new Error("laço sem o tempo andar em " + RT.hora);
+        await respira();
+        if (pare && pare()) return true;
+        if (RT.fila.length > 4000) RT.fila = RT.fila.filter(e => !e.morto);
+        let m = -1;
+        for (let i = 0; i < RT.fila.length; i++) { const e = RT.fila[i]; if (e.morto) continue; if (m < 0 || e.at < RT.fila[m].at || (e.at === RT.fila[m].at && e.s < RT.fila[m].s)) m = i; }
+        if (m < 0 || RT.fila[m].at > fim) {
+          for (let i = 0; i < 4; i++) await respira();
+          if (pare && pare()) return true;
+          if (RT.fila.some(e => !e.morto && e.at <= fim)) continue;
+          RT.hora = Math.max(RT.hora, fim);
+          return !!(pare && pare());
+        }
+        const e = RT.fila.splice(m, 1)[0];
+        RT.hora = Math.max(RT.hora, e.at); acontecimentos++;
+        try { e.fn(); } catch (er) { ok(false, "exceção num acontecimento: " + (er && er.stack || er)); }
+      }
+      return false;
+    }
+    const passa = ms => anda(null, ms);
+    async function espera(p, limiteMs = 120_000) {
+      let feito = false, val, err;
+      p.then(v => { feito = true; val = v; }, e => { feito = true; err = e; });
+      await anda(() => feito, limiteMs);
+      if (!feito) throw new Error("a promessa não resolveu em " + limiteMs + " ms");
+      if (err) throw err;
+      return val;
+    }
+    const banco = new BancoFalso({ relogio: () => RT.hora, tempo: () => RT.hora, agendar });
+    // ---------- as regras opcionais (o .validate do LEIA-ME) avaliadas em cada gravação, sem recusar: o fluxo honesto do
+    // campeonato não pode ser recusado por elas ----------
+    const confereRegras = avaliadorRegras(path.join(RAIZ, "firebase/regras-leilao-validate.json")), recusas = [];
+    let gravacoes = 0;
+    banco.negar = (op, caminho, valor, C) => {
+      const ps = String(caminho).split("/").filter(Boolean);
+      if (ps[0] !== "leiloes") return false;
+      gravacoes++;
+      const f = confereRegras(banco.raiz, ps, valor, banco.relogio(), C ? C.uid : null);
+      if (f.length) recusas.push({ op, caminho, f });
+      return false;
+    };
+    // ---------- o servidor guarda a história de cada jogo (a hora do servidor de cada mudança do nó) e a de cada
+    // batimento (a presença de cada conta: os `ts` que o servidor pôs) ----------
+    const HIST = {};   // código → { ult: { id: canon }, log: { id: [{ hora, j }] }, bates: { uid: [ts] } }
+    const escreveOrig = banco._escreve.bind(banco);
+    banco._escreve = itens => {
+      const toca = [], bts = [];
+      for (const [ps] of itens) {
+        if (ps[0] === "leiloes" && HIST[ps[1]] && (ps.length <= 2 || ps[2] === "jogos")) toca.push(ps);
+        if (ps[0] === "leiloes" && HIST[ps[1]] && ps[2] === "bate" && ps.length >= 4) bts.push(ps);
+      }
+      escreveOrig(itens);
+      for (const ps of bts) {
+        const b = banco.ler("leiloes/" + ps[1] + "/bate/" + ps[3]), H = HIST[ps[1]], L = (H.bates[ps[3]] = H.bates[ps[3]] || []);
+        if (b && typeof b.ts === "number" && L[L.length - 1] !== b.ts) L.push(b.ts);
+      }
+      for (const ps of toca) {
+        const H = HIST[ps[1]], ids = ps.length >= 4 ? [ps[3]] : [...new Set(Object.keys(banco.ler("leiloes/" + ps[1] + "/jogos") || {}).concat(Object.keys(H.ult)))];
+        for (const id of ids) {
+          const j = banco.ler("leiloes/" + ps[1] + "/jogos/" + id), c = LC.canon(j);
+          if (H.ult[id] === c) continue;
+          H.ult[id] = c; (H.log[id] = H.log[id] || []).push({ hora: RT.hora, j });
+        }
+      }
+    };
+    // ---------- os aparelhos (como os do bloco O) ----------
+    let nAp = 0;
+    function documento() { const d = { hidden: false, ouvintes: [], addEventListener(n, f) { if (n === "visibilitychange") this.ouvintes.push(f); }, removeEventListener(n, f) { this.ouvintes = this.ouvintes.filter(x => x !== f); }, esconde(sim) { this.hidden = sim; this.ouvintes.slice().forEach(f => f()); } }; return d; }
+    function aparelho(uid, o = {}) {
+      nAp++;
+      const dev = { uid, desvio: o.desvio || 0, arm: armazemFalso(), doc: documento() };
+      dev.cli = banco.cliente({ uid: "auth-" + uid, latencia: o.latencia ?? 20, relogio: () => RT.hora + dev.desvio });
+      dev.mono = { base: 30_000 + nAp * 977, pulo: 0 };
+      dev.redePara = codigo => R.firebase(codigo, { db: dev.cli.db, firebase: dev.cli.firebase, relogio: () => RT.hora - 9_000_000 + dev.mono.base + dev.mono.pulo, relogioParede: () => RT.hora + dev.desvio });
+      dev.opc = extra => Object.assign({
+        id: { uid, auth: "auth-" + uid, nome: "Pessoa " + uid.toUpperCase(), num: "2000-" + String(nAp).padStart(4, "0") },
+        redePara: dev.redePara, edicao: () => "public", suUnlocked: () => false, trocarEdicao: ed => ed, fairplay: () => false,
+        armazem: dev.arm, agendar, cancelar, mundo: MUNDO.public, doc: dev.doc, semAtual: true
+      }, extra || {});
+      dev.abrir = codigo => espera(SS.abrir(codigo, dev.opc({ online: true })));
+      dev.bytes = () => banco.bytes(dev.cli.cid);
+      return dev;
+    }
+    // a sala no fim do leilão, gravada direto no servidor (o leilão de robôs da máquina pura: o bloco O testa o leilão)
+    const CORES = ["#ef4444", "#3b82f6", "#22c55e", "#eab308", "#a855f7", "#f97316", "#14b8a6", "#ec4899"];
+    // regras: a versão da sala (padrão 2: os casos do KO são de antes do PR 5 — o jogo de duas pessoas simulado ao abrir a rodada;
+    // o par das salas de regras 4 está no caso "par")
+    function salaPronta(cod, uids, nb, formato, liga, semente, regras = 2) {
+      const T = uids.length + nb, { lotes, fora } = lotesDe("public", liga, T);
+      const ctx = Lx.contexto({ T, lotes, fora, semente }), fim = leilaoRobos(ctx).v;
+      const sala = {
+        meta: { dono: uids[0], proto: SS.PROTO, regras, versaoTM: "", edicao: "public", criada: RT.hora, estado: "escalacao", semente, atividade: RT.hora, fimLeilao: RT.hora },
+        cfg: { liga, ligaNome: liga, vagas: T, bots: nb, tempo: 10000, formato, overall: "mostra", T }, tec: {}
+      };
+      uids.forEach((u, i) => { sala.tec[u] = { nome: "Pessoa " + u.toUpperCase(), num: "2000-000" + i, papel: i ? "tecnico" : "dono", pronto: true, auth: "auth-" + u, entrou: i, clube: { nome: "Clube " + u.toUpperCase(), sigla: u.toUpperCase().slice(0, 3), cor: CORES[i], escudo: "classico|star" }, formacao: "4-4-2" }; });
+      SS._sala.refazBots(sala);
+      sala.ordem = SS._sala.ordemPrevista(sala);
+      HIST[cod] = { ult: {}, log: {}, bates: {} };
+      banco.gravar("leiloes/" + cod, { sala, lotes: { l: lotes, f: fora, T, liga, ed: "public" }, vivo: fim });
+      return { T, ordem: sala.ordem, ctx, fim, sala };
+    }
+    // a vista resumida (o que todo aparelho tem de ver igual)
+    const resumo = S => { const c = S.ver().camp; return c ? JSON.stringify({ r: c.rodadas.map(R0 => R0.jogos.map(g => [g.id, g.a, g.b, g.e, g.placar, g.venc])), t: c.tabela && c.tabela.map(x => [x.t, x.pts, x.sg, x.gp]), c: c.campeao, cl: c.classificacao, a: c.artilharia.slice(0, 5).map(x => [x.id, x.gols]), f: c.fim }) : "sem camp"; };
+    // a história de cada jogo no servidor: uma reserva, um resultado e nada depois; o prazo da pessoa com 2 min correndo
+    function confereHist(cod, S, id, conta, so) {
+      const H = HIST[cod], c = S.ver().camp, ctxC = S._campCtx();
+      c.rodadas.forEach(R0 => R0.jogos.forEach(g => {
+        if (so && !so.includes(g.id)) return;
+        const L = H.log[g.id] || [], res = L.filter(x => x.j && x.j.e === "reservado"), fe = L.filter(x => x.j && x.j.e === "feito");
+        ok(res.length === 1 && fe.length === 1 && L[L.length - 1].j && L[L.length - 1].j.e === "feito", `${id}: ${g.id} com ${res.length} reservas e ${fe.length} resultados no servidor`);
+        if (!res.length || !fe.length) return;
+        const jr = res[0].j, jf = fe[0].j;
+        ok(jf.trava === jr.trava && LC.canon(jf.esc) === LC.canon(jr.esc) && LC.conferirJogo(ctxC, g, jf) === null, `${id}: ${g.id} gravado com outra trava, escalação ou resultado`);
+        conta[jr.motivo] = (conta[jr.motivo] || 0) + 1;
+        const k = L.indexOf(res[0]);
+        let corre = 0;
+        for (let i = 0; i < k; i++) if (L[i].j && L[i].j.e === "aberto" && !L[i].j.parado) corre += L[i + 1].hora - L[i].hora;
+        L.slice(0, k).forEach(x => { if (x.j && x.j.e === "aberto" && x.j.parado) conta.pausas = (conta.pausas || 0) + 1; });
+        if (jr.motivo === "prazo") {
+          const ant = k > 0 ? L[k - 1].j : null;
+          ok(ant && ant.e === "aberto" && !ant.parado && ant.ini + ant.resta <= res[0].hora, `${id}: ${g.id} reservado pelo prazo ANTES de vencer pela hora do servidor (${ant ? ant.ini + ant.resta - res[0].hora : "?"} ms)`);
+          ok(corre >= LC.PRAZO, `${id}: ${g.id} reservado pelo prazo com só ${corre / 1000} s de prazo correndo no servidor`);
+          const pres = presenteCorrendo(cod, S, g, L, k);
+          if (pres != null) {
+            conta.presMin = Math.min(conta.presMin ?? Infinity, Math.round(pres / 100) / 10);
+            ok(pres >= LC.PRAZO - 1000, `${id}: ${g.id} reservado pelo prazo com a pessoa presente só ${(pres / 1000).toFixed(1)} s do prazo correndo (pelos batimentos dela no servidor)`);
+          }
+        }
+      }));
+    }
+    // quanto do prazo correndo (o nó aberto e não parado, pela história do servidor, até a reserva k) a pessoa do jogo
+    // esteve PRESENTE pelos batimentos dela no servidor (presente entre dois bates com no máximo 12 s um do outro, e do
+    // último bate até a reserva quando ele tem no máximo 12 s); null = não é o jogo de uma pessoa contra um bot ou ela saiu
+    // da sala
+    function presenteCorrendo(cod, S, g, L, k) {
+      const c = S._campCtx(), ordem = S._ordem();
+      if (LC.confronto(c, g) !== "pessoaBot") return null;
+      const p = c.tipos[g.a] === "pessoa" ? g.a : g.b, uid = ordem[p], tc = S.sala.tec[uid];
+      if (!tc || tc.saiu) return null;
+      const R = L[k].hora, B = (HIST[cod].bates[uid] || []).filter(x => x <= R).sort((x, y) => x - y), pres = [];
+      for (let i = 0; i + 1 < B.length; i++) if (B[i + 1] - B[i] <= 12000) pres.push([B[i], B[i + 1]]);
+      if (B.length && R - B[B.length - 1] <= 12000) pres.push([B[B.length - 1], R]);
+      let soma = 0;
+      for (let i = 0; i < k; i++) {
+        const x = L[i].j; if (!x || x.e !== "aberto" || x.parado) continue;
+        const a = L[i].hora, b = L[i + 1].hora;
+        for (const [p0, p1] of pres) soma += Math.max(0, Math.min(b, p1) - Math.max(a, p0));
+      }
+      return soma;
+    }
+    // a pessoa: simula o próprio jogo quando a regra diz (2 s depois de ver o jogo aberto)
+    function pilotoOnline(S, simula) {
+      const visto = new Set(), resp = [];
+      let parado = false;
+      const off = S.aoMudar(() => {
+        if (parado) return;
+        const c = S.ver().camp, mj = c && c.meuJogo;
+        if (!mj || !mj.podeSimular || visto.has(mj.id) || !simula(mj)) return;
+        visto.add(mj.id);
+        agendar(() => { if (!parado) S.simular(mj.id).then(r => resp.push({ id: mj.id, r })); }, 2000);
+      });
+      return { parar() { parado = true; off(); }, resp };
+    }
+    // o dono: "Simular os pendentes" quando a rodada só espera por quem sumiu (o prazo parado, ou o jogo nem aberto)
+    const DEP = {}, chamadas = {};
+    function vigiaDono(S0, sumidos, conta) {
+      let parado = false;
+      const olha = () => {
+        if (parado) return;
+        const c = S0.ver().camp;
+        if (c && !c.fim && c.pendentes) {
+          const pend = c.rodada.jogos.filter(g => g.e !== "feito");
+          const soSumidos = pend.every(g => (g.j && g.j.e === "aberto" && g.j.parado) || (!g.j && [g.a, g.b].some(t => sumidos.has(t))));
+          if (soSumidos) { conta.dono = (conta.dono || 0) + 1; S0.simularPendentes(); }
+        }
+        agendar(olha, 30_000);
+      };
+      agendar(olha, 30_000);
+      return { parar() { parado = true; } };
+    }
+    try {
+      /* ---------- dois: 2 pessoas + 2 bots no mata-mata; dois aparelhos simulando o mesmo jogo; recarregar ---------- */
+      if (caso("dois")) {
+        const id = "KO dois", conta = {};
+        // a semente em que a 2ª pessoa (t = 1) joga contra um bot na 1ª rodada
+        let sem = null;
+        for (let k = 0; k < 100 && !sem; k++) { const c = LC.contexto({ formato: "mata", T: 4, semente: "KOd" + k }), j = LC.estrutura(c)[0].jogos.find(x => x.src.some(s => s.t === 1)); if (j && j.src.some(s => s.t >= 2)) sem = "KOd" + k; }
+        salaPronta("KODOIS", ["d0", "d1"], 2, "mata", "it", sem);
+        const A = aparelho("d0", { latencia: 15 }), B = aparelho("d1", { latencia: 60, desvio: 5000 });
+        const SA = await A.abrir("KODOIS");
+        let SB = await B.abrir("KODOIS");
+        await anda(() => SA.sala.meta.estado === "camp" && SB.sala.meta.estado === "camp", 200_000);
+        ok(SA.sala.meta.estado === "camp" && typeof SA.sala.meta.camp === "number", `${id}: a escalação não passou ao campeonato em 60 s`);
+        // o jogo da 2ª pessoa abre (o prazo corre) e ela some (a página escondida): o prazo para e o jogo passa a esperar por
+        // ela. Ela volta e toca em Simular no MESMO instante em que o dono — que ainda não viu a volta (a rede dele chega
+        // 2 s atrasada) — toca em "Simular os pendentes": duas transações no mesmo jogo
+        await anda(() => { const mj = SB.ver().camp && SB.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.podeSimular); }, 60_000);
+        const idB = SB.ver().camp.meuJogo.id;
+        B.doc.esconde(true);
+        const esperou = await anda(() => { const j = SA.jogos[idB], c = SA.ver().camp; return !!(j && j.e === "aberto" && j.parado && c.podePendentes && c.pendLista.some(x => x.id === idB)); }, 60_000);
+        banco.definirLatencia(A.cli.cid, { sobe: 15, desce: 2000 });
+        B.doc.esconde(false);
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.podeSimular); }, 60_000);
+        const aindaPend = SA.ver().camp.pendLista.some(x => x.id === idB);
+        const pB = SB.simular(), pA = SA.simularPendentes();
+        const [rB, rA] = await espera(Promise.all([pB, pA]));
+        banco.definirLatencia(A.cli.cid, 15);
+        ok(esperou && aindaPend && rB.ok && rA.ok && rB.jogo && rB.jogo.e === "feito", `${id}: as respostas da corrida: ${JSON.stringify([esperou, aindaPend, rB.estado, rB.motivo, rA.estado, rA.motivo])}`);
+        await passa(2000);
+        const L = HIST.KODOIS.log[idB] || [];
+        ok(L.filter(x => x.j && x.j.e === "reservado").length === 1 && L.filter(x => x.j && x.j.e === "feito").length === 1, `${id}: a corrida no mesmo jogo deu ${L.length} mudanças no servidor`);
+        ok(LC.canon(rB.res) === LC.canon(SA.jogos[idB].res) && LC.canon(SB.jogos[idB].res) === LC.canon(SA.jogos[idB].res), `${id}: os dois viram resultados diferentes`);
+        // o 2º aparelho recarrega no meio (fecha e abre de novo): vê tudo gravado e segue
+        SB.parar(); await passa(20_000);
+        SB = await B.abrir("KODOIS");
+        ok(resumo(SB) === resumo(SA), `${id}: quem recarregou viu outro campeonato`);
+        await anda(() => SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", 3600_000);
+        ok(SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", `${id}: não acabou (${SA.sala.meta.estado}/${SB.sala.meta.estado})`);
+        ok(resumo(SA) === resumo(SB) && SA.ver().camp.campeao != null && !SA.alterada && !SB.alterada, `${id}: vistas diferentes no fim ou sala congelada (${SA.alterada}/${SB.alterada} ${JSON.stringify(SA.alteradaJogo || SB.alteradaJogo)})`);
+        confereHist("KODOIS", SA, id, conta);
+        ok((conta.pedido || 0) + (conta.dono || 0) >= 1, `${id}: ninguém simulou pela tela: ${JSON.stringify(conta)}`);
+        nota(`dois: ${JSON.stringify(conta)}`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- limpeza: a sala no campeonato com atividade nos jogos não some; a do fim, 24 h depois, some ---------- */
+      if (caso("limpeza")) {
+        const id = "KO limpeza", H = 3600_000;
+        RT.hora = Math.max(RT.hora, 40 * H);         // (as horas "de 25 h atrás" precisam de um relógio que já passou delas)
+        // uma sala no camp com a meta de 25 h atrás e um jogo gravado há 2 h (a atividade do campeonato mora nos jogos)
+        const P1 = salaPronta("KOLIMP", ["l0", "l1"], 2, "mata", "es", "KOl"), s1 = P1.sala;
+        // (o contexto como o da sessão: os clubes e os técnicos da sala entram no texto dos lances)
+        const ctxDaSala = (P, cod, sem, T) => LC.contexto({ codigo: cod, semente: sem, formato: "mata", T, ctx: P.ctx, vivo: P.fim,
+          clubes: P.ordem.map(u => P.sala.tec[u].clube), nomes: P.ordem.map(u => P.sala.tec[u].nome), tipos: P.ordem.map(u => P.sala.tec[u].papel === "bot" ? "bot" : "pessoa") });
+        const c1 = ctxDaSala(P1, "KOLIMP", "KOl", 4);
+        const g1 = LC.montar(c1, {}).rodadas[0].jogos[0];
+        const j1 = LC.reservar(null, { ab: [g1.a, g1.b], esc: [LC.escalacaoDoJogo(c1, g1.a), LC.escalacaoDoJogo(c1, g1.b)], modo: "simulado", por: -1, motivo: "dono", ts: RT.hora - 2 * H }).jogo;
+        const f1 = LC.gravar(j1, { trava: j1.trava, res: LC.resultadoDoJogo(c1, g1.id, j1), ts: RT.hora - 2 * H + 1000, mata: true }).jogo;
+        Object.assign(s1.meta, { estado: "camp", camp: RT.hora - 25 * H, atividade: RT.hora - 25 * H, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 60_000 });
+        banco.gravar("leiloes/KOLIMP/sala", s1); banco.gravar("leiloes/KOLIMP/jogos/" + g1.id, f1);
+        // uma sala no fim, tudo de 25 h atrás: some
+        const P2 = salaPronta("KOLIM2", ["n0", "n1"], 0, "mata", "es", "KOn"), s2 = P2.sala;
+        const c2 = ctxDaSala(P2, "KOLIM2", "KOn", 2);
+        const g2 = LC.montar(c2, {}).rodadas[0].jogos[0];
+        const j2 = LC.reservar(null, { ab: [g2.a, g2.b], esc: [LC.escalacaoDoJogo(c2, g2.a), LC.escalacaoDoJogo(c2, g2.b)], modo: "simulado", por: -1, motivo: "abertura", ts: RT.hora - 25 * H }).jogo;
+        const f2 = LC.gravar(j2, { trava: j2.trava, res: LC.resultadoDoJogo(c2, g2.id, j2), ts: RT.hora - 25 * H + 1000, mata: true }).jogo;
+        Object.assign(s2.meta, { estado: "fim", camp: RT.hora - 25 * H - 5000, fimCamp: RT.hora - 25 * H + 2000, atividade: RT.hora - 25 * H + 2000, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 70_000 });
+        banco.gravar("leiloes/KOLIM2/sala", s2); banco.gravar("leiloes/KOLIM2/jogos/" + g2.id, f2);
+        // uma sala no campeonato PARADA há 25 h (o jogo do dono, que sumiu, esperando; a outra pessoa abre e fica): com
+        // alguém na sala, o campeonato em andamento não some
+        const P3 = salaPronta("KOLIM3", ["m0", "m1"], 2, "mata", "es", "KOm"), s3 = P3.sala;
+        const c3 = ctxDaSala(P3, "KOLIM3", "KOm", 4), g3 = LC.montar(c3, {}).rodadas[0].jogos.find(g => g.a !== 0 && g.b !== 0) || LC.montar(c3, {}).rodadas[0].jogos[1];
+        const j3 = LC.reservar(null, { ab: [g3.a, g3.b], esc: [LC.escalacaoDoJogo(c3, g3.a), LC.escalacaoDoJogo(c3, g3.b)], modo: "simulado", por: -1, motivo: "abertura", ts: RT.hora - 25 * H }).jogo;
+        const f3 = LC.gravar(j3, { trava: j3.trava, res: LC.resultadoDoJogo(c3, g3.id, j3), ts: RT.hora - 25 * H + 1000, mata: true }).jogo;
+        Object.assign(s3.meta, { estado: "camp", camp: RT.hora - 25 * H - 5000, atividade: RT.hora - 25 * H, criada: RT.hora - 26 * H, fimLeilao: RT.hora - 25 * H - 70_000 });
+        banco.gravar("leiloes/KOLIM3/sala", s3); banco.gravar("leiloes/KOLIM3/jogos/" + g3.id, f3);
+        const S1 = await aparelho("l1", { latencia: 30 }).abrir("KOLIMP"), S2 = await aparelho("n1", { latencia: 30 }).abrir("KOLIM2"), S3 = await aparelho("m1", { latencia: 30 }).abrir("KOLIM3");
+        await passa(120_000);
+        ok(banco.ler("leiloes/KOLIMP/sala") && !S1.apagada && !S1.alterada, `${id}: a sala no campeonato com um jogo gravado há 2 h sumiu (${S1.alterada})`);
+        ok(!banco.ler("leiloes/KOLIM2/sala") && S2.apagada, `${id}: a sala do fim de 25 h atrás não sumiu (${S2.alterada} ${JSON.stringify(S2.alteradaJogo)})`);
+        ok(banco.ler("leiloes/KOLIM3/sala") && !S3.apagada && !S3.alterada, `${id}: o campeonato parado há 25 h sumiu com alguém dentro da sala (${S3.alterada})`);
+        S1.parar(); S2.parar(); S3.parar();
+      }
+
+      /* ---------- passar: com as regras opcionais VALENDO, o dono passa o clube no instante em que o batimento do aparelho
+         velho está a caminho: o servidor o recusa (sem permissão: a conta já não é da sala) e o aparelho velho, que só olha,
+         não fica em "Reconectando…" (a recusa por permissão não é queda de conexão) ---------- */
+      if (caso("passar")) {
+        const id = "KO passar", cod = "KOPASS";
+        salaPronta(cod, ["p0", "p1"], 2, "mata", "it", "KOp");
+        const A = aparelho("p0", { latencia: 15 }), B = aparelho("p1", { latencia: 20 }), N = aparelho("p9", { latencia: 20 });
+        const negarAntes = banco.negar;
+        let negadas = 0;
+        banco.negar = (op, caminho, valor, C) => {
+          const ps = String(caminho).split("/").filter(Boolean);
+          if (ps[0] === "leiloes" && ps[1] === cod && (ps[2] === "bate" || ps[2] === "pres") && confereRegras(banco.raiz, ps, valor, banco.relogio(), C ? C.uid : null).length) { negadas++; return true; }
+          return negarAntes(op, caminho, valor, C);
+        };
+        try {
+          const SA = await A.abrir(cod), SB = await B.abrir(cod);
+          await passa(12_000);
+          // a conta nova (outro aparelho da mesma pessoa) pede pelo código: o pedido "depois" do Começar
+          const SN = await espera(SS.entrar(cod, N.opc({ online: true })));
+          await anda(() => !!(SA.sala.pedidos && SA.sala.pedidos.p9), 30_000);
+          // o batimento do velho a caminho (1,5 s para subir; o ack em menos de 3 s): o dono passa o clube nesse instante
+          banco.definirLatencia(B.cli.cid, { sobe: 1500, desce: 20 });
+          await anda(() => SB._bateEmVoo, 30_000);
+          const em = SB._bateEmVoo, r = await espera(SA.passarClube("p1", "p9"));
+          await passa(12_000);
+          banco.definirLatencia(B.cli.cid, 20);
+          await passa(12_000);
+          ok(em && r.ok && SB.eu === -1 && SN.eu === 1 && negadas >= 1, `${id}: o clube não passou com o batimento a caminho (${JSON.stringify({ em, r, eu: SB.eu, novo: SN.eu, negadas })})`);
+          ok(SB._estadoRede() === "ok" && SB.ver().rede === "ok", `${id}: o aparelho velho ficou em '${SB._estadoRede()}' depois da recusa do batimento a caminho`);
+          SA.parar(); SB.parar(); SN.parar();
+        } finally { banco.negar = negarAntes; }
+      }
+
+      /* ---------- quatro: 4 pessoas + 2 bots no misto; ±5 s, o pulo de +60 s, quem some e volta, quem some e o dono ---------- */
+      if (caso("quatro")) {
+        const id = "KO quatro", conta = {}, cod = "KOQUAT";
+        const { ordem } = salaPronta(cod, ["q0", "q1", "q2", "q3"], 2, "misto", "br", "KOq"), t0q = RT.hora;
+        const devs = ["q0", "q1", "q2", "q3"].map((u, k) => aparelho(u, { latencia: [0, 25, 70, 140][k], desvio: [0, 5000, -5000, 0][k] }));
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        // o relógio de parede do 4º pula +60 s depois da calibração
+        await anda(() => Ss[3].rede._hora().escolhida, 30_000);
+        devs[3].desvio += 60_000;
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        const pils = [pilotoOnline(Ss[1], mj => mj.rodada % 2 === 0)];
+        // o 3º some 70 s quando o prazo do jogo dele contra um bot está correndo (duas vezes); o 4º some de vez na 3ª rodada
+        let some3 = 0, sumiu4 = false;
+        const sumidos = new Set();
+        const offs = [Ss[2].aoMudar(() => {
+          const c = Ss[2].ver().camp, mj = c && c.meuJogo;
+          if (some3 < 2 && mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.contraBot && !devs[2].doc.hidden) {
+            some3++; devs[2].doc.esconde(true);
+            agendar(() => devs[2].doc.esconde(false), 70_000);
+          }
+        }), Ss[0].aoMudar(() => {
+          const c = Ss[0].ver().camp;
+          if (!sumiu4 && c && c.rodada && c.rodada.n >= 3) { sumiu4 = true; sumidos.add(3); devs[3].doc.esconde(true); }
+        })];
+        const dono = vigiaDono(Ss[0], sumidos, chamadas);
+        if (process.env.KO_DEPURA) Ss.forEach((S, k) => { const o = S._acao.bind(S); S._acao = (tipo, a) => { const x = k + ":" + tipo + ":" + (a.acao || ""); DEP[x] = (DEP[x] || 0) + 1; return o(tipo, a); }; });
+        await anda(() => Ss.slice(0, 3).every(S => S.sala.meta.estado === "fim"), 6 * 3600_000);
+        dono.parar(); pils.forEach(p => p.parar()); offs.forEach(f => f());
+        ok(Ss.slice(0, 3).every(S => S.sala.meta.estado === "fim"), `${id}: não acabou (${Ss.map(S => S.sala.meta.estado)}; rodada ${Ss[0].ver().camp && Ss[0].ver().camp.rodada && Ss[0].ver().camp.rodada.n})`);
+        // quem sumiu volta e vê tudo gravado
+        devs[3].doc.esconde(false);
+        await passa(30_000);
+        ok(Ss.every(S => resumo(S) === resumo(Ss[0])) && Ss.every(S => !S.alterada), `${id}: vistas diferentes ou sala congelada (${Ss.map(S => S.alterada)})`);
+        confereHist(cod, Ss[0], id, conta);
+        ok((conta.pausas || 0) > 0 && (conta.prazo || 0) > 0 && (conta.dono || 0) > 0, `${id}: o prazo parado, o prazo vencido e o dono não foram exercitados: ${JSON.stringify(conta)}`);
+        ok(some3 > 0 && sumiu4, `${id}: ninguém sumiu (${some3}, ${sumiu4})`);
+        nota(`quatro: ${JSON.stringify(conta)} (o dono simulou os pendentes ${chamadas.dono || 0}×), ${ordem.length} técnicos, ${((RT.hora - t0q) / 60000).toFixed(0)} min de campeonato`);
+        if (process.env.KO_DEPURA) console.log(JSON.stringify(DEP));
+        Ss.forEach(S => S.parar());
+      }
+
+      /* ---------- oito: 8 pessoas nos pontos corridos (56 jogos); quem sai da sala conta como bot ---------- */
+      if (caso("oito")) {
+        const id = "KO oito", conta = {}, cod = "KOOITO", uids = ["o0", "o1", "o2", "o3", "o4", "o5", "o6", "o7"];
+        salaPronta(cod, uids, 0, "pontos", "de", "KOo");
+        const devs = uids.map((u, k) => aparelho(u, { latencia: k === 7 ? 10 : 20 + k * 20, desvio: (k % 3 - 1) * 5000 }));
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        // o 8º sai da sala quando a 2ª rodada abre: os jogos das rodadas que abrem depois disso andam como os de um bot (o
+        // prazo do adversário); antes, como os de uma pessoa (simulados na abertura)
+        let pSai = null;
+        const offSai = Ss[0].on("rodada", x => { if (x.n === 2 && !pSai) pSai = Ss[7].sair(); });
+        await anda(() => !!pSai, 3600_000);
+        offSai();
+        if (!ok(pSai, `${id}: a 2ª rodada não abriu`)) throw new Error("oito: sem a 2ª rodada");
+        await espera(pSai);
+        const tSaiu = RT.hora;
+        const vivos = Ss.slice(0, 7);
+        await anda(() => vivos.every(S => S.sala.meta.estado === "fim"), 6 * 3600_000);
+        ok(vivos.every(S => S.sala.meta.estado === "fim"), `${id}: não acabou (${vivos.map(S => S.sala.meta.estado)})`);
+        ok(vivos.every(S => resumo(S) === resumo(vivos[0])) && vivos.every(S => !S.alterada), `${id}: vistas diferentes ou sala congelada`);
+        confereHist(cod, vivos[0], id, conta);
+        // os jogos do 8º: 'abertura' antes de sair; depois, o prazo do adversário (não a abertura)
+        const c = vivos[0].ver().camp, H = HIST[cod];
+        let depois = 0;
+        c.rodadas.forEach(R0 => R0.jogos.forEach(g => {
+          if (g.a !== 7 && g.b !== 7) return;
+          const jr = (H.log[g.id] || []).find(x => x.j && x.j.e === "reservado");
+          if (!jr) return;
+          if (R0.n === 1) ok(jr.j.motivo === "abertura", `${id}: ${g.id} (antes de sair) por '${jr.j.motivo}'`);
+          else if (R0.abre > tSaiu + 1000) { depois++; ok(jr.j.motivo === "prazo", `${id}: ${g.id} (a rodada abriu ${(R0.abre - tSaiu) / 1000} s depois de ele sair) por '${jr.j.motivo}'`); }
+        }));
+        ok(depois >= 5 && c.rodadas.flatMap(R0 => R0.jogos).length === 56, `${id}: ${depois} jogos depois de sair`);
+        const kb = devs.slice(0, 7).map(d => (d.bytes().desce / 1024).toFixed(0));
+        nota(`oito: ${JSON.stringify(conta)}; KB baixados por aparelho no campeonato ${kb.join("/")}`);
+        vivos.forEach(S => S.parar());
+      }
+
+      /* ---------- sozinho: a pessoa sozinha na sala (o outro técnico nunca abriu) some com o prazo correndo e volta: sem
+         ninguém para gravar a pausa, o prazo parou mesmo assim no último bate dela (o bate da volta diz que houve um buraco)
+         e só vence depois de 2 min com ela presente ---------- */
+      if (caso("sozinho")) {
+        const id = "KO sozinho", cod = "KOSOZ", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOs" + k }), j = LC.estrutura(c)[0].jogos.find(x => x.src.some(s => s.t === 0)); if (j && j.src.some(s => s.t >= 2)) sem = "KOs" + k; }
+        salaPronta(cod, ["s0", "s1"], 2, "pontos", "it", sem);
+        const A = aparelho("s0", { latencia: 20 }), SA = await A.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => { const mj = SA.ver().camp && SA.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }, 60_000);
+        const idA = SA.ver().camp.meuJogo.id;
+        await passa(5000);
+        A.doc.esconde(true); const tSome = RT.hora;
+        await passa(300_000);
+        const jFora = banco.ler("leiloes/" + cod + "/jogos/" + idA);
+        A.doc.esconde(false); const tVolta = RT.hora;
+        // de volta: o prazo para no último bate antes do buraco e volta a correr (nada reservado na volta)
+        await passa(20_000);
+        const jVolta = banco.ler("leiloes/" + cod + "/jogos/" + idA), L0 = HIST[cod].log[idA] || [];
+        const pausa = L0.find(x => x.j && x.j.e === "aberto" && x.j.parado);
+        ok(jFora && jFora.e === "aberto" && jVolta && jVolta.e === "aberto" && !jVolta.parado && pausa && pausa.hora >= tVolta && pausa.j.resta >= LC.PRAZO - 12_000,
+          `${id}: na volta o jogo não parou no último bate antes do buraco (${JSON.stringify({ fora: jFora, volta: jVolta, pausa: pausa && { seg: (pausa.hora - tVolta) / 1000, resta: pausa.j.resta } })})`);
+        // e vence pelo prazo só depois de ela ficar presente o que restava
+        await anda(() => { const j = SA.jogos[idA]; return !!(j && j.e === "feito"); }, 600_000);
+        const L = HIST[cod].log[idA] || [], jr = L.find(x => x.j && x.j.e === "reservado");
+        ok(jr && jr.j.motivo === "prazo" && jr.hora > tSome && (jr.hora - tVolta) >= (pausa ? pausa.j.resta : LC.PRAZO) - 1000,
+          `${id}: reservado ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) + " s depois da volta por '" + jr.j.motivo + "'" : "nunca"} (restavam ${pausa ? pausa.j.resta / 1000 : "?"} s)`);
+        confereHist(cod, SA, id, conta, [idA]);
+        nota(`sozinho: o prazo parou no último bate (restavam ${pausa ? (pausa.j.resta / 1000).toFixed(1) : "?"} s) e venceu ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) : "?"} s depois da volta; a pessoa presente ${conta.presMin ?? "?"} s do prazo`);
+        SA.parar();
+      }
+
+      /* ---------- dormem: as duas pessoas, cada uma contra um bot, travam o celular ao mesmo tempo com o prazo correndo e
+         voltam juntas: ninguém viu ninguém sumir, e nenhum dos dois jogos é simulado pelo prazo na volta ---------- */
+      if (caso("dormem")) {
+        const id = "KO dormem", cod = "KODORM", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOz" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOz" + k; }
+        salaPronta(cod, ["z0", "z1"], 2, "pontos", "it", sem);
+        const A = aparelho("z0", { latencia: 20 }), B = aparelho("z1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => [SA, SB].every(S => { const mj = S.ver().camp && S.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }), 60_000);
+        const ids = [SA, SB].map(S => S.ver().camp.meuJogo.id);
+        await passa(10_000);
+        A.doc.esconde(true); B.doc.esconde(true);
+        await passa(180_000);
+        A.doc.esconde(false); B.doc.esconde(false); const tVolta = RT.hora;
+        await passa(30_000);
+        const naVolta = ids.map(i => banco.ler("leiloes/" + cod + "/jogos/" + i));
+        ok(naVolta.every(j => j && j.e === "aberto" && !j.parado && j.resta >= LC.PRAZO - 15_000), `${id}: na volta, os jogos: ${JSON.stringify(naVolta)}`);
+        await anda(() => ids.every(i => SA.jogos[i] && SA.jogos[i].e === "feito"), 600_000);
+        ids.forEach(i => {
+          const L = HIST[cod].log[i] || [], jr = L.find(x => x.j && x.j.e === "reservado");
+          ok(jr && jr.j.motivo === "prazo" && jr.hora - tVolta >= LC.PRAZO - 15_000, `${id}: ${i} reservado ${jr ? ((jr.hora - tVolta) / 1000).toFixed(1) + " s depois da volta por '" + jr.j.motivo + "'" : "nunca"}`);
+        });
+        confereHist(cod, SA, id, conta, ids);
+        nota(`dormem: a pessoa presente ${conta.presMin ?? "?"} s do prazo no pior jogo`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- semdono: o DONO some com o jogo dele contra um bot esperando: nos primeiros 5 min só o dono teria o
+         "Simular os pendentes"; depois, o outro técnico presente tem (motivo 'pendentes') e o campeonato vai ao fim ---------- */
+      if (caso("semdono")) {
+        const id = "KO semdono", cod = "KOSEMD", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "mata", T: 4, semente: "KOx" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOx" + k; }
+        salaPronta(cod, ["x0", "x1"], 2, "mata", "it", sem);
+        const A = aparelho("x0", { latencia: 20 }), B = aparelho("x1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await passa(3000);
+        A.doc.esconde(true); const tSome = RT.hora;    // o dono fecha o app
+        const pil = pilotoOnline(SB, () => true);
+        await passa(4 * 60_000);
+        const c4 = SB.ver().camp, r4 = await espera(SB.simularPendentes());
+        const idDono = c4.rodada.jogos.find(g => g.a === 0 || g.b === 0).id;
+        ok(c4.pendentes === 1 && !c4.podePendentes && c4.pendLista[0].id === idDono && c4.pendLista[0].t === 0 && !r4.ok && r4.motivo === "dono",
+          `${id}: com o dono fora há 4 min, o outro técnico já podia simular os pendentes (${JSON.stringify({ pend: c4.pendentes, pode: c4.podePendentes, r4 })})`);
+        await anda(() => SB.ver().camp.podePendentes, 120_000);
+        const c5 = SB.ver().camp;
+        ok(c5.podePendentes && c5.pendQuem === "outro" && RT.hora - tSome >= 5 * 60_000 - 15_000, `${id}: o "Simular os pendentes" não passou ao outro técnico (${(RT.hora - tSome) / 1000} s; ${JSON.stringify({ pode: c5.podePendentes, quem: c5.pendQuem })})`);
+        // o outro técnico toca sempre que o campeonato espera pelo dono (a final também pode ser do dono contra um bot)
+        let n = 0;
+        while (SB.sala.meta.estado !== "fim" && n < 4) {
+          if (!(await anda(() => SB.sala.meta.estado === "fim" || SB.ver().camp.podePendentes, 3600_000))) break;
+          if (SB.sala.meta.estado === "fim") break;
+          const r = await espera(SB.simularPendentes()); n++;
+          ok(r.ok && r.n >= 1, `${id}: o "Simular os pendentes" do outro técnico: ${JSON.stringify(r)}`);
+        }
+        await anda(() => SB.sala.meta.estado === "fim", 3600_000);
+        ok(SB.sala.meta.estado === "fim" && n >= 1, `${id}: o campeonato não acabou sem o dono (${SB.sala.meta.estado}; ${n} toques)`);
+        const jr = (HIST[cod].log[idDono] || []).find(x => x.j && x.j.e === "reservado");
+        ok(jr && jr.j.motivo === "pendentes" && jr.j.por === 1, `${id}: o jogo do dono reservado por '${jr && jr.j.motivo}' (por ${jr && jr.j.por})`);
+        pil.parar();
+        // o dono volta e vê tudo gravado
+        A.doc.esconde(false);
+        await passa(20_000);
+        ok(resumo(SA) === resumo(SB) && !SA.alterada && !SB.alterada, `${id}: o dono voltou e viu outro campeonato`);
+        confereHist(cod, SB, id, conta);
+        nota(`semdono: ${JSON.stringify(conta)} (${n} toques do outro técnico)`);
+        SA.parar(); SB.parar();
+      }
+
+      /* ---------- pendentes: o "Simular os pendentes" do dono só simula os jogos de quem NÃO está aqui — nunca o do dono
+         (ele tem o Simular partida) nem o de quem está presente com o prazo correndo ---------- */
+      if (caso("pendentes")) {
+        const id = "KO pendentes", cod = "KOPEND", conta = {};
+        let sem = null;
+        for (let k = 0; k < 400 && !sem; k++) { const c = LC.contexto({ formato: "pontos", T: 4, semente: "KOy" + k }), js = LC.estrutura(c)[0].jogos; if (js.every(j => (j.src[0].t < 2) !== (j.src[1].t < 2))) sem = "KOy" + k; }
+        salaPronta(cod, ["y0", "y1"], 2, "pontos", "it", sem);
+        const A = aparelho("y0", { latencia: 20 }), B = aparelho("y1", { latencia: 40 });
+        const SA = await A.abrir(cod), SB = await B.abrir(cod);
+        await anda(() => SA.sala.meta.estado === "camp", 200_000);
+        await anda(() => [SA, SB].every(S => { const mj = S.ver().camp && S.ver().camp.meuJogo; return !!(mj && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }), 60_000);
+        const idA = SA.ver().camp.meuJogo.id, idB = SB.ver().camp.meuJogo.id;
+        await passa(9000);
+        const c1 = SA.ver().camp, r1 = await espera(SA.simularPendentes());
+        const j1 = [idA, idB].map(i => banco.ler("leiloes/" + cod + "/jogos/" + i).e);
+        ok(c1.pendentes === 0 && !c1.podePendentes && !r1.ok && r1.motivo === "semPendentes" && j1.every(e => e === "aberto"),
+          `${id}: com as duas pessoas presentes, o dono ia simular ${c1.pendentes} jogo(s) (${JSON.stringify({ r1, j1 })})`);
+        // B some: o jogo dele passa a esperar por quem não está aqui; o do dono, não
+        B.doc.esconde(true);
+        await anda(() => { const c = SA.ver().camp; return !!(c.podePendentes && c.pendentes === 1); }, 60_000);
+        const c2 = SA.ver().camp, r2 = await espera(SA.simularPendentes());
+        await passa(2000);
+        const jA = banco.ler("leiloes/" + cod + "/jogos/" + idA), jB = banco.ler("leiloes/" + cod + "/jogos/" + idB);
+        ok(c2.pendLista.length === 1 && c2.pendLista[0].id === idB && c2.pendLista[0].t === 1 && r2.ok && r2.n === 1 && jB.e === "feito" && jB.motivo === "dono" && jA.e === "aberto",
+          `${id}: o dono simulou ${JSON.stringify({ lista: c2.pendLista, r2, jA: jA && jA.e, jB: jB && [jB.e, jB.motivo] })}`);
+        B.doc.esconde(false);
+        await anda(() => SA.sala.meta.estado === "fim" && SB.sala.meta.estado === "fim", 6 * 3600_000);
+        confereHist(cod, SA, id, conta);
+        nota(`pendentes: ${JSON.stringify(conta)}`);
+        SA.parar(); SB.parar();
+      }
+      /* ---------- par (PR 5): o jogo de duas pessoas no Online 3D, numa sala de regras 4 com 3 pessoas (pontos corridos: um jogo
+         por rodada, a 3ª folga e age nos prazos) — cada rodada um caminho: o 3D gravado UMA vez (os dois gravam o mesmo), o W.O.
+         de quem não tocou em Jogar (pela hora do servidor), o simulado do 3D que não abriu, o W.O. de quem saiu, o Simular de um
+         dos dois e o prazo de 2 min sem ninguém tocar; numa sala de regras 2, o jogo contra o amigo é simulado ao abrir a rodada,
+         sem o Jogar ---------- */
+      if (caso("par")) {
+        const id = "KO par", cod = "KOPAR", H0 = Object.keys(HIST).length;
+        salaPronta(cod, ["q0", "q1", "q2"], 0, "pontos", "br", "KOpar", Lx.REGRAS_PAR);
+        const devs = [aparelho("q0", { latencia: 15 }), aparelho("q1", { latencia: 40, desvio: 3000 }), aparelho("q2", { latencia: 25, desvio: -4000 })];
+        const Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        ok(Ss.every(S => S._comPar() && S._campCtx().par), `${id}: a sala de regras 4 sem o par`);
+        const jogo = i => banco.ler("leiloes/" + cod + "/jogos/" + i);
+        const r3Par = (T, h, a) => ({ homeGoals: h, awayGoals: a, gols: [].concat(Array.from({ length: h }, (_, k) => ({ lado: 0, tmId: T[0].players[10 - k].id, nome: T[0].players[10 - k].name, minuto: 10 + k * 20 })), Array.from({ length: a }, (_, k) => ({ lado: 1, tmId: T[1].players[10 - k].id, nome: T[1].players[10 - k].name, minuto: 15 + k * 20 }))),
+          cartoes: [], stats: { possession: [52, 48], shots: [h + 5, a + 4], onTarget: [h + 2, a + 1] } });
+        const CAM = ["3d", "naoVeio", "naoAbriu", "saiu", "simular", "prazo"], vistos = {};
+        for (let rod = 0; rod < 6; rod++) {
+          await anda(() => { const c = Ss[0].ver().camp; return !!(c && (c.fim || (c.rodada && c.rodada.aberta && c.rodada.n === rod + 1))); }, 3600_000);
+          const C0 = Ss[0].ver().camp;
+          if (C0.fim) break;
+          const g = C0.rodada.jogos[0], a = g.a, b = g.b, SA = Ss[a], SB = Ss[b], cam = CAM[rod];
+          // o jogo aberto (o prazo correndo: as pessoas estão na sala)
+          await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado); }, 60_000);
+          const mj0 = SA.ver().camp.meuJogo, X = vistos[cam] = { id: g.id, a, b };
+          X.antes = { contraAmigo: mj0.contraAmigo, comPar: mj0.comPar, podeJogar: mj0.podeJogar, podeSimular: mj0.podeSimular };
+          if (cam === "prazo") {
+            await anda(() => (jogo(g.id) || {}).e === "feito", 600_000);
+          } else if (cam === "simular") {
+            X.ra = await espera(SA.jogarPar(g.id));
+            await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeSimular && mj.podeJogar); }, 30_000);
+            X.rb = await espera(SB.simular(g.id));
+          } else {
+            X.ra = await espera(SA.jogarPar(g.id));
+            if (cam !== "naoVeio") {
+              await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && !mj.par.vemEu && mj.podeJogar); }, 30_000);
+              X.rb = await espera(SB.jogarPar(g.id));
+              await anda(() => Ss.every(S => { const j = S.jogos[g.id]; return !!(j && j.vem0 != null && j.vem1 != null); }), 30_000);
+              const P = SA.par(g.id), PB = SB.par(g.id);
+              X.par = { ladoA: P && P.lado, ladoB: PB && PB.lado, vieram: P && P.vieram, mesmaTrava: !!(P && PB && P.trava === PB.trava) };
+              if (cam === "3d") {
+                await espera(SA.abriu3d(g.id, P.trava, null));
+                const r3 = r3Par(P.times, 2, 1);
+                // os dois aparelhos gravam o mesmo resultado do 3D (o lockstep): fica UM, e a resposta de quem perdeu a corrida é o gravado
+                const [ga, gb] = await espera(Promise.all([SA.gravar3d(g.id, P.trava, "3d", r3), SB.gravar3d(g.id, PB.trava, "3d", r3)]));
+                X.grav = [ga.ok && ga.gravou, gb.ok && gb.gravou, LC.canon(ga.res) === LC.canon(gb.res)];
+              } else if (cam === "saiu") {
+                await espera(SB.abriu3d(g.id, PB.trava, null));
+                // o 3D de B avisou que A saiu: B grava o W.O. de A; A (que saiu) grava o mesmo depois — um só fica
+                X.wb = await espera(SB.woPar(g.id, PB.trava, P.lado));
+                X.wa = await espera(SA.desistir3d(g.id, P.trava));
+              }
+            }
+            await anda(() => (jogo(g.id) || {}).e === "feito", 900_000);
+          }
+          await passa(3000);
+          X.j = jogo(g.id);
+          X.log = (HIST[cod].log[g.id] || []).map(x => ({ hora: x.hora, e: x.j && x.j.e, vem0: x.j && x.j.vem0, vem1: x.j && x.j.vem1, abriu: x.j && x.j.abriu }));
+          X.iguais = Ss.every(S => S.jogos[g.id] && LC.canon(S.jogos[g.id]) === LC.canon(X.j)) && Ss.every(S => !S.alterada);
+        }
+        const feitos = L => L.filter(x => x.e === "feito").length;
+        const V3 = vistos["3d"], VV = vistos.naoVeio, VA = vistos.naoAbriu, VS = vistos.saiu, VM = vistos.simular, VP = vistos.prazo;
+        ok(V3 && V3.antes.contraAmigo && V3.antes.comPar && V3.antes.podeJogar && V3.antes.podeSimular && V3.ra.ok && V3.rb.ok && V3.par.vieram && V3.par.mesmaTrava && V3.par.ladoA === 0 && V3.par.ladoB === 1,
+          `${id}: o Jogar dos dois (o lado 0 é o anfitrião): ${JSON.stringify(V3 && { antes: V3.antes, ra: V3.ra && [V3.ra.ok, V3.ra.motivo], rb: V3.rb && [V3.rb.ok, V3.rb.motivo], par: V3.par })}`);
+        ok(V3 && V3.j.e === "feito" && V3.j.fim === "3d" && V3.j.res.em3d && V3.j.res.score.join() === "2,1" && V3.j.abriu != null && feitos(V3.log) === 1 && V3.grav[0] !== V3.grav[1] && V3.grav[2] && V3.iguais,
+          `${id}: o 3D gravado UMA vez (os dois gravam o mesmo; quem perde a corrida recebe o gravado): ${JSON.stringify(V3 && { fim: V3.j.fim, s: V3.j.res && V3.j.res.score, grav: V3.grav, log: V3.log.map(x => x.e) })}`);
+        ok(VV && VV.ra.ok && VV.j.res.wo === 1 && VV.j.woPor === "naoVeio" && VV.j.vem1 == null && VV.j.ts >= VV.j.inicio + LC.PRAZO && feitos(VV.log) === 1 && VV.iguais,
+          `${id}: quem não tocou em Jogar perde por W.O. só depois de 2 min pela hora do servidor: ${JSON.stringify(VV && VV.j && { wo: VV.j.res.wo, por: VV.j.woPor, dt: VV.j.ts - VV.j.inicio })}`);
+        ok(VA && VA.j.fim === "simulado" && !VA.j.res.em3d && VA.j.abriu == null && VA.j.ts >= Math.max(VA.j.vem0, VA.j.vem1) + LC.PRAZO && feitos(VA.log) === 1 && VA.iguais,
+          `${id}: com os dois e o 3D que não abriu (a ligação que não deu), o simulado depois de 2 min: ${JSON.stringify(VA && VA.j && { fim: VA.j.fim, dt: VA.j.ts - Math.max(VA.j.vem0, VA.j.vem1) })}`);
+        ok(VS && VS.j.res.wo === 0 && VS.j.woPor === "saiu" && VS.wb.ok && VS.wb.gravou && VS.wa.ok && LC.canon(VS.wa.res) === LC.canon(VS.j.res) && feitos(VS.log) === 1 && VS.iguais,
+          `${id}: quem sai no meio perde por W.O. (gravado por quem ficou; o de quem saiu dá no mesmo): ${JSON.stringify(VS && { wo: VS.j.res.wo, por: VS.j.woPor, wb: VS.wb && [VS.wb.ok, VS.wb.gravou], wa: VS.wa && VS.wa.ok })}`);
+        ok(VM && VM.rb.ok && VM.j.fim === "simulado" && VM.j.vem1 == null && VM.j.vem0 != null && feitos(VM.log) === 1 && VM.iguais && LC.canon(VM.rb.res) === LC.canon(VM.j.res),
+          `${id}: um chamou para o 3D e o outro escolheu Simular: o simulado com a semente: ${JSON.stringify(VM && { rb: VM.rb && [VM.rb.ok, VM.rb.motivo], fim: VM.j && VM.j.fim })}`);
+        ok(VP && VP.j.modo === "simulado" && VP.j.motivo === "prazo" && VP.j.par == null && feitos(VP.log) === 1 && VP.iguais,
+          `${id}: ninguém tocou em Jogar nem em Simular: o simulado pelo prazo de 2 min: ${JSON.stringify(VP && VP.j && { modo: VP.j.modo, motivo: VP.j.motivo })}`);
+        // a conferência de cada aparelho aceitou tudo; a mesma vista nos três
+        ok(Ss.every(S => !S.alterada && resumo(S) === resumo(Ss[0])), `${id}: vistas diferentes ou sala congelada (${Ss.map(S => S.alterada)} ${JSON.stringify(Ss.map(S => S.alteradaJogo))})`);
+        Ss.forEach(S => S.parar());
+        // a sala de regras 2 (antes do PR 5): o jogo contra o amigo é simulado ao abrir a rodada, sem o Jogar
+        salaPronta("KOPAR2", ["w0", "w1"], 0, "mata", "br", "KOpar2", 2);
+        const W = [aparelho("w0", { latencia: 15 }), aparelho("w1", { latencia: 30 })], Sw = [];
+        for (const d of W) Sw.push(await d.abrir("KOPAR2"));
+        await anda(() => Sw.every(S => S.sala.meta.estado === "camp"), 200_000);
+        const mjw = Sw[0].ver().camp.meuJogo, rw = await espera(Sw[0].jogarPar());
+        await anda(() => Sw.every(S => S.ver().camp && S.ver().camp.fim), 600_000);
+        const jw = banco.ler("leiloes/KOPAR2/jogos/m1j0");
+        ok(!Sw[0]._comPar() && (!mjw || (!mjw.comPar && !mjw.podeJogar)) && !rw.ok && (rw.motivo === "semPar" || rw.motivo === "jaFeito") && jw && jw.e === "feito" && jw.motivo === "abertura" && jw.par == null && Sw.every(S => !S.alterada),
+          `${id}: a sala de regras 2 sem o par: ${JSON.stringify({ mj: mjw && [mjw.comPar, mjw.podeJogar], rw: [rw.ok, rw.motivo], j: jw && [jw.e, jw.motivo] })}`);
+        Sw.forEach(S => S.parar());
+        nota(`par: 6 caminhos (${Object.keys(vistos).join(", ")}) com ${Object.keys(HIST).length - H0} salas`);
+      }
+      /* ---- a revisão do PR 5 (PLANO-LEILAO.md §8 "A revisão do PR 5"): os casos de prova das duas revisões, agora com as metas ----
+         revsim (M1) os dois tocam em Jogar no mesmo instante; revoculto (M2) quem não tocou saiu da sala; revcaiu (M3) a ligação
+         caiu no meio; revforja (M4) o aparelho adulterado (o 3º técnico) grava os dois toques na mesma reserva e o W.O. */
+      const parRev = async (cod, uids, lat) => {
+        salaPronta(cod, uids, 0, "pontos", "br", "REV" + cod, Lx.REGRAS_PAR);
+        const devs = uids.map((u, k) => aparelho(u, { latencia: lat ? lat[k] : 30 })), Ss = [];
+        for (const d of devs) Ss.push(await d.abrir(cod));
+        await anda(() => Ss.every(S => S.sala.meta.estado === "camp"), 200_000);
+        await anda(() => { const c = Ss[0].ver().camp; return !!(c && c.rodada && c.rodada.aberta); }, 600_000);
+        const g = Ss[0].ver().camp.rodada.jogos[0];
+        return { devs, Ss, g, SA: Ss[g.a], SB: Ss[g.b], jogoS: () => banco.ler("leiloes/" + cod + "/jogos/" + g.id) };
+      };
+      if (caso("revsim")) {
+        const { Ss, g, SA, SB, jogoS } = await parRev("REVSIM", ["v0", "v1"]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.podeJogar); }, 60_000);
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        // os dois tocam em Jogar ao mesmo tempo (as duas transações a caminho juntas): os dois toques valem (um reserva, o outro
+        // entra — a escolha pelo nó DENTRO da transação); sem o 3D aqui, o par termina no simulado do 3D que não abriu, nunca no W.O.
+        const [ra, rb] = await espera(Promise.all([SA.jogarPar(g.id), SB.jogarPar(g.id)]));
+        const j1 = jogoS();
+        await anda(() => (jogoS() || {}).e === "feito", 600_000);
+        const j2 = jogoS();
+        ok(ra.ok && rb.ok && j1 && j1.vem0 != null && j1.vem1 != null && j1.vem0 !== j1.vem1 && j2.res.wo == null && j2.fim === "simulado" && Ss.every(S => !S.alterada),
+          `KO par revsim (M1): os dois no Jogar no mesmo instante, os dois toques gravados: ${JSON.stringify({ ra: [ra.ok, ra.motivo], rb: [rb.ok, rb.motivo], vem: j1 && [j1.vem0, j1.vem1], wo: j2.res && j2.res.wo, woPor: j2.woPor, fim: j2.fim, alt: Ss.map(S => S.alterada) })}`);
+        Ss.forEach(S => S.parar());
+      }
+      if (caso("revoculto")) {
+        const { devs, Ss, g, SA, SB, jogoS } = await parRev("REVOCU", ["o0", "o1"]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.id === g.id && mj.e === "aberto" && mj.prazo && !mj.prazo.parado && mj.podeJogar); }, 60_000);
+        // A chama com B na sala; logo depois a tela de B apaga (o celular travou) e B fica fora da sala: ele nem viu o chamado
+        const ra = await espera(SA.jogarPar(g.id));
+        devs[g.b].doc.esconde(true);
+        await passa(15_000);
+        const fora = SA._ausente(g.b, SA.hora());
+        await anda(() => (jogoS() || {}).e === "feito", 600_000);
+        const j2 = jogoS();
+        ok(ra.ok && fora && j2.res.wo == null && j2.woPor == null && j2.fim === "simulado" && j2.ts - j2.inicio >= LC.PRAZO && Ss.every(S => !S.alterada),
+          `KO par revoculto (M2): quem não tocou em Jogar estava fora da sala no fim do prazo: o simulado, não o W.O.: ${JSON.stringify({ ra: ra.ok, fora, wo: j2.res && j2.res.wo, woPor: j2.woPor, fim: j2.fim, dt: j2.ts - j2.inicio })}`);
+        Ss.forEach(S => S.parar());
+      }
+      if (caso("revcaiu")) {
+        const { Ss, g, SA, SB, jogoS } = await parRev("REVCAI", ["c0", "c1"], [60, 20]);
+        await anda(() => { const mj = SA.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        await espera(SA.jogarPar(g.id));
+        await anda(() => { const mj = SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeJogar); }, 60_000);
+        await espera(SB.jogarPar(g.id));
+        await anda(() => Ss.every(S => { const j = S.jogos[g.id]; return !!(j && j.vem0 != null && j.vem1 != null); }), 30_000);
+        const P = SA.par(g.id), PB = SB.par(g.id);
+        // o abandono ANTES do 3D abrir (o "Sair da partida" sem a tela do 3D à vista): o W.O. recusado, o fimPar dá o simulado (M4) —
+        // conferido no nó sem gravar: o W.O. direto é recusado pela máquina
+        const woCedo = await espera(SA.woPar(g.id, P.trava, PB.lado));
+        await espera(SA.abriu3d(g.id, P.trava, null));
+        // a ligação caiu no meio do jogo: os dois 3D avisam ('caiu') e os dois aparelhos mandam o fim — o simulado, uma vez (M3)
+        const [fa, fb] = await espera(Promise.all([SA.fimPar(g.id, P.trava, PB.lado, "caiu"), SB.fimPar(g.id, PB.trava, P.lado, "caiu")]));
+        await passa(3000);
+        const j = jogoS();
+        ok(!woCedo.ok && ["naoAbriu", "vem"].includes(woCedo.motivo) && fa.ok && fb.ok && j.e === "feito" && j.res.wo == null && j.woPor == null && j.fim === "simulado" && j.abriu != null
+          && LC.canon(fa.res) === LC.canon(fb.res) && (fa.gravou !== fb.gravou) && Ss.every(S => !S.alterada),
+          `KO par revcaiu (M3/M4): a ligação que cai é o simulado (gravado uma vez, por qualquer um), e o W.O. antes do 3D abrir é recusado: ${JSON.stringify({ woCedo: [woCedo.ok, woCedo.motivo], fa: [fa.ok, fa.gravou], fb: [fb.ok, fb.gravou], wo: j.res && j.res.wo, fim: j.fim, alt: Ss.map(S => S.alterada) })}`);
+        Ss.forEach(S => S.parar());
+        // o abandono explícito ('saiu') com o 3D aberto continua o W.O. de quem saiu (o caminho "saiu" acima, pelo woPar) — aqui pelo fimPar
+        const R2 = await parRev("REVSAI", ["s0", "s1"]);
+        await anda(() => { const mj = R2.SA.ver().camp.meuJogo; return !!(mj && mj.podeJogar); }, 60_000);
+        await espera(R2.SA.jogarPar(R2.g.id));
+        await anda(() => { const mj = R2.SB.ver().camp.meuJogo; return !!(mj && mj.par && mj.podeJogar); }, 60_000);
+        await espera(R2.SB.jogarPar(R2.g.id));
+        await anda(() => R2.Ss.every(S => { const x = S.jogos[R2.g.id]; return !!(x && x.vem0 != null && x.vem1 != null); }), 30_000);
+        const P2 = R2.SA.par(R2.g.id);
+        await espera(R2.SB.abriu3d(R2.g.id, P2.trava, null));
+        const f2 = await espera(R2.SB.fimPar(R2.g.id, P2.trava, P2.lado, "saiu"));
+        await passa(3000);
+        const j3 = R2.jogoS();
+        ok(f2.ok && j3.res.wo === P2.lado && j3.woPor === "saiu" && j3.ts >= j3.abriu && R2.Ss.every(S => !S.alterada),
+          `KO par revcaiu: o "Sair da partida" com o 3D aberto segue o W.O. de quem saiu: ${JSON.stringify({ f2: f2.ok, wo: j3.res && j3.res.wo, woPor: j3.woPor })}`);
+        R2.Ss.forEach(S => S.parar());
+      }
+      if (caso("revforja")) {
+        const { devs, Ss, g, jogoS } = await parRev("REVFOR", ["f0", "f1", "f2"], [20, 20, 20]);
+        const terceiro = [0, 1, 2].find(t => t !== g.a && t !== g.b), SX = Ss[terceiro], c = SX._campCtx(), TS = SX.rede.TS;
+        const esc = [LC.escalacaoDoJogo(c, g.a), LC.escalacaoDoJogo(c, g.b)];
+        const r0 = recusas.length;
+        // um aparelho ADULTERADO (o 3º técnico, que nem joga este jogo): reserva o par em nome de A já com o "toque" de B (os dois na
+        // mesma reserva) e tenta o W.O. de B
+        const t1 = await espera(SX._transJogo(g.id, cur => { const r = LC.reservarPar(cur, { ab: [g.a, g.b], esc, por: g.a, ts: TS }); if (r.ok) r.jogo.vem1 = TS; return r; }));
+        await passa(2000);
+        const t2 = await espera(SX._transJogo(g.id, cur => LC.woPar(cur, { trava: cur && cur.trava, ts: TS, perdedor: 1 })));
+        await passa(5000);
+        const j = jogoS(), rec = recusas.splice(r0);
+        const honestos = [Ss[g.a], Ss[g.b]];
+        ok(t1.feito && !t2.feito && j.e !== "feito" && honestos.every(S => S.alterada) && rec.length >= 1,
+          `KO par revforja (M4): os dois toques na mesma reserva acusados pela conferência (a sala congela), o W.O. sem o 3D aberto recusado pela máquina e as regras opcionais recusam o toque de outra conta: ${JSON.stringify({ t1: t1.feito, t2: t2.feito, e: j.e, wo: j.res && j.res.wo, alt: honestos.map(S => S.alterada), alteradaJogo: honestos.map(S => S.alteradaJogo && S.alteradaJogo.motivo), regras: rec.length })}`);
+        Ss.forEach(S => S.parar());
+      }
+      // as regras opcionais não recusaram nenhuma gravação honesta (e recusam as adulterações do campeonato)
+      ok(!recusas.length, `as regras opcionais recusariam ${recusas.length} gravações honestas: ${JSON.stringify(recusas.slice(0, 3))}`);
+      {
+        // (a ordem e as contas dos técnicos: o toque de cada lado só pela conta dele — revisão do PR 5, M4)
+        const raiz = { leiloes: { X: { sala: { meta: { estado: "camp" }, ordem: ["ua", "ub"], tec: { ua: { auth: "u" }, ub: { auth: "v" } } }, jogos: {
+          a: { e: "aberto", ini: 1000, resta: 120000 }, r: { e: "reservado", trava: 500, ab: [0, 1], motivo: "abertura" },
+          f: { e: "feito", trava: 500, ts: 600, res: { placar: [1, 0] } }, p: { e: "aberto", parado: true, resta: 90000 } } } } };
+        const TSv = { ".sv": "timestamp" }, recusa = (cam, v, hora, uid = "u") => confereRegras(raiz, ("leiloes/X/" + cam).split("/"), v, hora, uid).length > 0;
+        ok(!recusa("jogos/n", { e: "aberto", ini: TSv, resta: 120000 }, 2000) && !recusa("jogos/a", { e: "aberto", parado: true, resta: 90000 }, 31000) &&
+          !recusa("jogos/a", { e: "reservado", trava: TSv, motivo: "prazo", ab: [0, 1] }, 121000) && !recusa("jogos/r", { e: "feito", trava: 500, ts: TSv, res: { placar: [2, 0] } }, 9000),
+          "as regras opcionais recusaram um passo honesto da máquina do jogo");
+        const adult = [
+          ["o feito regravado", "jogos/f", { e: "feito", trava: 500, ts: TSv, res: { placar: [0, 3] } }, 9000],
+          ["o reservado de volta ao aberto", "jogos/r", { e: "aberto", ini: TSv, resta: 120000 }, 9000],
+          ["o prazo antes de vencer", "jogos/a", { e: "reservado", trava: TSv, motivo: "prazo", ab: [0, 1] }, 120999],
+          ["a trava inventada", "jogos/n", { e: "reservado", trava: 7, motivo: "abertura", ab: [0, 1] }, 9000],
+          ["o feito com outra trava", "jogos/r", { e: "feito", trava: 501, ts: TSv, res: { placar: [2, 0] } }, 9000],
+          ["o feito sem reservar", "jogos/a", { e: "feito", trava: 1000, ts: TSv, res: { placar: [2, 0] } }, 9000],
+          ["o prazo que volta a crescer", "jogos/p", { e: "aberto", ini: TSv, resta: 100000 }, 9000],
+          ["o prazo maior que 2 min", "jogos/n", { e: "aberto", ini: TSv, resta: 120001 }, 9000],
+          ["a hora inventada ao abrir", "jogos/n", { e: "aberto", ini: 5, resta: 120000 }, 9000],
+          ["o começo do campeonato inventado", "sala/meta/camp", 12345, 9000]
+        ];
+        adult.forEach(([nome, cam, v, h]) => ok(recusa(cam, v, h), `as regras opcionais deixaram passar ${nome}`));
+        // o par (PR 5): o 1º Jogar (o toque com a hora do servidor), o 2º, o abriu e o W.O. passam; o toque mexido, inventado ou
+        // apagado, e o par que troca quem reservou, não
+        const rp = { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 1, motivo: "pedido", trava: 700, inicio: 700, vem1: 700 };
+        const rp2 = Object.assign({}, rp, { vem0: 800 }), rp3 = Object.assign({}, rp2, { abriu: 900 });
+        raiz.leiloes.X.jogos.p1 = rp; raiz.leiloes.X.jogos.p2 = rp2; raiz.leiloes.X.jogos.p3 = rp3;
+        ok(!recusa("jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000)
+          && !recusa("jogos/a", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000)
+          && !recusa("jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 1, motivo: "pedido", trava: TSv, inicio: TSv, vem1: TSv }, 9000, "v")
+          && !recusa("jogos/p1", Object.assign({}, rp, { vem0: TSv }), 9000) && !recusa("jogos/p2", Object.assign({}, rp2, { abriu: TSv }), 9000, "v")
+          && !recusa("jogos/p3", Object.assign({}, rp3, { e: "feito", ts: TSv, woPor: "saiu", res: { placar: [3, 0] } }), 9000, "v")
+          && !recusa("jogos/p3", Object.assign({}, rp3, { e: "feito", ts: TSv, fim: "3d", res: { placar: [1, 0] } }), 9000, "v")
+          && !recusa("jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, fim: "simulado", res: { placar: [1, 0] } }), 9000, "v"),
+          "as regras opcionais recusaram um passo honesto do par");
+        const adultPar = [
+          ["o toque do outro lado com hora inventada", "jogos/p1", Object.assign({}, rp, { vem0: 5 }), 9000],
+          ["o toque de quem reservou mexido", "jogos/p1", Object.assign({}, rp, { vem1: TSv }), 9000],
+          ["o 2º toque trocando quem reservou", "jogos/p1", Object.assign({}, rp, { vem0: TSv, por: 0 }), 9000],
+          ["o toque apagado", "jogos/p2", Object.assign({}, rp2, { vem0: null, abriu: TSv }), 9000],
+          ["o par desligado no meio", "jogos/p1", Object.assign({}, rp, { par: false, vem0: TSv }), 9000],
+          // (revisão do PR 5, M4: o toque pela conta de outro técnico, a reserva com os dois toques, o W.O. de quem saiu e o 3D sem o abriu)
+          ["o toque do outro lado pela conta de outro técnico", "jogos/p1", Object.assign({}, rp, { vem0: TSv }), 9000, "v"],
+          ["a reserva nova pela conta do outro lado", "jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv }, 9000, "v"],
+          ["a reserva nova com os dois toques", "jogos/n", { e: "reservado", par: true, modo: "3d", ab: [0, 1], por: 0, motivo: "pedido", trava: TSv, inicio: TSv, vem0: TSv, vem1: TSv }, 9000],
+          ["o W.O. de quem saiu sem o 3D aberto", "jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, woPor: "saiu", res: { placar: [3, 0] } }), 9000],
+          ["o resultado do 3D do par sem o 3D aberto", "jogos/p2", Object.assign({}, rp2, { e: "feito", ts: TSv, fim: "3d", res: { placar: [1, 0] } }), 9000]
+        ];
+        adultPar.forEach(([nome, cam, v, h, uid]) => ok(recusa(cam, v, h, uid), `as regras opcionais deixaram passar ${nome}`));
+      }
+    } finally {
+      nota(`${acontecimentos} acontecimentos; as regras opcionais conferidas em ${gravacoes} gravações (${recusas.length} recusas)`);
+    }
+  });
+}
+
+await testeCamp();
+await testeOcultas();
+await testeCampSessao();
+await testeCamp3d();
+await testeCampOnline();
+await testeProtocolo();
+await testeSessao();
+await testeRede();
+await testeFirebase();
+await testeOnline();
+const nAsync = ["R", "F", "O"].filter(b => !SO || SO.includes(b)).length;
+console.log(`${falhas ? "REPROVOU" : "PASSOU"}: ${resultados.length + nAsync - falhas} de ${resultados.length + nAsync} blocos em ${((performance.now() - t00) / 1000).toFixed(1)} s`);
+process.exit(falhas ? 1 : 0);
+
+/* ================= --tela: o navegador num aparelho (PLANO-LEILAO.md §4.2) =================
+   O TM servido desta pasta (o servidor e o Playwright do golaco/tools/lib/navegador.mjs), o SDK do Firebase trocado por um
+   vazio (o treino não usa a rede), o relógio do treino acelerado por TM.leilaoSessao.acelerar. Uma linha por item. */
+async function testeTela() {
+  const t0 = performance.now();
+  const WT = path.resolve(RAIZ, "..");
+  const { servidor, playwright } = await import(pathToFileURL(path.join(WT, "golaco/tools/lib/navegador.mjs")).href);
+  const PASTA = opt("--prints", "/tmp/testar-leilao-tela");
+  fs.mkdirSync(PASTA, { recursive: true });
+  const srv = await servidor(0, RAIZ);
+  const { chromium } = playwright();
+  // com a barra de rolagem do PC (o headless esconde por padrão): a grade de 7 + 6 é medida com ela
+  const nav = await chromium.launch({ headless: true, ignoreDefaultArgs: ["--hide-scrollbars"] });
+  const TAMANHOS = [[360, 740], [390, 844], [430, 932], [844, 390], [820, 1180], [1280, 800], [1440, 900], [1920, 1080]];
+  const errosPagina = [], oks = [], falhasT = [];
+  const espera = ms => new Promise(r => setTimeout(r, ms));
+  function confere(nome, cond, info) {
+    (cond ? oks : falhasT).push(nome + (!cond && info != null ? " — " + JSON.stringify(info).slice(0, 1200) : ""));
+    console.log((cond ? "ok       " : "REPROVOU ") + nome + (cond && VERBOSO && info != null ? " — " + JSON.stringify(info).slice(0, 400) : ""));
+    if (!cond && info != null) console.log("         · " + JSON.stringify(info).slice(0, 1200));
+  }
+  async function aparelho(w, h, mob) {
+    const cx = await nav.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 1, isMobile: !!mob, hasTouch: !!mob, serviceWorkers: "block" });
+    await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await cx.addInitScript(() => { try { localStorage.setItem("totalmatch:__edition", "public"); } catch (e) {} });
+    const p = await cx.newPage();
+    p.on("pageerror", e => errosPagina.push(String(e).slice(0, 300)));
+    p.on("console", m => { if (m.type() === "error" && !/Failed to load resource|net::ERR/.test(m.text())) errosPagina.push("console: " + m.text().slice(0, 300)); });
+    await p.goto(srv.url + "index.html", { waitUntil: "load" });
+    await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+    await p.evaluate(() => TM.ui.go("modes"));
+    await espera(300);
+    return { cx, p };
+  }
+  async function ate(p, fn, arg, ms = 20000) { try { await p.waitForFunction(fn, arg, { timeout: ms, polling: 40 }); return true; } catch (e) { return false; } }
+  const ver = p => p.evaluate(() => { const S = TM.leilaoSessao.atual(); return S ? S.ver() : null; });
+  const print = (p, nome) => p.screenshot({ path: path.join(PASTA, nome + ".png") }).catch(() => {});
+  const clica = (p, rx, sel = "button") => p.evaluate(([rx, sel]) => {
+    const x = [...document.querySelectorAll(sel)].find(e => new RegExp(rx).test(e.textContent.trim()) && e.offsetParent !== null);
+    if (x) x.click(); return !!x;
+  }, [rx, sel]);
+  // nada sobre nada: o critério do testar-online3d.mjs (sobreposicao), com a barra de lance (fixa) numa camada própria — o
+  // que rola por baixo dela não "encosta" nela; no fim da rolagem, nada fica atrás dela (o espaço do fim da página)
+  const sobreposicao = p => p.evaluate(() => {
+    const sel = "button, a[href], [role=button], input, select, .ut-card, .lei-placar, .lei-meu, .lei-bloco, .next-match, .lei-sala, .lei-caixa, .lei-jogo, .lei-ch-jogo, .md-poster, .lei-cl, .lei-art-l, .lei-lote-card, .lei-cv-vaga, .lei-cv-bola, .lei-cv-nome, .lei-cv-ov, .lei-cv .lei-pen";
+    const visivel = e => {
+      const cs = getComputedStyle(e); if (cs.visibility === "hidden" || cs.display === "none" || +cs.opacity < 0.05 || cs.pointerEvents === "none") return false;
+      const rc = e.getBoundingClientRect(); if (rc.width < 4 || rc.height < 4) return false;
+      let a = e.parentElement; while (a) { const c2 = getComputedStyle(a); if (c2.display === "none" || c2.visibility === "hidden" || +c2.opacity < 0.05) return false; a = a.parentElement; }
+      return true;
+    };
+    const camada = e => { let a = e; while (a && a !== document.body) { if (getComputedStyle(a).position === "fixed") return a; a = a.parentElement; } return null; };
+    const els = [...document.querySelectorAll(sel)].filter(visivel);
+    const nome = e => (e.className && typeof e.className === "string" ? "." + e.className.trim().split(/\s+/).slice(0, 2).join(".") : e.tagName) + (e.textContent ? ' "' + e.textContent.trim().slice(0, 18) + '"' : "");
+    const pares = [], encostam = [];
+    // clicáveis vizinhos: nem por cima (> 1 px) nem encostados (menos de 2 px entre as bordas)
+    const clicavel = e => e.matches("button, a[href], [role=button], input, select");
+    for (let i = 0; i < els.length; i++) for (let j = i + 1; j < els.length; j++) {
+      const X = els[i], Y = els[j];
+      if (X.contains(Y) || Y.contains(X) || camada(X) !== camada(Y)) continue;
+      const a = X.getBoundingClientRect(), bb = Y.getBoundingClientRect();
+      const ix = Math.min(a.right, bb.right) - Math.max(a.left, bb.left), iy = Math.min(a.bottom, bb.bottom) - Math.max(a.top, bb.top);
+      if (ix > 1 && iy > 1) pares.push(nome(X) + " X " + nome(Y));
+      else if (ix > -2 && iy > -2 && clicavel(X) && clicavel(Y)) encostam.push(nome(X) + " | " + nome(Y) + " (" + Math.round(Math.max(-ix, -iy) * 10) / 10 + " px)");
+    }
+    // o texto de dentro de um botão não sai dele (o rótulo "Tudo ou nada" passava do botão 4-2-4)
+    const saem = [];
+    els.filter(e => e.matches("button")).forEach(b => {
+      const rb = b.getBoundingClientRect();
+      b.querySelectorAll("span, div, small, strong, b").forEach(x => {
+        if (!x.childNodes.length || ![...x.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+        const cs = getComputedStyle(x); if (cs.display === "none" || cs.visibility === "hidden") return;
+        const r = x.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return;
+        if (r.left < rb.left - 1 || r.right > rb.right + 1 || r.top < rb.top - 1 || r.bottom > rb.bottom + 1) saem.push(nome(x) + " em " + nome(b) + " (" + Math.round(r.left) + "–" + Math.round(r.right) + " no " + Math.round(rb.left) + "–" + Math.round(rb.right) + ")");
+      });
+    });
+    const larg = document.documentElement.clientWidth;
+    const fora = els.filter(e => { const rc = e.getBoundingClientRect(); return rc.right > larg + 1 || rc.left < -1; }).map(nome);
+    // no fim da rolagem, o último da página termina acima da barra fixa (a de lance ou a da Criar sala)
+    let atras = null;
+    const barra = document.querySelector(".lei-lance:not([hidden]), .lei-criarbar");
+    if (barra) {
+      const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
+      const topo = barra.getBoundingClientRect().top;
+      const baixo = els.filter(e => !camada(e)).map(e => e.getBoundingClientRect().bottom);
+      const fundo = Math.max(...baixo);
+      if (fundo > topo + 1) atras = Math.round(fundo - topo);
+      scrollTo(0, y0);
+    }
+    return { n: els.length, sobre: pares, encostam, saem, fora, rolaLado: document.documentElement.scrollWidth > larg + 1, atras };
+  });
+  const nadaSobre = [];
+  // (tams: outros tamanhos que os 8; o celular deitado estreito da aba Leilão)
+  const DEITADOS = [[667, 375], [740, 360]];
+  async function nadaSobreNada(p, rotulo, extra, tams = TAMANHOS) {
+    for (const [w, h] of tams) {
+      await p.setViewportSize({ width: w, height: h });
+      await espera(320);
+      await p.evaluate(() => { document.querySelectorAll(".toast").forEach(t => t.remove()); scrollTo(0, 0); });
+      const s = await sobreposicao(p);
+      const r = { tela: rotulo + " " + w + "x" + h, n: s.n, sobre: s.sobre.slice(0, 4), encostam: s.encostam.slice(0, 4), saem: s.saem.slice(0, 4), fora: s.fora.slice(0, 4), rolaLado: s.rolaLado, atras: s.atras };
+      if (extra) Object.assign(r, await extra(p, w, h));
+      nadaSobre.push(r);
+      await print(p, `nada-${rotulo}-${w}x${h}`);
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    await espera(250);
+  }
+  // os 8 tamanhos no escuro e no claro (o tema volta ao escuro no fim)
+  async function nadaSobreNadaTemas(p, rotulo, extra, tams) {
+    await nadaSobreNada(p, rotulo, extra, tams);
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await nadaSobreNada(p, rotulo + "-claro", extra, tams);
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+  }
+  // o campeonato no tema claro: caixas e jogos claros, texto escuro (o pôster do campeão fica escuro, como o do fim de jogo)
+  const temaClaroCamp = p => p.evaluate(() => {
+    TM.ui.applyTheme("light");
+    const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+    const q = s => document.querySelector(s), cs = s => q(s) ? getComputedStyle(q(s)) : null;
+    const out = { caixa: cs(".lei-rodada") && lum(cs(".lei-rodada").backgroundColor), jogo: cs(".lei-jogo") && lum(cs(".lei-jogo").backgroundColor),
+      texto: cs(".lei-rod-n") && lum(cs(".lei-rod-n").color), seu: cs(".lei-seujogo") ? lum(cs(".lei-seujogo").backgroundColor) : null };
+    TM.ui.applyTheme("dark");
+    return out;
+  });
+  // os extras medidos no campeonato: a tabela não rola de lado dentro da caixa e os escudos são os desenhados
+  const extraCamp = async p => p.evaluate(() => {
+    const r = document.querySelector(".lei-tab-rola");
+    return { tabelaRola: r ? r.scrollWidth > r.clientWidth + 1 : false, escudosReais: document.querySelectorAll(".lei-corpo-camp img").length };
+  });
+  // o campeonato pela tela: toca em Simular partida sempre que dá e vê cada jogo no 2D (Pular, Ver resultado, a prorrogação
+  // e os pênaltis gravados), conferindo o que a tela mostra contra o resultado GRAVADO; para no fim ou quando ate(V) diz
+  async function campPelaTela(p, ate0, limiteMs = 300000) {
+    const vis = { simular: 0, jogos: 0, pror: 0, ouro: 0, pen: 0, ruins: [], fim: false };
+    const t0 = Date.now();
+    while (Date.now() - t0 < limiteMs) {
+      const r = await p.evaluate(ate0 => { const S = TM.leilaoSessao.atual(), V = S && S.ver(); return { rota: TM.ui.current(), estado: V && V.estado, ate: !!(ate0 && V && V.camp && new Function("V", "return " + ate0)(V)) }; }, ate0 || null);
+      if (r.estado === "fim" && r.rota === "leilao-camp") { vis.fim = true; break; }
+      if (r.ate && r.rota === "leilao-camp") break;
+      if (r.rota === "leilao-camp") {
+        const clicou = await p.evaluate(() => { const b = document.querySelector(".lei-simular"); if (b && !b.disabled) { b.click(); return true; } return false; });
+        if (clicou) { vis.simular++; await ate(p, () => TM.ui.current() !== "leilao-camp" || !document.querySelector(".lei-simular[aria-busy]"), null, 15000); }
+        await espera(clicou ? 250 : 100);
+        continue;
+      }
+      if (r.rota !== "leilao-jogo") { vis.ruins.push("rota " + r.rota); await p.evaluate(() => TM.ui.go("leilao-camp")); continue; }
+      // no 2D: o gravado, sem pausa; Pular mostra o placar dos 90' gravado; nenhum sorteio novo pelo matchview
+      vis.jogos++;
+      await espera(250);
+      const g = await p.evaluate(() => {
+        const id = TM.leilaoTela.estado().jogo, J = TM.leilaoSessao.atual().partida(id);
+        window.__sims2d = 0;
+        return { id, res: J && { score: J.res.score, pror: J.res.pror ? J.res.pror.score : null, ouro: J.res.pror && J.res.pror.ouro != null, pen: J.res.pen ? { score: J.res.pen.score, n: J.res.pen.kicks.length } : null },
+          pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)), crest: document.querySelectorAll(".bc-crest.utx-escudo").length };
+      });
+      // animando (a velocidade normal): sem o botão de pausa, e o Pular vai adiante; instantâneo: o placar dos 90' já à mostra
+      const f90 = await p.evaluate(() => ({ animando: [...document.querySelectorAll(".screen.is-active .actions button")].some(x => /Pular/.test(x.textContent)),
+        placar: (document.querySelector(".live-score") || {}).textContent, overlay: !!document.querySelector(".pause-overlay"), campo2d: [...document.querySelectorAll(".screen.is-active button")].some(x => /Campo 2D/.test(x.textContent)) }));
+      // nos 2 primeiros jogos animados, o Campo 2D ligado antes do Pular: os chutes deixam a bola sem condutor e a pessoa sai
+      // do 2D com ele ligado (o laço do Campo 2D tem de parar sem erro de página na aba Campeonato)
+      if (f90.animando && (vis.campo2d || 0) < 2) {
+        const ligou = await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active button")].find(x => /Campo 2D/.test(x.textContent)); if (b) b.click(); return !!b; });
+        if (ligou) { vis.campo2d = (vis.campo2d || 0) + 1; await espera(1500); }
+      }
+      if (f90.animando) { vis.animados = (vis.animados || 0) + 1; await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active .actions button")].find(x => /Pular/.test(x.textContent)); if (b) b.click(); }); await espera(120); }
+      else vis.placares = (vis.placares || 0) + 1;
+      f90.sims = await p.evaluate(() => window.__sims2d);
+      if (!g.res || g.pausa || g.crest !== 2 || f90.overlay || f90.sims || !f90.campo2d || (!f90.animando && f90.placar !== g.res.score[0] + " - " + g.res.score[1])) vis.ruins.push({ jogo: g.id, g, f90 });
+      // Ver resultado → (a prorrogação → os pênaltis) → o Campeonato
+      for (let k = 0; k < 6; k++) {
+        const rota = await p.evaluate(() => TM.ui.current());
+        if (rota === "leilao-camp") break;
+        if (rota === "prorrogacao") {
+          vis.pror++;
+          const pr = await p.evaluate(() => ({ t: document.querySelector(".pror-t").textContent, num: document.querySelector(".pror-num").textContent, ouro: !!document.querySelector(".pror-ouro"), s: document.querySelector(".pror-s").textContent }));
+          if (g.res.ouro) vis.ouro++;
+          if (!/GOL DE OURO/.test(pr.t) || !/1º gol acaba/.test(pr.s) || !g.res.pror || pr.num !== g.res.pror[0] + " × " + g.res.pror[1] || pr.ouro !== g.res.ouro) vis.ruins.push({ jogo: g.id, pror: pr, res: g.res });
+        }
+        if (rota === "pen-shootout") {
+          vis.pen++;
+          await ate(p, () => [...document.querySelectorAll(".screen.is-active button")].some(b => /^Continuar$/.test(b.textContent.trim())), null, 30000);
+          const pk = await p.evaluate(() => ({ n: document.querySelectorAll(".pk-kick").length, st: document.querySelector(".pk-status").textContent, crest: document.querySelectorAll(".pk-crest.utx-escudo").length }));
+          if (!g.res.pen || pk.n !== g.res.pen.n || pk.st.indexOf(g.res.pen.score[0] + "–" + g.res.pen.score[1]) < 0 || pk.crest !== 2) vis.ruins.push({ jogo: g.id, pen: pk, res: g.res });
+        }
+        await p.evaluate(() => { const b = [...document.querySelectorAll(".screen.is-active button")].find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); });
+        await espera(250);
+      }
+    }
+    return vis;
+  }
+  // um treino pela Criar sala (T técnicos, o formato; antes(p): o que mais escolher na Criar) até a aba Campeonato: o leilão
+  // passando tudo com o relógio a ×40, a escalação e o Pronto
+  async function treinoAte(p, T, formato, antes, fatorCamp = 20) {
+    await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
+    await espera(400);
+    // (no treino, só os bots: T técnicos = você + T − 1 bots)
+    await p.evaluate(T => { const menos = document.querySelector('[aria-label="Menos um bot"]'), mais = document.querySelector('[aria-label="Mais um bot"]');
+      for (let i = 0; i < 10; i++) menos.click(); for (let i = 2; i < T; i++) mais.click(); }, T);
+    await p.click(`.lei-criar .lei-fmt[data-fmt="${formato}"]`);
+    if (antes) await antes(p);
+    await clica(p, "Começar o treino");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 30000);
+    // (no fim do leilão o relógio volta ao normal na hora: com ele a ×40, os 60 s da escalação passariam antes de a tela ir até ela)
+    for (let i = 0; i < 4000; i++) {
+      const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(1); return V.estado; });
+      if (e !== "leilao") break;
+      await espera(40);
+    }
+    await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
+    await p.evaluate(f => TM.leilaoSessao.acelerar(f), fatorCamp);
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
+    await espera(300);
+    const V = await ver(p);
+    return { T: V.T, formato: V.camp && V.camp.formato };
+  }
+  /* T14 o jogo contra um bot em 3D (PR 4; PLANO-LEILAO.md §4.2) pela PÁGINA DE ENSAIO do 3D (ferramentas/lib/ensaio-3d.mjs no
+     lugar do golaco; o GOLAÇO de verdade com o time de 11 está no testar-3d.mjs, seção 7): um treino de Pontos corridos com 4
+     (os 6 jogos meus contra os bots) com as Partidas em 3D escolhidas na Criar (3 min, Difícil). Jogo 1: o 3D acaba com o
+     resultado (o pedido com 11 + 11, a duração e a dificuldade travadas, mando neutro; o resultado do 3D gravado ANTES do 2D e o
+     2D sem pausa com o placar gravado); jogo 2: o "Simular partida" da tela do 3D com os titulares (o simulado gravado antes de
+     mostrar); jogo 3: o 3D aberto e fechado sem resultado (de volta ao Campeonato com "Jogando em 3D" e o prazo; nada sobre nada
+     com a caixa do 3D; o W.O. contra mim depois do prazo, pelo relógio acelerado); jogo 4: "Sempre simular" (o Jogar simula, sem
+     o quadro); jogo 5: recarregar no meio do 3D aberto (volta com "Jogando em 3D", o quadro fechado, e o W.O. depois do prazo);
+     jogo 6: recarregar com o 3D que nem abriu (volta com "Abrindo o 3D" e, em 2 min, o simulado). Revisão do PR 4 (com 6 técnicos:
+     os 10 jogos meus contra os bots): o jogo 3 e o 5 com o "Aceitar o W.O. agora" (o 5 o usa: o W.O. antes do prazo) e o 6 com o
+     "Simular agora"; jogo 7: o resultado do 3D no APITO (o golaco grava o localStorage e fica na cena do pós-jogo, sem o
+     tm3d:fim): gravado com o 3D ainda aberto e o app fechado ali não perde nada; jogo 8: o X do TM confirmado DEPOIS de o 3D
+     abrir (a confirmação ainda na tela): o simulado, não o W.O.; jogo 9: o jogo decidido por outro caminho com o 3D aberto (o
+     "Simular" de outra aba): o 3D fecha na hora e o 2D mostra o gravado. Nada sobre nada da Criar com as
+     Partidas em 3D nos 8 tamanhos, no escuro e no claro. Sozinho: --tela --so3d. */
+  /* T15 as notas escondidas (PR 6): o Overall na Criar sala ("À mostra" padrão, "Escondido"; o resumo), um treino de 3 com o
+     Overall escondido pela tela (Pontos corridos) — a aba Leilão, a ficha (i), as Vendas (o meu time e o de um bot), a Escalação, o Campeonato e o
+     2D do "Ver o jogo" sem nenhum número de nota nem o que a entregue (o selo "?", nada de .lei-cv-ov/.lei-prox-ov/atributos,
+     nenhum "Nota N", "Média N", "Soma … N", "geral N" no texto, nos aria-label e nos title, nem na região ao vivo), nos 8 tamanhos
+     e em 667×375, escuro e claro, com nada sobre nada. O "−1/−2" de fora da função FICA (revisão do PR 6: vem do specificPenalty,
+     a posição e os grupos, nunca a nota). O fim do campeonato revela: "Quem comprou melhor" (a frase "levou N pontos de nota a
+     mais/menos do que pagou", o negativo e o "sem compras" em cor neutra, quem não comprou no fim) e "As notas, reveladas" (a
+     soma das notas de cada time, da maior para a menor — não o ranking de quem comprou melhor —, o toque abre o time; o nome
+     acessível começa pelo texto à vista e diz "Ver o seu time" no meu). Sozinho: --tela --soOcultas. */
+  const vazamentos = p => p.evaluate(() => {
+    const vis = e => { const r = e.getBoundingClientRect(); if (r.width < 1 || r.height < 1) return false; let a = e; while (a) { const cs = getComputedStyle(a); if (cs.display === "none" || cs.visibility === "hidden") return false; a = a.parentElement; } return true; };
+    const out = [];
+    // (o "−1/−2" de fora da função fica: .lei-pen e "−N fora da função" não entregam a nota — revisão do PR 6)
+    document.querySelectorAll(".lei-cv-ov, .lei-prox-ov, .ut-card, .lei-ficha-at, .lei-revela").forEach(e => { if (vis(e)) out.push("elemento ." + String(e.className).split(" ")[0] + " " + e.textContent.trim().slice(0, 12)); });
+    document.querySelectorAll(".lei-pen").forEach(e => { if (vis(e) && !/^\u2212[12]$/.test(e.textContent.trim())) out.push("o −N com outro texto: " + e.textContent); });
+    document.querySelectorAll(".lei-nota b").forEach(e => { if (vis(e) && e.textContent.trim() !== "?") out.push("selo " + e.textContent); });
+    const rx = [/\bnotas?\s*\d/i, /\bm[ée]dia\s+\d/i, /\bsoma\b[^\n.]{0,30}\d/i, /\bgeral\s*\d/i, /\boverall\s*\d/i];
+    const textos = [document.body.innerText];
+    document.querySelectorAll("[aria-label], [title]").forEach(e => { if (!vis(e) && !e.closest("[role=dialog]")) return; textos.push(e.getAttribute("aria-label") || ""); textos.push(e.getAttribute("title") || ""); });
+    textos.forEach(t => rx.forEach(r => { const m = t.match(r); if (m) out.push("texto '" + t.slice(Math.max(0, m.index - 20), m.index + m[0].length + 10).replace(/\s+/g, " ") + "'"); }));
+    return [...new Set(out)];
+  });
+  // (as telas escondidas nos 8 tamanhos e no celular deitado estreito, 667×375: revisão do PR 6)
+  const TAM_OCULTO = TAMANHOS.concat([[667, 375]]);
+  async function t15() {
+    const { cx, p } = await aparelho(390, 844, true);
+    const ruinsVaza = [];
+    const comVaza = rotulo => async p2 => { const v = await vazamentos(p2); if (v.length) ruinsVaza.push({ rotulo, v: v.slice(0, 4) }); return { vaza: v.length }; };
+    // a Criar sala: o Overall
+    await p.evaluate(() => { TM.leilaoSessao.acelerar(40); TM.ui.go("leilao-criar"); });
+    await espera(400);
+    const op = await p.evaluate(() => {
+      const seg = document.querySelector('.lei-cs[data-secao="overall"] .lei-overall'), bts = seg ? [...seg.querySelectorAll(".seg-btn")] : [];
+      return { tit: (document.querySelector("#lei-cs-overall") || {}).textContent, bts: bts.map(b => b.textContent.trim()), ativo: bts.filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()),
+        dica: ((document.querySelector('.lei-cs[data-secao="overall"] .lei-cs-hint') || {}).textContent || ""), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    await p.evaluate(() => { const menos = document.querySelector('[aria-label="Menos um bot"]'), mais = document.querySelector('[aria-label="Mais um bot"]'); for (let i = 0; i < 10; i++) menos.click(); mais.click(); });
+    // (Pontos corridos com 3: turno e returno com as folgas — o 1º jogo meu nunca é o último do campeonato)
+    await p.click('.lei-criar .lei-fmt[data-fmt="pontos"]');
+    await p.click('.lei-overall .seg-btn[data-foco="overall-escondido"]');
+    await espera(150);
+    const op2 = await p.evaluate(() => ({ ativo: [...document.querySelectorAll(".lei-overall .seg-btn")].filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.textContent.trim()), resumo: document.querySelector(".lei-criar-resumo").title,
+      secoes: [...document.querySelectorAll(".lei-criar .lei-cs")].map(e => e.dataset.secao) }));
+    // (revisão do PR 6: "notas escondidas" logo depois do formato, antes do "…" da linha; o Overall depois do Tempo e antes das
+    // Partidas em 3D, o mesmo lugar do Saguão — D6f do testar-leilao-online)
+    const iOv = op2.secoes.indexOf("overall");
+    confere("T15 a Criar sala tem o Overall no segmentado ('À mostra' o padrão e 'Escondido'), logo depois do Tempo e antes das Partidas em 3D; o toque troca e o resumo diz 'notas escondidas' logo depois do formato",
+      op.tit === "Overall" && op.bts.join("|") === "À mostra|Escondido" && op.ativo.join() === "À mostra" && /aparecem no fim do campeonato/.test(op.dica) && !/escondidas/.test(op.resumo)
+      && op2.ativo.join() === "Escondido" && /pontos corridos, notas escondidas, /i.test(op2.resumo) && iOv > 0 && op2.secoes[iOv - 1] === "tempo" && op2.secoes[iOv + 1] === "3d", { op, op2 });
+    await clica(p, "Começar o treino");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual() && !!document.querySelector(".lei-lote-card .lei-nota"), null, 30000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    let V = await ver(p);
+    confere("T15 a sala do treino com o Overall escondido (regras 5): a vista com as notas escondidas e o selo '?'",
+      V.overall === "escondido" && V.notasOcultas && (await p.evaluate(() => TM.leilaoSessao.atual().sala.meta.regras)) === 5 && (await p.evaluate(() => document.querySelector(".lei-lote-card .lei-nota b").textContent)) === "?", { overall: V.overall, oc: V.notasOcultas });
+    // a aba Leilão nos 8 tamanhos, escuro e claro (com os Próximos lotes abertos)
+    await p.evaluate(() => { const b = document.querySelector(".lei-bloco-bt"); if (b && b.getAttribute("aria-expanded") !== "true") b.click(); });
+    await nadaSobreNadaTemas(p, "oculto-lote", comVaza("lote"), TAM_OCULTO);
+    // a região ao vivo durante o leilão (as últimas 40 falas são guardadas: junta as de agora com as do fim do leilão)
+    const falas = new Set(await p.evaluate(() => TM.leilaoTela.anuncios()));
+    // a ficha do (i)
+    await p.click(".lei-lote-card .lei-ficha-bt");
+    await espera(250);
+    const ficha = await p.evaluate(() => ({ aberta: !!document.querySelector(".lei-folha [role=dialog]"), at: document.querySelectorAll(".lei-ficha-at").length, dt: [...document.querySelectorAll(".lei-ficha-dl dt")].map(d => d.textContent) }));
+    const vazaFicha = await vazamentos(p);
+    await p.keyboard.press("Escape");
+    confere("T15 a ficha (i) sem a nota e sem os 6 atributos (os números da carta), com a posição, o clube, o país e a altura", ficha.aberta && !ficha.at && !ficha.dt.includes("Nota") && ficha.dt.includes("Clube") && !vazaFicha.length, { ficha, vazaFicha });
+    // o leilão passando (a pessoa passa, os bots compram) até algumas vendas: as Vendas com o meu time e o de um bot
+    await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    for (let i = 0; i < 2000; i++) {
+      const n = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); return V.vendas.length; });
+      if (n >= 8) break;
+      await espera(40);
+    }
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    await p.click('.lei-sb[aria-label="Vendas"]');
+    await espera(300);
+    const vend = await p.evaluate(() => ({ n: document.querySelectorAll(".lei-vend").length, jo: [...document.querySelectorAll(".lei-vend-jo")].map(e => e.textContent).slice(0, 4) }));
+    const vazaVend = await vazamentos(p);
+    await p.evaluate(() => { const b = [...document.querySelectorAll(".lei-vend-tec")].find(x => !/Você/.test(x.textContent)); if (b) b.click(); });
+    await espera(250);
+    const vazaVendBot = await vazamentos(p);
+    const cheiasBot = await p.evaluate(() => document.querySelectorAll(".lei-cv-folha .lei-cv-vaga.cheia").length);
+    await p.keyboard.press("Escape");
+    confere("T15 as Vendas sem 'Nota N' (só quem comprou) e o campinho de um bot sem a nota (o −1/−2 de fora da função pode ficar)", vend.n >= 8 && vend.jo.every(t => !/Nota/.test(t)) && !vazaVend.length && cheiasBot > 0 && !vazaVendBot.length, { vend, vazaVend, vazaVendBot, cheiasBot });
+    // o resto do leilão (passando) e a Escalação
+    await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    for (let i = 0; i < 4000; i++) {
+      const e = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); if (V.estado === "leilao" && V.botoes && V.botoes.passar.pode) S.passar(); if (V.estado !== "leilao") TM.leilaoSessao.acelerar(0.02); return V.estado; });
+      if (e !== "leilao") break;
+      await espera(40);
+    }
+    await ate(p, () => TM.ui.current() === "leilao-escalacao" && !!document.querySelector(".lei-esc-pronto"), null, 20000);
+    await espera(300);
+    (await p.evaluate(() => TM.leilaoTela.anuncios())).forEach(a => falas.add(a));
+    const esc = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual(), e = S.escalacao(S.ver().eu);
+      return { resumo: document.querySelector(".lei-esc-resumo").textContent, fotos: document.querySelectorAll(".lei-cv-esc .lei-cv-vaga.cheia").length, dica: (document.querySelector(".lei-esc-dica") || {}).textContent || "",
+        pen: e.pen.reduce((a, x) => a + (x || 0), 0), pens: [...document.querySelectorAll(".lei-cv-esc .lei-pen")].map(x => x.textContent).join(","), fora: e.pen.filter(x => x > 0).length };
+    });
+    // (o "−N fora da função" FICA com as notas escondidas: ele vem da posição, não da nota — revisão do PR 6)
+    confere("T15 a Escalação sem a média; o '11/11', o '−N fora da função' (quando há) e o '−1/−2' no campinho ficam, e a dica diz '−1 e −2' (sem 'laranja')",
+      esc.fotos === 11 && /11\/11/.test(esc.resumo) && !/Média/.test(esc.resumo) && (esc.pen ? new RegExp("\u2212" + esc.pen + " fora da função").test(esc.resumo) && esc.pens.split(",").length === esc.fora : !/fora da função/.test(esc.resumo))
+        && /\u22121 e \u22122 marcam quem está fora da função/.test(esc.dica) && !/laranja/.test(esc.dica), esc);
+    await nadaSobreNadaTemas(p, "oculto-escalacao", comVaza("escalacao"), TAM_OCULTO);
+    // o Campeonato: o meu 1º jogo pela tela (o Simular e o 2D), a aba nos 8 tamanhos e o 2D do Ver o jogo
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 20000);
+    const v1 = await campPelaTela(p, "V.camp.rodadas.some(R => R.jogos.some(g => g.e === 'feito' && (g.a === V.eu || g.b === V.eu)))", 120000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+    V = await ver(p);
+    confere("T15 no Campeonato as notas seguem escondidas (até o fim)", V.notasOcultas && !V.camp.fim, { oc: V.notasOcultas, fim: V.camp && V.camp.fim, ruins: v1.ruins.slice(0, 2) });
+    await nadaSobreNadaTemas(p, "oculto-camp", comVaza("camp"), TAM_OCULTO);
+    const idFeito = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); for (const R of V.camp.rodadas) for (const g of R.jogos) if (g.e === "feito" && g.res && g.res.wo == null) return g.id; return null; });
+    await p.evaluate(id => { TM.ui.go("leilao-jogo", { id, rapido: true }); }, idFeito);
+    await espera(600);
+    const vaza2d = await vazamentos(p);
+    confere("T15 o 2D do 'Ver o jogo' sem nota", !!idFeito && !vaza2d.length, { idFeito, vaza2d });
+    await p.evaluate(() => TM.ui.go("leilao-camp"));
+    await espera(300);
+    (await p.evaluate(() => TM.leilaoTela.anuncios())).forEach(a => falas.add(a));
+    const an = [...falas];
+    confere("T15 a região ao vivo nunca falou a nota (o lote: 'Jogador N de 60: nome, função', sem ', nota N')", an.some(a => /Jogador \d+ de 60: [^,.]+, [^,.]+(\.|$)/.test(a)) && !an.some(a => /nota \d/i.test(a)), an.filter(a => /Jogador|nota/i.test(a)).slice(-4));
+    // até o fim: a revelação
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const v2 = await campPelaTela(p, null, 180000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await espera(400);
+    V = await ver(p);
+    const fim = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual(), V = S.ver(), C = V.camp;
+      const linhasC = [...document.querySelectorAll(".lei-revela-compras-l > li")], bts = [...document.querySelectorAll(".lei-revela-bt")];
+      const x = e => e.querySelector(".lei-cl-x"), cor = e => getComputedStyle(e).color;
+      return { revela: !!document.querySelector(".lei-revela"), linhas: bts.length, compra: (document.querySelector(".lei-revela-compras") || {}).textContent || "",
+        frase: (document.querySelector(".lei-revela-frase") || {}).textContent || "",
+        tit: (document.querySelector("#lei-revela-t") || {}).textContent, melhor: [...document.querySelectorAll(".lei-dest")].some(d => /Melhor time pela soma das notas/.test(d.textContent) && /Soma das notas dos 11: \d+/.test(d.textContent)),
+        // quem comprou melhor: os valores, a cor de cada um e quem é o meu (a pessoa passou tudo: sem compras)
+        compras: linhasC.map(li => ({ x: x(li).textContent, cls: x(li).className, cor: cor(x(li)), eu: li.classList.contains("eu") })),
+        verde: getComputedStyle(document.querySelector(".lei-cl.campeao .lei-cl-p") || document.body).color,
+        // as notas, reveladas: a soma de cada time na ordem da tela e a do campeonato (somaNotas), e os nomes acessíveis
+        somas: bts.map(b => +x(b).textContent.replace(/\D+/g, "")), notas: (C.notas || []).map(n => n.soma), ordemT: (C.notas || []).map(n => n.t),
+        ordemCompra: TM.leilaoCamp.compraram(V.vendas.map(v => ({ t: v.t, preco: v.preco, nota: v.retrato.overall })), V.T).map(o => o.t),
+        aria: bts.map(b => ({ a: b.getAttribute("aria-label"), vis: [".lei-cl-p", ".lei-cl-n", ".lei-cl-s", ".lei-cl-x"].map(q => (b.querySelector(q) || {}).textContent || "").join(" "), eu: b.classList.contains("eu") })) };
+    });
+    // (WCAG 2.5.3: o nome acessível começa pelo texto à vista, na mesma ordem, sem contar a pontuação)
+    const pal = t => String(t || "").toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const ariaRuins = fim.aria.filter(b => !pal(b.a).startsWith(pal(b.vis)) || (b.eu ? !/Ver o seu time/.test(b.a) : !/Ver o time de /.test(b.a)));
+    const meuC = fim.compras.find(c => c.eu), negs = fim.compras.filter(c => /^\u2212|^0$|sem compras/.test(c.x));
+    await p.click(".lei-revela-bt");
+    await espera(300);
+    const fimFolha = await p.evaluate(() => ({ ov: document.querySelectorAll(".lei-cv-folha .lei-cv-ov").length, nota: [...document.querySelectorAll(".lei-vend-jo")].filter(e => /^Nota \d+ · /.test(e.textContent)).length }));
+    await p.keyboard.press("Escape");
+    confere("T15 o fim do campeonato revela: as notas à mostra; 'Quem comprou melhor' com a frase ('levou N pontos de nota a mais/menos do que pagou (N compras)'), quem não comprou no fim com 'sem compras' e o negativo/zero numa cor que não é o verde; 'As notas, reveladas' com a soma de cada um dos 3 times da maior para a menor (a do campeonato, não o ranking de quem comprou melhor), o nome acessível que começa pelo texto à vista ('Ver o seu time' no meu) e o toque abre o time com as 11 notas e as vendas com 'Nota N'",
+      v2.fim && !V.notasOcultas && V.revelados && V.revelados.every(Boolean) && fim.revela && fim.linhas === 3 && /Quem comprou melhor/.test(fim.compra)
+      && /^.+ levou (\d+ pontos? de nota a (mais|menos) do que pagou|a nota que pagou) \(\d+ compras?\)/.test(fim.frase)
+      && fim.compras.length === 3 && meuC && meuC.x === "sem compras" && fim.compras[fim.compras.length - 1] === meuC && negs.every(c => c.cor !== fim.verde && /\b(neg|nada)\b/.test(c.cls))
+      && fim.compras.filter(c => /^\+/.test(c.x)).every(c => /\bpos\b/.test(c.cls))
+      && fim.tit === "As notas, reveladas" && fim.somas.length === 3 && fim.somas.join() === fim.notas.join() && fim.somas.every((v, i) => !i || v <= fim.somas[i - 1])
+      && !ariaRuins.length && fim.melhor && fimFolha.ov === 11 && fimFolha.nota > 0, { oc: V.notasOcultas, fim, ariaRuins, fimFolha, ruins: v2.ruins.slice(0, 2) });
+    await nadaSobreNadaTemas(p, "oculto-fim", null, TAM_OCULTO);
+    const ruins = nadaSobre.filter(x => /^oculto/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
+    const telas = nadaSobre.filter(x => /^oculto/.test(x.tela)).length;
+    confere(`T15 nenhum número de nota escondida na tela (${telas - 18} telas: a aba Leilão, a Escalação e o Campeonato, nos 8 tamanhos e em 667×375, escuro e claro) e nada sobre nada também no fim que revela (${telas} telas)`,
+      !ruinsVaza.length && !ruins.length && telas === 72, { vaza: ruinsVaza.slice(0, 4), ruins: ruins.slice(0, 4), telas });
+    await cx.close();
+  }
+  async function t14() {
+    const { cx, p } = await aparelho(390, 844, true);
+    await servirEnsaio3d(cx);
+    // o quadro do 3D vira a página de ensaio, também depois de recarregar (e a sonda do WebGL 2: ligaEnsaio3d)
+    await cx.addInitScript(ligaEnsaio3d, PASTA_ENSAIO_3D);
+    await p.evaluate(ligaEnsaio3d, PASTA_ENSAIO_3D);
+    // o que a página vê: cada gravar3d (a hora em que respondeu e o que ficou gravado), a 1ª vez que o placar do 2D aparece (a
+    // rota, o placar, o botão de pausa), o quadro do 3D e os sorteios do 2D (o resimRest da pausa: têm de ser 0)
+    const vigia3d = () => p.evaluate(() => {
+      const S = TM.leilaoSessao.atual();
+      if (!S || S.__v3d) return;
+      S.__v3d = true;
+      const W = window.__v3d = window.__v3d || { gravados: [], vista: null, quadro: false, sims2d: 0 };
+      const g3 = S.gravar3d;
+      S.gravar3d = function () {
+        const a = arguments;
+        return g3.apply(S, a).then(r => { W.gravados.push({ t: performance.now(), origem: a[2], tit: !!a[3], ok: !!(r && r.ok), gravou: !!(r && r.gravou), e: r && r.jogo ? r.jogo.e : null, fim: r && r.jogo ? r.jogo.fim : null,
+          score: r && r.res ? r.res.score : null, em3d: !!(r && r.res && r.res.em3d), wo: r && r.res ? r.res.wo : null }); return r; });
+      };
+      if (!window.__v3dOb) {
+        window.__v3dOb = new MutationObserver(() => {
+          if (document.querySelector(".tm3d-quadro")) W.quadro = true;
+          const sc = document.querySelector(".screen.is-active .live-score");
+          if (sc && !W.vista) W.vista = { t: performance.now(), rota: TM.ui.current(), placar: sc.textContent, pausa: [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)), overlay: !!document.querySelector(".pause-overlay") };
+        });
+        window.__v3dOb.observe(document.body, { subtree: true, childList: true, characterData: true });
+        const o = TM.engine.simulate;
+        TM.engine.simulate = function () { if (/matchview\.js/.test(new Error().stack || "")) W.sims2d++; return o.apply(this, arguments); };
+      }
+    });
+    const zera = (modo, placar) => p.evaluate(([m, pl]) => {
+      localStorage.setItem("ensaio3d:modo", m); localStorage.setItem("ensaio3d:placar", pl); ["ensaio3d:ultimo", "ensaio3d:resultado"].forEach(k => localStorage.removeItem(k));
+      Object.assign(window.__v3d, { gravados: [], vista: null, quadro: false, sims2d: 0 });
+    }, [modo, placar || "2-1"]);
+    // o meu jogo da rodada aberto com o Jogar à mão; toca nele e devolve o id
+    async function tocaJogar(modo, placar) {
+      await vigia3d();
+      await zera(modo, placar);
+      const pode = await ate(p, () => { const V = TM.leilaoSessao.atual().ver(), mj = V.camp && V.camp.meuJogo, b = document.querySelector(".lei-jogar");
+        return TM.ui.current() === "leilao-camp" && !!(mj && mj.e === "aberto" && mj.podeJogar && b && !b.disabled); }, null, 20000);
+      const id = await p.evaluate(() => TM.leilaoSessao.atual().ver().camp.meuJogo.id);
+      await p.click(".lei-jogar");
+      return { id, pode };
+    }
+    // do 2D (o placar, a prorrogação, os pênaltis) até o Campeonato
+    async function ateCamp() {
+      for (let k = 0; k < 10; k++) {
+        if (await p.evaluate(() => TM.ui.current() === "leilao-camp")) return true;
+        await p.evaluate(() => { const bs = [...document.querySelectorAll(".screen.is-active button")]; const b = bs.find(x => /^Pular/.test(x.textContent.trim())) || bs.find(x => /Ver resultado|^Continuar$|Ir para os pênaltis/.test(x.textContent.trim())); if (b) b.click(); });
+        await espera(300);
+      }
+      return p.evaluate(() => TM.ui.current() === "leilao-camp");
+    }
+    const jogo = id => p.evaluate(id => { const j = TM.leilaoSessao.atual().jogos[id]; return j ? JSON.parse(JSON.stringify(j)) : null; }, id);
+    // o estado do jogo na lista da rodada dele (‹ até ela; depois "Ir à rodada da vez")
+    async function linha(id) {
+      let t = null;
+      for (let k = 0; k < 8 && t == null; k++) {
+        t = await p.evaluate(id => { const e = document.querySelector(`.lei-rodada .lei-jogo[data-jogo="${id}"] .lei-jg-est`); return e ? e.textContent : null; }, id);
+        if (t == null) { await p.evaluate(() => { const b = document.querySelector(".lei-rod-bt[data-foco='rod-ant']"); if (b && !b.disabled) b.click(); }); await espera(120); }
+      }
+      await p.evaluate(() => { const b = document.querySelector('[data-foco="rod-vez"]'); if (b) b.click(); });
+      return t;
+    }
+    const W = () => p.evaluate(() => JSON.parse(JSON.stringify(window.__v3d)));
+    // recarregar e voltar pela Entrada (Minhas salas → Continuar) ao Campeonato
+    async function recarrega() {
+      await p.reload({ waitUntil: "load" });
+      await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+      await p.evaluate(() => TM.ui.go("leilao"));
+      await espera(300);
+      await clica(p, "^Continuar$");
+      await ate(p, () => !!TM.leilaoSessao.atual(), null, 20000);
+      await p.evaluate(() => { if (TM.ui.current() !== "leilao-camp") TM.ui.go("leilao-camp"); });
+      return ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-seujogo"), null, 20000);
+    }
+    // o relógio do treino acelerado até o jogo ser feito; volta ao normal no mesmo instante (o prazo do próximo jogo corre)
+    const feitoAcelerado = (id, f, ms = 30000) => { return p.evaluate(f => TM.leilaoSessao.acelerar(f), f).then(() => ate(p, id => { const S = TM.leilaoSessao.atual(), j = S && S.jogos[id];
+      if (j && j.e === "feito") { TM.leilaoSessao.acelerar(1); return true; } return false; }, id, ms)); };
+
+    // a Criar com as Partidas em 3D: 3 min e Difícil; nada sobre nada nos 8 tamanhos, escuro e claro
+    let criar = null;
+    const tc = await treinoAte(p, 6, "pontos", async p => {
+      await p.click('.lei-criar [data-foco="dur3d-3"]');
+      await p.click('.lei-criar [data-foco="dif3d-dificil"]');
+      await espera(200);
+      criar = await p.evaluate(() => ({ dur: [...document.querySelectorAll(".lei-dur3d .seg-btn")].map(b => b.textContent + (b.getAttribute("aria-pressed") === "true" ? "*" : "")),
+        dif: [...document.querySelectorAll(".lei-dif3d .seg-btn")].map(b => b.textContent + (b.getAttribute("aria-pressed") === "true" ? "*" : "")), resumo: document.querySelector(".lei-criar-resumo").textContent }));
+      await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+      await nadaSobreNadaTemas(p, "criar3d");
+      await p.evaluate(() => TM.leilaoSessao.acelerar(40));
+    }, 1);
+    const V0 = await ver(p);
+    const ruinsCriar = nadaSobre.filter(x => /^criar3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
+    confere("T14 as Partidas em 3D na Criar sala: 3, 4, 5, 6, 8 e 10 min e Fácil, Normal, Difícil e Lenda; o toque escolhe, o resumo diz '3D de 3 min por tempo no Difícil' e a sala guarda os dois",
+      !!criar && criar.dur.join() === "3 min*,4 min,5 min,6 min,8 min,10 min" && criar.dif.join() === "Fácil,Normal,Difícil*,Lenda" && /3D de 3 min por tempo no Difícil$/.test(criar.resumo)
+      && tc.T === 6 && tc.formato === "pontos" && V0.duracao3d === 3 && V0.dificuldade3d === "dificil", { criar, tc, d3: [V0.duracao3d, V0.dificuldade3d] });
+    confere(`T14 nada sobre nada na Criar sala com as Partidas em 3D (${nadaSobre.filter(x => /^criar3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruinsCriar.length, ruinsCriar.slice(0, 4));
+
+    /* jogo 1: o 3D acaba com o resultado (2 × 1) */
+    const j1 = await tocaJogar("fim", "2-1");
+    const viu1 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    await espera(250);
+    const placar1 = await p.evaluate(() => (document.querySelector(".screen.is-active .live-score") || {}).textContent);
+    const w1 = await W(), ped1 = await p.evaluate(() => JSON.parse(localStorage.getItem("ensaio3d:ultimo") || "null")), r3 = await p.evaluate(() => JSON.parse(localStorage.getItem("ensaio3d:resultado") || "null"));
+    const g1 = await jogo(j1.id);
+    const autores = g1 && g1.res ? g1.res.events.filter(e => e.type === "goal" || e.type === "pengoal").map(e => e.playerId) : null;
+    confere("T14 o Jogar abre o 3D com o pedido do leilão: 11 + 11 sem banco, 3 min por tempo, Difícil travada (ajustesFixos), mando neutro, os escudos desenhados; o 3D aberto marca o abriu",
+      j1.pode && !!ped1 && ped1.nCasa === 11 && ped1.nFora === 11 && !!ped1.partida && ped1.partida.minutosPorTempo === 3 && ped1.partida.dificuldade === "dificil" && ped1.partida.ajustesFixos && ped1.partida.neutro
+      && !!ped1.escudos && ped1.escudos.every(e => e && e.tipo === "ultimate" && e.svg) && !!g1 && g1.modo === "3d" && g1.abriu != null, { j1, ped1, modo: g1 && g1.modo, abriu: g1 && g1.abriu });
+    confere("T14 jogo 1, o fim do 3D: o resultado do 3D gravado ANTES do 2D (feito, fim '3d', 2 × 1 com os autores do 3D) e o 2D sem pausa, com o placar gravado e nada sorteado por ele",
+      viu1 && w1.gravados.length === 1 && w1.gravados[0].origem === "3d" && w1.gravados[0].e === "feito" && w1.gravados[0].gravou && w1.gravados[0].t <= w1.vista.t && w1.vista.rota === "leilao-jogar"
+      && !w1.vista.pausa && !w1.vista.overlay && placar1 === "2 - 1" && w1.sims2d === 0 && g1.e === "feito" && g1.fim === "3d" && g1.res.em3d && g1.res.score.join() === "2,1"
+      && !!r3 && JSON.stringify(autores) === JSON.stringify(r3.gols.slice().sort((a, b) => a.minuto - b.minuto).map(x => x.tmId)), { w1, placar1, fim: g1 && g1.fim, res: g1 && g1.res && { score: g1.res.score, em3d: g1.res.em3d }, autores, r3: r3 && r3.gols });
+    const volta1 = await ateCamp();
+    await espera(300);
+    const l1 = await linha(j1.id), alt1 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 1: de volta ao Campeonato, a rodada diz 'Jogado em 3D' e a sala confere o resultado do 3D (não congela)", volta1 && /^Jogado em 3D/.test(l1 || "") && !alt1, { volta1, l1, alt1 });
+
+    /* jogo 2: o "Simular partida" da tela do 3D, com os titulares */
+    const j2 = await tocaJogar("simularTit");
+    const viu2 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    const w2 = await W(), g2 = await jogo(j2.id);
+    const pausa2 = await p.evaluate(() => [...document.querySelectorAll(".screen.is-active button")].some(b => /Pausar/.test(b.textContent)));
+    const volta2 = await ateCamp();
+    const w2b = await W(), l2 = await linha(j2.id), alt2 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 2, o 'Simular partida' da tela do 3D (com os titulares): o simulado com a semente gravado ANTES de mostrar (fim 'simulado', sem escSim com os mesmos 11), o 2D sem pausa e sem sorteio; a rodada diz 'Simulado'",
+      j2.pode && viu2 && w2.gravados.length === 1 && w2.gravados[0].origem === "simulado" && w2.gravados[0].tit && w2.gravados[0].e === "feito" && w2.gravados[0].t <= w2.vista.t && !w2.vista.pausa && !pausa2
+      && w2b.sims2d === 0 && !!g2 && g2.e === "feito" && g2.fim === "simulado" && !g2.res.em3d && g2.escSim == null && volta2 && /^Simulado/.test(l2 || "") && !alt2, { j2, w2, fim: g2 && g2.fim, escSim: g2 && g2.escSim, l2, alt2 });
+
+    /* jogo 3: o 3D aberto e fechado sem resultado: nada gravado, "Jogando em 3D" e, depois do prazo, o W.O. contra mim */
+    const j3 = await tocaJogar("sair");
+    const volta3 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return TM.ui.current() === "leilao-camp" && !!(j && j.abriu != null) && !!document.querySelector(".lei-sj-3d"); }, j3.id, 20000);
+    await espera(300);
+    const w3 = await W(), g3a = await jogo(j3.id);
+    const sj3 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, nota: (document.querySelector(".lei-seujogo .lei-sj-nota") || {}).textContent,
+      botoes: [...document.querySelectorAll(".lei-seujogo .lei-acoes button")].map(b => b.textContent.trim()) }));
+    const l3a = await linha(j3.id);
+    confere("T14 jogo 3, o 3D aberto e fechado sem resultado: nada gravado, de volta ao Campeonato com 'Jogando em 3D · M:SS de prazo para o resultado.', a nota do W.O. e só o 'Aceitar o W.O. agora'; a rodada diz 'Jogando em 3D'",
+      volta3 && !w3.gravados.length && g3a.e === "reservado" && g3a.modo === "3d" && /^Jogando em 3D · \d+:\d\d de prazo para o resultado\.$/.test(sj3.est || "") && /W\.O\. contra você/.test(sj3.nota || "") && sj3.botoes.join() === "Aceitar o W.O. agora" && l3a === "Jogando em 3D",
+      { volta3, w3: w3.gravados, e: g3a && g3a.e, sj3, l3a });
+    await nadaSobreNadaTemas(p, "camp-3d", extraCamp);
+    const ruins3d = nadaSobre.filter(x => /^camp-3d/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.tabelaRola || x.escudosReais));
+    confere(`T14 nada sobre nada no Campeonato com o Seu jogo em 3D (${nadaSobre.filter(x => /^camp-3d/.test(x.tela)).length} telas: os 8 tamanhos, no escuro e no claro)`, !ruins3d.length, ruins3d.slice(0, 4));
+    const feito3 = await feitoAcelerado(j3.id, 150);
+    const g3 = await jogo(j3.id), eu3 = await p.evaluate(() => TM.leilaoSessao.atual().eu);
+    const pz3 = await p.evaluate(() => TM.leilaoCamp.prazo3d(3));
+    await espera(300);
+    const l3 = await linha(j3.id), alt3 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 3: o prazo do 3D (2 × 3 min × 1,3 + 8 min) vence e o jogo vira W.O. contra mim (3 × 0 do bot), gravado só depois do prazo; a rodada diz 'W.O.' e a sala não congela",
+      feito3 && g3.e === "feito" && g3.res.wo === g3.ab.indexOf(eu3) && g3.ts >= g3.inicio + pz3 && l3 === "W.O." && !alt3, { feito3, res: g3 && g3.res && { wo: g3.res.wo, score: g3.res.score }, ab: g3 && g3.ab, eu3, ts: g3 && g3.ts - g3.inicio, pz3, l3, alt3 });
+
+    /* jogo 4: "Sempre simular" na Config: o Jogar simula direto (sem o quadro) */
+    await p.evaluate(() => TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { partidasTela: "simular" })));
+    const j4 = await tocaJogar("fim");
+    const viu4 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    const w4 = await W(), g4 = await jogo(j4.id);
+    const volta4 = await ateCamp();
+    await p.evaluate(() => TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { partidasTela: "tela" })));
+    confere("T14 jogo 4, 'Sempre simular' na Config: o Jogar simula direto (o quadro do 3D não abre), grava antes de mostrar e o 2D vem sem pausa",
+      j4.pode && viu4 && !w4.quadro && w4.vista.rota === "leilao-jogo" && !w4.vista.pausa && !!g4 && g4.e === "feito" && g4.modo === "simulado" && !g4.res.em3d && volta4, { j4, w4, modo: g4 && g4.modo, volta4 });
+
+    /* jogo 5: recarregar no meio do 3D aberto: volta com "Jogando em 3D" e o W.O. depois do prazo */
+    const j5 = await tocaJogar("aberto");
+    const abriu5 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.abriu != null); }, j5.id, 20000);
+    const trava5 = (await jogo(j5.id) || {}).trava;
+    const voltou5 = await recarrega();
+    await espera(400);
+    const g5a = await jogo(j5.id), sj5 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, quadro: !!document.querySelector(".tm3d-quadro") }));
+    confere("T14 jogo 5, recarregar no meio do 3D aberto: volta ao Campeonato com o jogo reservado no 3D (a mesma trava, o abriu), 'Jogando em 3D' com o prazo e o quadro fechado",
+      abriu5 && voltou5 && !!g5a && g5a.e === "reservado" && g5a.trava === trava5 && g5a.abriu != null && /^Jogando em 3D · \d+:\d\d de prazo/.test(sj5.est || "") && !sj5.quadro, { abriu5, voltou5, e: g5a && g5a.e, sj5 });
+    // o "Aceitar o W.O. agora" (com a confirmação): o W.O. contra mim na hora, sem esperar o prazo
+    await p.evaluate(() => document.querySelector(".lei-seujogo .lei-desistir").click());
+    await ate(p, () => !!document.querySelector(".sheet-overlay .sheet-item:not(.cancel)"), null, 5000);
+    const conf5 = await p.evaluate(() => { const o = document.querySelector(".sheet-overlay"); const t = o ? o.textContent : null; o.querySelector(".sheet-item:not(.cancel)").click(); return t; });
+    const feito5 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.e === "feito"); }, j5.id, 10000);
+    const g5 = await jogo(j5.id), eu5 = await p.evaluate(() => TM.leilaoSessao.atual().eu), alt5 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 5: o 'Aceitar o W.O. agora' (com a confirmação) grava o W.O. contra mim na hora, antes do prazo, e a sala confere",
+      feito5 && /Aceitar o W\.O\./.test(conf5 || "") && g5.e === "feito" && g5.res.wo === g5.ab.indexOf(eu5) && g5.desistiu === true && g5.ts < g5.inicio + 600000 && !alt5,
+      { feito5, conf5, res: g5 && g5.res && { wo: g5.res.wo, score: g5.res.score }, desistiu: g5 && g5.desistiu, dt: g5 && g5.ts - g5.inicio, alt5 });
+
+    /* jogo 6: recarregar com o 3D que nem abriu: "Abrindo o 3D" e, em 2 min, o simulado */
+    const j6 = await tocaJogar("parado");
+    const res6 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.e === "reservado" && j.modo === "3d") && !!document.querySelector(".tm3d-quadro"); }, j6.id, 20000);
+    const voltou6 = await recarrega();
+    await espera(400);
+    const g6a = await jogo(j6.id), sj6 = await p.evaluate(() => ({ est: (document.querySelector(".lei-sj-3d") || {}).textContent, nota: (document.querySelector(".lei-seujogo .lei-sj-nota") || {}).textContent,
+      botoes: [...document.querySelectorAll(".lei-seujogo .lei-acoes button")].map(b => b.textContent.trim()) }));
+    confere("T14 jogo 6, recarregar com o 3D que nem abriu: volta com 'Abrindo o 3D · M:SS para abrir.', a nota do simulado e o 'Simular agora'",
+      res6 && voltou6 && !!g6a && g6a.e === "reservado" && g6a.abriu == null && /^Abrindo o 3D · \d:\d\d para abrir\.$/.test(sj6.est || "") && /é simulado/.test(sj6.nota || "") && sj6.botoes.join() === "Simular agora", { res6, voltou6, e: g6a && g6a.e, sj6 });
+    const feito6 = await feitoAcelerado(j6.id, 30);
+    const g6 = await jogo(j6.id), alt6 = await p.evaluate(() => !!TM.leilaoSessao.atual().ver().alterada);
+    confere("T14 jogo 6: passados os 2 min sem o 3D abrir, o simulado com a semente (fim 'simulado', sem W.O.) e a sala confere",
+      feito6 && g6.e === "feito" && g6.fim === "simulado" && g6.res.wo == null && !g6.res.em3d && g6.ts >= g6.inicio + 120000 && !alt6, { feito6, fim: g6 && g6.fim, wo: g6 && g6.res && g6.res.wo, alt6 });
+
+    /* jogo 7: o resultado do 3D no APITO (o 3D ainda na cena do pós-jogo, sem o tm3d:fim): gravado com o 3D aberto; fechar o app ali
+       (recarregar) não perde nada */
+    const j7 = await tocaJogar("apito", "1-2");
+    const feito7 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.e === "feito"); }, j7.id, 20000);
+    await espera(400);
+    const w7 = await W(), g7 = await jogo(j7.id), aberto7 = await p.evaluate(() => ({ rota: TM.ui.current(), aberto: !!(TM.tm3d.aberto && TM.tm3d.aberto()), quadro: !!document.querySelector(".tm3d-quadro") }));
+    confere("T14 jogo 7, o apito do 3D: o resultado gravado já com o 3D aberto na cena do pós-jogo (feito '3d', 1 × 2 do 3D), sem fechar o 3D nem mostrar o 2D",
+      feito7 && g7.fim === "3d" && g7.res.em3d && g7.res.score.join() === "1,2" && w7.gravados.length >= 1 && w7.gravados[0].origem === "3d" && w7.gravados[0].gravou && !w7.vista && aberto7.aberto && aberto7.quadro && aberto7.rota === "leilao-jogar",
+      { feito7, fim: g7 && g7.fim, score: g7 && g7.res && g7.res.score, w7: w7.gravados, vista: w7.vista, aberto7 });
+    const voltou7 = await recarrega();
+    await espera(400);
+    const g7b = await jogo(j7.id), sobra7 = await p.evaluate(id => ({ caixa: Object.keys(localStorage).filter(k => /^totalmatch:(pro:)?leilao:3d:/.test(k)).length, guarda: Object.keys(localStorage).filter(k => /^tm3d:(guarda|resultado):/.test(k)).length }), j7.id);
+    confere("T14 jogo 7: o app fechado no pós-jogo (recarregar) — o jogo segue com o resultado do 3D e nada sobra no aparelho (a caixa e a guarda saem)",
+      voltou7 && g7b.e === "feito" && g7b.fim === "3d" && JSON.stringify(g7b.res.score) === JSON.stringify(g7.res.score) && g7b.ts === g7.ts && sobra7.caixa === 0 && sobra7.guarda === 0, { voltou7, fim: g7b && g7b.fim, sobra7 });
+
+    /* jogo 8: o X do TM confirmado DEPOIS de o 3D abrir (a confirmação "Voltar e simular" na tela quando chega o tm3d:tela) */
+    await p.evaluate(() => localStorage.removeItem("ensaio3d:solta"));
+    const j8 = await tocaJogar("tardio");
+    await ate(p, () => { const b = document.querySelector(".tm3d-sair"); return !!b && b.style.display !== "none"; }, null, 20000);
+    await p.evaluate(() => document.querySelector(".tm3d-sair").click());
+    const conf8 = await ate(p, () => !!document.querySelector(".sheet-overlay .sheet-item:not(.cancel)"), null, 5000);
+    await p.evaluate(() => localStorage.setItem("ensaio3d:solta", "1"));
+    const abriu8 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.abriu != null); }, j8.id, 20000);
+    await p.evaluate(() => document.querySelector(".sheet-overlay .sheet-item:not(.cancel)").click());
+    const feito8 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.e === "feito"); }, j8.id, 20000);
+    const viu8 = await ate(p, () => !!(window.__v3d && window.__v3d.vista), null, 20000);
+    const w8 = await W(), g8 = await jogo(j8.id);
+    await ateCamp();
+    confere("T14 jogo 8, o X 'Voltar e simular' confirmado depois de o 3D abrir: o simulado com a semente (fim 'simulado', não o W.O.), gravado antes do 2D",
+      conf8 && abriu8 && feito8 && viu8 && g8.fim === "simulado" && g8.res.wo == null && !g8.res.em3d && g8.abriu != null && w8.gravados.length === 1 && w8.gravados[0].origem === "simulado" && w8.gravados[0].t <= w8.vista.t && !w8.vista.pausa,
+      { conf8, abriu8, feito8, viu8, fim: g8 && g8.fim, wo: g8 && g8.res && g8.res.wo, w8: w8.gravados });
+
+    /* jogo 9: o jogo decidido por outro caminho com o 3D aberto (o "Simular partida" de outra aba): o 3D fecha e o 2D mostra o gravado */
+    const j9 = await tocaJogar("aberto");
+    const abriu9 = await ate(p, id => { const j = TM.leilaoSessao.atual().jogos[id]; return !!(j && j.abriu != null); }, j9.id, 20000);
+    await p.evaluate(() => { window.__toasts9 = []; const o = TM.ui.toast; TM.ui.toast = function (m) { window.__toasts9.push(m); return o.apply(this, arguments); }; });
+    await p.evaluate(id => { const S = TM.leilaoSessao.atual(), j = S.jogos[id]; S.gravar3d(id, j.trava, "simulado", null); }, j9.id);
+    const fechou9 = await ate(p, () => !(TM.tm3d.aberto && TM.tm3d.aberto()) && TM.ui.current() === "leilao-jogo", null, 20000);
+    const t9 = await p.evaluate(() => window.__toasts9.slice()), g9 = await jogo(j9.id);
+    await ateCamp();
+    confere("T14 jogo 9, o jogo decidido com o 3D aberto: o 3D fecha na hora, o aviso diz e o 2D mostra o gravado (o simulado)",
+      abriu9 && fechou9 && g9.e === "feito" && g9.fim === "simulado" && t9.some(x => /já foi decidido/.test(x)), { abriu9, fechou9, fim: g9 && g9.fim, t9 });
+    await cx.close();
+  }
+  const textoMotivos = await (async () => { const { p } = await aparelho(390, 844, true); const m = await p.evaluate(() => ["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim"].map(k => [k, TM.leilaoSessao.textoMotivo(k, { max: 0 })])); await p.context().close(); return m; })();
+
+  try {
+    // (--so3d: só o T14; os T1–T13 ficam com a indentação de antes dentro do if)
+    if (!SO_3D && !SO_OCULTAS) {
+    /* T1 "Mais modos": 13 atalhos, 7 + 6 no PC (com a barra de rolagem) e no tablet, 3·4 + 1 no celular */
+    const pc = await aparelho(1280, 800, false);
+    const grade = [];
+    for (const [w, h] of [[1280, 800], [1440, 900], [1920, 1080], [820, 1180], [790, 800]]) {
+      await pc.p.setViewportSize({ width: w, height: h });
+      await pc.p.evaluate(() => TM.ui.go("modes"));
+      await espera(300);
+      grade.push(await pc.p.evaluate(w => {
+        const bs = [...document.querySelectorAll(".vit-mais-b")].filter(b => b.offsetParent !== null);
+        const tops = [...new Set(bs.map(b => Math.round(b.getBoundingClientRect().top)))].sort((a, b) => a - b);
+        const quebra = bs.filter(b => b.lastElementChild && b.lastElementChild.getBoundingClientRect().height > 22).map(b => b.textContent.trim());
+        return { tela: w, barra: innerWidth - document.documentElement.clientWidth, n: bs.length, linhas: tops.map(t => bs.filter(b => Math.round(b.getBoundingClientRect().top) === t).length).join("+"), quebra,
+          emoji: bs.some(b => /\p{Extended_Pictographic}/u.test(b.textContent)) };
+      }, w));
+    }
+    await pc.cx.close();
+    const cel = await aparelho(360, 740, true);
+    const gCel = await cel.p.evaluate(() => {
+      const bs = [...document.querySelectorAll(".vit-mais-b")].filter(b => b.offsetParent !== null), rs = bs.map(b => b.getBoundingClientRect());
+      const tops = [...new Set(rs.map(r => Math.round(r.top)))].sort((a, b) => a - b), ult = rs.filter(r => Math.round(r.top) === tops[tops.length - 1]);
+      const larg = Math.max(...rs.map(r => r.right)) - Math.min(...rs.map(r => r.left));
+      const lei = bs.find(b => b.textContent.trim() === "Leilão");
+      return { n: bs.length, linhas: tops.map(t => rs.filter(r => Math.round(r.top) === t).length).join("+"), ultima: ult.length === 1 ? Math.round(ult[0].width / larg * 100) : null,
+        quebra: bs.filter(b => b.lastElementChild && b.lastElementChild.getBoundingClientRect().height > 22).map(b => b.textContent.trim()),
+        leilao: lei ? { icone: !!lei.querySelector("svg.tm-ic"), emoji: /\p{Extended_Pictographic}/u.test(lei.textContent) } : null };
+    });
+    confere("T1 'Mais modos' com 13 atalhos: 7 + 6 no PC com a barra de rolagem (1280, 1440, 1920, 790) e no tablet (820), sem nome quebrado nem emoji",
+      grade.every(g => g.n === 13 && g.linhas === "7+6" && !g.quebra.length && !g.emoji) && grade.some(g => g.barra >= 12), grade);
+    confere("T1 no celular 3 + 3 + 3 + 3 + 1 (o 13º na linha inteira); 'Leilão' com o ícone (gavel) e sem emoji",
+      gCel.n === 13 && gCel.linhas === "3+3+3+3+1" && gCel.ultima >= 95 && !gCel.quebra.length && gCel.leilao && gCel.leilao.icone && !gCel.leilao.emoji, gCel);
+    await cel.cx.close();
+
+    /* T2 a Entrada e o Criar (o treino) */
+    const { p } = await aparelho(390, 844, true);
+    // o que fica escrito na região ao vivo (#lei-vivo) e por quanto tempo: o que o leitor de tela ouve (também depois de recarregar)
+    const vigiaVivo = () => { window.__vivo = []; const ir = () => { const r = document.getElementById("lei-vivo"); if (r) new MutationObserver(() => window.__vivo.push([performance.now(), r.textContent])).observe(r, { childList: true, characterData: true, subtree: true }); };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", ir); else ir(); };
+    await p.context().addInitScript(vigiaVivo);
+    await p.evaluate(vigiaVivo);
+    const html = await (await fetch(srv.url + "index.html")).text();
+    confere("T2 a região ao vivo no HTML inicial (#lei-vivo, role=status, aria-live=polite) e os 5 arquivos do leilão no index.html",
+      /<div id="lei-vivo"[^>]*role="status"[^>]*aria-live="polite"/.test(html) && ["leilao.js", "leilao-camp.js", "leilao-rede.js", "leilao-sessao.js", "leilao-tela.js"].every(f => html.includes("js/" + f + "?v=")));
+    await p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(b => b.textContent.trim() === "Leilão").click());
+    await espera(400);
+    const entrada = await p.evaluate(() => ({ rota: TM.ui.current(), txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
+      off: [...document.querySelectorAll(".lei-online button")].map(b => b.disabled) }));
+    // (aqui o SDK do Firebase é um vazio: sem a conta online, a Entrada oferece só o Treino e diz por quê)
+    confere("T2 o atalho abre a Entrada: Treinar contra bots e, sem conexão com o servidor, o online com Criar sala e Entrar com código desligados", entrada.rota === "leilao" && /Treinar contra bots/.test(entrada.txt) && /Sem conexão com o servidor/i.test(entrada.txt) && entrada.off.length === 2 && entrada.off.every(Boolean), entrada);
+    await nadaSobreNada(p, "entrada");
+    await clica(p, "^Treinar contra bots$");
+    await espera(400);
+    confere("T2 'Treinar contra bots' abre a Criar sala", await p.evaluate(() => TM.ui.current()) === "leilao-criar");
+    // a Criar sala pelas fotos (15/11): em cada tamanho, a barra fixa embaixo (o resumo numa linha e o botão de ≥ 44 px), no fim
+    // da rolagem o último campo acima dela, as seções soltas (sem caixa) com o título de 19–20 px e a coluna com ≤ 600 px
+    const medeCriar = p => p.evaluate(async () => {
+      const bar = document.querySelector(".lei-criarbar"), rb = () => bar.getBoundingClientRect(), res = document.querySelector(".lei-criar-resumo"), bt = document.querySelector(".lei-criarbar .lei-comecar");
+      const fixa = getComputedStyle(bar).position === "fixed", embaixo = Math.abs(rb().bottom - innerHeight) <= 1 && rb().top < innerHeight - 40;
+      // (numa linha com "…" até 1023 px; no PC em até duas, e inteiro: com uma linha de 324 px só cabia a liga e os técnicos)
+      const pc = innerWidth >= 1024 && innerHeight > 520;
+      const linha = res.getBoundingClientRect().height <= parseFloat(getComputedStyle(res).lineHeight) * (pc ? 2.3 : 1.3) && (!pc || res.scrollHeight <= res.clientHeight + 1);
+      const y0 = scrollY; scrollTo(0, document.documentElement.scrollHeight);
+      await new Promise(r => requestAnimationFrame(() => r()));
+      const ultimo = Math.max(...[...document.querySelectorAll(".lei-criar-corpo > .lei-cs:not([hidden]), .lei-criar-res")].map(e => Math.round(e.getBoundingClientRect().bottom)));
+      const topoBarra = Math.round(rb().top);
+      scrollTo(0, y0);
+      const secs = [...document.querySelectorAll(".lei-criar .lei-cs")].filter(s => !s.hidden);
+      const caixa = secs.filter(s => { const c = getComputedStyle(s); return parseFloat(c.borderTopWidth) > 0 || !/rgba\(0, 0, 0, 0\)|transparent/.test(c.backgroundColor); }).length;
+      const tit = secs.map(s => parseFloat(getComputedStyle(s.querySelector(".lei-cs-tit")).fontSize));
+      // (o deslizante dentro da coluna: a ponta do trilho alinhada com a dos outros controles; com a margem e 100% passava 8 px)
+      const desl = [...document.querySelectorAll(".lei-criar .lei-passo-desl")].filter(d => d.offsetParent !== null)
+        .map(d => Math.round((d.getBoundingClientRect().right - d.closest(".lei-passo").getBoundingClientRect().right) * 10) / 10);
+      return { fixa, embaixo, linha, btH: Math.round(bt.getBoundingClientRect().height), ultimo, topoBarra, larg: Math.round(document.querySelector(".lei-criar-corpo").getBoundingClientRect().width),
+        secs: secs.length, caixa, tit: [Math.min(...tit), Math.max(...tit)], desl, deslFora: desl.filter(x => x > 0.5).length };
+    });
+    const nadaSobreCriar = async (rotulo) => {
+      await nadaSobreNadaTemas(p, rotulo, medeCriar);
+      await nadaSobreNada(p, rotulo + "-deitado", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("light"));
+      await nadaSobreNada(p, rotulo + "-deitado-claro", medeCriar, DEITADOS);
+      await p.evaluate(() => TM.ui.applyTheme("dark"));
+    };
+    await nadaSobreCriar("criar");
+    // os bots do treino (1 a 7; você e eles = 2 a 8 técnicos; sem o "Técnicos na sala"): o − e o + param nas pontas, o
+    // deslizante vai junto e também muda o número
+    const passo = await p.evaluate(async () => {
+      const g = r => document.querySelector('[aria-label="' + r + '"]'), menos = g("Menos um bot"), mais = g("Mais um bot"), n = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const desl = g("Bots de treino").querySelector(".lei-passo-desl"), dv = () => [+desl.min, +desl.max, +desl.value].join(), dica = () => document.querySelector('[data-secao="bots"] .lei-cs-hint').textContent;
+      // (na ponta, o − e o + apagados por aria-disabled: o foco do teclado fica neles; o Enter ali não muda nada)
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      const tec = !!g("Técnicos na sala");
+      for (let i = 0; i < 10; i++) menos.click();
+      const min = n(), menosOff = off(menos), dMin = dv();
+      for (let i = 0; i < 10; i++) mais.click();
+      const max = n(), maisOff = off(mais), dMax = dv(), hint = dica();
+      mais.focus(); mais.click(); const focoPonta = document.activeElement === mais && n() === max;
+      desl.value = "2"; desl.dispatchEvent(new Event("input", { bubbles: true }));
+      const peloDesl = n(), hint2 = dica(), valorTxt = desl.getAttribute("aria-valuetext");
+      for (let i = 0; i < 1; i++) mais.click();
+      return { tec, min, menosOff, dMin, max, maisOff, dMax, hint, focoPonta, peloDesl, hint2, valorTxt, agora: n(), dAgora: dv(), resumo: document.querySelector(".lei-criar-resumo").textContent };
+    });
+    confere("T2 no treino só os bots (sem 'Técnicos na sala'): de 1 a 7 (o − e o + param nas pontas, apagados sem perder o foco do teclado, o deslizante de 1 a 7 vai junto), 'Você e 7 bots', o deslizante também muda ('2 bots', 'Você e 2 bots'); volta a 3 (4 técnicos) e o resumo com a duração",
+      !passo.tec && passo.min === 1 && passo.menosOff && passo.dMin === "1,7,1" && passo.max === 7 && passo.maisOff && passo.focoPonta && passo.dMax === "1,7,7" && /Você e 7 bots/.test(passo.hint)
+      && passo.peloDesl === 2 && /Você e 2 bots/.test(passo.hint2) && passo.valorTxt === "2 bots" && passo.agora === 3 && passo.dAgora === "1,7,3" && /^Liga .+\. 4 técnicos, /.test(passo.resumo) && /leilão de cerca de \d+ a \d+ min/.test(passo.resumo), passo);
+    // o Formato: 3 cartões com o desenho (a chave, a tabela, as duas), o Mata-mata de padrão, "N rodadas com 4 técnicos · ~X a Y
+    // min"; o marcado pela borda e pelo fundo (sem o check); o toque troca e o resumo diz
+    const fmt = await p.evaluate(async () => {
+      const cards = () => [...document.querySelectorAll(".lei-criar .lei-fmt")];
+      const ler = () => ({ on: cards().filter(b => b.getAttribute("aria-pressed") === "true").map(b => b.dataset.fmt), ordem: cards().map(b => b.dataset.fmt).join(),
+        linhas: cards().map(b => b.querySelector(".lei-fmt-s").textContent), resumo: document.querySelector(".lei-criar-resumo").textContent,
+        // (a duração numa linha só dela, inteira: nenhum "·" pendurado no começo ou no fim de uma linha)
+        pendura: cards().filter(b => { const du = b.querySelector(".lei-fmt-s .lei-fmt-dur"); return !du || !/^~\d+ a \d+ min$/.test(du.textContent) || getComputedStyle(du).display !== "block" || getComputedStyle(du).whiteSpace !== "nowrap" || du.getBoundingClientRect().height > 24; }).length,
+        cards: cards().map(b => { const c = getComputedStyle(b), sv = b.querySelector("svg.lei-fmt-svg");
+          return { f: b.dataset.fmt, on: b.getAttribute("aria-pressed") === "true", borda: c.borderTopColor, fundo: c.backgroundColor, anel: c.boxShadow !== "none", des: sv && sv.getAttribute("data-desenho"),
+            formas: sv ? sv.querySelectorAll("rect, path, circle").length : 0, largDes: sv ? Math.round(sv.getBBox().width) : 0, cor: sv && getComputedStyle(sv).color, check: !!b.querySelector(".lei-fmt-ok, .lei-fmt-ic, svg.tm-ic") }; }) });
+      const out = { a: ler(), passos: [] };
+      for (const f of ["pontos", "misto", "mata"]) { document.querySelector('.lei-criar .lei-fmt[data-fmt="' + f + '"]').click(); await new Promise(r => setTimeout(r, 60)); out.passos.push(ler()); }
+      return out;
+    });
+    const linhaOk = (l, n) => new RegExp("^" + n + " rodadas com 4 técnicos · ~\\d+ a \\d+ min$").test(l);
+    const DES = { mata: "chave", pontos: "tabela", misto: "tabela-chave" };
+    // um marcado só, com a borda, o fundo e o desenho de cor própria; os outros iguais entre si; nenhum check
+    const marcaOk = x => { const on = x.cards.filter(c => c.on), off = x.cards.filter(c => !c.on);
+      return x.cards.length === 3 && on.length === 1 && x.cards.every(c => c.des === DES[c.f] && c.formas >= 2 && c.largDes >= 60 && !c.check) && on[0].anel
+        && off.every(c => c.borda === off[0].borda && c.fundo === off[0].fundo && c.cor === off[0].cor && c.borda !== on[0].borda && c.fundo !== on[0].fundo && c.cor !== on[0].cor); };
+    confere("T2 o Formato na Criar: 3 cartões com o desenho (a chave, a tabela, as duas) e sem o check, o marcado pela borda e pelo fundo (os outros iguais); na ordem das fotos — Pontos corridos, Mata-mata (padrão) e Pontos + mata-mata — com 'N rodadas com 4 técnicos · ~X a Y min' (6, 2 e 4; a duração numa linha só dela); o toque troca e o resumo diz o formato, a duração e as Partidas em 3D (4 min, Normal)",
+      fmt.a.on.join() === "mata" && fmt.a.ordem === "pontos,mata,misto" && !fmt.a.pendura && marcaOk(fmt.a) && fmt.passos.every(marcaOk) && linhaOk(fmt.a.linhas[0], 6) && linhaOk(fmt.a.linhas[1], 2) && linhaOk(fmt.a.linhas[2], 4)
+      && /, mata-mata, 4-4-2, leilão de cerca de \d+ a \d+ min e campeonato de \d+ a \d+ min, 3D de 4 min por tempo no Normal$/.test(fmt.a.resumo)
+      && fmt.passos[0].on.join() === "pontos" && /, pontos corridos, /.test(fmt.passos[0].resumo) && fmt.passos[1].on.join() === "misto" && /, pontos \+ mata-mata, /.test(fmt.passos[1].resumo) && fmt.passos[2].on.join() === "mata", fmt);
+    // a formação no segmentado 3 × 2 e o campinho das vagas embaixo
+    const formaCr = await p.evaluate(async () => {
+      const seg = document.querySelector(".lei-criar .lei-forma-seg"), bts = [...seg.querySelectorAll(".lei-forma-bt")], rs = bts.map(b => b.getBoundingClientRect());
+      const tops = [...new Set(rs.map(r => Math.round(r.top)))], lefts = [...new Set(rs.map(r => Math.round(r.left)))];
+      const campo = () => document.querySelector(".lei-criar .lei-cs-campo .lei-cv");
+      const conta = () => { const o = {}; campo().querySelectorAll(".lei-cv-vaga").forEach(v => { const s = v.querySelector(".lei-cv-sig"), k = s ? s.textContent : "?"; o[k] = (o[k] || 0) + 1; }); return o; };
+      const ler = () => ({ ativo: seg.querySelector(".active .lei-forma-f").textContent, pressed: bts.filter(b => b.getAttribute("aria-pressed") === "true").length, vagas: campo().querySelectorAll(".lei-cv-vaga").length,
+        vazias: campo().querySelectorAll(".lei-cv-bola.vazia").length, conta: conta(), n: campo().querySelector(".lei-cv-n").textContent, f: campo().querySelector(".lei-cv-forma").textContent,
+        embaixo: campo().getBoundingClientRect().top >= seg.getBoundingClientRect().bottom, rot: campo().getAttribute("aria-label") });
+      const a = ler();
+      bts.find(b => b.textContent.startsWith("4-3-3")).click(); await new Promise(r => setTimeout(r, 60));
+      const b = ler();
+      bts.find(b => b.textContent.startsWith("4-4-2")).click(); await new Promise(r => setTimeout(r, 60));
+      return { n: bts.length, linhas: tops.length, cols: lefts.length, porLinha: tops.map(t => rs.filter(r => Math.round(r.top) === t).length).join(), subs: bts.map(b => (b.querySelector(".lei-forma-n") || {}).textContent || ""), a, b, fim: ler().ativo };
+    });
+    confere("T2 'Sua formação' no segmentado 3 × 2 ('5-4-1 Retranca', '4-2-4 Tudo ou nada') com o campinho das vagas embaixo: 11 vagas vazias com a sigla (4-4-2: GOL 1, DEF 4, MEI 4, ATA 2), '0/11' e a formação; o toque troca (4-3-3: MEI 3, ATA 3)",
+      formaCr.n === 6 && formaCr.linhas === 2 && formaCr.cols === 3 && formaCr.porLinha === "3,3" && formaCr.subs[4] === "Retranca" && formaCr.subs[5] === "Tudo ou nada"
+      && formaCr.a.ativo === "4-4-2" && formaCr.a.pressed === 1 && formaCr.a.vagas === 11 && formaCr.a.vazias === 11 && formaCr.a.conta.GOL === 1 && formaCr.a.conta.DEF === 4 && formaCr.a.conta.MEI === 4 && formaCr.a.conta.ATA === 2
+      && formaCr.a.n === "0/11" && formaCr.a.f === "4-4-2" && formaCr.a.embaixo && /4-4-2/.test(formaCr.a.rot)
+      && formaCr.b.ativo === "4-3-3" && formaCr.b.pressed === 1 && formaCr.b.conta.MEI === 3 && formaCr.b.conta.ATA === 3 && formaCr.b.f === "4-3-3" && formaCr.b.n === "0/11" && formaCr.fim === "4-4-2", formaCr);
+    // o contraste dos textos da Criar (≥ 4,5:1) nos dois temas, cada um sobre o fundo de verdade (as camadas até a 1ª opaca)
+    const contrasteCriar = () => p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+      const fundo = e => { const pilha = []; for (let a = e; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) pilha.push(c); if (c[3] >= 1) break; }
+        let f = pilha.length && pilha[pilha.length - 1][3] >= 1 ? pilha.pop() : rgba(getComputedStyle(document.body).backgroundColor);
+        while (pilha.length) f = sobre(pilha.pop(), f); return f; };
+      const op = e => { let o = 1; for (let a = e; a; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+      const texto = (e, f) => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e); return cr(sobre(c, f), f); };
+      const out = {};
+      const min = (k, sel) => { const xs = [...document.querySelectorAll(sel)].filter(e => e.offsetParent !== null && e.textContent.trim()); if (xs.length) out[k] = Math.min(...xs.map(x => texto(x, fundo(x)))); };
+      min("titulo", ".lei-criar .lei-cs-tit"); min("dica", ".lei-criar .lei-cs-hint"); min("ligaN", ".lei-criar .lei-liga-n"); min("ligaS", ".lei-criar .lei-liga-s"); min("trocar", ".lei-criar .lei-liga-trocar");
+      min("fmtNome", ".lei-criar .lei-fmt-n"); min("fmtFrase", ".lei-criar .lei-fmt-f"); min("fmtLinha", ".lei-criar .lei-fmt-s"); min("passoN", ".lei-criar .lei-passo-n");
+      min("segOn", ".lei-criar .lei-seg .seg-btn.active .lei-seg-t"); min("segOff", ".lei-criar .lei-seg .seg-btn:not(.active) .lei-seg-t"); min("segSub", ".lei-criar .lei-seg-s"); min("rot3d", ".lei-criar .lei-3d-rot");
+      min("escolher", ".lei-criar .lei-esc-escolher-t"); min("nota", ".lei-criar .lei-criar-nota"); min("resTit", ".lei-criar .lei-criar-res-tit"); min("resumo", ".lei-criar-resumo"); min("resumoLiga", ".lei-criar-resumo b");
+      // o botão principal: o texto sobre as duas pontas do degradê
+      const bt = document.querySelector(".lei-criarbar .lei-comecar"), st = (getComputedStyle(bt).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba), tb = bt.querySelector("span:last-child");
+      if (st.length) out.comecar = Math.min(...st.map(c => texto(tb, sobre(c, fundo(bt.parentElement)))));
+      return out;
+    });
+    const ccEscuro = await contrasteCriar();
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await espera(250);
+    const ccClaro = await contrasteCriar();
+    const claroCriar = await p.evaluate(() => {
+      const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      const verde = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return m[1] > m[0] + 40 && m[1] > m[2] + 20; };
+      const cs = s => getComputedStyle(document.querySelector(s));
+      return { tit: lum(cs(".lei-criar .lei-cs-tit").color), fmtOff: lum(cs(".lei-criar .lei-fmt:not(.on)").backgroundColor), fmtOn: lum(cs(".lei-criar .lei-fmt.on").backgroundColor), bordaOn: verde(cs(".lei-criar .lei-fmt.on").borderTopColor),
+        segOn: lum(cs(".lei-criar .lei-seg .seg-btn.active").backgroundColor), barra: lum(cs(".lei-criarbar").backgroundColor), resumo: lum(cs(".lei-criar-resumo b").color),
+        grama: (cs(".lei-criar .lei-cv").backgroundImage.match(/rgba?\([^)]+\)/g) || []).every(verde) };
+    });
+    await print(p, "2-criar-claro");
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+    confere("T2 contraste ≥ 4,5:1 na Criar sala nos dois temas: títulos, dicas, a liga e o Trocar, os cartões do formato (o marcado e os outros), o número do passo, os segmentados (a escolhida e as outras), o Escolher escudo, a nota, o resumo e o botão da barra",
+      [ccEscuro, ccClaro].every(o => Object.keys(o).length >= 18 && Object.values(o).every(x => x >= 4.5)), { escuro: ccEscuro, claro: ccClaro });
+    confere("T2 tema claro da Criar sala: o texto escuro, o cartão do formato branco e o marcado num verde claro com a borda verde, a escolhida do segmentado branca, a barra clara e o campinho verde",
+      claroCriar.tit < 0.3 && claroCriar.fmtOff > 0.95 && claroCriar.fmtOn > 0.85 && claroCriar.fmtOn < claroCriar.fmtOff && claroCriar.bordaOn && claroCriar.segOn > 0.95 && claroCriar.barra > 0.9 && claroCriar.resumo < 0.3 && claroCriar.grama, claroCriar);
+    // a Criar da sala online (sem a conta online: a tela abre com o aviso): os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o
+    // − e o + e o deslizante), os bots presos quando os técnicos descem, as Partidas em 3D SEMPRE (a revisão do PR 5: o 3D entre
+    // amigos) — a dificuldade só com bots
+    await p.evaluate(() => TM.ui.go("leilao-criar", { online: true }));
+    await espera(400);
+    const onl = await p.evaluate(async () => {
+      const q = s => document.querySelector(s), g = r => q('[aria-label="' + r + '"]');
+      const nT = () => +g("Técnicos na sala").querySelector(".lei-passo-n").textContent, nB = () => +g("Bots de treino").querySelector(".lei-passo-n").textContent;
+      const dT = g("Técnicos na sala").querySelector(".lei-passo-desl"), dB = g("Bots de treino").querySelector(".lei-passo-desl"), dv = d => [+d.min, +d.max, +d.value].join();
+      const vis3d = () => { const s = q('.lei-criar [data-secao="3d"]'); return !!s && !s.hidden && s.offsetParent !== null; };
+      const dif3d = () => !!q('.lei-criar [data-secao="3d"] .lei-dif3d');
+      const anda = (d, v) => { d.value = String(v); d.dispatchEvent(new Event("input", { bubbles: true })); };
+      const off = b => b.getAttribute("aria-disabled") === "true" && !b.disabled;
+      for (let i = 0; i < 10; i++) g("Menos um bot").click();
+      const b0 = nB(), menosBOff = off(g("Menos um bot")), sem3d = !vis3d(), semDif = !dif3d();
+      for (let i = 0; i < 10; i++) g("Menos um técnico").click();
+      const t2 = nT(), menosTOff = off(g("Menos um técnico")), dT2 = dv(dT), dB2 = dv(dB);
+      for (let i = 0; i < 10; i++) g("Mais um técnico").click();
+      const t8 = nT(), maisTOff = off(g("Mais um técnico")), dT8 = dv(dT);
+      for (let i = 0; i < 10; i++) g("Mais um bot").click();
+      const b7 = nB(), maisBOff = off(g("Mais um bot")), com3d = vis3d(), comDif = dif3d(), dB7 = dv(dB);
+      anda(dT, 3);
+      const t3 = nT(), bPreso = nB(), dB3 = dv(dB);
+      // (volta ao padrão: 4 técnicos e nenhum bot; a escolha só é gravada no Criar sala)
+      anda(dT, 4); anda(dB, 0);
+      return { aviso: !!q(".lei-criar .lei-aviso-sala"), b0, menosBOff, sem3d, semDif, t2, menosTOff, dT2, dB2, t8, maisTOff, dT8, b7, maisBOff, com3d, comDif, dB7, t3, bPreso, dB3, fim: [nT(), nB()].join(), sem3dFim: !vis3d(), semDifFim: !dif3d(),
+        resumo: q(".lei-criar-resumo").textContent, bt: q(".lei-criarbar .lei-comecar").textContent.trim() };
+    });
+    confere("T2 a Criar da sala online: os técnicos de 2 a 8 e os bots de 0 a técnicos − 1 (o − e o + param nas pontas, o deslizante vai junto), os bots presos quando os técnicos descem pelo deslizante, as Partidas em 3D sempre (sem bots, só a duração; a dificuldade com bots) e 'Criar sala' na barra",
+      onl.aviso && onl.b0 === 0 && onl.menosBOff && !onl.sem3d && onl.semDif && onl.t2 === 2 && onl.menosTOff && onl.dT2 === "2,8,2" && onl.dB2 === "0,1,0" && onl.t8 === 8 && onl.maisTOff && onl.dT8 === "2,8,8"
+      && onl.b7 === 7 && onl.maisBOff && onl.com3d && onl.comDif && onl.dB7 === "0,7,7" && onl.t3 === 3 && onl.bPreso === 2 && onl.dB3 === "0,2,2" && onl.fim === "4,0" && !onl.sem3dFim && onl.semDifFim
+      && /^Liga .+\. Até 4 técnicos, mata-mata, 4-4-2, com a sala cheia, leilão de cerca de .*, 3D de 4 min por tempo$/.test(onl.resumo) && onl.bt === "Criar sala", onl);
+    await nadaSobreCriar("criar-online");
+    const criarT = nadaSobre.filter(x => /^criar(-online)?(-deitado)?(-claro)? /.test(x.tela));
+    confere(`T2 a Criar sala das fotos (${criarT.length} telas: treino e online, os 8 tamanhos e 667×375 e 740×360, escuro e claro): a barra fixa embaixo (o resumo numa linha; no PC inteiro em até duas; o botão com ≥ 44 px), no fim da rolagem o último campo acima dela, as seções soltas sem caixa com o título de 19–20 px, a coluna com ≤ 600 px e o deslizante dentro dela`,
+      criarT.length === 40 && criarT.every(x => x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora),
+      criarT.filter(x => !(x.fixa && x.embaixo && x.linha && x.btH >= 44 && x.ultimo <= x.topoBarra && x.larg <= 600 && x.secs >= 6 && x.caixa === 0 && x.tit[0] >= 19 && x.tit[1] <= 20 && x.desl.length >= 1 && !x.deslFora)).slice(0, 4));
+    // de volta à Criar do treino (o padrão: 4 técnicos, o Mata-mata)
+    await p.evaluate(() => TM.ui.go("leilao-criar"));
+    await espera(400);
+    // a liga pela folha; a formação 4-3-3; o clube
+    await p.click(".lei-liga-bt");
+    await espera(300);
+    const ligaEscolhida = await p.evaluate(() => { const b = [...document.querySelectorAll(".lei-folha .lei-liga")][1]; const n = b.querySelector(".lei-liga-n").textContent; b.click(); return n; });
+    await espera(250);
+    await p.evaluate(() => [...document.querySelectorAll(".lei-criar .lei-forma-bt")].find(b => /4-3-3/.test(b.textContent)).click());
+    await p.click(".lei-esc-abre");
+    await espera(150);
+    await p.fill(".lei-criar .lei-campo:not(.lei-campo-sigla)", "Clube Teste");
+    const corEscolhida = await p.evaluate(() => { const c = [...document.querySelectorAll(".lei-cor")][2]; c.click(); return c.style.background; });
+    await espera(150);
+    const criar = await p.evaluate(() => ({ liga: document.querySelector(".lei-liga-bt .lei-liga-n").textContent, sigla: document.querySelector(".lei-campo-sigla").value,
+      forma: document.querySelector(".lei-criar .lei-forma-bt.active").textContent, folhas: document.querySelectorAll(".lei-folha").length }));
+    confere("T2 a liga pela folha, a formação, o nome e a sigla do clube (CT) e a cor", criar.liga === ligaEscolhida && criar.sigla === "CT" && /4-3-3/.test(criar.forma) && criar.folhas === 0 && !!corEscolhida, criar);
+    await print(p, "2-criar");
+    await clica(p, "Começar o treino");
+    const abriu = await ate(p, () => TM.ui.current() === "leilao-lote" && !!document.querySelector(".lei-relogio"));
+    let V = await ver(p);
+    confere("T2 'Começar o treino' abre a aba Leilão: 4 técnicos (você + 3 bots), 80 lotes (20 por técnico), a liga e o clube escolhidos",
+      abriu && V && V.T === 4 && V.lote && V.lote.total === 80 && V.liga.nome === ligaEscolhida && V.tecnicos[V.eu].clube.nome === "Clube Teste" && V.tecnicos.filter(t => t.bot).length === 3
+      && V.tecnicos.filter(t => t.bot).every(t => /^Bot /.test(t.nome)), V && { T: V.T, liga: V.liga, clube: V.tecnicos[V.eu] && V.tecnicos[V.eu].clube });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+
+    /* T3 o leilão: os botões, os apagados com o motivo, o Tudo de dois toques, passar, outro valor */
+    const pausa = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { pausa: V.lote.pausa, dis: [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => b.disabled), msg: document.querySelector(".lei-lance-msg").textContent }; });
+    confere("T3 na pausa entre os lotes os botões ficam apagados com o motivo ('Aguarde o próximo jogador')", !pausa.pausa || (pausa.dis.every(Boolean) && /Aguarde/.test(pausa.msg)), pausa);
+    const abertoMeu = () => ate(p, () => { const S = TM.leilaoSessao.atual(); if (!S) return false; const V = S.ver(); const b = document.querySelector('.lei-lb-passo[data-tipo="+1"]');
+      return V.lote && !V.lote.pausa && !V.lote.fechando && V.lote.fim - S.hora() > 3000 && V.botoes["+1"].pode && V.lote.lider !== V.eu && b && !b.disabled; }, null, 60000);
+    const proximoLote = async () => { const s = (await ver(p)).lote.seq; await ate(p, s => { const V = TM.leilaoSessao.atual().ver(); return V.lote && V.lote.seq !== s; }, s, 60000); };
+    // +1
+    await abertoMeu();
+    let antes = await ver(p);
+    await p.click('.lei-lb-passo[data-tipo="+1"]');
+    await espera(250);
+    let depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent, dis: document.querySelector('.lei-lb-passo[data-tipo="+1"]').disabled }));
+    const lidera = depois.V.lote.seq === antes.lote.seq && depois.V.lote.lider === depois.V.eu;
+    confere("T3 '+1' sobre o valor visto: 'Lance de R$ X: você lidera' (ou 'Alguém chegou antes'); liderando, o +1 apaga com 'Você lidera'",
+      (lidera && depois.V.lote.valor >= antes.lote.valor + 1 && depois.msg === "Lance de R$ " + depois.V.lote.valor + ": você lidera" && depois.dis && depois.V.botoes["+1"].motivo === "lider") || (!lidera && /chegou antes|já fechou/.test(depois.msg)),
+      { antes: antes.lote.valor, depois: depois.V.lote.valor, msg: depois.msg });
+    await espera(2700);
+    const msgLider = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { lider: V.lote && V.lote.lider === V.eu, msg: document.querySelector(".lei-lance-msg").textContent }; });
+    if (msgLider.lider) confere("T3 passado o retorno, a linha de cima mostra o motivo do +1 apagado ('Você lidera')", /Você lidera/.test(msgLider.msg), msgLider);
+    // Passar (num lote em que não lidero)
+    await proximoLote(); await abertoMeu();
+    await p.click(".lei-lb-passar");
+    await espera(250);
+    depois = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { passou: V.tecnicos[V.eu].passou, msg: document.querySelector(".lei-lance-msg").textContent, passarOff: document.querySelector(".lei-lb-passar").disabled, umOff: document.querySelector('.lei-lb-passo[data-tipo="+1"]').disabled, motivo: V.botoes && V.botoes["+1"].motivo, seq: V.lote && V.lote.seq }; });
+    confere("T3 'Passar': 'Você passou neste jogador', e o Passar e o +1 apagam (motivo 'passou')", (depois.passou && /passou/.test(depois.msg) && depois.passarOff && depois.umOff && depois.motivo === "passou") || /já fechou/.test(depois.msg), depois);
+    // outro valor: acima do máximo (recusado na tela) e um valor bom
+    await proximoLote(); await abertoMeu();
+    antes = await ver(p);
+    await p.fill(".lei-valor", String(antes.botoes.outro.max + 5));
+    await p.click(".lei-lb-dar");
+    await espera(200);
+    const msgMax = await p.evaluate(() => document.querySelector(".lei-lance-msg").textContent);
+    const alvoOutro = Math.min(antes.botoes.outro.max, (await ver(p)).lote.valor + 3);
+    await p.fill(".lei-valor", String(alvoOutro));
+    await p.press(".lei-valor", "Enter");
+    await espera(250);
+    depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent, campo: document.querySelector(".lei-valor").value }));
+    confere("T3 'Outro valor': acima do máximo fica na tela ('Acima do seu máximo R$ X'); um valor bom (Enter) vira lance e o campo esvazia",
+      /Acima do seu máximo R\$ \d+/.test(msgMax) && ((depois.V.lote.lider === depois.V.eu && depois.V.lote.valor === alvoOutro && depois.campo === "") || /chegou antes|já fechou|tem de passar/.test(depois.msg)), { msgMax, alvoOutro, valor: depois.V.lote.valor, msg: depois.msg });
+    // o Tudo armado (o 1º toque: "Confirmar") cabe no botão em todo tamanho (com o valor ao lado, "Confirmar R$ 90" passava
+    // do botão em todo celular em pé: em 360 por cima do +10 e cortado na borda); o 2º toque não sai (espera os 2 s). Antes do
+    // Tudo de dois toques abaixo: ele gasta o máximo e, depois, o Tudo pode ficar apagado até o fim do leilão
+    // (o relógio corre até um lote em que o Tudo acende — o "Outro valor" acima pode me deixar na frente deste — e quase para
+    // enquanto o 1º toque é medido e os 2 s passam)
+    const tudoArmado = [];
+    for (const [w, h] of TAMANHOS.concat(DEITADOS)) {
+      await p.setViewportSize({ width: w, height: h });
+      await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+      const pronto = await ate(p, () => { const S = TM.leilaoSessao.atual(), V = S.ver(), b = document.querySelector(".lei-lb-tudo");
+        return V.lote && !V.lote.pausa && V.lote.fim - S.hora() > 4000 && V.botoes && V.botoes.tudo.pode && b && !b.disabled && !b.classList.contains("confirma"); }, null, 60000);
+      if (!pronto) { tudoArmado.push({ t: w + "x" + h, semLote: true, fora: [] }); continue; }
+      await p.evaluate(() => TM.leilaoSessao.acelerar(0.02));
+      await p.click(".lei-lb-tudo");
+      await espera(150);
+      tudoArmado.push(await p.evaluate(t => {
+        const b = document.querySelector(".lei-lb-tudo"), rb = b.getBoundingClientRect(), fora = [];
+        b.querySelectorAll(".lei-lb-t, .lei-lb-v").forEach(x => {
+          if (getComputedStyle(x).display === "none") return;
+          const rg = document.createRange(); rg.selectNodeContents(x); const r = rg.getBoundingClientRect();
+          if (r.width && (r.left < rb.left + 2 || r.right > rb.right - 2 || r.right > innerWidth)) fora.push(x.textContent + " " + Math.round(r.left) + "–" + Math.round(r.right) + " no " + Math.round(rb.left) + "–" + Math.round(rb.right));
+        });
+        return { t, conf: b.classList.contains("confirma"), txt: b.querySelector(".lei-lb-t").textContent, fora, sw: b.scrollWidth, cw: b.clientWidth };
+      }, w + "x" + h));
+      await espera(2200);
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.5));
+    confere("T3 o Tudo armado ('Confirmar', o 1º toque) cabe no botão nos 8 tamanhos e em 667×375 e 740×360 (o texto a ≥ 2 px das bordas, nada fora da tela)",
+      tudoArmado.length === 10 && tudoArmado.every(x => x.conf && x.txt === "Confirmar" && !x.fora.length && x.sw <= x.cw), tudoArmado.filter(x => !x.conf || x.fora.length || x.sw > x.cw).slice(0, 4));
+    // Tudo: o 1º toque vira "Confirmar R$ X" (nada sai), o 2º dá o lance do máximo
+    await proximoLote(); await abertoMeu();
+    antes = await ver(p);
+    await p.click(".lei-lb-tudo");
+    await espera(120);
+    const conf = await p.evaluate(() => { const b = document.querySelector(".lei-lb-tudo"), V = TM.leilaoSessao.atual().ver(); return { txt: b.textContent, cls: b.className, lider: V.lote.lider, valor: V.lote.valor, msg: document.querySelector(".lei-lance-msg").textContent, aria: b.getAttribute("aria-label") }; });
+    await p.click(".lei-lb-tudo");
+    await espera(250);
+    depois = await p.evaluate(() => ({ V: TM.leilaoSessao.atual().ver(), msg: document.querySelector(".lei-lance-msg").textContent }));
+    confere("T3 'Tudo' de dois toques: o 1º vira 'Confirmar R$ X' por 2 s sem dar lance; o 2º dá o lance do máximo",
+      /Confirmar/.test(conf.txt) && /confirma/.test(conf.cls) && conf.lider !== antes.eu && /confirmar R\$ \d+/i.test(conf.msg) && /Confirmar o lance de R\$ \d+/.test(conf.aria)
+      // com o lance do máximo, ninguém cobre: o lote fecha logo (a venda para mim pelo máximo) ou ainda está aberto comigo na frente
+      && ((depois.msg === "Lance de R$ " + antes.botoes.tudo.alvo + ": você lidera" && ((depois.V.lote && depois.V.lote.seq === antes.lote.seq && depois.V.lote.lider === depois.V.eu && depois.V.lote.valor === antes.botoes.tudo.alvo)
+        || (depois.V.ultimo && depois.V.ultimo.tipo === "vendido" && depois.V.ultimo.t === depois.V.eu && depois.V.ultimo.preco === antes.botoes.tudo.alvo)))
+        || /chegou antes|já fechou/.test(depois.msg)), { conf, ultimo: depois.V.ultimo, alvo: antes.botoes.tudo.alvo, msg: depois.msg });
+    // os 2 s do Tudo passam e o botão volta
+    const tudoVolta = await p.evaluate(async () => { const b = document.querySelector(".lei-lb-tudo"); b.click(); const a = /Confirmar/.test(b.textContent); await new Promise(r => setTimeout(r, 2300)); return { a, b: /Confirmar/.test(b.textContent) }; });
+    confere("T3 sem o 2º toque, o 'Confirmar' volta a 'Tudo' depois de 2 s", !tudoVolta.b, tudoVolta);
+
+    /* T4 nada sobre nada e a barra de lance à vista com o relógio rodando, nos 8 tamanhos (num lote aberto e lento) */
+    await proximoLote();
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.15));
+    await ate(p, () => { const V = TM.leilaoSessao.atual().ver(); return V.lote && !V.lote.pausa; }, null, 30000);
+    // (a tela das fotos, PLANO-LEILAO.md §9: medida em cada tamanho junto com o nada sobre nada; lotePelasFotos abaixo)
+    const lotePelasFotos = () => {
+      const r = e => e && e.getBoundingClientRect();
+      const card = document.querySelector(".lei-corpo-lote .lei-lote-card");
+      const dentro = s => { const x = card && card.querySelector(s); return !!x && x.offsetParent !== null; };
+      const sbs = [...document.querySelectorAll(".lei-cab .lei-sb")];
+      const abas = [...document.querySelectorAll(".lei-abas .lei-aba")];
+      const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => b.querySelector(".lei-lb-t").textContent.trim());
+      const v = document.querySelector(".lei-l2 .lei-valor"), cv = document.querySelector(".lei-corpo-lote .lei-cv"), V = TM.leilaoSessao.atual().ver();
+      const larg = Math.max(...[".lei-cab", ".lei-corpo-lote", ".lei-aviso-sala:not([hidden])"].map(s => { const x = document.querySelector(s); return x ? r(x).width : 0; }));
+      return {
+        // nenhuma carta do Ultimate na aba (nem a assinatura TOTAL MATCH dela)
+        cartas: document.querySelectorAll(".lei-corpo-lote .ut-card, .lei-corpo-lote .utc-tier").length,
+        // a foto, a nota, o nome, os chips, o relógio, quem lidera e o valor no MESMO cartão
+        // (a lista dos lances de antes some quando não há nenhum: está no cartão e, com lances, à vista)
+        noCartao: [".lei-foto", ".lei-nota", ".lei-nome", ".lei-chips .lei-chip", ".lei-ficha-bt", ".lei-relogio", ".lei-lider", ".lei-valor-atual"].filter(s => !dentro(s))
+          .concat((h => !h || (h.children.length ? h.offsetParent === null : getComputedStyle(h).display !== "none"))(card && card.querySelector(".lei-hist")) ? [".lei-hist"] : []),
+        nota: (card && card.querySelector(".lei-nota") || {}).getAttribute ? card.querySelector(".lei-nota").getAttribute("aria-label") : null,
+        // o topo: 6 ícones sem texto à vista, com aria-label e title, ≥ 44 × 44
+        sb: { n: sbs.length, comTexto: sbs.filter(b => b.innerText.trim()).length, semRotulo: sbs.filter(b => !b.getAttribute("aria-label") || !b.title).length,
+          min: Math.round(Math.min(...sbs.map(b => Math.min(r(b).width, r(b).height)))) },
+        // as abas em pílula: sem ícone, menos o check da feita; mais leves que o chip (as fotos: 23 × 32 px), com o alvo de
+        // toque de 44 px (o toque 6 px acima e abaixo da pílula ainda é nela)
+        abasIc: abas.filter(b => b.querySelector("svg") && !b.classList.contains("feita")).length,
+        abaH: Math.round(Math.max(...abas.map(b => r(b).height))), chipH: Math.round(r(document.querySelector(".lei-lote-n")).height),
+        abaAlvo: abas.every(b => { const q = r(b), x = q.left + q.width / 2; return [q.top - 6, q.bottom + 6].every(y => { const e = document.elementFromPoint(x, y); return !!e && e.closest(".lei-aba") === b; }); }),
+        // o campinho do seu clube: as 11 vagas da formação, as compras nelas, "n/11"
+        vagas: cv ? cv.querySelectorAll(".lei-cv-vaga").length : 0, cheias: cv ? cv.querySelectorAll(".lei-cv-vaga.cheia").length : -1, meus: V.tecnicos[V.eu].n,
+        conta: cv ? cv.querySelector(".lei-cv-n").textContent : null, campinho: cv ? Math.round(r(cv).width) : 0,
+        // a barra: +1 +5 +10 Tudo; Outro valor (≥ 16 px) · Dar lance · Passar
+        l1, l2: [v && v.placeholder, v && parseFloat(getComputedStyle(v).fontSize), (document.querySelector(".lei-l2 .lei-lb-dar") || {}).textContent, (document.querySelector(".lei-l2 .lei-lb-passar") || {}).textContent],
+        larg: Math.round(larg)
+      };
+    };
+    const extraLote = async (p, w, h) => p.evaluate(async lotePelasFotos => {
+      const barra = document.querySelector(".lei-lance").getBoundingClientRect(), rel = document.querySelector(".lei-relogio").getBoundingClientRect();
+      const val = document.querySelector(".lei-valor-atual").getBoundingClientRect();
+      const arco = document.querySelector(".lei-rel-arco"), d0 = arco.style.strokeDashoffset;
+      await new Promise(r => setTimeout(r, 450));
+      const l1 = [...document.querySelectorAll(".lei-l1 .lei-lb")].map(b => Math.round(b.getBoundingClientRect().height));
+      // o "Outro valor" inteiro no campo (o texto de verdade, com a fonte do campo)
+      const v = document.querySelector(".lei-valor"), cs = getComputedStyle(v), cv = document.createElement("canvas").getContext("2d");
+      cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+      const ph = { txt: v.placeholder, larg: Math.round(cv.measureText(v.placeholder).width), livre: Math.round(v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) };
+      return { barraVisivel: barra.top >= 0 && barra.bottom <= innerHeight + 1 && barra.height > 40, relVisivel: rel.top >= 0 && rel.bottom <= barra.top + 0.5,
+        valVisivel: val.top >= 0 && val.bottom <= barra.top + 0.5, ph, roda: arco.style.strokeDashoffset !== d0, l1min: Math.min(...l1), fotos: (0, eval)("(" + lotePelasFotos + ")")() };
+    }, lotePelasFotos.toString());
+    await nadaSobreNada(p, "lote", extraLote);
+    // o celular deitado mais estreito que 844 (o iPhone SE e o 8 deitados: a revisão de 15/11 achou o nome quebrado, o país
+    // em "M…" e "Outro val")
+    await nadaSobreNada(p, "lote-deitado", extraLote, DEITADOS);
+    // os Próximos lotes abertos (a única linha recolhível que ficou na aba): nada sobre nada também com a lista à vista
+    await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="false"]').forEach(b => b.click()));
+    await espera(200);
+    await nadaSobreNada(p, "lote-blocos", async p => p.evaluate(() => ({ blocos: document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').length, prox: document.querySelectorAll(".lei-bloco .lei-prox").length })));
+    const blocos = nadaSobre.filter(x => /^lote-blocos/.test(x.tela));
+    confere("T4 com os Próximos lotes abertos (a linha recolhível do fim) nos 8 tamanhos", blocos.length === 8 && blocos.every(x => x.blocos === 1 && x.prox > 0), blocos.map(x => ({ t: x.tela, b: x.blocos, n: x.prox })));
+    await p.evaluate(() => document.querySelectorAll('.lei-bloco-bt[aria-expanded="true"]').forEach(b => b.click()));
+    const fotos = nadaSobre.filter(x => /^lote /.test(x.tela)).map(x => Object.assign({ t: x.tela }, x.fotos));
+    confere("T4 a tela do lote pelas fotos, sem a carta: nenhuma .ut-card na aba; a foto, a nota, o nome, os chips, o (i), o relógio, quem lidera, o valor e os lances no mesmo cartão (8 tamanhos)",
+      fotos.length === 8 && fotos.every(x => x.cartas === 0 && !x.noCartao.length && /^Nota \d+$/.test(x.nota || "")), fotos.map(x => ({ t: x.t, c: x.cartas, falta: x.noCartao, nota: x.nota })));
+    confere("T4 o topo só de ícones (6, sem texto à vista, com aria-label e title, ≥ 44 × 44) e as abas em pílula sem ícone (só o check da feita), nos 8 tamanhos",
+      fotos.every(x => x.sb.n === 6 && !x.sb.comTexto && !x.sb.semRotulo && x.sb.min >= 44 && !x.abasIc), fotos.map(x => ({ t: x.t, sb: x.sb, abasIc: x.abasIc })));
+    confere("T4 as pílulas mais leves que o chip 'Jogador N de 80' (menor altura à vista) e com o alvo de toque de 44 px (o toque 6 px acima e abaixo ainda nelas), nos 8 tamanhos",
+      fotos.every(x => x.abaH < x.chipH && x.abaH >= 24 && x.abaAlvo), fotos.map(x => ({ t: x.t, aba: x.abaH, chip: x.chipH, alvo: x.abaAlvo })));
+    confere("T4 o campinho do seu clube sempre à vista: as 11 vagas da formação, as compras nelas e 'n/11' (8 tamanhos)",
+      fotos.every(x => x.vagas === 11 && x.cheias === x.meus && x.meus > 0 && x.conta === x.meus + "/11" && x.campinho > 200), fotos.map(x => ({ t: x.t, v: x.vagas, cheias: x.cheias, meus: x.meus, conta: x.conta, w: x.campinho })));
+    confere("T4 a barra de lance das fotos: +1, +5, +10 e Tudo; 'Outro valor' (≥ 16 px: o iPhone não dá zoom), Dar lance e Passar (8 tamanhos)",
+      fotos.every(x => x.l1.join() === "+1,+5,+10,Tudo" && x.l2[0] === "Outro valor" && x.l2[1] >= 16 && /^Dar lance$/.test(x.l2[2]) && /^Passar$/.test(x.l2[3])), fotos.map(x => ({ t: x.t, l1: x.l1, l2: x.l2 })));
+    confere("T4 nada de ponta a ponta no PC: o topo e a aba Leilão com no máximo 1000 px nos 8 tamanhos", fotos.every(x => x.larg > 0 && x.larg <= 1000), fotos.map(x => ({ t: x.t, l: x.larg })));
+    const ruins = nadaSobre.filter(x => x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.atras);
+    confere(`T4 nada sobre nada (nem encostado, nem texto fora do botão): Entrada, Criar e Leilão (blocos fechados e abertos) nos 8 tamanhos e o Leilão em 667×375 e 740×360 (${nadaSobre.length} telas, ${nadaSobre.reduce((s, x) => s + x.n, 0)} clicáveis e cartões)`, !ruins.length, ruins.slice(0, 6));
+    const deit = nadaSobre.filter(x => /^lote-deitado /.test(x.tela));
+    confere("T4 o celular deitado estreito (667×375 e 740×360): o anel e o valor acima da barra, a barra à vista, 'Outro valor' inteiro e as fotos no mesmo cartão (nada sobre nada no item abaixo)",
+      deit.length === 2 && deit.every(x => x.barraVisivel && x.relVisivel && x.valVisivel && x.ph.larg <= x.ph.livre && x.ph.txt === "Outro valor" && x.fotos.cartas === 0 && !x.fotos.noCartao.length),
+      deit.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, v: x.valVisivel, ph: x.ph, falta: x.fotos.noCartao })));
+    const lotes = nadaSobre.filter(x => /^lote /.test(x.tela));
+    confere("T4 a barra de lance à vista com o relógio rodando nos 8 tamanhos (também 844×390 e 360×740), o relógio e o valor acima dela, linha 1 com ≥ 48 px, 'Outro valor' inteiro",
+      lotes.length === 8 && lotes.every(x => x.barraVisivel && x.relVisivel && x.valVisivel && x.roda && x.l1min >= 48 && x.ph.larg <= x.ph.livre),
+      lotes.map(x => ({ t: x.tela, b: x.barraVisivel, r: x.relVisivel, v: x.valVisivel, roda: x.roda, h: x.l1min, ph: x.ph })));
+    // "Vendido para X por R$ Y" (ou "Sem lance") na pausa entre os lotes
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1.5));
+    const sAntes = (await ver(p)).lote.seq;
+    await ate(p, s => { const V = TM.leilaoSessao.atual().ver(); return V.lote && V.lote.seq !== s; }, sAntes, 30000);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(0.2));
+    await espera(150);
+    const vendido = await p.evaluate(() => { const e = document.querySelector(".lei-vendido"), S = TM.leilaoSessao.atual(), V = S.ver(), u = V.ultimo;
+      const toca = (a, b) => { const x = a.getBoundingClientRect(), y = b.getBoundingClientRect(); return Math.min(x.right, y.right) - Math.max(x.left, y.left) > 0 && Math.min(x.bottom, y.bottom) - Math.max(x.top, y.top) > 0; };
+      // (do (i), o círculo à vista: o botão tem 6 px de alvo transparente em volta, e a faixa não pega toque)
+      const chips = [...document.querySelectorAll(".lei-lote-card .lei-chip, .lei-lote-card .lei-ficha-ic, .lei-lote-card .lei-nome")];
+      return { visivel: !!e && !e.hidden && e.offsetParent !== null, txt: e && e.lastElementChild && e.lastElementChild.textContent, botoes: [...document.querySelectorAll(".lei-l1 .lei-lb")].every(b => b.disabled),
+        quem: e && (e.querySelector(".lei-vendido-quem") || {}).textContent, vendidoEra: u && S.ctx.lotes[u.i] && S.ctx.lotes[u.i].name, novo: V.lote && V.lote.retrato.name,
+        cobre: e ? chips.filter(c => toca(e, c)).map(c => c.textContent.slice(0, 16)) : [], msg: document.querySelector(".lei-lance-msg").textContent,
+        esperado: V.botoes && V.botoes["+1"].motivo === "pausa" && V.botoes["+1"].max > 0 ? "Aguarde o próximo jogador · seu máximo R$ " + V.botoes["+1"].max : null }; });
+    confere("T4 na pausa, 'Vendido para X por R$ Y' (ou 'Sem lance') com o nome de quem foi vendido, sobre a linha do relógio do cartão novo (sem cobrir o nome nem os chips), os botões apagados e 'Aguarde o próximo jogador' com o seu máximo",
+      vendido.visivel && /^(Vendido para .+ por R\$ \d+|Sem lance)/.test(vendido.txt) && vendido.botoes && !!vendido.quem && vendido.quem === vendido.vendidoEra && !vendido.cobre.length
+        && (vendido.esperado ? vendido.msg === vendido.esperado : !/^Seu máximo neste jogador/.test(vendido.msg)), vendido);
+    await print(p, "4-vendido");
+    // o contraste dos textos novos nos dois temas (a revisão de 15/11): os lances de antes (os velhos eram apagados por opacidade:
+    // 2,2–4,1:1), o valor do Tudo e o Dar lance (no claro, 2,5 e 4,5), os textos brancos do campinho sobre a grama (3,2–4,4)
+    const contrasteLote = () => p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const sobre = (c, f) => [0, 1, 2].map(i => c[i] * c[3] + f[i] * (1 - c[3])).concat([1]);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const cr = (a, b) => { const x = L(a), y = L(b); return Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100; };
+      // o fundo de verdade: as camadas de cima até a primeira opaca (a página por baixo de tudo)
+      const fundo = e => { const pilha = []; for (let a = e; a; a = a.parentElement) { const c = rgba(getComputedStyle(a).backgroundColor); if (c[3] > 0) pilha.push(c); if (c[3] >= 1) break; }
+        let f = pilha.length && pilha[pilha.length - 1][3] >= 1 ? pilha.pop() : rgba(getComputedStyle(document.body).backgroundColor);
+        while (pilha.length) f = sobre(pilha.pop(), f); return f; };
+      // o texto com a opacidade dele e a dos pais até o fundo (sem a do botão apagado: o estado, não a cor)
+      const op = (e, ate) => { let o = 1; for (let a = e; a && a !== ate; a = a.parentElement) o *= +getComputedStyle(a).opacity; return o; };
+      const texto = (e, f, ate) => { const c = rgba(getComputedStyle(e).color); c[3] *= op(e, ate); return cr(sobre(c, f), f); };
+      const stops = e => (getComputedStyle(e).backgroundImage.match(/rgba?\([^)]+\)/g) || []).map(rgba);
+      const out = {};
+      const card = document.querySelector(".lei-lote-card");
+      const ol = document.createElement("ol"); ol.className = "lei-hist";
+      ol.innerHTML = '<li><span class="lei-hist-n">A</span><b>R$ 9</b></li><li><span class="lei-hist-n">B</span><b>R$ 8</b></li><li><span class="lei-hist-n">C</span><b>R$ 7</b></li>';
+      card.appendChild(ol);
+      const fc = fundo(card);
+      out.hist = Math.min(...[...ol.querySelectorAll(".lei-hist-n, b")].map(x => texto(x, fc, card)));
+      ol.remove();
+      const tudo = document.querySelector(".lei-lb-tudo"), tv = tudo.querySelector(".lei-lb-v"), ft = stops(tudo).map(c => sobre(c, fundo(tudo.parentElement)));
+      out.tudoValor = Math.min(...ft.map(f => texto(tv, f, tudo)));
+      const dar = document.querySelector(".lei-lb-dar");
+      out.darLance = texto(dar.querySelector(".lei-lb-t"), fundo(dar), dar);
+      const cv = document.querySelector(".lei-corpo-lote .lei-cv"), grama = stops(cv);
+      for (const [k, s] of [["cvSigla", ".lei-cv-sig"], ["cvFormacao", ".lei-cv-forma"], ["cvConta", ".lei-cv-n"], ["cvNome", ".lei-cv-nome"]]) {
+        const x = cv.querySelector(s); if (x) out[k] = Math.min(...grama.map(f => texto(x, f, cv)));
+      }
+      return out;
+    });
+    const contrasteEscuro = await contrasteLote();
+    // tema claro
+    await p.evaluate(() => TM.ui.applyTheme("light"));
+    await espera(300);
+    const contrasteClaro = await contrasteLote();
+    confere("T4 contraste ≥ 4,5:1 nos dois temas: os lances de antes, o valor do Tudo, o Dar lance e os textos do campinho (a sigla, a formação, o n/11 e o sobrenome)",
+      [contrasteEscuro, contrasteClaro].every(o => Object.keys(o).length >= 6 && Object.values(o).every(x => x >= 4.5)), { escuro: contrasteEscuro, claro: contrasteClaro });
+    const claro = await p.evaluate(() => {
+      const lum = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; };
+      const cs = s => getComputedStyle(document.querySelector(s));
+      const verde = c => { const m = c.match(/\d+(\.\d+)?/g).map(Number); return m[1] > m[0] + 40 && m[1] > m[2] + 20 && (m[3] == null || m[3] > 0.9); };
+      return { barra: lum(cs(".lei-lance").backgroundColor), cartao: lum(cs(".lei-lote-card").backgroundColor), texto: lum(cs(".lei-meu-clube").color),
+        abaOn: verde(cs(".lei-aba.on").backgroundColor) && lum(cs(".lei-aba.on").backgroundColor) < 0.5, passo: verde(cs(".lei-lb-passo").backgroundColor),
+        tudo: cs(".lei-lb-tudo").backgroundImage !== "none", sb: lum(cs(".lei-sb").color), nome: lum(cs(".lei-nome").color) };
+    });
+    const contraste = await p.evaluate(() => {
+      const rgb = c => c.match(/[\d.]+/g).map(Number);
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => { const m = rgb(c); return 0.2126 * lin(m[0]) + 0.7152 * lin(m[1]) + 0.0722 * lin(m[2]); };
+      const cr = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const fundo = getComputedStyle(document.body).backgroundColor, barra = "rgb(255, 255, 255)";
+      const m = document.querySelector(".lei-lance-msg"), cls0 = m.className, out = {};
+      for (const k of ["ok", "alerta", "erro"]) { m.className = "lei-lance-msg " + k; out[k] = Math.round(cr(getComputedStyle(m).color, barra) * 100) / 100; }
+      m.className = cls0;
+      const pen = document.createElement("span"); pen.className = "lei-esc-pen"; document.querySelector(".lei-corpo").appendChild(pen);
+      out.pen = Math.round(cr(getComputedStyle(pen).color, fundo) * 100) / 100; pen.remove();
+      // os tons das fotos: o texto dos chips, da pílula inativa e da ativa (branco no verde cheio) sobre o próprio fundo
+      const par = s => { const e = document.querySelector(s), c = getComputedStyle(e); return Math.round(cr(c.color, c.backgroundColor) * 100) / 100; };
+      out.chip = par(".lei-lote-card .lei-chip"); out.abaOff = par(".lei-aba:not(.on)"); out.abaOn = par(".lei-aba.on");
+      return out;
+    });
+    confere("T4 tema claro: o retorno e o motivo da barra (ok, alerta, erro), o '−N fora da função', os chips e as pílulas com contraste ≥ 4,5:1", Object.values(contraste).every(x => x >= 4.5), contraste);
+    const sClaro = await sobreposicao(p);
+    await print(p, "4-claro");
+    confere("T4 tema claro: a barra e o cartão do lote claros, o texto e os ícones do topo escuros, a pílula ativa e o +1 em verde cheio e o Tudo em verde; nada sobre nada",
+      claro.barra > 0.9 && claro.cartao > 0.9 && claro.sb < 0.5 && claro.texto < 0.3 && claro.nome < 0.3 && claro.abaOn && claro.passo && claro.tudo && !sClaro.sobre.length && !sClaro.encostam.length && !sClaro.saem.length && !sClaro.atras, { claro, sobre: sClaro.sobre.slice(0, 3), encostam: sClaro.encostam.slice(0, 3), saem: sClaro.saem.slice(0, 3) });
+    await p.evaluate(() => TM.ui.applyTheme("dark"));
+
+    /* T5 a barra da sessão: Como funciona, Participantes e Vendas (folhas), e o relógio parado fora da sala */
+    const folhas = [];
+    for (const [rot, tit] of [["Como funciona", "Como funciona"], ["Participantes", "Participantes"], ["Vendas", "Vendas"]]) {
+      await p.click(`.lei-sb[aria-label="${rot}"]`);
+      await espera(250);
+      const s = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, txt: f.innerText.replace(/\s+/g, " ").slice(0, 3000), foco: document.activeElement && document.activeElement.className } : null; });
+      // aria-modal de verdade: a tela por trás inerte e o Tab (e o Shift+Tab) dando a volta dentro da folha
+      const fora = [];
+      for (let i = 0; i < 25; i++) { await p.keyboard.press(i < 19 ? "Tab" : "Shift+Tab"); const q = await p.evaluate(() => { const a = document.activeElement; return a && a.closest(".lei-folha-in") ? null : (a ? a.tagName + "." + a.className : "nada"); }); if (q) fora.push(q); }
+      const inerte = await p.evaluate(() => document.querySelector("#app > .screen").inert);
+      await p.keyboard.press("Escape");
+      await espera(150);
+      const solta = await p.evaluate(() => !document.querySelector("#app > .screen").inert);
+      folhas.push({ rot, ok: !!s && s.tit === tit && !(await p.evaluate(() => !!document.querySelector(".lei-folha"))), modal: !fora.length && inerte && solta, fora: fora.slice(0, 3), s: s && { tit: s.tit, foco: s.foco } , txt: s && s.txt });
+    }
+    confere("T5 Como funciona, Participantes e Vendas abrem como folhas (foco no Fechar) e fecham com Esc", folhas.every(f => f.ok) && /R\$ 100/.test(folhas[0].txt) && /Bot /.test(folhas[1].txt) && /Vendidos/i.test(folhas[2].txt), folhas.map(f => ({ rot: f.rot, ok: f.ok, s: f.s })));
+    confere("T5 as folhas prendem o foco: a tela por trás inerte enquanto abertas, o Tab e o Shift+Tab não saem da folha", folhas.every(f => f.modal), folhas.map(f => ({ rot: f.rot, modal: f.modal, fora: f.fora })));
+    // o bloco Técnicos saiu da aba: na folha Participantes, tocar num técnico abre o time dele (as Vendas com o campinho novo);
+    // a ficha do (i) também sem a carta (o cabeçalho do cartão, os 6 atributos em números e a lista)
+    await p.click('.lei-sb[aria-label="Participantes"]');
+    await espera(250);
+    // o selo VOCÊ da sua linha: a pílula verde nos dois temas (a regra base tinha saído junto com a do seu clube: no claro,
+    // branco sobre branco) e o rótulo da linha com o saldo e as vagas (um botão só lê o rótulo)
+    const voce = await p.evaluate(() => {
+      const rgba = c => { const m = (c.match(/[\d.]+/g) || [0, 0, 0, 0]).map(Number); return [m[0], m[1], m[2], m[3] == null ? 1 : m[3]]; };
+      const lin = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+      const L = c => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+      const mede = () => { const e = document.querySelector(".lei-folha .lei-part.eu .lei-voce"); if (!e) return null; const cs = getComputedStyle(e), f = rgba(cs.backgroundColor), t = rgba(cs.color);
+        const x = L(t), y = L(f); return { fundo: f[3], cr: Math.round((Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05) * 100) / 100 }; };
+      const escuro = mede(); TM.ui.applyTheme("light"); const claro = mede(); TM.ui.applyTheme("dark");
+      const eu = document.querySelector(".lei-folha .lei-part.eu.abre");
+      return { escuro, claro, rotulo: eu && eu.getAttribute("aria-label") };
+    });
+    confere("T5 o selo VOCÊ dos Participantes é a pílula verde nos dois temas (≥ 4,5:1) e a sua linha diz 'Ver o seu time: R$ X, N de 11'",
+      !!voce.escuro && !!voce.claro && voce.escuro.fundo >= 1 && voce.claro.fundo >= 1 && voce.escuro.cr >= 4.5 && voce.claro.cr >= 4.5 && /^Ver o seu time: R\$ \d+, \d+ de 11/.test(voce.rotulo || ""), voce);
+    const tecBot = await p.evaluate(() => { const l = [...document.querySelectorAll(".lei-folha .lei-part.abre")].find(x => /^Ver o time de Bot /.test(x.getAttribute("aria-label") || "")); if (!l) return null; const a = l.getAttribute("aria-label"); l.click(); return a; });
+    await espera(300);
+    const timeBot = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { tit: f.querySelector(".lei-folha-tit").textContent, sub: (f.querySelector(".lei-folha-sub") || {}).textContent, vagas: f.querySelectorAll(".lei-cv .lei-cv-vaga").length, cartas: f.querySelectorAll(".ut-card").length } : null; });
+    await p.keyboard.press("Escape"); await espera(150);
+    await p.click(".lei-lote-card .lei-ficha-bt");
+    await espera(300);
+    const ficha = await p.evaluate(() => { const f = document.querySelector(".lei-folha"); return f ? { cartas: f.querySelectorAll(".ut-card").length, at: [...f.querySelectorAll(".lei-ficha-at li")].map(x => x.textContent), foto: !!f.querySelector(".lei-ficha-cab .lei-foto"), nota: !!f.querySelector(".lei-ficha-cab .lei-nota") } : null; });
+    await p.keyboard.press("Escape"); await espera(150);
+    confere("T5 Participantes: tocar num técnico abre o time dele (Vendas, o campinho das 11 vagas, sem carta); a ficha do (i) sem a carta, com a foto, a nota e os 6 atributos",
+      !!tecBot && timeBot && timeBot.tit === "Vendas" && /^Time de Bot /.test(timeBot.sub || "") && timeBot.vagas === 11 && !timeBot.cartas
+      && ficha && !ficha.cartas && ficha.at.length === 6 && ficha.foto && ficha.nota, { tecBot, timeBot, ficha });
+    // o foco do teclado nunca atrás da barra de lance fixa (scroll-padding), no celular em pé
+    const focoTapado = [];
+    for (const [w, h] of [[390, 844], [360, 740]]) {
+      await p.setViewportSize({ width: w, height: h });
+      await espera(250);
+      await p.evaluate(() => { if (document.activeElement) document.activeElement.blur(); scrollTo(0, 0); });
+      for (let i = 0; i < 28; i++) {
+        await p.keyboard.press("Tab");
+        const r = await p.evaluate(() => { const a = document.activeElement, b = document.querySelector(".lei-lance"); if (!a || a === document.body || !b || b.hidden || b.contains(a)) return null;
+          const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect(); return ra.bottom > rb.top + 1 ? (a.getAttribute("aria-label") || a.textContent).trim().slice(0, 30) + " " + Math.round(ra.top) + "–" + Math.round(ra.bottom) + " (barra em " + Math.round(rb.top) + ")" : null; });
+        if (r) focoTapado.push(w + "x" + h + ": " + r);
+      }
+    }
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T5 o Tab pela aba Leilão nunca deixa o foco atrás da barra de lance (390×844 e 360×740)", !focoTapado.length, focoTapado.slice(0, 4));
+    // a linha da barra de lance: os textos mais longos (o retorno, os motivos, a troca de formação) cabem em 360 px; o campo de
+    // outro valor com o máximo no lugar reservado
+    await p.setViewportSize({ width: 360, height: 740 });
+    await espera(250);
+    const linha = await p.evaluate(() => {
+      const S = TM.leilaoSessao.atual();
+      S._emite("formacao", { de: "4-4-2", para: "4-2-4" });
+      const m = document.querySelector(".lei-lance-msg"), mede = () => { const r = document.createRange(); r.selectNodeContents(m); return r.getBoundingClientRect().width; };
+      const out = { formacao: m.textContent, larg: m.clientWidth, cabe: mede() <= m.clientWidth + 0.5, longos: [] };
+      const txt0 = m.textContent;
+      const textos = ["Lance de R$ 100: você lidera", "Alguém chegou antes: R$ 100", "Esse jogador já fechou", "Não deu para dar o lance", "Toque de novo para confirmar R$ 100",
+        "Digite o valor do lance", "Você passou neste jogador", "Seu máximo neste jogador: R$ 100", "Aguarde o próximo jogador", "Aguarde o próximo jogador · seu máximo R$ 100"]
+        .concat(["max", "goleiro", "posicao", "completo", "lider", "passou", "pausa", "tarde", "fim", "valor", "antes", "fechado"].map(k => TM.leilaoSessao.textoMotivo(k, { max: 100, valor: 100 })));
+      textos.forEach(t => { m.textContent = t; const w = mede(); if (w > m.clientWidth + 0.5) out.longos.push(t + " (" + Math.round(w) + " px)"); });
+      m.textContent = txt0;
+      const v = document.querySelector(".lei-valor"), cs = getComputedStyle(v), cv = document.createElement("canvas").getContext("2d");
+      cv.font = cs.fontWeight + " " + cs.fontSize + " " + cs.fontFamily;
+      const livre = v.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+      out.placeholder = { txt: v.placeholder, larg: Math.round(cv.measureText(v.placeholder).width), livre: Math.round(livre) };
+      return out;
+    });
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T5 em 360 px a linha da barra de lance mostra inteiros o aviso da formação e os outros textos (também o máximo da pausa), e o campo 'Outro valor' inteiro (o texto de verdade, com a fonte do campo)",
+      /^Formação agora é 4-2-4/.test(linha.formacao) && linha.cabe && !linha.longos.length && linha.placeholder.txt === "Outro valor" && linha.placeholder.larg <= linha.placeholder.livre, linha);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(2));
+    await p.click(".lei-cab .tb-back");
+    await espera(400);
+    const fora = await p.evaluate(async () => { const S = TM.leilaoSessao.atual(), h0 = S.hora(); await new Promise(r => setTimeout(r, 600)); return { rota: TM.ui.current(), parado: S.pausado(), andou: S.hora() - h0, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " ") }; });
+    confere("T5 voltar à Entrada no meio do treino para o relógio ('Leilão em andamento' com 'Voltar à sala')", fora.rota === "leilao" && fora.parado && fora.andou === 0 && /Leilão em andamento/i.test(fora.txt) && /Voltar à sala/.test(fora.txt), fora);
+    await clica(p, "^Voltar à sala$");
+    await espera(400);
+    const volta = await p.evaluate(async () => { const S = TM.leilaoSessao.atual(), h0 = S.hora(); await new Promise(r => setTimeout(r, 300)); return { rota: TM.ui.current(), parado: S.pausado(), andou: S.hora() - h0 }; });
+    confere("T5 'Voltar à sala' volta à aba Leilão com o relógio andando", volta.rota === "leilao-lote" && !volta.parado && volta.andou > 0, volta);
+
+    /* T6 recarregar no meio volta ao mesmo lote, com o tempo que faltava */
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await ate(p, () => { const S = TM.leilaoSessao.atual(), V = S.ver(); return V.lote && !V.lote.pausa && V.lote.fim - S.hora() > 4000; }, null, 30000);
+    const antesR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo }; });
+    await p.reload({ waitUntil: "load" });
+    await p.waitForFunction(() => window.TM && TM.ui && TM.leilaoSessao && TM.leilaoTela, null, { timeout: 60000 });
+    await p.evaluate(() => TM.ui.go("leilao"));
+    await espera(300);
+    const minhas = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().map(x => x.codigo), txt: (document.querySelector(".lei-salas") || {}).innerText }));
+    await clica(p, "^Continuar$");
+    await ate(p, () => TM.ui.current() === "leilao-lote" && !!TM.leilaoSessao.atual(), null, 20000);
+    const depoisR = await p.evaluate(() => { const S = TM.leilaoSessao.atual(), V = S.ver(); return { codigo: S.codigo, seq: V.lote.seq, ordem: V.lote.ordem, i: V.lote.i, resta: V.lote.fim - S.hora(), saldo: V.tecnicos[V.eu].saldo, n: document.querySelector(".lei-lote-n").textContent }; });
+    confere("T6 recarregar no meio: 'Minhas salas' lista o treino; 'Continuar' volta ao mesmo lote com o tempo que faltava (±1,5 s)",
+      !minhas.atual && minhas.salas.includes(antesR.codigo) && depoisR.codigo === antesR.codigo && depoisR.seq === antesR.seq && depoisR.i === antesR.i && depoisR.saldo === antesR.saldo
+      && Math.abs(depoisR.resta - antesR.resta) <= 1500 && depoisR.n === "Jogador " + antesR.ordem + " de 80", { minhas, antesR, depoisR });
+
+    /* T7 o resto do leilão (o relógio acelerado; quem decide é a pessoa de teste pela tela) */
+    await p.evaluate(() => TM.leilaoSessao.acelerar(10));
+    const amostras = { motivos: {}, ruins: [] };
+    const t7 = Date.now();
+    while (Date.now() - t7 < 240000) {
+      const r = await p.evaluate(async () => {
+        const S = TM.leilaoSessao.atual(); if (!S) return { fim: true };
+        let V = S.ver();
+        if (V.estado !== "leilao") { TM.leilaoSessao.acelerar(0.1); return { fim: true, estado: V.estado }; }
+        if (!V.lote || V.lote.pausa || V.lote.fechando) return {};
+        const msg = document.querySelector(".lei-lance-msg"), b1 = document.querySelector('.lei-lb-passo[data-tipo="+1"]'), pas = document.querySelector(".lei-lb-passar");
+        const out = {};
+        // o +1 apagado: a linha de cima diz o motivo (quando não há retorno de toque na tela); amostra só com o estado parado
+        // por dois quadros (a tela se refaz no quadro seguinte ao do estado novo)
+        if (V.botoes && !V.botoes["+1"].pode) {
+          const m1 = V.botoes["+1"].motivo, k1 = V.lote.seq + ":" + V.lote.n;
+          await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+          const V2 = S.ver();
+          if (V2.estado === "leilao" && V2.lote && !V2.lote.pausa && !V2.lote.fechando && V2.botoes && !V2.botoes["+1"].pode && V2.botoes["+1"].motivo === m1 && V2.lote.seq + ":" + V2.lote.n === k1
+            && b1.disabled && !/lidera:|chegou antes|passou neste|já fechou|Lance de|Formação agora|confirmar/.test(msg.textContent)) out.amostra = [m1, msg.textContent];
+          V = V2;
+          if (!V.botoes) return out;
+        }
+        const eu = V.tecnicos[V.eu];
+        if (V.botoes && V.botoes["+1"].pode && !b1.disabled && eu.vagas > 0 && V.botoes["+1"].alvo <= Math.max(1, Math.floor(eu.saldo / eu.vagas))) b1.click();
+        else if (V.botoes && V.botoes.passar.pode && !pas.disabled && Math.random() < 0.7) pas.click();
+        return out;
+      });
+      if (r.fim) break;
+      if (r.amostra) {
+        amostras.motivos[r.amostra[0]] = (amostras.motivos[r.amostra[0]] || 0) + 1;
+        const esperado = (textoMotivos.find(x => x[0] === r.amostra[0]) || [])[1];
+        if (!esperado || (r.amostra[0] === "max" ? !/^Acima do seu máximo R\$ \d+$/.test(r.amostra[1]) : r.amostra[1] !== esperado)) amostras.ruins.push(r.amostra);
+      }
+      await espera(70);
+    }
+    V = await ver(p);
+    // quantas amostras saem depende do caminho sorteado (o Passar e a sala do treino; a maior parte cai com o retorno do toque
+    // na linha de cima): de 6 a 90 nas duas versões. O que vale é nenhuma errada e um motivo de goleiro/posição/máximo/completo
+    const n7 = Object.values(amostras.motivos).reduce((s, x) => s + x, 0);
+    confere("T7 o leilão vai até o fim pela tela; sempre que o +1 apaga, a linha de cima diz o motivo (com o de goleiro/posição/máximo/completo entre eles)",
+      V.estado !== "leilao" && n7 >= 3 && !amostras.ruins.length && Object.keys(amostras.motivos).some(k => /goleiro|posicao|max|completo/.test(k)), { estado: V.estado, motivos: amostras.motivos, ruins: amostras.ruins.slice(0, 5) });
+    const an = await p.evaluate(() => TM.leilaoTela.anuncios());
+    confere("T7 a região ao vivo falou o lote ('Jogador N de 80: nome, função, nota') e as vendas", an.some(a => /^Jogador \d+ de 80: .+, .+, nota \d+$/.test(a)) && an.some(a => /^Vendido para .+ por R\$ \d+$/.test(a)), an.slice(-6));
+    // o que ficou de fato na #lei-vivo: o "Vendido para X por R$ Y" fica escrito (antes, o lote novo o trocava no mesmo quadro) e
+    // nenhuma fala sai antes de 1 s
+    const vivo = await p.evaluate(() => { const v = window.__vivo || [], falas = [];
+      // (a última fala ainda está na região: o tempo dela não conta)
+      for (let i = 0; i + 1 < v.length; i++) if (v[i][1]) falas.push({ t: v[i][1], ms: Math.round(v[i + 1][0] - v[i][0]) });
+      return { n: falas.length, vendidos: falas.filter(f => /Vendido para .+ por R\$ \d+/.test(f.t)).length, curtas: falas.filter(f => f.ms < 1000).map(f => f.t.slice(0, 60) + " (" + f.ms + " ms)"),
+        amostra: falas.filter(f => /Vendido/.test(f.t)).slice(-2).map(f => f.t.slice(0, 120) + " (" + f.ms + " ms)") }; });
+    confere("T7 na #lei-vivo o 'Vendido para X por R$ Y' fica escrito (junto com o lote novo) e cada fala fica pelo menos 1 s", vivo.n > 10 && vivo.vendidos > 3 && !vivo.curtas.length, vivo);
+
+    /* T8 a escalação (a aba abre sozinha no fim do leilão) */
+    const foiEsc = await ate(p, () => TM.ui.current() === "leilao-escalacao", null, 15000);
+    await espera(300);
+    V = await ver(p);
+    // (o campinho das vagas, o mesmo da aba Leilão: nenhuma carta do Ultimate na sala — o dono, 15/11)
+    const esc = await p.evaluate(() => ({ cartas: document.querySelectorAll(".lei-corpo-esc .ut-card").length, fotos: document.querySelectorAll(".lei-cv-esc .lei-cv-vaga.cheia .lei-foto").length,
+      vagas: document.querySelectorAll('.lei-cv-esc .lei-cv-vaga[role="button"]').length,
+      n: document.querySelector(".lei-esc-n").textContent, prazo: (document.querySelector(".lei-esc-prazo") || {}).textContent }));
+    confere("T8 no fim do leilão a aba Escalação abre sozinha: 11/11, o campinho das vagas com as 11 fotos tocáveis (sem carta) e o prazo",
+      foiEsc && V.estado === "escalacao" && V.meu.escalacao.n === 11 && !esc.cartas && esc.fotos === 11 && esc.vagas === 11 && esc.n === "11/11" && /A escalação fecha em \d:\d\d/.test(esc.prazo || ""), { foiEsc, estado: V.estado, esc });
+    await nadaSobreNada(p, "escalacao");
+    const ruinsEsc = nadaSobre.filter(x => /^escalacao/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado));
+    confere("T8 nada sobre nada na Escalação nos 8 tamanhos", !ruinsEsc.length, ruinsEsc.slice(0, 4));
+    // trocar duas vagas do mesmo grupo
+    const par = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), e = V.meu.escalacao, sl = TM.leilao.slotsDe(e.formacao);
+      for (let i = 0; i < sl.length; i++) for (let j = i + 1; j < sl.length; j++) if (sl[i][0] === sl[j][0] && sl[i][0] !== "GK") return { i, j, ti: e.tit[i], tj: e.tit[j] }; return null; });
+    await p.click(`.lei-cv-esc .lei-cv-vaga[data-vaga="${par.i}"]`);
+    await espera(150);
+    const marcada = await p.evaluate(i => !!document.querySelector(`.lei-cv-esc .lei-cv-vaga.sel[data-vaga="${i}"]`), par.i);
+    await p.click(`.lei-cv-esc .lei-cv-vaga[data-vaga="${par.j}"]`);
+    await espera(300);
+    V = await ver(p);
+    confere("T8 tocar em dois troca as vagas (a 1ª fica marcada); vale a escalação à mão", marcada && V.meu.escalacao.manual && V.meu.escalacao.tit[par.i] === par.tj && V.meu.escalacao.tit[par.j] === par.ti, { par, marcada, tit: V.meu.escalacao.tit });
+    // a formação (só as que cabem)
+    const forma = await p.evaluate(() => { const bs = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")]; const alvo = bs.find(b => !b.disabled && !b.classList.contains("active"));
+      const off = bs.filter(b => b.disabled).map(b => b.title); if (alvo) alvo.click(); return { alvo: alvo && alvo.querySelector(".lei-forma-f").textContent, off }; });
+    await espera(300);
+    V = await ver(p);
+    confere("T8 a formação troca para uma em que o time cabe (as que não cabem ficam apagadas com o motivo)",
+      // (o time pode caber numa formação só: então todas as outras estão apagadas com o motivo)
+      (forma.alvo ? V.meu.escalacao.formacao === forma.alvo : forma.off.length === 5) && forma.off.every(t => /não cabe/.test(t)), { forma, agora: V.meu.escalacao.formacao });
+    // o campinho cheio em cada formação em que o time cabe, em 360×740: as linhas retas e nada sobre nada (a nota e o −N saem
+    // da caixa da vaga: a revisão de 15/11 achou o nome do zagueiro central do 5-4-1 sobre a nota do goleiro)
+    await p.setViewportSize({ width: 360, height: 740 });
+    const formaAntes = V.meu.escalacao.formacao, formasCheias = [];
+    for (const f of await p.evaluate(() => [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].filter(b => !b.disabled).map(b => b.querySelector(".lei-forma-f").textContent))) {
+      await p.evaluate(f => { const b = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].find(x => x.querySelector(".lei-forma-f").textContent === f); if (b && !b.classList.contains("active")) b.click(); }, f);
+      await ate(p, f => TM.leilaoSessao.atual().ver().meu.escalacao.formacao === f && !!document.querySelector(".lei-cv-esc"), f, 5000);
+      await espera(200);
+      const s = await sobreposicao(p);
+      const linhas = await p.evaluate(() => { const tops = {}; document.querySelectorAll(".lei-cv-esc .lei-cv-vaga").forEach(v => { const g = (v.getAttribute("aria-label") || "").match(/vaga de (\w+)/); const k = g ? g[1] : "?"; (tops[k] = tops[k] || new Set()).add(v.style.top); });
+        return Object.values(tops).every(x => x.size === 1); });
+      formasCheias.push({ f, retas: linhas, sobre: s.sobre.slice(0, 3), encostam: s.encostam.slice(0, 3), fora: s.fora.slice(0, 3) });
+    }
+    await p.evaluate(f => { const b = [...document.querySelectorAll(".lei-esc-formas .lei-forma-bt")].find(x => x.querySelector(".lei-forma-f").textContent === f); if (b && !b.classList.contains("active")) b.click(); }, formaAntes);
+    await ate(p, f => TM.leilaoSessao.atual().ver().meu.escalacao.formacao === f, formaAntes, 5000);
+    await p.setViewportSize({ width: 390, height: 844 });
+    confere("T8 o campinho cheio da Escalação em cada formação em que o time cabe (360×740): as linhas retas e nada sobre nada (a nota, o −N e os nomes)",
+      formasCheias.length >= 1 && formasCheias.every(x => x.retas && !x.sobre.length && !x.encostam.length && !x.fora.length), formasCheias);
+    await print(p, "8-escalacao");
+    // Pronto → o campeonato: quem confirmou vai sozinho à aba Campeonato
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await clica(p, "^Pronto$");
+    await ate(p, () => TM.leilaoSessao.atual().ver().estado === "camp", null, 15000);
+    const foiCamp = await ate(p, () => TM.ui.current() === "leilao-camp" && !!document.querySelector(".lei-rodada"), null, 10000);
+    await espera(300);
+    const camp = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(); return { rota: TM.ui.current(), estado: V.estado, formato: V.camp && V.camp.formato, txt: document.querySelector(".screen.is-active").innerText.replace(/\s+/g, " "),
+      feitas: [...document.querySelectorAll(".lei-aba.feita")].map(b => b.dataset.rota), seu: !!document.querySelector(".lei-seujogo"), chave: !!document.querySelector(".lei-chave"), tabela: !!document.querySelector(".lei-tabela"),
+      jogos: document.querySelectorAll(".lei-rodada .lei-jogo").length }; });
+    confere("T8 'Pronto' leva ao campeonato sozinho: a aba Campeonato com o Mata-mata (Seu jogo, a rodada com 2 jogos e a chave, sem tabela), sem 'em breve'; Leilão e Escalação com o check",
+      foiCamp && camp.estado === "camp" && camp.formato === "mata" && camp.seu && camp.chave && !camp.tabela && camp.jogos === 2 && !/em breve/i.test(camp.txt) && /Mata-mata/.test(camp.txt) && camp.feitas.join() === "leilao-lote,leilao-escalacao", camp);
+    await print(p, "8-campeonato");
+
+    /* T11 o Campeonato no treino: Seu jogo com o prazo, a Escalação que vale no próximo jogo, o Simular partida (grava e só
+       então mostra) e o Ver o jogo no 2D sem pausa */
+    await ate(p, () => { const V = TM.leilaoSessao.atual().ver(); return V.camp && V.camp.meuJogo && V.camp.meuJogo.e === "aberto" && V.camp.meuJogo.podeSimular; }, null, 15000);
+    await espera(300);
+    const pz1 = await p.evaluate(() => TM.leilaoTela.estado().prazo);
+    await espera(1300);
+    const seu = await p.evaluate(() => ({ prazo: TM.leilaoTela.estado().prazo, escudos: document.querySelectorAll(".lei-seujogo .utx-escudo").length, simular: !!document.querySelector(".lei-simular:not([disabled])"),
+      txt: document.querySelector(".lei-seujogo").innerText.replace(/\s+/g, " ") }));
+    confere("T11 Seu jogo: os dois escudos desenhados, 'Simulado sozinho em M:SS' andando pelo relógio da sala e o Simular partida",
+      /^Simulado sozinho em \d:\d\d/.test(pz1 || "") && /^Simulado sozinho em \d:\d\d/.test(seu.prazo || "") && seu.prazo !== pz1 && seu.escudos === 2 && seu.simular && /Seu jogo · Semifinal/i.test(seu.txt), { pz1, seu });
+    await nadaSobreNadaTemas(p, "camp", extraCamp);
+    const claroCamp = await temaClaroCamp(p);
+    confere("T11 o Campeonato no tema claro: as caixas e os jogos claros, o texto escuro", claroCamp.caixa > 0.9 && claroCamp.jogo > 0.9 && claroCamp.seu > 0.9 && claroCamp.texto < 0.3, claroCamp);
+    // a Escalação continua aberta no campeonato e diz que vale a partir do próximo jogo
+    await p.click('.lei-aba[data-rota="leilao-escalacao"]');
+    await espera(300);
+    const escCamp = await p.evaluate(() => ({ txt: document.querySelector(".lei-esc-camp").innerText, vagas: document.querySelectorAll('.lei-cv-esc .lei-cv-vaga[role="button"]').length }));
+    confere("T11 a Escalação no campeonato: as 11 vagas tocáveis e 'vale a partir do seu próximo jogo que ainda não começou'", escCamp.vagas === 11 && /próximo jogo que ainda não começou/.test(escCamp.txt), escCamp);
+    await p.click('.lei-aba[data-rota="leilao-camp"]');
+    await ate(p, () => !!document.querySelector(".lei-simular"), null, 10000);
+    // o Simular partida: só abre o 2D com o jogo JÁ gravado (feito), e o 2D toca o gravado sem pausa
+    await p.evaluate(() => {
+      const o = TM.engine.simulate; window.__sims2d = 0;
+      // conta só os sorteios feitos pelo 2D (o resimRest da pausa): a conferência da sessão também simula, por outro caminho
+      TM.engine.simulate = function () { if (/matchview\.js/.test(new Error().stack || "")) window.__sims2d++; return o.apply(this, arguments); };
+      window.__feitoAoAbrir = null;
+      const go = TM.ui.go;
+      TM.ui.go = function (r, prm) { if (r === "leilao-jogo") { const S = TM.leilaoSessao.atual(), V = S.ver(); let g = null; V.camp.rodadas.forEach(R => R.jogos.forEach(x => { if (x.id === prm.id) g = x; })); window.__feitoAoAbrir = g ? g.e : "?"; } return go.apply(this, arguments); };
+    });
+    const v1 = await campPelaTela(p, "V.camp.rodadas[0].feita", 60000);
+    const aoAbrir = await p.evaluate(() => window.__feitoAoAbrir);
+    confere("T11 'Simular partida' grava antes de mostrar: o 2D abre com o jogo já feito, anima sem o botão de pausa (pauseSide null) e não sorteia nada (e o Campo 2D ligado; ao sair, nenhum erro de página: ver o último item)",
+      v1.simular >= 1 && v1.jogos >= 1 && v1.animados >= 1 && v1.campo2d >= 1 && aoAbrir === "feito" && !v1.ruins.length, { v1, aoAbrir });
+    // o estado de cada jogo na rodada: Simulado com o placar e o Ver o jogo
+    const linhas = await p.evaluate(() => [...document.querySelectorAll(".lei-rodada .lei-jogo")].map(li => ({ e: li.dataset.e, est: li.querySelector(".lei-jg-est").textContent, pl: li.querySelector(".lei-jg-pl").textContent, ver: !!li.querySelector(".lei-jg-ver") })));
+    confere("T11 os jogos da rodada com o estado ('Simulado' com o placar e o Ver o jogo; 'Esperando' sem placar)",
+      linhas.length > 0 && linhas.every(l => (l.e === "feito" && /^Simulado/.test(l.est) && /^\d+ × \d+$/.test(l.pl) && l.ver) || (l.e !== "feito" && /Esperando|Simulando|A definir/.test(l.est) && l.pl === "×" && !l.ver)), linhas);
+    // ‹ › pela rodada mantém o foco no botão
+    const nav1 = await p.evaluate(async () => {
+      const rod = () => document.querySelector(".lei-rodada").dataset.rodada, a = rod();
+      const prox = document.querySelector('.lei-rod-bt[data-foco="rod-prox"]'), ant = document.querySelector('.lei-rod-bt[data-foco="rod-ant"]');
+      const alvo = !prox.disabled ? prox : ant; alvo.focus(); alvo.click();
+      await new Promise(r => setTimeout(r, 120));
+      const b = rod(), foco = document.activeElement && document.activeElement.dataset.foco;
+      document.activeElement.click();
+      await new Promise(r => setTimeout(r, 120));
+      return { a, b, foco, c: rod(), vista: TM.leilaoTela.estado().rodadaVista };
+    });
+    confere("T11 ‹ › mostra as outras rodadas e o foco fica no botão", nav1.a !== nav1.b && /^rod-/.test(nav1.foco || "") && nav1.vista != null, nav1);
+    await p.evaluate(() => { const b = document.querySelector('[data-foco="rod-vez"]'); if (b) b.click(); });
+
+    /* T12 o resto do mata-mata até o campeão pela tela, e o fim (o 2D instantâneo daqui em diante: o placar dos 90' à mostra) */
+    await p.evaluate(() => { TM.storage.saveSettings(Object.assign({}, TM.storage.settings(), { matchSpeed: "instantaneo" })); TM.leilaoSessao.acelerar(20); });
+    const v2 = await campPelaTela(p, null, 120000);
+    await espera(400);
+    const fimV = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return { estado: V.estado, campeao: C.campeao, classificacao: C.classificacao, art: C.artilharia[0] ? C.artilharia[0].nome : null, mt: C.melhorTime,
+      nomes: V.tecnicos.map(t => t.clube.nome), eu: V.eu, rota: TM.ui.current(),
+      poster: document.querySelector(".lei-campeao") ? document.querySelector(".lei-campeao").innerText.replace(/\s+/g, " ") : "", escPoster: document.querySelectorAll(".lei-campeao .utx-escudo").length,
+      classe: [...document.querySelectorAll(".lei-class .lei-cl-n")].map(e => e.textContent), dest: [...document.querySelectorAll(".lei-dest .lei-dest-n")].map(e => e.textContent),
+      bts: [...document.querySelectorAll(".lei-fim-acoes button")].map(b => b.textContent.trim()) }; });
+    confere("T12 o mata-mata até o campeão pela tela (cada jogo visto no 2D conferido contra o gravado: o placar dos 90', a prorrogação e os pênaltis)", v2.fim && fimV.estado === "fim" && !v2.ruins.length, { v2, estado: fimV.estado });
+    confere("T12 o fim: o campeão no pôster com o escudo desenhado, a classificação final na ordem, o artilheiro, o melhor time pela soma das notas, Voltar e Criar outra sala",
+      fimV.rota === "leilao-camp" && fimV.escPoster === 1 && fimV.poster.indexOf(fimV.nomes[fimV.campeao]) >= 0 && /Campeão/i.test(fimV.poster)
+      && fimV.classe.join("|") === fimV.classificacao.map(t => fimV.nomes[t]).join("|") && fimV.dest[0] === (fimV.art || "Ninguém marcou") && fimV.dest[1] === fimV.nomes[fimV.mt.t]
+      && fimV.bts.join("|") === "Voltar|Criar outra sala" && (fimV.campeao === fimV.eu ? /Você é o campeão/i.test(fimV.poster) : /Seu lugar: \d+º/i.test(fimV.poster)), fimV);
+    const anCamp = await p.evaluate(() => TM.leilaoTela.anuncios());
+    confere("T12 a região ao vivo falou a rodada que abriu e o campeão", anCamp.some(a => /começou$/.test(a) && /Final|Semifinal|Rodada/.test(a)) && anCamp.some(a => /^O campeonato acabou: campeão .+/.test(a)), anCamp.slice(-8));
+    await nadaSobreNadaTemas(p, "fim", extraCamp);
+    await print(p, "12-fim");
+    // Criar outra sala abre a Criar (o treino); volta à sala para o Sair do T9
+    await clica(p, "^Criar outra sala$");
+    await espera(300);
+    const outra = await p.evaluate(() => TM.ui.current());
+    await p.evaluate(() => TM.ui.go("leilao-camp"));
+    await espera(300);
+    confere("T12 'Criar outra sala' abre a Criar sala", outra === "leilao-criar", outra);
+
+    /* T9 Sair da sala (com confirmação) apaga o treino deste aparelho */
+    await p.click(".lei-sb.sair");
+    await espera(250);
+    await p.evaluate(() => { const b = [...document.querySelectorAll(".sheet-overlay .sheet-item")].find(x => x.textContent.trim() === "Sair da sala"); if (b) b.click(); });
+    await ate(p, () => TM.ui.current() === "leilao", null, 10000);
+    const saiu = await p.evaluate(() => ({ atual: !!TM.leilaoSessao.atual(), salas: TM.leilaoSessao.salas().length }));
+    confere("T9 'Sair da sala' pede confirmação, volta à Entrada e apaga o treino", !saiu.atual && saiu.salas === 0, saiu);
+
+    /* T10 o convite pelo link (?leilao=CÓDIGO): a Entrada com o código, guardado uma vez por carga da página */
+    {
+      const cx = await nav.newContext({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+      await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+      const p = await cx.newPage();
+      p.on("pageerror", e => errosPagina.push(String(e).slice(0, 300)));
+      await p.goto(srv.url + "index.html?leilao=" + encodeURIComponent("https://x/?leilao=ab2cd3"), { waitUntil: "load" });
+      await ate(p, () => window.TM && TM.ui && TM.ui.current && TM.ui.current() === "leilao", null, 30000);
+      const r1 = await p.evaluate(() => ({ rota: TM.ui.current(), convite: TM.leilaoTela.convite() }));
+      // voltar à Entrada não guarda de novo; usar o convite o tira
+      const r2 = await p.evaluate(() => { TM.leilaoTela.convite(true); TM.ui.go("modes"); TM.ui.go("leilao", { codigo: "ZZZZZZ", auto: true }); return TM.leilaoTela.convite(); });
+      confere("T10 o link ?leilao=CÓDIGO abre a Entrada do leilão com o convite (o link colado limpo, maiúsculas), uma vez por carga da página",
+        r1.rota === "leilao" && r1.convite === "AB2CD3" && r2 === null, { r1, r2 });
+      await cx.close();
+    }
+
+    /* T13 os outros formatos até o campeão pela tela: Pontos corridos com 8 (a tabela com 8), Pontos + mata-mata com 8 (a
+       tabela e a chave da fase final) e o Mata-mata com 6 (a chave com as folgas); nada sobre nada nos 8 tamanhos, no
+       escuro e no claro. O leilão desses passa em tudo pela sessão (a tela do leilão já foi conferida no T3–T7). */
+    const treinoAteCamp = (T, formato) => treinoAte(p, T, formato);
+    const fimDe = () => p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return { estado: V.estado, n: document.querySelectorAll(".lei-class .lei-cl").length,
+      classe: [...document.querySelectorAll(".lei-class .lei-cl-n")].map(e => e.textContent).join("|"), esperado: C.classificacao.map(t => V.tecnicos[t].clube.nome).join("|"),
+      x: [...document.querySelectorAll(".lei-class .lei-cl-x")].map(e => e.textContent), poster: !!document.querySelector(".lei-campeao .utx-escudo") }; });
+
+    // Pontos corridos com 8
+    const tp = await treinoAteCamp(8, "pontos");
+    const vp1 = await campPelaTela(p, "V.camp.atual >= 3", 120000);
+    const tab = await p.evaluate(() => { const C = TM.leilaoSessao.atual().ver().camp; return { linhas: document.querySelectorAll(".lei-tabela tbody tr").length,
+      pts: [...document.querySelectorAll(".lei-tabela tbody tr td.c7")].map(td => +td.textContent).join(), esperado: C.tabela.map(r => r.pts).join(), eu: document.querySelectorAll(".lei-tabela tbody tr.eu").length,
+      chave: !!document.querySelector(".lei-chave"), sub: document.querySelector(".lei-camp-sub").textContent }; });
+    confere("T13 Pontos corridos com 8: a tabela com os 8 na ordem da sessão, a minha linha marcada, sem chave; 'Rodada N de 14 · 1º turno'",
+      tp.T === 8 && tp.formato === "pontos" && tab.linhas === 8 && tab.pts === tab.esperado && tab.eu === 1 && !tab.chave && /^Rodada \d+ de 14 · [12]º turno$/.test(tab.sub) && !vp1.ruins.length, { tp, tab, ruins: vp1.ruins.slice(0, 3) });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await nadaSobreNadaTemas(p, "camp-pontos8", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const vp2 = await campPelaTela(p, null, 300000);
+    const fp = await fimDe();
+    confere("T13 Pontos corridos até o campeão pela tela: a classificação final com os 8 (na ordem da tabela) e os pontos de cada um",
+      vp2.fim && !vp2.ruins.length && fp.estado === "fim" && fp.n === 8 && fp.classe === fp.esperado && fp.x.every(t => /^\d+ pontos?$/.test(t)) && fp.poster, { fp, ruins: vp2.ruins.slice(0, 3), jogos: vp1.jogos + vp2.jogos });
+    await nadaSobreNadaTemas(p, "fim-pontos8", extraCamp);
+
+    // Pontos + mata-mata com 8: a fase de pontos, depois a chave com os 4 classificados
+    const tm = await treinoAteCamp(8, "misto");
+    const vm1 = await campPelaTela(p, "V.camp.ligaFeita", 240000);
+    const mx = await p.evaluate(() => { const V = TM.leilaoSessao.atual().ver(), C = V.camp; return {
+      classif: document.querySelectorAll(".lei-tabela tbody tr.classif").length, semis: [...document.querySelectorAll(".lei-ch-col")].map(c => [...c.querySelectorAll(".lei-ch-n")].map(e => e.textContent)),
+      esperado: [[0, 3], [1, 2]].map(pr => pr.map(k => V.tecnicos[C.tabela[k].t].clube.nome)), nota: (document.querySelector(".lei-tab-nota") || {}).textContent }; });
+    confere("T13 Pontos + mata-mata com 8: os 4 primeiros marcados na tabela e a chave com 1º × 4º e 2º × 3º, e a Final",
+      tm.formato === "misto" && mx.classif === 4 && mx.semis.length === 2 && mx.semis[0].join("|") === mx.esperado.map(x => x.join("|")).join("|") && mx.semis[1].length === 2 && /4 primeiros/.test(mx.nota || "") && !vm1.ruins.length, { mx, ruins: vm1.ruins.slice(0, 3) });
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    await nadaSobreNadaTemas(p, "camp-misto8", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const vm2 = await campPelaTela(p, null, 120000);
+    const fm = await fimDe();
+    confere("T13 Pontos + mata-mata até o campeão pela tela: a classificação final com os 8 (Campeão, Vice, Semifinal e a fase de pontos)",
+      vm2.fim && !vm2.ruins.length && fm.n === 8 && fm.classe === fm.esperado && fm.x[0] === "Campeão" && fm.x[1] === "Vice" && fm.x.slice(2, 4).every(t => t === "Semifinal") && fm.x.slice(4).every(t => /^Fase de pontos · [5-8]º$/.test(t)), { fm, ruins: vm2.ruins.slice(0, 3) });
+
+    // Mata-mata com 6: 2 folgas na 1ª rodada, espalhadas pela chave
+    const t6 = await treinoAteCamp(6, "mata");
+    await p.evaluate(() => TM.leilaoSessao.acelerar(1));
+    const ch6 = await p.evaluate(() => { const C = TM.leilaoSessao.atual().ver().camp; return { col: [...document.querySelectorAll(".lei-ch-col")].map(c => ({ tit: c.querySelector(".lei-ch-tit").textContent, jogos: c.querySelectorAll(".lei-ch-jogo:not(.folga)").length, folgas: c.querySelectorAll(".lei-ch-jogo.folga").length })),
+      folgas: C.rodadas[0].folgas.length, rotulos: [...document.querySelectorAll(".lei-ch-g.folga")].map(e => e.textContent) }; });
+    confere("T13 Mata-mata com 6: a chave com as Quartas (2 jogos e 2 folgas), a Semifinal e a Final",
+      t6.formato === "mata" && ch6.folgas === 2 && ch6.col.length === 3 && ch6.col[0].jogos === 2 && ch6.col[0].folgas === 2 && ch6.col[1].tit === "Semifinal" && ch6.col[2].tit === "Final" && ch6.rotulos.every(t => t === "folga"), ch6);
+    await nadaSobreNadaTemas(p, "camp-mata6", extraCamp);
+    await p.evaluate(() => TM.leilaoSessao.acelerar(20));
+    const v6 = await campPelaTela(p, null, 120000);
+    const f6 = await fimDe();
+    confere("T13 Mata-mata com 6 até o campeão pela tela: a classificação final com os 6 (Campeão, Vice, Semifinal, Quartas de final)",
+      v6.fim && !v6.ruins.length && f6.n === 6 && f6.classe === f6.esperado && f6.x[0] === "Campeão" && f6.x[1] === "Vice" && f6.x.every(t => /^(Campeão|Vice|Semifinal|Quartas de final)$/.test(t)), { f6, ruins: v6.ruins.slice(0, 3) });
+    const vistos = [vp1, vp2, vm1, vm2, v6];
+    const soma = k => vistos.reduce((s2, v) => s2 + (v[k] || 0), 0);
+    confere(`T13 os jogos vistos no 2D pela tela (${soma("jogos")}, ${soma("placares")} com o placar dos 90' conferido; ${soma("pror")} prorrogações, ${soma("ouro")} no gol de ouro, ${soma("pen")} pênaltis) batem com o gravado`,
+      soma("jogos") >= 20 && soma("placares") >= 20 && !vistos.some(v => v.ruins.length), { jogos: soma("jogos"), pror: soma("pror"), pen: soma("pen") });
+    const ruinsCamp = nadaSobre.filter(x => /^(camp|fim)/.test(x.tela) && (x.sobre.length || x.encostam.length || x.saem.length || x.fora.length || x.rolaLado || x.tabelaRola || x.escudosReais));
+    confere(`T13 nada sobre nada no Campeonato e no fim (${nadaSobre.filter(x => /^(camp|fim)/.test(x.tela)).length} telas: mata 4, pontos 8, misto 8, mata 6 e os fins, nos 8 tamanhos, escuro e claro): nem encostado, nem texto fora do botão, a tabela sem rolar de lado, só escudos desenhados`,
+      !ruinsCamp.length, ruinsCamp.slice(0, 6));
+    }
+    if (!SO_OCULTAS) await t14();
+    if (!SO_3D) await t15();
+  } catch (e) {
+    confere("exceção no teste de tela", false, String(e && e.stack || e).slice(0, 1500));
+  } finally {
+    await nav.close().catch(() => {});
+    await srv.fechar();
+  }
+  confere("nenhum erro de página nem no console", !errosPagina.length, errosPagina.slice(0, 6));
+  console.log(`${falhasT.length ? "REPROVOU" : "PASSOU"}: ${oks.length} de ${oks.length + falhasT.length} itens da tela em ${((performance.now() - t0) / 1000).toFixed(1)} s (prints em ${PASTA})`);
+  return falhasT.length ? 1 : 0;
+}

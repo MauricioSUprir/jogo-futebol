@@ -83,7 +83,7 @@ chamadas, 92 044 triângulos, a CPU pareada +0,00 ms); o medido e o que o C12 e 
 C11").
 
 **O C12 (12/11; `234ba552`, `e8fcb651`, `9f3eb26f`): a troca de qualidade, a queda gravada e o contexto restaurado.** R, Q e Z: 3
-metas fora → 0; as guardas novas (a mira aquecida no R1 e no R4, a tela já opaca no R1, o P14 do `teste-pausa-tela`, o
+metas fora → 0; as guardas novas (a mira aquecida no R1 e no R4, a tela já opaca no R1, o P15 do `teste-pausa-tela`, o
 `teste-ritmo-desenho`) reprovam na base e por mutação, menos o `transition: none` do `hud.ocupado` (dito). O N8 estava errado: o
 `compile()` do r170 percorre todos os objetos da cena (seção 1.2). O medido, o que mudou além do plano e o que o C13 precisa saber
 estão na seção 6 ("Medido no C12").
@@ -1106,7 +1106,7 @@ o HEAD do C11, `37d8ac32`, numa worktree; depois = o C12; os testes do HEAD nos 
 | Q `__golaco.quedaDeTeste()`: o mesmo canvas, Baixa, `SAMPLES` continua 4, gravada e dita na pausa | não existe | mesmo canvas, 4 → 4, `{media, baixa, v: 1}`, "Agora: Baixa (o aparelho não segurou a Média; escolha Média para tentar de novo)" |
 | Q a recarga depois da queda gravada abre na Baixa (`SAMPLES` 0) | media, 4 | baixa, 0 |
 | Q escolher a Média apaga a queda | nada a apagar | apagada |
-| `teste-pausa-tela` P14 (novo): a linha da queda à vista, uma linha inteira no celular, sem rolar | não existe a queda: reprova | passa de 844×390 a 568×320 (11 px no 568) e no PC (1280×720 e as janelas baixas); 318 → 327 medidas no P2, nenhuma rola |
+| `teste-pausa-tela` P15 (novo; era o P14 até a junção com o PR 6 do Leilão, que usou o P14): a linha da queda à vista, uma linha inteira no celular, sem rolar | não existe a queda: reprova | passa de 844×390 a 568×320 (11 px no 568) e no PC (1280×720 e as janelas baixas); 318 → 327 medidas no P2, nenhuma rola |
 | `teste-ritmo-desenho` (Node, novo) | — | passa (R1–R10) |
 | `teste-carga` nosso / folga | 2941 KB / 479,2 KB | 2960 KB / 461,0 KB |
 
@@ -1302,7 +1302,7 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
   | Teste | Base | HEAD | Diferença | Tempo (base → HEAD) |
   |---|---|---|---|---|
   | `teste-carga` | — | passa | nosso 2967 → 2973 KB, folga 454,0 → 447,8 KB (do C13); o medidor nunca baixado | 36 s |
-  | `teste-pausa-tela` | reprova só o P14 (novo: sem a `quedaDeTeste()`) | passa | 318 → 327 medidas sem rolar; S1 online 19/49 e 28/28 → 14/38, 15/46, 42/23 (ruído, a lição abaixo) | 306 → 328 s (+7%) |
+  | `teste-pausa-tela` | reprova só o P15 (novo: sem a `quedaDeTeste()`) | passa | 318 → 327 medidas sem rolar; S1 online 19/49 e 28/28 → 14/38, 15/46, 42/23 (ruído, a lição abaixo) | 306 → 328 s (+7%) |
   | `teste-mira-tela` | 19/19 | 19/19 | as mesmas linhas (a mira pelo `compile()` no HEAD) | 199 → 42 s (a base desenha cada posição: `DESENHAR`) |
   | `teste-bola-parada-tela` | 55/55 | 55/55 | "nenhum programa novo quando a mira aparece" nos dois (o `compile()` cria o programa como o `compileAsync`); o L5 do escanteio de dia no 844×390 95% de 20 → 100% de 18 (o classificador do C15 do bloco 2) | 276 → 293 s (+6%) |
   | `teste-tm-tela` | 14/14 | 14/14 | só o que depende do relógio real ("Simular o resto" 7708 → 7713 passos; a nota do travado 6 → 7,1) | 41 → 41 s |
@@ -1311,7 +1311,7 @@ de leitura; o C13 = `95c85b23`, pelos números da revisão; agora = `5ff4db63`; 
 
 - **Para o C15** (nada mexido agora; nenhuma meta existente mudou de propósito neste bloco — as que mudaram são dos testes do
   próprio item: o `teste-ritmo-desenho` e o `teste-medidor-quadros`, refeitos aqui, e as linhas novas do `teste-graficos-pagina`):
-  - `tools/lib/tempos-ci.mjs`: o `teste-pausa-tela` sobe com o P14 (a sessão nova; base 306 → HEAD 328 s aqui, 296 → 378 s na
+  - `tools/lib/tempos-ci.mjs`: o `teste-pausa-tela` sobe com o P15 (a sessão nova; base 306 → HEAD 328 s aqui, 296 → 378 s na
     revisão com a máquina carregada) e o `teste-graficos-pagina` entra no C14 com o R5 (+20–26 s) e a P2 do toque (+12–14 s):
     177 s para P2, R, Q, Z e T aqui;
   - `teste-pausa-tela` S1 online (regressões 3, não é do bloco): reprovou no CI do `7fe3a1ab` (15/52, 8/31, 15/41) e pede a 2ª
@@ -1470,7 +1470,7 @@ antes = o HEAD do C14a, `35b9ec6e`; agora = `964a2efd`; a main `e41aa791` pela w
   - o `mudancas` do `deploy-pages.yml` compara a árvore do `golaco-testes.yml`: a próxima publicação depois do merge roda a bateria
     inteira (esperado).
 - **Os tempos** (`tempos-ci.mjs`): o celular 126 s e a página 339 s (a P 49 s com a base, ~20 sem ela; o R5 26 s; a P2 do toque 11
-  s), medidos aqui; o `teste-pausa-tela` com o P14, 250 → 261 s (260,8 s no log do CI do `38d6b243`). Os outros continuam como
+  s), medidos aqui; o `teste-pausa-tela` com o P15, 250 → 261 s (260,8 s no log do CI do `38d6b243`). Os outros continuam como
   estavam: alguns estão longe do CI (o `teste-cenas-tela` 1020 × 1191 s, o `teste-estadio` 290 × 377 s), mas a divisão já sai
   equilibrada.
 - **O CI do `964a2efd`** ([run 43200911500](https://github.com/MauricioSUprir/jogo-futebol/actions/runs/43200911500); o painel de

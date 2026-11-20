@@ -46,14 +46,17 @@
 //       px fixos: 13–15)
 //   (as medidas com as transições e animações da pausa DESLIGADAS — o foco anda 6 px em 160 ms e a lista entra em cascata: o teste
 //   mede o estado final, não o meio do movimento; lição do relógio das animações sem GPU, "Tela limpa")
+//   P14 (o Modo Leilão do TM, PR 6: as notas escondidas; ?notasOcultas=1 = o partida.notasOcultas do pedido) no PC 1280×720 e no
+//       celular 844×390: a pausa (o 1º nível com o cartão do meu time, as Opções, o Modo de jogo e as Estatísticas) sem nenhuma nota
+//       ("nota N", "geral N", .pp-nota, .c-nota) e o cartão IGUAL ao sem o parâmetro (as mesmas fichas: a pausa não depende da nota)
 //   (item 45, C12: a queda automática da qualidade)
-//   P14 com a queda (Automática + __golaco.quedaDeTeste), a linha "Agora: Baixa (o aparelho não segurou a Média; escolha Média para
+//   P15 com a queda (Automática + __golaco.quedaDeTeste), a linha "Agora: Baixa (o aparelho não segurou a Média; escolha Média para
 //       tentar de novo)" à vista nas Opções — também no celular, onde a linha da qualidade some sem a queda —, numa linha só e
 //       inteira de 844×390 a 568×320, e as Opções sem rolar (o P2); no PC ("Agora: Média … a Alta") em 1280×720 e nas janelas
 //       baixas (1366×600, 1280×520, 1000×520, 800×600). Sem a queda (a base) reprova
 //   S1  o mundo parado com a pausa aberta (0 passos em 60 quadros; 10 em 10 fechada); no online o jogo anda (de propósito)
 //   S2  0 erros no console        S5  a menor letra ≥ 11 px (o campinho ≥ 10 em 568×320)
-//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|queda]
+//   node tools/teste-pausa-tela.mjs [--raiz <pasta golaco>] [--so cel|pc|tm|online|notas|queda]
 // (--raiz: mede outra cópia do jogo — a base a5abaa4e tem de REPROVAR)
 import path from 'node:path';
 import { servidor, abrir, RAIZ as RAIZ_PADRAO } from './lib/navegador.mjs';
@@ -76,7 +79,7 @@ const res = [];
 const meta = (nome, medido, alvo, ok) => { res.push({ nome, medido, alvo, ok: !!ok }); console.log(`${ok ? 'PASSOU  ' : 'REPROVOU'}  ${nome}\n          ${medido}  (alvo: ${alvo})`); };
 const erros = [];
 // as coletas das metas (cada sessão soma aqui; as metas saem no fim)
-const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0, p12: [], p13: [], p14: [] };
+const P = { p1: [], p1n: 0, p2: [], p2n: 0, p6: [], p6n: 0, s5: [], s5n: 0, p3: [], p4: [], p5: [], p7: [], p8: [], p9: [], p10: [], p10custo: [], s1: [], p11: [], p11n: 0, p12: [], p13: [], p15: [] };
 // (item 125) a área do campo da BASE (29d67bad; o mapa do item 125, a mesma pausa, com o entalhe no celular) e a meta de cada tela
 const CAMPO_BASE = { '1920x1010': [554, 444, 1.30], '1280x720': [362, 290, 1.30], '1024x768': [285, 228, 1.30], '844x390': [282, 226, 1.30], '667x375': [282, 226, 1.15], '568x320': [220, 173, 1.10] };
 const CORTADOS_MAX = { '1920x1010': 0, '1280x720': 0, '1024x768': 0, '844x390': 0, '667x375': 1, '568x320': 5 };
@@ -992,8 +995,52 @@ async function sessaoOnline() {
   finally { erros.push(...s.erros.map(x => `online: ${x}`)); await s.navegador.close(); }
 }
 
+// ------------------------------------------------------------------ sessão: as notas escondidas (o Modo Leilão do TM, PR 6; P14)
+async function sessaoNotas() {
+  const ruins = [], vistos = [];
+  for (const [w, h, toque] of [[PC[0], PC[1], false], [844, 390, true]]) {
+    const cartoes = {};
+    for (const oc of [true, false]) {
+      const s = await abrir({ largura: w, altura: h, dpr: toque ? 2 : 1, toque });
+      const pg = s.pagina;
+      try {
+        await pg.goto(`${srv.url}index.html?${Q}${toque ? '&toque=1&entalhe=1' : ''}${oc ? '&notasOcultas=1' : ''}`, { waitUntil: 'load' });
+        await pronta(pg);
+        await carregarPausa(pg);
+        await manual(pg);
+        const r = await pg.evaluate(async () => {
+          const g = window.__golaco, rx = /\b(nota|geral)\s*\d/i, out = { flag: g.notasOcultas, textos: [], el: 0 };
+          g.abrirMenu();
+          await new Promise(ok => setTimeout(ok, 250));
+          const olha = rot => { const m = document.getElementById('menu'); const t = m ? m.innerText : ''; if (rx.test(t)) out.textos.push(rot + ': ' + (t.match(rx) || [''])[0]); out.el += document.querySelectorAll('#menu .pp-nota, #menu .c-nota, #pausa-time .pp-nota').length; };
+          olha('1º nível');
+          const card = document.getElementById('pausa-time');
+          out.cartao = card ? [...card.querySelectorAll('.pt-ficha')].map(f => f.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : '';
+          for (const sel of ['#btn-opcoes', '#btn-modos', '#btn-estatisticas']) {
+            const b = document.querySelector(sel); if (!b || b.offsetParent === null) continue;
+            b.click(); await new Promise(ok => setTimeout(ok, 200)); olha(sel);
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); await new Promise(ok => setTimeout(ok, 150));
+          }
+          g.fecharMenu();
+          return out;
+        });
+        cartoes[oc] = r.cartao;
+        vistos.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${r.cartao.split(' | ').length} fichas, ${r.textos.length} textos com nota, ${r.el} peças de nota`);
+        if (r.textos.length || r.el) ruins.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${r.textos.concat(r.el ? [r.el + ' peças de nota'] : []).slice(0, 3).join('; ')}`);
+        if (r.flag !== oc) ruins.push(`${w}×${h}: __golaco.notasOcultas ${r.flag}`);
+        if (s.erros && s.erros.length) ruins.push(`${w}×${h}: ${s.erros.length} erros no console`);
+      } catch (e) {
+        ruins.push(`${w}×${h}${oc ? ' escondidas' : ''}: ${e.message.slice(0, 120)}`);
+      } finally { await s.navegador.close(); }
+    }
+    if (!cartoes.true || cartoes.true !== cartoes.false) ruins.push(`${w}×${h}: o cartão muda com as notas escondidas (${String(cartoes.true).slice(0, 60)} × ${String(cartoes.false).slice(0, 60)})`);
+  }
+  meta('P14 as notas escondidas (o Modo Leilão do TM, PR 6; ?notasOcultas=1): a pausa (o 1º nível com o cartão, as Opções, o Modo de jogo e as Estatísticas) sem nota nenhuma e o cartão igual ao sem o parâmetro',
+    `${vistos.join(' · ')}${ruins.length ? ' — ' + ruins.slice(0, 4).join(' | ') : ''}`, 'nenhuma nota; o cartão igual', !ruins.length);
+}
+
 // ------------------------------------------------------------------ sessão: a linha da queda automática (item 45, C12)
-/** P14: a linha da queda nas Opções (celular com toque e entalhe; o PC na Alta), sem ?q — a Automática —, depois da quedaDeTeste. */
+/** P15: a linha da queda nas Opções (celular com toque e entalhe; o PC na Alta), sem ?q — a Automática —, depois da quedaDeTeste. */
 async function sessaoQueda() {
   const PC_Q = [PC, [1366, 600], [1280, 520], [1000, 520], [800, 600]];
   for (const [toque, telas] of [[true, CEL], [false, PC_Q]]) {
@@ -1006,7 +1053,7 @@ async function sessaoQueda() {
       await carregarPausa(pg);
       await manual(pg);
       const q = await pg.evaluate(() => (typeof window.__golaco.quedaDeTeste === 'function' ? window.__golaco.quedaDeTeste() : null));
-      if (!q) { P.p14.push({ ok: false, medido: `${rot}: sem a __golaco.quedaDeTeste()` }); continue; }
+      if (!q) { P.p15.push({ ok: false, medido: `${rot}: sem a __golaco.quedaDeTeste()` }); continue; }
       const esperado = toque ? /^Agora: Baixa \(o aparelho não segurou a Média; escolha Média para tentar de novo\)$/ : /^Agora: Média \(o aparelho não segurou a Alta; escolha Alta para tentar de novo\)$/;
       for (const [W, H] of telas) {
         await pg.setViewportSize({ width: W, height: H });
@@ -1023,7 +1070,7 @@ async function sessaoQueda() {
           return { texto: e.textContent, vis: e.getClientRects().length > 0 && cs.display !== 'none' && cs.visibility !== 'hidden', linhas: Math.round(r.height / parseFloat(cs.lineHeight)), corta: e.scrollWidth > e.clientWidth + 1, f: parseFloat(cs.fontSize) };
         });
         const ok = !!l && l.vis && esperado.test(l.texto) && !l.corta && (!toque || l.linhas === 1) && m.rola <= 0;
-        P.p14.push({ ok, medido: `${rot} ${W}×${H}: ${l ? `${l.vis ? 'à vista' : 'ESCONDIDA'}, ${l.linhas} linha(s), ${l.f} px${l.corta ? ', CORTADA' : ''}${esperado.test(l.texto) ? '' : `, "${l.texto}"`}` : 'sem a linha'}; rola ${m.rola}` });
+        P.p15.push({ ok, medido: `${rot} ${W}×${H}: ${l ? `${l.vis ? 'à vista' : 'ESCONDIDA'}, ${l.linhas} linha(s), ${l.f} px${l.corta ? ', CORTADA' : ''}${esperado.test(l.texto) ? '' : `, "${l.texto}"`}` : 'sem a linha'}; rola ${m.rola}` });
       }
       await pg.evaluate(() => window.__golaco.fecharMenu());
     } catch (e) { erros.push(`${rot}: ${e.stack ?? e}`); }
@@ -1048,6 +1095,7 @@ if (!SO || SO === 'tm') {
   await sessaoTM(PED_P, 'penaltis', ORDEM.tmPenaltis, [[844, 390], [568, 320]], { rot: 'Pênaltis' });
 }
 if (!SO || SO === 'online') await sessaoOnline();
+if (!SO || SO === 'notas') await sessaoNotas();
 if (!SO || SO === 'queda') await sessaoQueda();
 await srv.fechar();
 
@@ -1077,8 +1125,8 @@ if (P.p10custo.length || P.p10.length) {
   console.log('          custos (toques / teclas / apertos do controle, a partir do jogo):');
   for (const n of nomes) console.log(`            ${n}: ${custo('toque', n) ?? '-'} / ${custo('teclado', n) ?? '-'} / ${custo('controle', n) ?? '-'}`);
 }
-if (P.p14.length) meta('P14 a linha da queda automática da qualidade (item 45, C12): à vista nas Opções (também no celular), uma linha inteira no celular, sem rolar',
-  P.p14.map(x => `${x.ok ? '' : 'FALHA '}${x.medido}`).join(' | '), 'todas', P.p14.every(x => x.ok));
+if (P.p15.length) meta('P15 a linha da queda automática da qualidade (item 45, C12): à vista nas Opções (também no celular), uma linha inteira no celular, sem rolar',
+  P.p15.map(x => `${x.ok ? '' : 'FALHA '}${x.medido}`).join(' | '), 'todas', P.p15.every(x => x.ok));
 if (P.p11n) meta('P11 a linha "Duração | Dificuldade" (item 33): à vista onde vale, escondida no resto; os rótulos inteiros; no celular a altura do nível igual',
   `${P.p11n} medidas; problemas: ${lista(P.p11, 6)}`, 'nenhum', P.p11.length === 0);
 if (P.s1.length) meta('S1 o mundo parado com a pausa aberta (0/60 passos; 10/10 fechada); no online o jogo anda', P.s1.join('; '), '0/10 fora do online', !P.s1.some(x => x.startsWith('FALHA')));

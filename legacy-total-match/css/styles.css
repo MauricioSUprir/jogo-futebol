@@ -4760,6 +4760,10 @@ body.theme-light .fc-admin { background: rgba(20,24,20,.7); color: #fff; }
 .pror-min { flex: 0 0 auto; font-weight: 900; color: var(--gold-light); font-size: 12.5px; }
 .pror-txt { font-size: 12.5px; color: var(--text); line-height: 1.35; }
 .pror-vazio { margin-top: 14px; font-size: 12.5px; color: var(--text-dim); }
+/* o gol de ouro (o Modo Leilão: a prorrogação acaba no 1º gol) */
+.pror-lance.ouro { border-color: rgba(34,197,94,.55); box-shadow: 0 0 0 1px rgba(34,197,94,.2); align-items: center; flex-wrap: wrap; }
+.pror-ouro { flex: 0 0 auto; padding: 2px 8px; border-radius: 999px; background: var(--gold); color: #03140a; font-size: 10.5px; font-weight: 900; letter-spacing: .06em; text-transform: uppercase; }
+body.theme-light .pror-ouro { color: #ffffff; }
 
 /* ===================== MENU INICIAL — VITRINE ===================== */
 .screen.vit { padding: env(safe-area-inset-top, 0px) 0 36px; align-items: stretch; }   /* desce o topo (coins, conta) para baixo do relógio do iPhone */
@@ -5161,6 +5165,11 @@ body.theme-light .scout-tip-tx { color: var(--text); }
 .md-poster.res-v { border-color: rgba(34,197,94,.55); box-shadow: 0 14px 40px rgba(0,0,0,.45), 0 0 0 1px rgba(34,197,94,.25), 0 0 34px rgba(34,197,94,.16); }
 .md-poster.res-d { border-color: rgba(220,38,38,.4); }
 @media (max-width: 360px) { .mdp-placar { font-size: 38px; } .md-poster .mdp-escudo { width: 54px; height: 54px; } }
+/* o escudo desenhado (o do Ultimate: o time do Ultimate e o do Modo Leilão) no lugar do escudo do clube — 2D, pênaltis e o pôster */
+.utx-escudo.bc-crest { font-size: 41px; width: 1em; height: 1.12em; margin-bottom: 5px; }
+.utx-escudo.pk-crest { font-size: 44px; width: 1em; height: 1.12em; }
+.utx-escudo.mdp-escudo { font-size: 57px; width: 1em; height: 1.12em; }
+@media (max-width: 360px) { .md-poster .utx-escudo.mdp-escudo { font-size: 48px; width: 1em; height: 1.12em; } }
 @media (prefers-reduced-motion: reduce) { .mdp-placar { animation: none; } }
 
 /* ---- MENU no tema claro (pedido do dono: o modo claro vale também na tela inicial) ---- */
@@ -6566,21 +6575,15 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 @media (min-width: 760px) and (max-width: 1099px) {
   .vit-palco.grade .vit-trilho { --cols: 4; }
 }
-/* os 12 atalhos (com o Pênaltis 3D, o Modo Livre 3D e o Online 3D): até 1279 px, 6 + 6 — com 5 por linha o último ia
-   sozinho para uma 3ª linha e, com os 11 numa linha abaixo de 1280 px, "Modo Livre 3D" e "Dream Team" quebravam em duas */
-@media (min-width: 760px) and (max-width: 1279px) {
-  .screen.vit > .vit-mais { --cols: 6; }
+/* os 13 atalhos (o Leilão é o 13º): 7 + 6 a partir de 790 px, onde "Modo Livre 3D" cabe numa linha com a barra de rolagem
+   do PC (medido no Chromium com a barra de 15 px: em 790, 95 px de botão para 83 px de texto; o limite é ~765); de 760 px até
+   lá, 5 + 5 + 3. Com 6 por linha o 13º ia sozinho para uma 3ª linha e, com os 13 numa linha, "Modo Livre 3D" quebrava em duas
+   até 1440 px */
+@media (min-width: 790px) {
+  .screen.vit > .vit-mais { --cols: 7; }
 }
 @media (min-width: 1100px) {
   .vit-mais-b { padding: 16px 6px 14px; font-size: 12.5px; }
-}
-/* de 1280 px para cima, os 12 numa linha só (com o Online 3D); até 1439 px a letra e a folga do lado diminuem um pouco
-   para "Modo Livre 3D" não quebrar em duas (medido: 83 px de texto em 87 px de botão em 1280) */
-@media (min-width: 1280px) {
-  .screen.vit > .vit-mais { --cols: 12; }
-}
-@media (min-width: 1280px) and (max-width: 1439px) {
-  .screen.vit > .vit-mais > .vit-mais-b { padding-left: 3px; padding-right: 3px; font-size: 12px; }
 }
 /* celular (3 por linha, numa grade de 6 colunas): a última linha sempre cheia, sem buraco no fim nem um botão perdido
    no canto — o que sobra sozinho (3+3+3+1) ocupa a linha inteira e os dois que sobram (11 = 3+3+3+2) meia linha cada,
@@ -6631,6 +6634,8 @@ body.theme-light .ut-tab.utk-aba.on .utk-badge{background:#ffffff;color:#0f7a3a}
 .tm3d-sair:hover{opacity:1}
 .tm3d-sair .tm-ic{width:18px;height:18px}
 body.tm3d-aberto{overflow:hidden}
+/* o gancho gravar (Modo Leilão): o resultado do 3D sendo gravado antes do 2D (no lugar do quadro, na tela do modo) */
+.tm3d-gravando{display:flex;align-items:center;justify-content:center;min-height:40vh;padding:24px 16px;color:var(--text-dim);font-weight:700;text-align:center}
 /* a confirmação do X ("Sair do 3D?", TM.ui.confirm) vai para o body: por CIMA do quadro do 3D (z-index 5000), senão o toque
    no X não mostrava nada (item 124: toda partida passa pelo "Abrindo o estádio 3D…"). Por cima do 3D ela fica no meio da tela:
    a regra geral .modal (o cartão de 380 px) também pega a .sheet-overlay.modal e a prendia no canto esquerdo */
@@ -6725,3 +6730,1143 @@ body.tm3d-aberto .sheet-overlay.modal .sheet{max-width:440px;margin:0;border-rad
 .o3d-espera{cursor:default}
 .o3d-sigla{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;background:var(--panel);font-weight:800;font-size:12px;color:var(--text)}
 .o3d-status{margin:0}
+
+/* ================= LEILÃO (Modo Leilão; js/leilao-tela.js, PLANO-LEILAO.md §2) =================
+   Verde e preto pelas variáveis do :root, Inter (a TM Cond só na carta), ícones pelo TM.ic e o tema claro em todo bloco
+   (o campinho das vagas é verde nos dois temas, como nas fotos). A barra de lance é PRÓPRIA (não o .bottom-nav): fixa embaixo em todo
+   layout, à vista com o relógio rodando também no celular deitado; a página termina com um espaço da altura dela. */
+.lei-vivo { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lei-screen { padding-top: 14px; }
+.lei-screen [hidden] { display: none !important; }
+.lei-caixa { width: 100%; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.lei-cartao { margin-bottom: 0; }
+.lei-acoes { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; width: 100%; }
+.next-match .lei-acoes .btn, .lei-acoes .btn { flex: 1 1 180px; width: auto; max-width: 280px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.lei-bt-ic { display: inline-flex; }
+.lei-bt-ic .tm-ic { width: 17px; height: 17px; }
+.lei-rotulo { font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--text-dim); }
+.lei-vazio { font-size: 12.5px; color: var(--text-dim); padding: 6px 2px; }
+.lei-tag { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 20px; background: rgba(34,197,94,.14); color: var(--gold); font-size: 10.5px; font-weight: 800; letter-spacing: .06em; vertical-align: middle; }
+.btn.lei-off, .btn.lei-off:hover { opacity: .45; cursor: not-allowed; border-color: var(--line-2); transform: none; }
+/* o escudo desenhado (o do Ultimate) em tamanhos do leilão */
+.lei-esc { font-size: 34px; }
+.lei-esc.pp { font-size: 20px; }
+.lei-esc.p { font-size: 30px; }
+.lei-esc.g { font-size: 58px; }
+.lei-esc-txt { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1.12em; border-radius: 6px; background: var(--fill); font-size: 12px; font-weight: 800; }
+
+/* ---------- a moldura da sala (PLANO-LEILAO.md §9, as fotos de 14/11): o topo só de ícones e as abas em pílula ----------
+   À esquerda a marca (volta ao início do Leilão), à direita os 6 ícones da sala (44 × 44, sem texto: o rótulo no aria-label
+   e no title); embaixo uma linha. As abas são pílulas centralizadas (a ativa cheia, a feita com o check). O título e a liga
+   ficam só para o leitor de tela (.lei-sr). */
+.lei-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.lei-screen.lei-na-sala { padding-left: 16px; padding-right: 16px; }
+/* os tons dos chips, das pílulas e do Dar lance (o verde do TM bem claro; no escuro, um véu verde) */
+.lei-screen, .lei-folha, .lei-lance { --lei-tom: rgba(34,197,94,.10); --lei-tom-tx: var(--text); --lei-cheio: var(--green); }
+.lei-cab { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+.lei-topo { display: flex; align-items: center; justify-content: space-between; gap: 3px; min-width: 0; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+.lei-marca.tb-back { flex: 0 0 auto; width: auto; height: 44px; min-width: 44px; padding: 0 2px 0 0; gap: 0; border: 0; border-radius: 12px; background: transparent; color: var(--text-dim); cursor: pointer; }
+.lei-marca.tb-back .tm-ic { width: 16px; height: 16px; }
+.lei-marca-seta { display: inline-flex; }
+.lei-marca-logo { width: 30px; height: 30px; display: block; border-radius: 8px; background: #0b110e; object-fit: cover; }
+.lei-marca:focus-visible, .lei-sb:focus-visible, .lei-aba:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lei-sessao { display: flex; align-items: center; gap: 3px; min-width: 0; }
+.lei-sb { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
+.lei-sb-ic { display: inline-flex; }
+.lei-sb-ic .tm-ic { width: 22px; height: 22px; }
+.lei-sb.sair { color: var(--erro); }
+/* (o som desligado é o ícone volume-x, sem apagar: apagado, no claro ficava abaixo de 3:1) */
+/* o hover só com mouse (no toque o círculo cinza ficava preso no ícone depois do toque) */
+@media (hover: hover) {
+  .lei-marca.tb-back:hover { color: var(--gold); }
+  .lei-sb:hover { background: var(--fill); color: var(--text); }
+  .lei-aba:hover { color: var(--text); }
+  .lei-ficha-bt:hover { color: var(--gold); }
+  .lei-ficha-bt:hover .lei-ficha-ic { border-color: var(--gold); }
+}
+/* as pílulas mais leves que o chip "Jogador N de 52" (as fotos): 30 px à vista e o alvo de toque de 44 px pelo ::after (a folga
+   de 14 px entre as linhas, se quebrarem, guarda o alvo de cada uma) */
+.lei-abas { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 6px; }
+.lei-aba { position: relative; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 4px; min-height: 30px; padding: 0 13px; border-radius: 999px; border: 0;
+  background: var(--lei-tom); color: var(--text-dim); font: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; }
+.lei-aba::after { content: ""; position: absolute; left: 0; right: 0; top: -7px; bottom: -7px; }
+.lei-aba-ic { display: inline-flex; }
+.lei-aba-ic:empty { display: none; }
+.lei-aba-ic .tm-ic { width: 14px; height: 14px; stroke-width: 2.6; }
+.lei-aba.feita:not(.on) { color: var(--text); }
+.lei-aba.feita:not(.on) .lei-aba-ic { color: var(--gold); }
+.lei-aba.on { background: var(--lei-cheio); color: #fff; }
+.lei-aviso-sala { width: 100%; max-width: 560px; display: flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 10px 12px; border-radius: 12px;
+  border: 1px solid rgba(240,82,82,.45); background: rgba(240,82,82,.10); color: var(--text); font-size: 13px; font-weight: 600; }
+.lei-aviso-ic { display: inline-flex; color: var(--erro); }
+.lei-corpo { width: 100%; max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
+.lei-col-a, .lei-col-b { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.lei-regras-sala { font-size: 13px; font-weight: 700; color: var(--text-dim); }
+/* o celular em pé: a linha do topo de ponta a ponta, como nas fotos; até 380 px as pílulas apertam (as 4 do online cabem em 360) */
+@media (max-width: 599px) {
+  .lei-topo { margin: 0 -16px; padding: 0 16px 4px; }
+}
+/* (as 4 pílulas do online numa linha até 400 px: com 13 px somavam ~359 px e quebravam em 390, com o Campeonato embaixo; as 3 do
+   treino ficam como estavam até 380 px) */
+@media (max-width: 400px) {
+  .lei-abas:has(.lei-aba:nth-child(4)) { gap: 14px 4px; }
+  .lei-abas:has(.lei-aba:nth-child(4)) .lei-aba { padding: 0 10px; font-size: 12px; }
+}
+@media (max-width: 380px) {
+  .lei-abas { gap: 14px 4px; }
+  .lei-aba { padding: 0 10px; font-size: 12px; }
+  /* o nome do seu clube com 16 letras inteiro em 360 (as regras do seu clube vêm depois: por isso o .lei-meu na frente) */
+  .lei-meu .lei-meu-l1 { gap: 8px; }
+  .lei-meu .lei-meu-clube { font-size: 15px; }
+  .lei-meu .lei-meu-nome { gap: 6px; }
+  .lei-meu .lei-meu-nome .lei-voce { letter-spacing: .06em; }
+}
+
+/* ---------- a aba Leilão (as fotos de 14/11; PLANO-LEILAO.md §9) ----------
+   O chip "Jogador N de 52"; UM cartão: a foto redonda (a silhueta na pública) com o selo da nota à esquerda e o escudo no canto,
+   o nome, "função, clube", os chips e o (i); o anel do relógio com quem lidera e o valor grande; os lances de antes. Depois o
+   seu clube solto na página, a barra do orçamento e o campinho verde com as vagas. A carta do Ultimate não entra aqui. */
+.lei-lote-cab { display: flex; justify-content: center; margin-top: 4px; }
+.lei-lote-n { display: inline-flex; align-items: center; min-height: 32px; padding: 0 16px; border-radius: 12px; background: var(--lei-tom); color: var(--lei-tom-tx);
+  font-size: 15px; font-weight: 800; letter-spacing: .1px; font-variant-numeric: tabular-nums; }
+.lei-lote-rep { color: var(--alerta); margin-right: 1px; }
+.lei-lote-card { position: relative; display: flex; flex-direction: column; gap: 14px; padding: 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--panel); }
+.lei-lote-card.lampejo { animation: leiLampejo .7s ease-out; }
+@keyframes leiLampejo { 0% { border-color: var(--erro); box-shadow: 0 0 0 0 rgba(240,82,82,.65); } 100% { box-shadow: 0 0 0 14px rgba(240,82,82,0); } }
+.lei-lc-topo { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: start; min-height: 104px; }
+.lei-foto-box { position: relative; justify-self: center; width: 100px; height: 100px; }
+.lei-foto { position: relative; display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%; border-radius: 50%; overflow: hidden; background-color: var(--lei-tom); }
+.lei-foto-img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; display: block; }
+.lei-foto.sil { background-color: var(--gold-dark); }
+/* o círculo da silhueta com a borda (a cor do clube preta sumia no cartão escuro) e a silhueta escura na cor clara (amarela,
+   branca: a branca ficava a 1,4:1) */
+.lei-foto-box .lei-foto.sil { box-shadow: inset 0 0 0 1.5px var(--line-2); }
+.lei-sil { display: block; width: 74%; height: auto; color: #fff; opacity: .85; }
+.lei-foto.sil.clara .lei-sil { color: #0b110e; opacity: .6; }
+.lei-foto-box .lei-nota { position: absolute; left: -14px; top: 22px; }
+.lei-nota { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 44px; height: 46px; border-radius: 10px;
+  background: var(--gold); color: var(--black); line-height: 1; box-shadow: 0 2px 8px rgba(0,0,0,.28); }
+.lei-nota b { font-size: 19px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-nota small { font-size: 11px; font-weight: 800; letter-spacing: .04em; }
+.lei-foto-esc { position: absolute; right: -12px; top: -12px; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%;
+  background: var(--panel); border: 1px solid var(--line-2); box-shadow: 0 2px 8px rgba(0,0,0,.22); }
+.lei-foto-esc-img { width: 24px; height: 24px; object-fit: contain; display: block; }
+.lei-lc-info { min-width: 0; display: flex; flex-direction: column; }
+.lei-nome { font-size: 22px; font-weight: 800; line-height: 1.12; letter-spacing: -.2px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.lei-funcao { margin-top: 4px; font-size: 14px; line-height: 1.3; color: var(--text-dim); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.lei-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; min-width: 0; }
+.lei-chip { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 26px; padding: 0 9px; border-radius: 7px; background: var(--lei-tom); color: var(--lei-tom-tx);
+  font-size: 13px; font-weight: 700; white-space: nowrap; }
+.lei-chip > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lei-bandeira { width: 18px; height: 13px; flex: 0 0 auto; object-fit: cover; border-radius: 2px; }
+/* o (i): um círculo de 28 px à vista dentro de um alvo de 40 × 40 (a margem negativa não abre a linha) */
+.lei-ficha-bt { flex: 0 0 auto; width: 40px; height: 40px; margin: -7px -6px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-dim); font: inherit; cursor: pointer; }
+.lei-ficha-ic { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2); }
+.lei-ficha-ic .tm-ic { width: 15px; height: 15px; color: inherit; }
+.lei-ficha-bt:focus-visible { outline: none; }
+.lei-ficha-bt:focus-visible .lei-ficha-ic { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lei-placar { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: center; min-width: 0; }
+.lei-relogio { position: relative; justify-self: center; width: 64px; height: 64px; flex: 0 0 auto; }
+.lei-relogio svg { width: 100%; height: 100%; transform: rotate(-90deg); display: block; }
+.lei-rel-fundo { fill: none; stroke: var(--line-2); stroke-width: 7; }
+.lei-rel-arco { fill: none; stroke: var(--gold); stroke-width: 7; stroke-linecap: round; transition: stroke .2s ease; }
+.lei-rel-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 26px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-relogio.espera .lei-rel-num { color: var(--text-dim); }
+.lei-relogio.espera .lei-rel-arco { stroke: var(--text-dim); }
+.lei-relogio.alerta .lei-rel-arco { stroke: var(--erro); }
+.lei-relogio.alerta .lei-rel-num { color: var(--erro); }
+@media (prefers-reduced-motion: no-preference) {
+  .lei-relogio.alerta { animation: leiPulsa 1s ease-in-out infinite; }
+}
+@media (prefers-reduced-motion: reduce) { .lei-lote-card.lampejo { animation: none; border-color: var(--erro); } }
+@keyframes leiPulsa { 50% { transform: scale(1.05); } }
+.lei-placar-dir { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.lei-lider { display: flex; align-items: baseline; gap: 5px; min-width: 0; max-width: 100%; font-size: 14px; font-weight: 600; color: var(--text-dim); }
+.lei-lider.eu { color: var(--gold); font-weight: 700; }
+.lei-lider-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-lider-v { flex: 0 0 auto; white-space: nowrap; }
+.lei-valor-atual { font-size: 40px; font-weight: 900; line-height: 1; letter-spacing: -.5px; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lei-valor-atual.eu { color: var(--gold); }
+.lei-valor-atual.vazio { color: var(--text-dim); }
+/* os lances de antes: até 3 linhas de 22 px; sem nenhum, a lista some (a faixa vazia deixava o cartão com cara de inacabado) */
+.lei-hist:empty { display: none; }
+.lei-hist { list-style: none; display: flex; flex-direction: column; font-size: 14.5px; color: var(--text-dim); }
+.lei-hist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; height: 22px; min-width: 0; }
+/* os mais velhos mais leves pelo peso e pelo tamanho (sem apagar: apagados, ficavam abaixo de 4,5:1) */
+.lei-hist li:nth-child(n+2) { font-size: 13.5px; }
+.lei-hist li:nth-child(n+2) b { font-weight: 400; }
+.lei-hist li.eu { color: var(--gold); }
+.lei-hist-n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.lei-hist b { font-weight: 600; font-variant-numeric: tabular-nums; }
+/* "Vendido para X por R$ Y" na pausa: sobre a linha do relógio (não sobre os chips do jogador novo), com o nome do vendido */
+.lei-placar { position: relative; }
+.lei-vendido { position: absolute; left: -6px; right: -6px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 10px;
+  padding: 8px 12px; border-radius: 14px; background: rgba(5,8,7,.94); border: 1px solid rgba(34,197,94,.55); box-shadow: 0 10px 30px rgba(0,0,0,.5);
+  font-size: 15px; font-weight: 800; text-align: center; pointer-events: none; }
+.lei-vendido-quem { flex: 1 1 100%; min-width: 0; font-size: 12.5px; font-weight: 600; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* o seu clube, solto na página */
+.lei-meu { display: flex; flex-direction: column; margin-top: 12px; min-width: 0; }
+.lei-meu-l1 { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 32px; }
+.lei-meu-nome { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 10px; }
+.lei-meu-clube { font-weight: 800; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+/* o selo VOCÊ (o Saguão e os Participantes: a pílula verde); no seu clube da aba Leilão, só o texto (as fotos) */
+.lei-voce { flex: 0 0 auto; padding: 2px 7px; border-radius: 6px; background: var(--gold); color: var(--black); font-size: 10px; font-weight: 900; letter-spacing: .08em; }
+.lei-meu .lei-voce { flex: 0 0 auto; padding: 0; background: none; color: var(--text-dim); font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+.lei-meu-saldo { flex: 0 0 auto; font-size: 18px; font-weight: 900; color: var(--gold); font-variant-numeric: tabular-nums; }
+.lei-meu-barra { height: 6px; margin-top: 12px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.lei-meu-barra i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--gold-dark), var(--gold-light)); transition: width .3s ease; }
+.lei-meu-l3 { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2px 12px; margin-top: 8px; font-size: 14px; }
+.lei-meu-linha b { font-weight: 800; font-variant-numeric: tabular-nums; }
+.lei-meu-media { color: var(--text-dim); }
+/* o campinho das vagas (verde nos dois temas, como nas fotos): as vagas pela formação, em círculo de 10% da largura */
+.lei-meu-campo { margin-top: 4px; }
+.lei-cv { position: relative; width: 100%; aspect-ratio: .9; border-radius: 16px; overflow: hidden; container-type: inline-size;
+  background: repeating-linear-gradient(180deg, #177a3e 0 10%, #136b36 10% 20%); }
+.lei-cv-linhas { position: absolute; inset: 4.5% 5%; border: 1.5px solid rgba(255,255,255,.32); border-radius: 2px; pointer-events: none; }
+.lei-cv-linhas i { position: absolute; display: block; border: 1.5px solid rgba(255,255,255,.32); }
+.lei-cv-linhas .m { left: 0; right: 0; top: 50%; border-width: 1.5px 0 0; }
+.lei-cv-linhas .c { left: 50%; top: 50%; width: 22%; aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); }
+.lei-cv-linhas .a1 { left: 30%; right: 30%; top: -1.5px; height: 12%; border-top-width: 0; }
+.lei-cv-linhas .a2 { left: 30%; right: 30%; bottom: -1.5px; height: 12%; border-bottom-width: 0; }
+.lei-cv-vaga { position: absolute; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; transform: translate(-50%, -5cqw); }
+.lei-cv-bola { position: relative; width: 10cqw; height: 10cqw; min-width: 30px; min-height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+.lei-cv-bola.vazia { background: rgba(0,0,0,.18); border: 1.5px solid rgba(255,255,255,.55); }
+.lei-cv-sig { font-size: 11px; font-weight: 800; letter-spacing: .02em; color: #fff; }
+.lei-cv-foto { border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.lei-cv-nome { max-width: 20cqw; font-size: 11px; font-weight: 800; line-height: 1.2; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.7); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-cv-ov { position: absolute; left: -8px; top: -5px; min-width: 18px; height: 16px; padding: 0 3px; display: inline-flex; align-items: center; justify-content: center; border-radius: 8px;
+  background: #fff; color: #0c5f2e; font-size: 11px; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+.lei-cv .lei-pen { right: -10px; top: -6px; font-size: 11px; }
+.lei-cv-forma, .lei-cv-n { position: absolute; bottom: 1%; font-size: 12px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.lei-cv-forma { left: 6%; }
+.lei-cv-n { right: 6%; }
+.lei-cv-folha { max-width: 380px; margin: 0 auto; }
+/* a Escalação: tocar em dois troca as vagas (a 1ª fica marcada com o anel branco); quem está fora da função com o anel âmbar */
+.lei-cv-vaga[role="button"] { cursor: pointer; border-radius: 10px; -webkit-tap-highlight-color: transparent; }
+.lei-cv-vaga[role="button"]:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.lei-cv-vaga.fora .lei-cv-foto { border-color: var(--alerta); }
+.lei-cv-vaga.sel .lei-cv-bola { box-shadow: 0 0 0 3px #fff, 0 0 0 6px rgba(5,8,7,.55); border-radius: 50%; }
+.lei-cv-vaga.sel .lei-cv-nome { background: #fff; color: #0c5f2e; text-shadow: none; padding: 0 4px; border-radius: 4px; }
+.lei-cv-esc { max-width: 440px; margin: 0 auto; }
+/* os Próximos lotes: uma linha recolhível no fim (sem caixa, só a linha de cima) */
+.lei-bloco { width: 100%; border-top: 1px solid var(--line); margin-top: 6px; }
+.lei-bloco-bt { width: 100%; display: flex; align-items: center; gap: 9px; min-height: 46px; padding: 10px 2px; border: 0; background: transparent; color: var(--text); font: inherit;
+  font-size: 14px; font-weight: 700; cursor: pointer; text-align: left; }
+.lei-bloco-ic, .lei-bloco-seta { display: inline-flex; color: var(--gold); }
+.lei-bloco-ic .tm-ic { width: 17px; height: 17px; }
+.lei-bloco-seta { margin-left: auto; transition: transform .2s ease; color: var(--text-dim); }
+.lei-bloco-tit { white-space: nowrap; }
+.lei-bloco-info { font-size: 12px; font-weight: 600; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.lei-bloco.aberto .lei-bloco-seta, .lei-bloco-bt.aberto .lei-bloco-seta { transform: rotate(180deg); }
+/* 2 px entre o botão do bloco e o 1º item (dois clicáveis nunca encostam) */
+.lei-bloco-corpo { padding: 2px 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.lei-gr { display: inline-flex; align-items: center; justify-content: center; min-width: 34px; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: .04em;
+  background: rgba(34,197,94,.14); color: var(--gold); }
+.lei-gr.gr-GK { background: rgba(245,184,61,.16); color: #f5b83d; }
+.lei-gr.gr-DF { background: rgba(94,184,255,.15); color: #5eb8ff; }
+.lei-gr.gr-FW { background: rgba(240,82,82,.14); color: #f87171; }
+.lei-tec, .lei-part { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--black-soft); color: var(--text); font: inherit; text-align: left; }
+.lei-tec, .lei-part.abre { cursor: pointer; }
+.lei-tec:hover, .lei-part.abre:hover { border-color: rgba(34,197,94,.5); }
+.lei-part.abre:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.lei-tec.eu, .lei-part.eu { border-color: rgba(34,197,94,.45); }
+.lei-tec-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lei-tec-quem { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-tec-clube { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-tec-dir { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; flex: 0 0 auto; }
+.lei-tec-saldo { font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.lei-tec-n { font-size: 11px; color: var(--text-dim); }
+.lei-prox { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 6px 10px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lei-prox:hover { border-color: rgba(34,197,94,.5); }
+.lei-prox-nome { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lei-prox-n { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-prox-c { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-prox-ov { font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-espaco { width: 100%; flex: 0 0 auto; }
+.lei-espera { text-align: center; padding: 26px 14px; }
+.lei-fim-tecs { display: flex; flex-direction: column; gap: 6px; }
+
+/* ---------- a barra de lance (fixa embaixo; as fotos: +1 +5 +10 cheios e o Tudo com o valor ao lado; Outro valor · Dar lance · Passar) ---------- */
+.lei-lance { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 8px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(5,8,7,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid rgba(34,197,94,.22); box-shadow: 0 -10px 24px rgba(0,0,0,.35); }
+.lei-lance-in { max-width: 560px; margin: 0 auto; display: grid; gap: 6px; }
+.lei-lance-msg { min-height: 16px; font-size: 12.5px; line-height: 16px; font-weight: 600; color: var(--text-dim); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-lance-msg.ok { color: var(--ok); }
+.lei-lance-msg.alerta { color: var(--alerta); }
+.lei-lance-msg.erro { color: var(--erro); }
+.lei-l1 { display: grid; grid-template-columns: 1fr 1fr 1fr 1.7fr; gap: 6px; }
+.lei-l2 { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 6px; }
+.lei-lb { min-width: 0; min-height: 50px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 6px; border-radius: 12px;
+  border: 0; background: var(--panel); color: var(--text); font: inherit; cursor: pointer; transition: transform .1s ease, opacity .15s ease; }
+.lei-lb:active:not(:disabled) { transform: scale(.96); }
+.lei-lb-t { font-size: 20px; font-weight: 800; line-height: 1.1; white-space: nowrap; }
+.lei-lb-v { font-size: 14px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lei-lb:disabled { opacity: .36; cursor: not-allowed; }
+.lei-lb-passo { background: var(--lei-cheio); color: #fff; }
+.lei-lb-passo .lei-lb-v { display: none; }
+.lei-lb-tudo { flex-direction: row; gap: 8px; background: linear-gradient(120deg, var(--gold-light), var(--gold)); color: var(--black); }
+.lei-lb-tudo .lei-lb-v { opacity: .75; }
+.lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); color: #1b1203; box-shadow: 0 0 0 2px rgba(245,184,61,.45); }
+/* o 1º toque do Tudo: só "Confirmar" (o valor já está na linha de cima: "Toque de novo para confirmar R$ X"); com o valor ao
+   lado, "Confirmar R$ 90" passava do botão no celular em pé */
+.lei-lb-tudo.confirma .lei-lb-v { display: none; }
+.lei-lb-tudo.confirma .lei-lb-t { font-size: 17px; }
+.lei-l2 .lei-lb { min-height: 46px; padding: 0 18px; }
+.lei-l2 .lei-lb-t { font-size: 15px; font-weight: 800; }
+.lei-lb-dar { background: var(--lei-tom); color: var(--gold); }
+.lei-l2 .lei-lb-passar { min-width: 64px; padding: 0 14px; background: transparent; color: var(--text-dim); }
+.lei-lb-passar:hover:not(:disabled) { color: var(--text); }
+.lei-valor { min-width: 0; min-height: 46px; padding: 0 14px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text);
+  font: inherit; font-size: 16px; font-weight: 700; text-align: left; }
+.lei-valor:focus { outline: none; border-color: var(--gold); }
+.lei-valor:disabled { opacity: .45; }
+.lei-valor::placeholder { color: var(--text-dim); font-weight: 500; font-size: 16px; }
+
+/* o −N de quem está fora da função (o campinho das vagas) */
+.lei-pen { position: absolute; right: -6px; top: -6px; z-index: 3; padding: 1px 5px; border-radius: 8px; background: var(--alerta); color: #1b1203; font-size: 10px; font-weight: 900; line-height: 1.3; }
+
+/* ---------- a aba Escalação ---------- */
+.lei-esc-cab { display: flex; flex-direction: column; gap: 4px; }
+.lei-esc-tit { font-size: 18px; font-weight: 900; }
+.lei-esc-resumo { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--text-dim); }
+.lei-esc-n { color: var(--gold); font-weight: 800; }
+.lei-esc-pen { color: var(--alerta); }
+.lei-esc-formas { display: flex; flex-direction: column; gap: 8px; }
+.lei-formas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lei-forma-bt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; min-height: 46px; min-width: 0; padding: 6px 4px; }
+.lei-forma-f { font-size: 14px; font-weight: 800; }
+/* o nome quebra em duas linhas quando o botão é estreito ("Tudo ou / nada"): nunca sai do botão */
+.lei-forma-n { font-size: 10.5px; font-weight: 600; opacity: .85; line-height: 1.15; text-align: center; max-width: 100%; }
+.lei-forma-bt:disabled { opacity: .35; cursor: not-allowed; }
+.lei-esc-aviso { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; border: 1px solid rgba(245,184,61,.45); background: rgba(245,184,61,.10); font-size: 12.5px; font-weight: 600; }
+.lei-esc-aviso .tm-ic { color: var(--alerta); width: 17px; height: 17px; flex: 0 0 auto; }
+.lei-esc-dica { font-size: 12.5px; color: var(--text-dim); line-height: 1.45; }
+.lei-esc-pronto, .lei-esc-camp { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.lei-esc-prazo { font-size: 13px; font-weight: 600; }
+.lei-esc-pronto .btn, .lei-esc-camp .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 300px; }
+.lei-esc-campo { width: 100%; }
+
+/* ---------- o Campeonato (PLANO-LEILAO.md §2.6 e §1.8): Seu jogo, a rodada, a tabela, a chave, a artilharia e o fim ---------- */
+.lei-camp-a, .lei-camp-b { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.lei-camp-cab { display: flex; flex-direction: column; gap: 2px; padding: 0 2px; }
+.lei-camp-tit { font-size: 20px; font-weight: 900; letter-spacing: .2px; line-height: 1.2; }
+.lei-camp-sub { font-size: 12.5px; color: var(--text-dim); line-height: 1.35; }
+/* "Seu jogo": os dois times grandes, o placar ou o ×, o estado (o prazo) e o Simular partida / Ver o jogo */
+.lei-seujogo { margin-bottom: 0; border-color: rgba(34,197,94,.35); }
+.lei-seujogo.vazio { border-color: var(--line); }
+.lei-sj-times { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: start; gap: 8px; width: 100%; }
+.lei-sj-time { display: flex; flex-direction: column; align-items: center; gap: 5px; min-width: 0; text-align: center; }
+.lei-sj-time .lei-esc { font-size: 44px; }
+.lei-sj-clube { font-weight: 800; font-size: 14.5px; line-height: 1.2; overflow-wrap: anywhere; }
+.lei-sj-time.eu .lei-sj-clube { color: var(--gold); }
+.lei-sj-tec { font-size: 11.5px; color: var(--text-dim); line-height: 1.25; overflow-wrap: anywhere; }
+.lei-sj-meio { display: flex; flex-direction: column; align-items: center; gap: 3px; padding-top: 10px; min-width: 56px; }
+.lei-sj-x { font-size: 22px; font-weight: 900; color: var(--text-dim); }
+.lei-sj-placar { font-size: 30px; font-weight: 900; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lei-sj-extra { font-size: 11px; font-weight: 700; color: var(--gold); white-space: nowrap; }
+.lei-sj-estado { font-size: 13.5px; font-weight: 700; line-height: 1.4; }
+.lei-sj-estado.v { color: var(--ok); }
+.lei-sj-estado.d { color: var(--erro); }
+.lei-sj-nota, .lei-sj-motivo, .lei-sj-sem { font-size: 12.5px; line-height: 1.4; color: var(--text-dim); }
+.lei-sj-motivo { color: var(--alerta); }
+/* Simular os pendentes (o dono) */
+.lei-pend { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; border-color: rgba(245,184,61,.35); }
+.lei-pend-txt { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-pend-t { font-weight: 800; font-size: 14px; }
+.lei-pend-s { font-size: 12px; line-height: 1.4; color: var(--text-dim); }
+.lei-pend-lista { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.lei-pend-j { display: flex; flex-wrap: wrap; column-gap: 8px; row-gap: 0; font-size: 12px; line-height: 1.4; min-width: 0; }
+.lei-pend-quem { font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.lei-pend-cl { color: var(--text-dim); overflow-wrap: anywhere; min-width: 0; }
+.lei-pend .btn { flex: 1 1 200px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+/* a rodada à mostra: ‹ título › e os jogos */
+.lei-rodada { display: flex; flex-direction: column; gap: 10px; }
+.lei-rod-cab { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.lei-rod-bt { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2);
+  background: var(--black-soft); color: var(--text); cursor: pointer; }
+.lei-rod-bt:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.lei-rod-bt:disabled { opacity: .3; cursor: not-allowed; }
+.lei-rod-tit { min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px; text-align: center; }
+.lei-rod-n { font-weight: 900; font-size: 16px; line-height: 1.2; }
+.lei-rod-s { font-size: 11.5px; color: var(--text-dim); line-height: 1.3; }
+.lei-jogos { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.lei-jogo { display: flex; flex-direction: column; gap: 6px; padding: 9px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--black-soft); }
+.lei-jogo.meu { border-color: rgba(34,197,94,.5); }
+.lei-jg-lin { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; }
+.lei-jg-t { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.lei-jg-t.b { flex-direction: row-reverse; text-align: right; }
+.lei-jg-nome { min-width: 0; font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* o técnico junto do clube com o nome repetido (o "Meu Clube" de quem não tem o Ultimate): não encolhe antes do clube */
+.lei-tec-tag { flex: 0 0 auto; max-width: 46%; font-size: 11px; font-weight: 700; line-height: 16px; padding: 0 6px; border-radius: 999px; border: 1px solid var(--line); color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-jg-t.eu .lei-jg-nome { color: var(--gold); }
+.lei-jg-pl { min-width: 46px; text-align: center; font-size: 16px; font-weight: 900; color: var(--text-dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.lei-jg-pl.feito { color: var(--text); }
+.lei-jg-pe { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; min-height: 22px; }
+.lei-jg-est { font-size: 11.5px; font-weight: 700; color: var(--text-dim); }
+.lei-jg-est.feito { color: var(--gold); }
+.lei-jg-est.anda { color: var(--alerta); }
+.lei-jg-ver { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid rgba(34,197,94,.45);
+  background: transparent; color: var(--gold); font: inherit; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+.lei-jg-ver:hover { background: rgba(34,197,94,.12); }
+.lei-jg-ver .tm-ic { width: 15px; height: 15px; }
+.lei-rod-folga { font-size: 12px; color: var(--text-dim); line-height: 1.4; }
+.lei-esc.pp.lei-esc-txt { font-size: 11px; width: 20px; height: 22px; }
+/* a tabela (a fase de pontos): rola de lado só dentro da caixa, se faltar espaço */
+.lei-tab-box, .lei-chave-box, .lei-art-box { display: flex; flex-direction: column; gap: 8px; }
+.lei-tab-rola { width: 100%; overflow-x: auto; }
+.lei-tabela { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.lei-tabela th { font-size: 11px; font-weight: 800; color: var(--text-dim); text-transform: uppercase; letter-spacing: .04em; padding: 4px 4px 6px; text-align: center; border-bottom: 1px solid var(--line-2); }
+.lei-tabela td { padding: 6px 4px; text-align: center; border-bottom: 1px solid var(--line); }
+.lei-tabela .c1 { text-align: left; width: 100%; max-width: 0; }
+.lei-tabela th.c1 { text-align: left; }
+.lei-tabela .c0 { width: 22px; font-weight: 800; color: var(--text-dim); }
+.lei-tabela td.c7 { font-weight: 900; }
+.lei-tabela tr.eu td { background: rgba(34,197,94,.08); }
+.lei-tabela tr.eu .lei-tab-n { color: var(--gold); }
+.lei-tabela tr.classif td.c0 { color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
+.lei-tab-clube { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.lei-tab-n { min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-tab-nota { font-size: 11.5px; color: var(--text-dim); line-height: 1.4; }
+@media (max-width: 400px) { .lei-tabela .ved { display: none; } }
+/* a chave */
+.lei-chave { display: flex; flex-direction: column; gap: 12px; }
+.lei-ch-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.lei-ch-tit { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.lei-ch-jogo { display: flex; flex-direction: column; border-radius: 10px; border: 1px solid var(--line); background: var(--black-soft); overflow: hidden; }
+.lei-ch-l { display: flex; align-items: center; gap: 7px; min-height: 34px; padding: 4px 9px; min-width: 0; }
+.lei-ch-l + .lei-ch-l { border-top: 1px solid var(--line); }
+.lei-ch-n { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-ch-g { flex: 0 0 auto; font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-ch-g.folga { font-size: 11px; font-weight: 700; color: var(--text-dim); }
+.lei-ch-l.venc .lei-ch-n, .lei-ch-l.venc .lei-ch-g { color: var(--gold); }
+.lei-ch-l.perdeu { opacity: .6; }
+.lei-ch-l.eu .lei-ch-n { text-decoration: underline; text-decoration-color: rgba(34,197,94,.6); text-underline-offset: 3px; }
+/* a artilharia */
+.lei-art { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.lei-art-l { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 4px 2px; }
+.lei-art-p { flex: 0 0 26px; font-weight: 800; color: var(--text-dim); font-size: 12.5px; }
+.lei-art-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lei-art-n { font-size: 13px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-art-s { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-art-g { flex: 0 0 auto; font-weight: 900; font-size: 13px; color: var(--gold); }
+.lei-art-l.eu .lei-art-n { color: var(--gold); }
+/* o fim: o campeão (o pôster do fim de jogo com o escudo desenhado), a classificação e os destaques */
+.lei-fim { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.md-poster.fim.lei-campeao { width: 100%; margin: 0; }
+.lei-cp-centro { display: flex; flex-direction: column; align-items: center; gap: 6px; margin: 10px 0 8px; text-align: center; }
+.lei-cp-coroa { display: inline-flex; color: #4ade80; filter: drop-shadow(0 0 10px rgba(34,197,94,.55)); }
+.lei-cp-coroa .tm-ic { width: 30px; height: 30px; }
+.lei-cp-centro .lei-esc.g { font-size: 76px; filter: drop-shadow(0 8px 18px rgba(0,0,0,.6)); }
+.lei-cp-nome { font-size: 22px; }
+.lei-cp-tec { font-size: 13px; font-weight: 600; color: rgba(255,255,255,.82); }
+.lei-cp-camp { font-size: 12.5px; color: rgba(255,255,255,.78); line-height: 1.4; max-width: 420px; }
+.lei-class { list-style: none; display: flex; flex-direction: column; gap: 4px; }
+.lei-cl { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 6px 8px; border-radius: 10px; }
+.lei-cl.eu { background: rgba(34,197,94,.08); }
+.lei-cl.campeao .lei-cl-p { color: var(--gold); }
+.lei-cl-p { flex: 0 0 28px; font-weight: 900; font-size: 13px; color: var(--text-dim); }
+.lei-cl-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.lei-cl-n { font-size: 13.5px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-cl-s { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-cl-x { flex: 0 1 auto; min-width: 0; font-size: 12px; font-weight: 700; color: var(--gold); text-align: right; }
+.lei-class-box { display: flex; flex-direction: column; gap: 8px; }
+.lei-destaques { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; }
+.lei-dest { display: flex; align-items: center; gap: 12px; }
+.lei-dest-ic { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px; background: rgba(34,197,94,.12); color: var(--gold); }
+.lei-dest-ic .tm-ic { width: 20px; height: 20px; }
+.lei-dest-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-dest-n { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
+.lei-dest-s { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.lei-fim-acoes { margin-top: 2px; }
+@media (min-width: 560px) { .lei-destaques { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+/* as notas escondidas reveladas no fim (PR 6): quem comprou melhor e o time de cada técnico (o toque abre as notas) */
+.lei-revela { display: flex; flex-direction: column; gap: 10px; }
+.lei-revela h3.lei-rotulo { margin: 0; }
+.lei-revela-dica { margin: 0; font-size: 12px; line-height: 1.4; color: var(--text-dim); }
+.lei-revela-lista > li { display: block; }
+.lei-revela-bt { width: 100%; min-height: 48px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.lei-revela-bt:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+@media (hover: hover) { .lei-revela-bt:hover { border-color: rgba(34,197,94,.45); } }
+.lei-revela-frase { margin: 0; font-size: 14px; font-weight: 700; line-height: 1.4; overflow-wrap: anywhere; }
+/* (o verde só para quem levou mais do que pagou; o zero, o negativo e "sem compras" numa cor neutra; a soma das notas, o texto) */
+.lei-cl-x.neg, .lei-cl-x.nada { color: var(--text-dim); font-weight: 600; }
+.lei-cl-x.soma { color: var(--text); white-space: nowrap; }
+
+/* ---------- Campeonato antes da hora e a Entrada ---------- */
+.lei-embreve-ic { display: inline-flex; color: var(--gold); }
+.lei-embreve-ic .tm-ic { width: 34px; height: 34px; }
+.lei-entrada-corpo { gap: 12px; }
+.lei-entrada-corpo .block-title { margin-top: 6px; }
+.lei-sala-linha { display: flex; align-items: center; gap: 10px; width: 100%; justify-content: center; min-width: 0; }
+.lei-salas { display: flex; flex-direction: column; gap: 8px; }
+.lei-sala { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); min-width: 0; }
+.lei-sala.aberta { border-color: rgba(34,197,94,.5); }
+.lei-sala-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; text-align: left; }
+/* o título e o estado quebram em duas linhas no celular em vez de cortar (o estado é o que a linha diz de útil) */
+.lei-sala-t { font-weight: 700; font-size: 14px; line-height: 1.3; overflow-wrap: anywhere; }
+.lei-sala-s { font-size: 12px; line-height: 1.35; color: var(--text-dim); overflow-wrap: anywhere; }
+.lei-sala-bts { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.lei-sala-x { width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2);
+  background: var(--black-soft); color: var(--text-dim); cursor: pointer; }
+.lei-sala-x:hover { color: var(--erro); border-color: rgba(240,82,82,.5); }
+.lei-sala-x .tm-ic { width: 17px; height: 17px; }
+.lei-regras { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.lei-regras li { position: relative; padding-left: 18px; font-size: 13.5px; line-height: 1.45; color: var(--text); }
+.lei-regras li::before { content: ""; position: absolute; left: 4px; top: .58em; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+.lei-regras-curtas li { color: var(--text-dim); font-size: 13px; }
+
+/* ---------- Criar sala (o Treino) ---------- */
+.lei-liga-bt, .lei-liga { width: 100%; display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line-2);
+  background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lei-liga-bt:hover, .lei-liga:hover { border-color: rgba(34,197,94,.55); }
+.lei-liga.on { border-color: var(--gold); }
+.lei-liga-logo { width: 34px; height: 34px; object-fit: contain; flex: 0 0 auto; }
+.lei-liga-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-liga-n { font-weight: 800; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-liga-s { font-size: 12px; color: var(--text-dim); line-height: 1.35; }
+.lei-liga-trocar { flex: 0 0 auto; font-size: 12.5px; font-weight: 700; color: var(--gold); }
+.lei-liga-ok { display: inline-flex; color: var(--gold); }
+.lei-ligas { display: flex; flex-direction: column; gap: 6px; }
+.lei-criar-linha { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.lei-criar-lt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-criar-lt .setting-hint { padding: 0; }
+.lei-passo { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; }
+.lei-passo-bt { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2);
+  background: var(--black-soft); color: var(--text); cursor: pointer; }
+.lei-passo-bt:hover:not(:disabled):not([aria-disabled="true"]) { border-color: var(--gold); color: var(--gold); }
+.lei-passo-bt:disabled, .lei-passo-bt[aria-disabled="true"] { opacity: .35; cursor: not-allowed; }
+.lei-passo-n { min-width: 26px; text-align: center; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-criar-clube { display: flex; align-items: center; gap: 12px; }
+.lei-criar-esc { display: inline-flex; flex: 0 0 auto; }
+.lei-criar-campos { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr) 72px; gap: 8px; }
+.lei-campo { min-width: 0; min-height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text); font: inherit; font-size: 14.5px; font-weight: 600; }
+.lei-campo:focus { outline: none; border-color: var(--gold); }
+.lei-campo-sigla { text-transform: uppercase; text-align: center; letter-spacing: .08em; font-weight: 800; }
+.lei-esc-abre { border: 1px solid var(--line); border-radius: 12px; }
+.lei-criar-escudo { display: flex; flex-direction: column; gap: 8px; }
+.lei-cores, .lei-formas-esc, .lei-simbs { display: flex; flex-wrap: wrap; gap: 8px; }
+.lei-cor { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line-2); cursor: pointer; box-shadow: inset 0 0 0 2px rgba(0,0,0,.25); }
+.lei-cor.on { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(34,197,94,.35), inset 0 0 0 2px rgba(0,0,0,.25); }
+.lei-forma-esc, .lei-simb { width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1px solid var(--line-2);
+  background: var(--black-soft); color: var(--text); cursor: pointer; }
+.lei-forma-esc.on, .lei-simb.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(34,197,94,.3); color: var(--gold); }
+.lei-simb .tm-ic { width: 20px; height: 20px; }
+.lei-tempos .seg-btn { flex: 1 1 0; }
+/* o formato do campeonato: 3 cartões (o ícone, o nome, a frase e "N rodadas com T técnicos · ~X min") */
+.lei-formatos { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+.lei-fmt { display: grid; grid-template-columns: 36px minmax(0, 1fr) 22px; align-items: center; gap: 10px; width: 100%; min-height: 64px; padding: 9px 12px;
+  border-radius: 12px; border: 1px solid var(--line-2); background: var(--black-soft); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lei-fmt:hover:not(:disabled) { border-color: rgba(34,197,94,.55); }
+.lei-fmt.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(34,197,94,.22); }
+.lei-fmt:disabled { opacity: .55; cursor: not-allowed; }
+.lei-fmt.on:disabled { opacity: .8; }
+.lei-fmt-ic { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border-radius: 10px; background: rgba(34,197,94,.12); color: var(--gold); }
+.lei-fmt-ic .tm-ic { width: 19px; height: 19px; }
+.lei-fmt-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-fmt-n { font-weight: 800; font-size: 14.5px; line-height: 1.25; }
+.lei-fmt-f { font-size: 12.5px; line-height: 1.35; color: var(--text-dim); }
+.lei-fmt-s { font-size: 11.5px; font-weight: 700; line-height: 1.35; color: var(--gold); }
+.lei-fmt-ok { display: inline-flex; color: var(--gold); }
+.lei-fmt-ok .tm-ic { width: 20px; height: 20px; }
+.lei-comecar { width: 100%; max-width: 360px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.lei-comecar[aria-busy="true"] { opacity: .7; cursor: progress; }
+
+/* ---------- a Criar sala pelas fotos de 14/11 (PLANO-LEILAO.md §9; js/leilao-tela.js, rota leilao-criar) ----------
+   Seções soltas com o título grande fora de caixa (.lei-cs), cartões de opção (a liga, os formatos com o desenho), o passo
+   com o deslizante, o segmentado das fotos (um trilho tonal, a escolhida em relevo) e a barra FIXA embaixo com o resumo numa
+   linha e o botão principal; a página termina com um espaço da altura dela (.lei-espaco). As cores são as do TM. */
+.lei-criar .lei-criar-corpo { max-width: 560px; gap: 30px; padding-top: 4px; }
+.lei-cs { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.lei-cs-tit { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; color: var(--text); }
+.lei-cs-hint { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+.lei-criar .lei-aviso-sala { margin-bottom: 0; }
+/* a liga escolhida: o cartão grande marcado, com o Trocar */
+.lei-criar .lei-liga-bt, .lei-sag-cfg .lei-liga-bt { min-height: 84px; padding: 14px 16px; gap: 14px; border-radius: 16px; border: 1px solid var(--gold); background: rgba(34,197,94,.14);
+  box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(34,197,94,.14); }
+.lei-criar .lei-liga-bt .lei-liga-logo, .lei-sag-cfg .lei-liga-bt .lei-liga-logo { width: 44px; height: 44px; }
+.lei-criar .lei-liga-bt .lei-liga-txt, .lei-sag-cfg .lei-liga-bt .lei-liga-txt { gap: 4px; }
+.lei-criar .lei-liga-bt .lei-liga-n, .lei-sag-cfg .lei-liga-bt .lei-liga-n { font-size: 20px; line-height: 1.2; white-space: normal; }
+.lei-criar .lei-liga-bt .lei-liga-s, .lei-sag-cfg .lei-liga-bt .lei-liga-s { font-size: 14px; line-height: 1.4; text-wrap: balance; }
+.lei-criar .lei-liga-bt .lei-liga-trocar, .lei-sag-cfg .lei-liga-bt .lei-liga-trocar { display: inline-flex; align-items: center; min-height: 34px; padding: 0 14px; border-radius: 999px; background: var(--panel);
+  border: 1px solid var(--line-2); font-size: 14px; font-weight: 800; }
+@media (max-width: 400px) {
+  .lei-criar .lei-liga-bt, .lei-sag-cfg .lei-liga-bt { padding: 14px; gap: 12px; }
+  .lei-criar .lei-liga-bt .lei-liga-logo, .lei-sag-cfg .lei-liga-bt .lei-liga-logo { width: 36px; height: 36px; }
+  .lei-criar .lei-liga-bt .lei-liga-trocar, .lei-sag-cfg .lei-liga-bt .lei-liga-trocar { padding: 0 12px; }
+}
+/* os 3 cartões do formato com o desenho: o escolhido pela borda verde (com o anel) e pelo fundo */
+.lei-formatos.ilu { gap: 12px; }
+.lei-formatos.ilu .lei-fmt { grid-template-columns: 96px minmax(0, 1fr); gap: 16px; min-height: 0; padding: 16px; border-radius: 16px; border: 1px solid var(--line-2); background: var(--panel); }
+.lei-formatos.ilu .lei-fmt.on { border-color: var(--gold); background: rgba(34,197,94,.14); box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(34,197,94,.14); }
+.lei-fmt-des { display: flex; align-items: center; justify-content: center; }
+.lei-fmt-svg { display: block; width: 96px; height: 64px; color: var(--text-dim); }
+.lei-fmt.on .lei-fmt-svg { color: var(--gold); }
+.lei-fmt-svg .tr { fill: currentColor; opacity: .25; }
+.lei-fmt-svg .ch, .lei-fmt-svg .pt { fill: currentColor; }
+.lei-fmt-svg .ln { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.lei-formatos.ilu .lei-fmt-txt { gap: 4px; }
+.lei-formatos.ilu .lei-fmt-n { font-size: 17px; line-height: 1.25; }
+.lei-formatos.ilu .lei-fmt-f { font-size: 14px; line-height: 1.4; }
+.lei-formatos.ilu .lei-fmt-s { margin-top: 4px; font-size: 13px; font-weight: 700; color: var(--text); }
+.lei-fmt-dur { display: block; white-space: nowrap; font-weight: 600; }
+@media (max-width: 379px) {
+  .lei-formatos.ilu .lei-fmt { grid-template-columns: 80px minmax(0, 1fr); gap: 12px; padding: 14px; }
+  .lei-fmt-svg { width: 80px; height: 54px; }
+}
+/* o passo com o deslizante (as fotos): − e + quadrados tonais, o número grande em verde, o deslizante ligado a ele */
+.lei-passo.desl { display: grid; grid-template-columns: 46px minmax(52px, auto) 46px minmax(0, 1fr); align-items: center; gap: 8px; width: 100%; }
+.lei-passo.desl .lei-passo-bt { width: 46px; height: 46px; border: 0; border-radius: 12px; background: var(--lei-tom); color: var(--text); }
+.lei-passo.desl .lei-passo-bt .tm-ic { width: 20px; height: 20px; }
+.lei-passo.desl .lei-passo-n { min-width: 52px; font-size: 44px; line-height: 1; color: var(--gold); }
+/* (8 px a mais de folga depois do +, descontados da largura: com 100% e a margem o trilho passava 8 px da coluna) */
+.lei-passo-desl { -webkit-appearance: none; appearance: none; width: calc(100% - 8px); min-width: 0; height: 44px; margin: 0 0 0 8px; padding: 0; background: transparent; cursor: pointer; --p: 0%; }
+.lei-passo-desl::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--gold) 0 var(--p), var(--line-2) var(--p) 100%); }
+.lei-passo-desl::-moz-range-track { height: 6px; border-radius: 3px; background: var(--line-2); }
+.lei-passo-desl::-moz-range-progress { height: 6px; border-radius: 3px; background: var(--gold); }
+.lei-passo-desl::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 30px; height: 30px; margin-top: -12px; border-radius: 50%; background: #ffffff;
+  border: 1px solid rgba(0,0,0,.2); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.lei-passo-desl::-moz-range-thumb { width: 30px; height: 30px; border-radius: 50%; background: #ffffff; border: 1px solid rgba(0,0,0,.2); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.lei-passo-desl:disabled { opacity: .4; cursor: not-allowed; }
+.lei-passo-desl:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; border-radius: 10px; }
+/* o segmentado das fotos: o trilho tonal, a escolhida em relevo com o texto verde (no claro, branca com sombra) */
+.lei-seg { width: 100%; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--lei-tom); }
+.lei-seg .seg-btn { min-width: 0; min-height: 44px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 6px 4px;
+  border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--text-dim); font: inherit; font-size: 15px; font-weight: 700; line-height: 1.2; text-align: center; }
+.lei-seg .seg-btn.active { background: #1b2a21; border-color: rgba(34,197,94,.45); color: var(--gold); }
+.lei-seg .seg-btn:disabled { opacity: .45; cursor: not-allowed; }
+.lei-seg .seg-btn:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lei-seg-t { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-seg-s { max-width: 100%; font-size: 12px; font-weight: 600; line-height: 1.2; opacity: 1; }
+@media (hover: hover) { .lei-seg .seg-btn:not(.active):not(:disabled):hover { color: var(--text); } }
+.lei-seg.lei-forma-seg { grid-auto-flow: row; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lei-seg.lei-forma-seg .seg-btn { min-height: 54px; }
+.lei-seg.lei-dur3d, .lei-seg.lei-dif3d { grid-auto-flow: row; gap: 4px; }
+.lei-3d-op.seg { gap: 8px; }
+.lei-3d-op.seg .lei-3d-rot { font-size: 14px; font-weight: 600; }
+.lei-3d-op.seg .lei-3d-rot + .lei-seg { margin-bottom: 8px; }
+/* o campinho das vagas da formação (o mesmo da aba Leilão), à esquerda, com 62% da largura */
+.lei-cs-campo { width: 62%; max-width: 250px; }
+/* (o campinho da formação, vazio: o círculo central menor, entre os dois meias do meio como na foto, e as vagas sem
+   transparência — com 22% e as vagas translúcidas, a linha do círculo passava por dentro dos meias no 4-4-2) */
+.lei-cv-criar .lei-cv-linhas .c { width: 13%; }
+.lei-cv-criar .lei-cv-bola.vazia { background: #125e31; }
+/* o seu clube: o nome e a sigla, e o "Escolher escudo" tonal com o escudo dentro (abre o seletor) */
+.lei-editor-clube.escolher { gap: 12px; }
+.lei-editor-clube.escolher .lei-criar-campos { grid-template-columns: minmax(0, 1fr) 84px; }
+.lei-criar .lei-campo { min-height: 48px; font-size: 16px; }
+.lei-esc-escolher { align-self: flex-start; max-width: 100%; display: inline-flex; align-items: center; gap: 12px; min-height: 52px; padding: 4px 16px 4px 12px; border: 0;
+  border-radius: 14px; background: var(--lei-tom); color: var(--text); font: inherit; font-size: 16px; font-weight: 800; cursor: pointer; text-align: left; }
+.lei-esc-escolher .lei-criar-esc { display: inline-flex; flex: 0 0 auto; }
+.lei-esc-escolher-t { min-width: 0; }
+.lei-esc-escolher.aberto .lei-bloco-seta { transform: rotate(180deg); }
+.lei-esc-escolher:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+/* (as cores do escudo com o alvo de 44 px, como as formas e os símbolos; na Criar sala e no Saguão) */
+.lei-editor-clube.escolher .lei-cor { width: 44px; height: 44px; }
+/* (o fim da Criar no cartão de destaque verde do Saguão, menor: "Cada técnico entra com R$ 100." e a nota do dinheiro do jogo) */
+.lei-criar-res { width: 100%; display: flex; flex-direction: column; gap: 6px; padding: 16px 18px; border-radius: 18px; border: 1px solid rgba(34,197,94,.4);
+  background: linear-gradient(160deg, rgba(34,197,94,.16), rgba(34,197,94,.03) 65%), var(--panel); }
+.lei-criar-res-tit { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.2; letter-spacing: -.01em; color: var(--text); }
+.lei-criar .lei-criar-nota { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text); }
+/* a barra fixa: o resumo numa linha (com "…") e o botão principal; no celular em pé um embaixo do outro, do tablet para cima
+   (e no celular deitado) lado a lado */
+.lei-criarbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(5,8,7,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid rgba(34,197,94,.22); box-shadow: 0 -10px 24px rgba(0,0,0,.35); }
+.lei-criarbar-in { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+.lei-criar-resumo { min-width: 0; margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-dim); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-criar-resumo b { font-weight: 800; color: var(--text); }
+.lei-criarbar .lei-comecar { width: 100%; max-width: none; min-height: 56px; padding: 0 20px; border-radius: 14px; font-size: 17px; font-weight: 800; letter-spacing: .01em; }
+.lei-criarbar .lei-comecar .tm-ic { width: 20px; height: 20px; }
+@media (min-width: 600px) {
+  .lei-criarbar-in { flex-direction: row; align-items: center; gap: 16px; }
+  .lei-criar-resumo { flex: 1 1 auto; }
+  .lei-criarbar .lei-comecar { flex: 0 0 auto; width: auto; min-width: 220px; }
+}
+/* (no PC o resumo inteiro em até duas linhas, com a barra mais larga que a coluna: em 560 px só cabia a liga e os técnicos) */
+@media (min-width: 1024px) and (min-height: 521px) {
+  .lei-criarbar-in { max-width: 880px; }
+  .lei-criar-resumo { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+}
+@media (max-height: 520px) and (min-width: 560px) {
+  .lei-criarbar { padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .lei-criarbar .lei-comecar { min-height: 46px; }
+  .lei-criar .lei-criar-corpo { gap: 24px; }
+}
+
+/* ---------- as folhas (Como funciona, Participantes, Vendas, a ficha, a liga) ---------- */
+.lei-folha { position: fixed; inset: 0; z-index: 130; display: flex; align-items: flex-end; justify-content: center; background: rgba(0,0,0,.66); opacity: 0; transition: opacity .18s ease; }
+.lei-folha.show { opacity: 1; }
+.lei-folha-in { width: 100%; max-width: 560px; max-height: 88vh; overflow-y: auto; overscroll-behavior: contain; padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0px));
+  border-radius: 18px 18px 0 0; background: var(--bg); border: 1px solid var(--line); border-bottom: none; }
+.lei-folha-larga { max-width: 680px; }
+.lei-folha-cab { position: sticky; top: -14px; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: -14px -16px 10px; padding: 12px 16px 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
+.lei-folha-tit { font-size: 16px; font-weight: 800; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-folha-x { flex: 0 0 auto; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--line-2);
+  background: var(--panel); color: var(--text); cursor: pointer; }
+.lei-folha-x:hover { border-color: var(--gold); color: var(--gold); }
+.lei-folha-corpo { display: flex; flex-direction: column; gap: 8px; }
+.lei-folha-sub { font-size: 13px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--gold); margin-top: 6px; }
+.lei-vend-tecs { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
+.lei-vend-tec { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 8px; align-items: center; min-height: 48px; padding: 6px 8px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.lei-vend-tec .lei-esc { grid-row: 1 / 3; }
+.lei-vend-tec.on { border-color: var(--gold); box-shadow: 0 0 0 2px rgba(34,197,94,.25); }
+.lei-vend-tec-n { font-size: 12.5px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-vend-tec-x { font-size: 11px; color: var(--text-dim); white-space: nowrap; }
+.lei-vend-campo { width: 100%; }
+.lei-vend-falta { font-size: 12.5px; color: var(--text-dim); text-align: center; }
+.lei-vend-lista { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+.lei-vend { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+.lei-vend.eu { border-color: rgba(34,197,94,.45); }
+.lei-vend-j { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.lei-vend-jn { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-vend-jo { font-size: 11.5px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-vend-p { font-size: 14px; font-variant-numeric: tabular-nums; color: var(--gold); }
+/* a ficha sem a carta: o cabeçalho do cartão do lote, os 6 atributos em números e a lista */
+.lei-ficha-cab { display: grid; grid-template-columns: 108px minmax(0, 1fr); column-gap: 14px; align-items: start; padding: 14px 0 4px; }
+.lei-ficha-at { list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.lei-ficha-a { display: flex; align-items: baseline; justify-content: center; gap: 6px; padding: 8px 6px; border-radius: 12px; background: var(--lei-tom); }
+.lei-ficha-a b { font-size: 20px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.lei-ficha-a span { font-size: 11px; font-weight: 800; letter-spacing: .06em; color: var(--text-dim); }
+.lei-ficha-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; font-size: 13.5px; margin-top: 4px; }
+.lei-ficha-dl dt { color: var(--text-dim); font-weight: 600; }
+.lei-ficha-dl dd { font-weight: 700; }
+
+/* ---------- o online: a Entrada, a Criar sala, o Saguão e a faixa da sala (PLANO-LEILAO.md §2.1–§2.4) ---------- */
+/* a faixa da sala: a conexão (Reconectando…, Atualizando…, Servidor cheio…) e outra aba em âmbar; o vermelho fica para a
+   sala alterada e as regras */
+.lei-aviso-sala.rede { border-color: rgba(245,184,61,.5); background: rgba(245,184,61,.10); }
+.lei-aviso-sala.rede .lei-aviso-ic { color: var(--alerta); }
+.lei-aviso-txt { flex: 1; min-width: 0; }
+.lei-aviso-bt { flex: 0 0 auto; }
+.lei-aviso-entrada { max-width: none; margin-bottom: 0; border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.08); }
+.lei-aviso-entrada .lei-aviso-ic { color: var(--gold); }
+/* a Entrada: entrar com o código (ou o link colado) */
+.lei-entrar { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; text-align: left; }
+.lei-entrar-l { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.lei-entrar-cod { text-transform: uppercase; letter-spacing: .12em; font-weight: 800; text-align: center; }
+.lei-entrar-cod::placeholder { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.lei-entrar-bt { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 18px; }
+.lei-entrar-bt[aria-busy="true"], .lei-sagbar-bt[aria-busy="true"] { cursor: progress; }
+.lei-erro { margin: 0; font-size: 13px; line-height: 1.4; font-weight: 600; color: var(--erro); text-align: center; }
+/* o Meu clube (a Criar e o Saguão) */
+.lei-editor-clube { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.lei-cor.usada { opacity: .28; cursor: not-allowed; }
+.lei-cor:disabled, .lei-forma-esc:disabled, .lei-simb:disabled { cursor: not-allowed; }
+.lei-forma-esc:disabled, .lei-simb:disabled { opacity: .45; }
+.lei-campo:disabled { opacity: .55; }
+.lei-passo-bt:disabled, .lei-passo-bt[aria-disabled="true"] { opacity: .35; cursor: not-allowed; }
+/* ---------- o Saguão pelas fotos de 14/11 (PLANO-LEILAO.md §9; js/leilao-tela.js, rota leilao-saguao) ----------
+   O título grande com a frase do convite e "N/M participantes"; o código numa caixa tracejada com o olho e o copiar (ícones de
+   44 px); Copiar convite (verde cheio) e Compartilhar (tonal) lado a lado; os pedidos e os participantes em cartões (o papel e
+   o estado em caixa alta, a pílula PRONTO verde e AGUARDANDO no tom); o resumo num cartão de destaque VERDE do TM (sem o
+   amarelo do site); "Sala e clube" num cartão só (a liga, o formato numa lista com o escolhido em relevo, o passo com o
+   deslizante, os segmentados, o seu clube e a formação com o campinho); a barra FIXA com "N de M prontos" e o botão de 56 px.
+   Uma coluna de até 560 px; duas no PC (≥ 1024 × 600, até 1000 px) e no celular deitado largo (≥ 800 px). */
+.lei-sec { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.lei-corpo-sag { gap: 24px; }
+.lei-corpo-sag > .lei-col-a, .lei-corpo-sag > .lei-col-b { width: 100%; gap: 22px; }
+.lei-sag-cab { gap: 8px; padding-top: 2px; }
+.lei-sag-tit { margin: 0; font-size: 30px; font-weight: 900; line-height: 1.12; letter-spacing: -.02em; color: var(--text); }
+.lei-sag-frase { margin: 0; font-size: 16px; line-height: 1.45; color: var(--text-dim); }
+.lei-sag-conta { margin: 8px 0 0; display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.lei-sag-conta-ic { display: inline-flex; }
+.lei-sag-conta-ic .tm-ic { width: 22px; height: 22px; }
+.lei-sag-nota { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+/* o convite: a caixa tracejada do código (o rótulo, o código e os dois ícones; sem lugar, o rótulo sobe para uma linha só dele) */
+.lei-convite { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.lei-cod-caixa { max-width: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 0 10px; padding: 5px 6px 5px 16px; border: 1.5px dashed rgba(138,157,144,.55); border-radius: 14px; }
+.lei-conv-rot { font-size: 15px; font-weight: 600; color: var(--text-dim); white-space: nowrap; }
+.lei-cod-l { flex: 1 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.lei-conv-cod { min-width: 92px; font-size: 18px; font-weight: 900; letter-spacing: .2em; color: var(--text-dim); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.lei-conv-cod.visivel { font-size: 19px; letter-spacing: .14em; color: var(--gold); }
+.lei-cod-bts { display: flex; gap: 2px; }
+.lei-cod-bt { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-dim); cursor: pointer; }
+.lei-cod-bt .tm-ic { width: 22px; height: 22px; }
+.lei-cod-bt[aria-pressed="true"] { color: var(--gold); }
+.lei-cod-bt:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.lei-conv-bts { display: flex; flex-wrap: wrap; gap: 10px; }
+.lei-conv-bts .btn { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 16px; border-radius: 14px; font-size: 15px; font-weight: 800; white-space: nowrap; }
+.lei-conv-bts .btn .tm-ic { width: 18px; height: 18px; }
+.btn.lei-conv-comp, .btn.lei-bt-tom { background: var(--lei-tom); border-color: transparent; color: var(--text); box-shadow: none; }
+.lei-qr { margin: 0; }
+.lei-qr svg { width: 168px; height: 168px; }
+.lei-conv-nota { margin: 0; font-size: 13px; line-height: 1.45; color: var(--text-dim); }
+@media (hover: hover) {
+  .lei-cod-bt:hover { background: var(--fill); color: var(--text); }
+  .btn.lei-conv-comp:hover, .btn.lei-bt-tom:hover:not(:disabled) { border-color: rgba(34,197,94,.5); }
+}
+/* (no celular estreito os dois dividem a linha, um do lado do outro) */
+@media (max-width: 380px) {
+  .lei-conv-bts { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .lei-conv-bts .btn { padding: 0 8px; gap: 6px; font-size: 14px; }
+}
+/* os cartões (Pedidos de entrada, Participantes, Sala e clube): o título de 20 px e a contagem à direita */
+.lei-sag-card { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 14px; padding: 18px 16px; border-radius: 18px; border: 1px solid var(--line-2); background: var(--panel); }
+.lei-sag-ccab { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; min-width: 0; }
+.lei-sag-ctit { margin: 0; min-width: 0; font-size: 20px; font-weight: 800; line-height: 1.2; letter-spacing: -.01em; color: var(--text); }
+.lei-sag-ctit-s { font-size: 17px; }
+.lei-sag-ctit:focus, .lei-sag-rot:focus { outline: none; }
+.lei-sag-cn { flex: 0 0 auto; font-size: 18px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.lei-sag-lista { display: flex; flex-direction: column; gap: 10px; }
+.lei-sag-card .lei-vazio { margin: 0; padding: 0; font-size: 14px; line-height: 1.45; }
+/* cada participante (e cada pedido) num cartão: o escudo, o nome (o VOCÊ junto), o papel em caixa alta e, à direita, o estado na
+   pílula, na mesma linha do nome (as fotos; o nome quebra em duas linhas em vez de cortar). O Tirar do dono só aparece com o
+   "Tirar alguém da sala" ligado, no lugar da pílula */
+.lei-sag-lista { container-type: inline-size; }
+.lei-part.sag, .lei-pedido { width: 100%; min-height: 64px; padding: 10px 12px 10px 14px; border-radius: 14px; border: 1px solid var(--line-2); background: transparent; }
+.lei-part.sag { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; grid-template-areas: "esc nome dir"; align-items: center; gap: 6px 12px; min-height: 60px; padding-right: 10px; }
+.lei-pedido { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.lei-part.sag > .lei-esc { grid-area: esc; }
+.lei-part.sag > .lei-tec-nome { grid-area: nome; min-width: 0; }
+.lei-part.sag > .lei-part-dir { grid-area: dir; margin-left: 0; }
+/* (só numa coluna estreita demais para o nome — abaixo de 260 px, o texto grande do sistema — a pílula desce para baixo dele) */
+@container (max-width: 259px) {
+  .lei-part.sag { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: "esc nome" "esc dir"; }
+  .lei-part.sag > .lei-part-dir { justify-content: flex-start; }
+}
+.lei-part.sag.eu { border-color: rgba(34,197,94,.5); }
+.lei-part.sag > .lei-esc, .lei-pedido > .lei-esc { flex: 0 0 auto; font-size: 32px; }
+/* (o nome do pedido ao lado do escudo, com a base de 140 px: com "auto" um nome largo descia inteiro e o escudo ficava sozinho) */
+.lei-pedido > .lei-tec-nome { flex: 1 1 140px; min-width: 0; }
+.lei-part.sag .lei-part-n, .lei-pedido .lei-part-n { font-size: 17px; font-weight: 700; line-height: 1.3; color: var(--text); white-space: normal; overflow: visible; overflow-wrap: break-word; }
+.lei-part.sag .lei-voce { font-size: 11px; }
+.lei-part-papel { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; margin-top: 2px; }
+.lei-part-pp { font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); }
+.lei-part-papel .lei-num { font-size: 12px; }
+.lei-part.sag .lei-part-dir { gap: 8px; }
+.lei-part.sag .lei-selo { padding: 5px 8px; border: 0; border-radius: 7px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; line-height: 1.2; }
+/* (os botões do TM não dizem a fonte: na Criar sala e no Saguão eles saíam na do navegador, ao lado dos cartões em Inter) */
+.lei-criar .btn, .lei-tela-sag .btn { font-family: inherit; }
+/* o "Tirar alguém da sala" do dono (e o "Concluir"), embaixo da lista */
+.btn.lei-gerir { align-self: flex-start; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 12px;
+  font-family: inherit; font-size: 14px; font-weight: 700; }
+.lei-gerir .tm-ic { width: 16px; height: 16px; }
+.lei-part.sag .lei-selo.pronto, .lei-part.sag .lei-selo.lidera { background: rgba(34,197,94,.16); color: var(--gold); }
+.lei-part.sag .lei-selo.falta, .lei-part.sag .lei-selo.bot { background: var(--lei-tom); color: var(--text-dim); }
+.lei-part-tirar { flex: 0 0 auto; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; border-radius: 12px;
+  background: var(--lei-tom); color: var(--text-dim); cursor: pointer; }
+.lei-part-tirar .tm-ic { width: 18px; height: 18px; }
+.lei-part-tirar:disabled { opacity: .45; cursor: not-allowed; }
+.lei-part-tirar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@media (hover: hover) { .lei-part-tirar:hover:not(:disabled) { color: var(--erro); } }
+.lei-pedido { border-color: rgba(34,197,94,.45); background: rgba(34,197,94,.06); }
+.lei-pedido-bts { display: flex; gap: 8px; flex: 0 0 auto; margin-left: auto; }
+.lei-pedido-bts .btn, .lei-pedido-passar .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 12px; font-size: 14px; }
+.lei-pedido-bts .tm-ic, .lei-pedido-passar .tm-ic { width: 16px; height: 16px; }
+/* (o Tirar da folha Participantes: o botão com o texto) */
+.lei-part-bt { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 38px; padding: 0 12px; }
+.lei-part-bt .tm-ic { width: 15px; height: 15px; }
+.lei-pedido-depois { flex-direction: column; align-items: stretch; }
+.lei-pedido-passar { display: flex; flex-wrap: wrap; gap: 8px; }
+.lei-pedido-passar .btn { flex: 1 1 160px; }
+.lei-folha-pedidos { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+/* os botões do pedido descem pela largura da COLUNA (no celular e na coluna do PC) */
+.lei-pedidos { container-type: inline-size; }
+@container (max-width: 440px) {
+  .lei-pedido-bts { width: 100%; }
+  .lei-pedido-bts .btn { flex: 1 1 0; }
+}
+/* a linha de participante da folha Participantes (fora do Saguão: o nome, o número e o VOCÊ; o clube e o papel embaixo) */
+.lei-part .lei-tec-quem, .lei-pedido .lei-tec-quem { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; min-width: 0; overflow: visible; }
+.lei-part-n { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lei-num { flex: 0 0 auto; font-size: 11.5px; font-weight: 600; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.lei-part .lei-voce { font-size: 9.5px; }
+.lei-part.longe { opacity: .72; }
+.lei-part { flex-wrap: wrap; row-gap: 6px; }
+.lei-part > .lei-tec-nome { flex: 1 1 150px; }
+.lei-part-dir { margin-left: auto; display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
+.lei-selo { flex: 0 0 auto; padding: 3px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; white-space: nowrap;
+  background: var(--fill); color: var(--text-dim); border: 1px solid var(--line); }
+.lei-selo.pronto, .lei-selo.lidera { background: rgba(34,197,94,.14); color: var(--gold); border-color: rgba(34,197,94,.35); }
+.lei-selo.falta { background: rgba(245,184,61,.12); color: var(--alerta); border-color: rgba(245,184,61,.35); }
+.lei-selo.ausente, .lei-selo.saiu { background: rgba(240,82,82,.10); color: #f87171; border-color: rgba(240,82,82,.35); }
+.lei-selo.completo { color: var(--info); }
+/* o resumo: o cartão de destaque verde (o degradê sutil e a borda verde do fim de temporada do TM), as etiquetas e os prontos */
+.lei-sag-res { width: 100%; display: flex; flex-direction: column; gap: 14px; padding: 22px 18px; border-radius: 20px; border: 1px solid rgba(34,197,94,.4);
+  background: linear-gradient(160deg, rgba(34,197,94,.16), rgba(34,197,94,.03) 65%), var(--panel); }
+.lei-sag-res-tit { margin: 0; font-size: 26px; font-weight: 900; line-height: 1.15; letter-spacing: -.02em; color: var(--text); }
+.lei-sag-resumo { margin: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
+.lei-etqs { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.lei-etq { display: inline-flex; align-items: center; min-height: 30px; padding: 5px 11px; border-radius: 10px; background: rgba(34,197,94,.13); color: var(--text);
+  font-size: 13px; font-weight: 600; line-height: 1.25; }
+.lei-sag-dur { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+.lei-sag-prontos { margin: 0; font-size: 18px; font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+/* Sala e clube: as opções da sala (o rótulo das fotos em cima de cada uma) e, depois de uma linha, o seu clube e a formação */
+.lei-sag-sala { gap: 22px; }
+.lei-sag-cfg, .lei-sag-clube { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.lei-sag-clube { padding-top: 22px; border-top: 1px solid var(--line); }
+.lei-sag-op { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.lei-sag-rot { font-size: 16px; font-weight: 700; line-height: 1.3; color: var(--text-dim); }
+.lei-sag-dica { margin: 0; font-size: 14px; line-height: 1.45; color: var(--text-dim); }
+.lei-sag-clube .lei-campo { min-height: 48px; font-size: 16px; }
+.lei-sag-clube .lei-salvar-l { justify-content: flex-start; }
+.lei-salvar-l[hidden] { display: none; }
+.lei-sag-clube .lei-salvar { min-height: 48px; padding: 0 20px; border-radius: 14px; font-size: 15px; }
+/* o formato numa lista das fotos: o trilho tonal, o escolhido em relevo com o nome verde; quem não é o dono só vê (sem apagar) */
+.lei-formatos.lista { gap: 4px; padding: 4px; border-radius: 16px; background: var(--lei-tom); }
+.lei-formatos.lista .lei-fmt { grid-template-columns: minmax(0, 1fr); min-height: 0; padding: 12px 14px; border: 1px solid transparent; border-radius: 12px; background: transparent; box-shadow: none; }
+.lei-formatos.lista .lei-fmt.on { background: #1b2a21; border-color: rgba(34,197,94,.45); box-shadow: none; }
+.lei-formatos.lista .lei-fmt-txt { gap: 3px; }
+.lei-formatos.lista .lei-fmt-n { font-size: 17px; color: var(--text-dim); }
+.lei-formatos.lista .lei-fmt.on .lei-fmt-n { color: var(--gold); }
+.lei-formatos.lista .lei-fmt-f { font-size: 14px; line-height: 1.4; }
+.lei-formatos.lista .lei-fmt-s { margin-top: 2px; font-size: 13px; color: var(--text-dim); }
+.lei-formatos.lista .lei-fmt.on .lei-fmt-s { color: var(--text); }
+.lei-formatos.so-ver .lei-fmt:disabled, .lei-formatos.so-ver .lei-fmt.on:disabled { opacity: 1; cursor: default; }
+@media (hover: hover) { .lei-formatos.lista .lei-fmt:not(.on):not(:disabled):hover { border-color: rgba(34,197,94,.35); } }
+.lei-cfg-tempo { display: flex; flex-direction: column; gap: 6px; }
+/* as partidas em 3D da sala (Criar sala e Saguão): a duração de cada tempo (3 + 3) e a dificuldade dos bots (4 numa linha) */
+.lei-3d-op { display: flex; flex-direction: column; gap: 6px; }
+.lei-3d-rot { font-size: 12.5px; font-weight: 600; color: var(--text-dim); }
+.lei-3d-rot + .segmented { margin-bottom: 4px; }
+.lei-dur3d, .lei-dif3d { display: grid; gap: 6px; }
+.lei-dur3d { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.lei-dif3d { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.lei-dur3d .seg-btn, .lei-dif3d .seg-btn { min-width: 0; padding: 9px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 560px) { .lei-criar .lei-dur3d { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+/* o Seu jogo com o 3D em andamento (noutro aparelho ou aba): o prazo em destaque */
+.lei-sj-3d { color: var(--alerta); }
+body.theme-light .lei-sj-3d { color: #92400e; }
+.lei-salvar-l { display: flex; justify-content: flex-end; }
+.lei-salvar { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; }
+.lei-salvar:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+/* a barra fixa do saguão: "N de M prontos." (em negrito) com quem falta e, embaixo, o Pronto (verde cheio; pronto, tonal com o
+   check) ou o Começar do dono, com 56 px; do tablet para cima (e no celular deitado) lado a lado */
+.lei-sagbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: rgba(5,8,7,.96); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-top: 1px solid rgba(34,197,94,.22); box-shadow: 0 -10px 24px rgba(0,0,0,.35); }
+.lei-sagbar-in { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 8px; }
+.lei-sagbar-l { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lei-sagbar-txt { margin: 0; font-size: 14px; font-weight: 500; line-height: 20px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lei-sagbar-txt.dois { white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.lei-sagbar-txt b { font-weight: 800; color: var(--text); }
+.lei-sagbar-msg { margin: 0; text-align: left; white-space: normal; min-height: 0; line-height: 1.35; font-size: 13px; }
+.lei-sagbar-msg:empty { display: none; }
+.lei-sagbar-bt { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 20px; border-radius: 14px;
+  font-size: 17px; font-weight: 800; letter-spacing: .01em; white-space: nowrap; }
+.lei-sagbar-bt .tm-ic { width: 20px; height: 20px; }
+.lei-sagbar-bt:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.btn.lei-sagbar-bt.on { background: var(--lei-tom); border-color: transparent; color: var(--text); box-shadow: none; }
+.lei-sagbar-bt.on .lei-bt-ic { color: var(--gold); }
+@media (min-width: 600px) {
+  .lei-sagbar-in { flex-direction: row; align-items: center; gap: 16px; }
+  .lei-sagbar-l { flex: 1 1 auto; }
+  .lei-sagbar-bt { flex: 0 0 auto; width: auto; min-width: 240px; }
+}
+/* o celular deitado: a barra baixa; a partir de 800 px, as duas colunas (o convite e os participantes | o resumo e Sala e clube) */
+@media (max-height: 520px) and (min-width: 560px) {
+  .lei-sagbar { padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .lei-sagbar-in { max-width: 900px; }
+  .lei-sagbar-bt { min-height: 46px; }
+  .lei-corpo-camp { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 12px; align-items: start; }
+  .lei-corpo-camp > .lei-cartao { grid-column: 1 / -1; }
+}
+@media (max-height: 520px) and (min-width: 800px) {
+  .lei-corpo-sag:not(.uma) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 20px; row-gap: 0; align-items: start; }
+  .lei-corpo-sag > .lei-espaco { grid-column: 1 / -1; }
+}
+
+/* ---------- tablet e PC (as outras abas em duas colunas a partir de 760 px; a aba Leilão, de 600 a 1023 px, numa coluna de 560) ---------- */
+@media (min-width: 760px) and (min-height: 521px) {
+  .lei-cab, .lei-aviso-sala { max-width: 1040px; }
+  .lei-tela-lote .lei-cab, .lei-tela-lote .lei-aviso-sala, .lei-tela-sag .lei-cab, .lei-tela-sag .lei-aviso-sala { max-width: 560px; }
+  .lei-corpo-esc { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 440px) minmax(0, 1fr); column-gap: 24px; row-gap: 12px; align-items: start; }
+  .lei-corpo-esc > * { grid-column: 2; }
+  .lei-corpo-esc > .lei-esc-campo { grid-column: 1; grid-row: 1 / span 7; }
+  .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  /* na Escalação a coluna da direita é estreita até ~1100 px: 3 por linha, como no celular */
+  .lei-corpo-esc .lei-formas { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .lei-corpo-camp { max-width: 1040px; display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lei-corpo-camp > .lei-cartao { grid-column: 1 / -1; max-width: 720px; justify-self: center; }
+  .lei-chave.tres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-items: start; }
+  /* a aba Leilão no tablet: a coluna do celular, um pouco maior */
+  .lei-foto-box { width: 112px; height: 112px; }
+  .lei-lc-topo, .lei-placar { grid-template-columns: 120px minmax(0, 1fr); }
+  .lei-nome { font-size: 24px; }
+  .lei-valor-atual { font-size: 44px; }
+}
+@media (min-width: 1100px) and (min-height: 521px) {
+  .lei-corpo-esc .lei-formas { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+/* o topo numa linha (o celular deitado e o PC): a marca, as pílulas no meio e os ícones */
+@media (max-height: 520px) and (min-width: 560px), (min-width: 1024px) and (min-height: 600px) {
+  .lei-na-sala .lei-cab { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+  .lei-na-sala .lei-topo { display: contents; }
+  .lei-na-sala .lei-marca { grid-column: 1; grid-row: 1; }
+  .lei-na-sala .lei-abas { grid-column: 2; grid-row: 1; }
+  .lei-na-sala .lei-sessao { grid-column: 3; grid-row: 1; }
+}
+/* PC (≥ 1024 × 600): a aba Leilão em 2 colunas de no máximo 1000 px (o cartão à esquerda; o seu clube e o campinho à direita) */
+@media (min-width: 1024px) and (min-height: 600px) {
+  /* o Saguão em 2 colunas: o título, o convite, os pedidos e os participantes | o resumo e Sala e clube */
+  .lei-tela-sag .lei-cab, .lei-tela-sag .lei-aviso-sala, .lei-corpo-sag, .lei-tela-sag .lei-sagbar-in { max-width: 1000px; }
+  .lei-corpo-sag:not(.uma) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 32px; row-gap: 0; align-items: start; }
+  .lei-corpo-sag > .lei-espaco { grid-column: 1 / -1; }
+  .lei-tela-lote .lei-cab, .lei-tela-lote .lei-aviso-sala, .lei-corpo-lote { max-width: 1000px; }
+  .lei-corpo-lote { display: grid; grid-template-columns: minmax(0, 540fr) minmax(0, 420fr); column-gap: 28px; align-items: start; }
+  .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
+  .lei-col-b .lei-meu { margin-top: 4px; }
+  .lei-foto-box { width: 120px; height: 120px; }
+  .lei-lc-topo, .lei-placar { grid-template-columns: 128px minmax(0, 1fr); }
+  .lei-nome { font-size: 26px; }
+  .lei-relogio { width: 76px; height: 76px; }
+  .lei-rel-num { font-size: 30px; }
+  .lei-valor-atual { font-size: 48px; }
+}
+/* celular deitado (pouca altura): o cartão deitado (a foto, o nome e os chips | o anel, quem lidera e o valor; os lances numa
+   linha) à esquerda, com o anel à vista; o seu clube e o campinho à direita; a barra de lance numa linha */
+@media (max-height: 520px) and (min-width: 560px) {
+  .lei-screen { padding-top: 8px; }
+  .lei-na-sala .lei-cab { max-width: 900px; margin-bottom: 8px; }
+  .lei-aviso-sala, .lei-corpo { max-width: 900px; }
+  .lei-corpo-lote { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .lei-corpo-lote > .lei-espaco, .lei-corpo-lote > .lei-cartao, .lei-corpo-lote > .lei-caixa, .lei-corpo-lote > .lei-fim-tecs { grid-column: 1 / -1; }
+  .lei-corpo-lote .lei-col-a { gap: 8px; }
+  .lei-lote-cab { justify-content: flex-start; margin-top: 0; }
+  .lei-lote-n { min-height: 28px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+  /* as pílulas um pouco menores que o chip também deitado (o alvo de toque continua com 44 px) */
+  .lei-aba { min-height: 26px; font-size: 12.5px; }
+  .lei-aba::after { top: -9px; bottom: -9px; }
+  .lei-lote-card { display: grid; grid-template-columns: minmax(0, 1fr) 150px; grid-template-areas: "topo placar" "hist hist"; gap: 8px 12px; padding: 12px; }
+  .lei-lc-topo { grid-area: topo; grid-template-columns: 84px minmax(0, 1fr); column-gap: 12px; min-height: 76px; }
+  .lei-foto-box { width: 76px; height: 76px; }
+  .lei-foto-box .lei-nota { left: -10px; top: 14px; width: 38px; height: 40px; }
+  .lei-nota b { font-size: 16px; }
+  .lei-foto-esc { width: 32px; height: 32px; right: -8px; top: -8px; }
+  .lei-foto-esc-img { width: 20px; height: 20px; }
+  .lei-nome { font-size: 19px; }
+  .lei-funcao { font-size: 13px; margin-top: 2px; }
+  .lei-chips { margin-top: 6px; }
+  .lei-placar { grid-area: placar; grid-template-columns: minmax(0, 1fr); justify-items: center; row-gap: 6px; text-align: center; }
+  .lei-placar-dir { align-items: center; max-width: 100%; }
+  .lei-relogio { width: 60px; height: 60px; }
+  .lei-rel-num { font-size: 24px; }
+  .lei-lider { font-size: 13px; }
+  .lei-valor-atual { font-size: 30px; }
+  .lei-hist { grid-area: hist; min-height: 22px; flex-direction: row; flex-wrap: wrap; column-gap: 16px; font-size: 13px; }
+  .lei-hist li { gap: 6px; }
+  .lei-lance { padding: 6px 16px calc(6px + env(safe-area-inset-bottom, 0px)); }
+  .lei-lance-in { max-width: 900px; grid-template-columns: minmax(0, 1fr) minmax(0, .9fr); gap: 4px 8px; }
+  .lei-lance-msg { grid-column: 1 / -1; }
+  .lei-lb { min-height: 48px; }
+  .lei-l2 .lei-lb, .lei-valor { min-height: 46px; }
+}
+/* o celular deitado mais estreito (de 560 a 799 px: o iPhone SE e o 8 deitados): uma coluna só (o cartão de ponta a ponta; o
+   seu clube e o campinho embaixo), o placar numa linha (o anel ao lado de quem lidera e do valor) e a linha de baixo da barra
+   mais justa ("Outro valor" inteiro); abaixo de 700 px a barra em duas linhas, como em pé (o Tudo e o campo não cabiam lado a lado) */
+@media (max-height: 520px) and (min-width: 560px) and (max-width: 799px) {
+  /* (as 4 pílulas do online não cabem entre a marca e os ícones: numa linha só delas, embaixo, em vez de quebrar no meio) */
+  /* (11 px entre os ícones e as pílulas: o alvo de toque delas, 9 px acima pelo ::after, fica a 2 px dos ícones; com 6 px ele
+     subia 3 px por cima da borda de baixo do tema e do som) */
+  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) { row-gap: 11px; }
+  .lei-na-sala .lei-cab:has(.lei-aba:nth-child(4)) .lei-abas { grid-column: 1 / -1; grid-row: 2; padding-bottom: 2px; }
+  .lei-corpo-lote { grid-template-columns: minmax(0, 1fr); }
+  .lei-corpo-lote .lei-col-b { width: 100%; max-width: 420px; margin: 0 auto; }
+  .lei-lote-card { grid-template-columns: minmax(0, 1fr) 210px; }
+  .lei-placar { grid-template-columns: 60px minmax(0, 1fr); justify-items: start; column-gap: 10px; text-align: left; }
+  .lei-placar-dir { align-items: flex-start; }
+  .lei-l2 .lei-lb { padding: 0 12px; }
+  .lei-l2 .lei-lb-passar { min-width: 0; padding: 0 10px; }
+  .lei-valor { padding: 0 10px; }
+}
+@media (max-height: 520px) and (min-width: 560px) and (max-width: 699px) {
+  .lei-lance-in { grid-template-columns: minmax(0, 1fr); }
+  .lei-lb { min-height: 44px; }
+  .lei-l2 .lei-lb, .lei-valor { min-height: 44px; }
+}
+
+/* ---------- tema claro ---------- */
+body.theme-light .lei-lance { background: rgba(255,255,255,.97); border-top-color: rgba(0,0,0,.08); box-shadow: 0 -8px 20px rgba(0,0,0,.08); }
+body.theme-light .lei-vendido { background: rgba(255,255,255,.97); color: var(--text); box-shadow: 0 10px 26px rgba(0,0,0,.14); }
+body.theme-light .lei-tec, body.theme-light .lei-part, body.theme-light .lei-prox,
+body.theme-light .lei-liga-bt, body.theme-light .lei-liga, body.theme-light .lei-passo-bt, body.theme-light .lei-forma-esc, body.theme-light .lei-simb,
+body.theme-light .lei-valor, body.theme-light .lei-campo, body.theme-light .lei-sala-x, body.theme-light .lei-fmt,
+body.theme-light .lei-rod-bt, body.theme-light .lei-jogo, body.theme-light .lei-ch-jogo { background: #ffffff; }
+/* os tons do leilão no claro (perto das fotos): o tom verde-acinzentado e o verde cheio escuro */
+body.theme-light .lei-screen, body.theme-light .lei-folha, body.theme-light .lei-lance { --lei-tom: var(--black-soft); --lei-cheio: var(--gold); }
+body.theme-light .lei-lote-card, body.theme-light .lei-foto-esc { background: #ffffff; }
+/* a Criar sala no claro (as fotos): o escolhido num verde bem claro (o texto apagado com 4,7:1), o segmentado com a escolhida
+   branca em relevo e o texto das outras mais escuro que o --text-dim (sobre o tom: 4,4 → 5,9:1), a barra branca */
+body.theme-light .lei-criar .lei-liga-bt, body.theme-light .lei-sag-cfg .lei-liga-bt, body.theme-light .lei-formatos.ilu .lei-fmt.on { background: #e8f2ea; box-shadow: inset 0 0 0 1px var(--gold), 0 0 0 4px rgba(15,122,58,.12); }
+body.theme-light .lei-formatos.ilu .lei-fmt { background: #ffffff; }
+body.theme-light .lei-criar .lei-liga-bt .lei-liga-trocar, body.theme-light .lei-sag-cfg .lei-liga-bt .lei-liga-trocar { background: #ffffff; }
+body.theme-light .lei-seg .seg-btn { color: #4a5c50; }
+body.theme-light .lei-seg .seg-btn.active { background: #ffffff; border-color: transparent; color: var(--gold); box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+body.theme-light .lei-criarbar { background: rgba(255,255,255,.97); border-top-color: rgba(0,0,0,.08); box-shadow: 0 -8px 20px rgba(0,0,0,.08); }
+body.theme-light .lei-nota { color: #ffffff; }
+/* o texto da pílula inativa um pouco mais escuro que o --text-dim (sobre o tom: 4,4 → 5,8:1) */
+body.theme-light .lei-aba:not(.on):not(.feita) { color: #4a5c50; }
+body.theme-light .lei-lote-rep { color: #92400e; }
+/* o Tudo e o Dar lance no claro: o verde mais escuro (o branco do valor e o verde do Dar lance com ≥ 4,5:1) */
+body.theme-light .lei-lb-tudo { background: linear-gradient(120deg, var(--gold), var(--gold-dark)); color: #ffffff; }
+body.theme-light .lei-lb-tudo .lei-lb-v { opacity: 1; }
+body.theme-light .lei-lb-dar { color: var(--gold-dark); }
+body.theme-light .lei-lb-tudo.confirma { background: linear-gradient(120deg, #ffd27a, var(--alerta)); color: #1b1203; }
+body.theme-light .lei-voce { color: #ffffff; }
+body.theme-light .lei-meu .lei-voce { color: var(--text-dim); }
+/* os textos de estado sobre o branco: tons escuros (contraste ≥ 4,5:1; o --ok/--alerta do escuro dá 2,3 e 1,8) */
+body.theme-light .lei-lance-msg.ok { color: #0f7a3a; }
+body.theme-light .lei-lance-msg.alerta, body.theme-light .lei-esc-pen { color: #92400e; }
+body.theme-light .lei-lance-msg.erro { color: #b91c1c; }
+body.theme-light .lei-gr.gr-GK { color: #92400e; background: rgba(245,184,61,.22); }
+body.theme-light .lei-gr.gr-DF { color: #1d4ed8; background: rgba(59,130,246,.14); }
+body.theme-light .lei-gr.gr-FW { color: #b91c1c; background: rgba(239,68,68,.12); }
+body.theme-light .lei-folha { background: rgba(10,20,14,.45); }
+body.theme-light .lei-tag { background: rgba(15,122,58,.12); }
+/* o online no tema claro (os textos de estado em tons escuros: contraste ≥ 4,5:1 sobre o branco) */
+body.theme-light .lei-sagbar { background: rgba(255,255,255,.97); border-top-color: rgba(0,0,0,.08); box-shadow: 0 -8px 20px rgba(0,0,0,.08); }
+/* o Saguão no claro (as fotos): os cartões brancos com a borda clara, o resumo num verde bem claro com as etiquetas quase brancas,
+   o formato com o escolhido branco em relevo, as pílulas e os textos apagados mais escuros que o --text-dim (≥ 4,5:1 no tom) */
+body.theme-light .lei-sag-card { background: #ffffff; border-color: #dfe7e1; }
+body.theme-light .lei-part.sag { background: #ffffff; border-color: #dfe7e1; }
+body.theme-light .lei-part.sag.eu { border-color: rgba(15,122,58,.45); }
+body.theme-light .lei-pedido { background: #f2f8f3; border-color: rgba(15,122,58,.35); }
+body.theme-light .lei-part.sag .lei-selo.pronto { background: rgba(15,122,58,.12); color: #0f7a3a; }
+body.theme-light .lei-part.sag .lei-selo.falta, body.theme-light .lei-part.sag .lei-selo.bot { color: #4a5c50; }
+body.theme-light .lei-part-tirar { color: #4a5c50; }
+body.theme-light .lei-cod-caixa { border-color: rgba(22,36,27,.3); }
+body.theme-light .lei-sag-res, body.theme-light .lei-criar-res { background: #e2efe5; border-color: rgba(15,122,58,.3); }
+body.theme-light .lei-sag-res .lei-etq { background: rgba(255,255,255,.82); }
+body.theme-light .lei-sag-dur { color: #4a5c50; }
+body.theme-light .lei-formatos.lista .lei-fmt { background: transparent; }
+body.theme-light .lei-formatos.lista .lei-fmt.on { background: #ffffff; border-color: transparent; box-shadow: 0 1px 3px rgba(0,0,0,.14); }
+body.theme-light .lei-formatos.lista .lei-fmt-n, body.theme-light .lei-formatos.lista .lei-fmt-f, body.theme-light .lei-formatos.lista .lei-fmt-s { color: #4a5c50; }
+body.theme-light .lei-formatos.lista .lei-fmt.on .lei-fmt-n { color: var(--gold); }
+body.theme-light .lei-formatos.lista .lei-fmt.on .lei-fmt-s { color: var(--text); }
+body.theme-light .lei-aviso-sala.rede .lei-aviso-ic, body.theme-light .lei-selo.falta { color: #92400e; }
+body.theme-light .lei-selo.pronto, body.theme-light .lei-selo.lidera, body.theme-light .lei-conv-cod.visivel, body.theme-light .lei-aviso-entrada .lei-aviso-ic { color: #0f7a3a; }
+body.theme-light .lei-selo.ausente, body.theme-light .lei-selo.saiu, body.theme-light .lei-erro { color: #b91c1c; }
+body.theme-light .lei-selo.completo { color: #1d4ed8; }
+/* o campeonato no tema claro (o pôster do campeão continua escuro, como o do fim de jogo do TM) */
+body.theme-light .lei-sj-estado.v { color: #0f7a3a; }
+body.theme-light .lei-sj-estado.d { color: #b91c1c; }
+body.theme-light .lei-sj-motivo, body.theme-light .lei-jg-est.anda { color: #92400e; }
+body.theme-light .lei-pend { border-color: rgba(146,64,14,.35); }
+body.theme-light .lei-tabela tr.eu td, body.theme-light .lei-cl.eu { background: rgba(15,122,58,.08); }
+
+/* ---------- o par (revisão do PR 5): o Jogar apagado de verdade, o alvo de 44 px e o chamado do amigo ---------- */
+.lei-acoes .btn { min-height: 44px; }
+.lei-acoes .btn:disabled:not([aria-busy="true"]) { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* o chamado do amigo para o 3D nas abas da sala que não são o Campeonato (no fluxo da página, sem cobrir nada) */
+.lei-chamado { width: 100%; max-width: 560px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: 10px; padding: 8px 8px 8px 12px;
+  border-radius: 12px; border: 1px solid rgba(34,197,94,.55); background: rgba(34,197,94,.12); color: var(--text); font-size: 13.5px; font-weight: 700; }
+.lei-chamado-ic { display: inline-flex; color: var(--gold); }
+.lei-chamado-txt { flex: 1 1 180px; min-width: 0; overflow-wrap: anywhere; }
+.lei-chamado .btn { flex: 0 0 auto; min-height: 44px; padding: 0 20px; display: inline-flex; align-items: center; gap: 8px; }
+.lei-chamado .btn:disabled:not([aria-busy="true"]) { opacity: .45; cursor: not-allowed; box-shadow: none; transform: none; }
+/* o selo na aba Campeonato: o ponto verde no canto (o chamado esperando o seu toque) */
+.lei-aba-selo { position: absolute; top: 2px; right: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 0 2px var(--bg, #050807); pointer-events: none; }
+.lei-aba.on .lei-aba-selo { background: #fff; }
+@media (min-width: 760px) and (min-height: 521px) {
+  .lei-chamado { max-width: 1040px; }
+  .lei-tela-lote .lei-chamado, .lei-tela-sag .lei-chamado { max-width: 560px; }
+}
+@media (min-width: 1024px) and (min-height: 600px) {
+  .lei-tela-sag .lei-chamado, .lei-tela-lote .lei-chamado { max-width: 1000px; }
+}
+@media (max-height: 520px) and (min-width: 560px) { .lei-chamado { max-width: 900px; } }
+body.theme-light .lei-chamado-ic { color: #15803d; }

@@ -2,7 +2,8 @@
 
 Repositório com vários projetos. Os estáticos (sem build) são publicados pelo GitHub
 Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O CreateFlow
-(Next.js, raiz) é hospedado à parte.
+(Next.js, raiz) é hospedado à parte. O LIFE OS (`life-os/`, Next.js + PostgreSQL) roda no servidor
+do dono (Docker Compose), fora do Pages — ver a seção "LIFE OS" no fim.
 
 ## Preferências do dono
 - **FILA EM VIGOR (09/10): o GOLAÇO NOVO (`golaco/`), feito do zero** — "totalmente novo, nada que restou
@@ -138,6 +139,52 @@ Pages a cada merge na `main` (ver `.github/workflows/deploy-pages.yml`). O Creat
   tipográfico do 3D (ver "Sistema tipográfico" abaixo), a pausa com o campinho ~1,5× maior no PC e as outras telas; (126) "a foto
   com o nome tem que ser mais embaixo e menor, no canto inferior" — o cartão do autor embaixo à DIREITA (no celular, logo acima
   do "Pular"), ~4× menor no PC e ~2× no celular.
+- **Modo Leilão (dono, 14/11)**: "consegue criar um modo de leilão? com os jogadores da liga escolhida?". Respostas dele:
+  com AMIGOS ONLINE; depois do leilão, "leilão e mata a mata, nas configurações pré jogo eles escolhem ou jogar ou simular"
+  (a tela antes do jogo do 3D); lances de cada um em +1, +5, +10 ou Tudo, todos começam com R$ 100 (dinheiro do jogo);
+  "pode começar agora". Regras: sala SÓ PRIVADA (código/convite, o dono aceita quem entra), sem chat, sem estranhos; as
+  fotos que ele mandou (site de terceiros) dão só a mecânica — NÃO copiar o nome, a arte nem o visual do site de
+  referência; a cara é a do TM (verde e preto, Inter, ícones `TM.ic`, sem emoji, modo claro, "nada sobre nada"); nada de
+  Pix, doação nem Total Coins; testes nunca com o Firebase de verdade; modo novo em "Mais modos". Branch `claude/leilao`
+  (o item 45 do golaco segue pausado em outro branch); plano em `legacy-total-match/PLANO-LEILAO.md` (6 PRs, ~111 h; as
+  decisões dele na seção 7, aplicadas com a recomendada; o que o código pediu de diferente na seção 8). **PR 1 ENTREGUE**
+  (#640; TM v382): o leilão inteiro contra 1 a 7 bots num aparelho e a escalação. **PR 2 ENTREGUE** (#641; TM v383): COM
+  OS AMIGOS ONLINE — a sala privada por código ou link (o dono aceita cada pedido), o Saguão e o leilão ao vivo no
+  Firebase do TM (`leiloes/{CÓDIGO}`). **PR 3 ENTREGUE** (#642; TM v384): O CAMPEONATO, no treino e
+  online, com os jogos SIMULADOS — Mata-mata (o padrão; gol de ouro e pênaltis), Pontos corridos (turno e returno,
+  3/1/0) e Pontos + mata-mata (até 4 técnicos, a final; de 5 a 8, as semifinais), escolhido na Criar sala ou no Saguão
+  com a duração estimada; o "Simular partida" do seu jogo contra um bot (o prazo de 2 min, que só corre com você na
+  sala), o "Ver o jogo" no 2D sem pausa, "Simular os pendentes" do dono, a tabela, a chave, a artilharia e o fim (o
+  campeão, a classificação, o artilheiro e o melhor time). **PR 4 PRONTO** (branch `claude/leilao`; TM v385): OS SEUS
+  JOGOS CONTRA OS BOTS EM 3D — o "Jogar" do Seu jogo abre a tela antes do jogo do 3D (Jogar partida ou Simular partida),
+  com a duração e a dificuldade da SALA (escolhidas na Criar sala ou no Saguão; padrão 4 min e Normal) travadas; o
+  resultado é gravado antes de o 2D mostrar (já no apito final do 3D, antes da cena do pós-jogo); o 3D que fecha sem
+  resultado vira W.O. depois do prazo (ou na hora, com o "Aceitar o W.O. agora"), o que nem abriu, o simulado; com
+  "Sempre simular" ou sem WebGL 2, o simulado direto. Salas criadas antes do PR 4 (regras 1) seguem valendo, sem o Jogar.
+  **PR 5 PRONTO** (branch `leilao-pr5`; a versão sobe no PR): VOCÊ CONTRA UM AMIGO EM 3D AO VIVO — no Seu jogo contra um amigo,
+  o "Jogar" para os dois (o 1º toque chama o outro, só com ele na sala); com os dois, os aparelhos se ligam direto (o Online 3D,
+  pela MESMA sessão de partida da sala do Online 3D: `TM.online3d.confronto`) e abre a tela antes do jogo do 3D com "Pronto" e
+  o "Simular partida" novo (qualquer um escolhe e os dois saem com o simulado; depois do Pronto, só o do outro). Perde por W.O.
+  quem estava na sala e não tocou em Jogar em 2 min (fora dela: o simulado; o chamado aparece em qualquer aba da sala, com o
+  Jogar e um selo no Campeonato) ou quem toca em "Sair da partida" com o 3D aberto; a ligação que não dá OU CAI no meio (sem
+  TURN, comum no 4G) vira o simulado (revisão do PR 5: PLANO §8 "A revisão do PR 5"); o resultado é gravado uma vez, por
+  qualquer um dos dois aparelhos (nada no ranking nem no h2h). Salas criadas antes (regras 1 a 3) seguem com o jogo contra amigo simulado ao
+  abrir a rodada. **PR 6 PRONTO** (branch `leilao-pr6`; a versão sobe no PR): AS NOTAS ESCONDIDAS ("leilão no olho") — na Criar
+  sala e no Saguão (o dono) o "Overall: À mostra · Escondido" (padrão à mostra; mudar zera os Pronto; o resumo e a etiqueta
+  "Overall escondido"); escondido, nenhuma nota nem o que a entregue (a média, a soma, os atributos, a fala da região ao vivo, a
+  ordem da fila e das vagas/camisas; o "−1/−2" de fora da função fica: vem da posição) do leilão ao fim do campeonato,
+  também no 3D (a tela antes do jogo e o Editar time sem nota nem o GERAL), e os bots dão
+  lance pela "nota percebida" (a nota ± 3, a mesma em todo aparelho); as notas aparecem SÓ NO FIM DO CAMPEONATO (decisão 13, a
+  recomendada; a alternativa, a cada partida, numa constante) com quem comprou melhor (a nota de cada compra contra a que o
+  preço pagava na sala) e o time de cada técnico com as notas. Salas de antes (regras 1 a 4) ficam à mostra.
+  Detalhes técnicos na seção TOTAL MATCH ("Modo Leilão"). A avisar ao dono: no máximo 3 treinos
+  guardados no aparelho (o 4º tira o mais antigo); o bloco `.validate` OPCIONAL do Firebase
+  (`legacy-total-match/firebase/LEIA-ME-leilao.md`; as regras de hoje não mudaram); quem some no campeonato não é
+  simulado pelo prazo sozinho (os jogos dele esperam até ele voltar ou o dono tocar em "Simular os pendentes"; com o dono
+  fora há mais de 5 min, qualquer técnico presente tem o botão — escolha minha); a
+  pergunta do plano grátis (Spark): um leilão de 8 técnicos baixa ~1,0–1,1 MB por página com 104 lotes (~9 MB no total; com os
+  160 lotes de 15/11, ~2,1 MB por página e ~17 MB a sala) e o
+  campeonato soma ~30 KB no mata-mata e ~0,5 MB nos pontos corridos com 8 (no pior caso ~12,5 MB a sala de 8).
 - **Pedidos do dono de 17/10:** ENTREGUES (1) o NOME do jogador com a bola (`main.js marcarCondutor` → `hud.js nomeCanto`,
   exceção pedida à "sem narração"; desde os itens 59 e 60 (23/10; #598) no `#hud`, nos CANTOS de baixo pelo time do placar — contrato
   "Faixa de baixo") e (2) os overalls da tela iguais aos do TM (`elenco.js
@@ -1296,6 +1343,203 @@ O Chromium headless não passa pelo proxy: os testes usam `tools/cdn-route.mjs`
   **Online 3D** (`js/online3d.js`, `jogarOnline`; dono, 16/10): sala privada por código/link (`?online3d=`), o anfitrião
   aceita ou recusa, cada um escolhe o SEU time, o anfitrião monta o pedido `modo: "online"`, só o anfitrião grava h2h e
   ranking, sair no meio = W.O. (fair play). Teste `ferramentas/testar-online3d.mjs [--golaco]`.
+- **Modo Leilão** (dono, 14/11; plano `PLANO-LEILAO.md`, as decisões na §7, o que o código pediu de diferente na §8): "Leilão"
+  (ícone `gavel`) em "Mais modos". **PR 1 (v382): o TREINO num aparelho** — você + 1 a 7 bots (nomes "Bot Arrojado",
+  "Bot Paciente"…, clubes inventados, escudo desenhado do Ultimate, cores sem repetir), os jogadores da liga escolhida no
+  MUNDO-BASE (`TM.data.mundoBase()`: sem Editor, clube criado nem Viverde/`especial`), 20 lotes por técnico pela cota de
+  posição (dono, 15/11; eram 13: `LOTES_POR_TEC`; as salas de regras 1 e 2 seguem com 13, `lotesPorTec(regras)`; a cota não
+  come a reserva de `fora`, e a Suíça A e a Paraguai A públicas ficam com 135 e 120 lotes com 7 e 8 técnicos; os robôs
+  passam no lote abaixo do nível de reposição; PLANO-LEILAO.md §8 "Lotes por técnico (15/11)"), R$ 100 cada (dinheiro do
+  jogo), 10 s por lote (lance com menos de 8 s volta a 8 s), +1/+5/+10 sobre o valor visto, Tudo de dois toques, outro
+  valor, Passar, repescagem de 6 s e o completar de graça com os de fora; a escalação no
+  campinho (só as formações em que o time cabe, troca de vagas, −1/−2); o Campeonato "em breve". Arquivos: `js/leilao.js`
+  (PURO, `TM.leilao`: lotes, a máquina do lote, robôs, emparelhamento das 6 formações, escalação pelo húngaro e a
+  conferência — também com o seq pulando, pelos limites da janela, e depois do fim, quando nada muda e o `f` é o completar
+  refeito), `js/leilao-rede.js` (o transporte, `TM.leilaoRede`: `memoria()` com gravação no localStorage; o `firebase()` do
+  PR 2 segue a mesma interface), `js/leilao-sessao.js` (`TM.leilaoSessao`, sem DOM: relógios, robôs e transações
+  idempotentes; `ver()` para as telas; o relógio do treino PARA com a página escondida ou com a pessoa fora das telas da
+  sala, `segurar`; recarregar volta ao mesmo lote), `js/leilao-tela.js` (rotas `leilao`, `leilao-criar`, `leilao-lote`,
+  `leilao-escalacao`, `leilao-camp`; a barra de lance PRÓPRIA, fixa embaixo e à vista também em 844×390; a região ao vivo
+  `#lei-vivo` no `index.html`; Wake Lock; sons curtos), o bloco LEILÃO do `css/styles.css` (tema claro incluído) e
+  `TM.rng.hashStr/comSemente`. "Mais modos" com 13 atalhos: 7 + 6 a partir de 790 px (medido com a barra de rolagem do PC),
+  5 + 5 + 3 de 760 a 789 e 3 + 3 + 3 + 3 + 1 no celular (mexeu na grade? `testar-online3d`, `testar-livre` e
+  `testar-penaltis` conferem). Ícones novos só pelo `EXTRA` do `ferramentas/gerar-icones.py` (a `semEmoji` mora no MODELO
+  do gerador: regenerar não a apaga). Testes: `ferramentas/testar-leilao.mjs` (Node, L1–L10 + R + S, ~30 s; no CI pelo
+  `.github/workflows/tm-testes.yml`, com o `conferir-estilos.py`) e `testar-leilao.mjs --tela` (navegador, 38 itens: a
+  grade, o treino inteiro pela tela, recarregar no meio, nada sobre nada nos 8 tamanhos — por cima, ENCOSTADO (< 2 px entre
+  clicáveis) ou texto saindo do botão — com a barra fixa numa camada própria e os blocos abertos, o tema claro com contraste
+  ≥ 4,5:1, as folhas modais (tela inerte, Tab preso), o foco nunca atrás da barra (scroll-padding), o que fica escrito na
+  `#lei-vivo` (falas juntas, ≥ 1 s cada); ~3 min). Lições: teste de regra confere contra a conta feita no próprio teste
+  (as cotas, o completar), nunca contra a função testada; a região ao vivo trocada no mesmo quadro cala a fala anterior.
+  **PR 2 (v383): COM OS AMIGOS ONLINE** — a sala privada por código de 6 letras (sem I, O, 0 e 1; nasce por transação de
+  null) ou pelo link `?leilao=CÓDIGO` (`app.js` → a Entrada, que entra sozinha uma vez por carga); o PEDIDO que o dono
+  aceita ou recusa (tirar = recusado: não pede de novo); 2 a 8 técnicos contando os bots (os bots sempre depois das
+  pessoas); a edição do dono para todos (a pública troca sozinha, a pro só com a chave); as `regras` do `leilao.js` (quem
+  é da sala sempre volta, também depois de um deploy; com outras regras, só olha); o Saguão (o código atrás do olho, Copiar
+  convite, Compartilhar só com `navigator.share`, o QR do Online 3D, pedidos, participantes, a configuração que zera os
+  Pronto, o Meu clube com o seletor de escudo do Ultimate, o Pronto e o Começar por transação; depois do Começar, o dono
+  passa o clube de quem trocou de aparelho); presença por conexão e o batimento de 5 s, que é a TESTEMUNHA da hora (toda
+  decisão por prazo pela hora do servidor; o relógio de nenhum aparelho decide); as ações escalonadas (o k-ésimo presente
+  espera 1,5 s × k); quem some (12 s sem batimento ou "Sair da sala") passa sozinho e não gasta; "Conferindo…" do ack
+  perdido; outra aba ("Usar aqui"); a limpeza (30 min no saguão, 24 h sem atividade); as Minhas salas online; a sala
+  adulterada congela ("A sala foi alterada fora das regras"). Arquivos: `leilao-rede.js` `firebase(codigo)` (a mesma
+  interface da `memoria()`: a transação OUVE o caminho e espera o 1º valor do servidor antes de rodar; a `ouvir` entrega
+  sempre depois e na ordem; os erros com `codigo`; `horaServidor` = o relógio monótono + a testemunha de menor ida e volta;
+  `salto()`), a sessão online no `leilao-sessao.js` (`criarSala`, `entrar`, `abrir`, `conferirSalas`, `esquecer`; na sessão
+  `aceitar`, `recusar`, `tirar`, `configurar`, `pronto`, `meuClube`, `comecar`, `passarClube`, `encerrar`, `assumir`,
+  `reconectar`), as telas no `leilao-tela.js` (a Entrada pela conta do TM, a Criar sala `{ online: true }`, a aba Saguão, a
+  faixa da sala com a rede: sem internet, Reconectando…, Atualizando…, "Servidor cheio"; ganchos de teste no topo), o
+  bloco LEILÃO do `styles.css` e o bloco `.validate` OPCIONAL (`firebase/regras-leilao-validate.json` +
+  `LEIA-ME-leilao.md`: o dono publica no console se quiser; as regras de hoje NÃO mudaram; não protege o lance em nome de
+  outro técnico). Testes: o banco falso como o SDK compat 10.12.5 (`ferramentas/lib/banco-falso.mjs`, também o do
+  `testar-online3d`; o topo diz o que ele imita e o que não; `relogioAcelerado`, com `window.__relogioPula(ms)` na página);
+  o `testar-leilao.mjs` ganhou o F (a `firebase()` sobre o banco falso) e o O (o leilão online pela sessão em 2, 4 e 8
+  aparelhos em Node, ~8 s; ~40 s o arquivo inteiro); `ferramentas/testar-leilao-online.mjs` (navegador: cada página um
+  aparelho contra o banco falso, o relógio ×6 nas páginas e no servidor, o servidor confere CADA gravação do vivo — nenhum
+  lote fecha antes do fim; lance depois do fim só até 1,5 s de jogo, o caminho da mensagem —, as pessoas por um piloto
+  na página que decide como um robô e age pelos BOTÕES ou pela API; `--so dois,quatro,oito`: D1–D14 a sala e o leilão
+  inteiro pela tela — criar, convite, o link, aceitar, recusar, as recusas, Pronto, Começar, a corrida, o ack perdido, o
+  lance velho, recarregar pelo link e pelas Minhas salas depois do deploy, a escalação —, Q1–Q6 4 páginas + 2 bots com os
+  relógios ±5 s, o pulo de +60 s, quem some, passar o clube e a queda do dono, O1–O3 8 páginas e os bytes, G0–G2 a guarda
+  do Firebase de verdade e nenhum erro; ~1 + 2 + 3 min; o nada sobre nada do Saguão e do Leilão em 360×740, 844×390 e
+  1280×800, escuro e claro). CI (`.github/workflows/tm-testes.yml`): o Node, o `--tela`, os casos do online e o
+  `testar-online3d` (sem a senha, o Viverde sai como "pulado") em jobs paralelos; o check `tm-testes` só passa com todos.
+  Rodar: `NODE_PATH=<playwright> node ferramentas/testar-leilao-online.mjs [--so telas,dois,quatro,oito] [--fator 6]`.
+  Lições: a 1ª rodada da transação do SDK é com o CACHE local (`null` num caminho que ninguém ouve: aborta sem perguntar
+  ao servidor) — ouvir antes; `set`/`update` cancelam as transações do mesmo lugar, de cima e de baixo; o
+  teste do online com o relógio acelerado separa o que é estrito (fechar cedo) do que tem o caminho da mensagem (o lance
+  tarde); a tela que só aparece num estado (o aviso de outra versão depois do Começar) só se acha pelo fluxo de verdade.
+  **Revisão do PR 2** (PLANO §8, "A revisão do PR 2"): o vivo apagado congela (não recomeça o leilão); o Começar usa a
+  edição DA SALA e só mantém lotes IGUAIS aos do mundo-base; quem vê a sala sumir apaga de novo pelo mesmo socket
+  (`rede.varrer()`: o bate a caminho não recria a sala); o `goOffline()/goOnline()` só com o socket PRESO e nenhuma outra
+  sala online do TM aberta (ele vale para o TM inteiro: o servidor rodava o `onDisconnect` da sala do Online 3D e dos
+  outros modos — regressão achada); o `.validate` opcional com regras nos PAIS (apagar antes não desfaz mais as recusas);
+  a conta vinculada em dois aparelhos com o bloco publicado fica sem remédio dentro da sala (PENDENTE). Telas: o nome
+  antes do número, os botões do pedido pela largura da coluna, o Salvar do clube pelo `limpaClube`, o foco depois de
+  Aceitar, "Sala parada", "Atualizando a sala…". Testes O7, O8 e o caso `telas` (T1–T8; um job a mais no CI). Lições:
+  mexer na conexão global do SDK (goOffline) derruba as salas dos outros modos pelo `onDisconnect`; o `.validate` não
+  vale para `null` — a regra que protege um nó de ser apagado mora no PAI; o Firebase devolve as chaves em outra ordem
+  (comparar pelo mesmo canal, nunca o texto cru); o botão que fica apagado durante a ação perde o foco para o BODY.
+  **PR 3 (v384): O CAMPEONATO** (PLANO §1.7, §1.8, §2.6, §3.1–§3.3, §3.6 só a simulação; o que mudou na §8, "Durante o
+  PR 3"): todos os jogos SIMULADOS, no treino e online pelo MESMO código (a interface da rede). `js/leilao-camp.js`
+  (`TM.leilaoCamp`, PURO): os 3 formatos (`mata` o padrão, com as folgas espalhadas pela chave; `pontos` turno e returno
+  pelo método do círculo, 3/1/0, o desempate pontos → saldo → gols pró → confronto direto recursivo → sorteio pela
+  semente → técnico; `misto` com os classificados), a vista montada SÓ dos jogos gravados (`montar`: rodadas, tabela,
+  chave, o campeão, a classificação, a artilharia, o melhor time pela soma das notas), `timeDoTecnico` (os 11 nas vagas,
+  a camisa pela vaga, `colors` e `escudoUT`), `simularJogo` (o motor com `semLesao` dentro de `comSemente`, realismo 3,
+  mando neutro; no mata-mata empatado os 91'–120' cortados no 1º gol — o gol de ouro sem mexer no motor — e os pênaltis
+  sem os expulsos), a semente `"leilao:"+código+":"+jogo+":"+trava` e a MÁQUINA de cada jogo em `jogos/{id}` (aberto →
+  reservado → feito, uma transação por passo; a trava = a hora do SERVIDOR gravada ao reservar; o prazo de 2 min do jogo
+  de uma pessoa contra um bot só corre com ela presente — `pausar`/`retomar`; bot × bot e, nas salas de regras 1 a 3, pessoa
+  × pessoa simulados ao abrir a rodada; `proximaAcao`, `conferirJogo`; ids `r{rodada}j{k}` e `m{rodada}j{par}`). `js/engine.js`:
+  a opção `semLesao` (sem ela, o motor igual à main: o C7 confere com a `ferramentas/dados/motor-ref.json`; mudança de
+  propósito no motor = `--gravar-motor` e dizer no PR). A sessão: o campeonato nasce numa transação (`meta.camp`), quem
+  age é escalonado com a testemunha da hora, `simular(id?)` (grava e só então responde), `simularPendentes()` (o dono),
+  `partida(id)` (os times pelas escalações GRAVADAS), `ver().camp`; a escalação mudada vale no próximo jogo que não
+  começou; QUEM SOME: os jogos dele esperam (o prazo parado) até ele voltar ou o dono simular os pendentes — também quando
+  ninguém viu ele sumir (sozinho na sala, todos de celular travado: o bate leva a presença contínua, `ant`/`cont`/`falta`,
+  e o prazo para no último bate antes do buraco); "Simular os pendentes" só nos jogos de quem NÃO está aqui (nunca o do
+  dono nem o de quem está presente) e, com o dono fora há mais de 5 min, de qualquer técnico presente (motivo
+  `pendentes`); a limpeza não apaga o campeonato em andamento com alguém na sala; quem sai da sala conta como bot; todo resultado simulado é recalculado UMA vez por aparelho (a conferência; qualquer diferença
+  congela a sala). As telas: o Formato na Criar e no Saguão (com a duração estimada), a aba Campeonato (Seu jogo com o
+  prazo e o Simular partida, a rodada com ‹ ›, a tabela, a chave, a artilharia; o "Simular os pendentes" só online e 8 s
+  depois de a rodada abrir; o fim no pôster do TM), o "Ver o jogo" (rota `leilao-jogo`: o `TM.matchview.play` com o
+  resultado GRAVADO e `pauseSide` null — sem a pausa, que sortearia o resto de novo —, depois a prorrogação com o gol de
+  ouro e os pênaltis gravados). Fora do leilão (§3.7): `TM.ui.escudoUT` no pôster, no `crestOf` do 2D e nos pênaltis; o
+  `pickColors` lê `t.colors` (o 2D do Ultimate passou a mostrar o escudo desenhado e as cores do clube); a `prorrogacao`
+  com `golDeOuro`. O `.validate` opcional ganhou `jogos/$j` e `meta.camp`/`fimCamp`. Não conta no ranking nem no h2h e
+  não usa Total Coins. Testes: `testar-leilao.mjs` C1–C8 (o núcleo e o motor), K (o campeonato no treino pela sessão),
+  KO (online no banco falso: dois, limpeza, passar, quatro, oito; as regras opcionais em cada gravação) — ~60 s o
+  arquivo inteiro; `--tela` T11–T13 (o treino até o campeão nos 3 formatos pela tela, o 2D conferido contra o gravado,
+  nada sobre nada em 96 telas); `testar-leilao-online.mjs` com o campeonato nos casos: `dois` o misto com 2, `quatro` os
+  pontos corridos com 6 pela tela (o Simular de cada página e o 2D só com o jogo gravado, o prazo com o relógio +5 s, a
+  página que cai e volta, recarregar, o dono "Simular os pendentes", nada sobre nada no meio e no fim), `oito` o
+  mata-mata com 8 e os bytes; em todo caso a história de cada jogo no servidor (uma reserva e um resultado, o prazo pela
+  hora do servidor) e o G3 (as regras opcionais em cada gravação das páginas, pela `ferramentas/lib/regras-leilao.mjs`).
+  Os testes acharam e corrigiram: o 2D que não abria depois do Simular (a resposta da transação antes do dado pelo
+  ouvinte: a tela espera o jogo na vista e abre também se ele chega depois dos 8 s) e, com o `.validate` publicado, o
+  aparelho que perdeu o clube preso em "Reconectando…" (a recusa por permissão do batimento não é queda de conexão). A
+  revisão do PR 3 (PLANO §8, "A revisão do PR 3"): o prazo que corria sem ninguém presente, o dono ausente que travava e
+  apagava o campeonato, o "Simular os pendentes" que pegava jogos de quem estava presente, os clubes de mesmo nome (o
+  técnico junto do clube na aba e no 2D), a fala com os pênaltis, o Campo 2D (o condutor nulo depois do chute e o laço que
+  não parava fora da tela; `pitch2d.js`, já na main) e o T7 instável do `--tela`; KO `sozinho`, `dormem`, `semdono`,
+  `pendentes` e Q16 no `quatro`. **PR 4 (v385; PLANO §8 "Durante o PR 4")**: SÓ o jogo de uma pessoa contra um BOT
+  ganha o 3D (pessoa × pessoa e bot × bot seguem simulados). O "Jogar" reserva no modo `'3d'` (a trava = o `inicio`,
+  pela hora do servidor; no online, a trava lida do nó que chega pelos ouvintes — `_reservaNoServidor`: o fim da
+  transação traz a estimativa do TIMESTAMP) e abre a rota `leilao-jogar` (fora das rotas da sala: o relógio do treino
+  para) com o gancho `cfg.gravar(origem, dados)`/`cfg.aoAbrir` do `tm3d.js` (sem ele, nada muda nos outros modos): o
+  `abriu` na 1ª tela do 3D; o fim do 3D grava ANTES do 2D (`resDo3d`; o empate do mata-mata com o gol de ouro e os
+  pênaltis simulados com a semente); o "Simular partida" da tela e o 3D que nem abriu gravam o simulado; o 2D mostra só o
+  gravado, sem pausa. Prazos: sem o `abriu`, 2 min → o simulado (`naoAbriu`); com ele, 2 × duração × 1,3 + 8 min → o W.O.
+  de quem reservou (`wo`), por qualquer aparelho. A conferência aceita o 3D pela forma (`res3dValido`). A sala:
+  `duracao3d` (3–10, padrão 4) e `dificuldade3d` (padrão Normal) na Criar e no Saguão ("Partidas em 3D"; zera os Pronto).
+  Revisão do PR 4 (PLANO §8, "A revisão do PR 4"): `REGRAS` 2 (o aparelho de antes só olha as salas novas; as de regras 1
+  seguem valendo, sem o Jogar: `regrasAceitas`, `_com3d`); o resultado do 3D gravado no APITO (o `tm3d.js` olha o
+  `localStorage["tm3d:resultado:<id>"]` com o quadro aberto: `cfg.aoResultado`; a guarda `tm3d:guarda:<id>` contra o
+  `limpaSobras`); a caixa `leilao:3d:<código>` no aparelho (o abriu, o pedido e o resultado do 3D) com que o MOTOR insiste no
+  abriu e no resultado até o jogo ser decidido (`gravar3d`/`abriu` no `_acaoJogo`); a reserva sem resposta lê o nó do
+  servidor; o X e a demora do TM pedem o simulado (`dados.doTM`); a vigia da `leilao-jogar` fecha o 3D se o jogo é decidido
+  por outro caminho; "Aceitar o W.O. agora" (`desistir`, `desistiu: true`) e "Simular agora" (o 3D que nem abriu); a
+  conferência e o `.validate` com o `por`, o `motivo` e o `inicio` iguais no abriu.
+  Testes: TD (Node; TD10–TD14 da revisão), `--tela` T14 (o treino com 6 pela página de ensaio do 3D,
+  `ferramentas/lib/ensaio-3d.mjs` — modos `apito` e `tardio` da revisão: o fim do 3D, o Simular da tela, o 3D fechado = W.O.,
+  "Sempre simular", recarregar no meio, o "Aceitar o W.O. agora", o apito, o X depois de abrir, a vigia; nada sobre nada;
+  `--so3d`), o caso `tresd`
+  do `testar-leilao-online.mjs` (a outra página vê o mesmo resultado; o W.O. gravado pela outra página) e a seção 7 do
+  `testar-3d.mjs` (o GOLAÇO de verdade com o time de 11 sem banco: o `golaco/` não mudou). **PR 5 (o par; PLANO §8 "Durante
+  o PR 5")**: `REGRAS` 4 (aceitas 1 a 4; `REGRAS_PAR` 4, `_comPar`; o 3 são os 20 lotes por técnico, `REGRAS_20`: sem o par). `TM.online3d.confronto(o)` = a sessão de partida tirada do
+  `online3d.js` (o sinal POR NÓ — `sinalRef`; o par em `leiloes/{c}/rtc/{jogo}` pelo `rede.refBruta` —, a ligação, o lobby
+  técnico, o pedido, o quadro e a porta; `auto`, `partida`/`online` por cima do pedido, `rodada0`, `aoAbrir`/`aoResultado`); a
+  sala do Online 3D usa a MESMA. A máquina do par (`leilao-camp.js`, só com `c.par`): `reservarPar` (o 1º Jogar; `par`,
+  `vem0`/`vem1`), `entrarPar` (o 2º), `naoVeio` (2 min sem o 2º toque: W.O. de quem não veio), `marcarAbriu` (com os dois),
+  `naoAbriu` (com os dois, sem abrir em 2 min ou sem resultado no prazo da partida: o simulado), `woPar` (quem saiu); o jogo de
+  duas pessoas antes do toque tem o prazo de 2 min correndo com UMA delas presente (`_acaoPar`). A sessão: `jogarPar`, `par(id)`,
+  `woPar`; o `simular` vale no par antes de abrir; o `desistir3d` no par = o meu W.O. A tela (`leilao-tela.js`, o controlador
+  `PAR`): o lado 0 do jogo é o anfitrião; o par liga sozinho com os dois no Jogar (`olhaPar`); o fim grava o do 3D (o do apito
+  1,5 s depois), o W.O. de quem saiu (`online.wo`), o simulado (dessincronia, `motivo: 'simular'`, a ligação que não dá); os
+  dois aparelhos gravam (fica o primeiro); o jogo decidido por outro caminho fecha o 3D; depois o 2D do gravado (`leilao-jogo
+  {rapido}`). GOLAÇO (só página; fecho 0, hashes iguais): com `online.simular` as abas do online são Pronto · Simular partida ·
+  Visão tática, o bit `E_SIMULAR` 128 no byte 19 + `{tipo:'simular'}` pelo canal confiável e os dois saem com `tm3d:sair
+  {motivo: 'simular'}`. Testes: `testar-leilao.mjs` PAR e KO `--caso par`; `testar-leilao-online.mjs --so par3d` (o WebRTC de
+  verdade no loopback, o `ensaio-3d.mjs` no modo online; no CI); `golaco` `teste-prepartida-tela` O8 e `teste-online` O16.
+  **A revisão do PR 5** (PLANO §8): o `jogarPar` escolhe entrar/reservar DENTRO da transação (os dois juntos); o `naoVeio`
+  vencido com quem não tocou fora da sala ou com buraco desde o chamado = o simulado (`_viuChamado`, `naoAbriu` com um toque);
+  `S.fimPar(id, trava, perdedor, motivo)`: só o `'saiu'` (o "Sair da partida") é W.O., e só com o `abriu` (o `woPar` e o `'3d'`
+  do par exigem o `abriu`; a conferência, o toque do outro > `inicio` e `ts ≥ abriu`; as regras, o `vemN` pela conta de
+  `ab[N]`); o prazo da partida do par + 6 min (`prazoPar`); o pedido no `aoAbrir` e o r3 do apito já na caixa; a faixa
+  `.lei-chamado` + o selo da aba + o aviso a cada 25 s fora das abas; o Ver o jogo some com o par esperando; o 3D da sala
+  também sem bots (só a duração). GOLAÇO (só página): `woDe` ('saiu' / nada depois do apito / 'caiu' / 'sumiu') e
+  `textosQueda`, o Simular desligado depois do Pronto e o E_SIMULAR pendente até a tela abrir. Testes: KO `--caso
+  revsim,revoculto,revcaiu,revforja`, PAR2 (17 adulterações), `par3d` P8–P9, `teste-online` O17, `teste-prepartida-tela`
+  O8b/O8c.
+  **PR 6 (as notas escondidas; PLANO §8 "Durante o PR 6")**: `REGRAS` 5 (aceitas 1 a 5, `REGRAS_OCULTAS` 5; o aparelho de antes
+  só olha toda sala nova), `cfg.overall` 'mostra' | 'escondido' (`criarTreino`/`criarSala` com `overall`, `configurar({ overall })`
+  só nas salas de regras 5, zera os Pronto; `leilao.js ocultasNaSala`). Os robôs pela NOTA PERCEBIDA (`notaPercebida(semente, id,
+  overall)` = a nota + ⌊r × 7⌋ − 3 pelo mulberry32 do FNV-1a de "leilao:{semente}:percebida:{id}"; o `contexto({ notasOcultas })`
+  guarda `ctx.ov` e o robô só usa ela — o mercado, o p80 e a ordem por nota; à mostra, o leilão bit a bit igual: L7 1 000 leilões
+  igual à main; escondido, depois da revisão, 100,0% completos, preço R$ 7,56 → 7,61, sobra R$ 16,8 → 16,2, nota média do time
+  74,78 → 74,42). A
+  revelação: `REVELA_NOTAS` "campeonato" (a alternativa "partida": `leilao-camp.js revelados`), `ver().overall/notasOcultas/revelados`;
+  a tela (`notaOcultaDe(t)`) sem a fala da nota, a Média, o "Nota N" das Vendas; o fim com "Quem comprou
+  melhor" (`leilao-camp.js compraram`: a nota de cada compra contra a reta nota × preço da sala; a soma menos o gasto premiava quem
+  não comprava nada; quem não comprou vai para o fim, "sem compras") e "As notas, reveladas" (a soma das notas de cada time; o
+  toque abre o time com as notas). **Revisão do PR 6** (PLANO §8 "A revisão do PR 6"): escondido, o húngaro da escalação pelo
+  hash da semente + o id (`leilao.js embaralhaTime`: a vaga e a camisa entregavam a ordem das notas em ~85% dos pares → ~50%) e a
+  fila sorteada sem as faixas de nota (`ordem(…, semFaixas)`; à mostra tudo bit a bit igual à main); o Overall gravado com os
+  lotes no Começar (`lotes.ov`; o `ctx`/`ver()` usam esse; o `cfg.overall` ou o `meta.regras` mudados depois congelam a sala,
+  "overall"; nas regras opcionais o `cfg/overall` só muda no saguão e o `meta/regras` nunca); o "−1/−2" fica; o Overall no Saguão
+  no mesmo lugar da Criar; no GOLAÇO o `?notasOcultas=0` não desliga o pedido. O 3D: `simOpts.notasOcultas` / o `partida` do par
+  → `tm3d.js partidaDe` põe `partida.notasOcultas` → o GOLAÇO (`ajustes-partida.js notasOcultasDoPedido`, `?notasOcultas=1`) esconde
+  na tela antes do jogo (`prepartida.js dadosDaPartida({notasOcultas})`: "?", a raridade grafite `r-n`, sem o GERAL) e no Editar
+  time (`criarEditorTime({notasOcultas})`); o `elenco.js notaExibida` NÃO muda (é do fecho: fecho 0, hashes IGUAIS). Testes:
+  `testar-leilao.mjs` NO (NO3 a fila, NO8 os pares empatados, NO9 o Overall travado; e o L7 com `--ocultas`), O1, O7 (f), PAR4,
+  `--tela` T15 (`--soOcultas`: nenhuma nota em 54 telas, o fim que revela em 72, com o 667×375), `testar-leilao-online.mjs` D6f
+  (o Saguão nos 8 tamanhos), `testar-3d.mjs` seção 8; golaco `teste-ponte-tm` P15, `teste-prepartida-tela` E27 e E27b,
+  `teste-editor-tela` 17, `teste-pausa-tela` P14 (`--so notas`).
+  Lições: o resultado que todos veem é gravado UMA vez e ninguém recalcula para mostrar; a ação que abre uma
+  tela a partir da resposta de uma transação espera o dado chegar à vista (o ouvinte entrega depois); no teste online, o
+  acontecimento que depende do sorteio do calendário se procura no servidor e o piloto segura o toque até ele (sem
+  deadlock: o prazo simula o jogo se ele não vier).
 
 ## LANCE A LANCE (`simulador/`) — simulador de partidas (a "bolinha")
 - Canvas 2D, ES modules, **sem build e sem dependências externas**. Identidade: grafite + verde-limão.
@@ -1311,3 +1555,63 @@ node tools/engine-test.mjs
 # navegador (servidor: python3 -m http.server 8791 em simulador/):
 node tools/ui-shot.mjs --out /tmp/lal && node tools/e2e.mjs
 ```
+
+## LIFE OS (`life-os/`) — sistema operacional pessoal (privado, servidor próprio)
+Pedido do dono (17/11): painel de vida "estilo Tony Stark" com 15 módulos (água, hábitos, agenda, saúde, treinos/futebol,
+sono, bem-estar, estudos, alimentação, metas, finanças, projetos, IA, analytics) em 4 fases; acesso só dele (iPhone,
+computador, tablet); identidade preto `#080B12`, azul-elétrico `#2563EB`, violeta `#7C3AED`, branco, cinza `#94A3B8`,
+detalhes holográficos. O plano dele pode ser de um adolescente (fala em adolescência e "passar direto"): **nada de
+diagnóstico, dieta restritiva, contagem obsessiva de calorias nem incentivo a excesso de exercício**; metas são dele e
+ajustáveis (não recomendação médica); sequências só motivacionais (perder um dia não pune).
+- **Fase 1 (Fundação) ENTREGUE** (PR #649): Central de Comando, Hydro Track, Habit Tracker,
+  Life Calendar (planejamento automático + modo foco), Registrar (botão central), segurança (conta única por
+  `LIFEOS_SETUP_TOKEN`, scrypt, sessões revogáveis no banco, TOTP + códigos de recuperação, limite de tentativas,
+  registro de acessos), exportação JSON/CSV/ICS, PWA, Docker Compose com backup diário.
+- **Fase 2 (Saúde e rotina) ENTREGUE** (PR #652; dono, 18/11: "já faz isso aqui tudo de uma vez"): Fitness Center (`/treinos`:
+  musculação com fichas/sessões/cronômetro/evolução da carga, futebol por temporada, cardio, recuperação com ALERTAS de
+  esforço sem descanso — regras puras em `lib/treinos.ts`), Health Center (`/saude/central`: consultas que vão para a
+  agenda, vacinas, exames, medicamentos, alergias, lesões, sintomas, documentos CIFRADOS no banco por `/api/documentos`,
+  emergência, diário de saúde), Sleep Lab (`/sono`: virada da meia-noite no fuso, média CIRCULAR dos horários, aula ×
+  fim de semana, sono × energia), Mind Center (`/mente`: check-in, padrões de estresse, diário sempre cifrado com senha
+  extra opcional — chave por scrypt, cookie `lifeos_diario` de 15 min cifrado com a chave do servidor —, respiração,
+  CVV 188), Nutrition Hub (`/alimentacao`: SEM calorias), Study Center (`/estudos`: provas na agenda com checklist,
+  Pomodoro, revisões espaçadas, Leitner, notas e "quanto falta", "Planejar a semana" cria tarefas da agenda) e Goals
+  Center (`/metas`: etapas ou número, prazo na agenda, conquistas). O check-in do dia (`DailyCheckin`,
+  `components/checkin`) é COMUM à saúde e à mente. Cada módulo entrega `CartaoPainel<Nome>`, `RegistroRapido…` +
+  `dadosRegistroRapido<Nome>`, `insights<Nome>` e `exportar<Nome>` (contrato em `life-os/README.md`); o e2e carrega um
+  arquivo por módulo de `tests/e2e/modulos/` (`E2E_MODULOS`, `E2E_PORTA`). Preferências por chave em
+  `lib/servidor/prefs.ts` (`salvarPref` nunca apaga as outras). Lições: worktree de agente NASCE NA `main`, não no
+  commit atual (avançar com `merge --ff-only` antes); link do menu para rota que ainda não existe deixa o
+  pré-carregamento pendurado e o `networkidle` do e2e nunca chega — juntar as rotas antes do e2e completo.
+  **Próximas (esperam o dono):** Fase 3 (Analytics, Web Push, Finance, Project Hub, IA opcional só com o que ele
+  autorizar) → Fase 4 (voz, widgets, Google Calendar, cofre, diário com fotos). O mapa está em
+  `life-os/src/lib/modulos.ts` (a tela "Todos os módulos").
+- Técnica: Next.js 16 (App Router, `output: standalone`, `src/proxy.ts`), TypeScript estrito, Tailwind 4 (tokens no
+  `globals.css` `@theme`), Prisma 7 (`prisma.config.ts`, cliente gerado em `src/generated`, driver `@prisma/adapter-pg`;
+  o `db` é preguiçoso: o build roda sem banco), Recharts, lucide-react. Auth PRÓPRIA (não Auth.js: as sessões JWT do
+  provedor de senha não se revogam). Regras puras e testadas em `src/lib/*.ts` (sem DOM nem banco); toda server action
+  chama `exigirUsuario()`; dias pela data LOCAL do fuso do usuário (`lib/datas.ts`), horários em UTC.
+- Interface: componentes à mão no estilo shadcn/ui (`components/ui.tsx`, `cliente.tsx`); toda grade leva coluna
+  `grid-cols-1` (minmax(0,1fr)) — uma grade sem coluna explícita deixou um nome longo alargar a página do iPhone para 433
+  px; formulários com `useActionState` usam `onReset={manterValores}` (o React 19 limpa o formulário depois da ação e a
+  pessoa perdia o que digitou quando dava erro). Gráficos pela skill dataviz (azul `#3987e5` + água `#199e70`, validados
+  no fundo escuro). Nada de CDN, rastreador nem IA externa (CSP só `'self'`).
+- Testes (rodar antes de todo commit do LIFE OS; o CI `.github/workflows/life-os-testes.yml` roda em todo PR que mexe em
+  `life-os/`): `npm run typecheck && npm test && npm run build && node tests/e2e/fluxo.mjs` (o e2e APAGA o banco
+  `E2E_DATABASE_URL`, padrão `postgresql://postgres@127.0.0.1:5544/lifeos_e2e`; 61 verificações, também no celular).
+  Postgres local: `/usr/lib/postgresql/16/bin` com `runuser -u postgres` (dados em `/var/tmp`, não no scratchpad). O
+  Docker sobe com `dockerd &`; para construir a imagem AQUI (proxy com certificado próprio) use um Dockerfile de teste no
+  scratchpad com `--build-context certs=/root/.ccr` + `NODE_EXTRA_CA_CERTS` e `--network host` — o Dockerfile real
+  fica limpo. Servidores Next mudam o nome do processo para `next-server`: pare com `pkill -f next-server`.
+- **Na nuvem (dono, 17/11: "cria um link e me manda")**: Railway da conta DELE (gui.drodrigues21, onde está o
+  `gideon-n8n`), projeto `life-os` (Postgres + serviço `life-os`). Essa conta NÃO tem acesso ao repositório (é do
+  MauricioSUprir): o serviço roda a IMAGEM `ghcr.io/mauriciosuprir/life-os:latest`, montada pelo
+  `.github/workflows/life-os-imagem.yml` a cada mudança em `life-os/` na `main` (tags `latest` e o SHA do commit);
+  atualizar o site = depois do workflow, `connect-service-source` do Railway MCP com a imagem
+  `ghcr.io/mauriciosuprir/life-os:<sha do merge>` (a tag fixa força a imagem nova; o redeploy da `latest` pode reusar a
+  que está em cache). Projeto `79b78278-…`, serviço `life-os` `1a026877-…`. O pré-deploy `sh /migrar/migrar.sh` (o migrador enxuto
+  vai DENTRO da imagem do app, em `/migrar`), o healthcheck `/api/saude` e o start ficam nas configurações do serviço; o
+  `life-os/railway.json` vale se um dia o serviço for ligado ao repositório (sem ele o Railway leria o `railway.json` da
+  RAIZ, o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
+  `mirror.gcr.io/library/node:22-bookworm-slim`.
+

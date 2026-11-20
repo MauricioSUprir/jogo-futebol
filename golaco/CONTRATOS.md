@@ -3111,6 +3111,19 @@ Pedido do dono (15/10): o GOLAÇO novo vira o motor 3D das partidas do Total Mat
   `timesDoPedido` e o hash iguais com e sem fotos); o golaco lê pelo lado + `tmId` (`js/tm-fotos.js`, contrato "Comemoração do
   gol"). No online, a foto do time montado num aparelho pro aparece se o pedido do anfitrião for pro (como os rostos reais).
 
+- **As notas escondidas do Modo Leilão (PR 6 do leilão do TM, 15/11)**: campo OPCIONAL `partida.notasOcultas` (true) no pedido — o
+  `tm3d.js partidaDe` só o põe com `simOpts.notasOcultas` (o jogo contra um bot de uma sala com o "Overall escondido"; no par do
+  Online 3D, o `partida` do `confronto`). A página lê com `ajustes-partida.js notasOcultasDoPedido(pedido)` (puro, fora do fecho:
+  só `=== true`; no online, o pedido do anfitrião) OU o `?notasOcultas=1` (testes; o parâmetro só LIGA: nada no endereço desliga
+  o que o pedido manda esconder — revisão do PR 6) — e `__golaco.notasOcultas`. SÓ A
+  TELA muda: a tela antes do jogo (`prepartida.js dadosDaPartida(m, {notasOcultas})`: as fichas com `nota: null` e a raridade
+  neutra `'n'` — grafite, `css/prepartida.css .r-n` —, o time com `geral`/`estrelas` null: o canto sem o GERAL, a ficha com "?" no
+  lugar da nota, a lista do leitor de tela sem nota nem geral) e o Editar time (`criarEditorTime({notasOcultas})`: as cartas com
+  "?", sem a nota do time, as estrelas e as linhas ATA/MEI/DEF, sem o "muito fora", o painel e a comparação sem nota e sem os
+  números da carta). A pausa não mostra nota. O `elenco.js notaExibida` NÃO muda (é do fecho do hash). Sem o campo, nada muda; o
+  `tm-times.js` não o lê (os times e o hash iguais com e sem ele). Testes: `teste-ponte-tm` P15, `teste-prepartida-tela` E27 e E27b,
+  `teste-editor-tela` 17, `teste-pausa-tela` P14 (`--so notas`) e o `testar-3d.mjs` seção 8 do TM (o GOLAÇO de verdade).
+
 - **A tela no lugar da janela "Jogar em 3D / Simular" (item 124, 05/11; PR #620)**. Pedido do dono (com o print da tela antes
   do jogo): "essa tela pré jogo é no lugar daqueles dois botões de jogar 3d ou simular; quando clica em jogar, já entra essa tela,
   e é em todos os modos". As escolhas E1–E5 abaixo são as recomendadas (FILA "Depende do dono" 24: o dono pode trocar). Só a
@@ -4911,8 +4924,8 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   saem (`entrada.limparPulsos()`, como na cena do cartão): preso, o pulso de um toque deixava o bit sempre "segurado" e o
   aperto novo do mesmo botão não pulava a cena. Fora do online nada muda (lá o menu congela as cenas: `pausado()`). Só
   página: o fecho do hash não muda.
-- **A marca E_CENA (item 30)**: o bit 64 do byte 19 do pacote (`online-pagina.js E_CENA`; o `online.js` não o lê; sobra o
-  128) = este lado segura a SUA simulação por uma cena (a substituição, um replay, a comemoração no gol + 149), do quadro da
+- **A marca E_CENA (item 30)**: o bit 64 do byte 19 do pacote (`online-pagina.js E_CENA`; o `online.js` não o lê; o
+  128 é o E_SIMULAR do par do Leilão) = este lado segura a SUA simulação por uma cena (a substituição, um replay, a comemoração no gol + 149), do quadro da
   cena até o 1º passo rodado depois dela (`marcaCena`, pura: o quadro em que a cena acaba sai sem passo e sem entrada nova) e
   só com a cena andando (sem a minha pausa e sem o celular em pé). O texto de baixo do aviso de espera (`textoEspera`, puro):
   com os pacotes do outro chegando, o motivo dele — "{nome} ainda está antes do jogo." / "no pré-jogo." / "ainda está vendo a
@@ -4921,6 +4934,27 @@ atan, atan2, exp, expm1, log*, pow, hypot, cbrt e as hiperbólicas) variam no ú
   comemoração do outro). Com a entrada do outro para o meu próximo passo já chegada, a espera acaba no MESMO quadro
   (`conexaoNoQuadro`, puro: o `paradoDesde` só zera depois do passo — sem isso o aviso ficava um quadro a mais e piscava
   "ainda não voltou ao jogo"). W.O. e o selo continuam só pela falta de pacote.
+- **O "Simular partida" do par do Modo Leilão (PR 5 do Leilão; `PLANO-LEILAO.md` §3.6)**: com o pedido `online.simular: true`
+  (o par do Leilão; nos testes, `&simular=1`) a tela antes do jogo do online tem Pronto · Simular partida · Visão tática; sem
+  ele (a sala do Online 3D), Pronto · Visão tática, como antes. O Simular é de dois toques (o armado do Simular do TM); quem
+  escolhe manda o bit **E_SIMULAR = 128** no byte 19 de todo pacote da tela (o último livre; `faseDoEstado` não o lê: a fase
+  continua 0/1) e a mensagem `{tipo: 'simular'}` pelo canal confiável; quem recebe qualquer um dos dois (uma vez:
+  `ao.simular` do `criarPaginaOnline`) sai também. Os dois: o aviso ("Simulando a partida…" / "{nome} escolheu simular a
+  partida."), o Pronto passa a não fazer nada, a tela não começa o jogo, e meio segundo depois (o que está saindo sai)
+  `sairTM({motivo: 'simular', titulares})` — o TM grava o simulado com a semente do jogo, UMA vez. Só página: fecho 0, hash
+  igual (`teste-online` O16, `teste-prepartida-tela` O8: o outro sai só pelo bit, com a mensagem descartada).
+  A revisão do PR 5 do Leilão: o **Pronto é final também para o Simular** — depois do meu Pronto o meu Simular fica desligado
+  (`aria-disabled` na aba, nem arma; `simularOnlineTela(true)` volta sem agir), o do outro ainda vale (ele escolheu antes de ver o
+  meu Pronto); o pacote trata o E_SIMULAR ANTES da fase (`aoMensagem`); o aviso do outro que chega antes de a tela abrir fica
+  PENDENTE (`simularPendente`/`reavisarSimular`: só marca `simularRemoto` quando a página agiu — o `ao.simular` devolve true) e
+  vale no 1º quadro da tela (`teste-prepartida-tela` O8b: A pronto → A Simular + B Pronto juntos, 80 ms de latência; O8c: B entra
+  depois do Simular de A). **O motivo do W.O.** (`woDe`, puro): o abandono ("Sair da partida") = `'saiu'` — e nada depois do apito
+  (`ctx.fim`: o placar de verdade vale) —, a ligação fechada = `'caiu'` (antes também `'saiu'`) e 90 s sem pacote = `'sumiu'`; vai
+  ao TM no `online.wo.motivo`. A sala do Online 3D dá o W.O. em todos (como antes); o par do Leilão, só no `'saiu'` (a queda é o
+  simulado). Com `online.simular` (`quedaSimula`), os textos da queda dizem "A ligação com {nome} caiu. / A partida vai ser
+  simulada." e o botão dos 90 s, "Encerrar e simular a partida" (`textosQueda`). O resultado do W.O. gravado em
+  `localStorage["tm3d:resultado:<id>"]` leva o `online.wo` (o placar parcial não é o do apito: o par guarda o do apito). Só página:
+  fecho 0, hash igual (`teste-online` O17).
 - **Antes do 1º passo** (item 64; contrato "Tela antes do jogo (item 64)", parte Online): os dois veem a tela antes do jogo com
   "Pronto" · Visão tática; a fase de cada lado vai no byte 19 de todo pacote (bits da página `E_TELA`/`E_PRONTO`/`E_PREJOGO`; o
   `online.js` intocado) e os dois saem juntos para o pré-jogo quando os dois estão prontos; o 1º passo continua decidido pelo

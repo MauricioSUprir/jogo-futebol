@@ -1,0 +1,101 @@
+name: Total Match — testes
+# Os testes do Total Match (legacy-total-match/) em todo PR que mexe nele: até o Modo Leilão um PR só do TM não tinha check
+# nenhum (o golaco-testes.yml só olha golaco/**). PLANO-LEILAO.md §4.4.
+#   node        o Node do leilão (testar-leilao.mjs: o núcleo puro, os robôs, a rede em memória, a firebase() sobre o banco
+#               falso, o leilão online pela sessão e o campeonato — C, K e KO —; ~60 s, sem navegador e sem rede) e o
+#               conferir-estilos.py (controle sem estilo no css/styles.css = visual padrão do navegador)
+#   navegador   (a partir do PR 2 do Leilão) os de navegador, em partes ao mesmo tempo, com o Playwright e o Chromium como no
+#               golaco-testes.yml: o treino num aparelho até o campeão e, desde o PR 4, o jogo contra um bot em 3D pela
+#               página de ensaio do 3D (testar-leilao.mjs --tela, ~7 min com o T14), o leilão online e o campeonato em várias
+#               páginas contra o banco falso (testar-leilao-online.mjs, um job por caso: telas ~15 s, no mesmo job o tresd
+#               ~3 min — o 3D contra um bot visto pela outra página e o W.O. gravado por ela, PR 4 —; dois ~1 min, o
+#               campeonato misto; quatro ~3 min, os pontos corridos pela tela; oito ~3 min, o mata-mata com 8 e os bytes; par3d,
+#               PR 5, o jogo contra um amigo no Online 3D do par com o WebRTC de verdade no loopback e o quadro de ensaio) e o
+#               Online 3D com o quadro de ensaio (testar-online3d.mjs; sem a senha do Viverde, o caso dele sai como "pulado").
+#               O testar-3d.mjs (o GOLAÇO de verdade) fica fora do CI: roda à mão nos PRs que mexem no pedido do 3D
+#   tm-testes   o nome que o PR mostra: só passa se todos passaram
+# Nenhum teste fala com o Firebase de verdade. O deploy (deploy-pages.yml) não muda.
+on:
+  pull_request:
+    paths:
+      - 'legacy-total-match/**'
+      - '.github/workflows/tm-testes.yml'
+      - 'golaco/tools/lib/navegador.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  node:
+    name: node
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Modo Leilão em Node (testar-leilao.mjs)
+        working-directory: legacy-total-match
+        run: node ferramentas/testar-leilao.mjs
+      - name: Controles sem estilo (conferir-estilos.py)
+        working-directory: legacy-total-match
+        run: python3 ferramentas/conferir-estilos.py
+  navegador:
+    name: navegador (${{ matrix.parte }})
+    # (fixo no Ubuntu 24.04, como o golaco-testes.yml: o Playwright 1.56 não instala o Chromium no 26.04)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - parte: treino na tela
+            cmd: node ferramentas/testar-leilao.mjs --tela --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, as telas e o 3D contra um bot
+            cmd: node ferramentas/testar-leilao-online.mjs --so telas,tresd --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online e o campeonato misto, 2 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so dois --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online e os pontos corridos, 4 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so quatro --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online e o mata-mata, 8 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so oito --prints "$RUNNER_TEMP/prints"
+          - parte: leilão online, o jogo contra um amigo no Online 3D, 3 páginas
+            cmd: node ferramentas/testar-leilao-online.mjs --so par3d --prints "$RUNNER_TEMP/prints"
+          - parte: Online 3D
+            # o TM servido na raiz (como no GitHub Pages; o quadro do 3D é a página de ensaio, sem o /golaco/)
+            cmd: |
+              python3 -m http.server 8283 --bind 127.0.0.1 > /dev/null 2>&1 &
+              for i in $(seq 1 30); do curl -sf http://127.0.0.1:8283/index.html > /dev/null && break; sleep 0.5; done
+              node ferramentas/testar-online3d.mjs http://127.0.0.1:8283 "$RUNNER_TEMP/prints"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright (Chromium) para os testes no navegador
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: ${{ matrix.parte }}
+        working-directory: legacy-total-match
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: ${{ matrix.cmd }}
+      - name: Prints da parte que reprovou
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: prints-${{ strategy.job-index }}
+          path: ${{ runner.temp }}/prints
+          if-no-files-found: ignore
+          retention-days: 7
+  tm-testes:
+    name: tm-testes
+    needs: [node, navegador]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Todas as partes passaram
+        run: |
+          echo "node: ${{ needs.node.result }} · navegador (7 partes): ${{ needs.navegador.result }}"
+          test "${{ needs.node.result }}" = success
+          test "${{ needs.navegador.result }}" = success

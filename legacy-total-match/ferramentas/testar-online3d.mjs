@@ -2,8 +2,9 @@
    outra"; js/online3d.js). Dois aparelhos = dois contextos do Chromium (armazenamento separado: Ana na edição pro, celular
    em pé; Bruno na pública, PC), com o WebRTC DE VERDADE entre eles no loopback (--disable-features=
    WebRtcHideLocalIpsWithMdns). O Firebase NUNCA é o de verdade: o SDK do gstatic é trocado por um falso que fala com um
-   banco em memória aqui no Node (o mesmo js/net.js do TM roda por cima dele: login anônimo, número, presença…), com
-   transação, ouvintes e onDisconnect (rodam quando a página recarrega ou fecha). O quadro do 3D é uma página de ensaio
+   banco em memória aqui no Node (ferramentas/lib/banco-falso.mjs, que se comporta como o SDK compat: o mesmo js/net.js do
+   TM roda por cima dele — login anônimo, número, presença…), com cache, transação, ouvintes e onDisconnect (rodam quando a
+   página recarrega ou fecha). O quadro do 3D é uma página de ensaio
    (__eco3d.html, servida aqui) que lê o pedido, recebe a porta e ecoa. Com --golaco, o GOLAÇO de verdade no lugar dele: a
    partida online entre os dois aparelhos (a IA joga pelos dois pelo bit IA do menu aberto) com o mesmo jogo nos dois —
    itens G1–G3 (G1c: a cena de substituição do ANFITRIÃO vale nos dois — item 30), e o teste acaba ali.
@@ -14,8 +15,8 @@
    A senha do Viverde FC vem SÓ da variável TM_SENHA_VIVERDE (nunca no código nem em arquivo); sem ela, o item 9 sai como
    "pulado" e a Ana joga com um clube comum.
    Confere:
-     1 "Online 3D" em "Mais modos" (ícone Lucide + nome, sem emoji) e a grade com 12 atalhos (PC numa linha; tablet 6 + 6;
-       celular 3 + 3 + 3 + 3);
+     1 "Online 3D" em "Mais modos" (ícone Lucide + nome, sem emoji) e a grade com 13 atalhos (o Leilão é o 13º: PC e tablet
+       7 + 6; celular 3 + 3 + 3 + 3 + 1);
      2 criar sala: código de 5 letras, link ?online3d=, QR; o nó salas3d/{código} no banco com a versão e o anfitrião;
      3 código inexistente, sala cheia e versão diferente: a mensagem certa na tela;
      4 entrar pelo código e o anfitrião RECUSAR: o convidado sai com o aviso e não entra de novo; o anfitrião volta a esperar;
@@ -46,157 +47,11 @@ const SENHA = process.env.TM_SENHA_VIVERDE || "";
 const GOLACO = process.argv.includes("--golaco");
 fs.mkdirSync(PASTA, { recursive: true });
 
-/* ---------------- o banco falso (Firebase Realtime Database em memória) ---------------- */
-const canon = v => JSON.stringify(v, (k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.keys(x).sort().reduce((o, c) => (o[c] = x[c], o), {}) : x));
-const copia = v => (v == null ? null : JSON.parse(JSON.stringify(v)));
-class BancoFalso {
-  constructor() { this.raiz = {}; this.ouvintes = new Map(); this.aoCair = new Map(); this.clientes = new Map(); this.gravacoes = 0; }
-  partes(c) { return String(c || "").split("/").filter(Boolean); }
-  ler(c) {
-    if (c === ".info/connected") return true;
-    if (c === ".info/serverTimeOffset") return 0;
-    let x = this.raiz;
-    for (const p of this.partes(c)) { if (x == null || typeof x !== "object") return null; x = x[p]; }
-    return x === undefined ? null : copia(x);
-  }
-  carimbo(v) {
-    if (v === undefined) return null;
-    if (v && typeof v === "object") {
-      if (v[".sv"] === "timestamp") return Date.now();
-      const o = {};
-      for (const [k, x] of Object.entries(v)) { const y = this.carimbo(x); if (y !== null && !(typeof y === "object" && !Object.keys(y).length)) o[k] = y; }
-      return Object.keys(o).length ? o : null;
-    }
-    return v;
-  }
-  gravarSem(c, v) {
-    v = this.carimbo(v);
-    const ps = this.partes(c);
-    if (!ps.length) { this.raiz = v && typeof v === "object" ? v : {}; return; }
-    let x = this.raiz; const pilha = [];
-    for (let i = 0; i < ps.length - 1; i++) {
-      if (x[ps[i]] == null || typeof x[ps[i]] !== "object") { if (v === null) return; x[ps[i]] = {}; }
-      pilha.push([x, ps[i]]); x = x[ps[i]];
-    }
-    const ult = ps[ps.length - 1];
-    if (v === null) delete x[ult]; else x[ult] = v;
-    for (let i = pilha.length - 1; i >= 0; i--) { const [pai, k] = pilha[i]; if (pai[k] && typeof pai[k] === "object" && !Object.keys(pai[k]).length) delete pai[k]; }
-    this.gravacoes++;
-  }
-  gravar(c, v) { this.gravarSem(c, v); this.avisa(); }
-  atualizar(c, o) { for (const [k, v] of Object.entries(o || {})) this.gravarSem(this.partes(c).concat(this.partes(k)).join("/"), v); this.avisa(); }
-  trocar(c, antes, novo) {
-    if (canon(this.ler(c)) !== canon(antes == null ? null : antes)) return { ok: false };
-    this.gravar(c, novo);
-    return { ok: true, valor: this.ler(c) };
-  }
-  entrega(o, carga) { o.pagina.evaluate(([id, cg]) => window.__fbEv && window.__fbEv(id, cg), [o.id, carga]).catch(() => {}); }
-  ouvir(cid, pagina, caminho, id, ev) {
-    const o = { cid, pagina, caminho, id, ev, ultimo: undefined, filhos: new Set() };
-    this.ouvintes.set(cid + ":" + id, o);
-    this.confere(o);
-  }
-  confere(o) {
-    const v = this.ler(o.caminho);
-    if (o.ev === "value") { const c = canon(v); if (c !== o.ultimo) { o.ultimo = c; this.entrega(o, { v }); } return; }
-    if (o.ev === "child_added") {
-      const ks = v && typeof v === "object" ? Object.keys(v).sort() : [];
-      for (const k of [...o.filhos]) if (!ks.includes(k)) o.filhos.delete(k);
-      for (const k of ks) if (!o.filhos.has(k)) { o.filhos.add(k); this.entrega(o, { k, v: v[k] }); }
-    }
-  }
-  avisa() { for (const o of this.ouvintes.values()) this.confere(o); }
-  // um aparelho caiu (página recarregou ou fechou): roda os onDisconnect dele e tira os ouvintes
-  cair(cid) {
-    for (const [k, o] of this.ouvintes) if (o.cid === cid) this.ouvintes.delete(k);
-    for (const op of this.aoCair.get(cid) || []) { if (op.op === "gravar") this.gravarSem(op.caminho, op.v); else for (const [k, v] of Object.entries(op.v || {})) this.gravarSem(this.partes(op.caminho).concat(this.partes(k)).join("/"), v); }
-    this.aoCair.delete(cid); this.clientes.delete(cid);
-    this.avisa();
-  }
-  cairPagina(pagina) { for (const [cid, pg] of [...this.clientes]) if (pg === pagina) this.cair(cid); }
-  chamada(pagina, cid, op, a) {
-    // a página recarregou: o cliente velho dela caiu
-    if (!this.clientes.has(cid)) { for (const [c2, pg] of [...this.clientes]) if (pg === pagina) this.cair(c2); this.clientes.set(cid, pagina); }
-    switch (op) {
-      case "ler": return this.ler(a[0]);
-      case "gravar": this.gravar(a[0], a[1]); return true;
-      case "atualizar": this.atualizar(a[0], a[1]); return true;
-      case "trocar": return this.trocar(a[0], a[1], a[2]);
-      case "ouvir": this.ouvir(cid, pagina, a[0], a[1], a[2]); return true;
-      case "parar": this.ouvintes.delete(cid + ":" + a[0]); return true;
-      case "aoCair": { const l = this.aoCair.get(cid) || []; l.push({ caminho: a[0], op: a[1], v: a[2] }); this.aoCair.set(cid, l); return true; }
-      case "aoCairNao": { const p = this.partes(a[0]).join("/"); this.aoCair.set(cid, (this.aoCair.get(cid) || []).filter(x => { const q = this.partes(x.caminho).join("/"); return !(q === p || q.startsWith(p + "/")); })); return true; }
-    }
-    return null;
-  }
-}
+/* ---------------- o banco falso (Firebase Realtime Database em memória) e o SDK falso na página ---------------- */
+// ferramentas/lib/banco-falso.mjs: o servidor aqui no Node e, na página, o SDK compat falso (cache, transação pelo cache,
+// TIMESTAMP no servidor, .info, onDisconnect) — banco.instalar(contexto) troca o SDK do gstatic e liga a página ao banco
+const { BancoFalso } = await import(path.join(AQUI, "lib/banco-falso.mjs"));
 const banco = new BancoFalso();
-
-/* ---------------- o SDK falso do Firebase (compat 10), na página ---------------- */
-const SDK_FALSO = `(function () {
-  var cid = "c" + Math.random().toString(36).slice(2), uid = window.__fbUid || ("u" + Math.random().toString(36).slice(2));
-  var ouvintes = {}, seq = 0, pushSeq = 0;
-  function chamar(op) { var a = Array.prototype.slice.call(arguments, 1); return window.__fb(cid, op, a); }
-  function norm(c) { return String(c || "").split("/").filter(Boolean).join("/"); }
-  function clone(v) { return v == null ? null : JSON.parse(JSON.stringify(v)); }
-  function snap(chave, v, caminho) {
-    return { key: chave, val: function () { return clone(v); }, exists: function () { return v != null; },
-      forEach: function (f) { if (!v || typeof v !== "object") return false; var ks = Object.keys(v).sort(); for (var i = 0; i < ks.length; i++) if (f(snap(ks[i], v[ks[i]], caminho + "/" + ks[i])) === true) return true; return false; },
-      child: function (k) { var x = v; norm(k).split("/").forEach(function (p) { x = x && typeof x === "object" ? x[p] : null; }); return snap(norm(k).split("/").pop(), x == null ? null : x, caminho + "/" + norm(k)); },
-      numChildren: function () { return v && typeof v === "object" ? Object.keys(v).length : 0; },
-      get ref() { return ref(caminho); } };
-  }
-  window.__fbEv = function (id, cg) { var o = ouvintes[id]; if (!o) return; try { o.cb(cg.k != null ? snap(cg.k, cg.v, o.caminho + "/" + cg.k) : snap(o.chave, cg.v, o.caminho)); } catch (e) { console.error(e); } };
-  function chavePush() { return "-" + ("000000000" + Date.now().toString(36)).slice(-9) + ("0000" + (pushSeq++).toString(36)).slice(-4) + Math.random().toString(36).slice(2, 6); }
-  function ref(caminho) {
-    caminho = norm(caminho);
-    var r = {
-      key: caminho ? caminho.split("/").pop() : null,
-      toString: function () { return "falso:/" + caminho; },
-      child: function (p) { return ref(caminho + "/" + p); },
-      get parent() { return caminho ? ref(caminho.split("/").slice(0, -1).join("/")) : null; },
-      get root() { return ref(""); },
-      get ref() { return r; },
-      once: function (ev, cb) { return chamar("ler", caminho).then(function (v) { var s = snap(r.key, v, caminho); if (typeof cb === "function") cb(s); return s; }); },
-      on: function (ev, cb) { var id = ++seq; ouvintes[id] = { cb: cb, caminho: caminho, ev: ev, chave: r.key }; chamar("ouvir", caminho, id, ev); return cb; },
-      off: function (ev, cb) { Object.keys(ouvintes).forEach(function (id) { var o = ouvintes[id]; if (o.caminho === caminho && (!ev || o.ev === ev) && (!cb || o.cb === cb)) { delete ouvintes[id]; chamar("parar", +id); } }); },
-      set: function (v) { return chamar("gravar", caminho, v === undefined ? null : v).then(function () {}); },
-      update: function (o) { return chamar("atualizar", caminho, o).then(function () {}); },
-      remove: function () { return chamar("gravar", caminho, null).then(function () {}); },
-      push: function (v) { var f = ref(caminho + "/" + chavePush()); var p = v === undefined ? Promise.resolve() : f.set(v); f.then = function (a, b) { return p.then(function () { return f; }).then(a, b); }; f.catch = function (b) { return p.catch(b); }; return f; },
-      transaction: function (fn, fim) {
-        function tenta(n) {
-          return chamar("ler", caminho).then(function (atual) {
-            var novo = fn(clone(atual));
-            if (novo === undefined) { var s0 = snap(r.key, atual, caminho); if (fim) fim(null, false, s0); return { committed: false, snapshot: s0 }; }
-            return chamar("trocar", caminho, atual, novo).then(function (res) {
-              if (res.ok) { var s1 = snap(r.key, res.valor, caminho); if (fim) fim(null, true, s1); return { committed: true, snapshot: s1 }; }
-              if (n > 25) { var e = new Error("disputa"); if (fim) fim(e, false, null); throw e; }
-              return tenta(n + 1);
-            });
-          });
-        }
-        return tenta(0);
-      },
-      onDisconnect: function () { return {
-        set: function (v) { return chamar("aoCair", caminho, "gravar", v); },
-        update: function (o) { return chamar("aoCair", caminho, "atualizar", o); },
-        remove: function () { return chamar("aoCair", caminho, "gravar", null); },
-        cancel: function () { return chamar("aoCairNao", caminho); } }; },
-      orderByChild: function () { return r; }, orderByKey: function () { return r; }, orderByValue: function () { return r; },
-      limitToLast: function () { return r; }, limitToFirst: function () { return r; }, startAt: function () { return r; }, endAt: function () { return r; }, equalTo: function () { return r; }
-    };
-    return r;
-  }
-  var usuario = { uid: uid, isAnonymous: true }, cbs = [];
-  var auth = { currentUser: null,
-    onAuthStateChanged: function (cb) { cbs.push(cb); if (auth.currentUser) setTimeout(function () { cb(auth.currentUser); }, 0); return function () {}; },
-    signInAnonymously: function () { return new Promise(function (ok) { setTimeout(function () { auth.currentUser = usuario; cbs.forEach(function (cb) { cb(usuario); }); ok({ user: usuario }); }, 30); }); } };
-  var db = { ref: function (c) { return ref(c || ""); } };
-  function database() { return db; }
-  database.ServerValue = { TIMESTAMP: { ".sv": "timestamp" } };
-  window.firebase = { initializeApp: function () { return {}; }, auth: function () { return auth; }, database: database, apps: [] };
-})();`;
 
 /* ---------------- o quadro de ensaio do 3D (ecoa a porta) ---------------- */
 const ECO_HTML = `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Ensaio do 3D</title>
@@ -230,11 +85,9 @@ const nav = await chromium.launch({ headless: true, args: ["--use-gl=angle", "--
 const erros = [];
 async function aparelho(nome, uid, viewport, opc) {
   const cx = await nav.newContext({ viewport, deviceScaleFactor: 1, hasTouch: !!opc.toque, isMobile: !!opc.toque, serviceWorkers: "block" });
-  await cx.route(/^https:\/\/www\.gstatic\.com\//, r => r.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
-  await cx.route(/^https:\/\/www\.gstatic\.com\/firebasejs\/[^/]+\/firebase-app-compat\.js/, r => r.fulfill({ status: 200, contentType: "text/javascript", body: SDK_FALSO }));
+  await banco.instalar(cx);   // o SDK do gstatic vira o falso, ligado ao banco daqui
   await cx.route(/__eco3d\.html/, r => r.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: ECO_HTML }));
   if (GOLACO) await rotearCdn(cx);   // o three.js do GOLAÇO pelo cache local (o Chromium daqui não passa pelo proxy)
-  await cx.exposeBinding("__fb", (src, cid, op, a) => banco.chamada(src.page, cid, op, a));
   await cx.addInitScript(([uid, nome, pro]) => {
     window.__fbUid = uid;
     try {
@@ -336,8 +189,8 @@ try {
     }, w));
   }
   await A.p.setViewportSize(A.vp);
-  confere("1 grade de 12 atalhos: PC numa linha (1280 e 1440, sem nome quebrado), tablet 6 + 6, celular 3 + 3 + 3 + 3",
-    grade.every(g => g.n === 12 && !g.quebra.length) && grade[0].linhas.join() === "12" && grade[1].linhas.join() === "12" && grade[2].linhas.join() === "6,6" && grade[3].linhas.join() === "3,3,3,3", grade);
+  confere("1 grade de 13 atalhos (com o Leilão): PC 7 + 6 (1280 e 1440, sem nome quebrado), tablet 7 + 6, celular 3 + 3 + 3 + 3 + 1",
+    grade.every(g => g.n === 13 && !g.quebra.length) && grade[0].linhas.join() === "7,6" && grade[1].linhas.join() === "7,6" && grade[2].linhas.join() === "7,6" && grade[3].linhas.join() === "3,3,3,3,1", grade);
   await A.p.evaluate(() => TM.ui.go("modes"));
   await espera(300);
   await A.p.evaluate(() => [...document.querySelectorAll(".vit-mais-b")].find(x => /Online 3D/.test(x.textContent)).click());

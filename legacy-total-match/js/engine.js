@@ -296,8 +296,8 @@
           }
         }
       }
-      // lesões
-      if (Math.random() < 0.0028 && state[0].pitch.length && state[1].pitch.length) {
+      // lesões (opts.semLesao: nenhuma, nem o sorteio — o Modo Leilão joga só com os 11; sem a opção, o mesmo de sempre)
+      if (!opts.semLesao && Math.random() < 0.0028 && state[0].pitch.length && state[1].pitch.length) {
         var si = Math.random() < 0.5 ? 0 : 1;
         var team3 = si === 0 ? teamA : teamB;
         var inj = pick(state[si].pitch);

@@ -175,6 +175,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .r-s { --f1: #ffffff; --f2: #7d8894; --f3: #e6ebf0; --f4: #4d5762; --acc: #b8c3cd; --acc2: #f1f5f8; }
 #prepartida .r-g { --f1: #fff3c2; --f2: #b8860b; --f3: #ffd966; --f4: #6e4f08; --acc: #e5b53a; --acc2: #ffe38c; }
 #prepartida .r-l { --f1: #c8ffe0; --f2: #14903f; --f3: #4ade80; --f4: #064d22; --acc: #22c55e; --acc2: #86efac; }
+/* a raridade neutra das notas escondidas (o Modo Leilão do TM, PR 6): grafite, sem nenhuma das cores que entregam a nota */
+#prepartida .r-n { --f1: #6b7680; --f2: #262e35; --f3: #46505a; --f4: #151a1f; --acc: #4b5560; --acc2: #8a949e; }
 /* os cantos de baixo: a formação e o selo | o geral e as estrelas */
 #prepartida .pp-canto-esq, #prepartida .pp-canto-dir { position: absolute; line-height: 1.05; pointer-events: none; white-space: nowrap; }
 #prepartida .pp-canto-dir { text-align: right; }
@@ -227,6 +229,8 @@ html.prepartida .hud, html.prepartida .toque, html.prepartida .dica, html.prepar
 #prepartida .pp-aba.armado:not(.foco) { color: #fde68a; }
 #prepartida .pp-aba[aria-pressed="true"]:not(.foco) { border-color: var(--pp-verde); }
 #prepartida .pp-aba:disabled, #prepartida .pp-aba[aria-disabled="true"] { cursor: default; opacity: 0.85; }
+/* (o online do par do Leilão: o Simular partida depois do Pronto, que é final — apagado de verdade, não só "esperando") */
+#prepartida .pp-aba[data-aba="simular"][aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
 #prepartida .pp-aba.aguardando > svg { display: none; }
 /* a aba que espera o 3D (a tela cedo, item 106; prepartida-tela.js marcarAbas: aria-disabled + aria-busy): o mesmo rótulo e a mesma
    medida, um pouco apagada, com a barra de carga DENTRO dela, no pé (absoluta: o layout não muda). A barra anda pelas etapas da carga

@@ -32,6 +32,10 @@
 //      com "…" (0 em 1920 e 375, ≤ 4 em 568; antes 4 e 10 cortados no meio da letra); no PC 1920×1010 as cartas e as letras crescem com
 //      a janela (carta ≥ 124 × 76, nota ≥ 26 px; antes 104 × 64 e 22 px); o "ATAQUE" do campinho com a seta em SVG (a TM Cond não tem
 //      → nem ↑: saía um tracinho). Reprova os 4 em e60e2c7c.
+//  17  (o Modo Leilão do TM, PR 6: as notas escondidas; ?notasOcultas=1 = o partida.notasOcultas do pedido) no PC 1280×720 e no
+//      celular 844×390 (toque): as cartas com "?" (no campinho e nas reservas), o cabeçalho sem a nota do time nem as estrelas, nenhum
+//      "muito fora" (vem da nota), o painel do escolhido e o da Formação sem nota e sem os números da carta, nenhum "nota N" nos
+//      rótulos; a geometria do 10 sem problema; sem o parâmetro, as notas de sempre. Reprova na base (as notas à mostra).
 // Saída PASSOU/REPROVOU por item; código 1 se algum reprovar.
 //   node tools/teste-editor-tela.mjs [--raiz <pasta do jogo>] [--semente N]
 //   (--raiz: mede outra cópia, ex.: a base; --semente soma N a todas as sementes: outro conjunto)
@@ -624,6 +628,47 @@ for (const t of TELAS) {
     } catch (e) {
       meta(`16 ${t.nome}: execução`, e.message, false);
     } finally { await s.navegador.close(); }
+  }
+}
+
+// ====================================================================== 17) as notas escondidas (o Modo Leilão do TM, PR 6)
+for (const t of [{ nome: '1280×720', largura: 1280, altura: 720, pc: true }, { nome: '844×390 toque', largura: 844, altura: 390, toque: true, dpr: 2 }]) {
+  for (const oc of [true, false]) {
+    const { navegador, pagina: pg, erros } = await abrirPagina(t, `&replay=0&comemoracao=0${oc ? '&notasOcultas=1' : ''}`);
+    try {
+      await pg.evaluate(() => window.__golaco.editor.abrir());
+      await pg.waitForFunction(() => !document.getElementById('editar-time')?.hidden && document.querySelectorAll('#editar-time .carta').length >= 11, null, { timeout: 60000 });
+      await pg.waitForTimeout(250);
+      const geo = await conferirEditor(pg);
+      const r = await pg.evaluate(() => {
+        const raiz = document.getElementById('editar-time'), rx = /\b(nota|geral)\s*\d/i;
+        const cs = [...raiz.querySelectorAll('.carta')];
+        const out = { flag: window.__golaco.notasOcultas, cartas: cs.length, notas: [...new Set(cs.map(c => (c.querySelector('.c-nota') || {}).textContent.replace(/°/g, '')))],
+          cab: (raiz.querySelector('[data-ed-nota]') || {}).textContent.trim(), muito: raiz.querySelectorAll('.muito-fora').length,
+          aria: cs.some(c => rx.test(c.getAttribute('aria-label') || '')) };
+        // o escolhido (o painel diz a nota nesta vaga e, no PC, os números da carta)
+        cs.find(c => c.classList.contains('no-campo')).click();
+        const info = raiz.querySelector('.ed-info');
+        out.info = info ? info.innerText.replace(/\s+/g, ' ').slice(0, 160) : '';
+        out.numeros = raiz.querySelectorAll('.ed-numeros').length;
+        out.infoNota = /Nesta vaga \([A-Z]+\): \d|Nota como [A-Z]+: \d|: \d+$/.test(out.info);
+        return out;
+      });
+      // a aba Formação (o painel diz quem está fora de posição, com a nota entre parênteses)
+      await pg.evaluate(() => { const b = document.querySelector('#editar-time [data-aba="formacao"]'); if (b) b.click(); });
+      await pg.waitForTimeout(150);
+      await pg.evaluate(() => { const b = document.querySelector('#editar-time [data-formacao="3-5-2"]'); if (b) b.click(); });
+      await pg.waitForTimeout(200);
+      r.forma = await pg.evaluate(() => (document.querySelector('#editar-time .ed-info') || {}).innerText.replace(/\s+/g, ' ').slice(0, 200));
+      const formaNota = /como [A-Z]+ \(\d+\)/.test(r.forma);
+      const bom = oc ? r.flag === true && r.cartas >= 11 && r.notas.join() === '?' && !r.cab && !r.muito && !r.aria && !r.infoNota && !r.numeros && !formaNota
+        : r.flag === false && r.notas.every(x => /^\d+$/.test(x)) && /\d/.test(r.cab) && r.infoNota && (!t.pc || r.numeros === 1);
+      meta(`17 ${t.nome} ${oc ? 'com as notas escondidas (?notasOcultas=1): as cartas com "?", o cabeçalho sem a nota do time, nada de "muito fora", o painel e a Formação sem nota nem os números da carta; a geometria do 10' : 'sem o parâmetro: as notas de sempre (o controle do 17)'}`,
+        `notas ${r.notas.slice(0, 4).join('/')}, cabeçalho "${r.cab.slice(0, 30)}", muito fora ${r.muito}, rótulos ${r.aria ? 'com nota' : 'sem nota'}, painel "${r.info.slice(0, 60)}" (números ${r.numeros}), Formação "${r.forma.slice(0, 60)}"; geometria ${geo.problemas.length ? geo.problemas.slice(0, 2).join(', ') : 'ok'}; erros ${erros.length}`,
+        bom && !geo.problemas.length && erros.length === 0);
+    } catch (e) {
+      meta(`17 ${t.nome} ${oc ? 'escondidas' : 'à mostra'}: execução`, e.message, false);
+    } finally { await navegador.close(); }
   }
 }
 

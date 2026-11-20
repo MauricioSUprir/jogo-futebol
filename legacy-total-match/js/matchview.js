@@ -36,7 +36,8 @@
     function crestOf(t) {
       if (t.club) return TM.img.clubImg(t.club, "bc-crest");
       if (t.nation) return TM.img.nationImg(t.nation, "bc-crest");
-      return null;
+      // o escudo desenhado (o do Ultimate e o do Modo Leilão); sem o escudoUT, nada (como antes)
+      return (TM.ui.escudoUT && TM.ui.escudoUT(t, "bc-crest")) || null;
     }
     function teamCol(t) {
       var kids = [];
@@ -181,7 +182,7 @@
     function teamColor(t) {
       // usa a cor do uniforme escolhido (1/2/3) quando for um clube
       if (t && t.club && t.kitVariant != null && TM.img && TM.img.kitColor) { try { return TM.img.kitColor(t.club, t.kitVariant); } catch (e) {} }
-      var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || null; return (c && c.primary) || "#3b82f6";
+      var c = (t && t.club && t.club.colors) || (t && t.nation && t.nation.colors) || (t && t.colors) || null; return (c && c.primary) || "#3b82f6";
     }
     // clareia uma cor hex em direção ao branco (amt 0..1) — garante texto/brilho visível em cores escuras
     function lightenHex(hex, amt) {
@@ -524,7 +525,11 @@
 
   /* ---------- disputa de pênaltis (visual) ----------
      cfg: { teamA, teamB, shoot (resultado de TM.engine.shootout), title, onDone(winnerSide) } */
-  function crestOf(t, cls) { return t.club ? TM.img.clubImg(t.club, cls) : (t.nation ? TM.img.nationImg(t.nation, cls) : el("span", { class: cls })); }
+  function crestOf(t, cls) {
+    if (t.club) return TM.img.clubImg(t.club, cls);
+    if (t.nation) return TM.img.nationImg(t.nation, cls);
+    return (TM.ui.escudoUT && TM.ui.escudoUT(t, cls)) || el("span", { class: cls });
+  }
   function playShootout(screen, cfg) {
     E();
     var a = cfg.teamA, b = cfg.teamB, shoot = cfg.shoot;
@@ -581,14 +586,16 @@
     playShootout(screen, params);
   });
 
-  /* ---- PRORROGAÇÃO: os 30 minutos a mais, antes dos pênaltis ---- */
+  /* ---- PRORROGAÇÃO: os 30 minutos a mais, antes dos pênaltis ----
+     params.golDeOuro (o Modo Leilão): a prorrogação acaba no 1º gol (os lances já vêm cortados nele); sem ele, igual */
   TM.ui.register("prorrogacao", function (screen, params) {
     if (!params) { TM.ui.go("modes"); return; }
-    var p = params, de = p.de || [0, 0], para = p.para || de;
-    var golsNovos = (p.ev || []).filter(function (e) { return e.type === "goal" && e.minute > 90; });
+    E();
+    var p = params, de = p.de || [0, 0], para = p.para || de, ouro = !!p.golDeOuro;
+    var golsNovos = (p.ev || []).filter(function (e) { return (e.type === "goal" || (ouro && e.type === "pengoal")) && e.minute > 90; });
     screen.appendChild(el("div", { class: "pror-wrap" }, [
-      el("div", { class: "pror-t", text: "⏱ PRORROGAÇÃO" }),
-      el("div", { class: "pror-s", text: "Empate no tempo normal — mais 30 minutos." }),
+      el("div", { class: "pror-t", text: ouro ? "⏱ PRORROGAÇÃO · GOL DE OURO" : "⏱ PRORROGAÇÃO" }),
+      el("div", { class: "pror-s", text: ouro ? "Empate no tempo normal — até 30 minutos a mais: o 1º gol acaba o jogo." : "Empate no tempo normal — mais 30 minutos." }),
       el("div", { class: "pror-placar" }, [
         el("span", { class: "pror-time", text: p.a }),
         el("span", { class: "pror-num", text: para[0] + " × " + para[1] }),
@@ -598,8 +605,9 @@
         + (p.agg ? "  ·  agregado " + p.agg[0] + " × " + p.agg[1] : "") }),
       golsNovos.length
         ? el("div", { class: "pror-lances" }, golsNovos.map(function (e) {
-            return el("div", { class: "pror-lance" }, [
+            return el("div", { class: "pror-lance" + (ouro ? " ouro" : "") }, [
               el("span", { class: "pror-min", text: e.minute + "'" }),
+              ouro ? el("span", { class: "pror-ouro", text: "Gol de ouro" }) : null,
               el("span", { class: "pror-txt", text: e.text || "Gol!" })
             ]);
           }))
