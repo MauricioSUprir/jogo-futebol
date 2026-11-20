@@ -132,6 +132,14 @@ fica fora estão na seção 6 ("Medido no C14a").
 - **Os tempos:** o celular 126–133 s e a página 339 s (com a base). Continua em 3 partes: a mais longa fica em ~39 min de testes.
 - **O CI do `964a2efd` passou inteiro** (os dois testes rodaram, a P pareada com a base do PR: +0,20 ms).
 
+**O C15 (20/11; `7a5337dc` a `833dad50`): a recalibração medida e as flutuações.** O medido está na seção 6 ("Medido no C15",
+partes 1 e 2). Só testes, o `tempos-ci` e o plano: `fecho-hash` 0.
+- **Parte 1:** o L5 da bola parada separa as linhas do campo pela geometria (o pior no gramado 2,73 → 3,41:1 no item 45 e 2,90 →
+  3,12:1 na main); a emenda do C9b aceita o pixel misturado do MSAA (93–116 → 418 colunas); o "Sem vazamento" em duas rodadas (a 1ª
+  aparição das peças, 33 → 37, rastreada na main). O resto da lista passa sem mudar.
+- **Parte 2:** as seis flutuações (o S1 online, o O1*, os dois do `testar-3d`, o V7 e o T9) estão também na main e nenhuma é defeito
+  do jogo; cada régua nova mede o que o teste quer e reprova por mutação. Os tempos do CI pelos logs; o TM passa.
+
 ---
 
 ## 1. Diagnóstico (conferido no código de hoje)
@@ -1496,6 +1504,81 @@ antes = o HEAD do C14a, `35b9ec6e`; agora = `964a2efd`; a main `e41aa791` pela w
 - **Lição:** o runner do CI muda de velocidade entre rodadas (o `teste-cenas-tela` 1191 s num, 689 s noutro): a divisão em partes se
   decide pelo runner LENTO (a soma da parte mais cheia + a instalação), não pela média.
 
+**Medido no C15 (parte 1)** (20/11; a recalibração das listas do bloco 2, do bloco 3 e do C14a; Chromium 141 do CI, SwiftShader, um
+teste de navegador por vez, carga 0,1–5; base = a main `5b7986a2` por `git archive` com os scripts do HEAD; HEAD = `4a503804`, a
+junção com o Leilão; logs em `scratchpad/f45/fech/c15/`). Só testes: `fecho-hash` 0.
+
+| Teste (meta) | O que mudou de propósito | Antes → depois |
+|---|---|---|
+| `teste-bola-parada-tela` L5 (`7a5337dc`) | o "gramado" do L5 pela GEOMETRIA: os pixels com linha do campo no fundo (o mesmo quadro sem a malha `linhas`) vão ao L5b | o pior no gramado: main 2,90:1 (844×390 dia, 95% de 20) → 3,12; item 45 2,73:1 (568×320 dia, 95%) → 3,41; os dois 100% nas 18 linhas |
+| `teste-corpo-tela` C9b, a emenda (informativa; `b8658b44`) | aceita 0–2 pixels misturados entre a cabeça e o corpo da máscara (o MSAA da Média) | item 45 93–116 → 418 colunas (main 424); \|ΔL*\| p50 47,5 (main 47,7) |
+| `teste-corpo-tela` C11b | nada (anotado) | 25 / 21 px (≥ 5); main 11 / 22 |
+| `teste-desempenho-celular` "Sem vazamento" (informativo; `056b8b3c`) | duas rodadas iguais, a meta na 2ª | 33 → 37 geo, 15 → 16 tex (reprovava) → 2ª rodada 37 → 37 · 16 → 16, na main e no item 45 |
+| `teste-carga` | nada | nosso 2974 → 2978 KB (a junção com o Leilão), folga 446,6 → 442,1 KB |
+| `teste-rede-tela`, `teste-estadio` (10b), `teste-prejogo`, `teste-gramado`, `teste-torcida`, `teste-graficos-*`, `teste-hud-minimo`, `teste-camera-tela`, `teste-replay`, `teste-comemoracao-tela`, `teste-mira-tela`, `teste-tecnicos-tela` | nada (as mudanças de propósito já estavam feitas: o `definirAA` no `4792e0c6`, o canvas opaco no `bc01cece`, a referência dos gráficos no C14a) | passam no CI do `4a503804` e do `7a5337dc` (a P pareada +0,00 ms: 3,50 × base 3,80) |
+
+- **O L5, o mecanismo:** a linha do campo de longe, misturada com a grama, fica na saturação do limiar da cor (0,17–0,26): a tira
+  com ela entrava ou não no "gramado" pelo tom, e era sempre a pior (o miolo sobre a linha). Nos dois lados o pior era essa tira
+  (a régua de antes punha a main no limite em 844×390 e o item 45 em 568×320). Prova por mutação: a mira cinza (`0xe0e0e0`) reprova
+  o L5 nas três telas (80 / 85 / 85%). `--lista-tiras` mostra cada tira com as duas réguas.
+- **O "vazamento", rastreado na main** (uma cópia do teste com os objetos novos da cena a cada aumento): +1 geometria no quadro 540,
+  com a bola rolando e 0 trocas; +3 geometrias e +1 textura no quadro 733, no INTERVALO (a semente acaba o tempo de 0,2 min), da
+  malha de perto da torcida (`torcida-perto`). A 1ª aparição, não as trocas. Prova por mutação: uma geometria por passo com troca,
+  tirada da cena sem `dispose` — a 2ª rodada vai a 38 → 39 e reprova. O resto do teste continua informativo (a CPU p95 7,30 na main
+  e 7,00 no item 45 aqui; no CI 6,80).
+- **O C9b:** a meta (p99 ≤ 2 na parte da cabeça) é a mesma (0,0 nos dois); só a medida informativa da emenda voltou a ver a gola
+  inteira.
+
+**Medido no C15 (parte 2)** (20/11; as flutuações conhecidas, os tempos e o TM; a mesma máquina e as mesmas cópias). Cada flutuação
+repetida nos dois lados, o caso que reprova rastreado e a régua nova provada por mutação:
+
+| Flutuação | O mecanismo (rastreado) | A régua nova (commit) | Medido | A mutação reprova |
+|---|---|---|---|---|
+| `teste-pausa-tela` S1 online | a página roda ≤ 5 passos por quadro (`MAX_PASSOS_POR_QUADRO`) e o rAF de B, com duas abas sem GPU, fica em 0,7–5 por segundo: os passos por 3 s mediam o desenho | ≥ 1 passo e ≥ 40% dos passos POR QUADRO do rAF de B (`58f3377a`) | a sonda, 8 pares por lado: a régua de antes reprova 1/8 na main (10/58) e 1/8 no item 45 (15/44); a nova 16/16 (aberta 3,2–5,0 por quadro, saturando o teto); o teste 15/45 → 5,0/3,8 por quadro | a pausa parando o online (0/12, 0/30, 0/12) e a pausa a 1 passo por quadro (1,0 × 3,0–5,0) |
+| `teste-prepartida-tela` O1* | a troca de qualidade do O3 é uma tarefa longa de ~41 s (os dois lados); um deles mostra "A conexão parou" e o `olhar()` do O3 guardava o aviso no Set que o O1 lia | o O1 espera a ligação de volta nos dois lados e conta só os avisos do Pronto em diante (`c5bc730f`, `3978a715`) | na main a rodada pegou "A: … A conexão parou" no O3 (a régua de antes reprovaria) e passa; o item 45 passa | A sem pacote depois do Pronto: "B: … A conexão parou" no O1 |
+| `testar-3d` "prontas ≥ 9" (Estrelato) | o 3D pede a foto dos titulares dos dois lados; o adversário é o da rodada sorteada (2, 4, 6, 9 titulares com foto; o meu clube 5) | pedidas = os titulares com foto do pedido (≥ 1), prontas = pedidas, 0 erros (`98990ab3`) | pro 11/11, `--publica` passa | o 3D sem as fotos do adversário: 5 pedidas para 14 (e a Carreira 11 < 12) |
+| `testar-3d` "some ≤ 0,5 s" (item 106) | o tm3d:sair CHEGA tarde ao TM: o 3D é da mesma origem e divide o fio com a página do TM, e com a carga do 3D no meio (tarefas longas de 0,3–2,1 s) a mensagem espera. A sonda (6 rodadas por lado, 2 laços ocupados): na main uma deu 0,946 s — o tm3d:sair chegou 0,883 s depois do toque e o quadro sumiu 0,063 s depois dele —; o item 45 0 de 6 (o pior 0,093 s) | o 3D manda o tm3d:sair no próprio toque (≤ 0,1 s) e o quadro some ≤ 0,5 s depois de a mensagem CHEGAR ao TM; o total, do toque, vai na linha (`a1dca10e`) | pro: postou 0, chegou 0,004, some no TM 0,026 s (total 0,030); `--publica` 0,021 s | o TM tirando o quadro da vista 0,8 s depois: some no TM 0,801 s |
+| `teste-replay-paradas-tela` V7 (CPU p95) | o replay é medido com 1 quadro em 8 desenhado e o jogo sem nenhum; o quadro logo depois de um desenhado leva os picos (o desenho por software disputa os núcleos com o fio): 0,44–0,79 ms no item 45 e 0,24–0,69 na main, os outros 0,12–0,25; dos quadros ≥ 1 ms, 18–67% são esses (ao acaso 6–13%); no CI 3,30 / 2,70 contra 1,40 / 1,30 | o jogo medido também com 1 quadro em 8 desenhado (`e13798c3`) | item 45 0,80 / 0,30 × jogo 2,20 ms; main 0,80 / 0,40 × 1,60 ms | o quadro do replay 3 ms mais caro: 4,40 / 3,40 contra ≤ 3,20 ms |
+| `teste-substituicao-tela` T9 (programas) | a base dos programas era lida logo depois do pronto, mas dois compilam sozinhos depois dele (a sonda com o momento, o nome e a cacheKey de cada programa): um ShaderMaterial 0,05–0,22 s depois e o impostor da torcida (assado em fatias ociosas) 4,5 s depois na main e 5,2–6,0 s no item 45; quem chegava no meio da cena contava como da cena (nos dois lados; os quadros mais lentos do item 45 aproximam a cena deles) | no celular, a base depois do impostor pronto e da contagem igual em 3 leituras seguidas, cada uma com um quadro desenhado e 0,4 s ociosos (`833dad50`) | item 45 38 → 38 (antes 37 → 37, 36 → 37 no CI); main 37 → 37 | a placa do quarto árbitro sem a pré-carga: 37 → 38 |
+
+- **Os tempos do CI** (`3978a715`, pelos logs de `4a503804`, `7a5337dc`, `58f3377a` e os do C14): `teste-pausa-tela` 261 → 300 s,
+  `teste-graficos-pagina` 339 → 275 s, `teste-replay-paradas-tela` 400 → 270 s, `teste-desempenho-celular` 35 → 60 s. As 3 partes
+  ~2062 / 2076 / 2077 s estimados (no CI elas levaram 1609–2570 s; a mais lenta no runner lento do `7a5337dc`).
+- **O TM** (o HEAD, carga 3,4–7,4 com outra frente da máquina parada): `teste-tm-tela` 14 de 14 (44 s); `testar-3d` pro e
+  `--publica` passam (193 e 211 s, nenhum erro de página; o item 106 0,025 / 0,021 s); sem `TM_SENHA_VIVERDE`, os casos do Viverde
+  pulam.
+- **Fora da lista, no CI deste passo:** os commits do C15 até o `3978a715` passaram inteiros, menos três vermelhos que não são deste passo nem do código do item 45:
+  - `teste-prepartida-tela` E7* "com o pré-jogo" no `4a503804` (a junção): "depois do Pular: pré-jogo true (6598 ms)" — a
+    flutuação já anotada no C11 (a main 1 de 13, o item 45 6 de 15: p ≈ 0,08, a contagem não prova); o mecanismo provável é o
+    quadro de segundos do Chromium sem GPU no pré-jogo (o "Pular" some 3 s depois do último gesto e o toque cai na camada de
+    baixo). Não rastreado aqui: vai ao C16 / "Depende do dono" 30 com a proposta (o toque e o Pular no mesmo evaluate, ou a espera
+    pelos quadros, não pelo relógio);
+  - `teste-camera-tela` N no `58f3377a` (só um teste mudou nele): Δ 5,5 cm entre a página de dia e a de noite (meta ≤ 1 mm). O mesmo
+    código do jogo passou no `7a5337dc` (7,1e-15 m), no `4a503804` (9,5e-4 m) e aqui 8 de 8 (main e item 45, ≤ 4,6e-5 m); a câmera
+    não mudou no item 45. Hipótese não provada: os quadros no relógio de verdade antes do relógio manual levam a câmera a um ramo
+    diferente da histerese do enquadramento;
+  - `tm-testes` "treino na tela" (o Leilão) no `e13798c3`: o T3 'Passar' com o motivo 'pausa' no lugar de 'passou' (a pausa entre
+    os lotes chegou antes). O workflow do TM passou a rodar no PR com o `testar-3d.mjs` mudado; o código do TM não muda neste PR, e o
+    mesmo teste passou no `98990ab3` e no `3978a715`.
+
+- **Para o C16:**
+  - o PR: as tabelas das partes 1 e 2 acima (o antes → depois de cada régua, com a mutação que ela reprova);
+  - ao "Depende do dono" 30: a K1 (5 linhas) e a CPU "≤ 6 ms" (do C14), a queda que não expira (do bloco 4), o E7* do pré-jogo e o N
+    da câmera (acima, com a proposta);
+  - o `teste-replay` G4 usa a mesma régua de CPU do V7 (o replay com 1 quadro em 8 desenhado, o jogo sem nenhum): não reprovou em
+    nenhum CI medido, mas tem o mesmo defeito de medida — a mesma correção, se reprovar;
+  - o CLAUDE.md: as réguas novas são de teste (nada no contrato do jogo); a lição abaixo.
+- **Lições:**
+  - **Taxa por segundo em teste de navegador mede o desenho por software:** a régua de "anda" é por quadro do rAF (o S1).
+  - **Um Set de avisos para duas fases** junta o que a fase anterior provocou de propósito (o O1*).
+  - **A régua de CPU compara o mesmo regime de desenho:** o quadro depois de um desenhado é o que leva os picos (o V7).
+  - **A base de uma contagem espera o que chega sozinho depois do pronto** (o impostor, os módulos sob demanda): rastrear QUANDO
+    cada peça nasce antes de chamar de flutuação (o T9 e o "vazamento").
+  - **O 3D e o TM dividem o fio:** medir o que cada um controla (o 3D manda no toque; o TM esconde quando a mensagem chega) — o
+    total sob carga mede a fila.
+  - **Na janela, `postMessage` é da própria janela ([Global]):** um `delete` depois de trocá-lo apaga o método (a 1ª versão da régua
+    do "some" quebrou o resto do `testar-3d`).
+
 ---
 
 ## 7. O que pode dar errado e o que pedir ao dono
@@ -1584,7 +1667,7 @@ antes = o HEAD do C14a, `35b9ec6e`; agora = `964a2efd`; a main `e41aa791` pela w
 | B4 | a revisão do bloco 4: `e6f6df30` (a queda gravada pela mediana), `2abed4b3` (a troca com prazo, a pausa travada, o online), `c37f5587` (o painel sem toque, as linhas, o rAF, o cronômetro), `b6be7508` (a espera própria dos programas), os testes `a44f0145`, `a4b9df80`, `5ff4db63` e o plano | `js/render/ritmo-desenho.js`, `main.js`, `hud.js`, `css/estilo.css`, `js/render/medidor-quadros.js`, `js/render/bola-parada.js` (comentário), `tools/teste-ritmo-desenho.mjs`, `tools/teste-medidor-quadros.mjs`, `tools/teste-graficos-pagina.mjs` | sim |
 | C14a | as metas que estavam fora: `77073fd3` (os finos na mistura na Baixa com as amostras da queda; a guarda na Q), `0ab75a89` (a pose da haste na F), `a39c0673` (a A2 contra o SSAA 8×8, a A2 por peça, a K1 com a verdade, a referência da página regravada só na A2 e na K) e o plano | `js/render/campo.js`, `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/dados/graficos-ref.json` | não |
 | C14 | as metas valendo e os dois testes no CI: `632326b2` (as metas por padrão, o motivo nas informativas, a base pela `GOLACO_BASE`), `964a2efd` (a lista do navegador, a base do PR no job e os tempos) e o plano | `tools/teste-graficos-celular.mjs`, `tools/teste-graficos-pagina.mjs`, `tools/rodar-navegador.mjs`, `tools/lib/tempos-ci.mjs`, `.github/workflows/golaco-testes.yml` | não |
-| C15 | "Item 45 (testes): recalibração medida dos testes afetados" (só os que mudaram de propósito; tabela no PR) | testes da seção 6, `tempos-ci.mjs` | não |
+| C15 | a recalibração e as flutuações: `7a5337dc` (o L5 pela geometria), `b8658b44` (a emenda do C9b), `056b8b3c` (o "Sem vazamento" em duas rodadas), `58f3377a` (o S1 por quadro do rAF), `c5bc730f` (o O1* do Pronto em diante), `98990ab3` (as fotos do Estrelato), `e13798c3` (o V7 no mesmo regime de desenho), `3978a715` (os tempos do CI), `a1dca10e` (o "some" do item 106), `833dad50` (o T9 depois do impostor) e o plano | `teste-bola-parada-tela`, `teste-corpo-tela`, `teste-desempenho-celular`, `teste-pausa-tela`, `teste-prepartida-tela`, `teste-replay-paradas-tela`, `teste-substituicao-tela`, `tools/lib/tempos-ci.mjs`, `legacy-total-match/ferramentas/testar-3d.mjs` | não |
 | C16 | "Item 45 (docs): contrato, FILA, CATEGORIAS, CLAUDE.md e o Depende do dono 30" | `golaco/CONTRATOS.md`, `golaco/FILA.md`, `golaco/CATEGORIAS.md`, `CLAUDE.md` | não |
 
 **Fechamento:**
