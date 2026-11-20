@@ -5,7 +5,7 @@
 // por software, então o tempo de GPU não serve.
 // Metas: CPU por quadro p95 ≤ 6 ms e média ≤ 3 ms (sobram ≥ 10 ms para a GPU a 60 qps); chamadas de
 // desenho da partida ≤ as do treino + 2 (mesma câmera); geometrias e texturas iguais depois de 10
-// substituições (5 por time; sem vazamento); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms; informativo: a
+// substituições (5 por time; sem vazamento; a 2ª de duas rodadas iguais — a 1ª cria as peças que aparecem pela 1ª vez); o quadro durante a comemoração do gol ≤ p95 do jogo + 1 ms; informativo: a
 // CPU por quadro da análise semiautomática do impedimento no replay (12/10).
 //   node tools/teste-desempenho-celular.mjs [--raiz <pasta do jogo>] [--segundos 30] [--cpu 4]
 import path from 'node:path';
@@ -67,12 +67,19 @@ try {
   }, DS);
   meta('Chamadas de desenho: partida ≤ treino + 2 (mesma câmera)', `partida ${cham.partida}${cham.sinalizadores ? ` (${cham.sinalizadores} dos sinalizadores acesos neste instante, à parte)` : ''} · treino ${cham.treino}`, `≤ ${cham.treino + META.chamadas}`, cham.partida - cham.sinalizadores <= cham.treino + META.chamadas);
 
-  // vazamento: 10 substituições (5 por time) e a memória da GPU igual
-  const vaz = await pg.evaluate(DS => {
+  // vazamento: 10 substituições (5 por time) e a memória da GPU igual. (item 45, C15) Em DUAS rodadas iguais (a mesma semente) e
+  // a meta na 2ª: na 1ª a memória cresce com as peças que aparecem pela 1ª vez no caminho (uma geometria no quadro 540, com a bola
+  // rolando e nenhuma troca feita, e a malha de perto da torcida — 'torcida-perto', 3 geometrias e 1 textura — no intervalo do
+  // quadro 733: 33 → 37 geometrias e 15 → 16 texturas na main e no item 45) e fica parada depois; um vazamento de verdade (algo
+  // criado por troca e nunca descartado) cresce nas duas. A 1ª rodada vai na linha, com o quadro de cada aumento e as trocas feitas
+  // até ele
+  const rodadaVaz = () => pg.evaluate(DS => {
     const g = window.__golaco;
     g.reiniciar({ modo: 'partida', semente: 6 + DS, minutosPorTempo: 0.2 });
     for (let i = 0; i < 4; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
     const antes = { geo: g.estado().geometrias, tex: g.estado().texturas };
+    const novas = []; // [quadro, geometrias, texturas, trocas feitas] a cada aumento
+    const olhaMem = n => { const e = g.estado(), u = novas.length ? novas[novas.length - 1] : [0, antes.geo, antes.tex]; if (e.geometrias !== u[1] || e.texturas !== u[2]) novas.push([n, e.geometrias, e.texturas, g.estadoTime(0).subs.feitas + g.estadoTime(1).subs.feitas]); };
     const eds = [0, 1].map(t => {
       const s = g.estadoTime(t);
       const el = window.__golaco.mundo.times[t].elenco;
@@ -90,13 +97,15 @@ try {
     g.rodarPassos(1, [{ x: 0, z: 0, botoes: 0, acoes: eds }]);
     const pend = [0, 1].map(t => g.estadoTime(t).pendente?.substituicoes?.length ?? 0);
     let n = 0;
-    while (n < 3600 && (g.estadoTime(0).subs.feitas < 5 || g.estadoTime(1).subs.feitas < 5)) { g.relogio.avancar(1000 / 60, { desenhar: n % 30 === 0 }); n++; }
-    for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: true });
+    while (n < 3600 && (g.estadoTime(0).subs.feitas < 5 || g.estadoTime(1).subs.feitas < 5)) { const d = n % 30 === 0; g.relogio.avancar(1000 / 60, { desenhar: d }); if (d) olhaMem(n); n++; }
+    for (let i = 0; i < 30; i++) { g.relogio.avancar(1000 / 60, { desenhar: true }); olhaMem(n + i); }
     const e = g.estado();
-    return { antes, depois: { geo: e.geometrias, tex: e.texturas }, pend, feitas: [g.estadoTime(0).subs.feitas, g.estadoTime(1).subs.feitas], quadros: n, jogadores: e.jogadores };
+    return { antes, depois: { geo: e.geometrias, tex: e.texturas }, pend, feitas: [g.estadoTime(0).subs.feitas, g.estadoTime(1).subs.feitas], quadros: n, jogadores: e.jogadores, novas };
   }, DS);
+  const vaz1 = await rodadaVaz(), vaz = await rodadaVaz();
+  const textoNovas = v => v.novas.length ? v.novas.map(([q, ge, te, t]) => `quadro ${q}: ${ge} geo, ${te} tex (${t} trocas feitas)`).join('; ') : 'nenhuma';
   meta('10 substituições (5 por time) feitas na parada', `pendentes ${vaz.pend.join('+')}, feitas ${vaz.feitas.join('+')} em ${vaz.quadros} quadros, ${vaz.jogadores} em campo`, '5 + 5, 22 em campo', vaz.feitas[0] === 5 && vaz.feitas[1] === 5 && vaz.jogadores === 22);
-  meta('Sem vazamento: geometrias e texturas iguais depois das substituições', `geometrias ${vaz.antes.geo} → ${vaz.depois.geo} · texturas ${vaz.antes.tex} → ${vaz.depois.tex}`, 'iguais', vaz.antes.geo === vaz.depois.geo && vaz.antes.tex === vaz.depois.tex);
+  meta('Sem vazamento: geometrias e texturas iguais depois das substituições (a 2ª rodada igual à 1ª)', `2ª rodada: geometrias ${vaz.antes.geo} → ${vaz.depois.geo} · texturas ${vaz.antes.tex} → ${vaz.depois.tex} (a 1ª, as peças que aparecem pela 1ª vez: ${vaz1.antes.geo} → ${vaz1.depois.geo} · ${vaz1.antes.tex} → ${vaz1.depois.tex}; ${textoNovas(vaz1)}; 10 + 10 trocas: ${vaz1.feitas.join('+')} e ${vaz.feitas.join('+')})`, 'iguais na 2ª', vaz.antes.geo === vaz.depois.geo && vaz.antes.tex === vaz.depois.tex && vaz1.feitas.every(f => f === 5));
   // comemoração do gol (CPU 4×): a página abre com ?comemoracao=0 (a cena seguraria a simulação nos 30 s medidos); aqui ela
   // é ligada e o quadro da cena (os 22 atores dela, junto com a simulação nos primeiros 2,5 s) é medido contra o p95 do jogo
   if (await pg.evaluate(() => !!window.__golaco.comemoracao)) {
