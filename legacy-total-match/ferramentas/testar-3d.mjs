@@ -36,8 +36,8 @@
    (revisão do item 106: o "≥ 1 s antes" media a lentidão do 3D); nele o aviso "Abrindo o estádio 3D…" e o X do TM saem; o "Simular partida" feito antes
    do tm3d:pronto fecha com tm3d:sair "simular" no próprio toque, sem tm3d:pronto nem tm3d:fim (a carga do 3D para), o quadro some
    da vista ≤ 0,5 s depois de o tm3d:sair chegar ao TM (o remove() do quadro, o desmonte do WebGL, depois; o 3D divide o fio com o TM
-   e, sob carga, a mensagem pode esperar as tarefas da carga dele: o total do toque até sumir vai na linha, informativo — item 45,
-   C15) e o TM simula o result de sempre.
+   e, sob carga, a mensagem pode esperar as tarefas da carga dele — item 45, C15) e ≤ 1,5 s depois do toque (o total, um teto de
+   guarda: a main sob carga 0,946 s; as correções do fechamento do item 45) e o TM simula o result de sempre.
    Modo Leilão (PR 4; seção 7): o Jogar do jogo contra um bot de um treino abre o GOLAÇO com o time do leilão — 11 SEM banco
    (o pedido 11 + 11 e o mundo 11 × 11) —, a duração e a dificuldade da sala travadas e os escudos desenhados; o "Simular o resto"
    grava o feito '3d' antes de o 2D mostrar o placar, sem pausa. A página de ensaio da seção 6 mora em ferramentas/lib/ensaio-3d.mjs.
@@ -402,8 +402,8 @@ if (fr) {
 // 1c) item 106 (a tela cedo), com o golaco de verdade na Partida rápida: a tela antes do jogo do 3D aparece ANTES do 3D pronto — o
 // recado tm3d:tela tira o aviso "Abrindo o estádio 3D…" e o X do TM — e o "Simular partida" (2 toques) feito antes do tm3d:pronto
 // fecha com tm3d:sair 'simular', sem tm3d:fim e sem tm3d:pronto (a carga do 3D para: a página do quadro é da mesma origem e as
-// tarefas longas dela travariam o TM); o quadro some da vista (o quadro seguinte da página do TM já sem ele) ≤ 0,5 s depois do 2º
-// toque — o remove(), o desmonte do WebGL, fica para depois — e o TM simula (com os titulares da tela: o placar pode ser outro, como
+// tarefas longas dela travariam o TM); o quadro some da vista (o quadro seguinte da página do TM já sem ele) ≤ 0,5 s depois de o
+// tm3d:sair chegar ao TM e ≤ 1,5 s depois do 2º toque — o remove(), o desmonte do WebGL, fica para depois — e o TM simula (com os titulares da tela: o placar pode ser outro, como
 // no 1b). Na base não há tm3d:tela: reprova
 {
   await p.evaluate(() => {
@@ -442,8 +442,11 @@ if (fr) {
   const chegou = toques && toques.postou && chegouEm ? (chegouEm - toques.postou) / 1000 : null;
   const someTM = chegouEm && someEm ? (someEm - chegouEm) / 1000 : null;
   confere("item 106 · Partida rápida: o tm3d:tela tira o aviso \"Abrindo o estádio 3D…\" e o X do TM", !!naTela && naTela.aviso === "none" && naTela.x === "none", naTela);
-  confere("item 106 · Partida rápida: o \"Simular partida\" (2 toques) ANTES do tm3d:pronto → tm3d:sair \"simular\" no próprio toque (≤ 0,1 s), sem tm3d:pronto nem tm3d:fim; o quadro some da vista ≤ 0,5 s depois de o tm3d:sair chegar ao TM (o total, do toque, informativo); o TM simula o result de sempre",
-    !!toques && toques.tela && toques.antes && toques.armado === "simular" && toques.tick === 0 && u.msgs[0] === "tm3d:tela" && !u.msgs.includes("tm3d:pronto") && postou != null && postou <= 0.1 && someTM != null && someTM <= 0.5 && ate106 && simulouNoTM(u, true),
+  // (as correções do fechamento do item 45) o total, do toque até sumir, com um teto de guarda: 1,5 s (a main sob carga 7,7 deu
+  // 0,946 s; o item 45, 0,021–0,200 s) — uma tarefa longa do 3D logo depois do postMessage atrasaria a chegada sem o postou nem o
+  // someTM verem
+  confere("item 106 · Partida rápida: o \"Simular partida\" (2 toques) ANTES do tm3d:pronto → tm3d:sair \"simular\" no próprio toque (≤ 0,1 s), sem tm3d:pronto nem tm3d:fim; o quadro some da vista ≤ 0,5 s depois de o tm3d:sair chegar ao TM e ≤ 1,5 s depois do toque (o total); o TM simula o result de sempre",
+    !!toques && toques.tela && toques.antes && toques.armado === "simular" && toques.tick === 0 && u.msgs[0] === "tm3d:tela" && !u.msgs.includes("tm3d:pronto") && postou != null && postou <= 0.1 && someTM != null && someTM <= 0.5 && some != null && some <= 1.5 && ate106 && simulouNoTM(u, true),
     { toques, some, postou, chegou, someTM, chegouResultado: ate106, msgs: u.msgs, em3d: u.em3d, placar: u.placar, antes: u.antes, toasts: u.toasts });
 }
 
