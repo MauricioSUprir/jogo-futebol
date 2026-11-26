@@ -1694,10 +1694,14 @@ máscara: |d| > 1,2 m).
 | de noite: a diferença para o quadro sem a sombra | 0 | 0,00 |
 | chamadas de desenho / triângulos (Golaço, TV) | 26 / 91 884 | 26 / 91 884 |
 | texturas na GPU | 15 | 16 (a máscara, ~110 KB) |
-| o quadro no SwiftShader com a leitura de 1 px (espera a GPU; 2 cargas × 15 quadros, mediana): Golaço / Allianz | 597,2 / 542,9 ms | 597,8 / 504,8 ms (no ruído) |
+| o quadro no SwiftShader com a leitura de 1 px (o software faz o trabalho da GPU na CPU; `?sombra=0` × o padrão, 2 cargas × 15 quadros, a média das medianas): Golaço / Allianz | 319,7 / 276,3 ms | 332,3 / 300,2 ms (+3,9% / +8,6%; o p10 +0–5%; o ruído entre cargas ±5%) |
+| a CPU do quadro (CPU 4×, a demo), pareada com a base (`teste-graficos-pagina` P) | — | −0,70 ms (7,20 × 7,10 ms no p95) |
 | a máscara em Node (os 3 mais pesados da amostra, a menor de 3) / a maior fatia | — | 56–117 ms / ≤ 6 ms |
+| a máscara na página em fatias no tempo ocioso (SwiftShader, o Golaço, `teste-estadio` 16g) | — | 26 fatias, a maior 13 ms, ~6,5 s do pedido ao fim |
 | download inicial (a folga até os 4 MB, `teste-carga`) | 442,1 KB | 392,1 KB (−50 KB: os dois módulos novos) |
 
 O árbitro (o raio até o sol pelo sólido do jogo) contra a máscara: 29 estádios, 26 100 pontos no chão e a 1,0/1,8 m, 0
 discordância longe da borda (> 0,3 m) e 97% de concordância de 0,1 a 0,3 m dela. Com o `?sombra=0` o quadro é o da main nos
-mesmos pontos (os que mudam são os que o desenho interpolado entre dois passos e a torcida no relógio de cada carga mexem).
+mesmos pontos (2419 de 2419 no Allianz e 127 de 127 no Golaço com diferença ≤ 1 de 255). O custo que falta medir é o de uma GPU
+de celular de verdade: no SwiftShader a leitura a mais no gramado e nos jogadores pesa +4–9% no quadro (uma `textureLod` R8 e ~15
+contas por pixel, a mesma em qualquer estádio).
