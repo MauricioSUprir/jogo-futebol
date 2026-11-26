@@ -23,7 +23,8 @@ export const REDE_TRAMA = { celula: 0.12, fio: 0.006, opacMin: 0.85, longe: 0.32
 export const LUZ_GOL = { redeDia: 0xaaadab, redeNoite: 0xaaadab, armDia: 0x2a2c2b, armNoite: 0x5a5c5b };
 import { cameraNoLadoDeCa } from './torcida-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
-import { retasAreaTecnica } from '../estadio-forma.js';
+import { retasAreaTecnica, REFLETORES } from '../estadio-forma.js';
+import { comSombraEstadio, definirEstadioSombra, definirHoraSombra, passoSombra } from './sombra-estadio-gpu.js';
 import { fileirasGolaco, gradeGolaco, pintorGolaco, TUNEL, CADEIRAS3D, DEGRAU_LOD, ESCADA_TUNEL, escadaDoPoste } from './cadeiras-dados.js';
 
 const MX = CAMPO.meioX, MZ = CAMPO.meioZ;
@@ -213,6 +214,8 @@ function criarLinhas(detalhe, uGramado = null) {
     sh.fragmentShader = aplicarTrocas(sh.fragmentShader, S.fragment, 'linhas, fragment');
   };
   mat.customProgramCacheKey = () => S.chave;
+  // a sombra do estádio (item 46): as linhas escurecem junto com o gramado (no ?gfx=antigo, o shader da main)
+  if (uGramado) comSombraEstadio(mat);
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
   mesh.renderOrder = 1;
@@ -856,15 +859,17 @@ function criarLadoDeCa(construtor, tex, A) {
 function criarRefletores() {
   const geos = [], lamp = [];
   const spots = [];
+  // (as medidas em estadio-forma.js REFLETORES: a sombra do estádio no chão, sombra-estadio.js, projeta este desenho)
+  const R = REFLETORES;
   for (const s of [-1, 1]) for (const t of [-1, 1]) {
-    const x = s * 72, z = t * 56;
-    geos.push(cilindroEntre([x, 0, z], [x, 38, z], 0.45, 8));
+    const x = s * R.x, z = t * R.z;
+    geos.push(cilindroEntre([x, 0, z], [x, R.alto, z], R.raio, 8));
     // painel virado para o centro do campo
-    const g = new THREE.BoxGeometry(7, 3.2, 0.4);
+    const g = new THREE.BoxGeometry(R.painel.larg, R.painel.alt, R.painel.esp);
     g.rotateY(Math.atan2(-x, -z));
-    g.translate(x, 39.5, z);
+    g.translate(x, R.painel.y, z);
     lamp.push(g);
-    spots.push(new THREE.Vector3(x * 0.985, 39.5, z * 0.985));
+    spots.push(new THREE.Vector3(x * 0.985, R.painel.y, z * 0.985));
   }
   const torres = new THREE.Mesh(juntarGeometrias(geos), new THREE.MeshLambertMaterial({ color: 0x2a2f31 }));
   const matLamp = new THREE.MeshBasicMaterial({ color: 0x3a4044 });
@@ -907,6 +912,9 @@ export function criarCampo(opc) {
   const matGrama = antigo
     ? comDetalheAntigo(new THREE.MeshLambertMaterial({ map: texGramadoAntigo(tamGrama, aniso) }), detalhe, 0.85)
     : comDetalhe(new THREE.MeshLambertMaterial({ map: texManchasGramado(tamGrama, aniso) }), detalhe, 0.85, { faixas: true, profundidade: true, uniforms: uGramado });
+  // a sombra do estádio (item 46: render/sombra-estadio-gpu.js) no gramado, no chão de fora e em tudo que está no chão; a
+  // máscara sai da planta deste estádio (null: o Estádio Golaço) no tempo ocioso
+  if (!antigo) comSombraEstadio(matGrama);
   const grama = new THREE.Mesh(gg, matGrama);
   grama.receiveShadow = true;
   grama.name = 'gramado';
@@ -921,6 +929,7 @@ export function criarCampo(opc) {
     ? comDetalheAntigo(new THREE.MeshLambertMaterial({ color: 0x2c5a26 }), detalhe, 0.6)
     : comDetalhe(new THREE.MeshLambertMaterial({ color: new THREE.Color().setRGB(...GRAMADO_HORAS.dia.fora) }), detalhe, 0.6, { profundidade: true, uniforms: uGramado }));
   fora.name = 'chao-fora';
+  if (!antigo) comSombraEstadio(fora.material);
   grupo.add(fora);
   // a profundidade relativa ao foco (C7): o uGFoco e o uRasante de cada desenho, pela câmera dele (os mesmos uniforms nos dois
   // materiais; os dois ganchos fazem a mesma conta, então vale a ordem em que o three desenhar); `semProf` = o gancho dos
@@ -931,13 +940,16 @@ export function criarCampo(opc) {
   const manchas = () => { if (uGramado) uGramado.uManchas.value = semMan ? 0 : valoresGramado(horaG).uManchas; };
   grupo.add(criarLinhas(detalhe, uGramado));
   const gols = criarGols(antigo);
+  if (!antigo) { comSombraEstadio(gols.matArm); comSombraEstadio(gols.matRede); }
   gols.finos.definirQualidade(opc.qualidade ?? 'media');
   grupo.add(gols.estrutura, gols.rede);
   // rede que balança: main.js escreve os impactos (rede-onda.js uniformsRede) nestes vetores
   const uRede = gols.uniformsRede;
   const band = criarBandeiras(ident);
+  if (!antigo) comSombraEstadio(band.mesh.material);
   grupo.add(band.mesh);
   const placas = criarPlacas(aniso, ident);
+  if (!antigo) comSombraEstadio(placas.corpo.material);
   grupo.add(placas.frente, placas.corpo);
   // estádio com forma própria (render/estadio-real.js, sob demanda): a tigela e a cobertura dele, sem as torres
   const f3 = ident?.forma3d;
@@ -945,6 +957,7 @@ export function criarCampo(opc) {
   grupo.add(arq);
   const refl = criarRefletores();
   if (!f3) grupo.add(refl.grupo);
+  if (!antigo) definirEstadioSombra(f3 ? f3.planta : null);
   const ladoDeCa = arq.userData.ladoDeCa;
   const _frustum = new THREE.Frustum(), _mat = new THREE.Matrix4();
   // cadeiras 3D de perto (item 69; render/cadeiras3d.js sob demanda: ligarCadeiras quando o módulo chega)
@@ -984,6 +997,7 @@ export function criarCampo(opc) {
     definirHora(hora) {
       const noite = hora === 'noite';
       uNoite.value = noite ? 1 : 0;
+      definirHoraSombra(hora);
       if (uGramado) {
         horaG = hora;
         horaGramado(uGramado, hora);
@@ -1010,6 +1024,7 @@ export function criarCampo(opc) {
      */
     atualizar(t, camera = null, desenha = true, deJogo = false) {
       band.tempo.value = t;
+      passoSombra(t);
       if (camera) {
         camera.updateMatrixWorld();
         _frustum.setFromProjectionMatrix(_mat.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));

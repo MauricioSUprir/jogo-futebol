@@ -13,6 +13,7 @@ import * as THREE from 'three';
 import { criarEsqueleto, NOSSOS } from './esqueleto.js';
 import { lerCorpo } from './corpo-dados.js';
 import { escolherLods, criarEstadoLod } from './lod-humano.js';
+import { comSombraEstadio } from './sombra-estadio-gpu.js';
 
 const BASE = new URL('../../assets/jogador/', import.meta.url);
 const TEXELS_KIT = 32;
@@ -348,6 +349,8 @@ export function criarHumano3D(cena, dados, opc = {}) {
   mat.defines = { USE_UV: '' }; // o vUv (máscara de regiões, cabeça, número) sem um mapa de cor
   mat.onBeforeCompile = sh => remendo(sh, uniforms, true);
   mat.customProgramCacheKey = () => 'humano-v3';
+  // a sombra do estádio (item 46: render/sombra-estadio-gpu.js), como no manequim
+  comSombraEstadio(mat);
   const matSombra = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   matSombra.onBeforeCompile = sh => remendo(sh, uniforms, false);
   matSombra.customProgramCacheKey = () => 'humano-sombra-v1';

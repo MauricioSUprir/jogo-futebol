@@ -95,6 +95,7 @@ export const TEMPOS_NODE = {
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
+  'teste-sombra-estadio.mjs': 20, // item 46 (medido: ~25 s aqui com outro teste rodando; 29 estádios × 900 pontos com o raio até o sol)
   'teste-cadeiras.mjs': 30, // item 69 (estimado: ~20 s aqui sozinho; as 104 genéricas)
   'teste-cadeiras-estadios.mjs': 40, // item 69, PR 4 (medido: 33 s aqui com 3 linhas de execução — ocupa 3 vagas; ~70 s numa só)
   'teste-corrida-cobranca.mjs': 40, // item 70 P1 (medido: ~15 s aqui com outro processo; 01/11, + o C11 com o canhão de 75 cobradores: ~19 s) (01/11, P2: + o canhão de estilos, 68 cobranças)
@@ -119,7 +120,7 @@ export const TEMPOS_NAVEGADOR = {
   'teste-carga.mjs': 36,
   'teste-controles.mjs': 64,
   'teste-editor-tela.mjs': 70, // item 125, revisão: + o item 16 (3 páginas com ?tm, ~+20 s)
-  'teste-estadio.mjs': 290, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s)
+  'teste-estadio.mjs': 400, // item 69, PR 3: + o impostor (9c, 14d/14e nos 2 aparelhos e a página sem o modelo, 15: ~+60 s); item 46: + a sombra do estádio (16: 3 páginas do celular, ~+100 s; 357 s aqui com outro agente rodando)
   // (item 29: + o 4b em 11 telas do PC e no celular e o 15, uma página ?tm com nomes longos em 5 telas — estimado ~+90 s;
   // acertar pelo log do CI; a revisão somou 2 páginas no 15 — o pedido misto e a TM Cond bloqueada —, ~+40 s)
   // (item 109: 580,3 s no log do CI do #614, navegador)

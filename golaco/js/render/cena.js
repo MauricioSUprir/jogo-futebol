@@ -13,6 +13,8 @@
 import * as THREE from 'three';
 import { QUALIDADE } from '../config.js';
 import { GRAFICOS } from './graficos-opcoes.js';
+// o sol do dia (item 46): a MESMA direção da sombra do estádio no chão (js/sombra-estadio.js) e das cadeiras das plantas
+import { SOL_DIA } from '../sombra-estadio.js';
 
 /** O antisserrilhado (MSAA do canvas) por qualidade. O ?aa=0|1 passa por cima; o ?gfx=antigo volta ao QUALIDADE.antialias. */
 export const AA_QUALIDADE = Object.freeze({ baixa: false, media: true, alta: true });
@@ -51,7 +53,7 @@ export function aaPedido(nome, opc = GRAFICOS, amb = ambiente()) {
 const HORAS = {
   dia: {
     topo: 0x2f6fd0, horizonte: 0xbcd6ee, baixo: 0x6d7a72, solCor: 0xfff1d6,
-    solDir: [-0.42, 0.74, 0.52],
+    solDir: SOL_DIA,
     hemiCeu: 0xc4dcff, hemiChao: 0x55703c, hemiInt: 1.45,
     luzCor: 0xfff3e2, luzInt: 3.3,
     extraInt: 0, extraDir: [0.5, 0.7, -0.5],

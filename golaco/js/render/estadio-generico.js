@@ -16,7 +16,7 @@
 import * as THREE from 'three';
 import { ESTADIO, CAMPO } from '../config.js';
 import { criarCanvas, texturaCanvas, gerador, juntarGeometrias, recorteAA } from './util.js';
-import { definirForma } from '../estadio-forma.js';
+import { definirForma, DESENHO_TORRES } from '../estadio-forma.js';
 import { definirLadoDeCa } from './torcida-dados.js';
 import { definirFormaBandeiras } from './bandeiras-dados.js';
 import { PONTOS_SINALIZADOR } from './festa.js';
@@ -25,6 +25,7 @@ import { texFachadaEstilo, texTalude, fachadaPorDentro } from './fachada-estilos
 import { PISTA } from '../estadio-generico.js';
 import { aneisEscada, sLiso, vLiso, pintorAnel } from './cadeiras-dados.js';
 import { trocarLod } from './campo.js';
+import { comSombraEstadio } from './sombra-estadio-gpu.js';
 
 const RAD = Math.PI / 180;
 const clampN = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -176,6 +177,9 @@ export function criarTigela(P, opc = {}) {
   const tex = texCadeiras(P, q, aniso);
   const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide });
   if (opc.comLuzFalsa) opc.comLuzFalsa(mat, 'tigela');
+  // a sombra do estádio (item 46) no PISO que mora nesta malha (a pista, o piso em volta, a faixa azul: abaixo de 0,25 m); as
+  // arquibancadas já têm a da cobertura na cor do vértice (luzDoSol)
+  comSombraEstadio(mat, { soChao: true });
   const fa = F.fachada;
   const concreto = cor(0xb9b7b0), concretoEsc = cor(0x8f8d88), mureta = cor(0x9d9c97);
   const vidro = cor(0x52677a), piso = cor(0x9f9d97);
@@ -563,28 +567,30 @@ export function criarTigela(P, opc = {}) {
   /** As torres de refletor (sem cobertura), os telões e o arco das marcas. */
   function estruturaExtra(Le) {
     const estr = cor(F.cobertura.estr ?? '#8f969b'), cab = cor(0x3b4146), lamp = cor(0xf4f6f8);
+    // (as medidas em estadio-forma.js DESENHO_TORRES: a sombra do estádio no chão, sombra-estadio.js, projeta este desenho)
+    const D = DESENHO_TORRES;
     for (const t of P.torres) {
       if (t.poste) {
         // o poste de refletores no alto da arquibancada descoberta (a cabeça virada para o meio do campo)
-        const h = Math.atan2(-t.z, -t.x), yb = t.alto - 14;
-        Le.cilindro(t.x, yb, t.z, t.alto - 1, 0.22, estr, 6, 0.16, UV_NORMAL);
-        Le.caixa(t.x, t.alto - 0.6, t.z, 0.5, 1.6, 3.6, h, cab, 6, UV_NORMAL);
+        const h = Math.atan2(-t.z, -t.x), yb = t.alto - D.poste.abaixo;
+        Le.cilindro(t.x, yb, t.z, t.alto - 1, D.poste.raio, estr, 6, 0.16, UV_NORMAL);
+        Le.caixa(t.x, t.alto - 0.6, t.z, ...D.poste.cabeca, h, cab, 6, UV_NORMAL);
         const nx = Math.cos(h), nz = Math.sin(h);
         for (const jj of [-1, 0, 1]) Le.caixa(t.x + nx * 0.28 - nz * jj * 1.1, t.alto - 0.6, t.z + nz * 0.28 + nx * jj * 1.1, 0.06, 1.2, 0.9, h, lamp, 1, UV_ACESO);
         continue;
       }
       if (t.larga) {
         // a estrutura de refletores por cima do lado comprido (duas colunas e a viga com a fileira de luz)
-        for (const s of [-1, 1]) Le.cilindro(s * 62, 0, t.z, t.alto, 1.4, estr, 6, 0.9, UV_NORMAL);
-        Le.caixa(0, t.alto - 2, t.z, 128, 4, 2.2, 0, cab, 6, UV_NORMAL);
+        for (const s of [-1, 1]) Le.cilindro(s * D.larga.x, 0, t.z, t.alto, D.larga.raio[0], estr, 6, D.larga.raio[1], UV_NORMAL);
+        Le.caixa(0, t.alto - 2, t.z, ...D.larga.viga, 0, cab, 6, UV_NORMAL);
         const nz = -Math.sign(t.z);
         for (let x = -56; x <= 56; x += 4) Le.caixa(x, t.alto - 2.2, t.z + nz * 1.15, 3, 2.6, 0.1, 0, lamp, 1, UV_ACESO);
         continue;
       }
-      Le.cilindro(t.x, 0, t.z, t.alto - 3, 0.9, estr, 6, 0.45, UV_NORMAL);
+      Le.cilindro(t.x, 0, t.z, t.alto - 3, D.torre.raio[0], estr, 6, D.torre.raio[1], UV_NORMAL);
       // a cabeça virada para o meio do campo
       const h = Math.atan2(-t.z, -t.x);
-      Le.caixa(t.x, t.alto - 1.5, t.z, 1.0, 4.2, 8, h, cab, 6, UV_NORMAL);
+      Le.caixa(t.x, t.alto - 1.5, t.z, ...D.torre.cabeca, h, cab, 6, UV_NORMAL);
       const nx = Math.cos(h), nz = Math.sin(h);
       for (let i = -1; i <= 1; i++) for (let jj = -2; jj <= 2; jj++) {
         const cx = t.x + nx * 0.55 - nz * jj * 1.5, cz = t.z + nz * 0.55 + nx * jj * 1.5, cy = t.alto - 1.5 + i * 1.3;
@@ -594,16 +600,16 @@ export function criarTigela(P, opc = {}) {
     for (const m of P.marcas) {
       if (m.tipo === 'vigas') {
         // o retângulo de vigas-treliça por cima da cobertura (banzo de cima, de baixo e as diagonais), as pontas para fora
-        const c = cor(m.cor), y1 = m.y, y0 = m.y - m.alto;
-        const lados = [[[-m.hx - 22, -m.hz], [m.hx + 22, -m.hz]], [[-m.hx - 22, m.hz], [m.hx + 22, m.hz]], [[-m.hx, -m.hz - 22], [-m.hx, m.hz + 22]], [[m.hx, -m.hz - 22], [m.hx, m.hz + 22]]];
+        const c = cor(m.cor), y1 = m.y, y0 = m.y - m.alto, V = D.vigas, X = V.ponta;
+        const lados = [[[-m.hx - X, -m.hz], [m.hx + X, -m.hz]], [[-m.hx - X, m.hz], [m.hx + X, m.hz]], [[-m.hx, -m.hz - X], [-m.hx, m.hz + X]], [[m.hx, -m.hz - X], [m.hx, m.hz + X]]];
         for (const [a, b] of lados) {
-          Le.barra([a[0], y1, a[1]], [b[0], y1, b[1]], 1.4, c, UV_NORMAL);
-          Le.barra([a[0], y0, a[1]], [b[0], y0, b[1]], 1.1, c, UV_NORMAL);
-          const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L / 8);
+          Le.barra([a[0], y1, a[1]], [b[0], y1, b[1]], V.cima, c, UV_NORMAL);
+          Le.barra([a[0], y0, a[1]], [b[0], y0, b[1]], V.baixo, c, UV_NORMAL);
+          const L = Math.hypot(b[0] - a[0], b[1] - a[1]), n = Math.round(L / V.passo);
           for (let i = 0; i < n; i++) {
             const t0 = i / n, t1 = (i + 1) / n, p = t => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
             const [x0, z0] = p(t0), [x1, z1] = p(t1);
-            Le.barra([x0, i % 2 ? y0 : y1, z0], [x1, i % 2 ? y1 : y0, z1], 0.5, c, UV_NORMAL);
+            Le.barra([x0, i % 2 ? y0 : y1, z0], [x1, i % 2 ? y1 : y0, z1], V.diagonal, c, UV_NORMAL);
           }
         }
         continue;
@@ -622,7 +628,7 @@ export function criarTigela(P, opc = {}) {
         continue;
       }
       if (m.tipo === 'telao') {
-        Le.caixa(m.x, m.y, m.z, m.larg, m.alt, 1.2, m.th + Math.PI / 2, cab, 6, UV_NORMAL);
+        Le.caixa(m.x, m.y, m.z, m.larg, m.alt, D.telao, m.th + Math.PI / 2, cab, 6, UV_NORMAL);
         const nx = -Math.cos(m.th), nz = -Math.sin(m.th);
         Le.caixa(m.x + nx * 0.62, m.y, m.z + nz * 0.62, m.larg - 0.6, m.alt - 0.6, 0.05, m.th + Math.PI / 2, cor(0x6a90b8), 1, UV_ACESO);
         // nos postes (em cima da arquibancada) ou nos tirantes até a cobertura (pendurado)

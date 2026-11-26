@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { SEGMENTOS, RAIO_CABECA, J, NJ, FORMA_SEG, FORMA_SEG_GOL, CABECA_ESCALA, CABELO_ESCALA, CABELO_DESLOCA } from '../anim.js';
 import { texMancha, texIndicador, texIndicadorPressao } from './texturas.js';
 import { poseManequim } from './apoio-mao.js';
+import { comSombraEstadio } from './sombra-estadio-gpu.js';
 
 const NSEG = SEGMENTOS.length;
 
@@ -285,10 +286,12 @@ export function criarJogadores3D(cena, qualidade, opc = {}) {
   const geoCabelo = new THREE.SphereGeometry(1, alta ? 20 : 12, alta ? 8 : 5, 0, Math.PI * 2, 0, Math.PI * 0.52);
   const gm = new THREE.PlaneGeometry(1, 1);
   gm.rotateX(-Math.PI / 2);
-  const matSeg = materialSegmentos();
+  // (a sombra do estádio, item 46: quem está na sombra da cobertura perde a luz direta do sol — a sombra dele no chão, o mapa de
+  // sombra do cena.js, não escurece de novo: as duas multiplicam a mesma luz)
+  const matSeg = comSombraEstadio(materialSegmentos());
   const matSegSombra = materialSombraSegmentos();
-  const matCab = new THREE.MeshStandardMaterial({ roughness: 0.6 });
-  const matCabelo = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+  const matCab = comSombraEstadio(new THREE.MeshStandardMaterial({ roughness: 0.6 }));
+  const matCabelo = comSombraEstadio(new THREE.MeshStandardMaterial({ roughness: 0.9 }));
   const matMancha = new THREE.MeshBasicMaterial({
     map: texMancha(), color: 0x000000, transparent: true, depthWrite: false, opacity: 0.5,
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6,

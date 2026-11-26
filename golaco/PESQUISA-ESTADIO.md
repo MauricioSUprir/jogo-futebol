@@ -1655,3 +1655,95 @@ o xadrez da Ligue 1 (opção futura por liga) e as faixas que invertem no contra
 **Ainda não confirmado:** nada foi medido num celular de verdade (o custo do MSAA no Chrome Android e no Safari, o teto num
 celular de 120 Hz, o engasgo da queda); o minuto do dono com `?perf=1&aa=0` × `?perf=1&aa=1` num Android e num iPhone, com o print
 do painel, é o que fecha ("Depende do dono" 30).
+
+## 20. A sombra do estádio no gramado e nos jogadores, de dia (item 46 da FILA, categoria I; `js/sombra-estadio.js`, `render/sombra-estadio-gpu.js`, `render/cena.js`, `render/campo.js`, `render/jogador3d.js`, `render/humano3d.js`, `render/bola3d.js`, `render/estadio-generico.js`, `render/estadio-real.js`, `estadio-forma.js`)
+O pedido (a fila antiga: "sombras/gráficos de dia"; a linha 46 da FILA): "sombra do estádio no gramado e nos jogadores durante o
+jogo de dia". Antes, o sol e a sombra dos jogadores existiam (`render/cena.js`: o mapa de sombra justo em volta da jogada, só nos
+jogadores e na bola) e a sombra da estrutura só aparecia nas CADEIRAS das plantas (a `luzDoSol` das plantas: 0,66 na cor do
+vértice debaixo da cobertura). O gramado, as linhas, os gols, os jogadores e a bola ficavam ao sol em qualquer estádio.
+
+**O que a TV mostra** (LivePictureAI, "Shadows in live sports" e "Mixed lighting and stadium camera exposure", 2026; Talru Sports
+Photography, "Shooting in the shadows"; e os prints de jogo de tarde): a cobertura e as arquibancadas tapam o sol de parte do campo
+e a sombra é uma borda DURA ("a near-vertical edge between two very different brightness levels"), quase reta, que segue a borda
+da cobertura; na sombra o gramado e os jogadores ficam bem mais escuros e azulados (só o céu os ilumina), e a câmera de TV, com uma
+exposição só para o quadro inteiro, não segura os dois lados ("expose for the sun, and the shaded half drops into near-black").
+Aproveitado: a borda dura (a penumbra só do disco do sol: 0,53° × a distância até a borda, ~0,4 m a 40 m), o escuro pela luz que
+some (a luz direta do sol; o céu fica) e NADA de exposição automática por quadro (o jogo é para ser jogado: no meio-termo do
+operador de câmera, a sombra escura mas legível — o lado da sombra com ~0,42 do brilho do sol na tela, os jogadores ~0,64; ver
+abaixo). O que não entrou: o sol que anda durante a partida (o sol do jogo é fixo: `render/cena.js`).
+
+**A técnica.**
+- **Sem mapa de sombra novo.** O mapa de sombra é uma passada a mais do ponto de vista da luz, guardando a profundidade, a cada
+  quadro (Williams 1978; Evans 2014, "Variable Penumbra Soft Shadows for Mobile Devices", o custo dele no celular) e, no estádio,
+  precisaria de um mapa enorme ou de cascatas para a cobertura a 30–60 m da jogada. O GPU Gems, cap. 12 ("Omnidirectional Shadow
+  Mapping"): "the shadow maps can be either precalculated (for static scenes) or re-rendered every frame" — aqui a cena que faz a
+  sombra (o estádio) e o sol são PARADOS durante a partida: a sombra deles no chão é uma forma fixa, calculada uma vez por
+  estádio em JS e guardada numa textura de dados de 8 bits (nada é desenhado nela: 0 passada, 0 render target, 0 chamada de
+  desenho).
+- **A forma pela planta, como sólidos convexos projetados.** Cada peça que faz sombra vira um sólido convexo (as fatias de 1° da
+  cobertura e das arquibancadas com o perfil de cada uma, as caixas das placas, dos bancos e das peças finas, os cilindros dos
+  postes) e a sombra de um sólido convexo no chão é o fecho convexo dos vértices projetados pelo raio do sol (Andrew, a cadeia
+  monótona). O ponto P = (x, y, z) vai ao chão em (x, z) + y · k, k = −(sx, sz)/sy (o chão que o raio de P toca). As pontas da
+  cobertura parcial e da arquibancada nos cantos abertos são refinadas em 2 × 2 até 1/16 da fatia (o teste de existência da
+  própria planta: `cobEm`, `temArquibancada`).
+- **A distância com sinal, não a cobertura.** A textura guarda a DISTÂNCIA (m) até a borda da sombra (Green, "Improved
+  Alpha-Tested Magnification for Vector Textures and Special Effects", SIGGRAPH 2007, Valve): filtrada em bilinear, a borda fica
+  reta e nítida em qualquer distância da câmera (a cobertura filtrada borra a borda num texel inteiro) e a borda macia sai de uma
+  smoothstep de largura conhecida (a penumbra + a pegada do pixel, pelo `fwidth` no topo do shader). A distância exata sai da
+  grade binária de 0,25 m pela transformada de Felzenszwalb e Huttenlocher ("Distance Transforms of Sampled Functions", Theory of
+  Computing 8, 2012: as duas passadas 1D separáveis do envelope inferior de parábolas, O(n)) para os dois lados (o sol e a
+  sombra), e o texel de 0,5 m é a média das 4 células em volta do centro dele.
+- **Só a luz direta do sol.** No three r170 o `onBeforeCompile` vê os `#include` fechados (a documentação do
+  `Material.onBeforeCompile`; o fórum do three, "How to change size of normalMap", e a lição do item 62): o
+  `lights_fragment_begin` entra aberto, pelo `THREE.ShaderChunk`, e o fator multiplica o `directLight.color` da luz de índice 0
+  (o three põe primeiro a que faz sombra e, sem sombra, a ordem da cena: a do sol vem antes da `extra`) — o mesmo lugar em que
+  o `getShadow` do mapa de sombra multiplica. Dentro da sombra do estádio a luz direta já é 0: a sombra do jogador não escurece de
+  novo (as duas visibilidades se multiplicam na mesma luz, como os oclusores de verdade). O céu (a `HemisphereLight`) fica. A
+  troca que não acha o trecho avisa (o `aplicarTrocas` do item 45).
+- **Nos jogadores e na bola**: a mesma leitura, no chão do raio que passa pelo ponto do corpo (exato para tudo que está abaixo do
+  que faz sombra: a cobertura está a 20–60 m, os jogadores a ≤ 2,5 m); a posição do mundo no vertex com a instância e o lote (a
+  conta do `project_vertex` do three).
+- **No tempo ocioso** (`requestIdleCallback`, o prazo de 200 ms e 6 ms por vez quando o jogo não deixa tempo ocioso): a máscara
+  sai em ~26–40 fatias (Node: 30–120 ms no total, a maior fatia ≤ 6 ms); até ela chegar, e de noite, o fator é 1 (o desenho de
+  antes), e ela entra em 0,8 s.
+
+**O que a medida mostrou** (o `teste-sombra-estadio` em Node e o item 16 do `teste-estadio`; os números do resultado no contrato
+"Sombra do estádio (item 46)"):
+- o sol do jogo (−0,42; 0,74; 0,52: 48° de altura, de −x e do lado de cá) é ALTO: sem cobertura, as arquibancadas não fazem
+  sombra no gramado (o raio sobe 1,42 m por metro de z e 1,76 por metro de x, e o degrau mais íngreme sobe ~0,7) — só a frente em
+  pé delas (uma faixa de ~1 m no pé), as placas (0,5–0,9 m) e as peças finas; com cobertura, a sombra entra no campo pelo lado de
+  cá e pelo fundo −x: de 0% (o Estádio Golaço: só o painel da torre do canto −x de cá, perto da bandeirinha, 0,4% do campo) a
+  77% do campo (o San Siro); nos 29 estádios da amostra do teste, 13 com ≥ 25% do campo na sombra;
+- a câmera de TV fica do lado de cá, de costas para o sol: a sombra cai no lado de cá e no fundo −x, ao pé da tela — como nas
+  transmissões de tarde em que o sol vem de trás da câmera principal;
+- a sombra de cada jogador aponta para (+x, −z), a mesma direção da borda da sombra do estádio (um sol só: o `SOL_DIA` lido pelo
+  `render/cena.js` e o mesmo `SOLD` das plantas).
+
+### 20.1 O resultado: antes → depois
+Celular 844×390, dpr 2, Média, de dia, a câmera e o tick iguais (semente 7, o relógio parado no passo 90); "antes" = a main
+`94fe1412`, "depois" = o item 46; a luminância (0–255) da tela nos mesmos pontos do chão (a grade de 1 m, longe da borda da
+máscara: |d| > 1,2 m).
+
+| medida | antes (main) | depois |
+|---|---|---|
+| Allianz Arena (TV): o gramado que a máscara diz na sombra (1795 pontos) | 120,2 | 50,6 (× 0,421) |
+| Allianz Arena: o gramado ao sol (1148 pontos) | 123,1 | 123,1 (× 1,000) |
+| Estádio Golaço, canto −x de cá: a sombra do painel da torre | 136,1 | 60,7 (× 0,446) |
+| Estádio Golaço: o gramado ao sol em volta | 116,2 | 116,2 (× 1,000) |
+| o mesmo quadro com a força 1 ÷ 0 (`teste-estadio` 16b–16d, Allianz): o gramado na sombra / ao sol | 1 / 1 | 0,422 / 1,000 |
+| os jogadores (o peito) na sombra / ao sol | 1 / 1 | 0,637 / 1,000 |
+| a sombra do jogador DENTRO da do estádio ÷ o chão ao lado (sem a do estádio: 0,500) | 0,50 | 1,11 (não dobra) |
+| de noite: a diferença para o quadro sem a sombra | 0 | 0,00 |
+| chamadas de desenho / triângulos (Golaço, TV) | 26 / 91 884 | 26 / 91 884 |
+| texturas na GPU | 15 | 16 (a máscara, ~110 KB) |
+| o quadro no SwiftShader com a leitura de 1 px (o software faz o trabalho da GPU na CPU; `?sombra=0` × o padrão, 2 cargas × 15 quadros, a média das medianas): Golaço / Allianz | 319,7 / 276,3 ms | 332,3 / 300,2 ms (+3,9% / +8,6%; o p10 +0–5%; o ruído entre cargas ±5%) |
+| a CPU do quadro (CPU 4×, a demo), pareada com a base (`teste-graficos-pagina` P) | — | −0,70 ms (7,20 × 7,10 ms no p95) |
+| a máscara em Node (os 3 mais pesados da amostra, a menor de 3) / a maior fatia | — | 56–117 ms / ≤ 6 ms |
+| a máscara na página em fatias no tempo ocioso (SwiftShader, o Golaço, `teste-estadio` 16g) | — | 26 fatias, a maior 13 ms, ~6,5 s do pedido ao fim |
+| download inicial (a folga até os 4 MB, `teste-carga`) | 442,1 KB | 392,1 KB (−50 KB: os dois módulos novos) |
+
+O árbitro (o raio até o sol pelo sólido do jogo) contra a máscara: 29 estádios, 26 100 pontos no chão e a 1,0/1,8 m, 0
+discordância longe da borda (> 0,3 m) e 97% de concordância de 0,1 a 0,3 m dela. Com o `?sombra=0` o quadro é o da main nos
+mesmos pontos (2419 de 2419 no Allianz e 127 de 127 no Golaço com diferença ≤ 1 de 255). O custo que falta medir é o de uma GPU
+de celular de verdade: no SwiftShader a leitura a mais no gramado e nos jogadores pesa +4–9% no quadro (uma `textureLod` R8 e ~15
+contas por pixel, a mesma em qualquer estádio).

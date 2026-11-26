@@ -168,6 +168,8 @@ const LISTA = [
   // (4 vagas = SOZINHO, não para dividir partidas: o G7 mede o TEMPO da planta e dos lugares, e com a parte do CI cheia passava
   // da meta — 1131 e 1070 ms nos dois CIs do #600, com 323 ms aqui e 325 na base; o teste ignora o --par)
   ['estádios de forma genérica (tigela, inglesa, arena, pista, pequeno): a base inteira — torcida, festa, câmera de TV, trilhos do pré-jogo', 'teste-estadio-generico.mjs', [], 'padrao', 4],
+  // Item 46 (a sombra do estádio no gramado e nos jogadores, de dia): a máscara pela planta × o raio até o sol pelos sólidos
+  ['sombra do estádio (item 46): a máscara do chão × o raio até o sol pelos sólidos (Golaço, Maracanã, genéricas), sem cobertura, um sol só, a leitura, o GLSL e o custo', 'teste-sombra-estadio.mjs'],
   ['cadeiras e degraus (item 69): a grade das 3 malhas — medidas da pesquisa, textura = grade, torcida nas cadeiras, degrau em escada, blocos de perto', 'teste-cadeiras.mjs'],
   ['cadeiras e torcida nos 524 estádios (item 69, PR 4): escadas, caimento ≤ 34°, fileiras, sólidos, torcida na cadeira, escala, densidade perto, cores = base, lotação', 'teste-cadeiras-estadios.mjs', [], 'padrao', 3],
   // Etapa 5 (corpo humano realista; só desenho): o esqueleto do desenho a partir das juntas e o nível de detalhe

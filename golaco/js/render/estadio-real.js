@@ -25,6 +25,7 @@ import { PONTOS_SINALIZADOR } from './festa.js';
 import { CAMERA_GERAL } from './camera.js';
 import { aneisEmDegraus, sLiso, pintorAnel, FAIXA_PISO } from './cadeiras-dados.js';
 import { trocarLod } from './campo.js';
+import { comSombraEstadio, definirForaSombra } from './sombra-estadio-gpu.js';
 
 const RAD = Math.PI / 180;
 const clampN = (v, a, b) => (v < a ? a : v > b ? b : v);
@@ -470,6 +471,9 @@ export function criarTigela(P, opc = {}) {
   const tex = texCadeiras(P, q, aniso);
   const mat = new THREE.MeshLambertMaterial({ map: tex, vertexColors: true, side: THREE.DoubleSide, alphaHash: true });
   if (opc.comLuzFalsa) opc.comLuzFalsa(mat, 'tigela');
+  // a sombra do estádio (item 46) no PISO que mora nesta malha (a pista, o piso em volta, a faixa azul: abaixo de 0,25 m); as
+  // arquibancadas já têm a da cobertura na cor do vértice (luzDoSol)
+  comSombraEstadio(mat, { soChao: true });
   // o u da textura das cadeiras: pelo arco no meio da profundidade (estadio-planta.js uTex: 30 ladrilhos de 2 gomos na
   // volta), contínuo além de ±π (as colunas do fundo −x passam de π)
   const NLAD = P.forma.corredores / 2;
@@ -1618,6 +1622,8 @@ export function criarForaForma(cena, opc, P, pecas) {
   const ceu = cena.getObjectByName('ceu'), hemi = cena.children.find(o => o.isHemisphereLight), sol = cena.children.find(o => o.isDirectionalLight);
   function luzDoRio(v) {
     const liga = v && hora !== 'noite';
+    // (a sombra do estádio no chão é a do sol do jogo: com o sol dos planos de fora, nenhuma — item 46)
+    definirForaSombra(liga);
     if (liga && !salvo) {
       salvo = {
         topo: ceu?.material.uniforms.uTopo.value.getHex(), hor: ceu?.material.uniforms.uHorizonte.value.getHex(), baixo: ceu?.material.uniforms.uBaixo.value.getHex(),
