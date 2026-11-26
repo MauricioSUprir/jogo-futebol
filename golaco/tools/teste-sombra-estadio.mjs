@@ -17,7 +17,7 @@
 //   S6) o custo: a máscara dos 3 estádios mais pesados da amostra ≤ 300 ms em Node (a menor de 3 vezes) e a maior fatia entre
 //       duas pausas ≤ 40 ms (a página roda as fatias no tempo ocioso).
 // Na main (sem js/sombra-estadio.js) reprova.
-//   node tools/teste-sombra-estadio.mjs [--js <pasta js>] [--passo N (um estádio da base a cada N; 0 = só os exemplos)]
+//   node tools/teste-sombra-estadio.mjs [--js <pasta js>] [--passo N (um estádio da base a cada N; 0 = só os fixos)]
 //     [--pontos N (por estádio)] [--so chave1,chave2]
 import fs from 'node:fs';
 import path from 'node:path';
@@ -102,6 +102,8 @@ if (!S) {
       const ref = arbitro(planta, finas, x, y, z);
       if (ref) cont.sombraRef++;
       const d = S.distanciaNoChao(m, gx, gz);
+      // (perto da borda, de 0,1 a 0,3 m, só informativo: a borda da máscara contra a do árbitro)
+      if (Math.abs(d) > 0.1 && Math.abs(d) <= 0.3) { cont.perto = (cont.perto ?? 0) + 1; if ((d < 0) === ref) cont.pertoOk = (cont.pertoOk ?? 0) + 1; }
       if (Math.abs(d) <= 0.3) { cont.borda++; continue; }
       if ((d < 0) !== ref) { cont.disc++; if (cont.ex.length < 8) cont.ex.push(`(${x.toFixed(1)}, ${y}, ${z.toFixed(1)}) árbitro ${ref ? 'sombra' : 'sol'}, máscara ${fmt(d, 2)} m`); }
     }
@@ -138,6 +140,8 @@ if (!S) {
   reg(`S1 raio × sólidos: a máscara × o raio até o sol pelo sólido do jogo (as finas pelo desenho), longe da borda (> 0,3 m), no chão e a 1,0/1,8 m — ${resumo.length} estádios, ${tot.n} pontos`,
     `discordância total ${fmt(100 * tot.disc / Math.max(1, tot.n - tot.borda), 3)}%; pior ${pior.nome} ${fmt(100 * pior.frac, 2)}% (${pior.disc}/${pior.n - pior.borda})${pior.ex.length ? ': ' + pior.ex.join('; ') : ''}; na borda ${fmt(100 * tot.borda / tot.n, 1)}%`,
     '≤ 0,3% em cada estádio', resumo.every(r => r.frac <= 0.003));
+  const perto = resumo.reduce((a, b) => ({ n: a.n + (b.perto ?? 0), ok: a.ok + (b.pertoOk ?? 0) }), { n: 0, ok: 0 });
+  linhas.push(['S1i (informativo) perto da borda, de 0,1 a 0,3 m dela pela máscara: o árbitro concorda', `${perto.ok}/${perto.n} (${fmt(100 * perto.ok / Math.max(1, perto.n), 1)}%)`, '—', 'INFO']);
   // S1b: a amostra exercita sombras de verdade no campo (o S1 só prova algo se a máscara não estiver quase toda ao sol): ≥ 5
   // estádios com ≥ 25% do campo na sombra e os pontos do campo deles na sombra pelo árbitro
   const grandes = resumo.filter(r => r.campo <= 0.75);
