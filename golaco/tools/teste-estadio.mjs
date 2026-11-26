@@ -19,7 +19,9 @@
 //   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
 //      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9; a rede véu de noiva: o vetor redeDesloc(vec3)); o
 //      estado de cada torcedor (a pose com a ola e o bandeirão: torcedor-pose.js, o mesmo nos dois shaders) e o vértice do
-//      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2);
+//      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2); a ONDA da reação (item 47:
+//      onda-reacao.js, dentro do estado) com 3 lances em andamento — e, na página, a onda do gol nasce no gol (item 4) e os
+//      uniforms do estado são os mesmos objetos no quadro, no torcedor 3D (item 14b) e no impostor (item 14d);
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos); 10b) o canvas fica OPACO com a A2C
@@ -41,6 +43,13 @@
 //  14d) o impostor na página (celular e PC): assado em fatias, na TV da Média nenhum (o programa de hoje), de perto com o
 //      mesmo custo e outra imagem, a Baixa no quadro SDF, a densidade real perto no orçamento; 14e) o programa que não
 //      compila volta ao quadro SDF; 15) sem o modelo do torcedor (o assamento não acontece), o quadro SDF;
+//  16) a SOMBRA DO ESTÁDIO (item 46; js/sombra-estadio.js + render/sombra-estadio-gpu.js; celular 844×390 Média de dia): (a) a
+//      leitura da máscara no shader de verdade = solNoChao do JS (GPU = JS); (b) num estádio coberto (o Allianz Arena da
+//      edição pro), no MESMO quadro com a força 1 e 0, o gramado que a máscara diz na sombra escurece e o que está ao sol não
+//      muda; (c) os jogadores também; (d) a sombra do jogador DENTRO da sombra do estádio não escurece de novo (com a força
+//      0 ela aparece); (e) de noite nada; (f) no Estádio Golaço, a sombra do painel da torre do canto −x de cá no gramado, o
+//      cálculo em fatias no tempo ocioso e as mesmas chamadas de desenho e triângulos que com ?sombra=0. `--so-sombra` roda só
+//      ele (e não abre as outras páginas).
 //  14c) o ORÇAMENTO de triângulos por quadro do 3D de perto (PR 2; render/cadeiras-dados.js criarOrcamento3D) na página:
 //      medido (o renderer.info), na TV gasto 0; perto, o total do quadro = o resto medido + o gasto do 3D de perto
 //      (cadeiras × 18 + os triângulos do torcedor), o gasto ≤ o orçamento − a margem e o orçamento = o alvo da qualidade −
@@ -49,7 +58,8 @@
 // do gol (tools/teste-comemoracao-tela.mjs) segurariam a simulação ~10 s e ~7,5 s depois do gol, e os itens 4 e 10 andam
 // o relógio atravessando a saída — o que eles medem é a câmera do gol do jogo (com a comemoração ligada ela é o plano da
 // rede, os primeiros 1,2 s da cena).
-//   node tools/teste-estadio.mjs [--raiz <pasta do jogo>]
+//   node tools/teste-estadio.mjs [--raiz <pasta do jogo>] [--so-sombra]
+import fs from 'node:fs';
 import path from 'node:path';
 import { servidor, abrir, RAIZ } from './lib/navegador.mjs';
 import { golRoteirizado } from './lib/gol-roteirizado.mjs';
@@ -86,6 +96,8 @@ async function diferenca(contexto, a, b, reg) {
 }
 
 const srv = await servidor(0, raiz);
+const SO_SOMBRA = args.includes('--so-sombra');
+if (!SO_SOMBRA) {
 const { navegador, contexto, pagina: pg, erros } = await abrir({ largura: 1280, altura: 720 });
 // contagem de AudioContext criados e de sons baixados (nada antes do gesto; nada com o som desligado)
 await contexto.addInitScript(() => {
@@ -316,6 +328,25 @@ try {
   meta('Som: gol, chuá da rede e apito da saída tocaram', `gol ${nGol} · rede ${nRede} · apito na saída ${nApito}`, '≥ 1 cada (gol, rede, apito)', nGol >= 1 && nRede >= 1 && nApito >= 1);
   const torc = await pg.evaluate(() => window.__golaco.estadio.emocao);
   meta('Torcida da casa explodiu no gol', `gols contados ${torc.contagem.gol ?? 0}`, '≥ 1', (torc.contagem.gol ?? 0) >= 1);
+  // a ONDA da reação na página (item 47): no gol, a onda mais nova dos uniforms da torcida nasce na bola dentro do gol e a
+  // idade anda com o relógio do estádio; os uniforms do estado (render/torcedor-pose.js NOMES_ESTADO) existem no quadro
+  const golOnda = await golRoteirizado(pg, { semente: 5, time: 0 });
+  const onda = await pg.evaluate(async () => {
+    const g = window.__golaco, T = g.estadio.torcidaObj;
+    const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+    const O = T?.uniforms?.uOndaO?.value;
+    if (!O) return { erro: 'sem os uniforms da onda (uOndaO)' };
+    g.relogio.avancar(1000 / 60, { desenhar: false });
+    const a = Array.from(T.uniforms.uOndaO.value.slice(0, 4));
+    for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    const b = Array.from(T.uniforms.uOndaO.value.slice(0, 4));
+    return { a, b, faltam: (NOMES_ESTADO ?? []).filter(n => !T.uniforms[n]) };
+  });
+  meta('Gol: a onda da reação nasce no gol (a mais nova dos uniforms da torcida com a origem na bola dentro do gol; a idade anda 0,5 s em 30 quadros)',
+    onda.erro ?? `origem (${f2(onda.a[0])}, ${f2(onda.a[1])}), idade ${f2(onda.a[2])} → ${f2(onda.b[2])} s; uniforms do estado que faltam no quadro: ${onda.faltam.length ? onda.faltam.join(', ') : 'nenhum'}`,
+    '|x| 52–56,5 e |z| < 4; idade < 0,5 → +0,5 ± 0,05; nenhum',
+    golOnda.ok && !onda.erro && onda.a[3] === 1 && Math.abs(onda.a[0]) >= 52 && Math.abs(onda.a[0]) <= 56.5 && Math.abs(onda.a[1]) < 4 && onda.a[2] < 0.5
+      && onda.b[0] === onda.a[0] && Math.abs(onda.b[2] - onda.a[2] - 0.5) < 0.05 && onda.faltam.length === 0);
 
   // 5) gol do visitante: a casa cala
   const golFora = await golRoteirizado(pg, { semente: 5, time: 1 });
@@ -543,6 +574,15 @@ void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
     const B = BD.bandeiroes();
     const U = { tempo: 37.3, tempoOrg: 12.9, animada: 1, ola: { theta: 1.1, largura: 0.18, forca: 0.9, ativa: true }, bandeiroes: B, abre: [0.8, 1] };
     const niveis = [{ excita: 0.3, tensao: 0.4, lamento: 0.1, palmas: 0.5 }, { excita: 0.05, tensao: 0.7, lamento: 0.45, palmas: 0.2 }];
+    // a ONDA da reação (item 47; render/onda-reacao.js, dentro do ESTADO_GLSL): 3 lances em andamento (a defesa, o chute e
+    // um lance do outro lado), cada um com os níveis de antes — os lugares sorteados caem em todos os casos (a mais nova já
+    // chegou, com a volta do atraso; só a do meio; só a mais velha; nenhuma)
+    const OR = await import('./js/render/onda-reacao.js').catch(() => null);
+    if (OR && TP.NOMES_ESTADO?.includes('uOndaO')) {
+      U.ondaO = Float32Array.from([51, 1, 0.65, 1, 36.5, 2, 0.9, 1, -53, 0, 1.1, 1]);
+      U.ondaA = Float32Array.from([0.1, 0.6, 0.9, 0.2, 0.8, 0.05, 0.1, 0.7, 0.5, 0.0, 0.3, 0.95, 0.0, 0.6, 0.65, 0.2, 0.9, 0.35, 0.0, 0.25, 0.4, 0.1, 0.5, 0.05]);
+      niveis[0].excita = 0.18; niveis[0].lamento = 0.35;   // perto dos limiares: a volta do atraso (e^(atraso/τ)) decide
+    }
     const ent = new Float32Array(4 * N * 2);
     for (let i = 0; i < N; i++) {
       let p;
@@ -566,10 +606,17 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
     gl.uniform4f(gl.getUniformLocation(pE, 'uOla'), U.ola.theta, U.ola.largura, U.ola.forca, 1);
     gl.uniform3fv(gl.getUniformLocation(pE, 'uBandA'), B.flatMap(b => b.A)); gl.uniform3fv(gl.getUniformLocation(pE, 'uBandU'), B.flatMap(b => b.U));
     gl.uniform3fv(gl.getUniformLocation(pE, 'uBandV'), B.flatMap(b => b.V)); u2('uAbre', U.abre[0], U.abre[1]);
+    if (U.ondaO) { gl.uniform4fv(gl.getUniformLocation(pE, 'uOndaO'), U.ondaO); gl.uniform4fv(gl.getUniformLocation(pE, 'uOndaA'), U.ondaA); }
     const oE = rodar(pE, [['uEntrada', tex(ent, N, 2)]]);
     let poseDif = 0, puloDif = 0, balDif = 0, sob = 0, ola = 0;
+    const casosOnda = [0, 0, 0, 0];   // a mais nova chegou · só a do meio · só a mais velha · nenhuma
     for (let i = 0; i < N; i++) {
       const a = ent.subarray(4 * i, 4 * i + 4), b = ent.subarray(4 * (N + i), 4 * (N + i) + 4);
+      if (U.ondaO) {
+        const r0 = OR.reacaoTorcedor(a[3], b[3]), O = U.ondaO;
+        const k = [0, 1, 2].findIndex(j => O[4 * j + 2] >= OR.atrasoOnda(a[0], a[2], O[4 * j], O[4 * j + 1], r0));
+        casosOnda[k < 0 ? 3 : k]++;
+      }
       const r = TP.estadoTorcedor(niveis, [a[0], a[1], a[2]], a[3], [b[0], b[1], b[2], b[3]], U);
       if (r.pose !== Math.round(oE[4 * i])) poseDif++;
       puloDif = Math.max(puloDif, Math.abs(r.pulo - oE[4 * i + 1])); balDif = Math.max(balDif, Math.abs(r.bal - oE[4 * i + 2]));
@@ -599,10 +646,11 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
       const o = rodar(pV, [['uEntrada', tex(e, N, 3)], ['uVat', tVat]]);
       for (let i = 0; i < N; i++) vatDif = Math.max(vatDif, Math.hypot(o[4 * i] - js[i][0], o[4 * i + 1] - js[i][1], o[4 * i + 2] - js[i][2]));
     }
-    return { N, poseDif, puloDif, balDif, sob, ola, vatDif, poses: n8.size, malhas: mod.nVar * mod.nLod };
+    return { N, poseDif, puloDif, balDif, sob, ola, vatDif, poses: n8.size, malhas: mod.nVar * mod.nLod, casosOnda: U.ondaO ? casosOnda : null };
   });
-  meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola e o bandeirão; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola)`,
-    '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100);
+  meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola, o bandeirão e a onda da reação; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola; a onda: ${gpu3.casosOnda ? `a mais nova chegou ${gpu3.casosOnda[0]}, só a do meio ${gpu3.casosOnda[1]}, só a mais velha ${gpu3.casosOnda[2]}, nenhuma ${gpu3.casosOnda[3]}` : 'NÃO existe'})`,
+    '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola; a onda com ≥ 100 em cada caso', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100
+      && !!gpu3.casosOnda && gpu3.casosOnda.every(c => c >= 100));
   meta('GPU = JS: torcedor 3D — a textura de animação (VAT) nas 8 poses (4 malhas × 4096 vértices; escala, pulo, balanço, cadeira e rumo)', gpu3.erro ?? `difere até ${(gpu3.vatDif * 1000).toFixed(3)} mm (${gpu3.poses} poses, ${gpu3.malhas} malhas)`, '≤ 0,1 mm, 8 poses, 4 malhas', !gpu3.erro && gpu3.vatDif <= 1e-4 && gpu3.poses === 8 && gpu3.malhas === 4);
   // 9c) o IMPOSTOR octaédrico (item 69, PR 3): as contas do vertex shader dele (render/impostor-dados.js IMPOSTOR_GLSL — o
   //     mapa hemi-octaédrico de polo inclinado, as 3 fotos e os pesos, a direção e a base de cada foto, a projeção virtual)
@@ -1109,8 +1157,16 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         g.estadio.mostrarCadeiras(false); g.desenhar(); g.desenhar();
         const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, tor: g.estadio.cadeiras.torcedores.torcedores, ocultos: g.estadio.cadeiras.torcedores.ocultos };
         g.estadio.mostrarCadeiras(true); g.cameraLivre(null); g.desenhar();
-        return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto };
+        // a onda da reação (item 47) nas três representações: os uniforms do estado (o ânimo, a ola, o bandeirão e a onda)
+        // são os MESMOS objetos no quadro, no torcedor 3D e no programa do impostor
+        const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+        const T = g.estadio.torcidaObj, mt = (g.estadio.torcedor3d?.malhas ?? []).map(m => m.material), mi = T.impostor?.material;
+        const mesmos = (NOMES_ESTADO ?? []).length > 0 && [...mt, ...(mi ? [mi] : [])].every(m => NOMES_ESTADO.every(n => m.uniforms[n] === T.uniforms[n]));
+        return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto, estado: { mesmos, malhas3d: mt.length, impostor: !!mi, nomes: (NOMES_ESTADO ?? []).length } };
       });
+      meta(`A onda da reação no torcedor 3D (${nome}): os uniforms do estado são os mesmos objetos no quadro e nas malhas 3D (o impostor, no 14d)`,
+        `${tor.estado.nomes} uniforms; ${tor.estado.malhas3d} malhas do torcedor 3D${tor.estado.impostor ? ' e o impostor' : ''}: ${tor.estado.mesmos ? 'os mesmos' : 'DIFERENTES'}`,
+        'os mesmos, ≥ 1 malha 3D', tor.estado.mesmos && tor.estado.malhas3d >= 1);
       meta(`Torcedor 3D (${nome}): nunca na TV; perto, sentado nas cadeiras 3D, fora do quadro, no teto de triângulos`,
         `TV: máx ${r.tor} em 20 instantes (modelo ${r.carregado ? 'carregado' : 'NÃO carregado'}); perto: ${tor.com.torcedores} torcedores (níveis ${tor.com.lods?.join('/')}), ${tor.com.ocultos} fora do quadro (${tor.com.pessoas} pessoas com a densidade real, ${tor.com.perto} na malha perto), ${tor.com.triangulos} triângulos (teto ${tor.teto}); sem as cadeiras 3D: ${tor.sem.tor} e ${tor.sem.ocultos} fora, −${tor.com.c - tor.sem.c} chamadas, −${tor.com.t - tor.sem.t} triângulos`,
         '0 na TV; perto ≥ 1, os desenhados dos blocos fora do quadro (≥ os em 3D), ≤ teto; sem cadeiras 0 e 0, −(1 + malhas + a malha perto) chamadas e −(18/cadeira + os dele + 2/pessoa da malha perto)',
@@ -1146,6 +1202,10 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         const cx = off.getContext('2d', { willReadFrequently: true });
         const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
         const com = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, cad: E.cadeiras, px: ler() };
+        // a onda da reação (item 47) também no ramo do impostor: os uniforms do estado do programa dele são os do quadro
+        const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+        const mi = E.torcidaObj?.impostor?.material ?? null;
+        const ondaImp = { ligado: !!mi, mesmos: !!mi && (NOMES_ESTADO ?? []).length > 0 && NOMES_ESTADO.every(n => mi.uniforms[n] === E.torcidaObj.uniforms[n]), nomes: (NOMES_ESTADO ?? []).length };
         E.impostorObj?.pausar(true); g.desenhar(); g.desenhar();
         const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, px: ler() };
         E.impostorObj?.pausar(false); g.desenhar(); g.desenhar();
@@ -1158,9 +1218,11 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         g.definirQualidade(q0); for (let i = 0; i < 4; i++) g.desenhar();
         g.cameraLivre(null); g.desenhar();
         const o = com.cad.orcamento, tq = com.cad.torcedores;
-        return { est0, tvTor, tvGrupos, com: { c: com.c, t: com.t, imp: com.imp, perto: tq?.perto ?? 0, pessoas: tq?.pessoas ?? 0, gasto: o?.gasto, orc: o?.orcamento }, sem: { c: sem.c, t: sem.t, tor: sem.imp.torcida.torcedores, grupos: sem.imp.torcida.grupos.length }, dif: dif / (com.px.length / 4), baixa, q0 };
+        return { ondaImp, est0, tvTor, tvGrupos, com: { c: com.c, t: com.t, imp: com.imp, perto: tq?.perto ?? 0, pessoas: tq?.pessoas ?? 0, gasto: o?.gasto, orc: o?.orcamento }, sem: { c: sem.c, t: sem.t, tor: sem.imp.torcida.torcedores, grupos: sem.imp.torcida.grupos.length }, dif: dif / (com.px.length / 4), baixa, q0 };
       });
       const media = nome === 'celular';
+      meta(`A onda da reação no ramo do impostor (${nome}): os uniforms do estado do programa dele são os mesmos objetos do quadro`,
+        im.ondaImp.ligado ? `${im.ondaImp.nomes} uniforms: ${im.ondaImp.mesmos ? 'os mesmos' : 'DIFERENTES'}` : 'o programa do impostor não ligou', 'ligado; os mesmos', im.ondaImp.ligado && im.ondaImp.mesmos);
       meta(`Impostor octaédrico (${nome}): assado em fatias, na TV ${media ? 'da Média nenhum (o programa de hoje)' : 'da Alta, sim'}; de perto o impostor com o mesmo custo (chamadas e triângulos) e outra imagem; a Baixa no quadro SDF; a densidade real perto no orçamento`,
         `pronto ${im.est0?.pronto ? 'sim' : 'NÃO'}${im.est0?.falhou ? ' (FALHOU)' : ''} (${Math.round(im.est0?.ms ?? 0)} ms de assamento, ${im.est0?.spec ? `${im.est0.spec.N}×${im.est0.spec.N} fotos de ${im.est0.spec.celula.join('×')}` : 'sem atlas'}, ${im.est0?.mapeados} torcedores nos blocos); TV: ${im.tvTor} em impostor, ${im.tvGrupos} grupos no programa dele; perto: ${im.com.imp.blocos} blocos, ${im.com.imp.torcida.torcedores} torcedores, grupos [${im.com.imp.torcida.grupos.join(', ')}], ${im.com.c}/${im.com.t} × sem ${im.sem.c}/${im.sem.t} (chamadas/triângulos), ${(100 * im.dif).toFixed(1)}% da imagem muda; densidade real: ${im.com.pessoas} pessoas (${im.com.perto} na malha perto, ${im.com.gasto?.perto} triângulos no gasto); Baixa: ${im.baixa.tor} em impostor, ${im.baixa.grupos} grupos, ${im.baixa.perto} perto`,
         `pronto; TV ${media ? '0 e 0' : '≥ 1'}; perto ≥ 1 bloco, ≥ 100 torcedores, ≥ 1 grupo, chamadas e triângulos iguais, ≥ 2% muda; perto = 2/pessoa; Baixa 0, 0, 0`,
@@ -1246,6 +1308,193 @@ try {
   } finally { await nav.close(); }
 } catch (e) {
   meta('Execução (lateral: marcadores)', e.message, 'sem exceção', false);
+}
+}
+
+// ------------------------------------------------------------------------------------------------------------------
+// 16) a SOMBRA DO ESTÁDIO (item 46): ver o cabeçalho
+{
+  const ESTADIOS = JSON.parse(fs.readFileSync(path.join(raiz, 'assets/tm/estadios.json'), 'utf8'));
+  const { PED_A } = await import(new URL('./lib/pedidos-tm.mjs', import.meta.url).href);
+  const lum = c => (c ? 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] : NaN);
+  const mediana = v => { const a = v.filter(Number.isFinite).sort((x, y) => x - y); return a.length ? a[a.length >> 1] : NaN; };
+  // abre uma página do celular Média de dia, parada (relógio manual), com a máscara pronta; `est` = a chave do estádio (null = o Golaço)
+  async function pagina(est, extra = '') {
+    const ab = await abrir({ largura: 844, altura: 390, dpr: 2, toque: true });
+    let url = `${srv.url}?q=media&toque=1&semente=7&hora=dia&replay=0&comemoracao=0&prejogo=0${extra}`;
+    if (est) {
+      await ab.contexto.addInitScript(([k, v]) => { try { localStorage.setItem(k, v); } catch (_) { /* nada */ } }, ['tm3d:pedido:sombra', JSON.stringify({ ...PED_A, id: 'sombra', edicao: 'pro', home: { ...PED_A.home, stadium: ESTADIOS.estadios[est].nome } })]);
+      url += '&tm=sombra';
+    }
+    await ab.pagina.goto(url, { waitUntil: 'load' });
+    await ab.pagina.waitForFunction(() => window.__golaco && window.__golaco.pronto, null, { timeout: 120000 });
+    const tem = await ab.pagina.evaluate(async () => {
+      const g = window.__golaco;
+      if (!g.sombraEstadio) return false;
+      await g.sombraEstadio.esperar();
+      g.relogio.usarManual(true);
+      for (let i = 0; i < 90; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+      g.relogio.avancar(1000 / 60, { desenhar: true });
+      return true;
+    });
+    return { ...ab, tem };
+  }
+  try {
+    // ------------------------------------------------------------------ (a)–(e) no Allianz Arena (cobertura total)
+    const A = await pagina('allianz arena', '&sombra=sync');
+    try {
+      if (!A.tem) throw new Error('a página não tem a sombra do estádio (__golaco.sombraEstadio)');
+      // (a) GPU = JS: a função do shader (SOMBRA_GLSL_F_DECL) na textura da máscara da página, num contexto WebGL2 à parte
+      const gpu = await A.pagina.evaluate(async () => {
+        const S = await import('./js/sombra-estadio.js');
+        const m = window.__golaco.sombraEstadio.estado.mascara;
+        const cv = document.createElement('canvas'), gl = cv.getContext('webgl2');
+        if (!gl || !gl.getExtension('EXT_color_buffer_float')) return { erro: 'sem WebGL2 com textura float' };
+        const N = 4096; cv.width = N; cv.height = 1;
+        const sh = (tipo, src) => { const o = gl.createShader(tipo); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+        const p = gl.createProgram();
+        gl.attachShader(p, sh(gl.VERTEX_SHADER, '#version 300 es\nvoid main(){ vec2 v = vec2(float((gl_VertexID << 1) & 2), float(gl_VertexID & 2)); gl_Position = vec4(v * 2.0 - 1.0, 0.0, 1.0); }'));
+        const decl = S.SOMBRA_GLSL_F_DECL.replace(/varying[^;]*;/g, '');
+        gl.attachShader(p, sh(gl.FRAGMENT_SHADER, `#version 300 es
+precision highp float; precision highp sampler2D;
+uniform sampler2D uEntrada; out vec4 cor;
+${decl}
+void main() { vec4 e = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0); cor = vec4(sombraSol(e.xy, e.z), 0.0, 0.0, 1.0); }`));
+        gl.linkProgram(p);
+        if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+        gl.useProgram(p);
+        const tex = (u, i, f) => { gl.activeTexture(gl.TEXTURE0 + i); const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t); f(); gl.uniform1i(gl.getUniformLocation(p, u), i); return t; };
+        let semente = 4646;
+        const rnd = () => { semente = (semente * 1664525 + 1013904223) >>> 0; return semente / 4294967296; };
+        const ent = new Float32Array(4 * N), pts = [];
+        const [X0, Z0] = [m.x0, m.z0], LX = m.nx * m.passo, LZ = m.nz * m.passo;
+        for (let i = 0; i < N; i++) {
+          // metade perto da borda (|d| < 1 m), metade em qualquer lugar (e um pouco fora da caixa)
+          let x, z, k = 0;
+          do { x = X0 - 4 + (LX + 8) * rnd(); z = Z0 - 4 + (LZ + 8) * rnd(); k++; } while (i % 2 === 0 && k < 200 && Math.abs(S.distanciaNoChao(m, x, z)) > 1);
+          const w = rnd() < 0.5 ? 0 : 0.3 * rnd();
+          ent.set([x, z, w, 0], 4 * i); pts.push([x, z, w]);
+        }
+        tex('uEntrada', 0, () => { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, ent); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST); });
+        tex('uSombraMapa', 1, () => {
+          gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, m.nx, m.nz, 0, gl.RED, gl.UNSIGNED_BYTE, m.dados);
+          for (const [a, b] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, a, b);
+        });
+        const U = S.uniformsDaMascara(m);
+        gl.uniform4f(gl.getUniformLocation(p, 'uSombraCaixa'), ...U.caixa);
+        gl.uniform1f(gl.getUniformLocation(p, 'uSombraFaixa'), U.faixa);
+        gl.uniform1f(gl.getUniformLocation(p, 'uSombraBorda'), U.borda);
+        gl.uniform1f(gl.getUniformLocation(p, 'uSombraForca'), 1);
+        const alvo = gl.createTexture(); gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D, alvo); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, N, 1, 0, gl.RGBA, gl.FLOAT, null);
+        const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, alvo, 0);
+        gl.viewport(0, 0, N, 1); gl.drawArrays(gl.TRIANGLES, 0, 3);
+        const out = new Float32Array(4 * N); gl.readPixels(0, 0, N, 1, gl.RGBA, gl.FLOAT, out);
+        let dif = 0, nBorda = 0;
+        pts.forEach(([x, z, w], i) => { const js = S.solNoChao(m, x, z, w); dif = Math.max(dif, Math.abs(js - out[4 * i])); if (js > 0.02 && js < 0.98) nBorda++; });
+        return { dif, nBorda, N };
+      });
+      meta('16a Sombra do estádio: a leitura da máscara no shader de verdade (a bilinear da GPU e a borda) = solNoChao do JS',
+        gpu.erro ?? `${gpu.N} pontos (${gpu.nBorda} na borda): maior diferença ${gpu.dif.toFixed(4)}`, '≤ 0,01', !gpu.erro && gpu.dif <= 0.01 && gpu.nBorda >= 200);
+      // (b)–(e): no mesmo quadro, força 1 e 0
+      const r = await A.pagina.evaluate(async () => {
+        const g = window.__golaco, S = await import('./js/sombra-estadio.js'), m = g.sombraEstadio.estado.mascara;
+        const k = m.k, est = g.sombraEstadio.estado;
+        // o chão do campo que aparece: uma grade de 2 m, longe da borda da sombra (|d| > 1,5 m)
+        const chao = { sol: [], som: [] };
+        for (let x = -50; x <= 50; x += 2) for (let z = -32; z <= 32; z += 2) {
+          const d = S.distanciaNoChao(m, x, z);
+          if (Math.abs(d) > 1.5) (d > 0 ? chao.sol : chao.som).push([x, 0.02, z]);
+        }
+        // os jogadores: o peito (1,2 m) na sombra ou ao sol; a sombra do PRÓPRIO jogador no chão (o chão do raio pelo ombro, 1,3 m de
+        // altura) e o chão do lado dela (1,5 m para o lado), os dois bem dentro da sombra do estádio
+        const js = g.mundo.jogadores, peito = { sol: [], som: [] }, dupla = [];
+        for (const j of js) {
+          const s = S.solEm(m, j.x, 1.2, j.z);
+          if (s > 0.98) peito.sol.push([j.x, 1.2, j.z]); else if (s < 0.02) peito.som.push([j.x, 1.2, j.z]);
+          // (o chão do lado: 1,5 m para o lado de cá no MESMO x — a mesma faixa de corte, que muda com o x — e a ~0,95 m da linha
+          // da sombra do corpo, fora dela)
+          const sx = j.x + 1.3 * k[0], sz = j.z + 1.3 * k[1], rx = sx, rz = sz + 1.5;
+          // longe dos outros jogadores (1,2 m), dentro da sombra do estádio (≤ −1 m)
+          const livre = (x, z) => js.every(o => o === j || Math.hypot(o.x - x, o.z - z) > 1.2);
+          if (S.distanciaNoChao(m, sx, sz) < -1 && S.distanciaNoChao(m, rx, rz) < -1 && livre(sx, sz) && livre(rx, rz) && Math.hypot(j.vx ?? 0, j.vz ?? 0) < 9) dupla.push([[sx, 0.02, sz], [rx, 0.02, rz]]);
+        }
+        const ler = pts => g.sombraEstadio.lerPontos(pts, 1).map(p => p.rgb);
+        const lerTudo = () => ({ sol: ler(chao.sol), som: ler(chao.som), psol: ler(peito.sol), psom: ler(peito.som), dupla: dupla.map(par => ler(par)) });
+        g.sombraEstadio.forcar(1); const com = lerTudo();
+        g.sombraEstadio.forcar(0); const sem = lerTudo();
+        g.sombraEstadio.forcar(null);
+        // (e) de noite: a força da regra é 0 e o quadro é o da força 0
+        g.definirHora('noite'); g.relogio.avancar(1000 / 60, { desenhar: false });
+        const fNoite = g.sombraEstadio.estado.forca;
+        const noiteRegra = ler(chao.som);
+        g.sombraEstadio.forcar(0); const noite0 = ler(chao.som); g.sombraEstadio.forcar(null);
+        g.definirHora('dia');
+        return { com, sem, n: { sol: chao.sol.length, som: chao.som.length, psol: peito.sol.length, psom: peito.som.length, dupla: dupla.length }, fNoite, noiteRegra, noite0, ms: est.ms, sombra: est.sombra };
+      });
+      const L = c => (c ? 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] : NaN);
+      const razoes = (a, b) => a.map((c, i) => (c && b[i] && L(b[i]) > 4 ? L(c) / L(b[i]) : NaN));
+      const rSol = mediana(razoes(r.com.sol, r.sem.sol)), rSom = mediana(razoes(r.com.som, r.sem.som));
+      const nSol = r.com.sol.filter(Boolean).length, nSom = r.com.som.filter(Boolean).length;
+      meta('16b Sombra do estádio no gramado (Allianz Arena, TV do celular, o mesmo quadro com a força 1 ÷ 0): o chão na sombra escurece, o ao sol fica',
+        `na sombra ${rSom.toFixed(3)} (${nSom} pontos); ao sol ${rSol.toFixed(3)} (${nSol} pontos); a máscara ${r.ms.toFixed(0)} ms, ${(100 * r.sombra).toFixed(0)}% da caixa`,
+        'sombra ≤ 0,75 com ≥ 30 pontos; sol 0,98–1,02 com ≥ 30', nSom >= 30 && nSol >= 30 && rSom <= 0.75 && rSol >= 0.98 && rSol <= 1.02);
+      const pSol = mediana(razoes(r.com.psol, r.sem.psol)), pSom = mediana(razoes(r.com.psom, r.sem.psom));
+      meta('16c Os jogadores: o peito de quem está na sombra do estádio escurece, o de quem está ao sol fica',
+        `na sombra ${pSom.toFixed(3)} (${r.n.psom}); ao sol ${pSol.toFixed(3)} (${r.n.psol})`, 'sombra ≤ 0,85 com ≥ 2; sol 0,97–1,03 com ≥ 2',
+        r.n.psom >= 2 && r.n.psol >= 2 && pSom <= 0.85 && pSol >= 0.97 && pSol <= 1.03);
+      const dCom = mediana(r.com.dupla.map(([a, b]) => (a && b && L(b) > 4 ? L(a) / L(b) : NaN))), dSem = mediana(r.sem.dupla.map(([a, b]) => (a && b && L(b) > 4 ? L(a) / L(b) : NaN)));
+      meta('16d A sombra do jogador DENTRO da sombra do estádio não escurece de novo (o chão dela ÷ o chão ao lado); sem a do estádio ela aparece',
+        `com a do estádio ${dCom.toFixed(3)}; sem ${dSem.toFixed(3)} (${r.n.dupla} jogadores)`, 'com ≥ 0,94; sem ≤ 0,85; ≥ 2 jogadores',
+        r.n.dupla >= 2 && dCom >= 0.94 && dSem <= 0.85);
+      const difNoite = Math.max(0, ...r.noiteRegra.map((c, i) => (c && r.noite0[i] ? Math.max(...c.map((v, k) => Math.abs(v - r.noite0[i][k]))) : 0)));
+      meta('16e De noite (refletores) nada: a força da regra é 0 e o quadro é o da força 0', `força ${r.fNoite}; maior diferença ${difNoite.toFixed(2)}`, '0; ≤ 0,5', r.fNoite === 0 && difNoite <= 0.5);
+      meta('16 Sem erro no console (Allianz Arena)', A.erros.length ? A.erros.slice(0, 3).join(' | ') : '0', '0', A.erros.length === 0);
+    } finally { await A.navegador.close(); }
+
+    // ------------------------------------------------------------------ (f) o Estádio Golaço: o painel da torre, as fatias, o custo
+    const B = await pagina(null, '&sombra=fatias');
+    const C = await pagina(null, '&sombra=0');
+    try {
+      if (!B.tem) throw new Error('a página não tem a sombra do estádio (__golaco.sombraEstadio)');
+      const rb = await B.pagina.evaluate(async () => {
+        const g = window.__golaco, S = await import('./js/sombra-estadio.js'), m = g.sombraEstadio.estado.mascara, est = g.sombraEstadio.estado;
+        // a câmera no canto −x de cá, olhando o gramado da sombra do painel (a máscara diz onde)
+        const dentro = [], fora = [];
+        for (let x = -58; x <= -44; x += 0.5) for (let z = 20; z <= 34; z += 0.5) {
+          const d = S.distanciaNoChao(m, x, z);
+          if (d < -0.6) dentro.push([x, 0.02, z]); else if (d > 1.5 && d < 4) fora.push([x, 0.02, z]);
+        }
+        g.cameraLivre({ de: [-38, 16, 48], para: [-51, 0, 27], fov: 50 });
+        g.sombraEstadio.forcar(1); const c1 = g.sombraEstadio.lerPontos([...dentro, ...fora], 1).map(p => p.rgb);
+        g.sombraEstadio.forcar(0); const c0 = g.sombraEstadio.lerPontos([...dentro, ...fora], 1).map(p => p.rgb);
+        g.sombraEstadio.forcar(null);
+        g.cameraLivre(null);
+        g.desenhar();
+        const e = g.estado();
+        // o custo do desenho (informativo: o SwiftShader é a CPU): 30 quadros da TV
+        const t0 = performance.now(); for (let i = 0; i < 30; i++) g.desenhar(); const ms = (performance.now() - t0) / 30;
+        return { nd: dentro.length, c1, c0, chamadas: e.desenhoChamadas, tri: e.desenhoTriangulos, texturas: e.texturas, ms, pronta: est.pronta, fatias: est.fatias, maior: est.maiorFatia, calc: est.ms };
+      });
+      const rc = await C.pagina.evaluate(() => {
+        const g = window.__golaco; g.desenhar();
+        const e = g.estado(), est = g.sombraEstadio?.estado;
+        const t0 = performance.now(); for (let i = 0; i < 30; i++) g.desenhar(); const ms = (performance.now() - t0) / 30;
+        return { chamadas: e.desenhoChamadas, tri: e.desenhoTriangulos, texturas: e.texturas, ms, ligada: est?.ligada };
+      });
+      const L = c => (c ? 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2] : NaN);
+      const rr = rb.c1.map((c, i) => (c && rb.c0[i] && L(rb.c0[i]) > 4 ? L(c) / L(rb.c0[i]) : NaN));
+      const rDentro = mediana(rr.slice(0, rb.nd)), rFora = mediana(rr.slice(rb.nd));
+      meta('16f Estádio Golaço: a sombra do painel da torre do canto −x de cá no gramado (força 1 ÷ 0)', `dentro ${rDentro.toFixed(3)} (${rb.nd} pontos); fora ${rFora.toFixed(3)}`, 'dentro ≤ 0,8 com ≥ 20; fora 0,98–1,02', rb.nd >= 20 && rDentro <= 0.8 && rFora >= 0.98 && rFora <= 1.02);
+      meta('16g A máscara em fatias no tempo ocioso (?sombra=fatias: o padrão sem webdriver): pronta, e a maior fatia', `pronta ${rb.pronta}; ${rb.fatias} fatias, a maior ${rb.maior.toFixed(1)} ms; ${rb.calc.toFixed(0)} ms do pedido ao fim`, 'pronta; ≤ 150 ms', rb.pronta && rb.maior <= 150);
+      meta('16h O custo: as mesmas chamadas de desenho e triângulos que com ?sombra=0 (a TV do celular); +1 textura (a máscara)',
+        `chamadas ${rc.chamadas} → ${rb.chamadas}; triângulos ${rc.tri} → ${rb.tri}; texturas ${rc.texturas} → ${rb.texturas}; o quadro no SwiftShader ${rc.ms.toFixed(1)} → ${rb.ms.toFixed(1)} ms (informativo); ?sombra=0 desliga: ${rc.ligada === false}`,
+        'iguais; iguais; +1', rb.chamadas === rc.chamadas && rb.tri === rc.tri && rb.texturas === rc.texturas + 1 && rc.ligada === false);
+      meta('16 Sem erro no console (Golaço, com e sem a sombra)', [...B.erros, ...C.erros].length ? [...B.erros, ...C.erros].slice(0, 3).join(' | ') : '0', '0', B.erros.length + C.erros.length === 0);
+    } finally { await B.navegador.close(); await C.navegador.close(); }
+  } catch (e) {
+    meta('16 Execução (sombra do estádio)', e.message, 'sem exceção', false);
+  }
 }
 await srv.fechar();
 

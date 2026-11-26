@@ -512,14 +512,19 @@ async function instalarPagina() {
     /**
      * O TEXTO dos programas da torcida (o quadro) e das bandeiras, pelo FNV-1a de 32 bits do vertex + fragment do material (a
      * revisão do bloco 3: o ?gfx=antigo tem de devolver o texto da main bit a bit; o número vai à referência gravada da main).
+     * No quadro da torcida, fora o ESTADO da pose (render/torcedor-pose.js ESTADO_GLSL — a regra, a ola, o bandeirão e, desde o
+     * item 47, a onda da reação: a MESMA conta no quadro, no impostor e no torcedor 3D, que não é do item 45): trocado por um
+     * marcador antes do hash (como o teste-gramado G6; a referência da main com o marcador: 2186701246, o texto cru 3046274822).
      */
-    fontes() {
+    async fontes() {
       const fnv = t => { let h = 0x811c9dc5; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 0x01000193); } return h >>> 0; };
+      const { ESTADO_GLSL } = await import('./js/render/torcedor-pose.js').catch(() => ({}));
+      const semEstado = v => (ESTADO_GLSL && v.split(ESTADO_GLSL).length === 2 ? v.split(ESTADO_GLSL).join('<ESTADO_GLSL>') : v);
       const T = g.estadio?.torcidaObj;
       const mats = (T?.mesh?.children ?? []).map(m => m.material).filter(m => m && m.isShaderMaterial);
       const quadro = mats.find(m => m.name !== 'torcida-impostor') ?? null, band = T?.bandeiras?.mesh?.material ?? null;
-      const h = m => (m ? fnv(m.vertexShader + '\n/*frag*/\n' + m.fragmentShader) : null);
-      return { torcida: h(quadro), bandeiras: h(band), a2c: !!quadro?.alphaToCoverage };
+      const h = (m, f = v => v) => (m ? fnv(f(m.vertexShader) + '\n/*frag*/\n' + m.fragmentShader) : null);
+      return { torcida: h(quadro, semEstado), bandeiras: h(band), a2c: !!quadro?.alphaToCoverage };
     },
     /** O tom do renderizador agora (pego no desenho). */
     tom() {

@@ -106,8 +106,9 @@ do dono (Docker Compose), fora do Pages — ver a seção "LIFE OS" no fim.
   resumo em `golaco/CATEGORIAS.md`.
   **Categoria I (visual, corpo e estádios; aprovada pelo dono)**: I-1 (itens 62 nuca, 63 bordas dos decalques e 77 mão
   de apoio do carrinho) ENTREGUE no PR #631 (06/11); I-2 (item 61, a passada natural fora da partida) ENTREGUE no PR
-  #632 (06/11); item 45 (os gráficos do celular, Baixa e Média) ENTREGUE no PR #639 (20/11); as escolhas em
-  `golaco/FILA.md` "Depende do dono" 27, 28 e 30.
+  #632 (06/11); item 45 (os gráficos do celular, Baixa e Média) ENTREGUE no PR #639 (20/11); I-3 (itens 46, a sombra do
+  estádio de dia, e 47, a torcida que reage em onda no gol e na chance) ENTREGUE no PR #654 (26/11); as escolhas em
+  `golaco/FILA.md` "Depende do dono" 27, 28, 30, 31 e 32.
   **Dono, 25/10 (depois do D4): "escolhe tudo filho"** — a categoria D segue até o fim (D5–D8: itens 22–25) e as escolhas
   dentro dela são minhas; no item 19 a meta passou a ser a de CHEGADA (arrancada do bloco armado na área ≤ 25%, no
   `teste-defesa-corrida`), com a velocidade do defensor do corredor só informativa. **D5 (item 22, o vai e volta)**: na partida,
@@ -509,6 +510,32 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   `sobBandeirao`); vaia pela posse longa do visitante (~2 por partida). Custo: +1 chamada (faixas/bandeiras) e +1 só com
   sinalizadores acesos; pré-carga no 1º quadro desenhado (nada engasga no 1º corte). Testes: `teste-som-jogo` (navegador, CI), `teste-torcida` (seções E/F), `teste-estadio` (itens 11 e 12).
   Sons novos só CC0/CC BY (`assets/sons/CREDITOS.md`; nada da BBC nem do Sonniss).
+- **A torcida reage em onda no gol e na chance** (item 47, categoria I, PR #654; contrato "A torcida reage em onda no gol e na
+  chance (item 47)", `PESQUISA-ESTADIO.md` §6.4; as escolhas no "Depende do dono" 32): o ânimo (excita, tensão, lamento, palmas)
+  continua mudando no instante do lance, mas cada torcedor só o VÊ quando a reação chega nele. Ela nasce no lance (a bola: o gol,
+  a defesa, a trave, o chute de perto, o escanteio, o pênalti) e anda pelo estádio. Atraso = a reação pela semente (0,18–0,4 s)
+  + a distância no chão / 100 m/s.
+  - O estado mora no `render/emocao.js` (`est.ondas`: até 3 lances em andamento, cada um com a origem, o t e os níveis de
+    ANTES; `uniformsOnda`). A conta de cada torcedor fica no `render/onda-reacao.js` (PURO: `niveisPelaOnda` = `ONDA_GLSL`),
+    dentro do `ESTADO_GLSL` do `torcedor-pose.js`. Vale no quadro, no ramo do impostor e no torcedor 3D (os mesmos uniforms:
+    `uniformsDoEstado`).
+  - Quem a reação acabou de alcançar vê o lance "como se fosse agora": os níveis que só caem voltam e^(atraso/τ) e o atraso
+    some em 3 s depois de chegar. Sem isso, no chute defendido, as mãos na cabeça no decil mais longe ficavam em 8%.
+  - Medido no gol da casa: o decil perto do gol reage aos 0,52 s e o longe aos 1,72 s (antes, os dois no quadro do gol). O
+    maior pedaço da casa que levanta num quadro caiu de 100% para 2,7%.
+  - A onda do gol chega em todos antes de o laço segurar a comemoração (gol + 149 passos: ali o relógio do estádio para). O
+    lugar mais longe fica a 206 m no Olympiastadion e a reação chega aos 2,46 s. Com 70 m/s, 1,8% do Golaço, 22% do Maracanã
+    e 32% do Olympiastadion ficavam sentados a cena inteira.
+  - As cenas (o fim, o cartão, a substituição) e o som continuam no mesmo instante para todos.
+  - Só desenho (fecho 0, hashes IGUAIS); nenhuma chamada nem atributo a mais.
+  - Testes: `teste-torcida` I1–I8 (I1, I2, I3 e I6 reprovam na main) e `teste-estadio` 4, 9b (GPU = JS com 3 lances em
+    andamento), 14b e 14d. O `?gfx=antigo` (`teste-gramado` G6 e `teste-graficos-pagina` P3) confere o texto da main FORA do
+    `ESTADO_GLSL` (trocado por um marcador; a referência `P3.fonte.torcida` passou a 2186701246).
+  - Lições:
+    - Uma foto dos níveis que vai ser comparada ("mudou?") tem de ser guardada em float64. Em Float32Array o 0,9 de antes já
+      "mudava" e todo lance abria uma onda.
+    - Um efeito que anda no relógio do estádio tem de terminar antes dos lugares em que esse relógio para (a comemoração
+      segura no gol + 149).
 - **Comemoração do gol** (pedido de 11/10: "não tem cena de comemoração!!!"; `PESQUISA-ESTADIO.md` §10, contrato em
   `CONTRATOS.md`): `js/comemoracao.js` (PURO) copia os 22 no tick do gol e anda com a MESMA locomoção (passoCorpo/
   passoPassada/passoPeDesenhado/alturaQuadril; o goleiro termina o mergulho) + gestos e golpes por IK (`anim.js` exporta
@@ -1145,6 +1172,27 @@ Pedido completo do dono (09/10) guardado no histórico da sessão; resumo das re
   - o runner do CI muda de velocidade entre rodadas: dividir as partes pelo runner LENTO.
   Pendente ("Depende do dono" 30): o minuto do dono com `?perf=1&aa=0|1` num Android e num iPhone, a queda gravada que não
   expira e a K1 (5 linhas informativas).
+- **Sombra do estádio** (item 46, categoria I, #654; a fila antiga "sombras/gráficos de dia"; contrato "Sombra do estádio (item
+  46)", `PESQUISA-ESTADIO.md` §20; as escolhas no "Depende do dono" 31): só desenho (fecho 0, hashes IGUAIS). Uma MÁSCARA estática
+  do chão por estádio: `js/sombra-estadio.js` (puro, fora do fecho) projeta pelo raio do sol as peças da PLANTA (a cobertura e as
+  arquibancadas pelo mesmo sólido de `estadio-forma.js solidoEm`; as placas e os bancos; as peças finas pelo desenho:
+  `estadio-forma.js REFLETORES` e `DESENHO_TORRES`, que o `render/campo.js` e o `render/estadio-generico.js` leem) e guarda a
+  DISTÂNCIA com sinal à borda numa textura R8 de 0,5 m; `render/sombra-estadio-gpu.js` injeta a leitura (`comSombraEstadio`,
+  uniforms compartilhados) e o fator multiplica SÓ a luz direta do sol (a luz 0 do three: o céu fica, a sombra do jogador não
+  dobra), de dia, no gramado, no chão de fora, nas linhas, no gol, nas placas, nos jogadores dos dois corpos, na bola e no piso
+  das plantas. Nenhum mapa de sombra novo, nenhum render target, nenhuma chamada de desenho; a máscara em fatias no tempo ocioso
+  (de uma vez com webdriver ou `?sombra=sync`; `?sombra=0` desliga). Um sol só: o `SOL_DIA` (o `render/cena.js` lê dele). Testes:
+  `teste-sombra-estadio` (Node: o raio até o sol pelos sólidos × a máscara) e o item 16 do `teste-estadio` (`--so-sombra`). Lições:
+  - **sombra de cena parada não precisa de mapa de sombra**: o sol e o estádio não mudam na partida — a máscara do chão é uma
+    textura de dados feita uma vez, e o ponto acima do chão lê o chão do raio que passa por ele (exato abaixo do que faz sombra);
+  - **guardar a distância, não a cobertura**: a borda filtrada em bilinear fica reta e nítida em qualquer distância (a cobertura
+    borra um texel inteiro);
+  - **o árbitro do teste é o sólido, não a máscara**: o raio pelo `solidoEm` achou as paredes de trás, as pontas da cobertura
+    parcial e os cantos abertos que a 1ª versão das peças não tinha; e o sólido da câmera tem folgas que não são forma (a coluna
+    acima da borda de fora da cobertura do Maracanã, o disco de 3,6 m no painel da torre): as peças finas seguem o desenho;
+  - **o que um teste de navegador compara pixel a pixel não pode depender do tempo ocioso**: com webdriver a máscara sai de uma vez;
+  - **o ponto de comparação de uma sombra fica na MESMA faixa de corte** (o gramado muda de faixa pelo x): o chão "ao lado" da
+    sombra do jogador no mesmo x.
 - Testes da Etapa 1 (Node, `node golaco/tools/rodar-testes.mjs`, ~30 s): bola, determinismo, entrada/zona morta,
   laço, resposta (≤ 0,1 s), condução (16 cenas + 4), cortes/giro/puxada, perda (60 s × 20 sementes), patinação,
   domínio, proteção, dribles. Navegador (`golaco/tools/`): `teste-carga.mjs` (erros, download ≤ 4 MB, hash Node =

@@ -4,9 +4,12 @@
 // 3D de perto (render/torcedor3d.js): os dois shaders incluem ESTADO_GLSL e chamam torcedorEstado() com o mesmo lugar
 // (aPos do torcedor) e as mesmas sementes — o mesmo instante dá a mesma pose no quadro e no 3D. estadoTorcedor() é a
 // conta em JS (testes: tools/teste-torcida.mjs G e tools/teste-estadio.mjs 9, a GPU de verdade).
+// A ONDA da reação (item 47; render/onda-reacao.js): os níveis do time chegam a cada torcedor com o atraso dele (a reação
+// nasce no lance e anda pelo estádio) — antes da regra da pose, nas três representações (o quadro, o impostor e o 3D).
 import { POSE, POSE_GLSL, poseDoTorcedor } from './torcida-dados.js';
 import { OLA_GLSL, olaPeso } from './festa.js';
 import { BANDEIRAS, SOB_GLSL, sobBandeirao } from './bandeiras-dados.js';
+import { ONDA_GLSL, niveisPelaOnda } from './onda-reacao.js';
 
 // a ola levanta quem está na crista (braços em V) e dá um pulo; debaixo do bandeirão aberto: braços em V, sem pular
 export const ESTADO_REGRA = Object.freeze({ olaLevanta: 0.45, olaPulo: 0.3, balAmp: 0.035 });
@@ -35,14 +38,17 @@ uniform vec2 uAbre;
 ${POSE_GLSL}
 ${OLA_GLSL}
 ${SOB_GLSL}
+${ONDA_GLSL}
 vec3 torcedorEstado(vec3 lugar, float h, vec4 info) {
   float time = step(0.5, info.x);
   bool org = info.z > 0.5;
   float h2 = info.w;
-  float ex = mix(uExcita.x, uExcita.y, time);
-  float te = mix(uTensao.x, uTensao.y, time);
-  float la = mix(uLamento.x, uLamento.y, time);
-  float pa = mix(uPalmas.x, uPalmas.y, time);
+  // os níveis do time dele, com o atraso da onda da reação (render/onda-reacao.js: quem está perto do lance reage antes)
+  vec4 nv = torcidaOnda(lugar.xz, h, h2, time, vec4(mix(uExcita.x, uExcita.y, time), mix(uTensao.x, uTensao.y, time), mix(uLamento.x, uLamento.y, time), mix(uPalmas.x, uPalmas.y, time)));
+  float ex = nv.x;
+  float te = nv.y;
+  float la = nv.z;
+  float pa = nv.w;
   // a pose e o pulo: a regra de torcida-dados.js (POSE_GLSL, gerado de POSE_REGRA); a organizada no relógio da batucada
   vec2 pp = torcidaPose(ex, te, la, pa, h, h2, org ? 1.0 : 0.0, org ? uTempoOrg : uTempo, uAnimada);
   float pose = pp.x;
@@ -63,16 +69,32 @@ vec3 torcedorEstado(vec3 lugar, float h, vec4 info) {
 `;
 })();
 
+/** Os nomes dos uniforms que ESTADO_GLSL declara: quem monta outro material com ele (o torcedor 3D) leva TODOS. */
+export const NOMES_ESTADO = Object.freeze([...ESTADO_GLSL.matchAll(/^uniform\s+\w+\s+(\w+)/gm)].map(m => m[1]));
+/** Os uniforms do estado tirados de U (os da torcida.js): os MESMOS objetos (o mesmo instante nos dois materiais). */
+export function uniformsDoEstado(U) {
+  const o = {};
+  for (const n of NOMES_ESTADO) o[n] = U[n];
+  return o;
+}
+
+const _nv = [0, 0, 0, 0], _nAgora = [0, 0, 0, 0];
 /**
  * A MESMA conta em JS. niveis = [{excita, tensao, lamento, palmas} do time 0, ... do time 1]; lugar = [x, y, z] (aPos);
  * h = semente; info = [time 0|1, setor, organizada 0|1, h2] (já em 0–1, como o shader lê); u = {tempo, tempoOrg,
- * animada (0|1), ola: {theta, largura, forca, ativa} | null, bandeiroes: [{A, U, V}…2], abre: [a0, a1]}.
+ * animada (0|1), ola: {theta, largura, forca, ativa} | null, bandeiroes: [{A, U, V}…2], abre: [a0, a1], ondaO, ondaA (os
+ * uniforms da onda da reação: emocao.js uniformsOnda; sem eles, nenhuma onda — como os uniforms zerados na GPU)}.
  * Devolve {pose, pulo, bal}.
  */
 export function estadoTorcedor(niveis, lugar, h, info, u) {
   const R = ESTADO_REGRA;
   const time = info[0] >= 0.5 ? 1 : 0, org = info[2] > 0.5, h2 = info[3];
-  const n = niveis[time];
+  let n = niveis[time];
+  if (u.ondaO && u.ondaA) {
+    _nAgora[0] = n.excita; _nAgora[1] = n.tensao; _nAgora[2] = n.lamento; _nAgora[3] = n.palmas;
+    niveisPelaOnda(lugar[0], lugar[2], h, h2, time, _nAgora, u.ondaO, u.ondaA, _nv);
+    n = { excita: _nv[0], tensao: _nv[1], lamento: _nv[2], palmas: _nv[3] };
+  }
   const r = poseDoTorcedor(n, h, h2, org, org ? u.tempoOrg : u.tempo, u.animada > 0.5);
   let pose = r.pose, pulo = r.pulo;
   const ola = olaPeso(lugar[0], lugar[2], u.ola);

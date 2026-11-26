@@ -18,11 +18,15 @@
 // o pano (braços em V, sem pular: ninguém fura o pano; bandeiras-dados.js sobBandeirao). O LADO DE CÁ (z +) só vai para a GPU com a
 // câmera fora do volume dele: a câmera de TV fica DENTRO da arquibancada do lado de cá (12,3 m de altura a até 69 m
 // do meio no celular) e o teste da caixa daria verdadeiro — os torcedores de lá cobririam a tela.
+// A ONDA da reação (item 47): no gol e na chance a reação nasce no lance e anda pelo estádio — os uniforms uOndaO/uOndaA
+// (emocao.js uniformsOnda: a origem, a idade e os níveis de antes de cada lance em andamento) e a conta de cada torcedor no
+// vertex shader (render/onda-reacao.js, dentro do ESTADO_GLSL: o quadro, o impostor e o torcedor 3D, os mesmos objetos).
 import * as THREE from 'three';
 import { gerarTorcidaNiveis, quantosNoSetor, atlasTorcida, TORCIDA, CAIXA_POSE, cameraNoLadoDeCa } from './torcida-dados.js';
 import { estadoOla, aberturaBandeirao } from './festa.js';
 import { bandeiroes } from './bandeiras-dados.js';
 import { ESTADO_GLSL } from './torcedor-pose.js';
+import { EMOCAO, ONDA_INATIVA, uniformsOnda } from './emocao.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ, atualizarLuzFalsa } from './luz-falsa.js';
 import { criarBandeiras } from './bandeiras.js';
 import { shaderTorcida } from './silhuetas-shader.js';
@@ -63,6 +67,9 @@ export function criarTorcida(cena, opc) {
     uOla: { value: new THREE.Vector4(0, 0.16, 0, 0) },
     uBandA: { value: BANDEIROES.map(b => new THREE.Vector3(...b.A)) }, uBandU: { value: BANDEIROES.map(b => new THREE.Vector3(...b.U)) },
     uBandV: { value: BANDEIROES.map(b => new THREE.Vector3(...b.V)) }, uAbre: { value: new THREE.Vector2(0, 0) },
+    // a onda da reação: as vagas vazias (idade ONDA_INATIVA, w = 0) até o 1º lance
+    uOndaO: { value: Float32Array.from({ length: 4 * EMOCAO.onda.vagas }, (_, i) => (i % 4 === 2 ? ONDA_INATIVA : 0)) },
+    uOndaA: { value: new Float32Array(8 * EMOCAO.onda.vagas) },
     uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
     // acento (cachecol) na cor do time, linear: verde do Golaço FC, branco do Ventania FC
     uAcento0: { value: new THREE.Color(0x19e07a) }, uAcento1: { value: new THREE.Color(0xf2f4f5) },
@@ -303,6 +310,8 @@ export function criarTorcida(cena, opc) {
         uni.uTensao.value.set(a.tensao, b.tensao);
         uni.uLamento.value.set(a.lamento, b.lamento);
         uni.uPalmas.value.set(a.palmas, b.palmas);
+        // a onda da reação (no relógio do estádio, o do ânimo): a idade de cada lance em andamento
+        if (emocao.ondas) uniformsOnda(emocao, uni.uOndaO.value, uni.uOndaA.value);
         // festa: a ola, a luz dos sinalizadores, as bandeiras e os sinalizadores (no relógio do estádio, o da agenda)
         if (emocao.festa) {
           const o = estadoOla(emocao.festa, emocao.t);

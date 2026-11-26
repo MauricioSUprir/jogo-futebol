@@ -171,7 +171,7 @@
 
 ---
 
-## 🎨 I. Visual, corpo e estádios — ~57 h a fazer + lotes
+## 🎨 I. Visual, corpo e estádios — ~47 h a fazer + lotes
 
 | nº | o que é | horas |
 |---|---|---|
@@ -181,9 +181,9 @@
 | 63 | ✅ **Bordas tracejadas em volta dos números e patrocínios das camisas**: a camisa lê os logos e os números sem o erro que pegava a borda da caixa, e as máscaras dos logos com margem e sem névoa (o logo do mesmo tamanho na camisa) (#631) | 2 |
 | 77 | ✅ **Carrinho: a mão de apoio no chão**, no boneco simples e no corpo novo (a palma virada para o chão), acompanhando a queda e o levantar; a manga comprida do goleiro cobre o braço inteiro (#631) | 2 |
 | 45 | ✅ **Gráficos melhores no celular (Baixa e Média)**: o antisserrilhado 4× na Média, o gramado com as 18 faixas da UEFA no verde realista, a profundidade ao longe, as linhas mais brancas, os ferros finos do gol sem tracejado (as bandeiras de mastro continuam inteiras de longe também com o antisserrilhado), o painel `?perf=1`, a troca de qualidade com a tela "Ajustando os gráficos…", a queda para a Baixa lembrada na próxima vez e o teto de 60 quadros no celular de 120 Hz (#639) | 12 |
+| 46 | ✅ **Sombra do estádio no gramado de dia**: a cobertura, as arquibancadas, as torres e os telões fazem sombra no gramado, nas linhas, nos jogadores e na bola pela forma de cada estádio, com a borda dura do sol, só de dia; a sombra do jogador dentro dela não escurece de novo (#654) | 6 |
+| 47 | ✅ **Torcida reagindo em onda no gol e na chance**: a reação nasce no lance e anda pelo estádio — quem está perto do gol levanta antes, a arquibancada de lá inteira em ~1 s na TV, ninguém no mesmo instante que o vizinho e ninguém parado lá longe (a reação chega inteira); vale no quadro, no torcedor 3D e no impostor; quem sofreu o gol não comemora e debaixo do bandeirão ninguém fura o pano (#654) | 4 |
 | F1 | Rostos do Brasileirão com o processo novo (a versão de teste) | 6 |
-| 46 | Sombra do estádio no gramado de dia | 6 |
-| 47 | Torcida reagindo em onda no gol e na chance | 4 |
 | 48 | Fotógrafos atrás do gol | 10 |
 | 49 | Acabamento do corpo nos closes | 6 |
 | 50–53 | Mocap: movimento capturado na corrida, nas cenas e nos detalhes | 25 |
@@ -223,11 +223,31 @@
 27. 🚶 Item 61 (a passada natural, #632): feito com as escolhas recomendadas — só no túnel, na fila e nas cenas (no jogo a passada e a corrida continuam as de antes); cada um com a sua fase e o seu ritmo, um pouco diferente (dá para variar mais o ritmo, mas aí um terço dá passos curtos demais); o braço balançando ±11° contra a perna, como a pesquisa (dá para deixar mais solto, ±15–17°); no corpo novo o braço solto com a dobra do jogo também durante a partida (dá para deixar só no pré-jogo e nas cenas, ~1 h); o trio de arbitragem quase em linha, sozinho na frente das colunas; nos treinadores só o quadril e o tronco acompanham a perna (os braços continuam nas posturas deles). **A decidir:** o sobe e desce do quadril (~13 cm por passo; o real é 4–5 cm) e o calcanhar que não sobe no fim do passo — (a) esperar o mocap (recomendado: itens 50–52) ou (b) uma camada do pé no desenho, ~4–6 h. Para conferir no seu celular: o túnel e a fila com o corpo novo (a edição pro do TM) e com o boneco simples. Detalhes na FILA ("Depende do dono" 28).
 28. 🏟️ Item 106 (a tela antes do jogo enquanto o estádio carrega, #635): feita com as escolhas recomendadas — a tela espera no máximo 0,3 s pelo que precisa (o código dela, as letras e os escudos) antes de o estádio começar a montar (dá para não esperar nada, mas às vezes ela apareceria sem a letra certa); enquanto carrega, um fundo escuro com o verde do TM vindo de baixo (dá para pôr a foto do estádio ou o escudo do mandante); já dá para ver a Visão tática, trocar o time mostrado, Personalizar, Simular e voltar; o Jogar e o ≡ esperam o estádio, com uma barrinha de carga dentro do botão e o aviso "O estádio ainda está carregando." no toque (dá para liberar no ≡ o que não mexe no estádio, como o som e a Ajuda); o X do TM sai assim que a tela aparece, menos em pé nos Pênaltis, no Livre e no online, onde a tela "Gire o celular" não tem botão (dá para pôr um botão de sair nela, ~1 h); o Simular aceita o 2º toque até 3 s depois de o "Toque de novo" aparecer; no controle, antes do estádio, só o Y, o X, o LB e o RB funcionam (o resto chega com o estádio; dá para fazer antes, ~1–2 h). **A decidir:** no navegador dos testes, sem placa de vídeo, o estádio (o Jogar) fica pronto 1–2 s mais tarde e a tela fica parada por até ~1,7 s em alguns momentos da carga (a tela e o estádio disputam o desenho) — (a) aceitar (recomendado: a tela chega ~1–3 s antes e o Simular já vale; no celular de verdade a conta é outra), (b) mostrar a tela um pouco mais tarde, depois do gramado e da torcida, ou (c) uma tela mais simples (o fundo, os escudos e o Simular) até o estádio. Para conferir no seu celular: o tempo até a tela e até o Jogar, o toque no Simular durante a carga e o app instalado em pé. Detalhes na FILA ("Depende do dono" 29).
 29. 🖥️ Item 45 (os gráficos do celular, #639): feito com as escolhas recomendadas — o verde realista no gramado (dá para voltar ao verde de antes e só alinhar as faixas); a cor corrigida sem trocar a curva de tom da imagem (as outras duas acinzentam ou mudam a cena inteira); a Baixa sem o antisserrilhado (dá para ligar também nela); as faixas iguais de qualquer câmera (dá para inverter no contraplano, como na TV); a queda para a Baixa LEMBRADA na próxima vez (escolher a qualidade à mão apaga; **a decidir:** ela não expira — a proposta é tentar o nível do aparelho de novo a cada ~10 partidas, cargas do jogo); o teto de 60 quadros só no celular (dá para tirar); o `?gfx=antigo` para comparar com o de antes; o tablet sem o antisserrilhado (dá para baixar a resolução e ligar); a profundidade só nas câmeras altas. Para você olhar: as manchas do gramado mais fortes (k 0,17 × 0,10), os cantos de baixo à noite, o chão de fora meio oliva. Ficaram de fora, com proposta: 5 medidas de franjas da torcida, das bandeiras e das placas (de 1 px a 1,5 ponto acima da meta; as das bandeiras e a da torcida na bola com uma guarda contra a versão de antes), a CPU "≤ 6 ms" (a do CI já passa; vale a comparação com a versão de antes) e três flutuações de teste não rastreadas (uma delas, a do pré-jogo, falhou mais vezes no item 45 que na main: a contagem não prova de onde vem). **Pedido:** 1 minuto de partida com `?perf=1&aa=0` e `?perf=1&aa=1` num Android e num iPhone, com o print do painel.
+30. 🏟️ Item 47 (a torcida em onda, #654): feito com as escolhas recomendadas. Cada uma tem alternativa:
+    - A onda anda a 100 m/s e chega no estádio inteiro antes de a comemoração começar. Dá para mais devagar, 70 m/s: fica mais
+      visível, mas o relógio do estádio teria de andar durante a comemoração. Dá também a do som (343 m/s, quase no mesmo
+      instante).
+    - Cada um reage 0,18–0,4 s depois de a onda chegar. Dá para 0,1–0,3 s.
+    - Nasce na bola, nos dois times. Dá para o lamento de quem sofreu sem onda.
+    - Só nos lances do campo: o gol, a chance, o escanteio e o pênalti. Dá para pôr também no cartão e na substituição.
+    - Lá longe a reação chega inteira. Sem isso, as mãos na cabeça lá longe quase sumiam.
+    Para conferir no seu celular: um gol e uma chance na TV e na câmera do gol. Detalhes na FILA ("Depende do dono" 32).
+31. 🏟️ Item 46 (a sombra do estádio, #654): feito com as escolhas recomendadas. Cada uma tem alternativa:
+    - Na sombra some só a luz direta do sol e o céu continua (o gramado fica com ~0,42 do brilho, os jogadores ~0,64). Dá para
+      clarear com uma luz de preenchimento ou escurecer mais, como na TV de verdade.
+    - A borda é dura, como a do sol de verdade. Dá para mais macia.
+    - O sol é o de hoje, fixo: com cobertura a sombra vai de quase nada (o Estádio Golaço) a 77% do campo (o San Siro). Dá para
+      o sol mais alto, um por estádio ou andando durante o jogo.
+    - Vale também na Baixa. Dá para só na Média e na Alta, se pesar no seu celular.
+    Para conferir no seu celular: um jogo de dia num estádio com cobertura, com `?perf=1` e com `?perf=1&sombra=0`. Detalhes na
+    FILA ("Depende do dono" 31).
 
 ---
 
 ## ✅ Entregue nesta rodada
 
+- 🌤️ A sombra do estádio de dia: a cobertura, as arquibancadas, as torres e os telões fazem sombra no gramado, nas linhas, nos jogadores e na bola, pela forma de cada estádio e com a borda dura do sol; a sombra do jogador dentro dela não escurece de novo e de noite nada muda; só desenho, o jogo continua igual (item 46, #654)
+- 🏟️ A torcida reage em onda no gol e na chance: a reação nasce no lance e anda pelo estádio — atrás do gol levantam primeiro, a arquibancada de lá inteira em ~1 s na TV, cada um com o seu tempo de reação (ninguém no mesmo instante que o vizinho) e ninguém parado lá longe; no quadro, no torcedor 3D de perto e no impostor; só desenho, o jogo continua igual (item 47, #654)
 - 🖥️ Os gráficos do celular: o antisserrilhado 4× na Média, o gramado com as 18 faixas da UEFA no verde realista, mais claro ao longe e com as linhas mais brancas, os ferros finos do gol sem tracejado (as bandeiras de mastro continuam inteiras de longe também com o antisserrilhado), o painel `?perf=1` com os números de desempenho, a tela "Ajustando os gráficos…" na troca de qualidade, a queda para a Baixa lembrada na próxima vez e o teto de 60 quadros no celular de 120 Hz; só desenho, o jogo continua igual (item 45, #639)
 - ⚡ Partida rápida com o "Jogar": escolhidos os dois times, ele abre a tela antes do jogo (Jogar partida ou Simular partida, como em todo modo); o "Simular direto", que simulava sem a tela, saiu (#638).
 - 🏟️ A tela antes do jogo aparece enquanto o estádio 3D carrega (~0,3 s depois de a página abrir, antes 3–4 s no navegador dos testes): já dá para Simular, ver a Visão tática e Personalizar; o Jogar mostra a carga e vale quando o estádio fica pronto; no TM o X sai logo e, no Simular, o 3D some na hora (item 106, #635)

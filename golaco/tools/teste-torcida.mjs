@@ -16,6 +16,13 @@
 //      sempre), o quadro do impostor cobre o corpo 3D de qualquer direção, a escolha por bloco (px com histerese, cone,
 //      teto, Baixa sem), cada torcedor no bloco da cadeira dele com o rumo dela e a DENSIDADE REAL perto (1 por cadeira
 //      ocupada pelo público, os vazios de propósito ficam, o time do vizinho). (A GPU = JS fica no teste-estadio, item 9c.)
+//   I) a ONDA da reação (item 47): no gol e na chance a reação nasce no lance e anda pelo estádio — com a torcida de verdade
+//      (as cadeiras da Alta) e a MESMA conta do shader (torcedor-pose.js estadoTorcedor com os uniforms de emocao.js
+//      uniformsOnda): quem está perto do gol levanta antes; ninguém no mesmo instante; ninguém fica parado (a reação chega
+//      inteira lá longe); quem sofreu o gol não comemora; debaixo do bandeirão aberto ninguém fura o pano; as vagas da onda;
+//      sem os uniforms (zerados) nada muda; a onda do gol chega em todos antes de o laço segurar a comemoração (o Golaço, o
+//      Maracanã e o Olympiastadion). (A GPU = JS com a onda fica no teste-estadio, item 9b.) Na versão sem a onda o I1, o I2,
+//      o I3 e o I6 reprovam (todo mundo reage no mesmo quadro).
 // Na versão publicada a arquibancada é vazia e não há som: este teste reprova (os módulos não existem).
 //   node tools/teste-torcida.mjs [--js <pasta js>]
 import path from 'node:path';
@@ -1108,6 +1115,213 @@ if (EM) {
         `Banorte, ${fB.length} blocos da frente (${oB.cad} cadeiras): desenhados ${fmt(100 * oB.antes, 0)}% → ${fmt(100 * oB.depois, 1)}% (${oB.novos} gente nova); público 50%: ${fmt(100 * oB5.depois, 1)}%; ${oB.dup + oB5.dup} cadeiras repetidas/fora do lugar; ${oB.timeErr + oB5.timeErr} sem um vizinho do mesmo time; Golaço, a divisa da visitante: ${divisaCheia}/${divisa} cheias, o meio dela ${meioCheio}/${meioDiv}`,
         `${fmt(100 * alvo - 4, 0)}–${fmt(100 * alvo + 1, 0)}%; ${fmt(50 * alvo - 5, 0)}–${fmt(50 * alvo + 5, 0)}%; 0; 0; a divisa ≤ 50%, o meio 0`,
         fB.length >= 4 && oB.antes < 0.5 && oB.depois >= alvo - 0.04 && oB.depois <= alvo + 0.01 && Math.abs(oB5.depois - 0.5 * alvo) <= 0.05 && oB.dup + oB5.dup === 0 && oB.timeErr + oB5.timeErr === 0 && divisa > 0 && divisaCheia <= 0.5 * divisa && meioDiv > 0 && meioCheio === 0);
+    }
+  }
+}
+
+// I) a ONDA da reação (item 47 da FILA — "a torcida reagir em onda no gol e na chance"): a reação nasce no lance (o gol, a
+//    chance) e anda pelo estádio (render/onda-reacao.js: atraso = reação pela semente + distância / 70 m/s); a pose é a do
+//    quadro, do impostor e do torcedor 3D (o mesmo ESTADO_GLSL; a GPU = JS no teste-estadio 9b). Aqui, com a torcida de
+//    verdade (as cadeiras da Alta, 1 em cada 7) e a conta em JS, quadro a quadro a 60 Hz.
+if (TD && EM) {
+  const TP = await imp('render/torcedor-pose.js'), BD = await imp('render/bandeiras-dados.js');
+  const { POSE } = TD;
+  const temOnda = typeof EM.uniformsOnda === 'function';
+  const R = TD.gerarTorcida('alta', null);
+  const B = BD.bandeiroes();
+  const ataca = { 0: 1, 1: -1 }, timeDe = id => (id >= 100 ? 1 : 0);
+  const amostra = [];
+  for (let i = 0; i < R.n; i += 7) amostra.push(i);
+  const infoDe = i => [R.info[4 * i] / 255, R.info[4 * i + 1] / 255, R.info[4 * i + 2] / 255, R.info[4 * i + 3] / 255];
+  const lugarDe = i => [R.pos[4 * i], R.pos[4 * i + 1], R.pos[4 * i + 2]];
+  const timeDo = i => (R.info[4 * i] > 127 ? 1 : 0);
+  const explode = p => p === POSE.BRACOS_V || p === POSE.UM_BRACO || p === POSE.CACHECOL;
+  const O = new Float32Array(4 * (EM.EMOCAO.onda?.vagas ?? 3)), A = new Float32Array(8 * (EM.EMOCAO.onda?.vagas ?? 3));
+  /** Os uniforms deste quadro (sem a onda na versão de antes: a mesma conta sem ela). */
+  const uDe = (e, t, extra = {}) => {
+    const u = { tempo: t, tempoOrg: t, animada: 1, ola: null, bandeiroes: B, abre: [0, 0], ...extra };
+    if (temOnda) { EM.uniformsOnda(e, O, A); u.ondaO = O; u.ondaA = A; }
+    return u;
+  };
+  /**
+   * Um lance quadro a quadro: `antes` s com a bola em bolaAntes (posse do time `posse`) e depois `eventos` [{f, ev, bola}] e
+   * `dur` s; a cada quadro a pose de cada torcedor da amostra (pelo estadoTorcedor) vai para `olhar(i, r, f)`.
+   */
+  function lance({ antes = 5, bolaAntes, posse = 0, eventos, bolaDepois, posseDepois = null, dur = 4.5, olhar, extra }) {
+    const e = EM.criarEmocao();
+    let t = 0;
+    const passo = (bola, k) => { t += 1 / 60; EM.emocaoPasso(e, { t, bola, posseTime: k, ataca, estado: 'jogo' }, 1 / 60); };
+    for (let k = 0; k < Math.round(antes * 60); k++) passo(bolaAntes, posse);
+    const nf = Math.round(dur * 60), ultimo = Math.max(...eventos.map(x => x.f));
+    for (let f = 0; f < nf; f++) {
+      for (const x of eventos) if (x.f === f) EM.emocaoEvento(e, x.ev, { t, timeDe, bola: x.bola, ataca });
+      const u = uDe(e, t, extra?.(f));
+      for (const i of amostra) olhar(i, TP.estadoTorcedor(e.torcida, lugarDe(i), R.pele[4 * i + 3] / 255, infoDe(i), u), f);
+      passo(f < ultimo ? bolaAntes : bolaDepois, f < ultimo ? posse : posseDepois);
+    }
+    return e;
+  }
+  // medianas por decil de distância ao lance (o 1º e o último decil) e a correlação distância × tempo
+  const mediana = v => { const s = v.slice().sort((a, b) => a - b); return s.length ? s[s.length >> 1] : NaN; };
+  function porDistancia(lista) {
+    lista.sort((a, b) => a.d - b.d);
+    const n = lista.length, dec = k => lista.slice(Math.floor(k * n / 10), Math.floor((k + 1) * n / 10));
+    const md = (k, campo) => mediana(dec(k).filter(x => x[campo] != null).map(x => x[campo]));
+    const ok = lista.filter(x => x.t != null);
+    const mx = ok.reduce((a, x) => a + x.d, 0) / ok.length, my = ok.reduce((a, x) => a + x.t, 0) / ok.length;
+    let sxy = 0, sxx = 0, syy = 0;
+    for (const x of ok) { sxy += (x.d - mx) * (x.t - my); sxx += (x.d - mx) ** 2; syy += (x.t - my) ** 2; }
+    const frac = k => dec(k).filter(x => x.t != null).length / Math.max(1, dec(k).length);
+    return { perto: md(0, 't'), longe: md(9, 't'), r: syy > 0 ? sxy / Math.sqrt(sxx * syy) : 0, fracPerto: frac(0), fracLonge: frac(9), dPerto: lista[Math.floor(n / 20)]?.d, dLonge: lista[Math.floor(19 * n / 20)]?.d, n };
+  }
+  // I1/I2/I4: o gol da casa no gol de +x (a bola na rede em x = 53): a casa explode, o visitante não
+  {
+    const GOL = { x: 53, y: 1, z: 0 }, fGol = 6;
+    const reage = new Map(), porQuadro = new Map(), comemoraFora = new Set(), sob = { n: 0, ruins: 0 };
+    let nCasa = 0;
+    for (const i of amostra) if (timeDo(i) === 0) nCasa++;
+    lance({
+      bolaAntes: { x: 46, z: 0 }, posse: 0, eventos: [{ f: fGol, ev: { tipo: 'gol', time: 0, autor: 9 }, bola: GOL }], bolaDepois: GOL, dur: 4.5,
+      olhar(i, r, f) {
+        if (f < fGol) return;
+        if (timeDo(i) === 1) { if (explode(r.pose)) comemoraFora.add(i); return; }
+        if (!reage.has(i) && explode(r.pose)) { const tr = (f - fGol) / 60; reage.set(i, tr); porQuadro.set(f, (porQuadro.get(f) ?? 0) + 1); }
+      },
+    });
+    const lista = amostra.filter(i => timeDo(i) === 0).map(i => ({ d: Math.hypot(R.pos[4 * i] - GOL.x, R.pos[4 * i + 2] - GOL.z), t: reage.get(i) ?? null }));
+    const D = porDistancia(lista);
+    const maxQuadro = Math.max(0, ...porQuadro.values()) / Math.max(1, reage.size);
+    const t95 = mediana([...reage.values()].sort((a, b) => a - b).slice(Math.floor(0.9 * reage.size)));
+    reg('I1 Onda no gol: quem está perto do gol levanta antes (o 1º e o último decil da distância ao gol; a correlação distância × tempo)',
+      `${D.n} da casa: perto (~${fmt(D.dPerto, 0)} m) aos ${fmt(D.perto, 2)} s, longe (~${fmt(D.dLonge, 0)} m) aos ${fmt(D.longe, 2)} s (+${fmt(D.longe - D.perto, 2)} s); r = ${fmt(D.r, 2)}`,
+      'longe − perto ≥ 1 s; r ≥ 0,8', D.longe - D.perto >= 1 && D.r >= 0.8);
+    reg('I2 Onda no gol: ninguém no mesmo instante e ninguém fica parado (a maior fração que levanta num quadro; quem explode até 4 s)',
+      `maior fração num quadro ${fmt(100 * maxQuadro, 1)}%; explodiram ${reage.size} de ${nCasa} (${fmt(100 * reage.size / Math.max(1, nCasa), 1)}%), o último décimo por volta de ${fmt(t95, 2)} s`,
+      '≤ 4%; ≥ 99%', maxQuadro <= 0.04 && reage.size >= 0.99 * nCasa);
+    reg('I4 Onda no gol: quem sofreu o gol não comemora', `${comemoraFora.size} do visitante com os braços para cima`, '0', comemoraFora.size === 0);
+  }
+  // I3: a chance — o chute de 16 m da casa (tensão) e a defesa 0,4 s depois (lamento da casa, palmas do visitante): as mãos
+  //     na cabeça chegam antes perto do gol e chegam INTEIRAS lá longe (a reação de quem acabou de ver o lance); ninguém
+  //     levanta nem senta no mesmo quadro
+  {
+    const fChute = 6, fDef = 30, DEF = { x: 51, y: 1, z: 1 };
+    const cab = new Map(), antesPe = new Map(), trocas = new Map();
+    let nOlhados = 0;
+    lance({
+      bolaAntes: { x: 40, z: 2 }, posse: 0, dur: 5,
+      eventos: [{ f: fChute, ev: { tipo: 'chute', id: 9, v: 26 }, bola: { x: 36.5, y: 0.2, z: 2 } }, { f: fDef, ev: { tipo: 'defesa', id: 101, modo: 'espalmada' }, bola: DEF }],
+      bolaDepois: DEF, posseDepois: 1,
+      olhar(i, r, f) {
+        if (timeDo(i) !== 0 || R.info[4 * i + 2] > 127) return;   // a casa, fora da organizada (essa fica sempre em pé)
+        if (f === 0) nOlhados++;
+        const pe = r.pose >= POSE.EM_PE;
+        if (antesPe.has(i) && antesPe.get(i) !== pe) trocas.set(f, (trocas.get(f) ?? 0) + 1);
+        antesPe.set(i, pe);
+        if (f >= fDef && r.pose === POSE.MAOS_CABECA && !cab.has(i)) cab.set(i, (f - fDef) / 60);
+      },
+    });
+    const lista = amostra.filter(i => timeDo(i) === 0 && R.info[4 * i + 2] <= 127).map(i => ({ d: Math.hypot(R.pos[4 * i] - DEF.x, R.pos[4 * i + 2] - DEF.z), t: cab.get(i) ?? null }));
+    const D = porDistancia(lista);
+    const maxTroca = Math.max(0, ...trocas.values()) / Math.max(1, nOlhados);
+    reg('I3 Onda na chance (chute e defesa): as mãos na cabeça chegam antes perto do gol e inteiras lá longe; ninguém levanta nem senta no mesmo quadro',
+      `perto (~${fmt(D.dPerto, 0)} m) aos ${fmt(D.perto, 2)} s (${fmt(100 * D.fracPerto, 0)}%), longe (~${fmt(D.dLonge, 0)} m) aos ${fmt(D.longe, 2)} s (${fmt(100 * D.fracLonge, 0)}%); r = ${fmt(D.r, 2)}; maior fração que troca sentado/em pé num quadro ${fmt(100 * maxTroca, 1)}%`,
+      'longe − perto ≥ 1 s; longe ≥ 90% de perto; r ≥ 0,8; ≤ 5%',
+      D.longe - D.perto >= 1 && D.fracLonge >= 0.9 * D.fracPerto && D.r >= 0.8 && maxTroca <= 0.05);
+  }
+  // I5: debaixo do bandeirão aberto, no meio da onda do gol, ninguém fura o pano (braços em V, sem pular)
+  {
+    const lugares = [];
+    for (const b of B) for (const [u, v] of [[0.2, 0.3], [0.5, 0.5], [0.8, 0.6], [0.4, 0.8]]) lugares.push([0, 1, 2].map(k => b.A[k] + b.U[k] * u + b.V[k] * v - b.N[k] * BD.BANDEIRAS.bandeirao.altura));
+    const e = EM.criarEmocao();
+    EM.emocaoEvento(e, { tipo: 'gol', time: 0, autor: 9 }, { t: 1, timeDe, bola: { x: 53, y: 1, z: 0 }, ataca });
+    let ruins = 0, n = 0;
+    for (let f = 0; f < 180; f++) {
+      const t = 1 + f / 60;
+      EM.emocaoPasso(e, { t, bola: { x: 53, z: 0 }, posseTime: null, ataca, estado: 'gol' }, f ? 1 / 60 : 0);
+      const u = uDe(e, t, { abre: [1, 1] });
+      for (const L of lugares) for (const h of [0.1, 0.5, 0.9]) { const r = TP.estadoTorcedor(e.torcida, L, h, [0, 0, 0, h], u); n++; if (r.pose !== POSE.BRACOS_V || r.pulo !== 0) ruins++; }
+    }
+    reg('I5 Onda no gol: debaixo do bandeirão aberto ninguém fura o pano (braços em V, sem pular)', `${ruins} de ${n} fora disso`, '0', ruins === 0 && n > 0);
+  }
+  // I6: as vagas da onda (emocao.js) e os uniforms zerados = nenhuma onda
+  if (!temOnda) reg('I6 As vagas da onda da reação (emocao.js uniformsOnda) e os uniforms zerados sem onda', 'não existe (todo mundo reage no mesmo instante)', 'existe', false);
+  else {
+    const E = EM.EMOCAO.onda, e = EM.criarEmocao(), erros = [];
+    const ev = (tipo, t, x, extra = {}) => EM.emocaoEvento(e, { tipo, ...extra }, { t, timeDe, bola: { x, y: 0.5, z: 0 }, ataca });
+    ev('chute', 0.5, 10, { id: 9 });     // chute de 42 m: não é chance, os níveis não mudam
+    if (e.ondas.length !== 0) erros.push('o chute de longe abriu onda');
+    ev('chute', 1, 36, { id: 9 }); ev('defesa', 1, 51, { id: 101 });   // o mesmo instante: uma onda só (a origem do 1º)
+    if (e.ondas.length !== 1 || e.ondas[0].x !== 36) erros.push(`o mesmo instante: ${e.ondas.length} ondas`);
+    ev('escanteio', 1.4, 52, { time: 0 });   // a tensão da casa já estava acima: nada muda, nenhuma onda
+    if (e.ondas.length !== 1) erros.push(`lance sem mudança abriu onda (${e.ondas.length})`);
+    ev('gol', 2, 53, { time: 0 }); ev('gol', 2.5, -53, { time: 1 }); ev('defesa', 3, -51, { id: 9 });
+    if (e.ondas.length !== E.vagas || e.ondas.map(w => w.x).join(',') !== '-51,-53,53') erros.push(`a fila de ${E.vagas}: ${e.ondas.map(w => w.x).join(',')}`);
+    EM.uniformsOnda(e, O, A, 3);
+    const vagas = [0, 1, 2].map(k => O[4 * k + 3]);
+    EM.emocaoPasso(e, { t: 3 + EM.ONDA_COMPLETA + 0.1, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 1 / 60);
+    if (e.ondas.length !== 1) erros.push(`completa: ${e.ondas.length} ondas (a mais nova fica até recuperar)`);
+    EM.emocaoPasso(e, { t: 3 + EM.ONDA_COMPLETA + E.recupera + 0.1, bola: { x: 0, z: 0 }, posseTime: 0, ataca, estado: 'jogo' }, 1 / 60);
+    if (e.ondas.length !== 0) erros.push('recuperada: a onda não saiu');
+    EM.uniformsOnda(e, O, A);
+    if (!(O[3] === 0 && O[2] === EM.ONDA_INATIVA)) erros.push('a vaga vazia não é inativa');
+    ev('gol', 20, 53, { time: 0 }); EM.zerarEmocao(e);
+    if (e.ondas.length !== 0) erros.push('zerar não limpa');
+    // os uniforms zerados (o padrão da GPU) = nenhuma onda: o mesmo estado com e sem eles, num lance com a onda andando
+    const e2 = EM.criarEmocao();
+    EM.emocaoEvento(e2, { tipo: 'gol', time: 1, autor: 109 }, { t: 1, timeDe, bola: { x: -53, y: 1, z: 0 }, ataca });
+    const Z = { ondaO: new Float32Array(O.length), ondaA: new Float32Array(A.length) };
+    let difZ = 0;
+    for (const i of amostra.slice(0, 600)) {
+      const base = { tempo: 1.2, tempoOrg: 1.2, animada: 1, ola: null, bandeiroes: B, abre: [0, 0] };
+      const a = TP.estadoTorcedor(e2.torcida, lugarDe(i), R.pele[4 * i + 3] / 255, infoDe(i), base), b = TP.estadoTorcedor(e2.torcida, lugarDe(i), R.pele[4 * i + 3] / 255, infoDe(i), { ...base, ...Z });
+      if (a.pose !== b.pose || a.pulo !== b.pulo) difZ++;
+    }
+    if (difZ) erros.push(`${difZ} diferentes com os uniforms zerados`);
+    reg('I6 As vagas da onda: chute de longe e lance sem mudança sem onda, o mesmo instante numa só, a fila de 3 (sai a mais velha), a completa fica até recuperar, zerar limpa; os uniforms zerados = nenhuma onda',
+      erros.length ? erros.join(' | ') : `ok (vagas ativas no fim da fila ${vagas.join('/')}; completa em ${fmt(EM.ONDA_COMPLETA, 2)} s)`, 'nenhuma falha', erros.length === 0);
+    // I7: a MESMA conta no shader das três representações — o ESTADO_GLSL chama a onda antes da regra da pose, e o torcedor
+    //     3D leva TODOS os uniforms do estado (os mesmos objetos do quadro: uniformsDoEstado)
+    const fs = await import('node:fs');
+    const t3 = fs.readFileSync(path.join(pastaJs, 'render/torcedor3d.js'), 'utf8');
+    const glsl = TP.ESTADO_GLSL ?? '';
+    const ok7 = /torcidaOnda\(lugar\.xz, h, h2, time,/.test(glsl) && glsl.indexOf('torcidaOnda(lugar') < glsl.indexOf('torcidaPose(ex') && ['uOndaO', 'uOndaA'].every(n => (TP.NOMES_ESTADO ?? []).includes(n))
+      && /\.\.\.uniformsDoEstado\(U\)/.test(t3);
+    reg('I7 A onda no shader das três representações: o ESTADO_GLSL aplica a onda antes da regra da pose; o torcedor 3D leva todos os uniforms do estado',
+      ok7 ? `sim (${(TP.NOMES_ESTADO ?? []).length} uniforms: ${(TP.NOMES_ESTADO ?? []).join(', ')})` : 'NÃO', 'sim', ok7);
+    // I8: a onda do gol chega em TODOS antes de o laço segurar a comemoração (main.js: o passo antes da saída, gol + golPausa·60
+    //     − 1; ali o relógio do estádio para e quem a onda não alcançou ficaria sentado a cena inteira) — no Estádio Golaço, no
+    //     Maracanã (a forma própria) e no Olympiastadion (o lugar mais longe do gol entre os 104 genéricos: 206 m); e a poda
+    //     (ONDA_COMPLETA) só depois de chegar no mais longe
+    {
+      const { PARTIDA } = await imp('config.js');
+      const limite = (Math.round(PARTIDA.golPausa * 60) - 1) / 60;
+      const OR = await imp('render/onda-reacao.js');
+      const estadios = [['Estádio Golaço', it => { for (let i = 0; i < R.n; i++) it(R.pos[4 * i], R.pos[4 * i + 2], R.pele[4 * i + 3] / 255, R.info[4 * i + 3] / 255); }]];
+      try {
+        const base = JSON.parse(fs.readFileSync(path.join(pastaJs, '../assets/tm/estadios.json'), 'utf8')).estadios;
+        const PL = await imp('estadio-planta.js'), G = await imp('estadio-generico.js');
+        // (os lugares da planta sem as sementes da torcida: o pior caso, a reação mais lenta)
+        const viaPlanta = P => it => { P.lugares.iterar((st, f, a, x, y, z) => it(x, z, null, null)); };
+        if (PL && base.maracana?.forma) estadios.push(['Maracanã', viaPlanta(PL.criarPlanta(PL.validarForma(base.maracana.forma)))]);
+        if (G && base.olympiastadion?.forma) estadios.push(['Olympiastadion', viaPlanta(G.criarPlantaGenerica(base.olympiastadion.forma))]);
+      } catch (_) { /* sem a base dos estádios: só o Golaço */ }
+      const linhas8 = [];
+      let pior = 0, ok8 = estadios.length === 3;
+      for (const [nome, iterar] of estadios) {
+        let dm = 0, mx = 0, fora = 0, n = 0;
+        iterar((x, z, h, h2) => {
+          for (const gx of [53.5, -53.5]) {
+            const d = Math.hypot(x - gx, z), a = OR.atrasoOnda(x, z, gx, 0, h == null ? EM.EMOCAO.onda.reacao[1] : OR.reacaoTorcedor(h, h2));
+            n++; if (d > dm) dm = d; if (a > mx) mx = a; if (a > limite) fora++;
+          }
+        });
+        pior = Math.max(pior, mx);
+        if (fora) ok8 = false;
+        linhas8.push(`${nome} ${fmt(dm, 0)} m → ${fmt(mx, 2)} s (${fora} de ${n} depois)`);
+      }
+      reg('I8 A onda do gol chega em todos antes de o laço segurar a comemoração (gol + 149 passos) e a poda espera o mais longe',
+        `${linhas8.join(' · ')}; limite ${fmt(limite, 3)} s; ONDA_COMPLETA ${fmt(EM.ONDA_COMPLETA, 2)} s`, 'os 3 estádios, 0 depois; ONDA_COMPLETA ≥ o maior atraso',
+        ok8 && EM.ONDA_COMPLETA >= pior);
     }
   }
 }
