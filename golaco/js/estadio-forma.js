@@ -34,6 +34,28 @@ export const FORA = {
   semente: 20261012,
 };
 
+/** As 4 torres de refletor do Estádio Golaço (cantos ±x, ±z): o poste (raio, até `alto`) e o painel virado para o meio do
+ *  campo (largura × altura × espessura, o centro a `y`). O desenho (render/campo.js criarRefletores), a sombra no chão
+ *  (sombra-estadio.js) e o sólido daqui (que usa um disco de 3,6 m em volta do painel: a folga da câmera) leem estas medidas. */
+export const REFLETORES = Object.freeze({ x: 72, z: 56, alto: 38, raio: 0.45, painel: Object.freeze({ larg: 7, alt: 3.2, esp: 0.4, y: 39.5 }) });
+
+/**
+ * As medidas do DESENHO das peças finas das plantas genéricas (render/estadio-generico.js estruturaExtra; a sombra do estádio
+ * no chão, sombra-estadio.js, projeta o desenho — o sólido de estadio-generico.js é a folga da câmera em volta delas; aqui e
+ * não lá: a sombra entra no download inicial e a planta genérica, não): o poste de refletores no alto da
+ * arquibancada (o tubo de `raio` de alto − `abaixo` a alto − 1 e a cabeça [ao longo do rumo para o meio, altura, de lado]), a
+ * estrutura larga por cima do lado (as colunas em ±x, o raio de baixo e de cima, e a viga [comprimento, altura, espessura]),
+ * a torre de canto (o raio de baixo e de cima até alto − 3 e a cabeça), a espessura do telão e as vigas-treliça (a ponta para
+ * fora, a barra de cima, a de baixo, a diagonal e o passo das diagonais).
+ */
+export const DESENHO_TORRES = Object.freeze({
+  poste: Object.freeze({ raio: 0.22, abaixo: 14, cabeca: Object.freeze([0.5, 1.6, 3.6]) }),
+  larga: Object.freeze({ x: 62, raio: Object.freeze([1.4, 0.9]), viga: Object.freeze([128, 4, 2.2]) }),
+  torre: Object.freeze({ raio: Object.freeze([0.9, 0.45]), cabeca: Object.freeze([1.0, 4.2, 8]) }),
+  telao: 1.2,
+  vigas: Object.freeze({ ponta: 22, cima: 1.4, baixo: 1.1, diagonal: 0.5, passo: 8 }),
+});
+
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
 /** Distância com sinal ao retângulo de cantos arredondados (meias medidas hx, hz; raio r): < 0 dentro. */
@@ -217,10 +239,10 @@ export function solidoEm(x, y, z, folga = 0.3, fora = true) {
   // bancos de reservas (lado de cá)
   if (z > 0 && ax >= BANCOS.x[0] - 0.3 - f && ax <= BANCOS.x[1] + 0.3 + f && z >= BANCOS.z[0] - 0.6 - f && z <= BANCOS.z[1] + f && y <= BANCOS.altura + 0.15 + f) return 'banco';
   if (forma) return null;
-  // torres dos refletores (±72, ±56) e o painel no alto
+  // torres dos refletores (±72, ±56: REFLETORES) e o painel no alto
   {
-    const d = Math.hypot(ax - 72, az - 56);
-    if (d <= 0.45 + f && y <= 38 + f) return 'refletor';
+    const RF = REFLETORES, d = Math.hypot(ax - RF.x, az - RF.z);
+    if (d <= RF.raio + f && y <= RF.alto + f) return 'refletor';
     if (d <= 3.6 + f && y >= 37.9 - f && y <= 41.1 + f) return 'refletor';
   }
   if (!fora) return null;

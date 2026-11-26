@@ -4,11 +4,13 @@
 import * as THREE from 'three';
 import { BOLA } from '../config.js';
 import { texBola, texMancha } from './texturas.js';
+import { comSombraEstadio } from './sombra-estadio-gpu.js';
 
 export function criarBola3D(cena, qualidade) {
   const alta = qualidade !== 'baixa';
   const geo = new THREE.SphereGeometry(BOLA.raio, alta ? 32 : 20, alta ? 20 : 12);
-  const mat = new THREE.MeshStandardMaterial({ map: texBola(alta ? 512 : 256), roughness: 0.42, metalness: 0 });
+  // (a sombra do estádio, item 46: a bola na sombra da cobertura perde a luz direta do sol, como o gramado)
+  const mat = comSombraEstadio(new THREE.MeshStandardMaterial({ map: texBola(alta ? 512 : 256), roughness: 0.42, metalness: 0 }));
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   mesh.name = 'bola';

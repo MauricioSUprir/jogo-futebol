@@ -6717,3 +6717,86 @@ com o motivo. Também: `teste-estadio` 10b (o canvas opaco), `teste-pausa-tela` 
 - **Linha decidida por poucos px muda com a semente**: medir em mais de uma antes de chamá-la de fechada.
 - **Uma regra de "duas janelas lentas" mede a coisa errada** quando a 2ª janela já roda no nível de baixo: quem decide é a
   cadência do nível de baixo.
+
+## Sombra do estádio (item 46; contrato)
+Pedido do dono (a fila antiga: "sombras/gráficos de dia"; a linha 46 da FILA, categoria I): a sombra do estádio no gramado e nos
+jogadores durante o jogo de dia. Pesquisa e fontes em `PESQUISA-ESTADIO.md` §20; as escolhas que o dono pode trocar no "Depende do
+dono" da `FILA.md` (o item 46). **Só desenho**: `fecho-hash --diff` 0 (o `config.js` não se toca), `hash-igual` (1440 hashes) e
+`hash-partida` (400) IGUAIS contra a main.
+
+**A conta (`js/sombra-estadio.js`, PURO: sem three.js nem DOM, fora do fecho).**
+- `SOL_DIA` = [−0,42; 0,74; 0,52] (a direção para o sol do dia, não normalizada): o `render/cena.js` (`HORAS.dia.solDir`) lê daqui
+  e o `SOLD` das plantas (a `luzDoSol` das cadeiras) é o mesmo — o `teste-sombra-estadio` S3 confere. Um sol só.
+- As PEÇAS que fazem sombra (`pecasDoEstadio(planta)`, `gerarPecas` em fatias), como sólidos convexos (`caixa` = a caixa do
+  `malha().caixa` do desenho genérico, `cilindro`, `pontos` = o fecho convexo de vértices, a `barra` com o teste de dentro):
+  - em todo estádio (o gramado é o mesmo): as placas (0,96 m) e os bancos, pelo sólido de `estadio-forma.js solidoEm`;
+  - o Estádio Golaço (sem forma): as arquibancadas (o prisma do degrau de `ARQ_GOLACO`, a frente em pé até `yBase`), as paredes
+    de trás, a marquise de lá, o teto de cá e as 4 torres pelo DESENHO (`estadio-forma.js REFLETORES`: o poste e o painel 7 ×
+    3,2 × 0,4 m virado para o meio — o `render/campo.js criarRefletores` desenha com as mesmas medidas; o sólido da câmera usa
+    um disco de 3,6 m em volta do painel, a folga dela);
+  - as plantas (o Maracanã de `estadio-planta.js` e as genéricas de `estadio-generico.js`): as arquibancadas por fatia de 1° e
+    por trecho do perfil (o trapézio em pé do chão até o degrau, `perfil(s)`/`perfil(s, th)`, só onde há arquibancada) e a parede
+    de trás até a fachada; a cobertura genérica pelo `cobEm` (a chapa ±1,2 m e, nos 15% de dentro, a treliça e a testeira
+    penduradas: 3,6 m com treliça, 2,2 m sem) e a do Maracanã pelos nós do `alturaCob` (com o relevo dos cones) e a passarela;
+    as pontas (a cobertura parcial, a ponta reta da arquibancada nos cantos abertos) refinadas em 2 × 2 até 1/16 da fatia; nas
+    genéricas, as peças FINAS pelo desenho (`estadio-forma.js DESENHO_TORRES`, a fonte das medidas do `render/estadio-generico.js
+    estruturaExtra`: o poste de refletores, a estrutura larga, a torre de canto, o telão, o cubo e as vigas-treliça) e a caixa do
+    túnel por cima da pista; os telões do Maracanã pelo sólido.
+  - Fora: a rede e os ferros do gol (não opacos), os prédios e o lado de fora (a máscara só vai até a frente das arquibancadas:
+    fora dela, sol; o lado de fora do pré-jogo tem as sombras pintadas dele).
+- `calcularMascara(planta, sol, opc)` (um GERADOR: pára a cada `lote` peças, a cada `bloco` linhas da distância e da textura) →
+  {nx, nz, x0, z0, passo, faixa, penumbra, k, dados, npecas, sombra}: cada peça projetada no chão pelo raio do sol (o ponto P
+  vai a (P.x, P.z) + P.y · k, k = `deslocamentoSol` = −(sx, sz)/sy) é o fecho convexo dos vértices (Andrew), pintado numa grade
+  binária de `fino` 0,25 m sobre a `caixa` [−96, −72, 96, 72]; a distância euclidiana exata para os dois lados (Felzenszwalb e
+  Huttenlocher 2012) dá a distância com sinal (> 0 ao sol) nos centros das células, e o texel de `passo` 0,5 m (384 × 288) é a
+  média das 4 em volta do centro dele, em 8 bits: 0,5 = a borda, ±`faixa` 3 m nos extremos. `mascaraDoChao` = de uma vez
+  (Node); `mascaraVazia()` = tudo ao sol.
+- A LEITURA (a mesma do shader): `distanciaNoChao(m, x, z)` = a bilinear do texel (o `LinearFilter`, borda presa) e a
+  decodificação, +faixa fora da caixa; `solNoChao(m, x, z, w)` = smoothstep(±(penumbra/2 + w)) da distância (0 sombra, 1 sol;
+  `penumbra` 0,4 m: o disco do sol a ~40 m da borda); `solEm(m, x, y, z, w)` = o sol no chão do raio que passa pelo ponto —
+  EXATO para tudo que está abaixo do que faz sombra e sem peça BAIXA entre o chão projetado e o ponto (o banco, a placa: o
+  `teste-sombra-estadio` tira esses pontos da conta e os conta à parte, ~3%).
+- O GLSL: `SOMBRA_GLSL_V_DECL`/`SOMBRA_GLSL_V` (depois do `project_vertex`: a posição do mundo com o lote e a instância, a
+  mesma conta do three, e o `vSombraChao`), `SOMBRA_GLSL_F_DECL` (a função `sombraSol(g, w)` sem derivada: `textureLod`),
+  `SOMBRA_GLSL_F_TOPO` (no topo do main, ANTES do `clipping_planes_fragment`: o `fwidth(vSombraChao)` e o `sombraFator`) e
+  `SOMBRA_GLSL_LUZ` (no `lights_fragment_begin` aberto: `directLight.color *= (UNROLLED_LOOP_INDEX == 0) ? sombraFator : 1.0`
+  — só a luz do sol; o mapa de sombra dos jogadores multiplica a mesma luz, logo a sombra do jogador DENTRO da sombra do estádio
+  não escurece de novo); `SOMBRA_SO_CHAO` 0,25 m com o define (o piso das plantas na malha das arquibancadas); `trocasSombra(luzes,
+  {soChao})` = as trocas no texto do three.
+
+**O desenho (`render/sombra-estadio-gpu.js`).**
+- `UNIFORMS_SOMBRA` (`uSombraMapa`, `uSombraCaixa`, `uSombraK`, `uSombraFaixa`, `uSombraBorda`, `uSombraForca`): os MESMOS objetos
+  em todo material — trocar a textura ou a força não recompila nada. A textura: `DataTexture` R8, `LinearFilter`, sem mip, borda
+  presa, `unpackAlignment` 1 (~110 KB; +1 textura na GPU).
+- `comSombraEstadio(material, {soChao})`: encadeia o `onBeforeCompile` de antes e acrescenta à chave (`|sombra-estadio-v1`;
+  sem chave própria, a de antes é o texto do `onBeforeCompile`); as trocas pelo `aplicarTrocas` (avisa quando não acha o
+  trecho); o `lights_fragment_begin` sem o trecho do sol também avisa. Ligada em: o gramado, o chão de fora, as linhas, a armação
+  e a rede do gol, as bandeirinhas e o corpo das placas (`render/campo.js`; no `?gfx=antigo`, nada), os jogadores do manequim
+  (segmentos, cabeças, cabelos: `render/jogador3d.js`) e do corpo novo (`render/humano3d.js`), a bola (`render/bola3d.js`) e,
+  com `soChao`, a malha das arquibancadas das plantas (`render/estadio-generico.js`, `render/estadio-real.js`: a pista, o piso em
+  volta, a faixa azul). O LED das placas não (`MeshBasicMaterial`: brilha sozinho).
+- `definirEstadioSombra(planta)` (no `criarCampo`; null = o Golaço): a máscara EM FATIAS no tempo ocioso (`requestIdleCallback`,
+  prazo 200 ms; o que o navegador dá − 2 ms ou, sem tempo ocioso, 6 ms por vez); de uma vez com `?sombra=sync` e, sem o
+  `?sombra=fatias`, com webdriver (o quadro de um teste não pode depender de quando o tempo ocioso chegou: o
+  `teste-graficos-pagina` compara cargas pixel a pixel). Até ela chegar a força é 0 (o desenho de antes); ela entra em 0,8 s
+  (`passoSombra(t)`, por quadro, no `campo.atualizar`; de uma vez, sem a entrada).
+- A força: 1 de dia com a máscara pronta; 0 de noite (`definirHoraSombra`, no `campo.definirHora`), nos planos de FORA do Maracanã
+  (`definirForaSombra`: a `luzDoRio` troca o sol) e desligada. `?sombra=0` e `?gfx=antigo`: os materiais saem SEM a injeção (o
+  shader de antes).
+- API (`__golaco.sombraEstadio`, testes): `estado` ({ligada, pronta, hora, ms, sombra, npecas, fatias, maiorFatia, forca,
+  mascara}), `esperar()`, `forcar(0 | 1 | null)` e `lerPontos(pontos, r)` (desenha um quadro e lê a média RGB dos pontos do mundo
+  projetados, no mesmo evaluate).
+
+**Testes.** `teste-sombra-estadio` (Node, padrão; reprova na main: o módulo não existe): S1 RAIO × SÓLIDOS — em pontos sorteados do
+chão aberto do estádio, no chão e a 1,0/1,8 m, um árbitro independente anda o raio até o sol pelo sólido do jogo
+(`solidoEm(x, y, z, 0, false)`; as peças finas pela peça exata do desenho; a coluna fechada acima da borda de fora da cobertura do
+Maracanã, a folga da câmera, ignorada) — a máscara diz o mesmo longe da borda (> 0,3 m) em ≤ 0,3% de cada estádio (o Golaço, o
+Maracanã, 11 fixos — um de cada peça — e um a cada 6 da base: 31 estádios, 26 mil pontos, 0 discordância); S1b a amostra com
+sombra de verdade (≥ 5 estádios com ≥ 25% do campo na sombra); S1c o Golaço com o campo 99,6% ao sol (o painel da torre do canto
+−x de cá); S2 sem cobertura, ≥ 95% do campo ao sol; S3 um sol só; S4 a leitura (bilinear + decodificação, sem degrau na borda,
+fora da caixa e a vazia ao sol); S5 o GLSL (o `fwidth` só no topo, nada de derivada nas funções, a luz 0, a instância e o lote);
+S6 o custo (os 3 estádios mais pesados ≤ 300 ms em Node e a maior fatia ≤ 40 ms). `teste-estadio` 16 (navegador, CI; `--so-sombra`
+roda só ele): 16a a função do shader na textura da página = o JS (4096 pontos), 16b–16e no Allianz Arena (o mesmo quadro com a
+força 1 ÷ 0: o gramado na sombra escurece e o ao sol fica, os jogadores também, a sombra do jogador dentro da do estádio não
+escurece de novo e aparece sem ela, de noite nada), 16f–16h no Golaço (o painel da torre, as fatias no tempo ocioso, as mesmas
+chamadas e triângulos que com `?sombra=0`, +1 textura).

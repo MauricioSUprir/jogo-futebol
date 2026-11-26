@@ -148,6 +148,7 @@ import { criarHud } from './hud.js';
 import { criarCena, aaPedido } from './render/cena.js';
 import { criarQueda, quedaValida, nivelInicial, QUEDA, criarTeto } from './render/ritmo-desenho.js';
 import { criarCampo } from './render/campo.js';
+import { estadoSombra, esperarSombra, forcaTesteSombra } from './render/sombra-estadio-gpu.js';
 import { criarBola3D } from './render/bola3d.js';
 import { criarJogadores3D } from './render/jogador3d.js';
 import { criarCamera } from './render/camera.js';
@@ -5280,6 +5281,32 @@ const api = {
   get qualidadeEstado() { return { escolha: escolhaQ, atual: qAtual, sessao: quedaSessao, gravada: quedaGravada, agora: quedaAgora(), trocando: trocandoQ }; },
   /** O teto de quadros (item 45, C13; testes): {ligado (só no celular), hz (o refresh medido), n, periodo}. */
   get teto() { return TETO_QUADROS.estado(); },
+  /** A sombra do estádio (item 46; testes): estado = {ligada, pronta, hora, ms, sombra, npecas, fatias, maiorFatia, forca,
+   *  mascara}; esperar() = a promessa da máscara pedida por último; forcar(0 | 1 | null). */
+  sombraEstadio: {
+    get estado() { return estadoSombra(); },
+    esperar() { return esperarSombra(); },
+    /** A força forçada (0 ou 1) para comparar os pixels no mesmo quadro; null volta à regra. */
+    forcar(v) { forcaTesteSombra(v); },
+    /**
+     * Desenha UM quadro (a câmera e o mundo de agora) e, no mesmo evaluate, lê a média RGB (0–255) de cada ponto do mundo
+     * [x, y, z] projetado na tela, numa caixa de (2·r + 1)² px do buffer: [{x, y (px CSS), atras, rgb}]. Testes.
+     */
+    lerPontos(pontos, r = 1) {
+      api.desenhar();
+      const gl = cena3d.renderer.getContext(), W = gl.drawingBufferWidth, H = gl.drawingBufferHeight;
+      const kx = W / window.innerWidth, ky = H / window.innerHeight, px = new Uint8Array(4 * (2 * r + 1) ** 2);
+      return pontos.map(([x, y, z]) => {
+        const p = projetar(x, y, z, { x: 0, y: 0, atras: false });
+        const bx = Math.round(p.x * kx) - r, by = H - 1 - Math.round(p.y * ky) - r;
+        if (p.atras || bx < 0 || by < 0 || bx + 2 * r >= W || by + 2 * r >= H) return { ...p, rgb: null };
+        gl.readPixels(bx, by, 2 * r + 1, 2 * r + 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        const m = [0, 0, 0];
+        for (let i = 0; i < px.length; i += 4) for (let c = 0; c < 3; c++) m[c] += px[i + c];
+        return { ...p, rgb: m.map(v => v / (px.length / 4)) };
+      });
+    },
+  },
   /**
    * Os gráficos do item 45 (testes): fisico(bool) = os desenhos seguintes sem os truques (a referência SSAA e a máscara
    * geométrica dos testes de gráficos): os dos finos (render/campo.js graficos.fisico), a A2C da torcida e a compensação de alfa
