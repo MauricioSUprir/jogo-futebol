@@ -139,6 +139,43 @@ fileiras da frente 37/62/88% → 85/97/98%, lado de cá 0 → 5.274 torcedores n
 | (medida própria: `festa.js` em partidas inteiras) | Gol da casa e, 20 s depois, gol do visitante: a casa voltava a cantar a FESTA por cima do gol deles (o `festaAte` do 1º gol continuava valendo) | O gol de um lado cancela a festa agendada do outro; teste "dois gols em 20 s" no `teste-torcida` |
 | (medida própria: `teste-som-jogo` M10) | Com o limiar do limitador em −5,5 dBFS o pico no grito do gol saiu a −1,1/−1,3/−1,4 dBFS: a 0,1–0,4 dB da meta (≤ −1), o CI reprovaria por sorteio | Limiar −6,5 (a compensação automática do nó sobe de +3,1 para +3,7 dB): pico −1,7 dBFS em 2 rodadas, leito −18,1/−18,5 dBFS e apito − leito 6,2/6,4 dB (as outras metas seguem passando) |
 | (medida própria: `main.js`) | Com o celular em pé a tela "Gire o celular" cobre tudo e nenhum quadro é desenhado — a pré-carga do 1º quadro era gasta num quadro que não ia para a GPU | A pré-carga espera o 1º quadro desenhado de verdade (`desenha`/`renderizar`) |
+### 6.4 A torcida reage em onda no gol e na chance (item 47 da FILA, categoria I; `js/render/emocao.js`, `onda-reacao.js`, `torcedor-pose.js`, `torcida.js`, `torcedor3d.js`)
+
+Antes, o ânimo (excita, tensão, lamento, palmas) chegava ao time inteiro no MESMO quadro: no gol da casa os 3.271
+torcedores da amostra (1 em cada 7 das cadeiras da Alta) levantavam os braços no quadro do gol (100% num quadro só); no
+chute de 16 m defendido, as mãos na cabeça também. Agora a reação NASCE no lance (a bola no gol, a defesa, a trave, o chute
+de perto, o escanteio, o pênalti) e anda pelo estádio: cada torcedor reage com o SEU atraso = o tempo de reação (pela
+semente) + a distância no chão até o lance / 100 m/s.
+
+| Fonte | O que diz | O que aproveitamos |
+|---|---|---|
+| Thompson et al., citado em Jain et al. (2015), "A comparative study of visual and auditory reaction times…" (PMC4456887) e BioNumbers BNID 110800 | Tempo de reação simples: ~180–200 ms ao estímulo visual, ~140–160 ms ao sonoro; com decisão, mais | O tempo de reação de cada torcedor sai da semente entre 0,18 s (quem vê e reage na hora) e 0,4 s (quem precisa confirmar o lance) — sem ligação com as sementes que decidem quem levanta e o gesto; o vizinho nunca reage no mesmo quadro (o maior pedaço da casa que levanta num quadro: 100% → 2,7%) |
+| Velocidade do som (343 m/s) e o envelope do grito do gol medido nas nossas gravações (`teste-estadio` 3: ≤ 0,3 s até −6 dB do pico) | O grito de quem está perto do gol chega ao outro lado do estádio (~140 m) em ~0,4 s; a gravação sobe quase toda em 0,3 s | A reação de um GOL é estímulo direto (a vista e o grito), muito mais rápida que a ola; mas quem está longe não tem certeza na hora (a bola de 22 cm a 140 m, a rede, os jogadores): a velocidade "de certeza" escolhida é 100 m/s — a arquibancada de lá inteira em ~0,8 s na TV, o Estádio Golaço todo em ~2,0 s (dentro da explosão do gol: `golSegura` 2,6 s + a queda) |
+| Farkas, Helbing e Vicsek, "Mexican waves in an excitable medium", Nature 419:131 (2002) e o material de apoio da ETH ("22 ± 3 cadeiras/s") | A OLA corre a ~12 m/s (~20 cadeiras/s): cada um levanta quando o VIZINHO levanta (meio excitável, tempo de reação por pessoa); começa com a torcida calma | Não usamos os 12 m/s na reação ao gol (a ola é combinada, vizinho a vizinho: 13 s para cruzar o estádio, a explosão já teria acabado); a ola de antes (`festa.js`, a torcida calma) continua igual. Do modelo deles vem a ideia do tempo de reação individual e da frente irregular |
+| GPU Gems 3, cap. 2, "Animated Crowd Rendering" (Dudash, NVIDIA) e Gosselin, Sander e Mitchell, "Drawing a Crowd" (ShaderX3) | A multidão instanciada anima cada instância no vertex shader com dados de baixa frequência em constantes (o que muda devagar e vale para muitos), cada uma com a sua animação numa chamada só | O lance vai em UNIFORMS (`uOndaO`: a origem, a idade e se está ativa, de até 3 lances em andamento; `uOndaA`: os níveis de antes de cada um) e o atraso de cada torcedor sai no vertex shader pela posição e pelas sementes que ele já tem — nada por torcedor na CPU, nenhum atributo novo, nenhuma chamada de desenho a mais. A MESMA conta no quadro, no ramo do impostor e no torcedor 3D (o `ESTADO_GLSL` de sempre: `torcidaOnda` antes da regra da pose) |
+| (medida própria: o relógio do estádio na comemoração; `teste-torcida` I8) | O laço segura a simulação no gol + 149 passos (2,48 s) enquanto a cena da comemoração roda, e o relógio do estádio para junto: quem a onda ainda não alcançou ficaria sentado a cena inteira. Com a 1ª calibragem (70 m/s, a reação até 0,5 s) ficavam 909 de 50.860 lugares do Estádio Golaço (os dois gols), 22% do Maracanã e 32% do Olympiastadion | A onda inteira cabe antes disso: 100 m/s e a reação até 0,4 s — o lugar mais longe do gol no Golaço (160 m) aos 1,98 s, no Maracanã (185 m) aos 2,25 s e no Olympiastadion (206 m, o mais longe dos 104 estádios de forma genérica) aos 2,46 s; 0 lugares depois do limite nos três. A poda das ondas (`ONDA_COMPLETA` 2,50 s) espera o mais longe |
+| (medida própria: a reação chegando atrasada) | Com o atraso puro, quem está longe via os níveis de AGORA, que já tinham caído (o lamento cai com τ = 1,8 s): no chute de 16 m defendido, o decil mais longe fazia as mãos na cabeça em 8% (o mais perto em 57%; com 70 m/s, 0% e 45%) | Quem a reação acabou de alcançar vê o lance "como se fosse agora": os níveis que só caem (excita depois de segurar, lamento, palmas: e^(−t/τ) do `emocao.js`) voltam e^(atraso/τ) — exato para a queda exponencial; a tensão (que sobe e desce pela bola) fica a de agora. Depois de chegar, o atraso some em 3 s (o relógio dele anda um pouco mais depressa até alcançar o de todos: sem pulo). Perto e longe: 100% e 100% |
+
+Contas (puras, em Node, `teste-torcida` I; a GPU = JS no `teste-estadio` 9b com 3 lances em andamento):
+
+| Medida (amostra da Alta, 1 em cada 7) | Antes | Depois |
+|---|---|---|
+| Gol da casa: o decil mais perto do gol (~26 m) levanta os braços aos | 0,00 s | 0,52 s |
+| … o decil mais longe (~141 m) aos | 0,00 s | 1,72 s |
+| … correlação distância × tempo | 0 | 0,96 |
+| … o maior pedaço da casa que levanta num quadro | 100% | 2,7% |
+| … quem explode até 4,5 s | 100% | 100% |
+| Chute de 16 m defendido: as mãos na cabeça, perto (~39 m) / longe (~140 m) | 0,00 s (100%) / 0,00 s (100%) | 0,67 s (100%) / 1,70 s (100%) |
+| … o maior pedaço que levanta ou senta num quadro | 4,0% | 1,7% |
+| Quem sofreu o gol com os braços para cima | 0 | 0 |
+| Debaixo do bandeirão aberto, fora da pose de segurar o pano (no meio da onda do gol) | 0 | 0 |
+
+O que fica igual: a ola (a torcida calma), o bandeirão, a regra da pose, as cenas (o fim do jogo, o cartão, a substituição:
+no mesmo instante para todos, como antes — não são um lance no campo), o som (o grito, o "uuuh" e as palmas tocam no
+instante do lance: a mixagem lê o agito, não a onda). Custo: nenhuma chamada nem atributo a mais; CPU +~0,06 µs por quadro
+(os uniforms) e +~0,04 µs por lance (a foto dos níveis); no vertex shader, por vértice, uma `fract`, 1–3 distâncias e 3
+`exp` (só para quem a onda mais nova já alcançou). Só desenho: `fecho-hash` 0, `hash-igual` e `hash-partida` IGUAIS.
+
 ## 7. Tela limpa (11/10): HUD mínimo e linha de impedimento só no apito (`css/estilo.css`, `js/hud.js`, `js/entrada.js`, `js/render/*`)
 
 Pedido do dono (11/10): "quero menos informação na tela", "tem muita coisa na tela", "não quero a linha de impedimento

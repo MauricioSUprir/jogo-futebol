@@ -784,20 +784,31 @@ if (!GR || typeof GR.faixaEm !== 'function' || typeof GR.GRAMADO_GLSL !== 'strin
       };
       const g5b = Object.entries(mutacoes).map(([nome, m]) => ({ nome, pega: m !== null && !conferirFrag(m).ok }));
       reg('G5b a guarda reprova as mutações da revisão (as 4 acima)', g5b.map(x => `${x.nome}: ${x.pega ? 'reprova' : 'PASSA'}`).join(' · '), 'as 4 reprovam', g5b.every(x => x.pega));
-      // G6: o ?gfx=antigo = a main, bit a bit
+      // G6: o ?gfx=antigo = a main, bit a bit — no quadro da torcida, fora o ESTADO da pose (render/torcedor-pose.js
+      // ESTADO_GLSL: a regra, a ola, o bandeirão e, desde o item 47, a onda da reação; a MESMA conta no quadro, no impostor e no
+      // torcedor 3D, que não tem `?gfx=antigo` — não é do item 45): o texto com o ESTADO_GLSL trocado por um marcador (uma vez
+      // só) tem o hash do da main e41aa791 com o mesmo marcador (13e49c8c…, a15b142b…; os de antes, o texto cru, 09ebd7a5… e
+      // 8984e075…, eram os mesmos textos com o ESTADO_GLSL da main)
+      const TP = await imp('render/torcedor-pose.js');
+      const ESTADO = TP?.ESTADO_GLSL ?? null;
       const HASH_MAIN_SIL = {
         bandeiras: 'ede9772967e720e53c39a8b948b2423c98dd8e88b13fb9d47d6ef63cd0260387',
-        torcida: '09ebd7a52544896600d5f49760966ab00b0b73d84d03388222583ea712a62638',
-        'torcida com o impostor': '8984e0755da8cfcba86967212615932b2f5a6c4c2adc957d27857f56aff78cf6',
+        torcida: '13e49c8c76d19bc1585739a07d8078af494d5ab1707f780845134978b6aa2a5c',
+        'torcida com o impostor': 'a15b142bb8338b98069e85998c4a44ae6ecf7c53362ad8e5ec5fea9be38fff16',
       };
       const antigos2 = {
         bandeiras: SS.shaderBandeiras({ antigo: true }),
         torcida: SS.shaderTorcida(null, { antigo: true }),
         'torcida com o impostor': SS.shaderTorcida(imp0, { antigo: true }),
       };
-      const g6 = Object.entries(antigos2).map(([nome, S]) => ({ nome, ok: hash({ vert: S.vert, frag: S.frag }) === HASH_MAIN_SIL[nome] }));
+      const semEstado = (nome, S) => {
+        if (nome === 'bandeiras') return { vert: S.vert, frag: S.frag };
+        const partes = ESTADO ? S.vert.split(ESTADO) : [S.vert];
+        return partes.length === 2 ? { vert: partes.join('<ESTADO_GLSL>'), frag: S.frag } : { vert: 'sem o ESTADO_GLSL (uma vez)', frag: '' };
+      };
+      const g6 = Object.entries(antigos2).map(([nome, S]) => ({ nome, ok: hash(semEstado(nome, S)) === HASH_MAIN_SIL[nome] }));
       const semCentroid = Object.values(antigos2).every(S => !/centroid/.test(S.vert + S.frag)) && !('fragTopo' in imp0.antigo);
-      reg('G6 o ?gfx=antigo = a main nas silhuetas: o texto do vertex e do fragment das bandeiras e do quadro da torcida, com e sem o ramo do impostor (o de antes), pelo hash da main e41aa791',
+      reg('G6 o ?gfx=antigo = a main nas silhuetas: o texto do vertex e do fragment das bandeiras e do quadro da torcida, com e sem o ramo do impostor (o de antes; o quadro fora do ESTADO_GLSL, o mesmo do 3D), pelo hash da main e41aa791',
         `${g6.map(x => `${x.nome} ${x.ok ? 'igual' : 'DIFERENTE'}`).join(' · ')} · sem centroid nem o fragTopo no antigo: ${semCentroid ? 'sim' : 'NÃO'}`, 'os 3 iguais; sim', g6.every(x => x.ok) && semCentroid);
       // G7: o recorte com o #ifdef do r170 e o alfa limitado; o aplicarTrocas avisa sem o trecho
       const para = SS.TROCA_RECORTE[0][1];

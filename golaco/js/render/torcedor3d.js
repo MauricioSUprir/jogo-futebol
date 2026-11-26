@@ -13,7 +13,7 @@
 // (torcida.ocultar). Só desenho: o hash não muda.
 import * as THREE from 'three';
 import { TORCEDOR3D, lerModelo, vatDados, variacaoDe, TORCEDOR_GLSL, escolherTorcedores, pxCadeira } from './torcedor-dados.js';
-import { ESTADO_GLSL } from './torcedor-pose.js';
+import { ESTADO_GLSL, uniformsDoEstado } from './torcedor-pose.js';
 import { preencherBloco, IMPOSTOR } from './impostor-dados.js';
 import { LUZ_FALSA_GLSL, UNIFORMS_LUZ } from './luz-falsa.js';
 
@@ -133,9 +133,8 @@ export function criarTorcedores3D(opc) {
       geo.instanceCount = 0;
       const uni = {
         ...THREE.UniformsUtils.clone(THREE.UniformsLib.fog),
-        uTempo: U.uTempo, uTempoOrg: U.uTempoOrg, uAnimada: U.uAnimada, uExcita: U.uExcita, uTensao: U.uTensao,
-        uLamento: U.uLamento, uPalmas: U.uPalmas, uOla: U.uOla, uBandA: U.uBandA, uBandU: U.uBandU, uBandV: U.uBandV,
-        uAbre: U.uAbre, uAcento0: U.uAcento0, uAcento1: U.uAcento1,
+        // os do estado (ESTADO_GLSL: o ânimo, a ola, o bandeirão e a onda da reação), os MESMOS objetos do quadro
+        ...uniformsDoEstado(U), uAcento0: U.uAcento0, uAcento1: U.uAcento1,
         uFlare: UNIFORMS_LUZ.uFlare, uFlareN: UNIFORMS_LUZ.uFlareN,
         uVat: { value: tex }, uLinha: { value: vat.linha(v, l) },
         uCalca: { value: calca }, uSapato: { value: sapato }, uSol, uNoite,

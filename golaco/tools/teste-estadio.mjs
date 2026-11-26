@@ -19,7 +19,9 @@
 //   9) as contas da GPU são as mesmas do JS: pose da torcida e deslocamento da rede avaliados no shader de verdade
 //      (WebGL2, float) × torcida-dados.js/rede-onda.js (contraprova M9; a rede véu de noiva: o vetor redeDesloc(vec3)); o
 //      estado de cada torcedor (a pose com a ola e o bandeirão: torcedor-pose.js, o mesmo nos dois shaders) e o vértice do
-//      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2);
+//      torcedor 3D lido da textura de animação nas 8 poses (torcedor-dados.js; item 69, PR 2); a ONDA da reação (item 47:
+//      onda-reacao.js, dentro do estado) com 3 lances em andamento — e, na página, a onda do gol nasce no gol (item 4) e os
+//      uniforms do estado são os mesmos objetos no quadro, no torcedor 3D (item 14b) e no impostor (item 14d);
 //  10) a torcida DURANTE O JOGO no celular deitado (844×390, Média; dono, 10/10): 20 instantes de uma partida IA×IA,
 //      cada um desenhado com e sem a torcida — ela ocupa ≥ 1% da tela em ≥ 90% deles, e o jogador controlado não
 //      fica menor na tela (≥ 33 px de altura: a câmera antiga dava 36 px; ≤ 10% a menos); 10b) o canvas fica OPACO com a A2C
@@ -316,6 +318,25 @@ try {
   meta('Som: gol, chuá da rede e apito da saída tocaram', `gol ${nGol} · rede ${nRede} · apito na saída ${nApito}`, '≥ 1 cada (gol, rede, apito)', nGol >= 1 && nRede >= 1 && nApito >= 1);
   const torc = await pg.evaluate(() => window.__golaco.estadio.emocao);
   meta('Torcida da casa explodiu no gol', `gols contados ${torc.contagem.gol ?? 0}`, '≥ 1', (torc.contagem.gol ?? 0) >= 1);
+  // a ONDA da reação na página (item 47): no gol, a onda mais nova dos uniforms da torcida nasce na bola dentro do gol e a
+  // idade anda com o relógio do estádio; os uniforms do estado (render/torcedor-pose.js NOMES_ESTADO) existem no quadro
+  const golOnda = await golRoteirizado(pg, { semente: 5, time: 0 });
+  const onda = await pg.evaluate(async () => {
+    const g = window.__golaco, T = g.estadio.torcidaObj;
+    const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+    const O = T?.uniforms?.uOndaO?.value;
+    if (!O) return { erro: 'sem os uniforms da onda (uOndaO)' };
+    g.relogio.avancar(1000 / 60, { desenhar: false });
+    const a = Array.from(T.uniforms.uOndaO.value.slice(0, 4));
+    for (let i = 0; i < 30; i++) g.relogio.avancar(1000 / 60, { desenhar: false });
+    const b = Array.from(T.uniforms.uOndaO.value.slice(0, 4));
+    return { a, b, faltam: (NOMES_ESTADO ?? []).filter(n => !T.uniforms[n]) };
+  });
+  meta('Gol: a onda da reação nasce no gol (a mais nova dos uniforms da torcida com a origem na bola dentro do gol; a idade anda 0,5 s em 30 quadros)',
+    onda.erro ?? `origem (${f2(onda.a[0])}, ${f2(onda.a[1])}), idade ${f2(onda.a[2])} → ${f2(onda.b[2])} s; uniforms do estado que faltam no quadro: ${onda.faltam.length ? onda.faltam.join(', ') : 'nenhum'}`,
+    '|x| 52–56,5 e |z| < 4; idade < 0,5 → +0,5 ± 0,05; nenhum',
+    golOnda.ok && !onda.erro && onda.a[3] === 1 && Math.abs(onda.a[0]) >= 52 && Math.abs(onda.a[0]) <= 56.5 && Math.abs(onda.a[1]) < 4 && onda.a[2] < 0.5
+      && onda.b[0] === onda.a[0] && Math.abs(onda.b[2] - onda.a[2] - 0.5) < 0.05 && onda.faltam.length === 0);
 
   // 5) gol do visitante: a casa cala
   const golFora = await golRoteirizado(pg, { semente: 5, time: 1 });
@@ -543,6 +564,15 @@ void main() { vec4 a = texelFetch(uEntrada, ivec2(int(gl_FragCoord.x), 0), 0);
     const B = BD.bandeiroes();
     const U = { tempo: 37.3, tempoOrg: 12.9, animada: 1, ola: { theta: 1.1, largura: 0.18, forca: 0.9, ativa: true }, bandeiroes: B, abre: [0.8, 1] };
     const niveis = [{ excita: 0.3, tensao: 0.4, lamento: 0.1, palmas: 0.5 }, { excita: 0.05, tensao: 0.7, lamento: 0.45, palmas: 0.2 }];
+    // a ONDA da reação (item 47; render/onda-reacao.js, dentro do ESTADO_GLSL): 3 lances em andamento (a defesa, o chute e
+    // um lance do outro lado), cada um com os níveis de antes — os lugares sorteados caem em todos os casos (a mais nova já
+    // chegou, com a volta do atraso; só a do meio; só a mais velha; nenhuma)
+    const OR = await import('./js/render/onda-reacao.js').catch(() => null);
+    if (OR && TP.NOMES_ESTADO?.includes('uOndaO')) {
+      U.ondaO = Float32Array.from([51, 1, 0.65, 1, 36.5, 2, 0.9, 1, -53, 0, 1.1, 1]);
+      U.ondaA = Float32Array.from([0.1, 0.6, 0.9, 0.2, 0.8, 0.05, 0.1, 0.7, 0.5, 0.0, 0.3, 0.95, 0.0, 0.6, 0.65, 0.2, 0.9, 0.35, 0.0, 0.25, 0.4, 0.1, 0.5, 0.05]);
+      niveis[0].excita = 0.18; niveis[0].lamento = 0.35;   // perto dos limiares: a volta do atraso (e^(atraso/τ)) decide
+    }
     const ent = new Float32Array(4 * N * 2);
     for (let i = 0; i < N; i++) {
       let p;
@@ -566,10 +596,17 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
     gl.uniform4f(gl.getUniformLocation(pE, 'uOla'), U.ola.theta, U.ola.largura, U.ola.forca, 1);
     gl.uniform3fv(gl.getUniformLocation(pE, 'uBandA'), B.flatMap(b => b.A)); gl.uniform3fv(gl.getUniformLocation(pE, 'uBandU'), B.flatMap(b => b.U));
     gl.uniform3fv(gl.getUniformLocation(pE, 'uBandV'), B.flatMap(b => b.V)); u2('uAbre', U.abre[0], U.abre[1]);
+    if (U.ondaO) { gl.uniform4fv(gl.getUniformLocation(pE, 'uOndaO'), U.ondaO); gl.uniform4fv(gl.getUniformLocation(pE, 'uOndaA'), U.ondaA); }
     const oE = rodar(pE, [['uEntrada', tex(ent, N, 2)]]);
     let poseDif = 0, puloDif = 0, balDif = 0, sob = 0, ola = 0;
+    const casosOnda = [0, 0, 0, 0];   // a mais nova chegou · só a do meio · só a mais velha · nenhuma
     for (let i = 0; i < N; i++) {
       const a = ent.subarray(4 * i, 4 * i + 4), b = ent.subarray(4 * (N + i), 4 * (N + i) + 4);
+      if (U.ondaO) {
+        const r0 = OR.reacaoTorcedor(a[3], b[3]), O = U.ondaO;
+        const k = [0, 1, 2].findIndex(j => O[4 * j + 2] >= OR.atrasoOnda(a[0], a[2], O[4 * j], O[4 * j + 1], r0));
+        casosOnda[k < 0 ? 3 : k]++;
+      }
       const r = TP.estadoTorcedor(niveis, [a[0], a[1], a[2]], a[3], [b[0], b[1], b[2], b[3]], U);
       if (r.pose !== Math.round(oE[4 * i])) poseDif++;
       puloDif = Math.max(puloDif, Math.abs(r.pulo - oE[4 * i + 1])); balDif = Math.max(balDif, Math.abs(r.bal - oE[4 * i + 2]));
@@ -599,10 +636,11 @@ void main() { int i = int(gl_FragCoord.x); vec4 a = texelFetch(uEntrada, ivec2(i
       const o = rodar(pV, [['uEntrada', tex(e, N, 3)], ['uVat', tVat]]);
       for (let i = 0; i < N; i++) vatDif = Math.max(vatDif, Math.hypot(o[4 * i] - js[i][0], o[4 * i + 1] - js[i][1], o[4 * i + 2] - js[i][2]));
     }
-    return { N, poseDif, puloDif, balDif, sob, ola, vatDif, poses: n8.size, malhas: mod.nVar * mod.nLod };
+    return { N, poseDif, puloDif, balDif, sob, ola, vatDif, poses: n8.size, malhas: mod.nVar * mod.nLod, casosOnda: U.ondaO ? casosOnda : null };
   });
-  meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola e o bandeirão; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola)`,
-    '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100);
+  meta('GPU = JS: estado do torcedor (quadro e 3D: a pose, a ola, o bandeirão e a onda da reação; 4096 sorteados)', gpu3.erro ?? `${gpu3.poseDif} poses diferentes; pulo até ${(gpu3.puloDif * 1000).toFixed(2)} mm, balanço até ${(gpu3.balDif * 1000).toFixed(2)} mm (${gpu3.sob} debaixo do bandeirão, ${gpu3.ola} levantados pela ola; a onda: ${gpu3.casosOnda ? `a mais nova chegou ${gpu3.casosOnda[0]}, só a do meio ${gpu3.casosOnda[1]}, só a mais velha ${gpu3.casosOnda[2]}, nenhuma ${gpu3.casosOnda[3]}` : 'NÃO existe'})`,
+    '≤ 0,2%, ≤ 1 mm; ≥ 400 debaixo e ≥ 100 na ola; a onda com ≥ 100 em cada caso', !gpu3.erro && gpu3.poseDif <= 0.002 * gpu3.N && gpu3.puloDif <= 0.001 && gpu3.balDif <= 0.001 && gpu3.sob >= 400 && gpu3.ola >= 100
+      && !!gpu3.casosOnda && gpu3.casosOnda.every(c => c >= 100));
   meta('GPU = JS: torcedor 3D — a textura de animação (VAT) nas 8 poses (4 malhas × 4096 vértices; escala, pulo, balanço, cadeira e rumo)', gpu3.erro ?? `difere até ${(gpu3.vatDif * 1000).toFixed(3)} mm (${gpu3.poses} poses, ${gpu3.malhas} malhas)`, '≤ 0,1 mm, 8 poses, 4 malhas', !gpu3.erro && gpu3.vatDif <= 1e-4 && gpu3.poses === 8 && gpu3.malhas === 4);
   // 9c) o IMPOSTOR octaédrico (item 69, PR 3): as contas do vertex shader dele (render/impostor-dados.js IMPOSTOR_GLSL — o
   //     mapa hemi-octaédrico de polo inclinado, as 3 fotos e os pesos, a direção e a base de cada foto, a projeção virtual)
@@ -1109,8 +1147,16 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         g.estadio.mostrarCadeiras(false); g.desenhar(); g.desenhar();
         const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, tor: g.estadio.cadeiras.torcedores.torcedores, ocultos: g.estadio.cadeiras.torcedores.ocultos };
         g.estadio.mostrarCadeiras(true); g.cameraLivre(null); g.desenhar();
-        return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto };
+        // a onda da reação (item 47) nas três representações: os uniforms do estado (o ânimo, a ola, o bandeirão e a onda)
+        // são os MESMOS objetos no quadro, no torcedor 3D e no programa do impostor
+        const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+        const T = g.estadio.torcidaObj, mt = (g.estadio.torcedor3d?.malhas ?? []).map(m => m.material), mi = T.impostor?.material;
+        const mesmos = (NOMES_ESTADO ?? []).length > 0 && [...mt, ...(mi ? [mi] : [])].every(m => NOMES_ESTADO.every(n => m.uniforms[n] === T.uniforms[n]));
+        return { com, sem, teto: TORCEDOR3D.qual[g.estadio.torcida.qualidade].teto, estado: { mesmos, malhas3d: mt.length, impostor: !!mi, nomes: (NOMES_ESTADO ?? []).length } };
       });
+      meta(`A onda da reação no torcedor 3D (${nome}): os uniforms do estado são os mesmos objetos no quadro e nas malhas 3D (o impostor, no 14d)`,
+        `${tor.estado.nomes} uniforms; ${tor.estado.malhas3d} malhas do torcedor 3D${tor.estado.impostor ? ' e o impostor' : ''}: ${tor.estado.mesmos ? 'os mesmos' : 'DIFERENTES'}`,
+        'os mesmos, ≥ 1 malha 3D', tor.estado.mesmos && tor.estado.malhas3d >= 1);
       meta(`Torcedor 3D (${nome}): nunca na TV; perto, sentado nas cadeiras 3D, fora do quadro, no teto de triângulos`,
         `TV: máx ${r.tor} em 20 instantes (modelo ${r.carregado ? 'carregado' : 'NÃO carregado'}); perto: ${tor.com.torcedores} torcedores (níveis ${tor.com.lods?.join('/')}), ${tor.com.ocultos} fora do quadro (${tor.com.pessoas} pessoas com a densidade real, ${tor.com.perto} na malha perto), ${tor.com.triangulos} triângulos (teto ${tor.teto}); sem as cadeiras 3D: ${tor.sem.tor} e ${tor.sem.ocultos} fora, −${tor.com.c - tor.sem.c} chamadas, −${tor.com.t - tor.sem.t} triângulos`,
         '0 na TV; perto ≥ 1, os desenhados dos blocos fora do quadro (≥ os em 3D), ≤ teto; sem cadeiras 0 e 0, −(1 + malhas + a malha perto) chamadas e −(18/cadeira + os dele + 2/pessoa da malha perto)',
@@ -1146,6 +1192,10 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         const cx = off.getContext('2d', { willReadFrequently: true });
         const ler = () => { cx.drawImage(cv, 0, 0, off.width, off.height); return cx.getImageData(0, 0, off.width, off.height).data; };
         const com = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, cad: E.cadeiras, px: ler() };
+        // a onda da reação (item 47) também no ramo do impostor: os uniforms do estado do programa dele são os do quadro
+        const { NOMES_ESTADO } = await import('./js/render/torcedor-pose.js');
+        const mi = E.torcidaObj?.impostor?.material ?? null;
+        const ondaImp = { ligado: !!mi, mesmos: !!mi && (NOMES_ESTADO ?? []).length > 0 && NOMES_ESTADO.every(n => mi.uniforms[n] === E.torcidaObj.uniforms[n]), nomes: (NOMES_ESTADO ?? []).length };
         E.impostorObj?.pausar(true); g.desenhar(); g.desenhar();
         const sem = { c: g.estado().desenhoChamadas, t: g.estado().desenhoTriangulos, imp: E.impostor, px: ler() };
         E.impostorObj?.pausar(false); g.desenhar(); g.desenhar();
@@ -1158,9 +1208,11 @@ for (const [nome, o, q] of [['celular', { largura: 844, altura: 390, dpr: 2, toq
         g.definirQualidade(q0); for (let i = 0; i < 4; i++) g.desenhar();
         g.cameraLivre(null); g.desenhar();
         const o = com.cad.orcamento, tq = com.cad.torcedores;
-        return { est0, tvTor, tvGrupos, com: { c: com.c, t: com.t, imp: com.imp, perto: tq?.perto ?? 0, pessoas: tq?.pessoas ?? 0, gasto: o?.gasto, orc: o?.orcamento }, sem: { c: sem.c, t: sem.t, tor: sem.imp.torcida.torcedores, grupos: sem.imp.torcida.grupos.length }, dif: dif / (com.px.length / 4), baixa, q0 };
+        return { ondaImp, est0, tvTor, tvGrupos, com: { c: com.c, t: com.t, imp: com.imp, perto: tq?.perto ?? 0, pessoas: tq?.pessoas ?? 0, gasto: o?.gasto, orc: o?.orcamento }, sem: { c: sem.c, t: sem.t, tor: sem.imp.torcida.torcedores, grupos: sem.imp.torcida.grupos.length }, dif: dif / (com.px.length / 4), baixa, q0 };
       });
       const media = nome === 'celular';
+      meta(`A onda da reação no ramo do impostor (${nome}): os uniforms do estado do programa dele são os mesmos objetos do quadro`,
+        im.ondaImp.ligado ? `${im.ondaImp.nomes} uniforms: ${im.ondaImp.mesmos ? 'os mesmos' : 'DIFERENTES'}` : 'o programa do impostor não ligou', 'ligado; os mesmos', im.ondaImp.ligado && im.ondaImp.mesmos);
       meta(`Impostor octaédrico (${nome}): assado em fatias, na TV ${media ? 'da Média nenhum (o programa de hoje)' : 'da Alta, sim'}; de perto o impostor com o mesmo custo (chamadas e triângulos) e outra imagem; a Baixa no quadro SDF; a densidade real perto no orçamento`,
         `pronto ${im.est0?.pronto ? 'sim' : 'NÃO'}${im.est0?.falhou ? ' (FALHOU)' : ''} (${Math.round(im.est0?.ms ?? 0)} ms de assamento, ${im.est0?.spec ? `${im.est0.spec.N}×${im.est0.spec.N} fotos de ${im.est0.spec.celula.join('×')}` : 'sem atlas'}, ${im.est0?.mapeados} torcedores nos blocos); TV: ${im.tvTor} em impostor, ${im.tvGrupos} grupos no programa dele; perto: ${im.com.imp.blocos} blocos, ${im.com.imp.torcida.torcedores} torcedores, grupos [${im.com.imp.torcida.grupos.join(', ')}], ${im.com.c}/${im.com.t} × sem ${im.sem.c}/${im.sem.t} (chamadas/triângulos), ${(100 * im.dif).toFixed(1)}% da imagem muda; densidade real: ${im.com.pessoas} pessoas (${im.com.perto} na malha perto, ${im.com.gasto?.perto} triângulos no gasto); Baixa: ${im.baixa.tor} em impostor, ${im.baixa.grupos} grupos, ${im.baixa.perto} perto`,
         `pronto; TV ${media ? '0 e 0' : '≥ 1'}; perto ≥ 1 bloco, ≥ 100 torcedores, ≥ 1 grupo, chamadas e triângulos iguais, ≥ 2% muda; perto = 2/pessoa; Baixa 0, 0, 0`,

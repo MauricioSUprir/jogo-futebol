@@ -16,6 +16,11 @@
 // 'chute', grupo, forca} numa fila que o som consome.
 // A festa (festa.js: cantos, batucada, vaia, sinalizadores, bandeirão e ola) anda junto: est.festa recebe os mesmos
 // eventos e o mesmo passo; est.ultimaReacao (t do último "uuuh"/palmas/vaia/gol) abaixa o leito na mixagem.
+// A ONDA da reação (item 47 da FILA): os níveis mudam no instante do lance, mas cada torcedor só os vê quando a reação
+// CHEGA nele — ela nasce no lance (o gol, a chance) e anda pelo estádio. Aqui mora o estado (est.ondas: até
+// EMOCAO.onda.vagas lances em andamento, cada um com a origem, o t e os níveis de ANTES dele) e os uniforms
+// (uniformsOnda); a conta de cada torcedor (o atraso pela distância e pela semente) é render/onda-reacao.js, a MESMA no
+// JS e no vertex shader do quadro, do impostor e do torcedor 3D (render/torcedor-pose.js ESTADO_GLSL).
 import { criarFesta, zerarFesta, festaEvento, festaPasso, festaReacao } from './festa.js';
 
 export const EMOCAO = {
@@ -38,7 +43,31 @@ export const EMOCAO = {
   chanceJanela: 2.6,      // s depois do chute em que defesa/trave/fora contam como chance perdida
   chanceDist: 34,         // m do gol: chute mais longe não é "chance"
   maxDisparos: 16,
+  // a onda da reação (item 47; PESQUISA-ESTADIO.md §6.4): quem está perto do lance reage antes. atraso de cada torcedor =
+  // reação (pela semente: o tempo de reação visual, 0,18–0,2 s, até a dúvida de quem vê de longe) + distância ao lance /
+  // vel. vel 100 m/s: a reação de um gol é estímulo direto (a vista e o grito de quem está perto, a 343 m/s), não a ola
+  // combinada vizinho a vizinho (12 m/s, Farkas et al. 2002) — a arquibancada de lá inteira em ~0,8 s na TV, o Estádio
+  // Golaço todo em ~2,0 s (o lugar mais longe a 160 m do gol; o Maracanã 185 m; o Olympiastadion, o mais longe dos
+  // genéricos, 206 m: 2,46 s) — e a onda inteira cabe antes de o laço segurar a comemoração (gol + 149 passos, 2,48 s: o
+  // relógio do estádio para; com 70 m/s e a reação até 0,5 s, 1,6% do Estádio Golaço ficava sem a reação durante a cena:
+  // teste-torcida I8). recupera: depois de a reação chegar, cada um volta ao relógio de todos em 3 s (sem pulo: o tempo
+  // dele anda um pouco mais depressa até alcançar).
+  onda: {
+    vel: 100,             // m/s — a reação andando pelo estádio a partir do lance
+    reacao: [0.18, 0.4],  // s — o tempo de reação de cada torcedor (pela semente)
+    vagas: 3,             // lances em andamento ao mesmo tempo (o chute, a defesa, o rebote)
+    junta: 0.05,          // s — lances do mesmo instante abrem uma onda só (o "antes" é o do 1º)
+    alcance: 210,         // m — a maior distância de um lugar ao lance (quando a onda chegou em todos)
+    recupera: 3,          // s — a volta ao relógio de todos depois de a reação chegar
+  },
 };
+// os lances que abrem uma onda quando mexem nos níveis (os outros — o fim do jogo, as cenas, a substituição — valem para
+// todos no mesmo instante, como antes)
+const TIPOS_ONDA = new Set(['gol', 'chute', 'cabeceio', 'defesa', 'trave', 'fora', 'escanteio', 'tiroDeMeta', 'penaltiMarcado']);
+/** Quanto tempo (s) depois do lance a reação chegou em todos os lugares. */
+export const ONDA_COMPLETA = EMOCAO.onda.reacao[1] + EMOCAO.onda.alcance / EMOCAO.onda.vel;
+/** A idade que os uniforms dão a uma vaga sem onda (lida como "já chegou em todos"; a .w = 0 diz o mesmo). */
+export const ONDA_INATIVA = 1e4;
 
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function suave(e0, e1, x) { const t = clamp((x - e0) / (e1 - e0), 0, 1); return t * t * (3 - 2 * t); }
@@ -57,6 +86,9 @@ export function criarEmocao() {
     contagem: {},         // disparos por tipo (testes e API)
     ultimaReacao: -1e9,   // t do último som de reação (a mixagem abaixa o leito)
     festa: criarFesta(),
+    // a onda da reação: os lances em andamento, o mais novo primeiro — {t0, x, z, antes: Float32Array(8) [excita 0,
+    // excita 1, tensão 0, tensão 1, lamento 0, lamento 1, palmas 0, palmas 1]} (os níveis logo antes do lance)
+    ondas: [],
   };
   est.disparar = (tipo, grupo, forca) => disparar(est, tipo, grupo, forca);
   return est;
@@ -67,6 +99,7 @@ export function zerarEmocao(est) {
   const n = criarEmocao();
   est.agito = n.agito; est.torcida = n.torcida; est.disparos.length = 0; est.chute = null; est.golT = -1e9;
   est.ultimaReacao = -1e9;
+  est.ondas.length = 0;
   zerarFesta(est.festa);
 }
 
@@ -99,11 +132,83 @@ function chancePerdida(est, k, forca, defesa) {
   est.chute = null;
 }
 
+// ------------------------------------------------------------------ a onda da reação (item 47)
+
+// (em float64: a comparação com os níveis de agora tem de ser exata — em float32 o 0,9 de antes já "mudava")
+const _foto = new Float64Array(8);
+/** Os níveis dos dois grupos agora, no formato do "antes" de uma onda. */
+function fotoNiveis(est, out) {
+  const [a, b] = est.torcida;
+  out[0] = a.excita; out[1] = b.excita; out[2] = a.tensao; out[3] = b.tensao;
+  out[4] = a.lamento; out[5] = b.lamento; out[6] = a.palmas; out[7] = b.palmas;
+  return out;
+}
+function mudouNiveis(est, foto) {
+  const [a, b] = est.torcida;
+  return a.excita !== foto[0] || b.excita !== foto[1] || a.tensao !== foto[2] || b.tensao !== foto[3]
+    || a.lamento !== foto[4] || b.lamento !== foto[5] || a.palmas !== foto[6] || b.palmas !== foto[7];
+}
+
+/**
+ * Tira as ondas que ninguém mais consulta: a partir da 1ª que já chegou em todos (ONDA_COMPLETA), as mais velhas — o
+ * torcedor que ainda não viu a mais nova já viu essa, então o "antes" dela nunca mais vale. A mais nova fica até todos
+ * voltarem ao relógio de todos (+ recupera).
+ */
+function podarOndas(est, t) {
+  const l = est.ondas;
+  for (let i = 0; i < l.length; i++) {
+    const a = t - l[i].t0;
+    if (a >= ONDA_COMPLETA) { l.length = i === 0 && a < ONDA_COMPLETA + EMOCAO.onda.recupera ? 1 : i; return; }
+  }
+}
+
+/** Um lance mexeu nos níveis: abre uma onda com a origem (x, z), no instante t, com os níveis de antes (foto). */
+function abrirOnda(est, t, x, z, foto) {
+  const O = EMOCAO.onda, l = est.ondas;
+  podarOndas(est, t);
+  // lances do mesmo instante (o chute e a defesa no mesmo passo, a trave e a saída): uma onda só, com o "antes" do 1º
+  if (l.length && Math.abs(t - l[0].t0) <= O.junta) return;
+  // sem vaga: sai a mais velha (3 lances em menos de ONDA_COMPLETA s; quem ainda não a tinha visto pula para a seguinte)
+  const w = l.length >= O.vagas ? l.pop() : { t0: 0, x: 0, z: 0, antes: new Float32Array(8) };
+  w.t0 = t; w.x = x; w.z = z;
+  w.antes.set(foto);
+  l.unshift(w);
+}
+
+/**
+ * Os uniforms da onda (torcida.js: o quadro, o impostor e o torcedor 3D usam os MESMOS objetos): O = Float32Array(4 ·
+ * vagas) — por vaga (x, z, idade = t − t0, 1) do lance, a mais nova primeiro; vaga vazia (0, 0, ONDA_INATIVA, 0) —; A =
+ * Float32Array(8 · vagas): os níveis de antes de cada uma ([excita 0, excita 1, tensão 0, tensão 1], [lamento 0, lamento
+ * 1, palmas 0, palmas 1]). t = o relógio do estádio (padrão est.t). Só lê o estado.
+ */
+export function uniformsOnda(est, O, A, t = est.t) {
+  const l = est.ondas ?? [];
+  for (let k = 0; k < EMOCAO.onda.vagas; k++) {
+    const w = l[k];
+    if (w) {
+      O[4 * k] = w.x; O[4 * k + 1] = w.z; O[4 * k + 2] = Math.min(ONDA_INATIVA, Math.max(0, t - w.t0)); O[4 * k + 3] = 1;
+      for (let i = 0; i < 8; i++) A[8 * k + i] = w.antes[i];
+    } else {
+      O[4 * k] = 0; O[4 * k + 1] = 0; O[4 * k + 2] = ONDA_INATIVA; O[4 * k + 3] = 0;
+      for (let i = 0; i < 8; i++) A[8 * k + i] = 0;
+    }
+  }
+  return { O, A };
+}
+
 /**
  * Um evento da simulação (o mesmo objeto de m.eventos) ou do desenho ({tipo: 'redeImpacto', vel}).
  * ctx = {t, timeDe(id) → 0|1|null, bola {x, y, z}, ataca {0: ±1, 1: ±1}, tick0Tempo?, tick?}.
+ * Um lance (TIPOS_ONDA) que mexe nos níveis abre uma ONDA com a origem na bola: a reação nasce ali.
  */
 export function emocaoEvento(est, ev, ctx) {
+  const onda = TIPOS_ONDA.has(ev.tipo) && !!ctx.bola;
+  if (onda) fotoNiveis(est, _foto);
+  eventoNiveis(est, ev, ctx);
+  if (onda && mudouNiveis(est, _foto)) abrirOnda(est, ctx.t, ctx.bola.x, ctx.bola.z, _foto);
+}
+
+function eventoNiveis(est, ev, ctx) {
   const t = ctx.t;
   est.t = t;
   const tipo = ev.tipo;
@@ -234,6 +339,7 @@ export function emocaoEvento(est, ev, ctx) {
  */
 export function emocaoPasso(est, ctx, dt) {
   est.t = ctx.t;
+  if (est.ondas.length) podarOndas(est, est.t);
   if (!(dt > 0)) return;
   const E = EMOCAO;
   // alvo do murmúrio: a bola perto do gol que o time com a bola ataca

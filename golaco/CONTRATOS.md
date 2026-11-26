@@ -442,6 +442,46 @@ em `config.js` é `ESTADIO` (túnel e bancos: geometria que outras frentes podem
 - **Testes**: `tools/teste-som-jogo.mjs` (navegador, CI: M1–M11), `tools/teste-torcida.mjs` (Node: seções E e F),
   `tools/teste-estadio.mjs` (itens 11 lado de cá e bancos fora da TV, 12 festa), `tools/teste-desempenho-celular.mjs` (os sinalizadores
   acesos contam à parte na comparação partida × treino).
+## A torcida reage em onda no gol e na chance (item 47, categoria I; contrato)
+Pedido (FILA item 47): "a torcida reagir em onda no gol e na chance". Pesquisa em `PESQUISA-ESTADIO.md` §6.4. **Só desenho**
+(`render/` fica fora do fecho: `fecho-hash --diff` 0, `hash-igual` e `hash-partida` IGUAIS). Os níveis do ânimo continuam
+mudando no instante do lance (o som igual); cada torcedor só os VÊ quando a reação chega nele.
+- **`emocao.js`** (o estado): `EMOCAO.onda = {vel 100 m/s, reacao [0,18, 0,4] s, vagas 3, junta 0,05 s, alcance 210 m,
+  recupera 3 s}` (a onda do gol inteira antes de o laço segurar a comemoração no gol + 149 passos: o lugar mais longe, 206 m
+  no Olympiastadion, aos 2,46 s); `est.ondas` (o mais novo primeiro: `{t0, x, z, antes: Float32Array(8)}` — os níveis LOGO ANTES do lance,
+  [excita 0, excita 1, tensão 0, tensão 1, lamento 0, lamento 1, palmas 0, palmas 1]); `emocaoEvento` tira a foto dos níveis
+  (em float64), roda o evento (`eventoNiveis`, o corpo de antes) e, se um LANCE (`gol`, `chute`, `cabeceio`, `defesa`,
+  `trave`, `fora`, `escanteio`, `tiroDeMeta`, `penaltiMarcado`) mexeu em algum nível, abre uma onda com a origem na bola
+  (`ctx.bola`); lances do mesmo instante (≤ `junta`) = uma onda (o "antes" do 1º); sem vaga sai a mais velha. Os outros
+  eventos (o fim do jogo, as cenas do cartão e do fim, a substituição) valem para todos no mesmo instante, como antes.
+  `podarOndas` (no `emocaoPasso`): a partir da 1ª onda que já chegou em todos (`ONDA_COMPLETA` = reação máxima + alcance /
+  vel = 2,5 s) as mais velhas saem; a mais nova fica até + `recupera`. `uniformsOnda(est, O, A, t = est.t)` → O =
+  Float32Array(4 · vagas) com (x, z, idade, 1) por onda e (0, 0, `ONDA_INATIVA` 1e4, 0) na vaga vazia; A = Float32Array(8 ·
+  vagas) com os níveis de antes. `zerarEmocao` limpa as ondas.
+- **`onda-reacao.js`** (PURO; a conta de cada torcedor): `reacaoTorcedor(h, h2)` (0,18 + 0,22 · fract(3,17·h + 11,3·h2) s),
+  `atrasoOnda(x, z, ox, oz, r)` (r + a distância no chão / vel), `niveisPelaOnda(x, z, h, h2, time, n, O, A, out)` e
+  `ONDA_GLSL` (`uniform vec4 uOndaO[3]`, `uOndaA[6]`, `vec4 torcidaOnda(xz, h, h2, time, n)`): a MESMA conta — a onda mais
+  nova chegou (idade ≥ atraso, ou a vaga inativa): os níveis de agora com o atraso dele, os que só caem (excita, lamento,
+  palmas) × e^(atraso'/τ) do `EMOCAO` (`golCai`, `lamentoTau`, `palmasTau`) com teto 1 e atraso' = atraso · (1 − (idade −
+  atraso) / recupera) até 0; a tensão a de agora; não chegou: os níveis de antes da mais nova que ainda não chegou nele (a
+  seguinte já chegou ou é a última). Uniforms zerados (o padrão da GPU) = nenhuma onda.
+- **`torcedor-pose.js`**: o `ESTADO_GLSL` inclui `ONDA_GLSL` e passa os níveis do time por `torcidaOnda(lugar.xz, h, h2, time,
+  …)` ANTES da regra da pose (`torcidaPose`) — vale no quadro, no ramo do impostor e no torcedor 3D (a mesma
+  `torcedorEstado`); a ola e o bandeirão seguem por cima (debaixo do pano aberto: braços em V, sem pular). `estadoTorcedor(…,
+  u)` aceita `u.ondaO`/`u.ondaA` (sem eles, nenhuma onda). `NOMES_ESTADO` (os uniforms que o `ESTADO_GLSL` declara, lidos do
+  texto) e `uniformsDoEstado(U)` (os MESMOS objetos): material novo com o `ESTADO_GLSL` leva todos por ela.
+- **`torcida.js`**: `uOndaO` (as vagas vazias: idade 1e4, w 0) e `uOndaA` nos uniforms (os mesmos objetos no programa do
+  impostor e no torcedor 3D); `atualizar(t, emocao, …)` chama `uniformsOnda(emocao, …)` no relógio do estádio (o do ânimo:
+  a pausa, o replay e as cenas seguram ou andam junto). **`torcedor3d.js`**: `...uniformsDoEstado(U)` no lugar da lista à mão.
+- **Testes**: `teste-torcida` I1–I8 (a torcida de verdade, a mesma conta do shader: perto do gol antes, ninguém no mesmo
+  quadro, ninguém parado, a chance inteira lá longe, quem sofreu não comemora, o bandeirão, as vagas, os uniforms zerados, o
+  `ESTADO_GLSL` e o torcedor 3D com todos os uniforms, a onda do gol inteira antes do gol + 149 no Golaço, no Maracanã e no
+  Olympiastadion; I1–I3 e I6 reprovam sem a onda); `teste-estadio` 9b (GPU = JS com 3
+  lances em andamento, ≥ 100 lugares em cada caso), 4 (na página a onda do gol nasce no gol e a idade anda) e 14b (os uniforms
+  do estado são os mesmos objetos no quadro, no torcedor 3D e no impostor). O `?gfx=antigo` (teste-gramado G6 e
+  teste-graficos-pagina P3) confere o texto da main FORA do `ESTADO_GLSL` (trocado por um marcador: a pose é a mesma conta nas
+  três representações, não é do item 45).
+
 ## Replay — gol, impedimento com a linha e "Replay" da pausa (contrato)
 Pedidos do dono de 11/10 ("o replay não funciona"; "quando o jogo parar por impedimento, no replay vai mostrar a linha").
 Pesquisa: `PESQUISA-ESTADIO.md` §6. **Só desenho: o replay LÊ um anel do que foi desenhado e a simulação fica PARADA
