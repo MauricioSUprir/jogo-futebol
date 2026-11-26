@@ -172,9 +172,14 @@ Contas (puras, em Node, `teste-torcida` I; a GPU = JS no `teste-estadio` 9b com 
 
 O que fica igual: a ola (a torcida calma), o bandeirão, a regra da pose, as cenas (o fim do jogo, o cartão, a substituição:
 no mesmo instante para todos, como antes — não são um lance no campo), o som (o grito, o "uuuh" e as palmas tocam no
-instante do lance: a mixagem lê o agito, não a onda). Custo: nenhuma chamada nem atributo a mais; CPU +~0,06 µs por quadro
-(os uniforms) e +~0,04 µs por lance (a foto dos níveis); no vertex shader, por vértice, uma `fract`, 1–3 distâncias e 3
-`exp` (só para quem a onda mais nova já alcançou). Só desenho: `fecho-hash` 0, `hash-igual` e `hash-partida` IGUAIS.
+instante do lance: a mixagem lê o agito, não a onda). Custo: nenhuma chamada nem atributo a mais (TV do celular Média 25
+chamadas e 80.840 triângulos, do PC Alta 25 e 167.692, iguais à main); CPU +~0,06 µs por quadro (os uniforms) e +~0,04 µs
+por lance (a foto dos níveis), e a CPU do quadro pareada com a main (`teste-graficos-pagina` P, CPU 4×) +0,70 ms com a
+tolerância de 1,0 (a main contra ela mesma já deu +0,70); no vertex shader, por vértice, uma `fract`, 1–3 distâncias e até 3
+`exp` (só para quem a onda mais nova já alcançou) — o desenho da torcida no SwiftShader com 3 lances em andamento, o quadro
+com × sem a torcida, intercalado com a main: celular 112/93 ms (main) × 91/103 ms, PC 117/176 × 134/148 ms (dentro do ruído:
+o quadro da torcida é limitado pelos pixels, não pelos vértices). Download inicial +~14 KB (folga 442 → 428 KB). Só desenho:
+`fecho-hash` 0, `hash-igual --ref origin/main` e `hash-partida` IGUAIS.
 
 ## 7. Tela limpa (11/10): HUD mínimo e linha de impedimento só no apito (`css/estilo.css`, `js/hud.js`, `js/entrada.js`, `js/render/*`)
 
