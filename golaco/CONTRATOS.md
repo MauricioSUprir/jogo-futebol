@@ -6791,7 +6791,7 @@ dono" da `FILA.md` (o item 46). **Só desenho**: `fecho-hash --diff` 0 (o `confi
 chão aberto do estádio, no chão e a 1,0/1,8 m, um árbitro independente anda o raio até o sol pelo sólido do jogo
 (`solidoEm(x, y, z, 0, false)`; as peças finas pela peça exata do desenho; a coluna fechada acima da borda de fora da cobertura do
 Maracanã, a folga da câmera, ignorada) — a máscara diz o mesmo longe da borda (> 0,3 m) em ≤ 0,3% de cada estádio (o Golaço, o
-Maracanã, 11 fixos — um de cada peça — e um a cada 6 da base: 31 estádios, 26 mil pontos, 0 discordância); S1b a amostra com
+Maracanã, 11 fixos — um de cada peça — e um a cada 6 da base: 29 estádios, 26 100 pontos, 0 discordância); S1b a amostra com
 sombra de verdade (≥ 5 estádios com ≥ 25% do campo na sombra); S1c o Golaço com o campo 99,6% ao sol (o painel da torre do canto
 −x de cá); S2 sem cobertura, ≥ 95% do campo ao sol; S3 um sol só; S4 a leitura (bilinear + decodificação, sem degrau na borda,
 fora da caixa e a vazia ao sol); S5 o GLSL (o `fwidth` só no topo, nada de derivada nas funções, a luz 0, a instância e o lote);

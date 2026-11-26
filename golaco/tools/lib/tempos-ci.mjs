@@ -95,7 +95,7 @@ export const TEMPOS_NODE = {
   'teste-identidade.mjs': 1,
   'teste-estadio-forma.mjs': 1,
   'teste-estadio-generico.mjs': 90, // item 69: a grade das cadeiras nos lugares (+~0,15 s por estádio)
-  'teste-sombra-estadio.mjs': 20, // item 46 (medido: ~14 s aqui sozinho; 31 estádios × 600 pontos com o raio até o sol)
+  'teste-sombra-estadio.mjs': 20, // item 46 (medido: ~25 s aqui com outro teste rodando; 29 estádios × 900 pontos com o raio até o sol)
   'teste-cadeiras.mjs': 30, // item 69 (estimado: ~20 s aqui sozinho; as 104 genéricas)
   'teste-cadeiras-estadios.mjs': 40, // item 69, PR 4 (medido: 33 s aqui com 3 linhas de execução — ocupa 3 vagas; ~70 s numa só)
   'teste-corrida-cobranca.mjs': 40, // item 70 P1 (medido: ~15 s aqui com outro processo; 01/11, + o C11 com o canhão de 75 cobradores: ~19 s) (01/11, P2: + o canhão de estilos, 68 cobranças)

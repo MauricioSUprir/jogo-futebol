@@ -1671,8 +1671,33 @@ abaixo). O que não entrou: o sol que anda durante a partida (o sol do jogo é f
   sombra no gramado (o raio sobe 1,42 m por metro de z e 1,76 por metro de x, e o degrau mais íngreme sobe ~0,7) — só a frente em
   pé delas (uma faixa de ~1 m no pé), as placas (0,5–0,9 m) e as peças finas; com cobertura, a sombra entra no campo pelo lado de
   cá e pelo fundo −x: de 0% (o Estádio Golaço: só o painel da torre do canto −x de cá, perto da bandeirinha, 0,4% do campo) a
-  77% do campo (o San Siro); nos 31 estádios da amostra do teste, 13 com ≥ 25% do campo na sombra;
+  77% do campo (o San Siro); nos 29 estádios da amostra do teste, 13 com ≥ 25% do campo na sombra;
 - a câmera de TV fica do lado de cá, de costas para o sol: a sombra cai no lado de cá e no fundo −x, ao pé da tela — como nas
   transmissões de tarde em que o sol vem de trás da câmera principal;
 - a sombra de cada jogador aponta para (+x, −z), a mesma direção da borda da sombra do estádio (um sol só: o `SOL_DIA` lido pelo
   `render/cena.js` e o mesmo `SOLD` das plantas).
+
+### 20.1 O resultado: antes → depois
+Celular 844×390, dpr 2, Média, de dia, a câmera e o tick iguais (semente 7, o relógio parado no passo 90); "antes" = a main
+`94fe1412`, "depois" = o item 46; a luminância (0–255) da tela nos mesmos pontos do chão (a grade de 1 m, longe da borda da
+máscara: |d| > 1,2 m).
+
+| medida | antes (main) | depois |
+|---|---|---|
+| Allianz Arena (TV): o gramado que a máscara diz na sombra (1795 pontos) | 120,2 | 50,6 (× 0,421) |
+| Allianz Arena: o gramado ao sol (1148 pontos) | 123,1 | 123,1 (× 1,000) |
+| Estádio Golaço, canto −x de cá: a sombra do painel da torre | 136,1 | 60,7 (× 0,446) |
+| Estádio Golaço: o gramado ao sol em volta | 116,2 | 116,2 (× 1,000) |
+| o mesmo quadro com a força 1 ÷ 0 (`teste-estadio` 16b–16d, Allianz): o gramado na sombra / ao sol | 1 / 1 | 0,422 / 1,000 |
+| os jogadores (o peito) na sombra / ao sol | 1 / 1 | 0,637 / 1,000 |
+| a sombra do jogador DENTRO da do estádio ÷ o chão ao lado (sem a do estádio: 0,500) | 0,50 | 1,11 (não dobra) |
+| de noite: a diferença para o quadro sem a sombra | 0 | 0,00 |
+| chamadas de desenho / triângulos (Golaço, TV) | 26 / 91 884 | 26 / 91 884 |
+| texturas na GPU | 15 | 16 (a máscara, ~110 KB) |
+| o quadro no SwiftShader com a leitura de 1 px (espera a GPU; 2 cargas × 15 quadros, mediana): Golaço / Allianz | 597,2 / 542,9 ms | 597,8 / 504,8 ms (no ruído) |
+| a máscara em Node (os 3 mais pesados da amostra, a menor de 3) / a maior fatia | — | 56–117 ms / ≤ 6 ms |
+| download inicial (a folga até os 4 MB, `teste-carga`) | 442,1 KB | 392,1 KB (−50 KB: os dois módulos novos) |
+
+O árbitro (o raio até o sol pelo sólido do jogo) contra a máscara: 29 estádios, 26 100 pontos no chão e a 1,0/1,8 m, 0
+discordância longe da borda (> 0,3 m) e 97% de concordância de 0,1 a 0,3 m dela. Com o `?sombra=0` o quadro é o da main nos
+mesmos pontos (os que mudam são os que o desenho interpolado entre dois passos e a torcida no relógio de cada carga mexem).
