@@ -27,7 +27,7 @@ export function AbasGrupo({
     sorteado ? { href: `${base}/mensagens`, rotulo: "Mensagens anônimas" } : null,
     { href: `${base}/enquetes`, rotulo: "Enquetes" },
     { href: `${base}/jogos`, rotulo: "Jogos" },
-    aoVivo || (admin && sorteado) ? { href: `${base}/ao-vivo/participar`, rotulo: aoVivo ? "Ao vivo agora" : "Ao vivo" } : null,
+    aoVivo || sorteado ? { href: `${base}/ao-vivo/participar`, rotulo: aoVivo ? "Ao vivo agora" : "Ao vivo" } : null,
     albumAberto ? { href: `${base}/album`, rotulo: "Álbum" } : null,
     admin ? { href: `${base}/admin`, rotulo: "Organizar" } : null,
   ].filter(Boolean) as { href: string; rotulo: string; exato?: boolean }[];

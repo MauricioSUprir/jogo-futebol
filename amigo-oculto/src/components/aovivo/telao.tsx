@@ -36,6 +36,7 @@ import {
   encerrarAoVivo,
   iniciarAoVivo,
   proximoAoVivo,
+  revelarMeuAmigo,
   revelarPorParticipante,
   temporizadorAoVivo,
 } from "@/lib/acoes/aovivo";
@@ -49,11 +50,13 @@ type Evento = { nome: string; tema: string; status: "open" | "drawn" | "finished
 
 export function Telao({
   eventoId,
+  euId,
   evento,
   pessoas,
   inicial,
 }: {
   eventoId: string;
+  euId: string;
   evento: Evento;
   pessoas: PessoaAoVivo[];
   inicial: EstadoAoVivo;
@@ -68,6 +71,7 @@ export function Telao({
   const [sorteando, setSorteando] = useState(false);
   const [confirmarPular, setConfirmarPular] = useState(false);
   const [confirmarFim, setConfirmarFim] = useState(false);
+  const [confirmarMeu, setConfirmarMeu] = useState(false);
   const [telaCheia, setTelaCheia] = useState(false);
   const [pendente, iniciar] = useTransition();
   const confete = useRef<ConfeteHandle>(null);
@@ -363,7 +367,11 @@ export function Telao({
                     ) : null}
 
                     <div className="mt-2 flex flex-wrap justify-center gap-3">
-                      {!revelacaoAtual ? (
+                      {!revelacaoAtual && atual.id === euId ? (
+                        <Botao variante="ouro" tamanho="g" brilho disabled={pendente} onClick={() => setConfirmarMeu(true)}>
+                          <Wand2 className="size-5" aria-hidden /> Revelar o meu par
+                        </Botao>
+                      ) : !revelacaoAtual ? (
                         <Botao
                           variante="ouro"
                           tamanho="g"
@@ -378,7 +386,7 @@ export function Telao({
                         <SkipForward className="size-5" aria-hidden /> Próximo
                       </Botao>
                     </div>
-                    {!revelacaoAtual && !autorizado ? (
+                    {!revelacaoAtual && !autorizado && atual.id !== euId ? (
                       <p className="text-[0.7em] text-suave">
                         {atual.nome.split(" ")[0]} não autorizou o organizador a revelar: a revelação é pelo celular.
                       </p>
@@ -504,6 +512,23 @@ export function Telao({
         </Dialogo>
 
         <Dialogo
+          aberto={confirmarMeu}
+          aoFechar={() => setConfirmarMeu(false)}
+          titulo="Revelar o seu par no telão?"
+          descricao="É a sua vez: todo mundo vai ver quem você tirou."
+          className="text-base"
+        >
+          <div className="flex flex-wrap justify-end gap-2">
+            <Botao variante="contorno" onClick={() => setConfirmarMeu(false)}>
+              Ainda não
+            </Botao>
+            <Botao variante="ouro" autoFocus carregando={pendente} onClick={() => executar(() => revelarMeuAmigo(eventoId), () => setConfirmarMeu(false))}>
+              <Sparkles className="size-4" aria-hidden /> Revelar
+            </Botao>
+          </div>
+        </Dialogo>
+
+        <Dialogo
           aberto={confirmarFim}
           aoFechar={() => setConfirmarFim(false)}
           titulo="Encerrar a revelação?"
@@ -589,7 +614,7 @@ function Configurar({
           <label
             key={m.id}
             className={cn(
-              "vidro-forte flex cursor-pointer items-start gap-4 rounded-[1.5rem] p-5 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ouro/50",
+              "vidro-forte relative flex cursor-pointer items-start gap-4 rounded-[1.5rem] p-5 transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-ouro/50",
               modo === m.id && "ring-2 ring-ouro",
             )}
           >

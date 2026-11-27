@@ -316,7 +316,7 @@ function NovaPergunta({ eventoId }: { eventoId: string }) {
           <legend className="mb-1 text-sm font-semibold">Opções (marque a certa)</legend>
           {opcoes.map((o, i) => (
             <div key={i} className="flex items-center gap-2">
-              <label className="inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-borda has-[:checked]:border-esmeralda has-[:checked]:bg-esmeralda has-[:checked]:text-white">
+              <label className="relative inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-borda has-[:checked]:border-esmeralda has-[:checked]:bg-esmeralda has-[:checked]:text-white">
                 <input
                   type="radio"
                   name="certa"

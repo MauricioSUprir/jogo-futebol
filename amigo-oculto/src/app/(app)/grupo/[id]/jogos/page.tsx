@@ -85,7 +85,7 @@ export default async function CentralDeJogos({ params }: { params: Promise<{ id:
       titulo: "Quiz dos participantes",
       descricao: "Cada um cria perguntas sobre si. Quem conhece melhor a turma?",
       icone: Brain,
-      estado: paraResponder ? <Selo cor="t1">{paraResponder} para responder</Selo> : perguntas.length ? <Selo>{perguntas.length} perguntas</Selo> : null,
+      estado: paraResponder ? <Selo cor="t1">{paraResponder} para responder</Selo> : perguntas.length ? <Selo>{perguntas.length} pergunta{perguntas.length === 1 ? "" : "s"}</Selo> : null,
       destaque: paraResponder > 0,
     },
     {

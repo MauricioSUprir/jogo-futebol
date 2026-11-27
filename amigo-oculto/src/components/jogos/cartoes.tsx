@@ -236,7 +236,7 @@ function CriarCartao({
             <legend className="mb-2 text-sm font-semibold">Modelo</legend>
             <div className="rolagem-fina -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible">
               {MODELOS.map((m) => (
-                <label key={m} className="flex w-24 shrink-0 cursor-pointer flex-col items-center gap-1.5 sm:w-auto">
+                <label key={m} className="relative flex w-24 shrink-0 cursor-pointer flex-col items-center gap-1.5 sm:w-auto">
                   <input type="radio" name="modelo" value={m} checked={modelo === m} onChange={() => setModelo(m)} className="peer sr-only" />
                   <span className="block w-full rounded-[1.4rem] ring-offset-2 ring-offset-transparent transition peer-checked:ring-4 peer-checked:ring-[color-mix(in_oklab,var(--t1)_60%,transparent)] peer-focus-visible:ring-4 peer-focus-visible:ring-ouro">
                     <CartaoVirtual compacto modelo={m} texto="" />
@@ -326,7 +326,7 @@ function OpcaoAssinatura({
   return (
     <label
       className={cn(
-        "vidro flex min-h-16 cursor-pointer items-start gap-3 rounded-2xl p-3 transition",
+        "vidro relative flex min-h-16 cursor-pointer items-start gap-3 rounded-2xl p-3 transition",
         marcado && "ring-2 ring-[color-mix(in_oklab,var(--t1)_55%,transparent)]",
         desabilitado && "cursor-not-allowed opacity-60",
       )}

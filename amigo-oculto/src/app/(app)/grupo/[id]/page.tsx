@@ -290,14 +290,15 @@ export default async function VisaoGeral({ params }: { params: Promise<{ id: str
 
 function Info2({ icone, rotulo, valor }: { icone: React.ReactNode; rotulo: string; valor: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3">
-      <span className="mt-0.5 inline-flex size-8 shrink-0 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--t1)_10%,transparent)] text-t1">
-        {icone}
-      </span>
-      <div className="min-w-0">
-        <dt className="text-xs font-semibold uppercase tracking-wider text-suave">{rotulo}</dt>
-        <dd className="font-medium">{valor}</dd>
-      </div>
+    // dt e dd filhos diretos do div (estrutura válida de <dl>); o ícone fica dentro do dt
+    <div className="relative min-w-0 pl-11">
+      <dt className="text-xs font-semibold uppercase tracking-wider text-suave">
+        <span className="absolute left-0 top-0.5 inline-flex size-8 items-center justify-center rounded-xl bg-[color-mix(in_oklab,var(--t1)_10%,transparent)] text-t1">
+          {icone}
+        </span>
+        {rotulo}
+      </dt>
+      <dd className="font-medium">{valor}</dd>
     </div>
   );
 }

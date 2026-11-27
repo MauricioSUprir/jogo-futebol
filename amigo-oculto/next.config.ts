@@ -28,6 +28,8 @@ const config: NextConfig = {
   // o servidor de desenvolvimento usa outra pasta (NEXT_DIST_DIR=.next-dev) para o build e o typegen não brigarem com ele
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Metadados (o <title>) sempre junto com a página, sem streaming: leitores de tela anunciam o título certo ao navegar.
+  htmlLimitedBots: /.*/,
   outputFileTracingRoot: raiz,
   turbopack: { root: raiz },
   experimental: { serverActions: { bodySizeLimit: "2mb" } },

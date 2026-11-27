@@ -1693,3 +1693,28 @@ ajustáveis (não recomendação médica); sequências só motivacionais (perder
   RAIZ, o do CreateFlow). Docker Hub dá 429 nesta máquina: no Dockerfile de TESTE troque a base por
   `mirror.gcr.io/library/node:22-bookworm-slim`.
 
+
+## AMIGO OCULTO (`amigo-oculto/`) — plataforma de amigo oculto (Next.js + Supabase, Vercel)
+Pedido do dono (27/11): plataforma completa para criar, gerenciar e realizar amigos ocultos (amigos, famílias,
+condomínios, escolas, empresas), com identidade premium vermelho/esmeralda/dourado/branco, vidro, claro/escuro e temas
+(Natal, Aniversário, Clássico, Corporativo). Stack pedida: Next.js + React + TS + Tailwind + Framer Motion + Lucide +
+Supabase (Postgres, Auth, Storage, Realtime, RLS) + Vercel. Não publicado ainda (a conta Supabase/Vercel ligada à sessão
+é da organização do Gui; publicar só com o aval do dono). Guia completo em `amigo-oculto/README.md`; convenções de código
+em `amigo-oculto/CONVENCOES.md`.
+- **Sigilo do sorteio (regra que vale sempre):** `assignments` sem nenhuma permissão para anon/authenticated; o par só sai
+  por `my_assignment` (o próprio); o sorteio roda no servidor (`src/lib/sorteio/servico.ts`, `crypto.getRandomValues`,
+  viabilidade por emparelhamento) e grava por `commit_draw`, executável só pelo `service_role`, que confere tudo de novo
+  numa transação. Mensagens anônimas, palpites, quiz e cartões só por funções que nunca devolvem o remetente. Nenhuma
+  tela, ação ou função nova pode expor quem tirou quem (nem ao organizador).
+- Banco: `supabase/migrations/` (RLS em tudo, `revoke all` + grants por coluna, funções `security definer` com
+  `search_path = ''`, `public.fail('codigo')` → `src/lib/erros.ts`). Migração nova = arquivo novo; nunca editar as antigas.
+  Embutir `events` a partir de `participants` exige o vínculo explícito `events!participants_event_id_fkey(...)`
+  (as tabelas de junção — palpites, restrições, pares, revelações — criam outros caminhos; sem ele o PostgREST dá PGRST201).
+- Tempo real: sempre pelo `useTempoReal`/`AtualizarAoVivo` (`src/components/sala/ao-vivo.tsx`), que manda o token antes
+  de assinar (sem isso o canal entra como anon e cai em silêncio).
+- Modo escuro sem script: cookie `ao-modo` lido no layout raiz + `prefers-color-scheme` no CSS; `htmlLimitedBots: /.*/`
+  deixa o `<title>` sempre no HTML (sem streaming de metadados).
+- Supabase local: `npm run db:start` (imagens pelo GHCR: o ECR estoura o limite nesta máquina), `npm run db:env`,
+  `npm run demo`. Testes: `npm run typecheck && npm test && npm run test:integracao && npm run build`, depois
+  `npm run start &` e `node tests/e2e/fluxo.mjs` (45 verificações: fluxo inteiro, sigilo na tela/HTML/rede, axe, celular).
+  CI: `.github/workflows/amigo-oculto-testes.yml` em todo PR que mexe em `amigo-oculto/`.

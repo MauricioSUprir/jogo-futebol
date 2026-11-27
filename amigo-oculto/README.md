@@ -10,6 +10,29 @@ Framer Motion · Lucide · Supabase (PostgreSQL, Auth, Storage, Realtime, Row Le
 
 ---
 
+## O que tem
+
+| Área | Onde | O que faz |
+|---|---|---|
+| **Página inicial** | `/` | Logo animado, presentes flutuantes, "Criar amigo oculto", "Entrar em um grupo" com campo de código, como funciona, recursos, perguntas frequentes e **demonstração interativa** (sorteio de verdade no navegador + a revelação, sem salvar nada) |
+| **Contas** | `/entrar`, `/cadastro`, `/recuperar-senha`, `/conta` | E-mail e senha, Google, recuperação de senha, foto, nome, apelido, configurações, histórico; **participação por convite sem cadastro** (sessão anônima segura do Supabase) que vira conta completa depois; exportar dados e excluir conta (LGPD) |
+| **Criar amigo oculto** | `/criar` | Assistente em 6 etapas: nome, descrição, capa, tema (Natal, Aniversário, Clássico, Corporativo), data/hora da revelação, local, valores mínimo e máximo, limite, regras, prazo de entrada, data do sorteio, manual ou agendado, público ou privado, aprovação de novos participantes |
+| **Convite** | `/grupo/:id/compartilhar`, `/convite/:codigo`, `/explorar` | Código exclusivo, QR Code, link e WhatsApp; página do convite para quem ainda não entrou; grupos públicos com busca |
+| **Sala do grupo** | `/grupo/:id` | Capa, contagem regressiva, participantes com fotos, informações e regras, valor dos presentes, mural de avisos, chat em tempo real, enquetes, status do sorteio, confirmação de presença, quem já viu o resultado e quem já comprou |
+| **Sorteio** | painel do organizador | Seguro no servidor (ver acima), restrições ("A não tira B", mútuo), agendado ou manual, refazer com confirmação |
+| **Revelação cinematográfica** | `/grupo/:id/revelacao` | Caixa misteriosa → toque → 3-2-1 → abertura com luz, partículas e confete → nome e foto → lista de desejos, preferências e ideias de presente; som e vibração opcionais, modo de animações reduzidas, resultado protegido de olhares |
+| **Lista de desejos** | `/lista-de-desejos` | Itens com foto, link, preço e ordem; hobbies, interesses, cores, tamanhos, o que não quer ganhar, observações; **sugestões** pelos interesses e pelo orçamento do grupo (197 ideias, regras próprias, sem IA externa) |
+| **Mensagens anônimas** | `/grupo/:id/mensagens`, `/mensagens` | Perguntas, pedidos de informação, pistas, respostas e emojis entre quem tirou e quem foi tirado; notificações; bloquear e denunciar; o remetente nunca aparece, nem na API |
+| **Jogos** | `/grupo/:id/jogos` | Adivinhe quem te tirou, quiz, pistas, enquetes de presentes, roleta de desafios, bingo natalino, cápsula do tempo, mural, cartões virtuais, ranking, conquistas e medalhas — nada revela o sorteio |
+| **Revelação ao vivo** | `/telao/:id` + `/grupo/:id/ao-vivo/participar` | Telão em tela cheia: ordem (corrente ou aleatória), sorteio de quem começa, fotos, temporizador de discurso, pistas, revelação pelo próprio participante (ou pelo organizador com autorização), sons, comemorações, registro de quem revelou e encerramento cinematográfico |
+| **Painel do organizador** | `/grupo/:id/admin` | Participantes, pedidos de entrada, edição, restrições, convites (inclusive por e-mail), sorteio, avisos, lembretes, moderação, estatísticas, revelação ao vivo, encerrar, arquivar e excluir — **sem acesso aos resultados** |
+| **Painel pessoal** | `/painel` | Meus amigos ocultos (ativos, próximos, concluídos), contagens, convites pendentes, lista de desejos, mensagens, notificações, histórico |
+| **Notificações** | `/notificacoes` | Internas em tempo real, por e-mail (Resend, Brevo ou SMTP) e push (Web Push), conforme a autorização de cada pessoa |
+| **Álbum de memórias** | `/grupo/:id/album` | Fotos privadas, revelações autorizadas, mensagens, linha do tempo, cartões, retrospectiva animada e lembrança personalizada em PNG/PDF |
+| **App** | — | Responsivo, claro/escuro, temas por evento, acessível (WCAG AA conferido com axe), instalável (PWA, com página offline) |
+
+---
+
 ## Segurança e privacidade do sorteio
 
 | Garantia | Como |
@@ -98,6 +121,7 @@ O GitHub Actions roda tudo isso em todo PR que mexe em `amigo-oculto/` (`.github
    | `NEXT_PUBLIC_SITE_URL` | `https://seu-dominio` |
    | `CRON_SECRET` | valor aleatório longo (`openssl rand -hex 32`) |
    | `NEXT_PUBLIC_AUTH_GOOGLE` | `1` se ligou o Google |
+   | `CONTATO_EMAIL` | e-mail de contato nas páginas de privacidade e termos |
    | `EMAIL_FROM` + `RESEND_API_KEY` *ou* `BREVO_API_KEY` *ou* `SMTP_URL` | e-mails das notificações (opcional) |
    | `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` | notificações push (`npm run vapid`) |
 

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { atualizarSessao } from "@/lib/supabase/proxy";
 
-const PROTEGIDAS = ["/painel", "/criar", "/conta", "/lista-de-desejos", "/notificacoes", "/mensagens", "/grupo"];
+const PROTEGIDAS = ["/painel", "/criar", "/conta", "/lista-de-desejos", "/notificacoes", "/mensagens", "/grupo", "/telao"];
 
 export async function proxy(request: NextRequest) {
   const { resposta, usuario } = await atualizarSessao(request);

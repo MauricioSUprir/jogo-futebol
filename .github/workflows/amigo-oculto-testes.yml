@@ -53,7 +53,10 @@ jobs:
       - name: Ponta a ponta (criar, convidar, entrar como convidado, sortear, revelar, mensagens anônimas, acessibilidade)
         env:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
-        run: node tests/e2e/fluxo.mjs
+        run: |
+          npm run start > "$RUNNER_TEMP/servidor.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:3100/entrar && break; sleep 1; done
+          node tests/e2e/fluxo.mjs || (tail -50 "$RUNNER_TEMP/servidor.log"; exit 1)
       - name: Capturas do teste
         if: failure()
         uses: actions/upload-artifact@v4

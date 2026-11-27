@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Lock } from "lucide-react";
 import { carregarGrupo } from "@/lib/servidor/grupo";
+import { exigirUsuario } from "@/lib/servidor/sessao";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { pessoasDoGrupo } from "@/components/jogos/dados";
 import { Telao } from "@/components/aovivo/telao";
@@ -8,6 +9,7 @@ import { BotaoLink } from "@/components/ui/botao";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
+  await exigirUsuario(`/telao/${id}`);
   const g = await carregarGrupo(id);
   return { title: `Telão — ${g.evento.name}` };
 }
@@ -15,6 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 /** Telão da revelação ao vivo: tela cheia, fora da casca do app, só para organizadores. */
 export default async function PaginaTelao({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  await exigirUsuario(`/telao/${id}`); // sem login: entra e volta para o telão
   const g = await carregarGrupo(id);
   if (!g.admin) {
     return (
@@ -40,6 +43,7 @@ export default async function PaginaTelao({ params }: { params: Promise<{ id: st
   return (
     <Telao
       eventoId={id}
+      euId={g.eu.id}
       evento={{ nome: g.evento.name, tema: g.evento.theme, status: g.evento.status }}
       pessoas={pessoas.map((x) => ({ id: x.id, nome: x.nome, avatar: x.avatar, autorizaRevelar: x.autorizaRevelar }))}
       inicial={{
