@@ -1,0 +1,51 @@
+{
+  "name": "amigo-oculto",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Amigo Oculto — plataforma digital para criar, sortear e revelar amigos ocultos",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "next build",
+    "start": "next start -p 3100",
+    "typecheck": "next typegen && tsc --noEmit",
+    "test": "vitest run --project unidade",
+    "test:integracao": "vitest run --project integracao",
+    "test:e2e": "node tests/e2e/fluxo.mjs",
+    "db:start": "node scripts/supabase.mjs start",
+    "db:stop": "node scripts/supabase.mjs stop",
+    "db:reset": "node scripts/supabase.mjs db reset",
+    "db:types": "node scripts/gerar-tipos.mjs",
+    "vapid": "node scripts/gerar-vapid.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "5.3.0",
+    "@supabase/ssr": "0.12.7",
+    "@supabase/supabase-js": "2.119.2",
+    "clsx": "^2.1.1",
+    "framer-motion": "14.14.0",
+    "lucide-react": "1.82.0",
+    "next": "16.4.6",
+    "nodemailer": "10.6.1",
+    "qrcode": "1.5.4",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "server-only": "0.0.1",
+    "tailwind-merge": "^3.3.0",
+    "web-push": "4.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/node": "^22",
+    "@types/nodemailer": "^6.4.17",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "tailwindcss": "4.3.5",
+    "typescript": "~5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
