@@ -39,7 +39,7 @@ export function EscolherPalpite({ eventoId, pessoas, atual }: { eventoId: string
   }
 
   return (
-    <fieldset>
+    <fieldset className="min-w-0">
       <legend className="sr-only">Quem você acha que te tirou?</legend>
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {pessoas.map((p, i) => {

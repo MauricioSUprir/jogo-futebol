@@ -126,7 +126,7 @@ export function CapsulaDoTempo({
               className="min-h-36"
               dica={`${texto.length}/2000`}
             />
-            <fieldset className="flex flex-col gap-2" disabled={limite}>
+            <fieldset className="flex min-w-0 flex-col gap-2" disabled={limite}>
               <legend className="mb-1 text-sm font-semibold">Abre em</legend>
               <div className="flex flex-wrap gap-2">
                 {atalhos.map((a) => {

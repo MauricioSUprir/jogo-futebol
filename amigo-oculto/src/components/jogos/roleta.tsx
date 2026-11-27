@@ -1,4 +1,5 @@
 "use client";
+import { Relativo } from "@/components/jogos/relativo";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { animate, motion, useMotionValue } from "framer-motion";
 import { Check, Dices, SkipForward } from "lucide-react";
@@ -12,7 +13,6 @@ import { tocar, vibrar } from "@/components/efeitos/som";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { useTempoReal } from "@/components/sala/ao-vivo";
 import { girarRoleta, resolverDesafio } from "@/lib/acoes/jogos";
-import { relativo } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
 
 type Giro = { id: string; participant_id: string; challenge_index: number; challenge_text: string; status: string; created_at: string };
@@ -147,8 +147,9 @@ export function Roleta({
               {Array.from({ length: total }, (_, i) => {
                 const cor = CORES[i % CORES.length];
                 const meio = (((i + 0.5) / total) * 360 - 90) * (Math.PI / 180);
-                const tx = Math.cos(meio) * r * 0.82;
-                const ty = Math.sin(meio) * r * 0.82;
+                // arredondado: o Math.cos do servidor e o do navegador diferem nas últimas casas (hidratação)
+                const tx = Math.round(Math.cos(meio) * r * 0.82 * 100) / 100;
+                const ty = Math.round(Math.sin(meio) * r * 0.82 * 100) / 100;
                 return (
                   <g key={i}>
                     <path d={fatia(i, total, r)} fill={cor} stroke="rgb(255 255 255 / .55)" strokeWidth="1" />
@@ -160,7 +161,7 @@ export function Roleta({
                       fontSize="11"
                       fontWeight="700"
                       fill={i % CORES.length === 3 ? "#7a1020" : "#fff"}
-                      transform={`rotate(${((i + 0.5) / total) * 360} ${tx} ${ty})`}
+                      transform={`rotate(${Math.round(((i + 0.5) / total) * 3600) / 10} ${tx} ${ty})`}
                     >
                       {i + 1}
                     </text>
@@ -230,7 +231,7 @@ export function Roleta({
                     <div className="min-w-0 flex-1">
                       <p className="text-sm">
                         <strong>{gi.participant_id === euId ? "Você" : (p?.nome ?? "Alguém")}</strong>{" "}
-                        <span className="text-suave">· {relativo(gi.created_at)}</span>
+                        <span className="text-suave">· <Relativo iso={gi.created_at} /></span>
                       </p>
                       <p className="text-sm text-suave">{gi.challenge_text}</p>
                     </div>

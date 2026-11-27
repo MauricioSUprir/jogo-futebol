@@ -40,6 +40,7 @@ import {
   temporizadorAoVivo,
 } from "@/lib/acoes/aovivo";
 import { cn } from "@/lib/cn";
+import { IndicadorAoVivo } from "@/components/sala/ao-vivo";
 import { temporizador, useAgora, useAoVivo, type EstadoAoVivo, type PessoaAoVivo, type Revelacao } from "@/components/aovivo/estado";
 import { ParRevelado, RelogioDiscurso } from "@/components/aovivo/partes";
 import { Encerramento } from "@/components/aovivo/encerramento";
@@ -73,7 +74,7 @@ export function Telao({
   const { avisar } = useAvisos();
   const mapa = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
 
-  const { estado, recarregar } = useAoVivo(eventoId, inicial, {
+  const { estado, recarregar, conexao } = useAoVivo(eventoId, inicial, {
     aoRevelar: (r) => setCelebracao(r),
     aoPista: () => tocar("tique", somRef.current),
   });
@@ -195,6 +196,7 @@ export function Telao({
             <p className="text-[0.65em] font-semibold uppercase tracking-[0.25em] text-ouro-claro">Revelação ao vivo</p>
             <h1 className="truncate font-titulo text-[1.4em] font-semibold leading-tight">{evento.nome}</h1>
           </div>
+          <IndicadorAoVivo estado={conexao} className="hidden text-[0.65em] sm:inline-flex" />
           {sessao?.status === "running" ? (
             <Selo cor="ouro" className="text-[0.7em]">
               {estado.revelacoes.length} de {pessoas.length} revelaram
@@ -581,7 +583,7 @@ function Configurar({
           que ela autorizar você a revelar).
         </p>
       </div>
-      <fieldset className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <fieldset className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
         <legend className="sr-only">Ordem de apresentação</legend>
         {modos.map((m) => (
           <label
@@ -701,8 +703,8 @@ function SorteioInicial({
       <div className="relative aspect-square w-[min(80vmin,34em)]">
         {pessoas.map((p, i) => {
           const a = (i / n) * Math.PI * 2 - Math.PI / 2;
-          const x = 50 + Math.cos(a) * 40;
-          const y = 50 + Math.sin(a) * 40;
+          const x = Math.round((50 + Math.cos(a) * 40) * 100) / 100;
+          const y = Math.round((50 + Math.sin(a) * 40) * 100) / 100;
           const acesa = luz === i;
           return (
             <motion.div

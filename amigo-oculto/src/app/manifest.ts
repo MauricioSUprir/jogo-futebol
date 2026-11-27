@@ -12,7 +12,6 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: "/painel",
     scope: "/",
     display: "standalone",
-    orientation: "portrait",
     background_color: "#fbf7ef",
     theme_color: "#b3172d",
     categories: ["entertainment", "lifestyle", "social"],

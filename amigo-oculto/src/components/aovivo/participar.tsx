@@ -1,4 +1,5 @@
 "use client";
+import { Relativo } from "@/components/jogos/relativo";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -21,9 +22,9 @@ import {
   revelarPorParticipante,
   temporizadorAoVivo,
 } from "@/lib/acoes/aovivo";
-import { relativo } from "@/lib/formatos";
 import { mmss, temporizador, useAgora, useAoVivo, type EstadoAoVivo, type PessoaAoVivo } from "@/components/aovivo/estado";
 import { ParRevelado } from "@/components/aovivo/partes";
+import { IndicadorAoVivo } from "@/components/sala/ao-vivo";
 
 export function ParticiparAoVivo({
   eventoId,
@@ -44,7 +45,7 @@ export function ParticiparAoVivo({
   const confete = useRef<ConfeteHandle>(null);
   const { avisar } = useAvisos();
   const mapa = useMemo(() => new Map(pessoas.map((p) => [p.id, p])), [pessoas]);
-  const { estado, recarregar } = useAoVivo(eventoId, inicial, {
+  const { estado, recarregar, conexao } = useAoVivo(eventoId, inicial, {
     aoRevelar: (r) => {
       tocar("revelar", som);
       if (r.giver_id === euId || r.receiver_id === euId) confete.current?.disparar({ quantidade: 160 });
@@ -271,7 +272,7 @@ export function ParticiparAoVivo({
                 >
                   <ParRevelado de={mapa.get(r.giver_id) ?? { nome: "?", avatar: null }} para={mapa.get(r.receiver_id) ?? { nome: "?", avatar: null }} tamanho={44} />
                   <p className="mt-2 text-center text-xs text-suave">
-                    {r.method === "presenter" ? "Revelado pelo organizador (autorizado)" : "Revelado pela própria pessoa"} · {relativo(r.revealed_at)}
+                    {r.method === "presenter" ? "Revelado pelo organizador (autorizado)" : "Revelado pela própria pessoa"} · <Relativo iso={r.revealed_at} />
                   </p>
                 </motion.li>
               ))}
@@ -283,7 +284,8 @@ export function ParticiparAoVivo({
       ) : null}
 
       {sessao?.status === "running" ? (
-        <p className="text-center text-xs text-suave">
+        <p className="flex flex-wrap items-center justify-center gap-x-1 text-center text-xs text-suave">
+          <IndicadorAoVivo estado={conexao} />
           Participantes: {pessoas.length} · Revelaram: {estado.revelacoes.length}
           {admin ? (
             <>

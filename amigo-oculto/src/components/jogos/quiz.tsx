@@ -312,7 +312,7 @@ function NovaPergunta({ eventoId }: { eventoId: string }) {
           className="min-h-20"
           required
         />
-        <fieldset className="flex flex-col gap-2">
+        <fieldset className="flex min-w-0 flex-col gap-2">
           <legend className="mb-1 text-sm font-semibold">Opções (marque a certa)</legend>
           {opcoes.map((o, i) => (
             <div key={i} className="flex items-center gap-2">

@@ -1,4 +1,6 @@
 "use client";
+import { Relativo } from "@/components/jogos/relativo";
+import { relativo } from "@/lib/formatos";
 import { useRef, useState, useTransition } from "react";
 import { motion } from "framer-motion";
 import { Inbox, Mail, Send, UserRound, VenetianMask } from "lucide-react";
@@ -12,7 +14,6 @@ import { usePreferencias } from "@/components/efeitos/preferencias";
 import { tocar } from "@/components/efeitos/som";
 import { CartaoVirtual, MODELOS, NOMES_MODELOS, type Modelo } from "@/components/jogos/cartao-virtual";
 import { enviarCartao } from "@/lib/acoes/jogos";
-import { relativo } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
 
 export type CartaoRecebido = {
@@ -35,7 +36,7 @@ export type CartaoEnviado = {
   recipient_name: string;
 };
 
-type Visto = { modelo: string; titulo: string | null; texto: string; de: string; para: string; quando: string };
+type Visto = { modelo: string; titulo: string | null; texto: string; de: string; para: string; quando: string; rotulo?: string };
 
 export function Cartoes({
   eventoId,
@@ -104,6 +105,7 @@ export function Cartoes({
                 para: meuNome,
                 quando: c.created_at,
                 novo: !c.read_at,
+                rotulo: `Cartão de ${c.anonymous ? "seu amigo oculto" : (c.sender_name ?? "alguém")}`,
               }))}
               aoAbrir={setVisto}
             />
@@ -135,7 +137,7 @@ export function Cartoes({
         </div>
       ) : null}
 
-      <Dialogo aberto={!!visto} aoFechar={() => setVisto(null)} titulo={visto ? `Cartão para ${visto.para}` : ""} descricao={visto ? relativo(visto.quando) : undefined} largura="max-w-md">
+      <Dialogo aberto={!!visto} aoFechar={() => setVisto(null)} titulo={visto ? (visto.rotulo ?? `Cartão para ${visto.para}`) : ""} descricao={visto ? relativo(visto.quando) : undefined} largura="max-w-md">
         {visto ? (
           <motion.div initial={{ rotateY: -70, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ type: "spring", stiffness: 120, damping: 16 }} style={{ perspective: 800 }}>
             <CartaoVirtual modelo={visto.modelo} titulo={visto.titulo} texto={visto.texto} de={visto.de} para={visto.para} />
@@ -168,7 +170,7 @@ function GradeCartoes({
             <span className="flex flex-wrap items-center gap-1.5 px-1 text-xs text-suave">
               {c.novo ? <Selo cor="rubi">Novo</Selo> : null}
               {c.secreto ? <Selo cor="ouro">Em segredo</Selo> : null}
-              <span className="truncate">Para {c.para} · {relativo(c.quando)}</span>
+              <span className="truncate">Para {c.para} · <Relativo iso={c.quando} /></span>
             </span>
           </button>
         </motion.li>
@@ -230,7 +232,7 @@ function CriarCartao({
       <Confete ref={confete} desligado={menosMovimento} />
       <Cartao forte>
         <form onSubmit={enviar} className="flex flex-col gap-5" noValidate>
-          <fieldset>
+          <fieldset className="min-w-0">
             <legend className="mb-2 text-sm font-semibold">Modelo</legend>
             <div className="rolagem-fina -mx-1 flex gap-3 overflow-x-auto px-1 pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible">
               {MODELOS.map((m) => (
@@ -245,7 +247,7 @@ function CriarCartao({
             </div>
           </fieldset>
 
-          <fieldset className="flex flex-col gap-2">
+          <fieldset className="flex min-w-0 flex-col gap-2">
             <legend className="mb-1 text-sm font-semibold">Assinar como</legend>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <OpcaoAssinatura marcado={!secreto} aoEscolher={() => setSecreto(false)} icone={<UserRound className="size-5" aria-hidden />} titulo={meuNome} texto="Com o seu nome, para qualquer pessoa do grupo." />

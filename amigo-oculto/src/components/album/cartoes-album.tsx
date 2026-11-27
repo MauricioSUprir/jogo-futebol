@@ -1,8 +1,8 @@
 "use client";
+import { Relativo } from "@/components/jogos/relativo";
 import { useState } from "react";
 import { CartaoVirtual } from "@/components/jogos/cartao-virtual";
 import { Dialogo } from "@/components/ui/dialogo";
-import { relativo } from "@/lib/formatos";
 
 type Cartao = { id: string; modelo: string; titulo: string | null; texto: string; de: string; quando: string };
 
@@ -21,7 +21,7 @@ export function CartoesDoAlbum({ cartoes, para }: { cartoes: Cartao[]; para: str
               aria-label={`Abrir cartão de ${c.de}${c.titulo ? `: ${c.titulo}` : ""}`}
             >
               <CartaoVirtual compacto modelo={c.modelo} titulo={c.titulo} texto={c.texto} de={c.de} />
-              <span className="px-1 text-xs text-suave">{relativo(c.quando)}</span>
+              <Relativo iso={c.quando} className="px-1 text-xs text-suave" />
             </button>
           </li>
         ))}

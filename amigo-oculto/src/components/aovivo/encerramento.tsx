@@ -86,7 +86,8 @@ export function Encerramento({
   const pos = new Map(
     pessoas.map((p, i) => {
       const a = (i / Math.max(1, n)) * Math.PI * 2 - Math.PI / 2;
-      return [p.id, { x: 50 + Math.cos(a) * 40, y: 50 + Math.sin(a) * 40 }];
+      // arredondado: servidor e navegador diferem nas últimas casas do Math.cos (hidratação)
+      return [p.id, { x: Math.round((50 + Math.cos(a) * 40) * 100) / 100, y: Math.round((50 + Math.sin(a) * 40) * 100) / 100 }];
     }),
   );
   const tamanho = n <= 8 ? 72 : n <= 16 ? 54 : 40;
