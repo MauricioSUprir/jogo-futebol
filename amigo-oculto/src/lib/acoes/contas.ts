@@ -157,10 +157,13 @@ export async function excluirConta(_: unknown, form: FormData): Promise<Resultad
   const usuario = await usuarioAtual();
   if (!usuario) return { ok: false, erro: "Entre na sua conta." };
   const supabase = await clienteServidor();
-  const { data: meus } = await supabase
+  // "!participants_event_id_fkey": a tabela guesses criou outro caminho participants↔events; sem o nome do vínculo o
+  // PostgREST recusa (PGRST201) e, sem conferir o erro, as regras abaixo eram puladas. Se a leitura falhar, não exclui.
+  const { data: meus, error: erroLeitura } = await supabase
     .from("participants")
-    .select("status, events!inner(status, archived_at, owner_id, name)")
+    .select("status, events!participants_event_id_fkey!inner(status, archived_at, owner_id, name)")
     .eq("user_id", usuario.id);
+  if (erroLeitura) return falha(erroLeitura, "Não foi possível conferir seus grupos agora. Tente de novo.");
   for (const p of meus ?? []) {
     const ev = p.events as unknown as { status: string; archived_at: string | null; owner_id: string | null; name: string };
     if (p.status === "approved" && ev.status === "drawn" && !ev.archived_at) {

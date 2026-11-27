@@ -50,6 +50,7 @@ export const PESOS = {
   desejoPalavras: 22,
   desejoPalavras2: 30,
   desejoEtiqueta: 14,
+  desejoPalavraSolta: 8,
   cor: 5,
   tamanho: 6,
   versatilSemPerfil: 24,
@@ -58,7 +59,7 @@ export const PESOS = {
   orcamentoEncaixe: 12,
   orcamentoPerto: 2,
   semOrcamento: 8,
-  diversidade: 12,
+  diversidade: 10,
 } as const;
 
 const NEGACAO = /\b(nao|nunca|odeia|odeio|detesta|detesto|evita|evito|alergia|alergica|alergico|intolerante|intolerancia|dispensa)\b/;
@@ -214,15 +215,22 @@ export function sugerirPresentes(perfil: PerfilParaSugestao, orcamento: Orcament
       const comuns = [...palavrasIdeia].filter((p) => d.palavras.has(p)).length;
       let p = 0;
       let motivo = "";
-      // palavra em comum só vale como "parecido" quando o assunto principal da ideia é o mesmo do desejo
-      // ("Livro de ficção" não deixa um livro de ciência "parecido", só "combinando")
-      const mesmoAssunto = d.etiquetas.size === 0 || d.etiquetas.has(ideia.etiquetas[0]);
-      if (comuns > 0 && mesmoAssunto) {
-        p = comuns >= 2 ? PESOS.desejoPalavras2 : PESOS.desejoPalavras;
+      // "Parecido" só quando é mesmo o mesmo tipo de coisa: duas palavras em comum, ou uma palavra e o mesmo assunto
+      // principal ("Livro de ficção" × "Livro do momento"). Uma palavra solta ("térmica" numa garrafa esportiva) ou só
+      // o assunto em comum vale menos: "combina com".
+      const mesmoAssunto = d.etiquetas.has(ideia.etiquetas[0]);
+      if (comuns >= 2 && (mesmoAssunto || d.etiquetas.size === 0)) {
+        p = PESOS.desejoPalavras2;
         motivo = `Parecido com “${d.titulo}”, da lista de desejos`;
-      } else if (comuns > 0 || etiquetas.some((e) => d.etiquetas.has(e))) {
+      } else if (comuns >= 1 && mesmoAssunto) {
+        p = PESOS.desejoPalavras;
+        motivo = `Parecido com “${d.titulo}”, da lista de desejos`;
+      } else if (etiquetas.some((e) => d.etiquetas.has(e))) {
         p = PESOS.desejoEtiqueta;
         motivo = `Combina com “${d.titulo}”, da lista de desejos`;
+      } else if (comuns >= 1) {
+        p = PESOS.desejoPalavraSolta;
+        motivo = `Lembra “${d.titulo}”, da lista de desejos`;
       }
       if (p > 0 && (!melhorDesejo || p > melhorDesejo.pontos)) melhorDesejo = { pontos: p, motivo };
     }
@@ -231,16 +239,17 @@ export function sugerirPresentes(perfil: PerfilParaSugestao, orcamento: Orcament
       motivos.push(melhorDesejo.motivo);
     }
 
-    // cor e tamanho
-    if (ideia.temCor && cores.length > 0) {
+    // cor e tamanho: só desempatam ideias que já têm a ver com a pessoa (ou quando não sabemos nada dela)
+    const relevante = casadas.length > 0 || melhorDesejo !== null || !temPerfil;
+    if (ideia.temCor && cores.length > 0 && relevante) {
       pontos += PESOS.cor;
       motivos.push(`Dá para escolher em ${cores[0].toLocaleLowerCase("pt-BR")}, a cor favorita`);
     }
     if (ideia.tamanho === "roupa") {
-      pontos += PESOS.tamanho;
+      if (relevante) pontos += PESOS.tamanho;
       motivos.push(`Tamanho já informado: ${tamRoupa}`);
     } else if (ideia.tamanho === "calcado") {
-      pontos += PESOS.tamanho;
+      if (relevante) pontos += PESOS.tamanho;
       motivos.push(`Número do calçado já informado: ${tamCalcado}`);
     }
 

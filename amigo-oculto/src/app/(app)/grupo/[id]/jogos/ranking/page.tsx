@@ -18,7 +18,7 @@ export default async function PaginaRanking({ params }: { params: Promise<{ id: 
   const lista = lerEstatisticas(data);
   const pos = posicoes(lista);
   const eu = lista.find((e) => e.participant_id === g.eu.id) ?? null;
-  const minhas = eu ? calcularConquistas(eu) : [];
+  const minhas = eu ? calcularConquistas(eu).sort((a, b) => Number(b.conquistada) - Number(a.conquistada) || b.progresso - a.progresso) : [];
   const conquistadas = minhas.filter((c) => c.conquistada).length;
   const podio = lista.slice(0, 3);
 

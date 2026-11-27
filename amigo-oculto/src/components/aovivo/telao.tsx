@@ -286,7 +286,7 @@ export function Telao({
                       >
                         <div className="relative">
                           <div aria-hidden className="absolute -inset-4 animate-pulse rounded-full bg-[radial-gradient(circle,color-mix(in_oklab,var(--ouro)_45%,transparent),transparent_70%)]" />
-                          <Avatar nome={atual.nome} caminho={atual.avatar} tamanho={240} anel className="relative !size-[7.5em] !text-[2.6em]" />
+                          <AvatarGrande nome={atual.nome} avatar={atual.avatar} className="relative size-[6.5em] sm:size-[7.5em]" anel />
                         </div>
                         <h2 className="font-titulo text-[3em] font-semibold leading-none">{atual.nome}</h2>
                       </motion.div>
@@ -783,7 +783,7 @@ function Comemoracao({
       </motion.p>
       <div className="relative flex items-center gap-6 sm:gap-12">
         <motion.div initial={menosMovimento ? false : { x: -40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ delay: 0.2 }}>
-          <Avatar nome={de.nome} caminho={de.avatar} tamanho={200} className="!size-[6em] !text-[2em] sm:!size-[8em]" />
+          <AvatarGrande nome={de.nome} avatar={de.avatar} className="size-[5.5em] sm:size-[8em]" />
         </motion.div>
         <motion.span
           initial={menosMovimento ? false : { scale: 0, rotate: -40 }}
@@ -799,7 +799,7 @@ function Comemoracao({
           animate={{ scale: 1, opacity: 1, rotate: 0 }}
           transition={{ delay: atraso, type: "spring", stiffness: 170, damping: 11 }}
         >
-          <Avatar nome={para.nome} caminho={para.avatar} tamanho={200} anel className="!size-[6em] !text-[2em] sm:!size-[8em]" />
+          <AvatarGrande nome={para.nome} avatar={para.avatar} className="size-[5.5em] sm:size-[8em]" anel />
         </motion.div>
       </div>
       <motion.p
@@ -828,5 +828,14 @@ function Comemoracao({
         </div>
       </motion.div>
     </motion.div>
+  );
+}
+
+/** Avatar que cresce com a fonte do telão (o tamanho fica no invólucro, em `em`, e a foto preenche). */
+function AvatarGrande({ nome, avatar, className, anel }: { nome: string; avatar: string | null; className?: string; anel?: boolean }) {
+  return (
+    <div className={cn("shrink-0", className)}>
+      <Avatar nome={nome} caminho={avatar} tamanho={256} anel={anel} className="!size-full !text-[2.4em]" />
+    </div>
   );
 }

@@ -22,7 +22,7 @@ export async function GET() {
     supabase.from("wishlist_items").select("title, notes, url, image_path, price_estimate, position, created_at, updated_at").eq("user_id", uid).order("position"),
     supabase
       .from("participants")
-      .select("role, status, rsvp, gift_bought, gift_bought_at, allow_public_reveal, result_viewed_at, join_message, created_at, approved_at, events(id, name, theme, reveal_at, location, status, created_at, finished_at, archived_at)")
+      .select("role, status, rsvp, gift_bought, gift_bought_at, allow_public_reveal, result_viewed_at, join_message, created_at, approved_at, events!participants_event_id_fkey(id, name, theme, reveal_at, location, status, created_at, finished_at, archived_at)")
       .eq("user_id", uid)
       .order("created_at", { ascending: false }),
     supabase.from("chat_messages").select("event_id, body, created_at, deleted_at").eq("user_id", uid).order("created_at", { ascending: false }).limit(5000),

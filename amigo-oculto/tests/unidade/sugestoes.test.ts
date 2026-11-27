@@ -112,7 +112,8 @@ describe("orçamento", () => {
       { interesses: ["astronomia"] }, // telescópio é caro: não pode aparecer
     ];
     for (const perfil of perfis) {
-      for (const orc of [ORC, { min: 20, max: 40 }, { max: 60 }, { min: 300, max: 500 }]) {
+      const orcamentos: { min?: number; max: number }[] = [ORC, { min: 20, max: 40 }, { max: 60 }, { min: 300, max: 500 }];
+      for (const orc of orcamentos) {
         const lista = sugerirPresentes(perfil, orc, { quantidade: 8 });
         expect(lista.length).toBeGreaterThan(0);
         const lo = (orc.min ?? 0) * 0.85;

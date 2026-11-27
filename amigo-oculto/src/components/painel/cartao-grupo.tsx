@@ -85,7 +85,7 @@ export function CartaoGrupo({
             </Link>
           </h3>
           <ul className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-suave">
-            {e.reveal_at ? (
+            {e.reveal_at && marco?.alvo !== e.reveal_at ? (
               <li className="flex items-center gap-1">
                 <CalendarHeart className="size-3.5 text-t1" aria-hidden /> {dataHora(e.reveal_at, { month: "short" })}
               </li>

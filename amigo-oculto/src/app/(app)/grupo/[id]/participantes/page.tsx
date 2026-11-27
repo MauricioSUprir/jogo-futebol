@@ -31,20 +31,21 @@ export default async function Participantes({ params }: { params: Promise<{ id: 
 
   return (
     <section aria-labelledby="titulo-participantes" className="flex flex-col gap-4">
-      <AtualizarAoVivo
-        canal={`sala-participantes:${id}`}
-        assinaturas={[
-          { tabela: "participants", filtro: `event_id=eq.${id}` },
-          { tabela: "events", filtro: `id=eq.${id}` },
-        ]}
-        mostrar
-        className="self-end"
-      />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="titulo-participantes" className="font-titulo text-2xl font-semibold">
-            Participantes
-          </h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 id="titulo-participantes" className="font-titulo text-2xl font-semibold">
+              Participantes
+            </h2>
+            <AtualizarAoVivo
+              canal={`sala-participantes:${id}`}
+              assinaturas={[
+                { tabela: "participants", filtro: `event_id=eq.${id}` },
+                { tabela: "events", filtro: `id=eq.${id}` },
+              ]}
+              mostrar
+            />
+          </div>
           <p className="text-sm text-suave">
             {total} pessoa{total === 1 ? "" : "s"} no grupo. Toque em alguém para ver a lista de desejos e as preferências.
           </p>

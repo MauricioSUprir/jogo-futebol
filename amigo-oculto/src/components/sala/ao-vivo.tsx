@@ -43,36 +43,64 @@ export function useTempoReal(canal: string, assinaturas: Assinatura[], aoMudar: 
   // só reassina quando muda o que vai para o servidor (tabela, evento, filtro)
   const chave = assinaturas.map((a) => `${a.tabela}|${a.evento ?? "*"}|${a.filtro ?? ""}`).join(";");
 
+  // `tentativa` muda quando o servidor recusa o canal: assina de novo (com o token renovado)
+  const [tentativa, setTentativa] = useState(0);
+
   useEffect(() => {
     if (!ligado) return;
     const supabase = clienteNavegador();
-    const ch = supabase.channel(nomeUnico(canal));
-    refAssinaturas.current.forEach((a, i) => {
-      const config = {
-        event: a.evento ?? "*",
-        schema: "public",
-        table: a.tabela,
-        ...(a.filtro ? { filter: a.filtro } : {}),
-      } as const;
-      ch.on("postgres_changes", config as never, (payload: RealtimePostgresChangesPayload<Linha>) => {
-        const atual = refAssinaturas.current[i] ?? a;
-        const nova = (payload.new ?? {}) as Linha;
-        const antiga = (payload.old ?? {}) as Linha;
-        if (atual.campo && atual.valores) {
-          const v = (nova[atual.campo] ?? antiga[atual.campo]) as string | undefined;
-          if (!v || !atual.valores.includes(v)) return;
-        }
-        refAoMudar.current({ tabela: a.tabela, tipo: payload.eventType, nova, antiga });
-      });
-    });
-    ch.subscribe((status) => {
-      if (status === "SUBSCRIBED") setEstado("ao-vivo");
-      else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") setEstado("caiu");
-    });
-    return () => {
-      void supabase.removeChannel(ch);
+    let ch: ReturnType<typeof supabase.channel> | null = null;
+    let encerrado = false;
+    let refazer: ReturnType<typeof setTimeout> | null = null;
+    const falhou = () => {
+      setEstado("caiu");
+      if (!encerrado && !refazer) refazer = setTimeout(() => setTentativa((t) => t + 1), Math.min(15_000, 1500 * 2 ** Math.min(tentativa, 3)));
     };
-  }, [canal, chave, ligado]);
+    void (async () => {
+      // O join leva o token que o Realtime já tem NAQUELE instante; logo depois de carregar a página ele ainda não
+      // chegou (é buscado de forma assíncrona) e o canal entraria como `anon` — o RLS recusa os filtros e nada chega.
+      try {
+        await supabase.realtime.setAuth();
+      } catch {
+        // sem sessão: o canal falha e tenta de novo
+      }
+      if (encerrado) return;
+      ch = supabase.channel(nomeUnico(canal));
+      refAssinaturas.current.forEach((a, i) => {
+        const config = {
+          event: a.evento ?? "*",
+          schema: "public",
+          table: a.tabela,
+          ...(a.filtro ? { filter: a.filtro } : {}),
+        } as const;
+        ch!.on("postgres_changes", config as never, (payload: RealtimePostgresChangesPayload<Linha>) => {
+          const atual = refAssinaturas.current[i] ?? a;
+          const nova = (payload.new ?? {}) as Linha;
+          const antiga = (payload.old ?? {}) as Linha;
+          if (atual.campo && atual.valores) {
+            const v = (nova[atual.campo] ?? antiga[atual.campo]) as string | undefined;
+            if (!v || !atual.valores.includes(v)) return;
+          }
+          refAoMudar.current({ tabela: a.tabela, tipo: payload.eventType, nova, antiga });
+        });
+      });
+      // recusa das assinaturas (ex.: filtro negado) chega como mensagem de sistema com status "error"
+      ch.on("system", {}, (m: { status?: string; extension?: string }) => {
+        if (m?.status === "error" && m.extension === "postgres_changes") falhou();
+      });
+      ch.subscribe((status) => {
+        if (encerrado) return;
+        if (status === "SUBSCRIBED") setEstado("ao-vivo");
+        else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") falhou();
+      });
+    })();
+    return () => {
+      encerrado = true;
+      if (refazer) clearTimeout(refazer);
+      if (ch) void supabase.removeChannel(ch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canal, chave, ligado, tentativa]);
 
   return estado;
 }
@@ -125,6 +153,12 @@ export function AtualizarAoVivo({
   const router = useRouter();
   const atualizar = useLimitado(() => router.refresh(), 1200);
   const estado = useTempoReal(canal, assinaturas, () => atualizar());
+  // voltou depois de cair: busca o que passou nesse meio-tempo
+  const anterior = useRef(estado);
+  useEffect(() => {
+    if (anterior.current === "caiu" && estado === "ao-vivo") atualizar();
+    anterior.current = estado;
+  }, [estado, atualizar]);
   useEffect(() => {
     const aoVoltar = () => {
       if (document.visibilityState === "visible") atualizar();

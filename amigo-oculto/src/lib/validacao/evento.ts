@@ -361,6 +361,14 @@ export function colunasDoEvento(d: DadosEvento, opcoes: { sorteado: boolean }) {
   };
 }
 
+/**
+ * Depois do sorteio, os campos travados não são gravados (colunasDoEvento os deixa de fora): na validação eles viram
+ * valores neutros, para que um valor antigo (ex.: a data do sorteio que já passou) não impeça salvar o resto.
+ */
+export function neutralizarTravados<T extends object>(entrada: T): T {
+  return { ...entrada, limite: null, prazoEntrada: null, sorteioEm: null, modoSorteio: "manual", aprovacao: false };
+}
+
 /** Código de convite digitado → forma canônica (8 letras/números, maiúsculas) ou null. */
 export function normalizarCodigo(v: string | null | undefined): string | null {
   const c = (v ?? "").toUpperCase().replace(/[^A-Z0-9]/g, "");

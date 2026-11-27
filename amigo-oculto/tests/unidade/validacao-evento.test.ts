@@ -8,6 +8,7 @@ import {
   etapaDoCampo,
   eventoParaRascunho,
   lerValor,
+  neutralizarTravados,
   normalizarCodigo,
   rascunhoParaEntrada,
   type EntradaEvento,
@@ -151,6 +152,15 @@ describe("validação do evento", () => {
       expect(depois).not.toHaveProperty(travado);
     }
     expect(depois).toHaveProperty("gift_min", 30);
+  });
+
+  it("depois do sorteio, campos travados (que não são gravados) não impedem salvar o resto", () => {
+    const antiga = emDias(-5);
+    // sorteio agendado no passado + limite abaixo de quem já entrou: com os campos travados neutralizados, passa
+    const e = entrada({ modoSorteio: "scheduled", sorteioEm: antiga, limite: "3", revelacaoEm: emDias(3) });
+    expect(errosDoEvento(neutralizarTravados(e), { agora: AGORA, original: {} })).toEqual({});
+    // mas os campos livres continuam validados
+    expect(errosDoEvento(neutralizarTravados({ ...e, nome: "x" }), { agora: AGORA }).nome).toBeTruthy();
   });
 
   it("utilitários: valores, código e etapa do campo", () => {

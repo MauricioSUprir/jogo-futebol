@@ -173,10 +173,11 @@ export async function excluirMinhaConta(estado: unknown, form: FormData): Promis
   const usuario = await usuarioAtual();
   if (!usuario) return falha("not_authenticated");
   const supabase = await clienteServidor();
-  const { data: meus } = await supabase
+  const { data: meus, error: erroLeitura } = await supabase
     .from("participants")
-    .select("status, events!inner(status, archived_at, owner_id, name)")
+    .select("status, events!participants_event_id_fkey!inner(status, archived_at, owner_id)")
     .eq("user_id", usuario.id);
+  if (erroLeitura) return falha(erroLeitura, "Não foi possível conferir seus grupos agora. Tente de novo.");
   const bloqueio = (meus ?? []).some((p) => {
     const ev = p.events as unknown as { status: string; archived_at: string | null; owner_id: string | null };
     return (p.status === "approved" && ev.status === "drawn" && !ev.archived_at) || (ev.owner_id === usuario.id && !ev.archived_at && ev.status !== "finished");

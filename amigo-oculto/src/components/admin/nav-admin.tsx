@@ -19,7 +19,7 @@ const ICONES: Record<IdSecao, typeof Users> = {
 export function NavAdmin({ id, atual, contadores }: { id: string; atual: IdSecao; contadores: Partial<Record<IdSecao, number>> }) {
   return (
     <nav aria-label="Seções do painel do organizador" className="-mx-3 lg:mx-0">
-      <ul className="rolagem-fina flex gap-1.5 overflow-x-auto px-3 pb-1 lg:vidro lg:sticky lg:top-24 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-cartao lg:p-2">
+      <ul className="rolagem-fina flex gap-1.5 overflow-x-auto px-3 pb-1 lg:sticky lg:top-24 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:rounded-cartao lg:border lg:border-[var(--vidro-borda)] lg:bg-vidro lg:p-2 lg:shadow-vidro lg:backdrop-blur-xl">
         {SECOES.map((s) => {
           const Icone = ICONES[s.id];
           const ativo = s.id === atual;
@@ -31,8 +31,8 @@ export function NavAdmin({ id, atual, contadores }: { id: string; atual: IdSecao
                 scroll={false}
                 aria-current={ativo ? "page" : undefined}
                 className={cn(
-                  "flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition lg:rounded-2xl lg:px-3",
-                  "max-lg:vidro",
+                  "vidro flex min-h-11 items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition",
+                  "lg:rounded-2xl lg:border-transparent lg:bg-transparent lg:px-3 lg:shadow-none lg:backdrop-blur-none",
                   ativo
                     ? "bg-[linear-gradient(135deg,var(--t1),color-mix(in_oklab,var(--t1)_70%,black))] text-white shadow-md"
                     : "text-suave hover:text-texto lg:hover:bg-black/5 lg:dark:hover:bg-white/5",

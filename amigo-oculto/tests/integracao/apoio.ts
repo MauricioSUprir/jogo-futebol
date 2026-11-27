@@ -43,10 +43,10 @@ export async function convidado(nome: string): Promise<Pessoa> {
   return { id: data.user!.id, email: "", nome, c };
 }
 
-export async function ok<T>(p: PromiseLike<{ data: T; error: unknown }>): Promise<T> {
+export async function ok<T>(p: PromiseLike<{ data: T | null; error: unknown }>): Promise<T> {
   const { data, error } = await p;
   if (error) throw new Error(`esperava sucesso: ${JSON.stringify(error)}`);
-  return data;
+  return data as T;
 }
 
 export async function erro(p: PromiseLike<{ data: unknown; error: { message?: string; code?: string } | null }>): Promise<string> {

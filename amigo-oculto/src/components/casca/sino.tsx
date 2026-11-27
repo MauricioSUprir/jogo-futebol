@@ -15,7 +15,13 @@ export function SinoNotificacoes({ usuarioId, inicial }: { usuarioId: string; in
   useEffect(() => setNaoLidas(inicial), [inicial]);
   useEffect(() => {
     const supabase = clienteNavegador();
-    const canal = supabase
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let ativo = true;
+    // O token da sessão precisa chegar ao Realtime ANTES da inscrição: senão o phx_join sai sem access_token, o servidor
+    // avalia o filtro como "anon" (sem permissão em notifications: "invalid column for filter") e o canal morre.
+    void supabase.realtime.setAuth().then(() => {
+      if (!ativo) return;
+      canal = supabase
       .channel(`notificacoes:${usuarioId}`)
       .on(
         "postgres_changes",
@@ -37,8 +43,10 @@ export function SinoNotificacoes({ usuarioId, inicial }: { usuarioId: string; in
         },
       )
       .subscribe();
+    });
     return () => {
-      void supabase.removeChannel(canal);
+      ativo = false;
+      if (canal) void supabase.removeChannel(canal);
     };
   }, [usuarioId, avisar, som]);
   return (

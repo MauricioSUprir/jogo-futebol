@@ -20,8 +20,8 @@ export type Preferencias = {
   notes: string | null;
 };
 
-const SUGESTOES_HOBBIES = ["Leitura", "Cozinhar", "Games", "Futebol", "Música", "Viagens", "Fotografia", "Plantas", "Corrida", "Séries"].map((nome) => ({ nome }));
-const SUGESTOES_INTERESSES = ["Café", "Tecnologia", "Moda", "Decoração", "Bem-estar", "Vinhos", "Arte", "Pets", "Esportes", "Skincare"].map((nome) => ({ nome }));
+const SUGESTOES_HOBBIES = ["Leitura", "Cozinhar", "Games", "Futebol", "Música", "Viagens", "Fotografia", "Séries"].map((nome) => ({ nome }));
+const SUGESTOES_INTERESSES = ["Café", "Tecnologia", "Moda", "Decoração", "Bem-estar", "Arte", "Pets", "Skincare"].map((nome) => ({ nome }));
 const SUGESTOES_NAO_QUERO = ["Perfume", "Chocolate", "Bebida alcoólica", "Meias", "Enfeites", "Roupas"].map((nome) => ({ nome }));
 
 /** Preferências de presente: hobbies, interesses, cores, tamanhos (opcionais), o que não quer e observações. */

@@ -46,8 +46,9 @@ export function Bingo({
   const [cartela, setCartela] = useState<CartelaBingo | null>(cartelaInicial);
   const [ultimo, setUltimo] = useState<number | null>(jogoInicial?.called.at(-1) ?? null);
   const [pendente, iniciar] = useTransition();
-  const [marcando, setMarcando] = useState<number | null>(null);
+  const [marcando, setMarcando] = useState<Set<number>>(() => new Set());
   const [confirmarFim, setConfirmarFim] = useState(false);
+  const [verTodos, setVerTodos] = useState(false);
   const confete = useRef<ConfeteHandle>(null);
   const { avisar } = useAvisos();
   const { som, vibracao, menosMovimento } = usePreferencias();
@@ -124,29 +125,43 @@ export function Bingo({
     });
   }
 
+  // Marcações em fila: cada toque aparece na hora (otimista) e vai ao servidor em ordem; a resposta da última
+  // marcação da fila é a verdade (o banco devolve a lista completa de casas marcadas).
+  const fila = useRef<Promise<void>>(Promise.resolve());
+  const naFila = useRef(0);
   function marcar(pos: number) {
-    if (!jogo || !cartela || pos === POSICAO_CENTRAL || marcando !== null) return;
+    if (!jogo || !cartela || pos === POSICAO_CENTRAL) return;
     const ja = cartela.marked.includes(pos);
     if (!ja && !chamados.includes(cartela.cells[pos])) {
       avisar(`“${termoDoBingo(cartela.cells[pos])}” ainda não foi chamado.`, "info");
       return;
     }
-    setMarcando(pos);
-    setCartela({ ...cartela, marked: ja ? cartela.marked.filter((m) => m !== pos) : [...cartela.marked, pos] });
-    void marcarBingo(eventoId, jogo.id, pos).then((r) => {
-      setMarcando(null);
+    if (!ja) {
+      tocar("tique", som);
+      vibrar(15, vibracao);
+    }
+    setCartela((c) => (c ? { ...c, marked: ja ? c.marked.filter((m) => m !== pos) : [...c.marked, pos] } : c));
+    setMarcando((m) => new Set(m).add(pos));
+    naFila.current++;
+    const jogoId = jogo.id;
+    fila.current = fila.current.then(async () => {
+      const r = await marcarBingo(eventoId, jogoId, pos);
+      naFila.current--;
+      setMarcando((m) => {
+        const n = new Set(m);
+        n.delete(pos);
+        return n;
+      });
       if (r.ok && r.dados) {
-        setCartela((c) => (c ? { ...c, marked: r.dados!.marked } : c));
-        if (!ja) {
-          tocar("tique", som);
-          vibrar(15, vibracao);
-        }
+        if (naFila.current === 0) setCartela((c) => (c ? { ...c, marked: r.dados!.marked } : c));
       } else if (!r.ok) {
-        setCartela((c) => (c ? { ...c, marked: cartela.marked } : c));
         avisar(r.erro, "erro");
+        const { data } = await clienteNavegador().from("bingo_cards").select("cells, marked, bingo_at").eq("game_id", jogoId).maybeSingle();
+        if (data) setCartela(data);
       }
     });
   }
+
 
   function gritar() {
     if (!jogo) return;
@@ -213,10 +228,9 @@ export function Bingo({
           texto={admin ? "Abra o primeiro bingo pelo painel acima." : "Quando o organizador abrir o bingo, você recebe um aviso para pegar a sua cartela."}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
-          {/* Chamada */}
-          <div className="flex flex-col gap-4 lg:order-2">
-            <section className="vidro-forte relative overflow-hidden rounded-cartao p-6 text-center" aria-labelledby="ultimo-item">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+          {/* Chamada (no celular: último item, depois a cartela, depois a lista) */}
+            <section className="vidro-forte relative overflow-hidden rounded-cartao p-6 text-center lg:col-start-2 lg:row-start-1" aria-labelledby="ultimo-item">
               <div className="fita-ouro absolute inset-x-0 top-0 h-1" aria-hidden />
               <p id="ultimo-item" className="text-xs font-semibold uppercase tracking-[0.2em] text-suave">
                 {jogo.status === "finished" ? "Bingo encerrado" : ultimo === null ? "Aguardando o primeiro item" : "Último item chamado"}
@@ -242,50 +256,8 @@ export function Bingo({
               <p className="mt-2 text-sm text-suave">{chamados.length} de 75 chamados</p>
             </section>
 
-            {jogo.winners.length ? (
-              <Cartao>
-                <h3 className="mb-3 flex items-center gap-2 font-titulo text-lg font-semibold">
-                  <Trophy className="size-5 text-ouro" aria-hidden /> Vencedores
-                </h3>
-                <ol className="flex flex-col gap-2">
-                  {jogo.winners.map((w, i) => {
-                    const p = nomes.get(w);
-                    return (
-                      <li key={w} className="flex items-center gap-3">
-                        <span className="w-6 font-titulo font-semibold text-ouro">{i + 1}º</span>
-                        <Avatar nome={p?.nome ?? "?"} caminho={p?.avatar} tamanho={32} />
-                        <span className="font-semibold">{w === euId ? "Você" : (p?.nome ?? "Participante")}</span>
-                      </li>
-                    );
-                  })}
-                </ol>
-              </Cartao>
-            ) : null}
-
-            <Cartao>
-              <h3 className="mb-3 font-titulo text-lg font-semibold">Itens chamados</h3>
-              {chamados.length ? (
-                <ul className="flex flex-wrap gap-1.5">
-                  {[...chamados].reverse().map((n, i) => (
-                    <li
-                      key={n}
-                      className={cn(
-                        "rounded-full px-3 py-1 text-sm font-medium",
-                        i === 0 ? "bg-t1 text-white" : "bg-black/5 dark:bg-white/10",
-                      )}
-                    >
-                      {termoDoBingo(n)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-suave">Nenhum ainda.</p>
-              )}
-            </Cartao>
-          </div>
-
           {/* Cartela */}
-          <div className="lg:order-1">
+          <div className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
             {cartela ? (
               <section className="vidro-forte rounded-cartao p-3 sm:p-5" aria-labelledby="minha-cartela">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
@@ -324,7 +296,7 @@ export function Bingo({
                           naLinha && "ring-2 ring-ouro ring-offset-1 ring-offset-transparent",
                           brilhar.has(pos) && "border-ouro shadow-[0_0_0_2px_color-mix(in_oklab,var(--ouro)_55%,transparent)]",
                           ativo && !centro && "active:scale-95",
-                          marcando === pos && "animate-pulse",
+                          marcando.has(pos) && "opacity-80",
                         )}
                       >
                         <span className="hyphens-auto break-words">{termoDoBingo(n)}</span>
@@ -339,7 +311,7 @@ export function Bingo({
                     brilho={completas.length > 0}
                     className="mt-4 w-full"
                     onClick={gritar}
-                    disabled={!completas.length}
+                    disabled={!completas.length || marcando.size > 0}
                     carregando={pendente}
                   >
                     BINGO!
@@ -367,6 +339,58 @@ export function Bingo({
               <Vazio titulo="Bingo encerrado" texto={admin ? "Abra um novo bingo quando quiser." : "Espere o organizador abrir uma nova rodada."} />
             )}
           </div>
+          <div className="flex flex-col gap-4 lg:col-start-2 lg:row-start-2">
+            {jogo.winners.length ? (
+              <Cartao>
+                <h3 className="mb-3 flex items-center gap-2 font-titulo text-lg font-semibold">
+                  <Trophy className="size-5 text-ouro" aria-hidden /> Vencedores
+                </h3>
+                <ol className="flex flex-col gap-2">
+                  {jogo.winners.map((w, i) => {
+                    const p = nomes.get(w);
+                    return (
+                      <li key={w} className="flex items-center gap-3">
+                        <span className="w-6 font-titulo font-semibold text-ouro">{i + 1}º</span>
+                        <Avatar nome={p?.nome ?? "?"} caminho={p?.avatar} tamanho={32} />
+                        <span className="font-semibold">{w === euId ? "Você" : (p?.nome ?? "Participante")}</span>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </Cartao>
+            ) : null}
+
+            <Cartao>
+              <h3 className="mb-3 font-titulo text-lg font-semibold">Itens chamados</h3>
+              {chamados.length ? (
+                <>
+                  <ul className="flex flex-wrap gap-1.5">
+                    {[...chamados].reverse().slice(0, verTodos ? 75 : 12).map((n, i) => (
+                      <li
+                        key={n}
+                        className={cn("rounded-full px-3 py-1 text-sm font-medium", i === 0 ? "bg-t1 text-white" : "bg-black/5 dark:bg-white/10")}
+                      >
+                        {termoDoBingo(n)}
+                      </li>
+                    ))}
+                  </ul>
+                  {chamados.length > 12 ? (
+                    <button
+                      type="button"
+                      onClick={() => setVerTodos((v) => !v)}
+                      aria-expanded={verTodos}
+                      className="mt-3 min-h-11 text-sm font-semibold text-t1 underline-offset-4 hover:underline"
+                    >
+                      {verTodos ? "Mostrar só os últimos" : `Ver todos os ${chamados.length}`}
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-sm text-suave">Nenhum ainda.</p>
+              )}
+            </Cartao>
+          </div>
+
         </div>
       )}
 

@@ -92,13 +92,14 @@ export function AssistenteCriar() {
   const [carregado, setCarregado] = useState(false);
   const [enviando, iniciar] = useTransition();
   const tituloRef = useRef<HTMLHeadingElement>(null);
-  const primeiraRenderizacao = useRef(true);
+  const etapaAnterior = useRef(0);
 
   // rascunho guardado no aparelho (sobrevive a recarregar a página)
   useEffect(() => {
     const salvo = lerRascunhoGuardado();
     if (salvo) {
       setR(salvo.r);
+      etapaAnterior.current = salvo.etapa; // restaurar o rascunho não rouba o foco
       setEtapa(salvo.etapa);
       setRecuperado(true);
     }
@@ -118,10 +119,8 @@ export function AssistenteCriar() {
 
   // foco no título a cada etapa (leitores de tela anunciam onde a pessoa está)
   useEffect(() => {
-    if (primeiraRenderizacao.current) {
-      primeiraRenderizacao.current = false;
-      return;
-    }
+    if (etapaAnterior.current === etapa) return;
+    etapaAnterior.current = etapa;
     tituloRef.current?.focus({ preventScroll: true });
     tituloRef.current?.scrollIntoView({ block: "nearest", behavior: menosMovimento ? "auto" : "smooth" });
   }, [etapa, menosMovimento]);

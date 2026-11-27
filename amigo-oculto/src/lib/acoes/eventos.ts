@@ -8,6 +8,7 @@ import {
   argumentosCriarEvento,
   colunasDoEvento,
   esquemaEvento,
+  neutralizarTravados,
   normalizarCodigo,
   type DadosEvento,
 } from "@/lib/validacao/evento";
@@ -47,7 +48,7 @@ export async function editarEvento(eventoId: string, entrada: unknown): Promise<
       original: { revelacaoEm: evento.reveal_at, prazoEntrada: evento.join_deadline, sorteioEm: evento.draw_at },
       ocupados: sorteado ? undefined : (ocupados ?? 0),
     }),
-    entrada,
+    sorteado && entrada && typeof entrada === "object" ? neutralizarTravados(entrada) : entrada,
   );
   if (!v.ok) return v.resultado;
   const dados: DadosEvento = v.dados;

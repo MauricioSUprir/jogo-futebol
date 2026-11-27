@@ -27,9 +27,9 @@ export function CartaoPublico({ g }: { g: GrupoPublico }) {
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" aria-hidden />
         <div className="absolute bottom-2.5 left-3 flex flex-wrap gap-1.5">
-          <Selo className="bg-white/90 text-[#1d2420]">{TEMAS[tema].nome}</Selo>
+          <Selo className="bg-white/90 text-[#1d2420] dark:bg-white/90">{TEMAS[tema].nome}</Selo>
           {g.requires_approval ? (
-            <Selo className="bg-white/90 text-[#1d2420]">
+            <Selo className="bg-white/90 text-[#1d2420] dark:bg-white/90">
               <Lock className="size-3" aria-hidden /> Com aprovação
             </Selo>
           ) : null}

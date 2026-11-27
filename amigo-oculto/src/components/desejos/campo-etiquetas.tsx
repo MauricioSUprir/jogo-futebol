@@ -91,7 +91,7 @@ export function CampoEtiquetas({
       ) : null}
       <div className="flex gap-2">
         <label htmlFor={id} className="sr-only">
-          Adicionar em {rotulo}
+          Novo item em {rotulo}
         </label>
         <input
           ref={campo}
@@ -122,9 +122,10 @@ export function CampoEtiquetas({
           type="button"
           onClick={() => adicionar(texto)}
           disabled={!texto.trim() || cheio}
-          className="inline-flex h-11 shrink-0 items-center gap-1 rounded-full border border-borda px-4 text-sm font-semibold transition hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+          aria-label={`Adicionar em ${rotulo}`}
+          className="inline-flex size-11 shrink-0 items-center justify-center gap-1 rounded-full border border-borda text-sm font-semibold transition hover:bg-black/5 disabled:opacity-50 sm:w-auto sm:px-4 dark:hover:bg-white/10"
         >
-          <Plus className="size-4" aria-hidden /> Adicionar
+          <Plus className="size-4" aria-hidden /> <span className="hidden sm:inline">Adicionar</span>
         </button>
       </div>
       <p id={`${id}-dica`} className={cn("text-xs", erro || aviso ? "font-medium text-rubi" : "text-suave")} aria-live="polite">

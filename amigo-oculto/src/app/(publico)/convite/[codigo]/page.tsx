@@ -107,9 +107,9 @@ export default async function PaginaConvite({ params }: { params: Promise<{ codi
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent" aria-hidden />
           <div className="absolute bottom-3 left-4 right-4 flex flex-wrap gap-2 sm:left-6">
-            <Selo className="bg-white/90 text-[#1d2420]">{TEMAS[tema].nome}</Selo>
+            <Selo className="bg-white/90 text-[#1d2420] dark:bg-white/90">{TEMAS[tema].nome}</Selo>
             {p.requires_approval ? (
-              <Selo className="bg-white/90 text-[#1d2420]">
+              <Selo className="bg-white/90 text-[#1d2420] dark:bg-white/90">
                 <Lock className="size-3" aria-hidden /> Precisa de aprovação
               </Selo>
             ) : null}

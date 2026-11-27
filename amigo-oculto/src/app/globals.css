@@ -293,3 +293,12 @@ body {
 .texto-legal p + p { margin-top: 0.75rem; }
 .texto-legal ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
 .texto-legal a { color: var(--t1); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+
+/* área E — impressão da lembrança digital do álbum (o bloco é um filho direto do <body>, criado por portal) */
+.lembranca-impressao { display: none; }
+@media print {
+  html.imprimindo-lembranca body > *:not(.lembranca-impressao) { display: none !important; }
+  html.imprimindo-lembranca .lembranca-impressao { display: flex !important; align-items: center; justify-content: center; min-height: 100vh; }
+  html.imprimindo-lembranca .lembranca-impressao img { max-width: 100%; max-height: 96vh; object-fit: contain; }
+  html.imprimindo-lembranca body { background: white !important; }
+}

@@ -21,7 +21,7 @@ export default async function Historico() {
   const supabase = await clienteServidor();
   const { data } = await supabase
     .from("participants")
-    .select("*, evento:events(*)")
+    .select("*, evento:events!participants_event_id_fkey(*)")
     .eq("user_id", usuario.id)
     .neq("status", "rejected")
     .order("created_at", { ascending: false });

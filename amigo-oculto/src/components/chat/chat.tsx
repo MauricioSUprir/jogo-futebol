@@ -170,23 +170,31 @@ export function ChatDoGrupo({
     },
   );
 
-  // mensagens que chegaram com o aparelho dormindo: ao voltar, busca o que passou (pelo fim da lista)
+  // o que chegou com o aparelho dormindo ou a conexão caída: busca as últimas e junta (pelo id)
+  const sincronizar = useCallback(async () => {
+    const r = await mensagensAnteriores(eventoId, new Date(Date.now() + 60_000).toISOString());
+    if (r.ok && r.dados) {
+      const novas = r.dados.mensagens;
+      for (const n of novas) void garantirPerfil(n.user_id);
+      setMensagens((atual) => {
+        const porId = new Map(atual.map((x) => [x.id, x] as const));
+        for (const n of novas) porId.set(n.id, { ...porId.get(n.id), ...n });
+        return ordenar([...porId.values()]);
+      });
+    }
+  }, [eventoId, garantirPerfil]);
   useEffect(() => {
-    const aoVoltar = async () => {
-      if (document.visibilityState !== "visible") return;
-      const r = await mensagensAnteriores(eventoId, new Date(Date.now() + 60_000).toISOString());
-      if (r.ok && r.dados) {
-        const novas = r.dados.mensagens;
-        setMensagens((atual) => {
-          const porId = new Map(atual.map((x) => [x.id, x] as const));
-          for (const n of novas) porId.set(n.id, { ...porId.get(n.id), ...n });
-          return ordenar([...porId.values()]);
-        });
-      }
+    const aoVoltar = () => {
+      if (document.visibilityState === "visible") void sincronizar();
     };
     document.addEventListener("visibilitychange", aoVoltar);
     return () => document.removeEventListener("visibilitychange", aoVoltar);
-  }, [eventoId]);
+  }, [sincronizar]);
+  const estadoAnterior = useRef(estado);
+  useEffect(() => {
+    if (estadoAnterior.current === "caiu" && estado === "ao-vivo") void sincronizar();
+    estadoAnterior.current = estado;
+  }, [estado, sincronizar]);
 
   function enviar() {
     const t = texto.trim();

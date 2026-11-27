@@ -38,11 +38,11 @@ export default async function Enquetes({
   const filtro = sp.categoria === "presente" ? "presente" : sp.categoria === "geral" ? "geral" : null;
   const g = await carregarGrupo(id);
   const supabase = await clienteServidor();
-  const [membros, { data }] = await Promise.all([
+  const [membros, { data, error: erroLeitura }] = await Promise.all([
     carregarMembros(id),
     supabase
       .from("polls")
-      .select("id, question, category, allow_multiple, closes_at, closed_at, created_at, created_by, poll_options(id, label, position), poll_votes(option_id, user_id)")
+      .select("id, question, category, allow_multiple, closes_at, closed_at, created_at, created_by, poll_options!poll_options_poll_id_fkey(id, label, position), poll_votes(option_id, user_id)")
       .eq("event_id", id)
       .order("created_at", { ascending: false })
       .limit(100),
@@ -143,7 +143,11 @@ export default async function Enquetes({
         </ul>
       </nav>
 
-      {lista.length ? (
+      {erroLeitura ? (
+        <p role="alert" className="vidro rounded-cartao px-5 py-4 text-sm font-medium text-rubi">
+          Não foi possível carregar as enquetes agora. Atualize a página em instantes.
+        </p>
+      ) : lista.length ? (
         <ul className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {lista.map((e) => (
             <li key={e.id}>

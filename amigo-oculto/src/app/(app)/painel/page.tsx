@@ -36,7 +36,7 @@ export default async function Painel() {
   const colunasNotificacao = "id, kind, title, body, link, created_at, read_at";
 
   const [participacoes, convites, desejos, preferencias, mensagens, naoLidas] = await Promise.all([
-    supabase.from("participants").select("*, evento:events(*)").eq("user_id", usuario.id).order("created_at", { ascending: false }),
+    supabase.from("participants").select("*, evento:events!participants_event_id_fkey(*)").eq("user_id", usuario.id).order("created_at", { ascending: false }),
     usuario.is_anonymous ? Promise.resolve({ data: [] }) : supabase.rpc("my_pending_invites"),
     supabase.from("wishlist_items").select("id", { count: "exact", head: true }).eq("user_id", usuario.id),
     supabase.from("gift_preferences").select("hobbies, interests, favorite_colors, shirt_size, dislikes, notes").eq("user_id", usuario.id).maybeSingle(),
