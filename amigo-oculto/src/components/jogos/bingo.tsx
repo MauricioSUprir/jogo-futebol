@@ -11,6 +11,7 @@ import { Confete, type ConfeteHandle } from "@/components/efeitos/confete";
 import { usePreferencias } from "@/components/efeitos/preferencias";
 import { tocar, vibrar } from "@/components/efeitos/som";
 import { clienteNavegador } from "@/lib/supabase/navegador";
+import { assinarComSessao } from "@/components/aovivo/tempo-real";
 import { chamarBingo, encerrarBingo, entrarBingo, gritarBingo, marcarBingo, novoBingo } from "@/lib/acoes/jogos";
 import {
   LETRAS_BINGO,
@@ -93,18 +94,15 @@ export function Bingo({
     setJogo(data);
   }, [eventoId, euId, nomes, som, vibracao, avisar]);
 
-  useEffect(() => {
-    const supabase = clienteNavegador();
-    const canal = supabase
-      .channel(`bingo:${eventoId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "bingo_games", filter: `event_id=eq.${eventoId}` }, () => {
-        void recarregar();
-      })
-      .subscribe();
-    return () => {
-      void supabase.removeChannel(canal);
-    };
-  }, [eventoId, recarregar]);
+  useEffect(
+    () =>
+      assinarComSessao(`bingo:${eventoId}`, (canal) =>
+        canal.on("postgres_changes", { event: "*", schema: "public", table: "bingo_games", filter: `event_id=eq.${eventoId}` }, () => {
+          void recarregar();
+        }),
+      ),
+    [eventoId, recarregar],
+  );
 
   const chamados = useMemo(() => jogo?.called ?? [], [jogo]);
   const completas = cartela ? linhasCompletas(cartela.cells, cartela.marked, chamados) : [];

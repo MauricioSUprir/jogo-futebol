@@ -11,7 +11,7 @@ import { Dialogo } from "@/components/ui/dialogo";
 import { useAvisos } from "@/components/ui/avisos";
 import { usePreferencias } from "@/components/efeitos/preferencias";
 import { enviarFotoAlbum } from "@/lib/imagem";
-import { clienteNavegador } from "@/lib/supabase/navegador";
+import { assinarComSessao } from "@/components/aovivo/tempo-real";
 import { denunciarFoto, editarLegendaFoto, excluirFotoAlbum, registrarFotoAlbum } from "@/lib/acoes/album";
 import { dataHora } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
@@ -46,25 +46,23 @@ export function FotosAlbum({ eventoId, fotos, admin }: { eventoId: string; fotos
     ids.current = new Set(fotos.map((f) => f.id));
   }, [fotos]);
   useEffect(() => {
-    const supabase = clienteNavegador();
     let espera: ReturnType<typeof setTimeout> | null = null;
     const atualizar = () => {
       if (espera) clearTimeout(espera);
       espera = setTimeout(() => router.refresh(), 800);
     };
-    const canal = supabase
-      .channel(`album:${eventoId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, () => { console.log("DBG-E insert"); atualizar(); })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
-      .on("postgres_changes", { event: "DELETE", schema: "public", table: "album_photos" }, (p) => {
-        const id = (p.old as { id?: string }).id;
-        console.log("DBG-E delete", id, [...ids.current]);
-        if (id && ids.current.has(id)) atualizar();
-      })
-      .subscribe((st, e) => console.log("DBG-E canal", st, e?.message));
+    const parar = assinarComSessao(`album:${eventoId}`, (canal) =>
+      canal
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
+        .on("postgres_changes", { event: "DELETE", schema: "public", table: "album_photos" }, (p) => {
+          const id = (p.old as { id?: string }).id;
+          if (id && ids.current.has(id)) atualizar();
+        }),
+    );
     return () => {
       if (espera) clearTimeout(espera);
-      void supabase.removeChannel(canal);
+      parar();
     };
   }, [eventoId, router]);
 

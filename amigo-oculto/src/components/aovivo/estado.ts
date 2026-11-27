@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clienteNavegador } from "@/lib/supabase/navegador";
+import { assinarComSessao } from "@/components/aovivo/tempo-real";
 import type { Database } from "@/lib/database.types";
 
 export type Sessao = Database["public"]["Tables"]["live_sessions"]["Row"];
@@ -66,17 +67,19 @@ export function useAoVivo(
   }, [eventoId]);
 
   useEffect(() => {
-    const supabase = clienteNavegador();
     const filtro = `event_id=eq.${eventoId}`;
-    const canal = supabase
-      .channel(`aovivo:${eventoId}:${Math.random().toString(36).slice(2, 8)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "live_sessions", filter: filtro }, () => void recarregar())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_reveals", filter: filtro }, () => void recarregar())
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_clues", filter: filtro }, () => void recarregar())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "participants", filter: filtro }, () => void recarregar())
-      .subscribe((status) => {
+    const parar = assinarComSessao(
+      `aovivo:${eventoId}`,
+      (canal) =>
+        canal
+          .on("postgres_changes", { event: "*", schema: "public", table: "live_sessions", filter: filtro }, () => void recarregar())
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_reveals", filter: filtro }, () => void recarregar())
+          .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_clues", filter: filtro }, () => void recarregar())
+          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "participants", filter: filtro }, () => void recarregar()),
+      (status) => {
         if (status === "SUBSCRIBED") void recarregar();
-      });
+      },
+    );
     const rede = setInterval(() => void recarregar(), 15_000);
     const voltou = () => {
       if (document.visibilityState === "visible") void recarregar();
@@ -85,7 +88,7 @@ export function useAoVivo(
     return () => {
       clearInterval(rede);
       document.removeEventListener("visibilitychange", voltou);
-      void supabase.removeChannel(canal);
+      parar();
     };
   }, [eventoId, recarregar]);
 
