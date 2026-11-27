@@ -11,7 +11,7 @@ import { Dialogo } from "@/components/ui/dialogo";
 import { useAvisos } from "@/components/ui/avisos";
 import { usePreferencias } from "@/components/efeitos/preferencias";
 import { enviarFotoAlbum } from "@/lib/imagem";
-import { assinarComSessao } from "@/components/aovivo/tempo-real";
+import { useLimitado, useTempoReal } from "@/components/sala/ao-vivo";
 import { denunciarFoto, editarLegendaFoto, excluirFotoAlbum, registrarFotoAlbum } from "@/lib/acoes/album";
 import { dataHora } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
@@ -40,31 +40,18 @@ export function FotosAlbum({ eventoId, fotos, admin }: { eventoId: string; fotos
   const { menosMovimento } = usePreferencias();
 
   // fotos novas (e apagadas) de outras pessoas aparecem sozinhas. O tempo real não filtra exclusões por coluna:
-  // a escuta de DELETE recebe só o id e confere se é uma foto desta tela.
-  const ids = useRef(new Set<string>());
-  useEffect(() => {
-    ids.current = new Set(fotos.map((f) => f.id));
-  }, [fotos]);
-  useEffect(() => {
-    let espera: ReturnType<typeof setTimeout> | null = null;
-    const atualizar = () => {
-      if (espera) clearTimeout(espera);
-      espera = setTimeout(() => router.refresh(), 800);
-    };
-    const parar = assinarComSessao(`album:${eventoId}`, (canal) =>
-      canal
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
-        .on("postgres_changes", { event: "DELETE", schema: "public", table: "album_photos" }, (p) => {
-          const id = (p.old as { id?: string }).id;
-          if (id && ids.current.has(id)) atualizar();
-        }),
-    );
-    return () => {
-      if (espera) clearTimeout(espera);
-      parar();
-    };
-  }, [eventoId, router]);
+  // a de DELETE vem sem filtro e só conta se o id for de uma foto desta tela.
+  const atualizar = useLimitado(() => router.refresh(), 800);
+  const filtro = `event_id=eq.${eventoId}`;
+  useTempoReal(
+    `album:${eventoId}`,
+    [
+      { tabela: "album_photos", evento: "INSERT", filtro },
+      { tabela: "album_photos", evento: "UPDATE", filtro },
+      { tabela: "album_photos", evento: "DELETE", campo: "id", valores: fotos.map((f) => f.id) },
+    ],
+    () => atualizar(),
+  );
 
   const enviar = useCallback(
     async (lista: FileList | File[]) => {

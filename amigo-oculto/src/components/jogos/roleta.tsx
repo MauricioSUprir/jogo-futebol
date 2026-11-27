@@ -10,7 +10,7 @@ import { Confete, type ConfeteHandle } from "@/components/efeitos/confete";
 import { usePreferencias } from "@/components/efeitos/preferencias";
 import { tocar, vibrar } from "@/components/efeitos/som";
 import { clienteNavegador } from "@/lib/supabase/navegador";
-import { assinarComSessao } from "@/components/aovivo/tempo-real";
+import { useTempoReal } from "@/components/sala/ao-vivo";
 import { girarRoleta, resolverDesafio } from "@/lib/acoes/jogos";
 import { relativo } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
@@ -68,15 +68,7 @@ export function Roleta({
     if (data) setGiros(data);
   }, [eventoId]);
 
-  useEffect(
-    () =>
-      assinarComSessao(`roleta:${eventoId}`, (canal) =>
-        canal.on("postgres_changes", { event: "*", schema: "public", table: "challenge_spins", filter: `event_id=eq.${eventoId}` }, () => {
-          void recarregar();
-        }),
-      ),
-    [eventoId, recarregar],
-  );
+  useTempoReal(`roleta:${eventoId}`, [{ tabela: "challenge_spins", filtro: `event_id=eq.${eventoId}` }], () => void recarregar());
 
   function girar() {
     if (girando || atual) return;

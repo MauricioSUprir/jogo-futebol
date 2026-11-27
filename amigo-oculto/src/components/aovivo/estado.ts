@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { clienteNavegador } from "@/lib/supabase/navegador";
-import { assinarComSessao } from "@/components/aovivo/tempo-real";
+import { useTempoReal } from "@/components/sala/ao-vivo";
 import type { Database } from "@/lib/database.types";
 
 export type Sessao = Database["public"]["Tables"]["live_sessions"]["Row"];
@@ -66,20 +66,22 @@ export function useAoVivo(
     }));
   }, [eventoId]);
 
+  const filtro = `event_id=eq.${eventoId}`;
+  const conexao = useTempoReal(
+    `aovivo:${eventoId}`,
+    [
+      { tabela: "live_sessions", filtro },
+      { tabela: "live_reveals", evento: "INSERT", filtro },
+      { tabela: "live_clues", evento: "INSERT", filtro },
+      { tabela: "participants", evento: "UPDATE", filtro },
+    ],
+    () => void recarregar(),
+  );
+  // conectou (ou voltou depois de cair): busca o que passou nesse meio-tempo
   useEffect(() => {
-    const filtro = `event_id=eq.${eventoId}`;
-    const parar = assinarComSessao(
-      `aovivo:${eventoId}`,
-      (canal) =>
-        canal
-          .on("postgres_changes", { event: "*", schema: "public", table: "live_sessions", filter: filtro }, () => void recarregar())
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_reveals", filter: filtro }, () => void recarregar())
-          .on("postgres_changes", { event: "INSERT", schema: "public", table: "live_clues", filter: filtro }, () => void recarregar())
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "participants", filter: filtro }, () => void recarregar()),
-      (status) => {
-        if (status === "SUBSCRIBED") void recarregar();
-      },
-    );
+    if (conexao === "ao-vivo") void recarregar();
+  }, [conexao, recarregar]);
+  useEffect(() => {
     const rede = setInterval(() => void recarregar(), 15_000);
     const voltou = () => {
       if (document.visibilityState === "visible") void recarregar();
@@ -88,11 +90,10 @@ export function useAoVivo(
     return () => {
       clearInterval(rede);
       document.removeEventListener("visibilitychange", voltou);
-      parar();
     };
-  }, [eventoId, recarregar]);
+  }, [recarregar]);
 
-  return { estado, recarregar };
+  return { estado, recarregar, conexao };
 }
 
 /** Relógio que anda (para o temporizador). */
