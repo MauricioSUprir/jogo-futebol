@@ -1,5 +1,6 @@
 "use server";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { clienteServidor } from "@/lib/supabase/servidor";
@@ -135,7 +136,13 @@ export async function salvarContaConvidado(_: unknown, form: FormData): Promise<
     if (/already|registered|exists/i.test(error.message)) return { ok: false, erro: "Este e-mail já tem uma conta. Use outro." };
     return falha(error, "Não foi possível salvar sua conta agora.");
   }
-  return sucesso("Pronto! Se pedirmos, confirme pelo link enviado ao seu e-mail.");
+  // O token da sessão ainda diz "anônimo" (is_anonymous) até ser renovado: sem isto, criar um grupo logo depois falhava
+  // com guest_cannot_create. Renovar grava o token novo nos cookies.
+  await supabase.auth.refreshSession();
+  revalidatePath("/", "layout");
+  const { data: atualizado } = await supabase.auth.getUser();
+  if (atualizado.user && !atualizado.user.is_anonymous) return sucesso("Pronto! Sua conta está salva. Agora você entra com este e-mail e senha.");
+  return sucesso("Quase lá! Confirme pelo link que enviamos ao seu e-mail para concluir.");
 }
 
 export async function sair() {

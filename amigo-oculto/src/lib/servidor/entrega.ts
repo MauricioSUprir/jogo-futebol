@@ -1,7 +1,7 @@
 import "server-only";
 import { after } from "next/server";
 import nodemailer from "nodemailer";
-import webpush from "web-push";
+import * as webpush from "web-push"; // CommonJS sem export default: o Turbopack recusa `import webpush from`
 import { clienteAdmin } from "@/lib/supabase/admin";
 import { urlDoSite } from "@/lib/env";
 

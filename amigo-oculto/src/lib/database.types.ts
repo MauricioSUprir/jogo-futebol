@@ -1127,6 +1127,9 @@ isOneToOne: false
 "my_participant_id":
 { Args: { "p_event": string }; Returns: string
                            },
+"my_pending_invites":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
 "notify":
 { Args: { "p_body"?: string,"p_event": string,"p_kind": string,"p_link"?: string,"p_title": string,"p_user": string }; Returns: undefined
                            },
@@ -1154,6 +1157,9 @@ isOneToOne: false
 "regenerate_invite_code":
 { Args: { "p_event": string }; Returns: string
                            },
+"register_push_subscription":
+{ Args: { "p_auth": string,"p_endpoint": string,"p_p256dh": string,"p_user_agent"?: string }; Returns: undefined
+                           },
 "remove_participant":
 { Args: { "p_participant": string }; Returns: undefined
                            },
@@ -1168,6 +1174,9 @@ isOneToOne: false
                            },
 "save_guess":
 { Args: { "p_event": string,"p_guessed": string }; Returns: undefined
+                           },
+"search_public_events":
+{ Args: { "p_limit"?: number,"p_offset"?: number,"p_query"?: string }; Returns: Json
                            },
 "secret_threads":
 { Args: { "p_event": string }; Returns: Json

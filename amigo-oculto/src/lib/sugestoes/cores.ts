@@ -1,0 +1,58 @@
+import { normalizar } from "@/lib/sugestoes/texto";
+
+/** Nome de cor em português → amostra (para mostrar as cores favoritas como bolinhas). Desconhecida → null. */
+const CORES: Record<string, string> = {
+  verde: "#1f9d55",
+  "verde escuro": "#14532d",
+  "verde claro": "#86efac",
+  "verde agua": "#5eead4",
+  "verde musgo": "#556b2f",
+  "verde militar": "#4b5320",
+  azul: "#2563eb",
+  "azul marinho": "#1e3a8a",
+  marinho: "#1e3a8a",
+  "azul claro": "#7dd3fc",
+  "azul bebe": "#bae6fd",
+  turquesa: "#14b8a6",
+  vermelho: "#dc2626",
+  vermelha: "#dc2626",
+  vinho: "#7f1d1d",
+  bordo: "#6b1d2a",
+  rosa: "#ec4899",
+  "rosa claro": "#f9a8d4",
+  "rosa bebe": "#fbcfe8",
+  pink: "#db2777",
+  coral: "#fb7185",
+  laranja: "#f97316",
+  amarelo: "#facc15",
+  amarela: "#facc15",
+  mostarda: "#d4a017",
+  dourado: "#d4a537",
+  dourada: "#d4a537",
+  ouro: "#d4a537",
+  prata: "#c0c0c0",
+  prateado: "#c0c0c0",
+  roxo: "#7c3aed",
+  roxa: "#7c3aed",
+  lilas: "#c4b5fd",
+  lavanda: "#b4a7e6",
+  violeta: "#8b5cf6",
+  preto: "#111111",
+  preta: "#111111",
+  branco: "#ffffff",
+  branca: "#ffffff",
+  "off white": "#f5f1e6",
+  cinza: "#9ca3af",
+  grafite: "#4b5563",
+  marrom: "#92400e",
+  caramelo: "#b8722c",
+  bege: "#e7d8b8",
+  nude: "#e3c3a8",
+  terracota: "#c2603d",
+  creme: "#f3e9c6",
+};
+
+export function amostraDaCor(nome: string): string | null {
+  const n = normalizar(nome);
+  return CORES[n] ?? CORES[n.split(" ")[0]] ?? null;
+}

@@ -232,3 +232,64 @@ body {
   .nao-imprimir { display: none !important; }
   body { background: white; }
 }
+
+/* área C — sala do grupo: bilhetes coloridos do mural (papel com texto escuro nos dois temas) */
+.bilhete { --papel-1: #fdf0c4; --papel-2: #f6dc8c; --tinta: #3b2a06; color: var(--tinta); background: linear-gradient(160deg, var(--papel-1), var(--papel-2)); }
+.bilhete-ouro { --papel-1: #fdf0c4; --papel-2: #f6dc8c; --tinta: #3b2a06; }
+.bilhete-vermelho { --papel-1: #fde0e4; --papel-2: #f7b9c2; --tinta: #4f0b17; }
+.bilhete-verde { --papel-1: #dcf5e8; --papel-2: #ade3c8; --tinta: #06321f; }
+.bilhete-neve { --papel-1: #ffffff; --papel-2: #ece7dc; --tinta: #1d2420; }
+.bilhete-rosa { --papel-1: #fde2ef; --papel-2: #f6bcd9; --tinta: #4d0c2e; }
+.bilhete-azul { --papel-1: #e1ebfd; --papel-2: #b6cdf6; --tinta: #0c214a; }
+.dark .bilhete { filter: saturate(0.92) brightness(0.93); }
+.bilhete::placeholder, .bilhete ::placeholder { color: color-mix(in oklab, var(--tinta) 55%, transparent); }
+
+/* =====================================================================================================================
+   área A — página inicial, revelação cinematográfica e páginas legais
+   ===================================================================================================================== */
+/* Palco escuro da revelação (o mesmo no claro e no escuro: é um "teatro") */
+.palco-revelacao {
+  background:
+    radial-gradient(42rem 26rem at 50% -12%, rgb(255 214 120 / 0.26), transparent 62%),
+    radial-gradient(28rem 28rem at -5% 105%, rgb(10 122 85 / 0.5), transparent 62%),
+    radial-gradient(28rem 28rem at 105% 105%, rgb(192 24 47 / 0.55), transparent 62%),
+    linear-gradient(180deg, #1d0a12, #10120f 62%, #08100d);
+  color: #fff8ea;
+}
+.ouro-palco {
+  background: linear-gradient(100deg, #f7d983, #fff1c2 45%, #e6b94a 75%, #f7d983);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Raios de luz atrás do presente aberto */
+.raios-luz {
+  background: repeating-conic-gradient(from 0deg, rgb(255 226 150 / 0.34) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, #000 22%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 0%, #000 22%, transparent 68%);
+  border-radius: 9999px;
+}
+@keyframes girar-lento { to { transform: rotate(360deg); } }
+.girar-lento { animation: girar-lento var(--duracao, 40s) linear infinite; }
+@keyframes surgir-suave {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.surgir { animation: surgir-suave 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: var(--atraso, 0s); }
+@keyframes pulsar-anel {
+  0% { box-shadow: 0 0 0 0 rgb(242 207 107 / 0.55); }
+  100% { box-shadow: 0 0 0 18px rgb(242 207 107 / 0); }
+}
+.pulsar-anel { animation: pulsar-anel 1.8s ease-out infinite; }
+/* Perguntas frequentes (<details>): sem o triângulo nativo, seta girando */
+.pergunta > summary { list-style: none; }
+.pergunta > summary::-webkit-details-marker { display: none; }
+.pergunta .seta-pergunta { transition: transform 0.25s ease; }
+.pergunta[open] .seta-pergunta { transform: rotate(180deg); }
+/* Textos longos das páginas legais */
+.texto-legal h2 { font-family: var(--font-titulo); font-size: 1.35rem; font-weight: 600; margin-top: 2.25rem; margin-bottom: 0.6rem; scroll-margin-top: 6rem; }
+.texto-legal h3 { font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.35rem; }
+.texto-legal p, .texto-legal li { line-height: 1.75; color: var(--texto); }
+.texto-legal p + p { margin-top: 0.75rem; }
+.texto-legal ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.texto-legal a { color: var(--t1); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }

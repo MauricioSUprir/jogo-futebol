@@ -65,6 +65,11 @@ const MENSAGENS: Record<string, string> = {
   poucos_participantes: "São necessários pelo menos 3 participantes aprovados para sortear.",
   duplicado: "Há participantes repetidos.",
   restricao_invalida: "Há uma restrição com alguém que não está mais no grupo.",
+  // área D (painel, lista de desejos, conta, notificações, push)
+  invalid_subscription: "Não foi possível ativar as notificações neste aparelho. Tente de novo.",
+  push_nao_configurado: "As notificações push não estão configuradas neste servidor.",
+  desejo_link_invalido: "Use um link que comece com https://.",
+  avatar_invalido: "Foto inválida. Envie a imagem de novo.",
 };
 
 export function mensagemDeErro(erro: unknown, padrao = "Algo deu errado. Tente de novo."): string {
