@@ -131,6 +131,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+@layer components {
 /* Fundo festivo: brilhos suaves nas cores do tema */
 .fundo-festivo {
   background:
@@ -172,6 +173,8 @@ body {
 /* Fita: faixa dourada fina usada em cartões de destaque */
 .fita-ouro {
   background-image: linear-gradient(90deg, transparent, var(--ouro-claro), var(--ouro), var(--ouro-claro), transparent);
+}
+
 }
 
 /* Foco visível e acessível em tudo */

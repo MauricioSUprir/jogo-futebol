@@ -8,3 +8,5 @@ next-env.d.ts
 tests/e2e/saida
 supabase/.temp
 supabase/.branches
+.next-dev
+.demo.json

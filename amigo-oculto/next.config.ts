@@ -25,6 +25,8 @@ const csp = [
 ].join("; ");
 
 const config: NextConfig = {
+  // o servidor de desenvolvimento usa outra pasta (NEXT_DIST_DIR=.next-dev) para o build e o typegen não brigarem com ele
+  distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   outputFileTracingRoot: raiz,
   turbopack: { root: raiz },

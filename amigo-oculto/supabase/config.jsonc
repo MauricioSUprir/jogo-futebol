@@ -286,13 +286,14 @@
       //   "sender_name": "Admin"
       // },
 
-      // Uncomment to customize email template
-      // "template": {
-      //   "invite": {
-      //     "subject": "You have been invited",
-      //     "content_path": "./supabase/templates/invite.html"
-      //   }
-      // },
+      // Modelos em português com link pelo token (funciona abrindo o e-mail em outro aparelho).
+      // No projeto na nuvem: copie o conteúdo em Authentication → Emails (ver o README).
+      "template": {
+        "confirmation": { "subject": "Confirme seu e-mail no Amigo Oculto", "content_path": "./supabase/templates/confirmacao.html" },
+        "recovery": { "subject": "Crie uma senha nova no Amigo Oculto", "content_path": "./supabase/templates/recuperacao.html" },
+        "email_change": { "subject": "Confirme seu novo e-mail no Amigo Oculto", "content_path": "./supabase/templates/troca-email.html" },
+        "magic_link": { "subject": "Seu link de acesso ao Amigo Oculto", "content_path": "./supabase/templates/link-magico.html" }
+      },
 
       // Uncomment to customize notification email template
       // "notification": {

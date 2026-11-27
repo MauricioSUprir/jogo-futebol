@@ -16,7 +16,9 @@
     "db:stop": "node scripts/supabase.mjs stop",
     "db:reset": "node scripts/supabase.mjs db reset",
     "db:types": "node scripts/gerar-tipos.mjs",
-    "vapid": "node scripts/gerar-vapid.mjs"
+    "vapid": "node scripts/gerar-vapid.mjs",
+    "db:env": "node scripts/env-local.mjs",
+    "demo": "node scripts/semente-demo.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "5.3.0",
