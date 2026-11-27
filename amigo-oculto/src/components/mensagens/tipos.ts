@@ -18,8 +18,9 @@ export type Conversas =
   | { disponivel: false }
   | {
       disponivel: true;
-      /** eu tirei essa pessoa (eu sou anônimo para ela) */
-      paraQuemTirei: { nome: string; bloqueada: boolean; mensagens: MensagemAnonima[] };
+      /** eu tirei essa pessoa (eu sou anônimo para ela). Sem `revelado`, o nome não sai do servidor: a pessoa ainda
+       * não passou pela revelação (o momento é dela) */
+      paraQuemTirei: { revelado: boolean; nome: string; bloqueada: boolean; mensagens: MensagemAnonima[] };
       /** essa pessoa me tirou (anônima para mim) */
       deQuemMeTirou: { bloqueada: boolean; mensagens: MensagemAnonima[] } | null;
     };

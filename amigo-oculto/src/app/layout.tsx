@@ -1,10 +1,12 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import "@fontsource-variable/fraunces";
 import "@fontsource-variable/plus-jakarta-sans";
 import "./globals.css";
 import { ProvedorAvisos } from "@/components/ui/avisos";
 import { ProvedorPreferencias } from "@/components/efeitos/preferencias";
 import { RegistrarServiceWorker } from "@/components/pwa/registrar-sw";
+import { ModoDoSistema, type ModoCor } from "@/components/casca/sincronizar-modo";
 import { usuarioAtual } from "@/lib/servidor/sessao";
 import { clienteServidor } from "@/lib/supabase/servidor";
 import { urlDoSite } from "@/lib/env";
@@ -29,9 +31,6 @@ export const viewport: Viewport = {
   ],
 };
 
-// Aplica claro/escuro antes da primeira pintura (sem piscar). A preferência fica no aparelho e na conta.
-const scriptModo = `(function(){try{var m=localStorage.getItem('ao-modo')||'system';var d=m==='dark'||(m==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);}catch(e){}})();`;
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const usuario = await usuarioAtual();
   let prefs = { som: true, vibracao: true, menosMovimento: false };
@@ -40,12 +39,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     const { data } = await supabase.from("user_settings").select("sound_effects, vibration, reduce_motion").maybeSingle();
     if (data) prefs = { som: data.sound_effects, vibracao: data.vibration, menosMovimento: data.reduce_motion };
   }
+  const cookieModo = (await cookies()).get("ao-modo")?.value;
+  const modo: ModoCor = cookieModo === "dark" || cookieModo === "light" ? cookieModo : "system";
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: scriptModo }} />
-      </head>
+    <html lang="pt-BR" suppressHydrationWarning className={modo === "system" ? undefined : modo}>
       <body>
+        <ModoDoSistema modo={modo} />
         <a
           href="#conteudo"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[200] focus:rounded-full focus:bg-white focus:px-4 focus:py-2 focus:font-semibold focus:text-black"

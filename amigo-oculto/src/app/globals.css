@@ -1,7 +1,17 @@
 @import "tailwindcss";
 
-/* Modo escuro pela classe .dark no <html> (sistema, claro ou escuro: Minha conta → Aparência). */
-@custom-variant dark (&:where(.dark, .dark *));
+/* Modo escuro: classe .dark no <html> (escolha "escuro"), ou o sistema em modo escuro sem a classe .light (escolha
+   "sistema"). O servidor põe a classe pelo cookie ao-modo — nada de script, nada de piscar. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light) *, :root:not(.light)) {
+      @slot;
+    }
+  }
+}
 
 /* =====================================================================================================================
    Identidade: vermelho-rubi, verde-esmeralda, dourado e branco. Vidro (glassmorphism), cantos generosos, brilho
@@ -57,6 +67,26 @@
   --ouro-claro: #f7d983;
   color-scheme: dark;
 }
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --fundo: #0b1210;
+    --fundo-2: #121b18;
+    --texto: #f6f1e7;
+    --texto-suave: #b4bfb8;
+    --borda: rgb(255 255 255 / 0.1);
+    --vidro: rgb(22 32 29 / 0.6);
+    --vidro-forte: rgb(26 38 34 / 0.86);
+    --vidro-borda: rgb(255 255 255 / 0.1);
+    --sombra: 0 12px 34px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+    --rubi: #e2394f;
+    --rubi-claro: #ff6b7d;
+    --esmeralda: #1fb586;
+    --esmeralda-clara: #4fd8a8;
+    --ouro: #e6b94a;
+    --ouro-claro: #f7d983;
+    color-scheme: dark;
+  }
+}
 
 /* Temas dos eventos */
 [data-tema="natal"] {
@@ -86,6 +116,16 @@
 .dark [data-tema="corporativo"] {
   --t1: #5b8cff;
   --t2: #2dd4bf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) [data-tema="classico"] {
+    --t1: #1fb586;
+    --t2: #8fb3a8;
+  }
+  :root:not(.light) [data-tema="corporativo"] {
+    --t1: #5b8cff;
+    --t2: #2dd4bf;
+  }
 }
 
 @theme inline {

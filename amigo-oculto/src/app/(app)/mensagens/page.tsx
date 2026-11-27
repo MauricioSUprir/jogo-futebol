@@ -115,7 +115,7 @@ export default async function CaixaGeral() {
                           {novas ? (
                             <strong className="text-texto">
                               {[
-                                novasDele ? `${novasDele} de ${c.paraQuemTirei.nome.split(" ")[0]}` : null,
+                                novasDele ? `${novasDele} de ${c.paraQuemTirei.revelado ? c.paraQuemTirei.nome.split(" ")[0] : "quem você tirou"}` : null,
                                 novasDoSanta ? `${novasDoSanta} do seu amigo oculto` : null,
                               ]
                                 .filter(Boolean)

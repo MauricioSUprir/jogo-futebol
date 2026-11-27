@@ -35,18 +35,26 @@ function limpar(m: Bruta): MensagemAnonima {
 }
 
 /** Lê as conversas pela função do banco e devolve só o que a tela usa (interno: não é ação). */
-async function lerConversas(supabase: ClienteSupabase, eventoId: string): Promise<Conversas> {
-  const { data, error } = await supabase.rpc("secret_threads", { p_event: eventoId });
+async function lerConversas(supabase: ClienteSupabase, usuarioId: string, eventoId: string): Promise<Conversas> {
+  const [{ data, error }, { data: eu }] = await Promise.all([
+    supabase.rpc("secret_threads", { p_event: eventoId }),
+    supabase.from("participants").select("result_viewed_at").eq("event_id", eventoId).eq("user_id", usuarioId).maybeSingle(),
+  ]);
   if (error) throw error;
   const t = (data ?? { available: false }) as Threads;
   if (!t.available || !t.with_receiver) return { disponivel: false };
+  // antes de passar pela revelação, o nome de quem a pessoa tirou não vai para o navegador
+  const revelado = !!eu?.result_viewed_at;
   return {
     disponivel: true,
-    paraQuemTirei: {
-      nome: t.with_receiver.receiver_name,
-      bloqueada: !!t.with_receiver.blocked,
-      mensagens: (t.with_receiver.messages ?? []).map(limpar),
-    },
+    paraQuemTirei: revelado
+      ? {
+          revelado: true,
+          nome: t.with_receiver.receiver_name,
+          bloqueada: !!t.with_receiver.blocked,
+          mensagens: (t.with_receiver.messages ?? []).map(limpar),
+        }
+      : { revelado: false, nome: "", bloqueada: false, mensagens: [] },
     deQuemMeTirou: t.with_santa
       ? { bloqueada: !!t.with_santa.blocked, mensagens: (t.with_santa.messages ?? []).map(limpar) }
       : null,
@@ -64,7 +72,7 @@ export async function carregarConversas(eventoId: string): Promise<Resultado<Con
   const s = await sessao();
   if (!s) return { ok: false, erro: "Entre na sua conta para continuar." };
   try {
-    return sucesso(undefined, await lerConversas(s.supabase, eventoId));
+    return sucesso(undefined, await lerConversas(s.supabase, s.usuario.id, eventoId));
   } catch (e) {
     return falha(e, "Não foi possível carregar as conversas.");
   }
@@ -98,7 +106,7 @@ export async function enviarMensagemAnonima(
   if (error) return falha(error, "Não foi possível enviar a mensagem.");
   entregarEmSegundoPlano();
   try {
-    return sucesso("Mensagem enviada em segredo.", await lerConversas(s.supabase, eventoId));
+    return sucesso("Mensagem enviada em segredo.", await lerConversas(s.supabase, s.usuario.id, eventoId));
   } catch {
     return sucesso("Mensagem enviada em segredo.");
   }
@@ -137,7 +145,7 @@ export async function denunciarMensagemAnonima(eventoId: string, mensagemId: str
   if (error) return falha(error, "Não foi possível enviar a denúncia.");
   entregarEmSegundoPlano();
   try {
-    return sucesso("Mensagem denunciada e escondida. O organizador vai ver só o texto, nunca quem mandou.", await lerConversas(s.supabase, eventoId));
+    return sucesso("Mensagem denunciada e escondida. O organizador vai ver só o texto, nunca quem mandou.", await lerConversas(s.supabase, s.usuario.id, eventoId));
   } catch {
     return sucesso("Mensagem denunciada e escondida.");
   }
@@ -153,7 +161,7 @@ export async function bloquearAmigoOculto(eventoId: string, bloquear: boolean): 
   try {
     return sucesso(
       bloquear ? "Pronto: seu amigo oculto não consegue mais te mandar mensagens." : "Mensagens desbloqueadas.",
-      await lerConversas(s.supabase, eventoId),
+      await lerConversas(s.supabase, s.usuario.id, eventoId),
     );
   } catch {
     return sucesso(bloquear ? "Mensagens bloqueadas." : "Mensagens desbloqueadas.");

@@ -172,8 +172,11 @@ export function CartaoEnquete({ eventoId, enquete: e, eu }: { eventoId: string; 
                           </span>
                         ) : null}
                       </span>
-                      <span className="w-14 text-right text-sm tabular-nums">
-                        <strong>{pct}%</strong> <span className="text-suave">({n})</span>
+                      <span className="min-w-11 whitespace-nowrap text-right text-sm tabular-nums">
+                        <strong>{pct}%</strong>
+                        <span className="block text-[11px] leading-tight text-suave">
+                          {n} voto{n === 1 ? "" : "s"}
+                        </span>
                       </span>
                     </span>
                   </span>
@@ -187,7 +190,7 @@ export function CartaoEnquete({ eventoId, enquete: e, eu }: { eventoId: string; 
 
       <footer className="mt-4 flex flex-wrap items-center gap-2">
         <p className="mr-auto text-sm text-suave">
-          {votantes} pessoa{votantes === 1 ? "" : "s"} votou{votantes === 1 ? "" : "aram"}
+          {votantes === 0 ? "Ninguém votou ainda" : votantes === 1 ? "1 pessoa votou" : `${votantes} pessoas votaram`}
         </p>
         {e.aberta && e.multipla && mudou ? (
           <Botao tamanho="p" carregando={pendente} onClick={() => votar(selecao)}>

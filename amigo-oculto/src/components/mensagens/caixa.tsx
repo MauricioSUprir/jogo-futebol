@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
-import { Ban, LockKeyhole, ShieldCheck, Unlock, VenetianMask } from "lucide-react";
+import { Ban, Gift, LockKeyhole, ShieldCheck, Unlock, VenetianMask } from "lucide-react";
 import {
   bloquearAmigoOculto,
   carregarConversas,
@@ -9,7 +9,7 @@ import {
   marcarConversaLida,
 } from "@/lib/acoes/mensagens";
 import { Avatar } from "@/components/ui/avatar";
-import { Botao } from "@/components/ui/botao";
+import { Botao, BotaoLink } from "@/components/ui/botao";
 import { Dialogo } from "@/components/ui/dialogo";
 import { useAvisos } from "@/components/ui/avisos";
 import { DialogoDenuncia } from "@/components/sala/denuncia";
@@ -181,6 +181,20 @@ export function CaixaAnonima({
           aria-label={desktop ? "Para quem eu tirei" : undefined}
           className={cn("vidro-forte flex-col overflow-hidden rounded-cartao", aba === "receiver" ? "flex" : "hidden lg:flex")}
         >
+          {!conversas.paraQuemTirei.revelado ? (
+            <div className="m-auto flex max-w-sm flex-col items-center px-6 py-12 text-center">
+              <span className="flutuar inline-flex size-16 items-center justify-center rounded-3xl bg-[linear-gradient(135deg,var(--t1),color-mix(in_oklab,var(--t1)_60%,black))] text-white shadow-brilho">
+                <Gift className="size-8" aria-hidden />
+              </span>
+              <h2 className="mt-4 font-titulo text-xl font-semibold">Primeiro, descubra quem você tirou</h2>
+              <p className="mt-1 text-sm text-suave">
+                A conversa com a pessoa que você tirou abre depois da sua revelação — o momento é só seu.
+              </p>
+              <BotaoLink href={`/grupo/${eventoId}/revelacao`} variante="ouro" brilho className="mt-5">
+                <Gift className="size-4" aria-hidden /> Descobrir quem eu tirei
+              </BotaoLink>
+            </div>
+          ) : (
           <Conversa
             id="receiver"
             nomeOutro={nome}
@@ -218,6 +232,7 @@ export function CaixaAnonima({
             }}
             aoDenunciar={setDenunciar}
           />
+          )}
         </section>
 
         {/* ------------------------------------------- essa pessoa me tirou: anônima para mim */}

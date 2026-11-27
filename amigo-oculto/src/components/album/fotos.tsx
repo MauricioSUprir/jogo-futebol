@@ -54,13 +54,14 @@ export function FotosAlbum({ eventoId, fotos, admin }: { eventoId: string; fotos
     };
     const canal = supabase
       .channel(`album:${eventoId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, () => { console.log("DBG-E insert"); atualizar(); })
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "album_photos", filter: `event_id=eq.${eventoId}` }, atualizar)
       .on("postgres_changes", { event: "DELETE", schema: "public", table: "album_photos" }, (p) => {
         const id = (p.old as { id?: string }).id;
+        console.log("DBG-E delete", id, [...ids.current]);
         if (id && ids.current.has(id)) atualizar();
       })
-      .subscribe();
+      .subscribe((st, e) => console.log("DBG-E canal", st, e?.message));
     return () => {
       if (espera) clearTimeout(espera);
       void supabase.removeChannel(canal);
