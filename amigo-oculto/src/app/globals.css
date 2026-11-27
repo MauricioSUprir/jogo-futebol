@@ -1,0 +1,344 @@
+@import "tailwindcss";
+
+/* Modo escuro: classe .dark no <html> (escolha "escuro"), ou o sistema em modo escuro sem a classe .light (escolha
+   "sistema"). O servidor põe a classe pelo cookie ao-modo — nada de script, nada de piscar. */
+@custom-variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not(.light) *, :root:not(.light)) {
+      @slot;
+    }
+  }
+}
+
+/* =====================================================================================================================
+   Identidade: vermelho-rubi, verde-esmeralda, dourado e branco. Vidro (glassmorphism), cantos generosos, brilho
+   dourado nos detalhes. Os temas de evento (Natal, Aniversário, Clássico, Corporativo) trocam as três cores de
+   destaque (--t1, --t2, --t3) e o fundo da sala.
+   ===================================================================================================================== */
+:root {
+  --fundo: #fbf7ef;
+  --fundo-2: #f3ebdc;
+  --texto: #1d2420;
+  --texto-suave: #55625a;
+  --borda: rgb(120 96 52 / 0.16);
+  --vidro: rgb(255 255 255 / 0.62);
+  --vidro-forte: rgb(255 255 255 / 0.82);
+  --vidro-borda: rgb(255 255 255 / 0.7);
+  --sombra: 0 10px 30px -12px rgb(60 30 10 / 0.25), 0 2px 6px -2px rgb(60 30 10 / 0.08);
+
+  --rubi: #c0182f;
+  --rubi-escuro: #8f0f22;
+  --rubi-claro: #ef4a5f;
+  --esmeralda: #0a7a55;
+  --esmeralda-escura: #064d36;
+  --esmeralda-clara: #19b383;
+  --ouro: #c9962b;
+  --ouro-claro: #f2cf6b;
+  --ouro-escuro: #8c6516;
+  --neve: #fffdf8;
+
+  /* destaque do tema (padrão: Natal) */
+  --t1: var(--rubi);
+  --t2: var(--esmeralda);
+  --t3: var(--ouro);
+  --t-texto: #ffffff;
+
+  color-scheme: light;
+}
+
+.dark {
+  --fundo: #0b1210;
+  --fundo-2: #121b18;
+  --texto: #f6f1e7;
+  --texto-suave: #b4bfb8;
+  --borda: rgb(255 255 255 / 0.1);
+  --vidro: rgb(22 32 29 / 0.6);
+  --vidro-forte: rgb(26 38 34 / 0.86);
+  --vidro-borda: rgb(255 255 255 / 0.1);
+  --sombra: 0 12px 34px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+  --rubi: #e2394f;
+  --rubi-claro: #ff6b7d;
+  --esmeralda: #1fb586;
+  --esmeralda-clara: #4fd8a8;
+  --ouro: #e6b94a;
+  --ouro-claro: #f7d983;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --fundo: #0b1210;
+    --fundo-2: #121b18;
+    --texto: #f6f1e7;
+    --texto-suave: #b4bfb8;
+    --borda: rgb(255 255 255 / 0.1);
+    --vidro: rgb(22 32 29 / 0.6);
+    --vidro-forte: rgb(26 38 34 / 0.86);
+    --vidro-borda: rgb(255 255 255 / 0.1);
+    --sombra: 0 12px 34px -12px rgb(0 0 0 / 0.6), 0 2px 8px -2px rgb(0 0 0 / 0.4);
+    --rubi: #e2394f;
+    --rubi-claro: #ff6b7d;
+    --esmeralda: #1fb586;
+    --esmeralda-clara: #4fd8a8;
+    --ouro: #e6b94a;
+    --ouro-claro: #f7d983;
+    color-scheme: dark;
+  }
+}
+
+/* Temas dos eventos */
+[data-tema="natal"] {
+  --t1: var(--rubi);
+  --t2: var(--esmeralda);
+  --t3: var(--ouro);
+}
+[data-tema="aniversario"] {
+  --t1: #d63c7a;
+  --t2: #7b4de0;
+  --t3: #f2a93b;
+}
+[data-tema="classico"] {
+  --t1: #0a6b4b;
+  --t2: #1f3a33;
+  --t3: #c9962b;
+}
+[data-tema="corporativo"] {
+  --t1: #1d4ed8;
+  --t2: #0f766e;
+  --t3: #c9962b;
+}
+.dark [data-tema="classico"] {
+  --t1: #1fb586;
+  --t2: #8fb3a8;
+}
+.dark [data-tema="corporativo"] {
+  --t1: #5b8cff;
+  --t2: #2dd4bf;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) [data-tema="classico"] {
+    --t1: #1fb586;
+    --t2: #8fb3a8;
+  }
+  :root:not(.light) [data-tema="corporativo"] {
+    --t1: #5b8cff;
+    --t2: #2dd4bf;
+  }
+}
+
+@theme inline {
+  --color-fundo: var(--fundo);
+  --color-fundo-2: var(--fundo-2);
+  --color-texto: var(--texto);
+  --color-suave: var(--texto-suave);
+  --color-borda: var(--borda);
+  --color-vidro: var(--vidro);
+  --color-vidro-forte: var(--vidro-forte);
+  --color-rubi: var(--rubi);
+  --color-rubi-escuro: var(--rubi-escuro);
+  --color-rubi-claro: var(--rubi-claro);
+  --color-esmeralda: var(--esmeralda);
+  --color-esmeralda-escura: var(--esmeralda-escura);
+  --color-esmeralda-clara: var(--esmeralda-clara);
+  --color-ouro: var(--ouro);
+  --color-ouro-claro: var(--ouro-claro);
+  --color-ouro-escuro: var(--ouro-escuro);
+  --color-neve: var(--neve);
+  --color-t1: var(--t1);
+  --color-t2: var(--t2);
+  --color-t3: var(--t3);
+
+  --font-titulo: "Fraunces Variable", "Fraunces", Georgia, serif;
+  --font-sans: "Plus Jakarta Sans Variable", "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --radius-cartao: 1.5rem;
+  --shadow-vidro: var(--sombra);
+  --shadow-brilho: 0 0 0 1px rgb(242 207 107 / 0.35), 0 10px 40px -10px rgb(201 150 43 / 0.55);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  background: var(--fundo);
+  color: var(--texto);
+  font-family: var(--font-sans);
+  min-height: 100dvh;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+/* Fundo festivo: brilhos suaves nas cores do tema */
+.fundo-festivo {
+  background:
+    radial-gradient(60rem 40rem at 10% -10%, color-mix(in oklab, var(--t1) 18%, transparent), transparent 60%),
+    radial-gradient(50rem 36rem at 110% 10%, color-mix(in oklab, var(--t2) 16%, transparent), transparent 60%),
+    radial-gradient(40rem 30rem at 50% 120%, color-mix(in oklab, var(--t3) 16%, transparent), transparent 60%),
+    var(--fundo);
+}
+
+/* Vidro */
+.vidro {
+  background: var(--vidro);
+  border: 1px solid var(--vidro-borda);
+  box-shadow: var(--sombra);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  backdrop-filter: blur(18px) saturate(140%);
+}
+.vidro-forte {
+  background: var(--vidro-forte);
+  border: 1px solid var(--vidro-borda);
+  box-shadow: var(--sombra);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
+}
+
+/* Texto dourado */
+.texto-ouro {
+  background: linear-gradient(100deg, var(--ouro-escuro), var(--ouro-claro) 45%, var(--ouro) 70%, var(--ouro-escuro));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.dark .texto-ouro {
+  background: linear-gradient(100deg, #f7d983, #fff1c2 45%, #e6b94a 75%);
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Fita: faixa dourada fina usada em cartões de destaque */
+.fita-ouro {
+  background-image: linear-gradient(90deg, transparent, var(--ouro-claro), var(--ouro), var(--ouro-claro), transparent);
+}
+
+}
+
+/* Foco visível e acessível em tudo */
+:focus-visible {
+  outline: 3px solid color-mix(in oklab, var(--ouro) 80%, white);
+  outline-offset: 2px;
+  border-radius: 0.6rem;
+}
+
+/* Brilho que passa (botões principais, revelação) */
+@keyframes brilho-passa {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to { transform: translateX(220%) skewX(-18deg); }
+}
+.brilho::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.35), transparent);
+  animation: brilho-passa 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes flutuar {
+  0%, 100% { transform: translateY(0) rotate(var(--giro, 0deg)); }
+  50% { transform: translateY(-14px) rotate(calc(var(--giro, 0deg) + 4deg)); }
+}
+.flutuar { animation: flutuar var(--duracao, 6s) ease-in-out infinite; }
+
+@keyframes cintilar {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+.cintilar { animation: cintilar var(--duracao, 2.4s) ease-in-out infinite; }
+
+/* Barra de rolagem discreta */
+.rolagem-fina { scrollbar-width: thin; scrollbar-color: var(--borda) transparent; }
+
+/* Movimento reduzido: pelo sistema ou pela preferência da conta (classe no <html>) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+.menos-movimento *, .menos-movimento *::before, .menos-movimento *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Telão da revelação ao vivo */
+.telao { font-size: clamp(16px, 1.4vw, 28px); }
+
+/* Impressão (lembrança digital) */
+@media print {
+  .nao-imprimir { display: none !important; }
+  body { background: white; }
+}
+
+/* área C — sala do grupo: bilhetes coloridos do mural (papel com texto escuro nos dois temas) */
+.bilhete { --papel-1: #fdf0c4; --papel-2: #f6dc8c; --tinta: #3b2a06; color: var(--tinta); background: linear-gradient(160deg, var(--papel-1), var(--papel-2)); }
+.bilhete-ouro { --papel-1: #fdf0c4; --papel-2: #f6dc8c; --tinta: #3b2a06; }
+.bilhete-vermelho { --papel-1: #fde0e4; --papel-2: #f7b9c2; --tinta: #4f0b17; }
+.bilhete-verde { --papel-1: #dcf5e8; --papel-2: #ade3c8; --tinta: #06321f; }
+.bilhete-neve { --papel-1: #ffffff; --papel-2: #ece7dc; --tinta: #1d2420; }
+.bilhete-rosa { --papel-1: #fde2ef; --papel-2: #f6bcd9; --tinta: #4d0c2e; }
+.bilhete-azul { --papel-1: #e1ebfd; --papel-2: #b6cdf6; --tinta: #0c214a; }
+.dark .bilhete { filter: saturate(0.92) brightness(0.93); }
+.bilhete::placeholder, .bilhete ::placeholder { color: color-mix(in oklab, var(--tinta) 55%, transparent); }
+
+/* =====================================================================================================================
+   área A — página inicial, revelação cinematográfica e páginas legais
+   ===================================================================================================================== */
+/* Palco escuro da revelação (o mesmo no claro e no escuro: é um "teatro") */
+.palco-revelacao {
+  background:
+    radial-gradient(42rem 26rem at 50% -12%, rgb(255 214 120 / 0.26), transparent 62%),
+    radial-gradient(28rem 28rem at -5% 105%, rgb(10 122 85 / 0.5), transparent 62%),
+    radial-gradient(28rem 28rem at 105% 105%, rgb(192 24 47 / 0.55), transparent 62%),
+    linear-gradient(180deg, #1d0a12, #10120f 62%, #08100d);
+  color: #fff8ea;
+}
+.ouro-palco {
+  background: linear-gradient(100deg, #f7d983, #fff1c2 45%, #e6b94a 75%, #f7d983);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Raios de luz atrás do presente aberto */
+.raios-luz {
+  background: repeating-conic-gradient(from 0deg, rgb(255 226 150 / 0.34) 0deg 5deg, transparent 5deg 15deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, #000 22%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 0%, #000 22%, transparent 68%);
+  border-radius: 9999px;
+}
+@keyframes girar-lento { to { transform: rotate(360deg); } }
+.girar-lento { animation: girar-lento var(--duracao, 40s) linear infinite; }
+@keyframes surgir-suave {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+.surgir { animation: surgir-suave 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: var(--atraso, 0s); }
+@keyframes pulsar-anel {
+  0% { box-shadow: 0 0 0 0 rgb(242 207 107 / 0.55); }
+  100% { box-shadow: 0 0 0 18px rgb(242 207 107 / 0); }
+}
+.pulsar-anel { animation: pulsar-anel 1.8s ease-out infinite; }
+/* Perguntas frequentes (<details>): sem o triângulo nativo, seta girando */
+.pergunta > summary { list-style: none; }
+.pergunta > summary::-webkit-details-marker { display: none; }
+.pergunta .seta-pergunta { transition: transform 0.25s ease; }
+.pergunta[open] .seta-pergunta { transform: rotate(180deg); }
+/* Textos longos das páginas legais */
+.texto-legal h2 { font-family: var(--font-titulo); font-size: 1.35rem; font-weight: 600; margin-top: 2.25rem; margin-bottom: 0.6rem; scroll-margin-top: 6rem; }
+.texto-legal h3 { font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.35rem; }
+.texto-legal p, .texto-legal li { line-height: 1.75; color: var(--texto); }
+.texto-legal p + p { margin-top: 0.75rem; }
+.texto-legal ul { list-style: disc; padding-left: 1.25rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.35rem; }
+.texto-legal a { color: var(--t1); text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+
+/* área E — impressão da lembrança digital do álbum (o bloco é um filho direto do <body>, criado por portal) */
+.lembranca-impressao { display: none; }
+@media print {
+  html.imprimindo-lembranca body > *:not(.lembranca-impressao) { display: none !important; }
+  html.imprimindo-lembranca .lembranca-impressao { display: flex !important; align-items: center; justify-content: center; min-height: 100vh; }
+  html.imprimindo-lembranca .lembranca-impressao img { max-width: 100%; max-height: 96vh; object-fit: contain; }
+  html.imprimindo-lembranca body { background: white !important; }
+}

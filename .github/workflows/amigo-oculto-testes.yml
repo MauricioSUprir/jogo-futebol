@@ -1,0 +1,67 @@
+name: Amigo Oculto — testes
+# O Amigo Oculto (amigo-oculto/) em todo PR que mexe nele: tipos, testes de unidade (algoritmo do sorteio, sugestões,
+# validações), Supabase local de verdade (migrações + RLS + funções) com os testes de integração de segurança, build de
+# produção e o teste de ponta a ponta no Chromium (celular e PC). Não publica nada: o app vai para a Vercel + Supabase.
+on:
+  pull_request:
+    paths:
+      - 'amigo-oculto/**'
+      - '.github/workflows/amigo-oculto-testes.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  amigo-oculto:
+    name: amigo-oculto
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: amigo-oculto
+    env:
+      # No GitHub as imagens do Supabase vêm do registro padrão (o GHCR também funciona).
+      SUPABASE_INTERNAL_IMAGE_REGISTRY: ghcr.io
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: amigo-oculto/package-lock.json
+      - name: Dependências
+        run: npm ci --no-audit --no-fund
+      - name: Supabase local (Postgres, Auth, Storage, Realtime)
+        run: |
+          node scripts/supabase.mjs start
+          node scripts/env-local.mjs --sobrescrever
+      - name: Tipos do banco em dia com as migrações
+        run: |
+          npm run db:types
+          git diff --exit-code -- src/lib/database.types.ts || (echo "::error::database.types.ts desatualizado: rode npm run db:types"; exit 1)
+      - name: Tipos (TypeScript)
+        run: npm run typecheck
+      - name: Testes de unidade (sorteio, sugestões, validações)
+        run: npm test
+      - name: Testes de integração (RLS, sigilo do sorteio, mensagens anônimas)
+        run: npm run test:integracao
+      - name: Build de produção
+        run: npm run build
+      - name: Playwright (Chromium)
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.56.1 @axe-core/playwright@4.10.2
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - name: Ponta a ponta (criar, convidar, entrar como convidado, sortear, revelar, mensagens anônimas, acessibilidade)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+        run: |
+          npm run start > "$RUNNER_TEMP/servidor.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf -o /dev/null http://127.0.0.1:3100/entrar && break; sleep 1; done
+          node tests/e2e/fluxo.mjs || (tail -50 "$RUNNER_TEMP/servidor.log"; exit 1)
+      - name: Capturas do teste
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: amigo-oculto-e2e
+          path: amigo-oculto/tests/e2e/saida
+          if-no-files-found: ignore
+          retention-days: 7

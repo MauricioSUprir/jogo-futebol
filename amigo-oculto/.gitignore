@@ -1,0 +1,12 @@
+node_modules
+.next
+next-env.d.ts
+*.tsbuildinfo
+.env
+.env.local
+.env*.local
+tests/e2e/saida
+supabase/.temp
+supabase/.branches
+.next-dev
+.demo.json
