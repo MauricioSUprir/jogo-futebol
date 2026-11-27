@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { BellOff, Check, CheckCheck, ChevronRight, Trash2 } from "lucide-react";
@@ -7,7 +7,7 @@ import { Botao, BotaoIcone } from "@/components/ui/botao";
 import { Vazio } from "@/components/ui/cartao";
 import { useAvisos } from "@/components/ui/avisos";
 import { usePreferencias } from "@/components/efeitos/preferencias";
-import { clienteNavegador } from "@/lib/supabase/navegador";
+import { IndicadorAoVivo, useTempoReal } from "@/components/sala/ao-vivo";
 import { dataHora, relativo } from "@/lib/formatos";
 import { cn } from "@/lib/cn";
 import { excluirLidas, excluirNotificacao, marcarNotificacaoLida, marcarTodasLidas } from "@/lib/acoes/notificacoes";
@@ -55,41 +55,30 @@ export function ListaNotificacoes({
 
   useEffect(() => setItens(iniciais), [iniciais]);
 
+  // novas chegando e lidas em outro aparelho, em tempo real (o hook autentica o Realtime antes de assinar e reassina
+  // se o canal cair; ao voltar, busca o que passou no meio-tempo)
+  const estado = useTempoReal(
+    `lista-notificacoes:${usuarioId}`,
+    [
+      { tabela: "notifications", evento: "INSERT", filtro: `user_id=eq.${usuarioId}` },
+      { tabela: "notifications", evento: "UPDATE", filtro: `user_id=eq.${usuarioId}` },
+    ],
+    (m) => {
+      const n = m.nova as unknown as Notificacao;
+      if (m.tipo === "INSERT") {
+        setItens((l) => (l.some((x) => x.id === n.id) ? l : [n, ...l]));
+        setAnuncio(`Nova notificação: ${n.title}`);
+      } else if (m.tipo === "UPDATE") {
+        setItens((l) => l.map((x) => (x.id === n.id ? { ...x, read_at: n.read_at } : x)));
+      }
+    },
+    aoVivo,
+  );
+  const estadoAnterior = useRef(estado);
   useEffect(() => {
-    if (!aoVivo) return;
-    const supabase = clienteNavegador();
-    let canal: ReturnType<typeof supabase.channel> | null = null;
-    let ativo = true;
-    // o token da sessão tem de chegar ao Realtime ANTES da inscrição: sem isso o servidor avalia o filtro como "anon"
-    // (sem permissão em notifications) e derruba o canal
-    void supabase.realtime.setAuth().then(() => {
-      if (!ativo) return;
-      canal = supabase
-      .channel(`lista-notificacoes:${usuarioId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${usuarioId}` },
-        (payload) => {
-          const n = payload.new as Notificacao;
-          setItens((l) => (l.some((x) => x.id === n.id) ? l : [n, ...l]));
-          setAnuncio(`Nova notificação: ${n.title}`);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${usuarioId}` },
-        (payload) => {
-          const n = payload.new as Notificacao;
-          setItens((l) => l.map((x) => (x.id === n.id ? { ...x, read_at: n.read_at } : x)));
-        },
-      )
-      .subscribe();
-    });
-    return () => {
-      ativo = false;
-      if (canal) void supabase.removeChannel(canal);
-    };
-  }, [aoVivo, usuarioId]);
+    if (estadoAnterior.current === "caiu" && estado === "ao-vivo") router.refresh();
+    estadoAnterior.current = estado;
+  }, [estado, router]);
 
   const naoLidas = itens.filter((n) => !n.read_at).length;
   const visiveis = soNaoLidas ? itens.filter((n) => !n.read_at) : itens;
@@ -112,6 +101,7 @@ export function ListaNotificacoes({
         {anuncio}
       </p>
       <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+        {aoVivo ? <IndicadorAoVivo estado={estado} className="mr-auto px-0" /> : null}
         <Botao
           variante="vidro"
           tamanho="p"

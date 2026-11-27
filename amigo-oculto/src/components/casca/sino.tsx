@@ -1,54 +1,57 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { clienteNavegador } from "@/lib/supabase/navegador";
 import { useAvisos } from "@/components/ui/avisos";
 import { usePreferencias } from "@/components/efeitos/preferencias";
 import { tocar } from "@/components/efeitos/som";
+import { useLimitado, useTempoReal } from "@/components/sala/ao-vivo";
 
-/** Sino com o número de não lidas, atualizado em tempo real (Supabase Realtime + RLS). */
+/**
+ * Sino com o número de não lidas, em tempo real (Supabase Realtime + RLS). Nova notificação: +1, aviso e som.
+ * Lidas/apagadas: recontagem no banco (a linha antiga do Realtime não traz o read_at).
+ */
 export function SinoNotificacoes({ usuarioId, inicial }: { usuarioId: string; inicial: number }) {
   const [naoLidas, setNaoLidas] = useState(inicial);
   const { avisar } = useAvisos();
   const { som } = usePreferencias();
   useEffect(() => setNaoLidas(inicial), [inicial]);
+
+  const recontar = useCallback(async () => {
+    const { count } = await clienteNavegador().from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+    if (typeof count === "number") setNaoLidas(count);
+  }, []);
+  const recontarLimitado = useLimitado(() => void recontar(), 800);
+
+  const estado = useTempoReal(
+    `sino:${usuarioId}`,
+    [
+      { tabela: "notifications", evento: "INSERT", filtro: `user_id=eq.${usuarioId}` },
+      { tabela: "notifications", evento: "UPDATE", filtro: `user_id=eq.${usuarioId}` },
+    ],
+    (m) => {
+      if (m.tipo === "INSERT") {
+        setNaoLidas((n) => n + 1);
+        const titulo = m.nova.title as string | undefined;
+        if (titulo) avisar(titulo, "info");
+        tocar("sino", som);
+      } else {
+        recontarLimitado();
+      }
+    },
+  );
+
+  // voltou à aba ou reconectou: confere o número no banco
   useEffect(() => {
-    const supabase = clienteNavegador();
-    let canal: ReturnType<typeof supabase.channel> | null = null;
-    let ativo = true;
-    // O token da sessão precisa chegar ao Realtime ANTES da inscrição: senão o phx_join sai sem access_token, o servidor
-    // avalia o filtro como "anon" (sem permissão em notifications: "invalid column for filter") e o canal morre.
-    void supabase.realtime.setAuth().then(() => {
-      if (!ativo) return;
-      canal = supabase
-      .channel(`notificacoes:${usuarioId}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${usuarioId}` },
-        (payload) => {
-          setNaoLidas((n) => n + 1);
-          const titulo = (payload.new as { title?: string }).title;
-          if (titulo) avisar(titulo, "info");
-          tocar("sino", som);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "notifications", filter: `user_id=eq.${usuarioId}` },
-        (payload) => {
-          const antes = payload.old as { read_at?: string | null };
-          const depois = payload.new as { read_at?: string | null };
-          if (!antes.read_at && depois.read_at) setNaoLidas((n) => Math.max(0, n - 1));
-        },
-      )
-      .subscribe();
-    });
-    return () => {
-      ativo = false;
-      if (canal) void supabase.removeChannel(canal);
-    };
-  }, [usuarioId, avisar, som]);
+    if (estado === "ao-vivo") recontarLimitado();
+  }, [estado, recontarLimitado]);
+  useEffect(() => {
+    const f = () => document.visibilityState === "visible" && recontarLimitado();
+    document.addEventListener("visibilitychange", f);
+    return () => document.removeEventListener("visibilitychange", f);
+  }, [recontarLimitado]);
+
   return (
     <Link
       href="/notificacoes"

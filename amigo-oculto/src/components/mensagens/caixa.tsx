@@ -142,7 +142,18 @@ export function CaixaAnonima({
         </p>
       </div>
 
-      <div role="tablist" aria-label="Conversas" className="vidro grid grid-cols-2 gap-1 rounded-full p-1 lg:hidden">
+      <div
+        role="tablist"
+        aria-label="Conversas"
+        className="vidro grid grid-cols-2 gap-1 rounded-full p-1 lg:hidden"
+        onKeyDown={(e) => {
+          if (e.key !== "ArrowLeft" && e.key !== "ArrowRight" && e.key !== "Home" && e.key !== "End") return;
+          e.preventDefault();
+          const proxima: LadoConversa = e.key === "Home" ? "receiver" : e.key === "End" ? "santa" : aba === "receiver" ? "santa" : "receiver";
+          setAba(proxima);
+          document.getElementById(`aba-${proxima}`)?.focus();
+        }}
+      >
         {abas.map((a) => (
           <button
             key={a.lado}
@@ -151,6 +162,7 @@ export function CaixaAnonima({
             role="tab"
             aria-selected={aba === a.lado}
             aria-controls={`painel-${a.lado}`}
+            tabIndex={aba === a.lado ? 0 : -1}
             onClick={() => setAba(a.lado)}
             className={cn(
               "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-2 text-sm font-semibold transition",

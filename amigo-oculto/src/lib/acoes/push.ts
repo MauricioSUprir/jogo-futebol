@@ -59,16 +59,16 @@ export async function removerTodasInscricoesPush(): Promise<Resultado> {
 type ResultadoTeste = { push: string; email: string };
 
 /**
- * Notificação de teste só para quem pediu: nasce no banco (aparece no sino em tempo real) e sai na hora pela fila de
- * entrega, por push (se este ou outro aparelho estiver inscrito) e por e-mail (se o servidor tiver e-mail e a pessoa
- * deixou ligado). O resultado diz o que realmente aconteceu em cada canal.
+ * Notificação de teste só para quem pediu: nasce no banco (aparece no sino em tempo real), sai por e-mail (se o servidor
+ * tiver e-mail e a pessoa deixou ligado) e, pela fila de entrega, por push (se algum aparelho estiver inscrito). O
+ * resultado diz o que realmente aconteceu em cada canal.
  */
 export async function enviarNotificacaoTeste(): Promise<Resultado<ResultadoTeste>> {
   const usuario = await usuarioAtual();
   if (!usuario) return falha("not_authenticated");
   let id: string;
   try {
-    const r = await criarNotificacaoTeste(usuario.id);
+    const r = await criarNotificacaoTeste(usuario.id, usuario.is_anonymous ? null : (usuario.email ?? null));
     if ("erro" in r) return falha(r.erro);
     id = r.id;
   } catch (e) {
@@ -80,7 +80,7 @@ export async function enviarNotificacaoTeste(): Promise<Resultado<ResultadoTeste
     for (let i = 0; i < 3; i++) {
       await entregarNotificacoes(50);
       const { data } = await supabase.from("notifications").select("email_status, push_status").eq("id", id).maybeSingle();
-      if (!data || (data.email_status !== "pending" && data.push_status !== "pending")) break;
+      if (!data || data.push_status !== "pending") break;
     }
   } catch {
     // a notificação já está no sino; o cron tenta de novo
